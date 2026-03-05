@@ -561,44 +561,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   {/* Streak Badge */}
                   <StreakBadge userId={profile.user_id} variant="full" />
 
-                  {/* Classement & Badges */}
-                  <ProfileRankCard userId={userId} />
-                  <EarnedBadgesSection userId={userId} />
-
-                  {/* Records personnels */}
-                  <PersonalRecords records={{
-                    running_records: profile.running_records,
-                    cycling_records: profile.cycling_records,
-                    swimming_records: profile.swimming_records,
-                    triathlon_records: profile.triathlon_records,
-                    walking_records: profile.walking_records,
-                  }} />
-
-                  {/* Clubs en commun */}
-                  {!isOwnProfile && commonClubs.length > 0 && (
-                    <div>
-                      <p className="ios-section-header">Clubs en commun</p>
-                      <div className="bg-card overflow-hidden">
-                        {commonClubs.map((club: any, index: number) => (
-                          <div key={club.id}>
-                            <div className="flex items-center px-4 py-[11px]">
-                              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
-                                <Users className="h-4 w-4 text-primary" />
-                              </div>
-                              <span className="text-[15px] font-medium text-foreground">{club.group_name}</span>
-                            </div>
-                            {index < commonClubs.length - 1 && <div className="h-px bg-border ml-[54px]" />}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Activité récente */}
-                  <ActivityTimeline userId={userId!} />
-
-                  {/* Statistiques d'activité */}
-                  <UserActivityChart userId={userId} username={profile.username} />
+                  {/* Unified ProfileStatsGroup — same as Profile.tsx */}
+                  <ProfileStatsGroup userId={profile.user_id}>
+                    <div className="h-px bg-border ml-[54px]" />
+                    <PersonalRecords records={{
+                      running_records: profile.running_records,
+                      cycling_records: profile.cycling_records,
+                      swimming_records: profile.swimming_records,
+                      triathlon_records: profile.triathlon_records,
+                      walking_records: profile.walking_records,
+                    }} />
+                  </ProfileStatsGroup>
 
                   {/* Member since */}
                   <div className="bg-card overflow-hidden">
