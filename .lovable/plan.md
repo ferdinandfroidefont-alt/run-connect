@@ -2,52 +2,42 @@
 
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+L'erreur est claire : `plutil -insert CFBundleURLTypes.-1` echoue quand le tableau est **vide** (0 elements). L'index `-1` (append) ne fonctionne pas sur un tableau vide avec certaines versions de `plutil` sur macOS. Il faut utiliser l'index `0` pour un tableau vide.
 
-Deux problemes distincts :
+## Correction
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
-
-## Solution en 2 parties
-
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+Remplacer le bloc lignes 174-181 par une logique qui :
+1. Verifie si `CFBundleURLTypes` existe
+2. Si non, insere directement le tableau avec l'entree dedans (pas de tableau vide + append)
+3. Si oui, utilise `/usr/libexec/PlistBuddy` comme fallback fiable pour ajouter a la fin
 
 ```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+INFO_PLIST="ios/App/App/Info.plist"
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+if plutil -p "$INFO_PLIST" | grep -q '"runconnect"'; then
+  echo "✅ runconnect scheme already present"
+else
+  # Check if CFBundleURLTypes key exists
+  if plutil -extract CFBundleURLTypes json "$INFO_PLIST" >/dev/null 2>&1; then
+    # Array exists — use PlistBuddy to append (handles any array size)
+    IDX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" | grep -c "Dict")
+    /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
+    /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
+  else
+    # Array doesn't exist — create it with the entry directly
+    plutil -insert CFBundleURLTypes \
+      -json '[{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}]' \
+      "$INFO_PLIST"
+  fi
+  echo "✅ Deep link URL Type configured (runconnect://)"
+fi
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+La difference cle : au lieu de creer un tableau vide puis append avec `-1`, on insere le **tableau complet avec l'entree dedans** en une seule commande quand la cle n'existe pas. Quand elle existe deja (Capacitor peut l'avoir creee), on utilise PlistBuddy qui gere correctement l'index calcule.
 
-### Partie 2 : Securiser la page bridge
+### Fichier modifie
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+**`.github/workflows/ios-appstore.yml`** — lignes 170-188, remplacer le bloc de configuration du deep link.
 
