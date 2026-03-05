@@ -171,16 +171,22 @@ jobs:
           if plutil -p "$INFO_PLIST" | grep -q '"runconnect"'; then
             echo "✅ runconnect scheme already present"
           else
-            # Ensure CFBundleURLTypes array exists
-            plutil -type CFBundleURLTypes "$INFO_PLIST" 2>/dev/null || \
-              plutil -insert CFBundleURLTypes -json '[]' "$INFO_PLIST"
-            
-            # Append runconnect scheme entry at end of array (-1 = append)
-            plutil -insert CFBundleURLTypes.-1 \
-              -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-              "$INFO_PLIST"
-            
-            echo "✅ Deep link URL Type configured (runconnect://)"
+            # Check if CFBundleURLTypes key exists
+            if plutil -extract CFBundleURLTypes json "$INFO_PLIST" >/dev/null 2>&1; then
+              # Array exists — use PlistBuddy to append (handles any array size)
+              IDX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" | grep -c "Dict")
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
+              echo "✅ Deep link URL Type appended via PlistBuddy (index $IDX)"
+            else
+              # Array doesn't exist — create it with the entry directly
+              plutil -insert CFBundleURLTypes \
+                -json '[{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}]' \
+                "$INFO_PLIST"
+              echo "✅ Deep link URL Type created via plutil"
+            fi
           fi
           
           # Verify final state
