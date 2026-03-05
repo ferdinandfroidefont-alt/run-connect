@@ -573,6 +573,29 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     }} />
                   </ProfileStatsGroup>
 
+                  {/* Clubs en commun */}
+                  {!isOwnProfile && commonClubs.length > 0 && (
+                    <div>
+                      <p className="ios-section-header">Clubs en commun</p>
+                      <div className="bg-card overflow-hidden">
+                        {commonClubs.map((club: any, index: number) => (
+                          <div key={club.id}>
+                            <div className="flex items-center px-4 py-[11px]">
+                              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
+                                <Users className="h-4 w-4 text-primary" />
+                              </div>
+                              <span className="text-[15px] font-medium text-foreground">{club.group_name}</span>
+                            </div>
+                            {index < commonClubs.length - 1 && <div className="h-px bg-border ml-[54px]" />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activité récente */}
+                  <ActivityTimeline userId={profile.user_id} />
+
                   {/* Member since */}
                   <div className="bg-card overflow-hidden">
                     <div className="flex items-center justify-between p-4">
