@@ -2,52 +2,47 @@
 
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+Trois vues de profil existent avec des designs inconsistants :
 
-Deux problemes distincts :
+1. **`Profile.tsx` (Mon profil)** — Le meilleur design : couverture Facebook-style, avatar chevauchant, stats row, `ProfileStatsGroup` unifie avec iOS inset grouped. C'est la reference.
+2. **`ProfilePreviewDialog.tsx` (profil tiers in-app)** — Couverture + avatar OK, mais le contenu en dessous est eparpille : `ProfileRankCard` et `EarnedBadgesSection` sont des composants separes avec leurs propres styles, pas integres dans un `ProfileStatsGroup`. Pas de `PersonalGoals`. Le design n'est pas aligne avec "Mon profil".
+3. **`PublicProfile.tsx` (profil public web)** — Design completement different : pas de couverture, avatar avec bordure primary, pas de stats row (abonnes/abonnements/reputation), design plat basique.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Plan de refonte
 
-## Solution en 2 parties
+### 1. `ProfilePreviewDialog.tsx` — Aligner sur le design de "Mon profil"
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+**Objectif** : Remplacer le contenu eparpille par le meme systeme `ProfileStatsGroup` unifie utilise dans `Profile.tsx`.
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+Changements :
+- Remplacer `ProfileRankCard` + `EarnedBadgesSection` separes par `<ProfileStatsGroup userId={...}>` qui contient deja classement, badges, activite dans un bloc iOS unifie
+- Integrer `PersonalRecords` a l'interieur du `ProfileStatsGroup` (comme dans `Profile.tsx`)
+- Garder la couverture + avatar + stats row existants (deja corrects)
+- Supprimer les imports `ProfileRankCard` et `EarnedBadgesSection` devenus inutiles (ils sont inclus dans `ProfileStatsGroup`)
+- Conserver les sections specifiques : clubs en commun, actions (unfollow/report), membre depuis
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### 2. `PublicProfile.tsx` — Adopter le meme layout Facebook-style
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+**Objectif** : Passer du design plat a la meme structure couverture + avatar + stats que les autres vues profil.
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+Changements :
+- Ajouter la couverture gradient (comme `Profile.tsx` ligne 656-697) avec l'avatar chevauchant (`marginTop: -50px`)
+- Ajouter l'interface `PublicProfile` enrichie : `cover_image_url`, `follower_count`, `following_count` via requetes Supabase
+- Ajouter la stats row (Abonnes / Abonnements) sous le nom, identique a `Profile.tsx`
+- Ajouter les badges inline (`OrganizerRatingBadge`, `StreakBadge` compact)
+- Mettre les boutons d'action (S'abonner / App) dans le meme style que la page profil
+- Styliser les sessions recentes dans un `bg-card` avec separateurs iOS identiques
+- Utiliser `ring-4 ring-card shadow-xl` pour l'avatar (meme style partout)
 
-### Partie 2 : Securiser la page bridge
+### 3. Harmonisation CSS/tailles
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+- Avatar : `h-24 w-24 ring-4 ring-card shadow-xl` partout (actuellement `h-20 w-20` dans Preview, `h-28 w-28` dans Public)
+- Couverture : `h-48` partout (actuellement `h-36` dans Preview)
+- Stats row : meme `gap-6`, memes tailles de texte `text-[20px]` / `text-[11px]`
+- Nom : `text-[22px] font-bold` + Crown icon pour premium partout
 
 ### Fichiers modifies
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+1. **`src/components/ProfilePreviewDialog.tsx`** — Remplacer le bloc "FOLLOWING: full profile" (lignes 560-650) par `ProfileStatsGroup` unifie ; augmenter la couverture a `h-48` et l'avatar a `h-24 w-24`
+2. **`src/pages/PublicProfile.tsx`** — Refonte complete du rendu : couverture + avatar chevauchant + stats row + badges + sessions iOS. Ajout fetch follower/following counts
 
