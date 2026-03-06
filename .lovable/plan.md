@@ -2,52 +2,39 @@
 
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+L'erreur YAML ligne 101 est causée par le code Python injecté à l'indentation 0 dans un bloc `run: |`. YAML exige que toutes les lignes du bloc soient indentées à au moins 10 espaces (le niveau du premier contenu). Les lignes `with open(...)`, `apns_methods = '''`, etc. à colonne 0 font sortir le parseur YAML du bloc littéral.
 
-Deux problemes distincts :
+Cela affecte **deux blocs Python** : lignes 97-207 et lignes 224-299.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Solution
 
-## Solution en 2 parties
+Extraire la logique Python dans un fichier script séparé `scripts/inject_ios_push.py`, puis l'appeler depuis le workflow. Cela élimine tout problème d'indentation/échappement YAML.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+### 1. Créer `scripts/inject_ios_push.py`
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+Script Python autonome qui :
+- Accepte un argument `--mode` : `fresh` (première injection) ou `update` (réinjection si bridge manquant)
+- En mode `fresh` : lit `AppDelegate.swift`, injecte les méthodes APNs + FCM + WebView bridge avant la dernière `}`
+- En mode `update` : supprime les anciennes méthodes (regex) puis réinjecte les nouvelles
+- Contient tout le code Swift en triple-quotes (sans conflit YAML puisque c'est un fichier .py séparé)
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### 2. Modifier `.github/workflows/ios-appstore.yml`
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+Remplacer les deux blocs `python3 -c "..."` par :
+
+```yaml
+              python3 scripts/inject_ios_push.py --mode fresh
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+et
 
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```yaml
+                python3 scripts/inject_ios_push.py --mode update
 ```
 
-### Fichiers modifies
+Le reste du workflow (sed pour imports, MessagingDelegate, FirebaseApp.configure) reste inchangé — il fonctionne déjà correctement.
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Fichiers modifiés
+- **Nouveau** : `scripts/inject_ios_push.py`
+- **Modifié** : `.github/workflows/ios-appstore.yml` (lignes 96-207 et 223-299)
 
