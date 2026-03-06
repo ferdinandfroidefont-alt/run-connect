@@ -76,104 +76,227 @@ jobs:
             echo "ℹ️ Firebase/Messaging pod already present"
           fi
 
-      - name: 🔥 Configure AppDelegate for Firebase + APNs delegates
+      - name: 🔥 Configure AppDelegate for Firebase + APNs + FCM WebView bridge
         run: |
           DELEGATE="ios/App/App/AppDelegate.swift"
           if [ -f "$DELEGATE" ]; then
             if ! grep -q "FirebaseCore" "$DELEGATE"; then
-              # Add imports
-              sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore\nimport FirebaseMessaging/' "$DELEGATE"
+              # Add imports (include Capacitor for CAPBridgeViewController)
+              sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore\nimport FirebaseMessaging\nimport Capacitor/' "$DELEGATE"
               
-              # Add MessagingDelegate protocol conformance to class declaration
+              # Add MessagingDelegate protocol conformance
               sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE"
               
-              # Add FirebaseApp.configure() + Messaging delegate after super.application didFinishLaunchingWithOptions
+              # Add FirebaseApp.configure() + Messaging delegate
               sed -i '' '/super.application.*didFinishLaunchingWithOptions/a\
                   FirebaseApp.configure()\
                   Messaging.messaging().delegate = self
               ' "$DELEGATE"
               
-              # Add APNs + FCM delegate methods before the last closing brace of the class
-              # CRITICAL: Post FCM token (not raw APNs token) to Capacitor
+              # Inject APNs + FCM methods with WebView JS bridge
               python3 -c "
-          import re
-          with open('ios/App/App/AppDelegate.swift', 'r') as f:
-              content = f.read()
-          apns_methods = '\n'.join([
-              '    // MARK: - APNs Token Registration',
-              '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
-              '        Messaging.messaging().apnsToken = deviceToken',
-              '        // Retrieve the FCM token (NOT the raw APNs token) and post it to Capacitor',
-              '        Messaging.messaging().token(completion: { fcmToken, error in',
-              '            if let fcmToken = fcmToken {',
-              '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
-              '            } else if let error = error {',
-              '                print(\"[PUSH] FCM token error: \\(error.localizedDescription)\")',
-              '            }',
-              '        })',
-              '    }',
-              '',
-              '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
-              '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
-              '    }',
-              '',
-              '    // MARK: - MessagingDelegate (FCM token refresh)',
-              '    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {',
-              '        guard let fcmToken = fcmToken else { return }',
-              '        print(\"[PUSH] FCM token refreshed\")',
-              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
-              '    }',
-          ])
-          last_brace = content.rfind('}')
-          if last_brace != -1:
-              content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
-          with open('ios/App/App/AppDelegate.swift', 'w') as f:
-              f.write(content)
-          print('FCM delegate methods injected (posts FCM token, not APNs)')
-          "
+with open('ios/App/App/AppDelegate.swift', 'r') as f:
+    content = f.read()
+
+apns_methods = '''
+    // MARK: - APNs Token Registration
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let hexToken = deviceToken.map { String(format: \"%02x\", \$0) }.joined()
+        print(\"[PUSH] APNs deviceToken received (hex): \\(hexToken.prefix(20))...\")
+
+        // 1. Post raw Data to Capacitor (standard flow — Capacitor converts to hex for registration event)
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+
+        // 2. Give APNs token to Firebase for FCM exchange
+        Messaging.messaging().apnsToken = deviceToken
+        print(\"[PUSH] APNs token given to Firebase Messaging\")
+
+        // 3. Fetch FCM token and inject into WebView
+        Messaging.messaging().token(completion: { [weak self] fcmToken, error in
+            if let error = error {
+                print(\"[PUSH] FCM token fetch error: \\(error.localizedDescription)\")
+                return
+            }
+            guard let fcmToken = fcmToken else {
+                print(\"[PUSH] FCM token is nil after fetch\")
+                return
+            }
+            print(\"[PUSH] FCM token received: \\(fcmToken.prefix(30))...\")
+            self?.injectFCMTokenIntoWebView(fcmToken)
+        })
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print(\"[PUSH] APNs registration FAILED: \\(error.localizedDescription)\")
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    // MARK: - MessagingDelegate (FCM token refresh)
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken = fcmToken else { return }
+        print(\"[PUSH] FCM token refreshed: \\(fcmToken.prefix(30))...\")
+        injectFCMTokenIntoWebView(fcmToken)
+    }
+
+    // MARK: - FCM Token WebView Bridge
+    private func injectFCMTokenIntoWebView(_ token: String) {
+        DispatchQueue.main.async {
+            guard let window = UIApplication.shared.windows.first,
+                  let rootVC = window.rootViewController else {
+                print(\"[PUSH] No root view controller found\")
+                return
+            }
+            // Walk the VC hierarchy to find CAPBridgeViewController
+            var vc: UIViewController? = rootVC
+            while let current = vc {
+                if let bridge = current as? CAPBridgeViewController {
+                    let escapedToken = token.replacingOccurrences(of: \"'\", with: \"\\\\\\'\" )
+                    let js = \"window.fcmToken='\\(escapedToken)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(escapedToken)',platform:'ios'}}));console.log('[PUSH] fcmTokenReady dispatched from native, token length:',\\(token.count));\"
+                    bridge.webView?.evaluateJavaScript(js) { result, error in
+                        if let error = error {
+                            print(\"[PUSH] JS injection error: \\(error.localizedDescription)\")
+                        } else {
+                            print(\"[PUSH] FCM token injected into WebView successfully\")
+                        }
+                    }
+                    return
+                }
+                // Try presented or child VCs
+                if let presented = current.presentedViewController {
+                    vc = presented
+                } else if let first = current.children.first {
+                    vc = first
+                } else {
+                    break
+                }
+            }
+            print(\"[PUSH] CAPBridgeViewController not found in VC hierarchy, retrying in 2s...\")
+            // Retry after 2s (WebView may not be ready yet at app launch)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                guard let window = UIApplication.shared.windows.first,
+                      let rootVC = window.rootViewController else { return }
+                var retryVC: UIViewController? = rootVC
+                while let current = retryVC {
+                    if let bridge = current as? CAPBridgeViewController {
+                        let escapedToken = token.replacingOccurrences(of: \"'\", with: \"\\\\\\'\" )
+                        let js = \"window.fcmToken='\\(escapedToken)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(escapedToken)',platform:'ios'}}));console.log('[PUSH] fcmTokenReady dispatched (retry)');\"
+                        bridge.webView?.evaluateJavaScript(js)
+                        print(\"[PUSH] FCM token injected on retry\")
+                        return
+                    }
+                    if let presented = current.presentedViewController {
+                        retryVC = presented
+                    } else if let first = current.children.first {
+                        retryVC = first
+                    } else {
+                        break
+                    }
+                }
+                print(\"[PUSH] CAPBridgeViewController still not found after retry\")
+            }
+        }
+    }
+'''
+
+last_brace = content.rfind('}')
+if last_brace != -1:
+    content = content[:last_brace] + apns_methods + '\\n' + content[last_brace:]
+with open('ios/App/App/AppDelegate.swift', 'w') as f:
+    f.write(content)
+print('✅ APNs + FCM + WebView bridge methods injected')
+"
               
-              echo "✅ Firebase + APNs delegates configured in AppDelegate"
+              echo "✅ Firebase + APNs + FCM WebView bridge configured in AppDelegate"
             else
               echo "ℹ️ Firebase already configured in AppDelegate"
-              # Still check if APNs methods are missing
-              if ! grep -q "didRegisterForRemoteNotificationsWithDeviceToken" "$DELEGATE"; then
+              # Still check if WebView bridge is missing
+              if ! grep -q "injectFCMTokenIntoWebView" "$DELEGATE"; then
+                echo "⚠️ WebView bridge missing, re-injecting..."
+                # Add Capacitor import if missing
+                if ! grep -q "import Capacitor" "$DELEGATE"; then
+                  sed -i '' 's/import FirebaseMessaging/import FirebaseMessaging\nimport Capacitor/' "$DELEGATE"
+                fi
                 # Add MessagingDelegate conformance if missing
-                sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate$/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE" 2>/dev/null || true
+                if ! grep -q "MessagingDelegate" "$DELEGATE"; then
+                  sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE"
+                fi
+                # Remove old APNs methods and re-inject with WebView bridge
                 python3 -c "
-          with open('ios/App/App/AppDelegate.swift', 'r') as f:
-              content = f.read()
-          if 'import FirebaseMessaging' not in content:
-              content = content.replace('import FirebaseCore', 'import FirebaseCore\nimport FirebaseMessaging')
-          # Ensure MessagingDelegate conformance
-          if 'MessagingDelegate' not in content:
-              content = content.replace('UIApplicationDelegate {', 'UIApplicationDelegate, MessagingDelegate {')
-          apns_methods = '\n'.join([
-              '    // MARK: - APNs Token Registration',
-              '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
-              '        Messaging.messaging().apnsToken = deviceToken',
-              '        Messaging.messaging().token(completion: { fcmToken, error in',
-              '            if let fcmToken = fcmToken {',
-              '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
-              '            }',
-              '        })',
-              '    }',
-              '',
-              '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
-              '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
-              '    }',
-              '',
-              '    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {',
-              '        guard let fcmToken = fcmToken else { return }',
-              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
-              '    }',
-          ])
-          last_brace = content.rfind('}')
-          if last_brace != -1:
-              content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
-          with open('ios/App/App/AppDelegate.swift', 'w') as f:
-              f.write(content)
-          print('FCM delegate methods added with MessagingDelegate conformance')
-          "
+with open('ios/App/App/AppDelegate.swift', 'r') as f:
+    content = f.read()
+
+# Remove existing didRegisterForRemoteNotifications methods
+import re
+# Remove old methods (they post String instead of Data)
+content = re.sub(r'    // MARK: - APNs Token Registration.*?(?=\n    // MARK: -|\n\})', '', content, flags=re.DOTALL)
+content = re.sub(r'    func application\(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken.*?^\    \}', '', content, flags=re.DOTALL|re.MULTILINE)
+content = re.sub(r'    func application\(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError.*?^\    \}', '', content, flags=re.DOTALL|re.MULTILINE)
+content = re.sub(r'    func messaging\(_ messaging: Messaging, didReceiveRegistrationToken.*?^\    \}', '', content, flags=re.DOTALL|re.MULTILINE)
+
+apns_methods = '''
+    // MARK: - APNs Token Registration
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print(\"[PUSH] APNs deviceToken received\")
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+        Messaging.messaging().apnsToken = deviceToken
+        Messaging.messaging().token(completion: { [weak self] fcmToken, error in
+            if let fcmToken = fcmToken {
+                print(\"[PUSH] FCM token received: \\(fcmToken.prefix(30))...\")
+                self?.injectFCMTokenIntoWebView(fcmToken)
+            }
+        })
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken = fcmToken else { return }
+        print(\"[PUSH] FCM token refreshed\")
+        injectFCMTokenIntoWebView(fcmToken)
+    }
+
+    private func injectFCMTokenIntoWebView(_ token: String) {
+        DispatchQueue.main.async {
+            guard let window = UIApplication.shared.windows.first,
+                  let rootVC = window.rootViewController else { return }
+            var vc: UIViewController? = rootVC
+            while let current = vc {
+                if let bridge = current as? CAPBridgeViewController {
+                    let js = \"window.fcmToken='\\(token)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(token)',platform:'ios'}}));\"
+                    bridge.webView?.evaluateJavaScript(js)
+                    return
+                }
+                if let p = current.presentedViewController { vc = p }
+                else if let c = current.children.first { vc = c }
+                else { break }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                guard let w = UIApplication.shared.windows.first, let r = w.rootViewController else { return }
+                var v: UIViewController? = r
+                while let c = v {
+                    if let b = c as? CAPBridgeViewController {
+                        let js = \"window.fcmToken='\\(token)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(token)',platform:'ios'}}));\"
+                        b.webView?.evaluateJavaScript(js)
+                        return
+                    }
+                    if let p = c.presentedViewController { v = p }
+                    else if let f = c.children.first { v = f }
+                    else { break }
+                }
+            }
+        }
+    }
+'''
+
+last_brace = content.rfind('}')
+if last_brace != -1:
+    content = content[:last_brace] + apns_methods + '\\n' + content[last_brace:]
+with open('ios/App/App/AppDelegate.swift', 'w') as f:
+    f.write(content)
+print('✅ WebView bridge re-injected')
+"
               fi
             fi
           else
