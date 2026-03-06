@@ -113,9 +113,6 @@ export const usePushNotifications = () => {
     return capPlatform;
   }, []);
 
-  const isRawApnsToken = useCallback((t: string): boolean => {
-    return /^[A-Fa-f0-9]{64}$/.test(t);
-  }, []);
 
   /** Save token via edge function WITH Authorization header */
   const saveTokenViaEdgeFunction = useCallback(async (pushToken: string, userId: string, platform: string): Promise<boolean> => {
@@ -203,11 +200,7 @@ export const usePushNotifications = () => {
   /** Save token to DB */
   const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
     const platform = detectPlatform();
-    if (platform === 'ios' && isRawApnsToken(pushToken)) {
-      logError('[SAVE] 🍎 APNs raw token detected (hex-64), NOT saving. Waiting for FCM token...');
-      updateDebug({ apnsHexDetected: true });
-      return false;
-    }
+    // No longer filtering APNs tokens on frontend — backend handles validation
 
     if (!user) {
       log('[SAVE] No user, storing token pending');
@@ -292,7 +285,7 @@ export const usePushNotifications = () => {
       pendingTokenRef.current = pushToken;
       return false;
     }
-  }, [user, detectPlatform, saveTokenViaEdgeFunction, isRawApnsToken, updateDebug]);
+  }, [user, detectPlatform, saveTokenViaEdgeFunction, updateDebug]);
 
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
@@ -335,13 +328,14 @@ export const usePushNotifications = () => {
 
         if (!receivedToken) return;
 
-        if (isRawApnsToken(receivedToken)) {
-          log('[EVENT] 🍎 APNs hex token (64 chars) — IGNORING. Waiting for fcmTokenReady...');
+        // Accept ALL tokens (including APNs hex-64) — backend will validate
+        const isHex64 = /^[A-Fa-f0-9]{64}$/.test(receivedToken);
+        if (isHex64) {
+          log('[EVENT] 🍎 APNs hex token detected (64 chars) — saving anyway, FCM will overwrite later');
           updateDebug({ apnsHexDetected: true });
-          return;
         }
 
-        log('[EVENT] ✅ Valid token received (not APNs hex), saving...');
+        log('[EVENT] ✅ Token received, saving... length=' + receivedToken.length);
         updateDebug({ fcmTokenLength: receivedToken.length, selectedFinalToken: receivedToken.substring(0, 20) + '...' });
         setToken(receivedToken);
         pendingTokenRef.current = receivedToken;
