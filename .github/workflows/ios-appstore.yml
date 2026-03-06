@@ -43,12 +43,13 @@ jobs:
         env:
           GOOGLE_SERVICE_INFO: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_BASE64 }}
         run: |
-          if [ -n "$GOOGLE_SERVICE_INFO" ]; then
-            echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/App/App/GoogleService-Info.plist
-            echo "✅ GoogleService-Info.plist added"
-          else
-            echo "⚠️ IOS_GOOGLE_SERVICE_INFO_BASE64 secret not set, skipping"
+          if [ -z "$GOOGLE_SERVICE_INFO" ]; then
+            echo "❌ IOS_GOOGLE_SERVICE_INFO_BASE64 secret NOT set — Firebase will NOT work!"
+            exit 1
           fi
+          echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/App/App/GoogleService-Info.plist
+          echo "✅ GoogleService-Info.plist added"
+          echo "📋 Plist size: $(wc -c < ios/App/App/GoogleService-Info.plist) bytes"
 
       - name: 📲 Configure Push Notification entitlements
         run: |
@@ -78,6 +79,13 @@ jobs:
 
       - name: 🔥 Configure AppDelegate for Firebase + APNs + FCM WebView bridge
         run: bash scripts/configure_ios_push.sh
+
+      - name: 📋 Verify AppDelegate injection (CI proof)
+        run: |
+          echo "=== AppDelegate.swift push methods ==="
+          grep -n 'PUSH\|fcmToken\|apnsToken\|injectFCM\|didRegister\|MessagingDelegate\|traceId' ios/App/App/AppDelegate.swift || echo "⚠️ No push markers found"
+          echo "=== end ==="
+
       - name: 🔥 Enable Firebase APNs proxy in Info.plist
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
