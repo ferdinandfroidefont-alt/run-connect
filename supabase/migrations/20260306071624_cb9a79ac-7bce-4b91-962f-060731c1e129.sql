@@ -1,0 +1,1 @@
+UPDATE profiles SET push_token = NULL, push_token_updated_at = NULL WHERE push_token_platform = 'ios' AND push_token ~ '^[A-Fa-f0-9]{64}$'

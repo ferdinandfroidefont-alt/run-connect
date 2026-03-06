@@ -99,8 +99,20 @@ export const usePushNotifications = () => {
     }
   }, []);
 
+  /** Detect if a token is a raw APNs token (hex 64 chars) — NOT a valid FCM token */
+  const isRawApnsToken = useCallback((t: string): boolean => {
+    return /^[A-Fa-f0-9]{64}$/.test(t);
+  }, []);
+
   /** Save token to DB — with retry if profile doesn't exist yet */
   const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
+    // Block raw APNs tokens (iOS sends hex-64 APNs token instead of FCM token)
+    const platform = detectPlatform();
+    if (platform === 'ios' && isRawApnsToken(pushToken)) {
+      logError('🍎 APNs raw token detected (hex-64), NOT saving. Waiting for FCM token...');
+      return false;
+    }
+
     if (!user) {
       log('No user, storing token in pendingTokenRef');
       setToken(pushToken);
@@ -187,7 +199,7 @@ export const usePushNotifications = () => {
       pendingTokenRef.current = pushToken;
       return false;
     }
-  }, [user, detectPlatform, saveTokenViaEdgeFunction]);
+  }, [user, detectPlatform, saveTokenViaEdgeFunction, isRawApnsToken]);
 
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
@@ -414,10 +426,14 @@ export const usePushNotifications = () => {
 
       if (data?.fcm_sent) {
         toast({ title: "✅ Notification envoyée !", description: "Vérifiez votre barre de notification" });
+      } else if (data?.token_cleaned) {
+        toast({ title: "Token invalide nettoyé", description: "Redémarrez l'app pour régénérer le token push", variant: "destructive" });
       } else if (data?.web_only) {
         toast({ title: "Token web", description: "Le token enregistré n'est pas un token mobile" });
       } else {
-        toast({ title: "Notification créée", description: "Enregistrée mais non envoyée (token invalide ?)" });
+        const stage = data?.stage || 'unknown';
+        const reason = data?.reason || '';
+        toast({ title: "Notification créée", description: `Non envoyée en push (${stage}: ${reason})`, variant: "destructive" });
       }
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });

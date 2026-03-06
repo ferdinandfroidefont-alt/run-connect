@@ -142,9 +142,10 @@ async function sendFCMNotification(
     if (!response.ok) {
       console.error('❌ [FCM] Failed:', response.status, JSON.stringify(responseData));
 
-      // UNREGISTERED token → clean up
-      if (response.status === 404 && responseData?.error?.details?.[0]?.errorCode === 'UNREGISTERED') {
-        console.log('🗑️ [FCM] Token UNREGISTERED → cleanup needed');
+      // UNREGISTERED or INVALID_ARGUMENT token → clean up
+      const errorCode = responseData?.error?.details?.[0]?.errorCode;
+      if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
+        console.log(`🗑️ [FCM] Token ${errorCode} → cleanup needed`);
         return { unregistered: true, token };
       }
 
