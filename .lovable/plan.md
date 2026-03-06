@@ -1,109 +1,53 @@
 
 
-## Plan: Fix iOS Crash — Versioned AppDelegate + Strict CI
+## Diagnostic
 
-### Root Cause (Refined)
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-The crash at `+[FIRApp configure]` line 13 persists because the sed-based injection into a Capacitor-generated AppDelegate is inherently fragile. Capacitor 8 alpha may generate a different AppDelegate structure than expected, causing malformed Swift or unexpected initialization order. The `FirebaseAutoConfigEnabled` key set in the workflow is NOT a real Firebase iOS SDK key — it does nothing.
+Deux problemes distincts :
 
-The only reliable fix: **stop injecting code into an unknown template**. Version the complete AppDelegate.swift directly.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### Changes
+## Solution en 2 parties
 
-#### 1. Create `ios-source/AppDelegate.swift` (NEW FILE)
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-A complete, production-ready AppDelegate.swift with:
-- All imports (UIKit, FirebaseCore, FirebaseMessaging, Capacitor)
-- `MessagingDelegate` conformance
-- Safe Firebase init: `if FirebaseApp.app() == nil { FirebaseApp.configure() }`
-- `Messaging.messaging().delegate = self`
-- All push methods (APNs registration, FCM token exchange, WebView bridge)
-- Extensive `[PUSH][IOS]` logging
-
-This file is the single source of truth. No more sed injection.
-
-#### 2. Rewrite `scripts/configure_ios_push.sh`
-
-Replace all the sed-injection logic with a simple copy + assertion:
-
-```text
-1. Copy ios-source/AppDelegate.swift → ios/App/App/AppDelegate.swift
-2. Assert FirebaseApp.configure appears exactly ONCE
-3. Assert didFinishLaunchingWithOptions appears exactly ONCE
-4. Assert all push markers present
-5. Print full file to CI logs for proof
-```
-
-Remove `inject_ios_push.py` call — all code is already in the versioned file.
-
-#### 3. Update `.github/workflows/ios-appstore.yml`
-
-- Remove the `FirebaseAutoConfigEnabled` line (not a real Firebase key)
-- Keep `FirebaseAppDelegateProxyEnabled = false`
-- Add a dedicated blocking assertion step that counts occurrences across ALL Swift files:
-  ```bash
-  grep -rn "FirebaseApp.configure" ios/ | wc -l  # must be exactly 1
-  grep -rn "didFinishLaunchingWithOptions" ios/ | wc -l  # verify
-  ```
-
-#### 4. `scripts/inject_ios_push.py` — Mark as no longer needed
-
-The push methods are now part of the versioned AppDelegate. Keep the file for reference but it won't be called.
-
-### Files to create/modify
-- `ios-source/AppDelegate.swift` — NEW: complete versioned AppDelegate
-- `scripts/configure_ios_push.sh` — Rewrite: copy + assertions only
-- `.github/workflows/ios-appstore.yml` — Add blocking assertions, remove fake key
-
-### Final AppDelegate.swift structure
-
-```text
-import UIKit
-import FirebaseCore
-import FirebaseMessaging
-import Capacitor
-
-@UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
-
-    func application(didFinishLaunchingWithOptions) -> Bool {
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
-        Messaging.messaging().delegate = self
-        return true
-    }
-
-    func application(didRegisterForRemoteNotifications) { ... }
-    func application(didFailToRegisterForRemoteNotifications) { ... }
-    func messaging(didReceiveRegistrationToken) { ... }
-    private func injectFCMTokenIntoWebView() { ... }
-}
-```
-
-### CI assertion step
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
 ```bash
-# BLOCKING: exactly 1 FirebaseApp.configure in entire ios/ tree
-COUNT=$(grep -rn "FirebaseApp.configure" ios/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
-if [ "$COUNT" -ne 1 ]; then
-  echo "❌ FATAL: Found $COUNT occurrences of FirebaseApp.configure()"
-  grep -rn "FirebaseApp.configure" ios/
-  exit 1
-fi
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-# BLOCKING: exactly 1 didFinishLaunchingWithOptions implementation
-DFLO=$(grep -rn "didFinishLaunchingWithOptions.*-> Bool" ios/App/App/AppDelegate.swift | wc -l | tr -d ' ')
-if [ "$DFLO" -ne 1 ]; then
-  echo "❌ FATAL: Found $DFLO didFinishLaunchingWithOptions"
-  exit 1
-fi
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-### Why this will work
-- No more sed pattern matching against unknown Capacitor templates
-- No more risk of double injection from script re-runs
-- The AppDelegate is fully controlled and tested
-- CI assertions block the build if ANY duplication exists
-- `FirebaseApp.app() == nil` check is belt-and-suspenders safety
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
