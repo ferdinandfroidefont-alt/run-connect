@@ -35,7 +35,7 @@ fi
 echo "✅ didFinishLaunchingWithOptions found exactly 1 time"
 
 # ─── STEP 4: BLOCKING — check across ios/App/App/ for duplicates (excludes Pods) ───
-TREE_MATCHES=$(grep -rn "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
+TREE_MATCHES=$(grep -rn --include="*.swift" "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
 TREE_COUNT=0
 if [ -n "$TREE_MATCHES" ]; then
   TREE_COUNT=$(echo "$TREE_MATCHES" | wc -l | tr -d ' ')
