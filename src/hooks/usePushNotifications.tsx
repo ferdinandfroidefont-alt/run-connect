@@ -52,6 +52,9 @@ const initialDebug: PushDebugState = {
   timestamp: new Date().toISOString(),
 };
 
+/** Check if token is a raw APNs hex token (64 hex chars) — NOT a valid FCM token */
+const isApnsHexToken = (t: string): boolean => /^[A-Fa-f0-9]{64}$/.test(t);
+
 export const usePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -113,20 +116,18 @@ export const usePushNotifications = () => {
     return capPlatform;
   }, []);
 
-
   /** Save token via edge function WITH Authorization header */
   const saveTokenViaEdgeFunction = useCallback(async (pushToken: string, userId: string, platform: string): Promise<boolean> => {
     const traceId = (window as any).__fcmTraceId || String(Date.now());
     try {
-      log('[SAVE] Calling save-push-token edge function traceId=' + traceId);
+      log('[SAVE-EF] Calling save-push-token edge function traceId=' + traceId + ' platform=' + platform + ' tokenLen=' + pushToken.length);
       updateDebug({ saveAttempted: true, traceId });
 
-      // Get JWT for Authorization
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
 
       if (!accessToken) {
-        logError('[SAVE] No access_token available');
+        logError('[SAVE-EF] No access_token available');
         updateDebug({ lastError: 'No access_token for save-push-token' });
       }
 
@@ -149,12 +150,11 @@ export const usePushNotifications = () => {
       let bodyJson: any = null;
       try { bodyJson = JSON.parse(bodyText); } catch {}
 
-      log('[SAVE] Response status=' + response.status + ' body=' + bodyText);
+      log('[SAVE-EF] Response status=' + response.status + ' body=' + bodyText);
       updateDebug({ saveResponse: { status: response.status, body: bodyJson || bodyText } });
 
       if (response.ok) {
-        log('[SAVE] ✅ Token saved via edge function');
-        // Verify by reading back
+        log('[SAVE-EF] ✅ Token saved via edge function');
         setTimeout(async () => {
           try {
             const { data: profile } = await supabase
@@ -171,11 +171,11 @@ export const usePushNotifications = () => {
         }, 2000);
         return true;
       }
-      logError('[SAVE] Edge function failed:', response.status, bodyText);
+      logError('[SAVE-EF] Edge function failed:', response.status, bodyText);
       updateDebug({ lastError: `save-push-token ${response.status}: ${bodyText.substring(0, 200)}` });
       return false;
     } catch (e: any) {
-      logError('[SAVE] Exception:', e);
+      logError('[SAVE-EF] Exception:', e);
       updateDebug({ lastError: e.message });
       return false;
     }
@@ -197,10 +197,19 @@ export const usePushNotifications = () => {
     }
   }, [user, updateDebug]);
 
-  /** Save token to DB */
+  /** Save token — iOS ONLY uses edge function (has APNs hex guard), Android uses client */
   const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
     const platform = detectPlatform();
-    // No longer filtering APNs tokens on frontend — backend handles validation
+
+    // ── iOS: REJECT raw APNs hex tokens on the frontend ──
+    if (platform === 'ios' && isApnsHexToken(pushToken)) {
+      log('[SAVE] 🍎 BLOCKED: APNs hex-64 token on iOS — waiting for real FCM token via fcmTokenReady');
+      updateDebug({ apnsHexDetected: true, lastError: 'APNs hex token blocked, waiting for FCM' });
+      // Store as pending but do NOT save to DB
+      pendingTokenRef.current = pushToken;
+      (window as any).__pendingApnsToken = pushToken;
+      return false;
+    }
 
     if (!user) {
       log('[SAVE] No user, storing token pending');
@@ -234,7 +243,7 @@ export const usePushNotifications = () => {
       }
 
       if (existing.push_token === pushToken) {
-        log('[SAVE] Token already saved');
+        log('[SAVE] Token already saved (identical)');
         setToken(pushToken);
         pendingTokenRef.current = null;
         setIsRegistered(true);
@@ -242,6 +251,23 @@ export const usePushNotifications = () => {
         return true;
       }
 
+      // ── iOS: always use edge function (server-side APNs guard) ──
+      if (platform === 'ios') {
+        log('[SAVE] 🍎 iOS: saving via edge function only (server-side validation)');
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        if (edgeSaved) {
+          setToken(pushToken);
+          pendingTokenRef.current = null;
+          setIsRegistered(true);
+          updateDebug({ selectedFinalToken: pushToken.substring(0, 20) + '...' });
+          return true;
+        }
+        setToken(pushToken);
+        pendingTokenRef.current = pushToken;
+        return false;
+      }
+
+      // ── Android/Web: save via Supabase client (faster) ──
       log('[SAVE] Saving via Supabase client, platform=' + platform);
       const { error } = await supabase
         .from('profiles')
@@ -328,14 +354,19 @@ export const usePushNotifications = () => {
 
         if (!receivedToken) return;
 
-        // Accept ALL tokens (including APNs hex-64) — backend will validate
-        const isHex64 = /^[A-Fa-f0-9]{64}$/.test(receivedToken);
-        if (isHex64) {
-          log('[EVENT] 🍎 APNs hex token detected (64 chars) — saving anyway, FCM will overwrite later');
+        const platform = detectPlatform();
+
+        // ── iOS: APNs hex token must NOT be saved ──
+        if (platform === 'ios' && isApnsHexToken(receivedToken)) {
+          log('[EVENT] 🍎 APNs hex-64 detected on iOS — NOT saving. Waiting for fcmTokenReady bridge event.');
           updateDebug({ apnsHexDetected: true });
+          // Store raw APNs token for debug but don't save to DB
+          (window as any).__pendingApnsToken = receivedToken;
+          return; // ← Critical: do NOT call savePushToken
         }
 
-        log('[EVENT] ✅ Token received, saving... length=' + receivedToken.length);
+        // ── Android/Web: save immediately ──
+        log('[EVENT] ✅ Token received (non-APNs), saving... length=' + receivedToken.length);
         updateDebug({ fcmTokenLength: receivedToken.length, selectedFinalToken: receivedToken.substring(0, 20) + '...' });
         setToken(receivedToken);
         pendingTokenRef.current = receivedToken;
@@ -345,7 +376,6 @@ export const usePushNotifications = () => {
         const saved = await savePushToken(receivedToken);
         if (!saved && user) {
           log('[EVENT] Direct save failed, edge function fallback');
-          const platform = detectPlatform();
           const edgeSaved = await saveTokenViaEdgeFunction(receivedToken, user.id, platform);
           if (edgeSaved) {
             pendingTokenRef.current = null;
@@ -363,7 +393,6 @@ export const usePushNotifications = () => {
 
               if (!profile?.push_token || profile.push_token !== receivedToken) {
                 log('[EVENT] Token not in DB after 3s, edge function fallback');
-                const platform = detectPlatform();
                 await saveTokenViaEdgeFunction(receivedToken, user.id, platform);
                 pendingTokenRef.current = null;
               }
@@ -468,7 +497,7 @@ export const usePushNotifications = () => {
       if (!dbToken || dbToken.length < 50) {
         const memoryToken = token || pendingTokenRef.current || (window as any).fcmToken || (window as any).__fcmTokenBuffer || (window as any).__pendingPushToken;
 
-        if (memoryToken && typeof memoryToken === 'string' && memoryToken.length > 50) {
+        if (memoryToken && typeof memoryToken === 'string' && memoryToken.length > 50 && !isApnsHexToken(memoryToken)) {
           log('[TEST] Token in memory, saving via edge function...');
           const platform = detectPlatform();
           const saved = await saveTokenViaEdgeFunction(memoryToken, user.id, platform);
@@ -541,13 +570,13 @@ export const usePushNotifications = () => {
 
           if (status.receive === 'granted') {
             const { data: profile } = await supabase.from('profiles').select('push_token').eq('user_id', user.id).maybeSingle();
-            if (profile?.push_token) {
-              log('[INIT] Token already in DB');
+            if (profile?.push_token && !isApnsHexToken(profile.push_token)) {
+              log('[INIT] Valid token already in DB, length=' + profile.push_token.length);
               setToken(profile.push_token);
               setIsRegistered(true);
               updateDebug({ backendProfilePushToken: profile.push_token, selectedFinalToken: profile.push_token.substring(0, 20) + '...' });
             } else {
-              log('[INIT] No token in DB, calling register()...');
+              log('[INIT] No valid token in DB, calling register()...');
               updateDebug({ registerCalled: true });
               await PushNotifications.register();
               log('[INIT] register() called');
@@ -579,8 +608,8 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     const pending = pendingTokenRef.current || (window as any).__pendingPushToken;
-    if (pending && typeof pending === 'string' && pending.length > 50) {
-      log('[PENDING] User available + pending token found');
+    if (pending && typeof pending === 'string' && pending.length > 50 && !isApnsHexToken(pending)) {
+      log('[PENDING] User available + valid pending token found');
       savePushToken(pending).then(saved => {
         if (saved) {
           pendingTokenRef.current = null;
@@ -616,7 +645,7 @@ export const usePushNotifications = () => {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (profile?.push_token) {
+        if (profile?.push_token && !isApnsHexToken(profile.push_token)) {
           setToken(profile.push_token);
           setIsRegistered(true);
           updateDebug({ backendProfilePushToken: profile.push_token });
@@ -625,7 +654,7 @@ export const usePushNotifications = () => {
       } catch {}
 
       const pendingToken = token || pendingTokenRef.current || (window as any).fcmToken || (window as any).__fcmTokenBuffer || (window as any).__pendingPushToken;
-      if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50) {
+      if (pendingToken && typeof pendingToken === 'string' && pendingToken.length > 50 && !isApnsHexToken(pendingToken)) {
         const saved = await savePushToken(pendingToken);
         if (saved) return true;
       }
@@ -658,16 +687,18 @@ export const usePushNotifications = () => {
     const retryInterval = 8000;
 
     const retryTimer = setInterval(async () => {
-      if (token || pendingTokenRef.current) {
-        log('[IOS-RETRY] Token acquired, stopping');
+      // Stop retrying if we have a valid (non-APNs) token
+      const currentToken = token || pendingTokenRef.current;
+      if (currentToken && !isApnsHexToken(currentToken)) {
+        log('[IOS-RETRY] Valid FCM token acquired, stopping');
         clearInterval(retryTimer);
         return;
       }
 
       iosRetryCountRef.current += 1;
       if (iosRetryCountRef.current > maxRetries) {
-        logError('[IOS-RETRY] Max retries reached (' + maxRetries + '). Token still null.');
-        updateDebug({ lastError: 'iOS max retries reached, no FCM token received' });
+        logError('[IOS-RETRY] Max retries reached (' + maxRetries + '). No FCM token received.');
+        updateDebug({ lastError: 'iOS max retries reached, no FCM token received. Check Firebase init in AppDelegate.' });
         clearInterval(retryTimer);
         return;
       }
@@ -689,7 +720,7 @@ export const usePushNotifications = () => {
     return () => clearInterval(retryTimer);
   }, [user, isNative, token, updateDebug]);
 
-  // ─── useEffect #5: fcmTokenReady listener ────────────────
+  // ─── useEffect #5: fcmTokenReady listener (PRIMARY iOS path) ────
 
   useEffect(() => {
     const handleFcmTokenReady = async (event: Event) => {
@@ -697,17 +728,23 @@ export const usePushNotifications = () => {
       const t = customEvent.detail?.token;
       const traceId = customEvent.detail?.traceId || (window as any).__fcmTraceId || null;
 
-      log('[EVENT] fcmTokenReady received length=' + (t?.length || 0) + ' traceId=' + traceId);
+      log('[EVENT] 🍎 fcmTokenReady received length=' + (t?.length || 0) + ' traceId=' + traceId);
       updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: t?.length || null, traceId });
 
       if (t && t.length > 50) {
-        // Always process if token is different from current
+        // Reject if somehow still an APNs hex token
+        if (isApnsHexToken(t)) {
+          logError('[EVENT] fcmTokenReady received APNs hex token — this should not happen. Firebase may not be initialized.');
+          updateDebug({ lastError: 'fcmTokenReady got APNs hex — Firebase not initialized?' });
+          return;
+        }
+
         if (t === token && isRegistered) {
           log('[EVENT] fcmTokenReady same as current token, skipping');
           return;
         }
 
-        log('[EVENT] fcmTokenReady — processing new FCM token');
+        log('[EVENT] fcmTokenReady — ✅ VALID FCM token, saving as final token');
         setIsNative(true);
         setToken(t);
         pendingTokenRef.current = t;
@@ -723,7 +760,7 @@ export const usePushNotifications = () => {
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
 
     const existingToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
-    if (existingToken && typeof existingToken === 'string' && existingToken.length > 50) {
+    if (existingToken && typeof existingToken === 'string' && existingToken.length > 50 && !isApnsHexToken(existingToken)) {
       log('[EVENT] window.fcmToken already present at mount, length=' + existingToken.length);
       setIsNative(true);
       setToken(existingToken);
@@ -739,8 +776,8 @@ export const usePushNotifications = () => {
     if (platform === 'ios') {
       fallbackTimer = setTimeout(() => {
         if (!token && !pendingTokenRef.current) {
-          logError('[FALLBACK] ⚠️ No fcmTokenReady received after 15s on iOS');
-          updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS' });
+          logError('[FALLBACK] ⚠️ No fcmTokenReady received after 15s on iOS — Firebase may not be initialized in AppDelegate');
+          updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Verify FirebaseApp.configure() in AppDelegate.' });
         }
       }, 15000);
     }
@@ -772,7 +809,7 @@ export const usePushNotifications = () => {
               .eq('user_id', user.id)
               .single();
 
-            if (profile?.push_token) {
+            if (profile?.push_token && !isApnsHexToken(profile.push_token)) {
               setToken(profile.push_token);
               setIsRegistered(true);
             } else {
