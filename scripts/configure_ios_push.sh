@@ -33,27 +33,40 @@ fi
 # Capacitor's AppDelegate does NOT call super.application(...)
 # It just has: func application(_ application:..., didFinishLaunchingWithOptions...) -> Bool { return true }
 # We must match the actual function signature, not super.application
-if ! grep -q "FirebaseApp.configure" "$DELEGATE"; then
-  # Strategy: insert after the opening brace of didFinishLaunchingWithOptions
+if ! grep -q "FirebaseApp.app()" "$DELEGATE"; then
+  # Strategy: insert safe Firebase init after the opening brace of didFinishLaunchingWithOptions
   sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
-        FirebaseApp.configure()\
+        if FirebaseApp.app() == nil {\
+            FirebaseApp.configure()\
+            print("[PUSH][IOS] Firebase configured")\
+        } else {\
+            print("[PUSH][IOS] Firebase already configured, skipping")\
+        }\
         Messaging.messaging().delegate = self\
-        print("[PUSH][IOS] Firebase configured + MessagingDelegate set")
+        print("[PUSH][IOS] MessagingDelegate set")
 ' "$DELEGATE"
-  echo "✅ FirebaseApp.configure() injected via didFinishLaunchingWithOptions pattern"
+  echo "✅ Safe FirebaseApp.configure() injected via didFinishLaunchingWithOptions pattern"
 fi
 
-# ─── HARD ASSERTION: FirebaseApp.configure() MUST be present ───
-if ! grep -q "FirebaseApp.configure" "$DELEGATE"; then
+# ─── HARD ASSERTION: Safe Firebase init MUST be present ───
+if ! grep -q "FirebaseApp.app() == nil" "$DELEGATE"; then
   echo ""
-  echo "❌ FATAL: FirebaseApp.configure() injection FAILED"
+  echo "❌ FATAL: Safe FirebaseApp.configure() injection FAILED"
   echo "The sed pattern did not match the AppDelegate structure."
   echo "--- Full AppDelegate.swift content ---"
   cat "$DELEGATE"
   echo "--- end ---"
   exit 1
 fi
-echo "✅ FirebaseApp.configure() confirmed present"
+
+# ─── ASSERT: Only ONE occurrence of FirebaseApp.configure (inside the nil check) ───
+CONFIGURE_COUNT=$(grep -c "FirebaseApp.configure()" "$DELEGATE" || true)
+if [ "$CONFIGURE_COUNT" -ne 1 ]; then
+  echo "❌ FATAL: Found $CONFIGURE_COUNT occurrences of FirebaseApp.configure() — expected exactly 1"
+  grep -n "FirebaseApp.configure" "$DELEGATE"
+  exit 1
+fi
+echo "✅ FirebaseApp.configure() confirmed present exactly once (safe guard)"
 
 # Always use update mode to replace any existing methods with instrumented version
 python3 scripts/inject_ios_push.py --mode update
