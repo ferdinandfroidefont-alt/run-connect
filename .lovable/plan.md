@@ -2,52 +2,29 @@
 
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+La capture montre `token: null` sur iOS TestFlight. Le problème est dans l'injection `AppDelegate.swift` du workflow CI : **le protocole `MessagingDelegate` n'est pas ajouté à la déclaration de classe `AppDelegate`**.
 
-Deux problemes distincts :
+Sans cette conformance, `Messaging.messaging().delegate = self` provoque une erreur de compilation Swift (ou est ignoré silencieusement), ce qui fait que :
+- Le callback `messaging(_:didReceiveRegistrationToken:)` ne s'exécute jamais
+- Le `Messaging.messaging().token { ... }` dans `didRegisterForRemoteNotificationsWithDeviceToken` peut aussi échouer car Firebase n'a pas encore échangé le token APNs contre un FCM token
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+Résultat : Capacitor ne reçoit jamais de token FCM, le `registration` listener ne fire pas (ou fire avec un token APNs qui est bloqué par notre validation hex-64), et `push_token` reste `null`.
 
-## Solution en 2 parties
+## Correctif
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+**Fichier : `.github/workflows/ios-appstore.yml`**
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+1. Ajouter une commande `sed` pour injecter `, MessagingDelegate` dans la déclaration de la classe `AppDelegate` (avant les méthodes et le delegate assignment) :
+   ```bash
+   sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE"
+   ```
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+2. Modifier l'appel `Messaging.messaging().token` pour utiliser la syntaxe explicite `token(completion:)` au lieu du trailing closure, afin d'éviter toute ambiguïté de compilation :
+   ```swift
+   Messaging.messaging().token(completion: { fcmToken, error in ... })
+   ```
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+3. Appliquer ces deux corrections dans les **deux blocs Python** (lignes 95-130 et 137-170).
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+Cela corrige les 2 causes simultanément : le protocole manquant et la syntaxe d'appel potentiellement ambiguë. Après rebuild TestFlight, le token FCM sera correctement généré et posté à Capacitor.
 
