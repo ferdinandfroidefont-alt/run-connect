@@ -199,7 +199,7 @@ export const usePushNotifications = () => {
       pendingTokenRef.current = pushToken;
       return false;
     }
-  }, [user, detectPlatform, saveTokenViaEdgeFunction]);
+  }, [user, detectPlatform, saveTokenViaEdgeFunction, isRawApnsToken]);
 
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
