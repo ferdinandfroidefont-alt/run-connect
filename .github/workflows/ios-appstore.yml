@@ -84,6 +84,9 @@ jobs:
               # Add imports
               sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore\nimport FirebaseMessaging/' "$DELEGATE"
               
+              # Add MessagingDelegate protocol conformance to class declaration
+              sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE"
+              
               # Add FirebaseApp.configure() + Messaging delegate after super.application didFinishLaunchingWithOptions
               sed -i '' '/super.application.*didFinishLaunchingWithOptions/a\
                   FirebaseApp.configure()\
@@ -101,13 +104,13 @@ jobs:
               '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
               '        Messaging.messaging().apnsToken = deviceToken',
               '        // Retrieve the FCM token (NOT the raw APNs token) and post it to Capacitor',
-              '        Messaging.messaging().token { fcmToken, error in',
+              '        Messaging.messaging().token(completion: { fcmToken, error in',
               '            if let fcmToken = fcmToken {',
               '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
               '            } else if let error = error {',
               '                print(\"[PUSH] FCM token error: \\(error.localizedDescription)\")',
               '            }',
-              '        }',
+              '        })',
               '    }',
               '',
               '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
@@ -134,20 +137,25 @@ jobs:
               echo "ℹ️ Firebase already configured in AppDelegate"
               # Still check if APNs methods are missing
               if ! grep -q "didRegisterForRemoteNotificationsWithDeviceToken" "$DELEGATE"; then
+                # Add MessagingDelegate conformance if missing
+                sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate$/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE" 2>/dev/null || true
                 python3 -c "
           with open('ios/App/App/AppDelegate.swift', 'r') as f:
               content = f.read()
           if 'import FirebaseMessaging' not in content:
               content = content.replace('import FirebaseCore', 'import FirebaseCore\nimport FirebaseMessaging')
+          # Ensure MessagingDelegate conformance
+          if 'MessagingDelegate' not in content:
+              content = content.replace('UIApplicationDelegate {', 'UIApplicationDelegate, MessagingDelegate {')
           apns_methods = '\n'.join([
               '    // MARK: - APNs Token Registration',
               '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
               '        Messaging.messaging().apnsToken = deviceToken',
-              '        Messaging.messaging().token { fcmToken, error in',
+              '        Messaging.messaging().token(completion: { fcmToken, error in',
               '            if let fcmToken = fcmToken {',
               '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
               '            }',
-              '        }',
+              '        })',
               '    }',
               '',
               '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
@@ -164,7 +172,7 @@ jobs:
               content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
           with open('ios/App/App/AppDelegate.swift', 'w') as f:
               f.write(content)
-          print('FCM delegate methods added to existing Firebase config')
+          print('FCM delegate methods added with MessagingDelegate conformance')
           "
               fi
             fi
