@@ -86,12 +86,15 @@ jobs:
           grep -n 'PUSH\|fcmToken\|apnsToken\|injectFCM\|didRegister\|MessagingDelegate\|traceId' ios/App/App/AppDelegate.swift || echo "⚠️ No push markers found"
           echo "=== end ==="
 
-      - name: 🔥 Enable Firebase APNs proxy in Info.plist
+      - name: 🔥 Disable Firebase auto-init and APNs proxy in Info.plist
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Add :FirebaseAppDelegateProxyEnabled bool false" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :FirebaseAppDelegateProxyEnabled false" "$INFO_PLIST"
-          echo "✅ FirebaseAppDelegateProxyEnabled set to false (custom AppDelegate handles callbacks)"
+          /usr/libexec/PlistBuddy -c "Add :FirebaseAutoConfigEnabled bool false" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :FirebaseAutoConfigEnabled false" "$INFO_PLIST"
+          echo "✅ FirebaseAppDelegateProxyEnabled = false (custom AppDelegate handles callbacks)"
+          echo "✅ FirebaseAutoConfigEnabled = false (prevent double FirebaseApp.configure crash)"
 
       - name: 🔢 Set build number
         run: |
