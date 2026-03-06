@@ -93,14 +93,19 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :FirebaseAppDelegateProxyEnabled false" "$INFO_PLIST"
           echo "✅ FirebaseAppDelegateProxyEnabled = false (custom AppDelegate handles callbacks)"
 
-      - name: 🛡️ BLOCKING — Verify no duplicate Firebase init across ios/
+      - name: 🛡️ BLOCKING — Verify no duplicate Firebase init across ios/App/App/
         run: |
-          echo "🔍 Scanning entire ios/ tree for FirebaseApp.configure..."
+          echo "🔍 Scanning ios/App/App/ for FirebaseApp.configure..."
           
-          # Count FirebaseApp.configure() across ALL Swift files
-          FC_COUNT=$(grep -rn "FirebaseApp.configure" ios/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
+          # Count FirebaseApp.configure() across app source only (excludes Pods)
+          FC_MATCHES=$(grep -rn "FirebaseApp.configure" ios/App/App/ 2>/dev/null || true)
+          FC_FILTERED=$(echo "$FC_MATCHES" | grep -v "^$" | grep -v "//.*FirebaseApp" || true)
+          FC_COUNT=0
+          if [ -n "$FC_FILTERED" ]; then
+            FC_COUNT=$(echo "$FC_FILTERED" | wc -l | tr -d ' ')
+          fi
           echo "   FirebaseApp.configure() occurrences: $FC_COUNT"
-          grep -rn "FirebaseApp.configure" ios/ || true
+          echo "$FC_FILTERED"
           
           if [ "$FC_COUNT" -ne 1 ]; then
             echo "❌ FATAL: Expected exactly 1 FirebaseApp.configure(), found $FC_COUNT"
@@ -109,7 +114,7 @@ jobs:
           fi
           
           # Count didFinishLaunchingWithOptions implementations
-          DFLO_COUNT=$(grep -rn "didFinishLaunchingWithOptions.*-> Bool" ios/App/App/AppDelegate.swift | wc -l | tr -d ' ')
+          DFLO_COUNT=$(grep -c "didFinishLaunchingWithOptions.*-> Bool" ios/App/App/AppDelegate.swift || true)
           echo "   didFinishLaunchingWithOptions in AppDelegate: $DFLO_COUNT"
           
           if [ "$DFLO_COUNT" -ne 1 ]; then
