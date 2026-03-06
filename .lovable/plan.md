@@ -1,53 +1,42 @@
 
 
-## Diagnostic
+## Fix: Remove Over-Aggressive Comment Filter in Step 4
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Root Cause
 
-Deux problemes distincts :
+Step 2 confirms `FirebaseApp.configure()` exists exactly once in the target file. Step 4 then searches the same directory recursively but applies `grep -v "//.*FirebaseApp"` which strips out the valid match. This happens because either:
+- macOS grep interprets the pattern differently on the `grep -rn` output line
+- `cap sync` generates a file containing a commented `// FirebaseApp.configure()` reference, which is the ONLY match found, and gets filtered — leaving count at 0
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+### Fix
 
-## Solution en 2 parties
-
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+**File: `scripts/configure_ios_push.sh`** — Simplify Step 4 to just count raw occurrences without the fragile comment filter. The goal is detecting duplicate files, not filtering comments (Step 2 already validates the single file's content).
 
 ```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+# ─── STEP 4: BLOCKING — check across ios/App/App/ for duplicates (excludes Pods) ───
+TREE_MATCHES=$(grep -rn "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
+TREE_COUNT=0
+if [ -n "$TREE_MATCHES" ]; then
+  TREE_COUNT=$(echo "$TREE_MATCHES" | wc -l | tr -d ' ')
+fi
+if [ "$TREE_COUNT" -ne 1 ]; then
+  echo "❌ FATAL: Found $TREE_COUNT occurrences of FirebaseApp.configure() across ios/App/App/ — expected exactly 1"
+  echo "$TREE_MATCHES"
+  exit 1
+fi
+echo "✅ FirebaseApp.configure() found exactly 1 time across ios/App/App/ tree"
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+Key changes:
+- Remove the `grep -v "//.*FirebaseApp"` filter entirely — it's the cause of the false negative
+- Use `FirebaseApp\.configure()` (escaped dot + parens) for a more precise match
+- Keep `|| true` and `2>/dev/null` for pipefail safety
 
-### Partie 2 : Securiser la page bridge
+Also apply the same simplification to the matching step in **`.github/workflows/ios-appstore.yml`** (the BLOCKING verification step).
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Files to modify
+| File | Change |
+|---|---|
+| `scripts/configure_ios_push.sh` | Remove comment filter from Step 4, use precise regex |
+| `.github/workflows/ios-appstore.yml` | Same fix in the BLOCKING assertion step |
 
