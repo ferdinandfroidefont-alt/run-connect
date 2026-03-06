@@ -1,73 +1,53 @@
 
 
-## Plan: Fix iOS Push Notification Token Flow
+## Diagnostic
 
-### Root Cause Analysis
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-After reading the code, there are 3 concrete bugs preventing the FCM token from reaching the database:
+Deux problemes distincts :
 
-1. **Front-end rejects APNs tokens** (`isRawApnsToken` filter in `usePushNotifications.tsx` lines 116-118, 206-210, 338-342). On iOS, Capacitor's `registration` event fires with the APNs hex token. The code rejects it and waits for `fcmTokenReady` — but if the native bridge fails to inject, no token is ever saved.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-2. **`FirebaseAppDelegateProxyEnabled = true`** (workflow line 92-94). With a custom AppDelegate that manually handles `didRegisterForRemoteNotificationsWithDeviceToken` and `MessagingDelegate`, enabling the proxy causes Firebase to intercept callbacks, creating a conflict. Must be `false`.
+## Solution en 2 parties
 
-3. **Token length filter too aggressive**. Multiple places check `token.length > 50` (lines 477, 588, 634, 709, 732). APNs hex tokens are exactly 64 chars — they pass this check but get caught by `isRawApnsToken`. If we remove the APNs filter, these tokens flow through correctly to `save-push-token` which has the proper backend guard.
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### Changes
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-#### 1. `src/hooks/usePushNotifications.tsx`
-- **Remove** `isRawApnsToken` function (line 116-118)
-- **Remove** APNs hex check in `savePushToken` (lines 206-210)
-- **Remove** APNs hex check in `registration` listener (lines 338-342)
-- **Simplify** `registration` listener: accept ANY token, save immediately
-- Keep `fcmTokenReady` listener as secondary path (native bridge)
-- Keep all debug state and logging
-- Remove `isRawApnsToken` from `useCallback` deps
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-#### 2. `.github/workflows/ios-appstore.yml`
-- Line 92-94: Change `FirebaseAppDelegateProxyEnabled` from `true` to `false`
-
-#### 3. `scripts/inject_ios_push.py` — No changes needed
-The Swift injection code is correct: it posts raw `deviceToken` to Capacitor, assigns to Firebase, fetches FCM token, and bridges to WebView. No modifications required.
-
-#### 4. `scripts/configure_ios_push.sh` — No changes needed
-Already forces re-injection and has assertions.
-
-#### 5. `supabase/functions/save-push-token/index.ts` — No changes needed
-Backend correctly rejects APNs hex-64 tokens with a 422 response. This is the right place for this guard.
-
-### Flow After Fix
-
-```text
-iOS App Launch
-  → PushNotifications.register()
-  → iOS calls didRegisterForRemoteNotifications
-  → AppDelegate posts raw Data to Capacitor
-  → Capacitor fires "registration" with hex APNs token (64 chars)
-  → Front saves immediately via savePushToken()
-    → Supabase client UPDATE (succeeds with APNs token)
-    → OR edge function (rejects hex-64 with 422, front retries later)
-  
-  Meanwhile:
-  → AppDelegate gives token to Firebase
-  → Firebase exchanges for FCM token
-  → AppDelegate injects via evaluateJavaScript → fcmTokenReady
-  → Front receives fcmTokenReady with real FCM token
-  → Front saves FCM token (overwrites APNs token in DB)
-  → save-push-token accepts FCM token (200 OK)
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-The key insight: by removing the front-end APNs filter, we ensure *something* always gets saved. The FCM token arrives shortly after via the native bridge and overwrites it. Even if the bridge fails, at minimum the Supabase client save will store the APNs token (which won't work for FCM push but proves the save path works — making debugging trivial).
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### Files Modified
-- `src/hooks/usePushNotifications.tsx` — Remove isRawApnsToken and all hex-64 guards
-- `.github/workflows/ios-appstore.yml` — Set FirebaseAppDelegateProxyEnabled to false
+### Partie 2 : Securiser la page bridge
 
-### Test Protocol (TestFlight)
-1. Build and deploy to TestFlight with these changes
-2. Install fresh on iPhone, grant notifications
-3. Go to Settings > Notifications
-4. Check debug section: permission should be `granted`, token should be non-null
-5. Check Supabase `profiles.push_token` — should contain a token
-6. If token is hex-64 (APNs), the native bridge isn't working — check Xcode logs for `[PUSH][IOS]`
-7. If token is long FCM format, tap "Tester les notifications" — push should arrive
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 

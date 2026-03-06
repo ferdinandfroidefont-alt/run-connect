@@ -89,9 +89,9 @@ jobs:
       - name: 🔥 Enable Firebase APNs proxy in Info.plist
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
-          /usr/libexec/PlistBuddy -c "Add :FirebaseAppDelegateProxyEnabled bool true" "$INFO_PLIST" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :FirebaseAppDelegateProxyEnabled true" "$INFO_PLIST"
-          echo "✅ FirebaseAppDelegateProxyEnabled set to true"
+          /usr/libexec/PlistBuddy -c "Add :FirebaseAppDelegateProxyEnabled bool false" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :FirebaseAppDelegateProxyEnabled false" "$INFO_PLIST"
+          echo "✅ FirebaseAppDelegateProxyEnabled set to false (custom AppDelegate handles callbacks)"
 
       - name: 🔢 Set build number
         run: |
