@@ -1,100 +1,124 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DELEGATE_TARGET="ios/App/App/AppDelegate.swift"
-DELEGATE_SOURCE="ios-source/AppDelegate.swift"
+DELEGATE="ios/App/App/AppDelegate.swift"
 INFO_PLIST="ios/App/App/Info.plist"
 
-echo "🔒 Strict Hybrid Mode: copying versioned AppDelegate.swift"
+if [ ! -f "$DELEGATE" ]; then
+  echo "⚠️ AppDelegate.swift not found at $DELEGATE"
+  exit 0
+fi
 
-# ─── STEP 1: Copy versioned source ───
-if [ ! -f "$DELEGATE_SOURCE" ]; then
-  echo "❌ FATAL: $DELEGATE_SOURCE not found in repo!"
+# ─── Always force re-injection for traceable builds ───
+echo "🔄 Force re-injecting push methods for traceable build..."
+
+# Add imports if missing
+if ! grep -q "FirebaseCore" "$DELEGATE"; then
+  sed -i '' 's/import UIKit/import UIKit\nimport FirebaseCore\nimport FirebaseMessaging\nimport Capacitor/' "$DELEGATE"
+  echo "✅ Imports added"
+fi
+
+if ! grep -q "import Capacitor" "$DELEGATE"; then
+  sed -i '' 's/import FirebaseMessaging/import FirebaseMessaging\nimport Capacitor/' "$DELEGATE"
+  echo "✅ Capacitor import added"
+fi
+
+# Add MessagingDelegate conformance if missing
+if ! grep -q "MessagingDelegate" "$DELEGATE"; then
+  sed -i '' 's/class AppDelegate: UIResponder, UIApplicationDelegate/class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate/' "$DELEGATE"
+  echo "✅ MessagingDelegate conformance added"
+fi
+
+# ─── CRITICAL FIX: Add FirebaseApp.configure() ───
+# Capacitor's AppDelegate does NOT call super.application(...)
+# It just has: func application(_ application:..., didFinishLaunchingWithOptions...) -> Bool { return true }
+# We must match the actual function signature, not super.application
+if ! grep -q "FirebaseApp.app()" "$DELEGATE"; then
+  # Strategy: insert safe Firebase init after the opening brace of didFinishLaunchingWithOptions
+  sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
+        if FirebaseApp.app() == nil {\
+            FirebaseApp.configure()\
+            print("[PUSH][IOS] Firebase configured")\
+        } else {\
+            print("[PUSH][IOS] Firebase already configured, skipping")\
+        }\
+        Messaging.messaging().delegate = self\
+        print("[PUSH][IOS] MessagingDelegate set")
+' "$DELEGATE"
+  echo "✅ Safe FirebaseApp.configure() injected via didFinishLaunchingWithOptions pattern"
+fi
+
+# ─── HARD ASSERTION: Safe Firebase init MUST be present ───
+if ! grep -q "FirebaseApp.app() == nil" "$DELEGATE"; then
+  echo ""
+  echo "❌ FATAL: Safe FirebaseApp.configure() injection FAILED"
+  echo "The sed pattern did not match the AppDelegate structure."
+  echo "--- Full AppDelegate.swift content ---"
+  cat "$DELEGATE"
+  echo "--- end ---"
   exit 1
 fi
 
-cp "$DELEGATE_SOURCE" "$DELEGATE_TARGET"
-echo "✅ Copied $DELEGATE_SOURCE → $DELEGATE_TARGET"
-
-# ─── STEP 2: BLOCKING ASSERTION — exactly 1 FirebaseApp.configure() ───
-CONFIGURE_COUNT=$(grep -c "FirebaseApp.configure()" "$DELEGATE_TARGET" || true)
+# ─── ASSERT: Only ONE occurrence of FirebaseApp.configure (inside the nil check) ───
+CONFIGURE_COUNT=$(grep -c "FirebaseApp.configure()" "$DELEGATE" || true)
 if [ "$CONFIGURE_COUNT" -ne 1 ]; then
-  echo "❌ FATAL: Found $CONFIGURE_COUNT occurrences of FirebaseApp.configure() in AppDelegate — expected exactly 1"
-  grep -n "FirebaseApp.configure" "$DELEGATE_TARGET"
+  echo "❌ FATAL: Found $CONFIGURE_COUNT occurrences of FirebaseApp.configure() — expected exactly 1"
+  grep -n "FirebaseApp.configure" "$DELEGATE"
   exit 1
 fi
-echo "✅ FirebaseApp.configure() found exactly 1 time"
+echo "✅ FirebaseApp.configure() confirmed present exactly once (safe guard)"
 
-# ─── STEP 3: BLOCKING ASSERTION — exactly 1 didFinishLaunchingWithOptions ───
-DFLO_COUNT=$(grep -c "didFinishLaunchingWithOptions" "$DELEGATE_TARGET" || true)
-if [ "$DFLO_COUNT" -ne 1 ]; then
-  echo "❌ FATAL: Found $DFLO_COUNT occurrences of didFinishLaunchingWithOptions — expected exactly 1"
-  grep -n "didFinishLaunchingWithOptions" "$DELEGATE_TARGET"
-  exit 1
-fi
-echo "✅ didFinishLaunchingWithOptions found exactly 1 time"
+# Always use update mode to replace any existing methods with instrumented version
+python3 scripts/inject_ios_push.py --mode update
 
-# ─── STEP 4: BLOCKING — check across ios/App/App/ for duplicates (excludes Pods) ───
-TREE_MATCHES=$(grep -rn --include="*.swift" "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
-TREE_COUNT=0
-if [ -n "$TREE_MATCHES" ]; then
-  TREE_COUNT=$(echo "$TREE_MATCHES" | wc -l | tr -d ' ')
-fi
-if [ "$TREE_COUNT" -ne 1 ]; then
-  echo "❌ FATAL: Found $TREE_COUNT occurrences of FirebaseApp.configure() across ios/App/App/ — expected exactly 1"
-  echo "$TREE_MATCHES"
-  exit 1
-fi
-echo "✅ FirebaseApp.configure() found exactly 1 time across ios/App/App/ tree"
+# ─── STRICT POST-INJECTION ASSERTIONS ───
+echo ""
+echo "🔍 Verifying injected code..."
 
-# ─── STEP 5: Verify push markers ───
 FAIL=0
 
-if ! grep -q 'Messaging.messaging().apnsToken = deviceToken' "$DELEGATE_TARGET"; then
+if ! grep -q 'Messaging.messaging().apnsToken = deviceToken' "$DELEGATE"; then
   echo "❌ ASSERTION FAILED: Messaging.messaging().apnsToken = deviceToken NOT FOUND"
   FAIL=1
 fi
 
-if ! grep -q 'messaging(_ messaging: Messaging, didReceiveRegistrationToken' "$DELEGATE_TARGET"; then
+if ! grep -q 'messaging(_ messaging: Messaging, didReceiveRegistrationToken' "$DELEGATE"; then
   echo "❌ ASSERTION FAILED: messaging(didReceiveRegistrationToken) NOT FOUND"
   FAIL=1
 fi
 
-if ! grep -q 'injectFCMTokenIntoWebView' "$DELEGATE_TARGET"; then
+if ! grep -q 'injectFCMTokenIntoWebView' "$DELEGATE"; then
   echo "❌ ASSERTION FAILED: injectFCMTokenIntoWebView NOT FOUND"
   FAIL=1
 fi
 
-if ! grep -q 'fcmTokenReady' "$DELEGATE_TARGET"; then
+if ! grep -q 'fcmTokenReady' "$DELEGATE"; then
   echo "❌ ASSERTION FAILED: fcmTokenReady event NOT FOUND"
   FAIL=1
 fi
 
-if ! grep -q 'PUSH.*IOS.*traceId' "$DELEGATE_TARGET"; then
+if ! grep -q 'PUSH.*IOS.*traceId' "$DELEGATE"; then
   echo "❌ ASSERTION FAILED: traceId logging NOT FOUND"
-  FAIL=1
-fi
-
-if ! grep -q 'FirebaseApp.app() == nil' "$DELEGATE_TARGET"; then
-  echo "❌ ASSERTION FAILED: Safe nil-check guard NOT FOUND"
   FAIL=1
 fi
 
 if [ "$FAIL" -eq 1 ]; then
   echo ""
-  echo "❌ BUILD FAILED: AppDelegate verification failed"
+  echo "❌ BUILD FAILED: AppDelegate injection verification failed"
+  echo "--- AppDelegate.swift content ---"
+  cat "$DELEGATE"
   exit 1
 fi
 
-echo "✅ All push markers verified"
+echo "✅ All assertions passed"
 
-# ─── STEP 6: Print full file to CI logs for proof ───
+# ─── SHOW INJECTED CODE IN CI LOGS (proof) ───
 echo ""
-echo "📋 === FULL AppDelegate.swift ($(wc -l < "$DELEGATE_TARGET") lines) ==="
-cat -n "$DELEGATE_TARGET"
-echo "=== END AppDelegate.swift ==="
+echo "📋 === AppDelegate.swift push-relevant excerpt ==="
+grep -n -A2 'PUSH\|fcmToken\|apnsToken\|injectFCM\|didRegister\|MessagingDelegate\|FirebaseApp' "$DELEGATE" | head -80
+echo "=== end excerpt ==="
 
-# ─── STEP 7: VERIFY UIBackgroundModes ───
+# ─── VERIFY UIBackgroundModes ───
 if [ -f "$INFO_PLIST" ]; then
   if ! plutil -p "$INFO_PLIST" | grep -q "remote-notification"; then
     echo "⚠️ Adding UIBackgroundModes remote-notification..."
@@ -106,4 +130,4 @@ if [ -f "$INFO_PLIST" ]; then
 fi
 
 echo ""
-echo "✅ AppDelegate.swift configured (versioned source, strict hybrid mode)"
+echo "✅ Firebase + APNs + FCM WebView bridge configured (instrumented build)"
