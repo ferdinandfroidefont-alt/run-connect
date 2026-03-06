@@ -98,7 +98,7 @@ jobs:
           echo "🔍 Scanning ios/App/App/ for FirebaseApp.configure..."
           
           # Count FirebaseApp.configure() across app source only (excludes Pods)
-          FC_MATCHES=$(grep -rn "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
+          FC_MATCHES=$(grep -rn --include="*.swift" "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
           FC_COUNT=0
           if [ -n "$FC_MATCHES" ]; then
             FC_COUNT=$(echo "$FC_MATCHES" | wc -l | tr -d ' ')
