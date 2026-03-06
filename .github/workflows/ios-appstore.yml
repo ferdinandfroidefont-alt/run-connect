@@ -86,15 +86,38 @@ jobs:
           grep -n 'PUSH\|fcmToken\|apnsToken\|injectFCM\|didRegister\|MessagingDelegate\|traceId' ios/App/App/AppDelegate.swift || echo "⚠️ No push markers found"
           echo "=== end ==="
 
-      - name: 🔥 Disable Firebase auto-init and APNs proxy in Info.plist
+      - name: 🔥 Disable Firebase APNs proxy in Info.plist
         run: |
           INFO_PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Add :FirebaseAppDelegateProxyEnabled bool false" "$INFO_PLIST" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :FirebaseAppDelegateProxyEnabled false" "$INFO_PLIST"
-          /usr/libexec/PlistBuddy -c "Add :FirebaseAutoConfigEnabled bool false" "$INFO_PLIST" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :FirebaseAutoConfigEnabled false" "$INFO_PLIST"
           echo "✅ FirebaseAppDelegateProxyEnabled = false (custom AppDelegate handles callbacks)"
-          echo "✅ FirebaseAutoConfigEnabled = false (prevent double FirebaseApp.configure crash)"
+
+      - name: 🛡️ BLOCKING — Verify no duplicate Firebase init across ios/
+        run: |
+          echo "🔍 Scanning entire ios/ tree for FirebaseApp.configure..."
+          
+          # Count FirebaseApp.configure() across ALL Swift files
+          FC_COUNT=$(grep -rn "FirebaseApp.configure" ios/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
+          echo "   FirebaseApp.configure() occurrences: $FC_COUNT"
+          grep -rn "FirebaseApp.configure" ios/ || true
+          
+          if [ "$FC_COUNT" -ne 1 ]; then
+            echo "❌ FATAL: Expected exactly 1 FirebaseApp.configure(), found $FC_COUNT"
+            echo "This WILL cause a crash at launch. Build aborted."
+            exit 1
+          fi
+          
+          # Count didFinishLaunchingWithOptions implementations
+          DFLO_COUNT=$(grep -rn "didFinishLaunchingWithOptions.*-> Bool" ios/App/App/AppDelegate.swift | wc -l | tr -d ' ')
+          echo "   didFinishLaunchingWithOptions in AppDelegate: $DFLO_COUNT"
+          
+          if [ "$DFLO_COUNT" -ne 1 ]; then
+            echo "❌ FATAL: Expected exactly 1 didFinishLaunchingWithOptions, found $DFLO_COUNT"
+            exit 1
+          fi
+          
+          echo "✅ All Firebase init checks passed — safe to build"
 
       - name: 🔢 Set build number
         run: |
