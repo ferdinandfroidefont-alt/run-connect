@@ -1,31 +1,53 @@
 
 
-## Fix: Tree Grep Scope in `scripts/configure_ios_push.sh`
+## Diagnostic
 
-### Root Cause
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-Step 4 runs `grep -rn "FirebaseApp.configure" ios/` which searches the **entire** `ios/` directory — including `ios/Pods/` (installed CocoaPods). Firebase's own SDK source code contains multiple references to `FirebaseApp.configure`, so the count exceeds 1 and the assertion fails.
+Deux problemes distincts :
 
-Steps 1-3 pass correctly (the versioned AppDelegate is fine). The crash fix itself is already correct — this is a CI script bug.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### Fix
+## Solution en 2 parties
 
-**File: `scripts/configure_ios_push.sh`** — Line 38
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-Change the tree grep to only scan app source code (`ios/App/`), excluding Pods and build artifacts:
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
 ```bash
-# Before (broken):
-TREE_COUNT=$(grep -rn "FirebaseApp.configure" ios/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-# After (fixed):
-TREE_COUNT=$(grep -rn "FirebaseApp.configure" ios/App/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-Update the error message on line 41 accordingly.
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-That's the only change needed. The versioned `AppDelegate.swift` and all other files are correct.
+### Partie 2 : Securiser la page bridge
 
-### Files to modify
-- `scripts/configure_ios_push.sh` — Change `ios/` to `ios/App/` on lines 38 and 41
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
