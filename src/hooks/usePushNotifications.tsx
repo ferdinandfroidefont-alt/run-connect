@@ -237,47 +237,59 @@ export const usePushNotifications = () => {
 
     try {
       await PushNotifications.addListener('registration', async (t) => {
-        log('📱 Registration token received, length:', t.value?.length);
-        if (t.value) {
-          setToken(t.value);
-          pendingTokenRef.current = t.value;
-          (window as any).__pendingPushToken = t.value;
-          setIsRegistered(true);
+        const receivedToken = t.value;
+        log('📱 Registration token received, length:', receivedToken?.length);
 
-          const saved = await savePushToken(t.value);
+        if (!receivedToken) return;
 
-          // Immediate edge function fallback if save failed and user is available
-          if (!saved && user) {
-            log('⚠️ Direct save failed, immediate edge function fallback');
-            const platform = detectPlatform();
-            const edgeSaved = await saveTokenViaEdgeFunction(t.value, user.id, platform);
-            if (edgeSaved) {
-              pendingTokenRef.current = null;
-              log('✅ Token saved via immediate edge function fallback');
-            }
+        // On iOS, Capacitor converts the raw APNs Data to a hex string (64 chars).
+        // This is NOT a valid FCM token — we must wait for fcmTokenReady event instead.
+        if (isRawApnsToken(receivedToken)) {
+          log('🍎 APNs hex token detected (64 chars) — IGNORING. Waiting for fcmTokenReady event from native bridge...');
+          // Do NOT save, do NOT set as registered. The fcmTokenReady event (useEffect #5) will handle the real FCM token.
+          return;
+        }
+
+        // Non-APNs token (Android FCM or valid token) — proceed normally
+        log('✅ Valid token received (not APNs hex), saving...');
+        setToken(receivedToken);
+        pendingTokenRef.current = receivedToken;
+        (window as any).__pendingPushToken = receivedToken;
+        setIsRegistered(true);
+
+        const saved = await savePushToken(receivedToken);
+
+        // Immediate edge function fallback if save failed and user is available
+        if (!saved && user) {
+          log('⚠️ Direct save failed, immediate edge function fallback');
+          const platform = detectPlatform();
+          const edgeSaved = await saveTokenViaEdgeFunction(receivedToken, user.id, platform);
+          if (edgeSaved) {
+            pendingTokenRef.current = null;
+            log('✅ Token saved via immediate edge function fallback');
           }
+        }
 
-          // Secondary check: verify token in DB after 3s
-          if (user) {
-            setTimeout(async () => {
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('push_token')
-                  .eq('user_id', user.id)
-                  .maybeSingle();
+        // Secondary check: verify token in DB after 3s
+        if (user) {
+          setTimeout(async () => {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('push_token')
+                .eq('user_id', user.id)
+                .maybeSingle();
 
-                if (!profile?.push_token || profile.push_token !== t.value) {
-                  log('⚠️ Token not in DB after 3s, using edge function fallback');
-                  const platform = detectPlatform();
-                  await saveTokenViaEdgeFunction(t.value, user.id, platform);
-                  pendingTokenRef.current = null;
-                }
-              } catch (e) {
-                logError('Fallback check error:', e);
+              if (!profile?.push_token || profile.push_token !== receivedToken) {
+                log('⚠️ Token not in DB after 3s, using edge function fallback');
+                const platform = detectPlatform();
+                await saveTokenViaEdgeFunction(receivedToken, user.id, platform);
+                pendingTokenRef.current = null;
               }
-            }, 3000);
-          }
+            } catch (e) {
+              logError('Fallback check error:', e);
+            }
+          }, 3000);
         }
       });
 
