@@ -35,10 +35,11 @@ fi
 echo "✅ didFinishLaunchingWithOptions found exactly 1 time"
 
 # ─── STEP 4: BLOCKING — check across ENTIRE ios/ tree for duplicates ───
-TREE_COUNT=$(grep -rn "FirebaseApp.configure" ios/App/ | grep -v "//.*FirebaseApp" | wc -l | tr -d ' ')
+TREE_MATCHES=$(grep -rn "FirebaseApp.configure" ios/App/ || true)
+TREE_COUNT=$(printf "%s\n" "$TREE_MATCHES" | grep -v "//.*FirebaseApp" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$TREE_COUNT" -ne 1 ]; then
   echo "❌ FATAL: Found $TREE_COUNT occurrences of FirebaseApp.configure() across ios/App/ — expected exactly 1"
-  grep -rn "FirebaseApp.configure" ios/App/
+  printf "%s\n" "$TREE_MATCHES"
   exit 1
 fi
 echo "✅ FirebaseApp.configure() found exactly 1 time across ios/App/ tree"
