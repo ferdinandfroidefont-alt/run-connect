@@ -1,53 +1,103 @@
 
 
-## Diagnostic
+## Root Cause
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+The current AppDelegate injection posts an FCM token **String** to `NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)`.
 
-Deux problemes distincts :
+**This is the bug.** Capacitor's `PushNotificationsHandler` expects a **`Data`** object (the raw APNs device token) on that notification. When it receives a String instead:
+- Capacitor tries to cast `notification.object` as `Data` → fails
+- The `registration` JS event never fires, OR fires with garbage
+- Front-end never gets a token → `push_token = null`
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Correct Architecture
 
-## Solution en 2 parties
-
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+┌─────────────────────────────────────────────────────────┐
+│ iOS Native (AppDelegate.swift)                          │
+│                                                         │
+│  didRegisterForRemoteNotificationsWithDeviceToken       │
+│    ├─ Post raw deviceToken (Data) to Capacitor          │
+│    │   → .capacitorDidRegisterForRemoteNotifications    │
+│    │   (Capacitor converts to hex → registration event) │
+│    │                                                    │
+│    ├─ Give deviceToken to Firebase:                     │
+│    │   Messaging.messaging().apnsToken = deviceToken    │
+│    │                                                    │
+│    └─ Fetch FCM token, inject into WebView via JS:      │
+│        evaluateJavaScript("window.dispatchEvent(        │
+│          new CustomEvent('fcmTokenReady', ...))")        │
+│                                                         │
+│  messaging(_:didReceiveRegistrationToken:)               │
+│    └─ Same: inject FCM token into WebView via JS        │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│ Front-end (usePushNotifications.tsx)                     │
+│                                                         │
+│  registration listener → receives hex APNs token        │
+│    └─ Detects hex-64 → IGNORES (waits for FCM)          │
+│                                                         │
+│  fcmTokenReady listener → receives real FCM token       │
+│    └─ Saves to DB via savePushToken()                   │
+│       ✅ Token > 100 chars, valid FCM format            │
+└─────────────────────────────────────────────────────────┘
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+The front-end **already has** a `fcmTokenReady` event listener (useEffect #5, line 621). It just never fires because AppDelegate never injects JS into the WebView.
 
-### Partie 2 : Securiser la page bridge
+## Changes
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+### 1. `.github/workflows/ios-appstore.yml` — Fix AppDelegate injection
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+Both Python blocks must be rewritten. The new AppDelegate methods:
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+- **`didRegisterForRemoteNotificationsWithDeviceToken`**: 
+  - Posts raw `deviceToken` (Data) to `.capacitorDidRegisterForRemoteNotifications` (standard Capacitor flow)
+  - Sets `Messaging.messaging().apnsToken = deviceToken`
+  - Calls `Messaging.messaging().token(completion:)` → on success, injects FCM token into WebView via `evaluateJavaScript`
+  
+- **`didFailToRegisterForRemoteNotificationsWithError`**: Posts error to Capacitor (unchanged)
+
+- **`messaging(_:didReceiveRegistrationToken:)`**: Injects refreshed FCM token into WebView via `evaluateJavaScript`
+
+JS injection helper method:
+```swift
+private func injectFCMToken(_ token: String) {
+    DispatchQueue.main.async {
+        if let vc = UIApplication.shared.windows.first?.rootViewController,
+           let bridge = vc as? CAPBridgeViewController {
+            let js = "window.fcmToken='\(token)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\(token)',platform:'ios'}}))"
+            bridge.webView?.evaluateJavaScript(js)
+        }
+    }
+}
 ```
 
-### Fichiers modifies
+### 2. `src/hooks/usePushNotifications.tsx` — Minor refinements
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+- In `registration` listener (line 239): when receiving a hex-64 APNs token on iOS, log it clearly and DO NOT save — just wait for `fcmTokenReady`. Currently it tries to save and fails silently; make the log explicit.
+- The existing `fcmTokenReady` listener (useEffect #5) already handles the real FCM token correctly — no change needed there.
+- Add a fallback: if `fcmTokenReady` doesn't fire within 10s after registration, re-call `PushNotifications.register()`.
 
-### Apres le deploy
+### 3. Edge functions — No changes needed
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+`save-push-token` and `send-push-notification` already have the correct guards.
+
+## Flow Summary
+
+1. App launches → `PushNotifications.register()` → iOS calls `didRegisterForRemoteNotificationsWithDeviceToken`
+2. AppDelegate posts raw Data to Capacitor (standard) AND gives token to Firebase
+3. Capacitor fires `registration` with hex-64 APNs token → front-end detects hex-64, ignores
+4. Firebase exchanges APNs token for FCM token → AppDelegate injects via `evaluateJavaScript`
+5. Front-end receives `fcmTokenReady` event → saves FCM token to DB
+6. "Tester les notifications" shows valid token, push works
+
+## Test Points (iPhone TestFlight)
+
+1. Open app, grant notification permission
+2. Check Safari Web Inspector console for `[PUSH] fcmTokenReady received`
+3. Check Supabase `profiles.push_token` — should be a long FCM token (100+ chars), NOT hex-64
+4. Put app in background, tap "Tester les notifications" → real push banner appears
+5. Kill app, test via Supabase dashboard → push arrives in Notification Center
 
