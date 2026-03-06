@@ -31,6 +31,16 @@ serve(async (req) => {
       );
     }
 
+    // Block raw APNs tokens (hex 64 chars) — these are NOT valid FCM tokens
+    const APNS_HEX_REGEX = /^[A-Fa-f0-9]{64}$/;
+    if (platform === 'ios' && APNS_HEX_REGEX.test(token)) {
+      console.error('❌ [SAVE-TOKEN] Rejected raw APNs token (hex-64) for iOS — FCM token required');
+      return new Response(
+        JSON.stringify({ error: 'ios_apns_token_not_fcm', message: 'Ce token est un token APNs brut, pas un token FCM. Redémarrez l\'app.' }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''

@@ -90,21 +90,35 @@ jobs:
                   Messaging.messaging().delegate = self
               ' "$DELEGATE"
               
-              # Add APNs delegate methods before the last closing brace of the class
-              # Find the last } and insert the methods before it
+              # Add APNs + FCM delegate methods before the last closing brace of the class
+              # CRITICAL: Post FCM token (not raw APNs token) to Capacitor
               python3 -c "
           import re
           with open('ios/App/App/AppDelegate.swift', 'r') as f:
               content = f.read()
           apns_methods = '\n'.join([
-              '    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)',
+              '    // MARK: - APNs Token Registration',
               '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
               '        Messaging.messaging().apnsToken = deviceToken',
-              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)',
+              '        // Retrieve the FCM token (NOT the raw APNs token) and post it to Capacitor',
+              '        Messaging.messaging().token { fcmToken, error in',
+              '            if let fcmToken = fcmToken {',
+              '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
+              '            } else if let error = error {',
+              '                print(\"[PUSH] FCM token error: \\(error.localizedDescription)\")',
+              '            }',
+              '        }',
               '    }',
               '',
               '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
               '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
+              '    }',
+              '',
+              '    // MARK: - MessagingDelegate (FCM token refresh)',
+              '    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {',
+              '        guard let fcmToken = fcmToken else { return }',
+              '        print(\"[PUSH] FCM token refreshed\")',
+              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
               '    }',
           ])
           last_brace = content.rfind('}')
@@ -112,7 +126,7 @@ jobs:
               content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
           with open('ios/App/App/AppDelegate.swift', 'w') as f:
               f.write(content)
-          print('APNs delegate methods injected')
+          print('FCM delegate methods injected (posts FCM token, not APNs)')
           "
               
               echo "✅ Firebase + APNs delegates configured in AppDelegate"
@@ -126,14 +140,23 @@ jobs:
           if 'import FirebaseMessaging' not in content:
               content = content.replace('import FirebaseCore', 'import FirebaseCore\nimport FirebaseMessaging')
           apns_methods = '\n'.join([
-              '    // MARK: - APNs Token Registration (required for Capacitor Push Notifications on iOS)',
+              '    // MARK: - APNs Token Registration',
               '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
               '        Messaging.messaging().apnsToken = deviceToken',
-              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)',
+              '        Messaging.messaging().token { fcmToken, error in',
+              '            if let fcmToken = fcmToken {',
+              '                NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
+              '            }',
+              '        }',
               '    }',
               '',
               '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
               '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
+              '    }',
+              '',
+              '    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {',
+              '        guard let fcmToken = fcmToken else { return }',
+              '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)',
               '    }',
           ])
           last_brace = content.rfind('}')
@@ -141,7 +164,7 @@ jobs:
               content = content[:last_brace] + apns_methods + '\n' + content[last_brace:]
           with open('ios/App/App/AppDelegate.swift', 'w') as f:
               f.write(content)
-          print('APNs delegate methods added to existing Firebase config')
+          print('FCM delegate methods added to existing Firebase config')
           "
               fi
             fi
