@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Inject APNs + FCM + WebView bridge methods into AppDelegate.swift.
+Fully instrumented with traceable logs for debugging.
 
 Usage:
   python3 scripts/inject_ios_push.py --mode fresh
@@ -17,96 +18,102 @@ SWIFT_METHODS = '''
     // MARK: - APNs Token Registration
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let hexToken = deviceToken.map { String(format: "%02x", $0) }.joined()
-        print("[PUSH] APNs deviceToken received (hex): \\(hexToken.prefix(20))...")
+        let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
+        print("[PUSH][IOS] didRegisterForRemoteNotifications called traceId=\\(traceId)")
+        print("[PUSH][IOS] APNs token hex length=\\(hexToken.count) prefix=\\(hexToken.prefix(16))...")
 
         // 1. Post raw Data to Capacitor (standard flow)
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
 
         // 2. Give APNs token to Firebase for FCM exchange
         Messaging.messaging().apnsToken = deviceToken
-        print("[PUSH] APNs token given to Firebase Messaging")
+        print("[PUSH][IOS] Messaging.apnsToken assigned")
 
         // 3. Fetch FCM token and inject into WebView
-        Messaging.messaging().token(completion: { [weak self] fcmToken, error in
+        Messaging.messaging().token { [weak self] fcmToken, error in
             if let error = error {
-                print("[PUSH] FCM token fetch error: \\(error.localizedDescription)")
+                print("[PUSH][IOS] FCM token fetch ERROR: \\(error.localizedDescription)")
                 return
             }
             guard let fcmToken = fcmToken else {
-                print("[PUSH] FCM token is nil after fetch")
+                print("[PUSH][IOS] FCM token fetch returned nil")
                 return
             }
-            print("[PUSH] FCM token received: \\(fcmToken.prefix(30))...")
-            self?.injectFCMTokenIntoWebView(fcmToken)
-        })
+            print("[PUSH][IOS] FCM token fetch SUCCESS length=\\(fcmToken.count) prefix=\\(fcmToken.prefix(20))...")
+            self?.injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
+        }
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("[PUSH] APNs registration FAILED: \\(error.localizedDescription)")
+        print("[PUSH][IOS] APNs registration FAILED: \\(error.localizedDescription)")
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
     // MARK: - MessagingDelegate (FCM token refresh)
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        guard let fcmToken = fcmToken else { return }
-        print("[PUSH] FCM token refreshed: \\(fcmToken.prefix(30))...")
-        injectFCMTokenIntoWebView(fcmToken)
+        guard let fcmToken = fcmToken else {
+            print("[PUSH][IOS] messaging(didReceiveRegistrationToken) called with nil")
+            return
+        }
+        let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
+        print("[PUSH][IOS] messaging(didReceiveRegistrationToken) length=\\(fcmToken.count) prefix=\\(fcmToken.prefix(20))... traceId=\\(traceId)")
+        injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
     }
 
     // MARK: - FCM Token WebView Bridge
-    private func injectFCMTokenIntoWebView(_ token: String) {
-        DispatchQueue.main.async {
-            guard let window = UIApplication.shared.windows.first,
-                  let rootVC = window.rootViewController else {
-                print("[PUSH] No root view controller found")
-                return
+    private func injectFCMTokenIntoWebView(_ token: String, traceId: String = "0") {
+        print("[PUSH][IOS] injectFCMTokenIntoWebView called length=\\(token.count) traceId=\\(traceId)")
+
+        func findBridge(from vc: UIViewController?) -> CAPBridgeViewController? {
+            guard let vc = vc else { return nil }
+            if let bridge = vc as? CAPBridgeViewController { return bridge }
+            if let presented = vc.presentedViewController {
+                if let found = findBridge(from: presented) { return found }
             }
-            var vc: UIViewController? = rootVC
-            while let current = vc {
-                if let bridge = current as? CAPBridgeViewController {
-                    let escapedToken = token.replacingOccurrences(of: "'", with: "\\\\'")
-                    let js = "window.fcmToken='\\(escapedToken)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(escapedToken)',platform:'ios'}}));console.log('[PUSH] fcmTokenReady dispatched from native, token length:',\\(token.count));"
-                    bridge.webView?.evaluateJavaScript(js) { result, error in
-                        if let error = error {
-                            print("[PUSH] JS injection error: \\(error.localizedDescription)")
-                        } else {
-                            print("[PUSH] FCM token injected into WebView successfully")
-                        }
-                    }
+            for child in vc.children {
+                if let found = findBridge(from: child) { return found }
+            }
+            return nil
+        }
+
+        func inject(attempt: Int) {
+            DispatchQueue.main.async {
+                guard let window = UIApplication.shared.windows.first,
+                      let rootVC = window.rootViewController else {
+                    print("[PUSH][IOS] No rootViewController (attempt \\(attempt))")
                     return
                 }
-                if let presented = current.presentedViewController {
-                    vc = presented
-                } else if let first = current.children.first {
-                    vc = first
+                if let bridge = findBridge(from: rootVC) {
+                    let escapedToken = token.replacingOccurrences(of: "'", with: "\\\\'")
+                    let js = """
+                    window.fcmToken='\\(escapedToken)';
+                    window.__fcmTraceId='\\(traceId)';
+                    window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(escapedToken)',platform:'ios',traceId:'\\(traceId)'}}));
+                    console.log('[PUSH][IOS-BRIDGE] fcmTokenReady dispatched length='+\\(token.count)+' traceId=\\(traceId)');
+                    """
+                    bridge.webView?.evaluateJavaScript(js) { result, error in
+                        if let error = error {
+                            print("[PUSH][IOS] JS injection error (attempt \\(attempt)): \\(error.localizedDescription)")
+                        } else {
+                            print("[PUSH][IOS] WebView bridge dispatch SUCCESS attempt=\\(attempt) traceId=\\(traceId)")
+                        }
+                    }
                 } else {
-                    break
-                }
-            }
-            print("[PUSH] CAPBridgeViewController not found, retrying in 2s...")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                guard let window = UIApplication.shared.windows.first,
-                      let rootVC = window.rootViewController else { return }
-                var retryVC: UIViewController? = rootVC
-                while let current = retryVC {
-                    if let bridge = current as? CAPBridgeViewController {
-                        let escapedToken = token.replacingOccurrences(of: "'", with: "\\\\'")
-                        let js = "window.fcmToken='\\(escapedToken)';window.dispatchEvent(new CustomEvent('fcmTokenReady',{detail:{token:'\\(escapedToken)',platform:'ios'}}));console.log('[PUSH] fcmTokenReady dispatched (retry)');"
-                        bridge.webView?.evaluateJavaScript(js)
-                        print("[PUSH] FCM token injected on retry")
-                        return
-                    }
-                    if let presented = current.presentedViewController {
-                        retryVC = presented
-                    } else if let first = current.children.first {
-                        retryVC = first
+                    print("[PUSH][IOS] CAPBridgeViewController NOT FOUND attempt=\\(attempt)")
+                    if attempt < 5 {
+                        let delay = Double(attempt) * 2.0
+                        print("[PUSH][IOS] Retrying in \\(delay)s...")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            inject(attempt: attempt + 1)
+                        }
                     } else {
-                        break
+                        print("[PUSH][IOS] ❌ GAVE UP finding CAPBridgeViewController after 5 attempts")
                     }
                 }
-                print("[PUSH] CAPBridgeViewController still not found after retry")
             }
         }
+
+        inject(attempt: 1)
     }
 '''
 
