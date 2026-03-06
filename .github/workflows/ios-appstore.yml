@@ -98,14 +98,13 @@ jobs:
           echo "🔍 Scanning ios/App/App/ for FirebaseApp.configure..."
           
           # Count FirebaseApp.configure() across app source only (excludes Pods)
-          FC_MATCHES=$(grep -rn "FirebaseApp.configure" ios/App/App/ 2>/dev/null || true)
-          FC_FILTERED=$(echo "$FC_MATCHES" | grep -v "^$" | grep -v "//.*FirebaseApp" || true)
+          FC_MATCHES=$(grep -rn "FirebaseApp\.configure()" ios/App/App/ 2>/dev/null || true)
           FC_COUNT=0
-          if [ -n "$FC_FILTERED" ]; then
-            FC_COUNT=$(echo "$FC_FILTERED" | wc -l | tr -d ' ')
+          if [ -n "$FC_MATCHES" ]; then
+            FC_COUNT=$(echo "$FC_MATCHES" | wc -l | tr -d ' ')
           fi
           echo "   FirebaseApp.configure() occurrences: $FC_COUNT"
-          echo "$FC_FILTERED"
+          echo "$FC_MATCHES"
           
           if [ "$FC_COUNT" -ne 1 ]; then
             echo "❌ FATAL: Expected exactly 1 FirebaseApp.configure(), found $FC_COUNT"
