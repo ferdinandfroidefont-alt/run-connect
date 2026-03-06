@@ -1,53 +1,53 @@
 
 
-## Diagnostic
+## Plan: Fix Double `FirebaseApp.configure()` Crash + Ensure Push Flow
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Root Cause
 
-Deux problemes distincts :
+The crash at AppDelegate.swift line 13 on `+[FIRApp configure]` is caused by Firebase being configured twice:
+1. **Firebase auto-initialization**: The `Firebase/Messaging` pod (which pulls in `Firebase/Core`) can auto-configure when a `GoogleService-Info.plist` exists in the bundle, even with `FirebaseAppDelegateProxyEnabled = false` (that flag only controls APNs swizzling, not auto-init).
+2. **Explicit call**: The script injects a bare `FirebaseApp.configure()` — if Firebase already auto-initialized, this crashes.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+### Changes
 
-## Solution en 2 parties
+#### 1. `scripts/configure_ios_push.sh` — Safe Firebase init injection
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+Replace the `sed` block (lines 36-44) that injects bare `FirebaseApp.configure()` with a safe version:
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```swift
+if FirebaseApp.app() == nil {
+    FirebaseApp.configure()
+    print("[PUSH][IOS] Firebase configured")
+} else {
+    print("[PUSH][IOS] Firebase already configured, skipping")
+}
+Messaging.messaging().delegate = self
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+Also update the `grep` assertion (line 47) to match `FirebaseApp.app()` instead of just `FirebaseApp.configure`.
 
-### Partie 2 : Securiser la page bridge
+Add a new assertion to ensure there is **exactly one** occurrence of `FirebaseApp.configure` (not two).
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+#### 2. `.github/workflows/ios-appstore.yml` — Disable Firebase auto-init
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+Add `FirebaseAutoConfigEnabled = false` in the Info.plist step (alongside the existing `FirebaseAppDelegateProxyEnabled = false`) to prevent Firebase from auto-initializing before our code runs. This is belt-and-suspenders with the nil check.
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+#### 3. `src/hooks/usePushNotifications.tsx` — No changes needed
 
-### Fichiers modifies
+The iOS APNs filtering and `fcmTokenReady` listener are already correctly configured from previous fixes.
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+#### 4. `scripts/inject_ios_push.py` — No changes needed
 
-### Apres le deploy
+The Swift methods injected by this script don't contain `FirebaseApp.configure()`. They handle APNs/FCM exchange and WebView bridge only.
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Files to modify
+- `scripts/configure_ios_push.sh` — Safe `FirebaseApp.configure()` with nil check + single-occurrence assertion
+- `.github/workflows/ios-appstore.yml` — Add `FirebaseAutoConfigEnabled = false` in Info.plist step
+
+### Expected outcome
+1. App launches without crash
+2. Firebase initializes exactly once (safe guard)
+3. APNs token received → exchanged for FCM token → injected into WebView
+4. Frontend saves FCM token via edge function → `profiles.push_token` populated
+5. "Tester les notifications" → `fcm_sent: true` → push delivered
 
