@@ -205,10 +205,10 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
     <>
     <div className="p-4 space-y-3">
       {profiles.map((profile) => (
-        <Card key={profile.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors">
+        <Card key={profile.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors" onClick={() => handleProfileClick(profile.user_id)}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="relative" onClick={() => handleProfileClick(profile.user_id)}>
+              <div className="relative">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={profile.avatar_url || undefined} />
                   <AvatarFallback>{profile.username[0]?.toUpperCase()}</AvatarFallback>
@@ -218,7 +218,7 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
                 </div>
               </div>
               
-              <div className="flex-1 min-w-0" onClick={() => handleProfileClick(profile.user_id)}>
+              <div className="flex-1 min-w-0">
                 <h4 className="font-semibold truncate">{profile.display_name}</h4>
                 <p className="text-sm text-muted-foreground truncate">@{profile.username}</p>
                 {profile.bio && (
@@ -233,17 +233,6 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
                   </span>
                 </div>
               </div>
-
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStartConversation(profile);
-                }}
-              >
-                <MessageCircle className="h-5 w-5" />
-              </Button>
             </div>
           </CardContent>
         </Card>
