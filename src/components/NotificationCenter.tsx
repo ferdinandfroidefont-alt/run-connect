@@ -593,7 +593,19 @@ export const NotificationCenter = ({
     setProfilePreviewUserId(userId);
     setIsProfilePreviewOpen(true);
   };
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Deduplicate follow_request notifications: keep only most recent per follower_id
+  const deduplicatedNotifications = (() => {
+    const seenFollowerIds = new Set<string>();
+    return notifications.filter(n => {
+      if (n.type === 'follow_request' && n.data?.follower_id) {
+        if (seenFollowerIds.has(n.data.follower_id)) return false;
+        seenFollowerIds.add(n.data.follower_id);
+      }
+      return true;
+    });
+  })();
+
+  const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <div className="relative cursor-pointer">
@@ -614,9 +626,18 @@ export const NotificationCenter = ({
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
           <div className="space-y-4 pr-4">
-            {notifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
+            {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
                 Aucune notification
-              </p> : notifications.map(notification => <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''} cursor-pointer hover:shadow-md transition-shadow`} onClick={() => {
+              </p> : deduplicatedNotifications.map(notification => {
+              // For follow_request, determine actual state from source of truth
+              const followerStatus = notification.type === 'follow_request' && notification.data?.follower_id 
+                ? followStatuses.get(notification.data.follower_id) || 'unknown'
+                : null;
+              const isFollowStillPending = followerStatus === 'pending';
+              const isFollowAccepted = followerStatus === 'accepted';
+              const isFollowGone = followerStatus === 'none';
+              
+              return <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''} cursor-pointer hover:shadow-md transition-shadow`} onClick={() => {
             if (!notification.read) {
               markAsRead(notification.id);
             }
@@ -717,8 +738,8 @@ export const NotificationCenter = ({
                         {notification.type === 'follow_request' && <>
                            <Separator className="my-3" />
                            <div className="flex flex-col gap-2">
-                             {/* Montrer accepter/refuser seulement si pas encore accepté */}
-                             {!acceptedFollows.has(notification.id) && !notification.read && <div className="flex gap-2">
+                             {/* Show Accept/Reject only if follow is ACTUALLY still pending */}
+                             {isFollowStillPending && !acceptedFollows.has(notification.id) && <div className="flex gap-2">
                                  <Button size="sm" onClick={() => confirmAcceptFollow(notification)} disabled={loading} className="flex-1">
                                    <Check className="h-4 w-4 mr-1" />
                                    Accepter
@@ -728,15 +749,21 @@ export const NotificationCenter = ({
                                    Refuser
                                  </Button>
                                </div>}
-                              {/* Montrer "ajouter en retour" seulement si pas déjà suivi (ni localement ni en DB) */}
-                              {(acceptedFollows.has(notification.id) || notification.read) && !followedBack.has(notification.id) && !alreadyFollowing.has(notification.data?.follower_id) && <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handleFollowBack(notification); }} disabled={loading} className="w-full">
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Ajouter en retour
-                                </Button>}
-                              {/* Montrer confirmation si déjà suivi en retour */}
-                              {(followedBack.has(notification.id) || alreadyFollowing.has(notification.data?.follower_id)) && <div className="w-full text-center text-sm text-muted-foreground py-2">
-                                  ✓ Vous suivez déjà cette personne
-                               </div>}
+                              {/* Show accepted state */}
+                              {(isFollowAccepted || acceptedFollows.has(notification.id)) && <>
+                                {/* Show "follow back" only if not already following */}
+                                {!followedBack.has(notification.id) && !alreadyFollowing.has(notification.data?.follower_id) && <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handleFollowBack(notification); }} disabled={loading} className="w-full">
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Ajouter en retour
+                                  </Button>}
+                                {(followedBack.has(notification.id) || alreadyFollowing.has(notification.data?.follower_id)) && <div className="w-full text-center text-sm text-muted-foreground py-2">
+                                    ✓ Vous suivez déjà cette personne
+                                  </div>}
+                              </>}
+                              {/* Show "rejected/gone" passive state */}
+                              {isFollowGone && !isFollowStillPending && !isFollowAccepted && !acceptedFollows.has(notification.id) && <div className="w-full text-center text-sm text-muted-foreground py-2">
+                                  Demande traitée
+                                </div>}
                            </div>
                          </>}
                      </div>
