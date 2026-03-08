@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ElevationProfile3D } from './ElevationProfile3D';
-import { ArrowLeft, Loader2, Mountain } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 
 interface ElevationProfile3DDialogProps {
   open: boolean;
@@ -96,9 +95,9 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent fullScreen className="p-0 bg-black" aria-describedby={undefined}>
-        {/* Floating back button — glass style */}
-        <div className="absolute top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)]">
-          <div className="flex items-center justify-between px-3 py-2">
+        {/* Floating back button — top left only, HUD handles route name */}
+        <div className="absolute top-0 left-0 z-30 pt-[env(safe-area-inset-top)]">
+          <div className="px-3 py-2">
             <Button
               variant="ghost"
               size="sm"
@@ -108,17 +107,6 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               <ArrowLeft className="h-4 w-4" />
               <span className="text-[13px]">Retour</span>
             </Button>
-
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-black/40 backdrop-blur-xl border border-white/15 rounded-full px-3 py-1.5 flex items-center gap-1.5"
-            >
-              <Mountain className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[13px] font-semibold text-white truncate max-w-[180px]">
-                {routeName || 'Vue 3D'}
-              </span>
-            </motion.div>
           </div>
         </div>
 
@@ -140,6 +128,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               coordinates={coordinates}
               elevations={elevations}
               autoPlay={false}
+              routeName={routeName}
               routeStats={computedStats}
               className="w-full h-full"
             />
