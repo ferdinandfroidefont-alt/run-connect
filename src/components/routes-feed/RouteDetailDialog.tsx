@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader } from '@googlemaps/js-api-loader';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -135,9 +136,27 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
 
   // Init map
   useEffect(() => {
-    if (!open || !mapContainer.current || !window.google || !route?.coordinates?.length) return;
+    if (!open || !mapContainer.current || !route?.coordinates?.length) return;
 
-    const timer = setTimeout(() => {
+    let timer: ReturnType<typeof setTimeout>;
+
+    const initMap = async () => {
+      if (!window.google?.maps) {
+        try {
+          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+            body: { type: 'get-key' }
+          });
+          const googleMapsApiKey = apiKeyData?.apiKey || '';
+          if (!googleMapsApiKey) return;
+          const loader = new Loader({ apiKey: googleMapsApiKey, version: 'weekly', libraries: ['geometry'] });
+          await loader.importLibrary('maps');
+        } catch (e) {
+          console.error('Failed to load Google Maps', e);
+          return;
+        }
+      }
+
+      timer = setTimeout(() => {
       if (!mapContainer.current) return;
       const path = route.coordinates.map((coord: any) => {
         if (coord.lat !== undefined && coord.lng !== undefined) return { lat: Number(coord.lat), lng: Number(coord.lng) };
@@ -194,7 +213,11 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
       mapRef.current.fitBounds(bounds, 40);
     }, 300);
 
-    return () => { clearTimeout(timer); mapRef.current = null; };
+    };
+
+    initMap();
+
+    return () => { if (timer) clearTimeout(timer); mapRef.current = null; };
   }, [open, route, photos]);
 
   // Long press listener for adding photos
