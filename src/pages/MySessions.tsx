@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Camera } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
@@ -30,6 +30,7 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import { StreakBadge } from '@/components/StreakBadge';
+import { RoutePhotosGallery } from '@/components/routes-feed/RoutePhotosGallery';
 
 interface UserSession {
   id: string;
@@ -89,7 +90,7 @@ export default function MySessions() {
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
-  const [routeSource, setRouteSource] = useState<'created' | 'feed'>('created');
+  const [routeSource, setRouteSource] = useState<'created' | 'feed' | 'photos'>('created');
   const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
   const [showRouteDetail, setShowRouteDetail] = useState(false);
   const routesFeed = useRoutesFeed();
@@ -997,6 +998,17 @@ export default function MySessions() {
                         }`}
                       >
                         Feed
+                      </button>
+                      <button
+                        onClick={() => setRouteSource('photos')}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors flex items-center justify-center gap-1 ${
+                          routeSource === 'photos'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        <Camera className="h-3 w-3" />
+                        Photos
                       </button>
                     </div>
                   </div>
