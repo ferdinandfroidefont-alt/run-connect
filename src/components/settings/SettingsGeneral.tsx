@@ -24,8 +24,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast({
-        title: "Erreur",
-        description: "Impossible de récupérer votre adresse email.",
+        title: t('common.error'),
+        description: t('settings.emailError'),
         variant: "destructive",
       });
       return;
@@ -42,12 +42,12 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       if (error) throw error;
 
       toast({
-        title: "Email envoyé !",
-        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe.",
+        title: t('settings.emailSent'),
+        description: t('settings.emailSentDescription'),
       });
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -75,7 +75,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-[17px] font-semibold">Général</h1>
+          <h1 className="text-[17px] font-semibold">{t('settings.general')}</h1>
           <div className="w-9" />
         </div>
       </div>
@@ -85,7 +85,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
           {/* Language & Theme */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-              Apparence
+              {t('settings.appearance')}
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Language Selector */}
@@ -94,7 +94,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   <Languages className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[15px] font-medium">Langue</p>
+                  <p className="text-[15px] font-medium">{t('settings.language')}</p>
                 </div>
                 <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
                   <SelectTrigger className="w-[120px] h-9 text-[13px] border-0 bg-secondary/50">
@@ -114,7 +114,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
           {/* Account */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-              Compte
+              {t('settings.account')}
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Password Reset */}
@@ -131,8 +131,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   )}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Mot de passe</p>
-                  <p className="text-[13px] text-muted-foreground">Réinitialiser par email</p>
+                  <p className="text-[15px] font-medium">{t('settings.password')}</p>
+                  <p className="text-[13px] text-muted-foreground">{t('settings.passwordDescription')}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -142,7 +142,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
           {/* Map Settings */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-              Carte
+              {t('settings.map')}
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Long Press to Create Session */}
@@ -151,16 +151,16 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   <MapPin className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[15px] font-medium">Appui long sur la carte</p>
-                  <p className="text-[13px] text-muted-foreground">Créer une session rapidement</p>
+                  <p className="text-[15px] font-medium">{t('settings.longPress')}</p>
+                  <p className="text-[13px] text-muted-foreground">{t('settings.longPressDescription')}</p>
                 </div>
                 <Switch
                   checked={localStorage.getItem('enableLongPressCreate') === 'true'}
                   onCheckedChange={(checked) => {
                     localStorage.setItem('enableLongPressCreate', checked.toString());
                     toast({
-                      title: "Paramètre mis à jour",
-                      description: checked ? "Appui long activé" : "Appui long désactivé"
+                      title: t('settings.updated'),
+                      description: checked ? t('settings.longPressEnabled') : t('settings.longPressDisabled')
                     });
                   }}
                 />
