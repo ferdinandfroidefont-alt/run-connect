@@ -73,6 +73,7 @@ import { CoachAccessDialog } from "@/components/coaching/CoachAccessDialog";
 import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
+import { SignedImage } from "@/components/SignedImage";
 
 interface Profile {
   user_id: string;
@@ -1965,9 +1966,8 @@ const Messages = () => {
 
                           {/* Image - iMessage rounded style */}
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
-                            <img 
-                              src={message.file_url} 
-                              alt=""
+                            <SignedImage 
+                              fileUrl={message.file_url} 
                               className="max-w-full h-auto rounded-[18px]"
                               style={{ maxHeight: '240px' }}
                             />
@@ -2751,9 +2751,8 @@ const Messages = () => {
                                 {conversation.last_message.message_type === 'image' && (
                                   <span className="inline-flex items-center gap-1.5">
                                     {conversation.last_message.file_url ? (
-                                      <img 
-                                        src={conversation.last_message.file_url} 
-                                        alt="" 
+                                      <SignedImage 
+                                        fileUrl={conversation.last_message.file_url} 
                                         className="h-4 w-4 rounded-[3px] object-cover inline-block" 
                                       />
                                     ) : null}
