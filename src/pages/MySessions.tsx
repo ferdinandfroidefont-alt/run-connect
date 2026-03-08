@@ -1,5 +1,9 @@
 import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
+import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
+import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
+import { RouteDetailDialog } from '@/components/routes-feed/RouteDetailDialog';
+import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { CreateSessionWizard } from '@/components/session-creation/CreateSessionWizard';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
@@ -85,6 +89,10 @@ export default function MySessions() {
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
+  const [routeSource, setRouteSource] = useState<'created' | 'feed'>('created');
+  const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
+  const [showRouteDetail, setShowRouteDetail] = useState(false);
+  const routesFeed = useRoutesFeed();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
@@ -953,9 +961,9 @@ export default function MySessions() {
                 )}
               </div>
 
-              {/* Right column: Itinéraires */}
+              {/* Right column: Itinéraires + sub-filter */}
               <div className="w-1/2">
-                <div className="bg-secondary rounded-[10px] p-1">
+                <div className={`bg-secondary ${currentView === 'routes' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0.5`}>
                   <button
                     onClick={() => setCurrentView('routes')}
                     className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
@@ -967,6 +975,32 @@ export default function MySessions() {
                     Itinéraires
                   </button>
                 </div>
+                {currentView === 'routes' && (
+                  <div className="bg-secondary rounded-b-[10px] px-1 pb-1">
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => setRouteSource('created')}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          routeSource === 'created'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Créés
+                      </button>
+                      <button
+                        onClick={() => setRouteSource('feed')}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          routeSource === 'feed'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Feed
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1168,9 +1202,9 @@ export default function MySessions() {
                 </div>
               )}
             </>
-          ) : (
+          ) : routeSource === 'created' ? (
             <>
-              {/* Routes */}
+              {/* Created Routes */}
               {routesLoading ? (
                 <div className="space-y-px">
                   {[1, 2].map((i) => (
@@ -1200,10 +1234,65 @@ export default function MySessions() {
                       route={route}
                       onEdit={() => editRoute(route)}
                       onDelete={() => confirmDeleteRoute(route.id)}
+                      onPublishToggle={async (isPublic) => {
+                        await supabase.from('routes').update({ is_public: isPublic }).eq('id', route.id);
+                        loadUserRoutes();
+                      }}
+                      isPublic={(route as any).is_public || false}
                     />
                   ))}
                 </div>
               )}
+            </>
+          ) : (
+            <>
+              {/* Routes Feed */}
+              <RoutesFeedFilters
+                maxDistance={routesFeed.maxDistance}
+                setMaxDistance={routesFeed.setMaxDistance}
+                selectedActivities={routesFeed.selectedActivities}
+                toggleActivity={routesFeed.toggleActivity}
+                toggleAllActivities={routesFeed.toggleAllActivities}
+              />
+              {routesFeed.loading ? (
+                <div className="space-y-px">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card p-4 animate-pulse">
+                      <div className="h-40 bg-secondary rounded mb-3" />
+                      <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-secondary rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : routesFeed.routes.length === 0 ? (
+                <div className="bg-card p-8 text-center">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire trouvé</p>
+                  <p className="text-[15px] text-muted-foreground">
+                    {routesFeed.hasLocation
+                      ? 'Aucun itinéraire public dans cette zone'
+                      : 'Activez la localisation pour voir les itinéraires proches'}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {routesFeed.routes.map((route, i) => (
+                    <RoutesFeedCard
+                      key={route.id}
+                      route={route}
+                      index={i}
+                      onClick={(r) => { setSelectedFeedRoute(r); setShowRouteDetail(true); }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <RouteDetailDialog
+                route={selectedFeedRoute}
+                open={showRouteDetail}
+                onOpenChange={setShowRouteDetail}
+                onRefresh={routesFeed.refresh}
+              />
             </>
           )}
         </div>

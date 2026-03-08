@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box, Navigation } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box, Navigation, Globe, Camera } from "lucide-react";
+import { RoutePhotoUploader } from '@/components/routes-feed/RoutePhotoUploader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
@@ -21,14 +23,17 @@ interface RouteCardProps {
   };
   onEdit: (route: any) => void;
   onDelete: (routeId: string) => void;
+  onPublishToggle?: (isPublic: boolean) => void;
+  isPublic?: boolean;
 }
 
-export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
+export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const [show3DDialog, setShow3DDialog] = useState(false);
+  const [showPhotoUploader, setShowPhotoUploader] = useState(false);
 
   const formatDistance = (meters: number | null) => {
     if (!meters) return "N/A";
@@ -289,6 +294,36 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
             <Box className="h-3.5 w-3.5" />
             Vue 3D du parcours
           </Button>
+          {/* Publish toggle & Photo upload */}
+          {onPublishToggle && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <div className="flex items-center gap-2">
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Public</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {isPublic && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPhotoUploader(true)}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <Camera className="h-3 w-3" /> Photo
+                  </Button>
+                )}
+                <Switch
+                  checked={isPublic}
+                  onCheckedChange={onPublishToggle}
+                />
+              </div>
+            </div>
+          )}
+          {isPublic && (
+            <Badge variant="secondary" className="mt-1 text-[10px] gap-1">
+              <Globe className="h-2.5 w-2.5" /> Publié dans le feed
+            </Badge>
+          )}
         </div>
 
         {/* 3D Dialog */}
@@ -320,6 +355,12 @@ export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
           }
         />
       </CardContent>
+
+      <RoutePhotoUploader
+        routeId={route.id}
+        open={showPhotoUploader}
+        onOpenChange={setShowPhotoUploader}
+      />
     </Card>
   );
 };
