@@ -608,30 +608,39 @@ export const usePushNotifications = () => {
     init();
   }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug]);
 
-  // ─── useEffect #2: PENDING TOKEN SAVE ────────────────────
+  // ─── useEffect #2: PENDING TOKEN SAVE (with delayed retry) ────────────────────
 
   useEffect(() => {
     if (!user) return;
 
-    const pending = pendingTokenRef.current || (window as any).__pendingPushToken;
-    if (pending && typeof pending === 'string' && pending.length > 50 && !isApnsHexToken(pending)) {
-      log('[PENDING] User available + valid pending token found');
-      savePushToken(pending).then(saved => {
-        if (saved) {
-          pendingTokenRef.current = null;
-          (window as any).__pendingPushToken = null;
-        } else {
-          const platform = detectPlatform();
-          saveTokenViaEdgeFunction(pending, user.id, platform).then(edgeSaved => {
-            if (edgeSaved) {
-              pendingTokenRef.current = null;
-              (window as any).__pendingPushToken = null;
-              setIsRegistered(true);
-            }
-          });
-        }
-      });
-    }
+    const tryPending = () => {
+      const pending = pendingTokenRef.current || (window as any).__pendingPushToken;
+      if (pending && typeof pending === 'string' && pending.length > 50 && !isApnsHexToken(pending)) {
+        log('[PENDING] User available + valid pending token found');
+        savePushToken(pending).then(saved => {
+          if (saved) {
+            pendingTokenRef.current = null;
+            (window as any).__pendingPushToken = null;
+          } else {
+            const platform = detectPlatform();
+            saveTokenViaEdgeFunction(pending, user.id, platform).then(edgeSaved => {
+              if (edgeSaved) {
+                pendingTokenRef.current = null;
+                (window as any).__pendingPushToken = null;
+                setIsRegistered(true);
+              }
+            });
+          }
+        });
+      }
+    };
+
+    // Immediate attempt
+    tryPending();
+
+    // Delayed retry after 2s to catch tokens that arrived during auth restoration
+    const retryTimer = setTimeout(tryPending, 2000);
+    return () => clearTimeout(retryTimer);
   }, [user, savePushToken, detectPlatform, saveTokenViaEdgeFunction]);
 
   // ─── useEffect #3: TOKEN RETRY ───────────────────────────
