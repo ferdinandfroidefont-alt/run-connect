@@ -1,43 +1,53 @@
 
 
-# Refonte LoadingScreen — Logo R cursif fidèle à l'image
+## Diagnostic
 
-## Probleme actuel
-Le logo actuel est un **carré arrondi bleu avec un R blocky à l'intérieur** (style icône d'app). Le vrai logo RunConnect est un **R cursif fluide** avec un pin GPS en bas à gauche, sans aucun carré extérieur. Totalement différent.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-De plus, l'animation du pin (phase 1) a été affaiblie — il faut la restaurer avec le spring bounce + pulse ring.
+Deux problemes distincts :
 
-## Ce qu'il faut changer
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### 1. Nouveau SVG — R cursif fluide
-Remplacer les paths `OUTER_PATH` (carré arrondi) et `INNER_PATH` (R blocky) par un **seul path principal** qui dessine la forme exacte du logo :
-- Départ en bas à gauche (position du pin GPS)
-- Courbe qui monte en arc vers le haut-droite (premier sweep)
-- Boucle qui revient former le haut du R
-- Trait diagonal vers le bas-droite (jambe du R)
+## Solution en 2 parties
 
-Le path utilise des courbes de Bézier cubiques pour reproduire les courbes fluides du logo.
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### 2. Pin GPS intégré au logo
-Le pin n'est plus un élément séparé qui disparaît — il fait partie du SVG final. Il est positionné au point de départ du tracé (bas-gauche). Pendant phase 1 il apparaît seul, puis le tracé démarre depuis lui.
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-### 3. Glow bleu clair
-Deux layers du même path :
-- Layer 1 : stroke bleu clair (`#60A5FA`) avec blur 4px — effet glow
-- Layer 2 : stroke bleu foncé (`#2563EB`) net — trait principal
-- Gradient le long du stroke pour l'effet dégradé bleu foncé → bleu clair visible dans l'image
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-### 4. Pas de carré, pas de fill
-Le logo final est un **tracé ouvert** (stroke only), pas un carré rempli. Pas de `fill` sur le R.
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-### 5. Timeline restaurée
-- **Pin (0-400ms)** : Pin GPS apparaît avec spring bounce + pulse ring (comme avant, restauré)
-- **Trace (400-1300ms)** : Le R se trace depuis le pin via `strokeDashoffset`
-- **Glow (1300-1600ms)** : Light sweep traverse le tracé, glow s'intensifie
-- **Loading (1600ms+)** : "RUNCONNECT" + barre de progression + phrases
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-## Fichier impacté
-| Fichier | Changement |
-|---------|-----------|
-| `src/components/LoadingScreen.tsx` | Refonte SVG paths, pin restauré, suppression carré arrondi |
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
