@@ -1,94 +1,53 @@
 
 
-# Enhanced Training Mode -- Komoot-inspired activity screen
+## Diagnostic
 
-## What changes
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### 1. Hook enhancement: `src/hooks/useTrainingMode.ts`
+Deux problemes distincts :
 
-Add tracking for activity stats that the UI needs:
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-- **`distanceTraveled`**: accumulated haversine distance between successive GPS positions (already have `prevPositionRef`)
-- **`elevationGain`**: track via altitude from GPS (`coords.altitude`) -- accumulate only positive deltas
-- **`averageSpeed`**: `distanceTraveled / elapsedTime` computed in the timer interval
-- **`activityType`**: load from session's `activity_type` field (default `'running'`) to know whether to show speed vs just distance
-- **`traveledPath`**: array of `Coord` positions recorded during activity -- for drawing the "traveled" polyline on the map
+## Solution en 2 parties
 
-Changes in `TrainingState`:
-```ts
-distanceTraveled: number;    // meters
-elevationGain: number;       // meters
-averageSpeed: number;        // km/h
-activityType: string;        // 'running' | 'cycling' | 'trail' | ...
-traveledPath: Coord[];       // GPS breadcrumb
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-In `handlePosition`: accumulate distance from prev position, track altitude delta, push to traveledPath.
-In timer interval: compute `averageSpeed = (distanceTraveled / 1000) / (elapsedTime / 3600)`.
-In data loading: fetch `activity_type` from sessions table when loading by sessionId.
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### 2. UI overhaul: `src/pages/TrainingMode.tsx`
+### Partie 2 : Securiser la page bridge
 
-Complete visual redesign of the overlay UI while keeping the exact same map init, marker, and GPS logic.
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-**Direction banner (top)** -- enhanced:
-- Larger turn icon area with colored background circle
-- Distance to next turn in big bold text (28px)
-- Turn instruction text below
-- Street name placeholder row (shows route name as fallback)
-- When no route: "Suivi de seance / GPS actif"
-- When paused: clean pause state with pulsing icon
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-**Stats panel (new)** -- glassmorphism card above controls:
-- 2x2 grid for cycling: Distance | Time | Speed | Elevation
-- 2-column for running: Distance | Time | Elevation (no pace per requirement)
-- Large readable numbers (28-32px), small labels (12px)
-- Semi-transparent backdrop-blur background
-- Rounded corners, subtle shadow
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-**Controls (bottom)** -- redesigned:
-- Three buttons: Stop (red, left) | Pause/Resume (large center, 72px) | Re-center (right)
-- Stop button: red circle with square icon
-- Pause: large glassmorphism circle, prominent
-- Re-center: small utility button to re-center map on user
-- Safe area bottom padding preserved
+### Fichiers modifies
 
-**Traveled path polyline** (new):
-- Draw a green/teal dashed polyline for the path the user has already covered
-- Update on each GPS position
-- Distinct from the blue route polyline
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-**Participant nearby overlay** (bonus):
-- If `sessionId` is provided, query `live_tracking_points` for other participants
-- Show small floating chips at bottom-left: "Pierre -- 120 m" with avatar
-- Maximum 3 shown, sorted by distance
-- Only if session has live tracking active
+### Apres le deploy
 
-**Off-route banner** -- improved:
-- Wider, more visible with subtle animation
-- Icon + text + distance off route
-
-### 3. Visual design tokens
-
-- Stats panel bg: `rgba(255,255,255,0.85)` with `backdrop-blur-xl` (light) or `rgba(0,0,0,0.7)` (could be forced light since outdoor)
-- Font sizes: turn distance 28px bold, stats numbers 28px semibold, labels 12px medium uppercase
-- Control buttons: stop 52px red, pause 72px dark glassmorphism, recenter 44px
-- Border radius: 20px for stats panel, full for buttons
-- Shadows: `0 4px 20px rgba(0,0,0,0.12)`
-
-### 4. Files to modify
-
-1. **`src/hooks/useTrainingMode.ts`** -- add `distanceTraveled`, `elevationGain`, `averageSpeed`, `activityType`, `traveledPath` to state + computation logic
-2. **`src/pages/TrainingMode.tsx`** -- full UI redesign of overlays (banner, stats, controls, traveled path polyline, nearby participants)
-
-### 5. What stays unchanged
-
-- Google Maps initialization, API key fetch, map styles
-- Directional marker (blue dot with heading arrow)
-- GPS watch start/stop/pause logic
-- Route loading from Supabase
-- Turn detection algorithm
-- Off-route detection logic
-- Wake lock, compass, vibration
-- All navigation/routing (`/training/:sessionId`, `/training/route/:routeId`)
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
