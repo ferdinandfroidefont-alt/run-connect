@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box, Navigation } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Route, TrendingUp, Mountain, Edit, Trash2, Calendar, Download, Box, Navigation, Globe, Camera } from "lucide-react";
+import { RoutePhotoUploader } from '@/components/routes-feed/RoutePhotoUploader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
@@ -21,14 +23,17 @@ interface RouteCardProps {
   };
   onEdit: (route: any) => void;
   onDelete: (routeId: string) => void;
+  onPublishToggle?: (isPublic: boolean) => void;
+  isPublic?: boolean;
 }
 
-export const RouteCard = ({ route, onEdit, onDelete }: RouteCardProps) => {
+export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
   const [show3DDialog, setShow3DDialog] = useState(false);
+  const [showPhotoUploader, setShowPhotoUploader] = useState(false);
 
   const formatDistance = (meters: number | null) => {
     if (!meters) return "N/A";
