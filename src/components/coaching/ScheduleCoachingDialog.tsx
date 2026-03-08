@@ -301,6 +301,14 @@ export const ScheduleCoachingDialog = ({
               rows={2}
             />
           </div>
+
+          {/* RCC Blocks preview — auto-filled from coaching session */}
+          {parsedResult.blocks.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Détail de la séance</Label>
+              <RCCBlocksPreview blocks={parsedResult.blocks} />
+            </div>
+          )}
         </div>
 
         {/* Sticky footer */}
@@ -318,6 +326,18 @@ export const ScheduleCoachingDialog = ({
             )}
           </Button>
         </div>
+
+        <LocationPickerMap
+          isOpen={showMapPicker}
+          onClose={() => setShowMapPicker(false)}
+          onSelect={(name, lat, lng) => {
+            setLocationName(name);
+            setLocationLat(lat);
+            setLocationLng(lng);
+          }}
+          initialLat={locationLat}
+          initialLng={locationLng}
+        />
       </DialogContent>
     </Dialog>
   );
