@@ -689,12 +689,6 @@ const Leaderboard = () => {
 
       <div className="h-24" />
 
-      {/* Floating pill */}
-      <ScrollToMyRankButton
-        onClick={scrollToMyRank}
-        visible={showMyRankPill && userRank !== null}
-        rank={userRank || 0}
-      />
 
       {showProfilePreview && selectedUserId && (
         <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
