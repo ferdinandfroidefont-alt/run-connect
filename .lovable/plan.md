@@ -1,53 +1,21 @@
 
 
+# Fix crash iOS — `+[FIRApp configure]` double-init (build 231)
+
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+Le crash report montre toujours `+[FIRApp configure]` (FIRApp.m:110) qui lève une exception. Le garde `if FirebaseApp.app() == nil` est présent dans le script, mais le problème persiste.
 
-Deux problemes distincts :
+**Cause racine** : Le pod `Firebase/Messaging` + la présence de `GoogleService-Info.plist` déclenche une **auto-initialisation** de Firebase AVANT que `didFinishLaunchingWithOptions` ne s'exécute. Firebase est donc déjà configuré quand l'AppDelegate tourne. Cependant, `FirebaseApp.app()` devrait retourner non-nil dans ce cas et le garde devrait fonctionner...
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+**Le vrai problème** : l'auto-init Firebase ne passe PAS par `+[FIRApp configure]` — elle utilise un mécanisme interne. Donc `FirebaseApp.app()` retourne `nil` au moment du check, mais ensuite `+[FIRApp configure]` détecte que l'init interne a déjà eu lieu et crash.
 
-## Solution en 2 parties
+**Solution** : Supprimer complètement l'appel à `FirebaseApp.configure()`. Avec le pod `Firebase/Messaging` + `GoogleService-Info.plist`, Firebase s'auto-initialise. On garde uniquement `Messaging.messaging().delegate = self`.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+## Changement
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
-
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### `scripts/configure_ios_push.sh`
+- Lignes 32-56 : Remplacer le bloc d'injection `FirebaseApp.configure()` par une injection de **seulement** `Messaging.messaging().delegate = self`
+- Supprimer l'assertion `FirebaseApp.configure` (puisqu'on ne l'injecte plus)
+- Ajouter un commentaire expliquant que Firebase s'auto-configure via le plist
 
