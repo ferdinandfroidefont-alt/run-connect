@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ArrowLeft } from "lucide-react";
 
 interface RouteDialogProps {
   isOpen: boolean;
@@ -28,6 +30,7 @@ export const RouteDialog = ({
   showCreateSessionOption = false
 }: RouteDialogProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [formData, setFormData] = useState({
     name: initialName,
     description: initialDescription
@@ -66,15 +69,22 @@ export const RouteDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Donnez un nom et une description à votre itinéraire
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent fullScreen={isMobile} hideCloseButton={isMobile} className={isMobile ? "[&>button]:hidden" : "sm:max-w-md"}>
+        {/* iOS-style header */}
+        <div className="flex items-center gap-3 p-4 sticky top-0 bg-background z-10 border-b border-border">
+          <Button variant="ghost" size="sm" onClick={handleClose} className="p-0 h-auto">
+            <ArrowLeft className="h-5 w-5 mr-1" />
+            Retour
+          </Button>
+          <DialogHeader className="flex-1 text-left space-y-0">
+            <DialogTitle className="text-[17px]">{title}</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              Donnez un nom et une description à votre itinéraire
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
             <Label htmlFor="route-name">Nom de l'itinéraire *</Label>
             <Input
@@ -101,15 +111,15 @@ export const RouteDialog = ({
           </div>
 
           {showCreateSessionOption && (
-            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
               <input
                 type="checkbox"
                 id="create-session"
                 checked={createSession}
                 onChange={(e) => setCreateSession(e.target.checked)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-border"
               />
-              <Label htmlFor="create-session" className="text-sm text-blue-700">
+              <Label htmlFor="create-session" className="text-sm text-primary">
                 Créer une séance avec cet itinéraire
               </Label>
             </div>

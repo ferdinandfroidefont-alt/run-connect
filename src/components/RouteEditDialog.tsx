@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Save, X, PenTool } from 'lucide-react';
+import { ArrowLeft, Save, PenTool } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface RouteEditDialogProps {
@@ -86,15 +86,22 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={isMobile ? "h-full w-full max-w-full max-h-full rounded-none border-none p-0 flex flex-col" : "max-w-md"}>
-        <DialogHeader className={isMobile ? "px-4 pt-4" : ""}>
-          <DialogTitle>Modifier l'itinéraire</DialogTitle>
-          <DialogDescription>
-            Modifiez les informations de votre itinéraire
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent fullScreen={isMobile} hideCloseButton={isMobile} className={isMobile ? "[&>button]:hidden" : "max-w-md"}>
+        {/* iOS-style header */}
+        <div className="flex items-center gap-3 p-4 sticky top-0 bg-background z-10 border-b border-border">
+          <Button variant="ghost" size="sm" onClick={onClose} className="p-0 h-auto">
+            <ArrowLeft className="h-5 w-5 mr-1" />
+            Retour
+          </Button>
+          <DialogHeader className="flex-1 text-left space-y-0">
+            <DialogTitle className="text-[17px]">Modifier l'itinéraire</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              Modifiez les informations de votre itinéraire
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className={isMobile ? "flex-1 overflow-y-auto px-4 space-y-4 pb-8" : "space-y-4"}>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
             <Label htmlFor="route-name">Nom de l'itinéraire</Label>
             <Input
@@ -102,6 +109,7 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Mon itinéraire"
+              className="mt-1"
             />
           </div>
 
@@ -113,6 +121,7 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Décrivez votre itinéraire..."
               rows={3}
+              className="mt-1"
             />
           </div>
 
@@ -144,7 +153,6 @@ export const RouteEditDialog = ({ isOpen, onClose, route, onRouteUpdated }: Rout
               onClick={onClose}
               disabled={loading}
             >
-              <X className="h-4 w-4 mr-2" />
               Annuler
             </Button>
           </div>
