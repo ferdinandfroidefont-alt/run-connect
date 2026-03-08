@@ -1310,6 +1310,8 @@ export default function MySessions() {
                 onRefresh={routesFeed.refresh}
               />
             </>
+          ) : (
+            <RoutePhotosGallery />
           )}
         </div>
       </div>
