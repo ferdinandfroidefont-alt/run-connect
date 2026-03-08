@@ -1,53 +1,49 @@
 
+Objectif: tu n’aies plus jamais besoin d’ouvrir un `.zip` localement pour diagnostiquer l’échec iOS (code 65), et que GitHub Actions affiche directement l’erreur exploitable.
 
-## Diagnostic
+Plan d’implémentation
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+1) Rendre l’erreur lisible directement dans le job
+- Dans `.github/workflows/ios-appstore.yml`, ajouter une étape `if: always()` juste après le build archive:
+  - lit `$RUNNER_TEMP/xcodebuild.log`
+  - extrait automatiquement les lignes critiques (`error:`, `fatal error:`, `CodeSign`, `ARCHIVE FAILED`, `PhaseScriptExecution`)
+  - publie un résumé court dans `$GITHUB_STEP_SUMMARY`
+  - imprime aussi un bloc compact dans les logs du job (avec `::group::`)
 
-Deux problemes distincts :
+2) Échouer explicitement avant l’export si l’archive n’existe pas
+- Ajouter une étape de garde avant `Export IPA`:
+  - vérifie que `"$RUNNER_TEMP/App.xcarchive"` existe
+  - si absent: affiche un message clair + les dernières erreurs extraites du log, puis `exit 1`
+- Ça évite l’erreur trompeuse “archive not found” comme symptôme principal.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+3) Conserver les logs complets en artefact (déjà en place), mais rendre le diagnostic immédiat
+- Garder `Upload xcodebuild log` en `if: always()`
+- Le but: diagnostic rapide dans l’UI + artefact complet pour investigation profonde.
 
-## Solution en 2 parties
+4) (Option de robustesse) Détecter automatiquement les causes fréquentes iOS CI
+- Dans le script de résumé, ajouter des “hints” si motifs trouvés:
+  - `No signing certificate` / `provisioning profile` → problème signing
+  - `SwiftCompile` / `module map` → problème compilation dépendances
+  - `PhaseScriptExecution` → script CocoaPods/Build Phase
+- Ces hints seront ajoutés au `GITHUB_STEP_SUMMARY`.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+Schéma du flux visé
+```text
+xcodebuild archive -> xcodebuild.log
+                  -> summary auto (erreurs filtrées + hints)
+                  -> check App.xcarchive exists
+                        yes -> Export IPA
+                        no  -> fail clair + cause probable
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
-
+Détails techniques (concis)
+- Fichier: `.github/workflows/ios-appstore.yml`
+- Zones modifiées:
+  - après “🏗️ Build iOS archive”
+  - avant “📦 Export IPA”
+- Outils shell:
+  - `grep -nE`, `tail`, `awk` (ou équivalent POSIX)
+  - sortie markdown vers `$GITHUB_STEP_SUMMARY`
+- Résultat attendu:
+  - plus besoin d’extraire manuellement les logs compressés
+  - erreur racine visible en quelques lignes dans l’onglet Actions
