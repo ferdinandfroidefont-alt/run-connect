@@ -1,28 +1,53 @@
 
 
-# Fix: iOS build exit code swallowed by `tee` pipe
+## Diagnostic
 
-## Root Cause
-In bash, `command | tee file` returns the exit code of `tee` (always 0), not `xcodebuild`. So when `xcodebuild archive` fails with a compilation error, the step still "passes." The next step (Export IPA) then fails with "archive not found."
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-The log artifact also never uploads because `if: failure()` checks the overall job status, which only fails at the export step — after the log was already needed.
+Deux problemes distincts :
 
-## Fix
-Add `set -o pipefail` to the archive step so the pipe returns xcodebuild's real exit code:
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**Edit `.github/workflows/ios-appstore.yml`** line 304:
-```yaml
-      - name: 🏗️ Build iOS archive
-        run: |
-          set -o pipefail
-          cd ios/App
-          xcodebuild archive \
-            ...
-            2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+## Solution en 2 parties
+
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-Also change the log upload condition from `if: failure()` to `if: always()` so the log is available even on success (useful for debugging warnings).
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### Files to edit
-1. `.github/workflows/ios-appstore.yml` — add `set -o pipefail` + change artifact upload to `if: always()`
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
