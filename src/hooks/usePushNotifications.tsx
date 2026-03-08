@@ -198,30 +198,36 @@ export const usePushNotifications = () => {
   }, [user, updateDebug]);
 
   /** Save token — iOS ONLY uses edge function (has APNs hex guard), Android uses client */
-  const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
+  const savePushToken = useCallback(async (pushToken: string, overrideUserId?: string): Promise<boolean> => {
     const platform = detectPlatform();
 
     // ── iOS: REJECT raw APNs hex tokens on the frontend ──
     if (platform === 'ios' && isApnsHexToken(pushToken)) {
       log('[SAVE] 🍎 BLOCKED: APNs hex-64 token on iOS — waiting for real FCM token via fcmTokenReady');
       updateDebug({ apnsHexDetected: true, lastError: 'APNs hex token blocked, waiting for FCM' });
-      // Store as pending but do NOT save to DB
       pendingTokenRef.current = pushToken;
       (window as any).__pendingApnsToken = pushToken;
       return false;
     }
 
-    if (!user) {
-      log('[SAVE] No user, storing token pending');
-      setToken(pushToken);
-      pendingTokenRef.current = pushToken;
-      (window as any).__pendingPushToken = pushToken;
-      return false;
+    // ── Resolve userId: prefer override, then React state, then fresh session ──
+    let resolvedUserId = overrideUserId || user?.id || null;
+
+    if (!resolvedUserId) {
+      log('[SAVE] No user in React state, trying getSession()...');
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        resolvedUserId = sess?.session?.user?.id || null;
+        if (resolvedUserId) {
+          log('[SAVE] ✅ Got userId from getSession(): ' + resolvedUserId.substring(0, 8));
+        }
+      } catch (e) {
+        logError('[SAVE] getSession() failed:', e);
+      }
     }
 
-    const { data: sess } = await supabase.auth.getSession();
-    if (!sess?.session?.user) {
-      log('[SAVE] Session not ready, deferring');
+    if (!resolvedUserId) {
+      log('[SAVE] No user anywhere, storing token pending');
       setToken(pushToken);
       pendingTokenRef.current = pushToken;
       (window as any).__pendingPushToken = pushToken;
