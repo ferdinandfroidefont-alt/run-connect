@@ -71,7 +71,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     // Mettre à jour l'état
     setLanguageState(lang);
     
-    // Sauvegarder aussi dans la base de données
+    // Sauvegarder aussi dans la base de données (async, non-bloquant)
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -84,11 +84,6 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     } catch (error) {
       console.error('❌ Error saving language to profile:', error);
     }
-    
-    // Recharger la page pour appliquer les changements
-    setTimeout(() => {
-      window.location.reload();
-    }, 300);
   };
 
   const t = (key: string): string => {
