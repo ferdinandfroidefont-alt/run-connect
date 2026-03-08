@@ -11,22 +11,22 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// Calligraphic swooping "R" — starts top-right, sweeps left-down to pin,
-// curves into wide bowl right, then kicks into bold diagonal leg
+// Clean stylized "R": vertical stem + rounded bowl + swooping athletic leg
 const R_PATH =
-  "M 155,18 C 130,10 95,12 75,35 C 55,58 48,85 50,110 " +       // top sweep down-left to pin area
-  "C 52,130 60,115 80,100 C 100,85 135,75 155,85 " +              // bowl curving right
-  "C 175,95 170,120 145,130 C 120,140 85,135 65,125 " +           // bowl closing back left
-  "L 65,125 C 75,140 100,165 125,185 C 140,197 160,205 175,210";  // diagonal leg down-right
-const R_PATH_LENGTH = 750;
+  "M 55,195 L 55,30 " +                                    // vertical stem bottom-to-top
+  "C 55,15 65,10 80,10 L 120,10 " +                        // top-left corner curve
+  "C 150,10 165,25 165,50 " +                              // bowl top-right curve
+  "C 165,75 150,90 120,90 L 55,90 " +                      // bowl bottom back to stem
+  "M 100,90 C 115,105 140,140 170,195";                    // diagonal athletic leg
+const R_PATH_LENGTH = 820;
 
-// Pin sits at the inner curl (left side, mid-height)
-const PIN_X = 48;
-const PIN_Y = 112;
+// Pin at top of stem (route start)
+const PIN_X = 55;
+const PIN_Y = 10;
 
 // SVG dimensions
 const SVG_W = 200;
-const SVG_H = 225;
+const SVG_H = 210;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin' | 'trace' | 'glow' | 'loading'>('pin');
