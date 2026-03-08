@@ -735,9 +735,30 @@ export const usePushNotifications = () => {
     return () => clearInterval(retryTimer);
   }, [user, isNative, token, updateDebug]);
 
-  // ─── useEffect #5: fcmTokenReady listener (PRIMARY iOS path) ────
+  // ─── useEffect #5: fcmTokenReady + userAuthenticatedWithFCMToken listeners ────
 
   useEffect(() => {
+    /** Save FCM token with dynamic user resolution (bypasses stale closure) */
+    const saveTokenDynamic = async (fcmToken: string, knownUserId?: string) => {
+      // Try known userId first, then React state, then fresh session
+      let userId = knownUserId || user?.id || null;
+      if (!userId) {
+        try {
+          const { data: sess } = await supabase.auth.getSession();
+          userId = sess?.session?.user?.id || null;
+        } catch {}
+      }
+
+      if (userId) {
+        log('[DYNAMIC-SAVE] Saving token for userId=' + userId.substring(0, 8) + '...');
+        await savePushToken(fcmToken, userId);
+      } else {
+        log('[DYNAMIC-SAVE] No user found, storing as pending');
+        pendingTokenRef.current = fcmToken;
+        (window as any).__pendingPushToken = fcmToken;
+      }
+    };
+
     const handleFcmTokenReady = async (event: Event) => {
       const customEvent = event as CustomEvent<{ token: string; platform: string; traceId?: string }>;
       const t = customEvent.detail?.token;
@@ -747,9 +768,8 @@ export const usePushNotifications = () => {
       updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: t?.length || null, traceId });
 
       if (t && t.length > 50) {
-        // Reject if somehow still an APNs hex token
         if (isApnsHexToken(t)) {
-          logError('[EVENT] fcmTokenReady received APNs hex token — this should not happen. Firebase may not be initialized.');
+          logError('[EVENT] fcmTokenReady received APNs hex token — Firebase may not be initialized.');
           updateDebug({ lastError: 'fcmTokenReady got APNs hex — Firebase not initialized?' });
           return;
         }
@@ -766,11 +786,28 @@ export const usePushNotifications = () => {
         (window as any).__pendingPushToken = t;
         setIsRegistered(true);
         updateDebug({ selectedFinalToken: t.substring(0, 20) + '...' });
-        await savePushToken(t);
+        await saveTokenDynamic(t);
+      }
+    };
+
+    // 🔥 FIX: Listen for userAuthenticatedWithFCMToken (dispatched by useAuth after SIGNED_IN)
+    const handleAuthWithToken = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ token: string; userId: string }>;
+      const { token: fcmToken, userId } = customEvent.detail || {};
+
+      log('[EVENT] 🔥 userAuthenticatedWithFCMToken received userId=' + userId?.substring(0, 8) + ' tokenLen=' + fcmToken?.length);
+
+      if (fcmToken && userId && fcmToken.length > 50 && !isApnsHexToken(fcmToken)) {
+        setToken(fcmToken);
+        pendingTokenRef.current = fcmToken;
+        setIsRegistered(true);
+        updateDebug({ selectedFinalToken: fcmToken.substring(0, 20) + '...' });
+        await saveTokenDynamic(fcmToken, userId);
       }
     };
 
     window.addEventListener('fcmTokenReady', handleFcmTokenReady);
+    window.addEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
     (window as any).__fcmListenerReady = true;
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
 
@@ -782,7 +819,7 @@ export const usePushNotifications = () => {
       pendingTokenRef.current = existingToken;
       setIsRegistered(true);
       updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: existingToken.length, selectedFinalToken: existingToken.substring(0, 20) + '...' });
-      savePushToken(existingToken);
+      saveTokenDynamic(existingToken);
     }
 
     // Fallback: if no fcmTokenReady after 15s on iOS, log warning
@@ -799,9 +836,10 @@ export const usePushNotifications = () => {
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
+      window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
       if (fallbackTimer) clearTimeout(fallbackTimer);
     };
-  }, [savePushToken, updateDebug, token, isRegistered]);
+  }, [savePushToken, updateDebug, token, isRegistered, user]);
 
   // ─── useEffect #6: App resume ────────────────────────────
 
