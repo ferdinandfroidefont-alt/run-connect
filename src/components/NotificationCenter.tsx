@@ -117,25 +117,43 @@ export const NotificationCenter = ({
     }
   }, [user, toast]);
 
-  // Check which follow_request users we already follow back (persists across reloads)
+  // Check actual follow status for all follow_request notifications (source of truth)
+  const [followStatuses, setFollowStatuses] = useState<Map<string, string>>(new Map());
+  
   useEffect(() => {
-    const checkAlreadyFollowing = async () => {
+    const checkFollowStatuses = async () => {
       if (!user || notifications.length === 0) return;
       const followRequestNotifs = notifications.filter(n => n.type === 'follow_request' && n.data?.follower_id);
       if (followRequestNotifs.length === 0) return;
       
       const followerIds = [...new Set(followRequestNotifs.map(n => n.data.follower_id))];
-      const { data: existingFollows } = await supabase
+      
+      // Check actual user_follows status for each follower -> me
+      const { data: incomingFollows } = await supabase
+        .from('user_follows')
+        .select('follower_id, status')
+        .eq('following_id', user.id)
+        .in('follower_id', followerIds);
+      
+      // Check if I already follow them back
+      const { data: outgoingFollows } = await supabase
         .from('user_follows')
         .select('following_id')
         .eq('follower_id', user.id)
         .in('following_id', followerIds);
       
-      if (existingFollows && existingFollows.length > 0) {
-        setAlreadyFollowing(new Set(existingFollows.map(f => f.following_id)));
+      const statusMap = new Map<string, string>();
+      for (const fid of followerIds) {
+        const incoming = incomingFollows?.find(f => f.follower_id === fid);
+        statusMap.set(fid, incoming?.status || 'none');
+      }
+      setFollowStatuses(statusMap);
+      
+      if (outgoingFollows && outgoingFollows.length > 0) {
+        setAlreadyFollowing(new Set(outgoingFollows.map(f => f.following_id)));
       }
     };
-    checkAlreadyFollowing();
+    checkFollowStatuses();
   }, [user, notifications]);
   const handleAcceptClubInvitation = async (notification: Notification) => {
     if (!user || notification.type !== 'club_invitation') return;
@@ -375,55 +393,47 @@ export const NotificationCenter = ({
     if (!user || notification.type !== 'follow_request') return;
     setLoading(true);
     try {
-      const {
-        follow_id,
-        follower_id
-      } = notification.data;
+      const { follow_id, follower_id } = notification.data;
 
       // Accept the follow request
-      const {
-        error
-      } = await supabase.rpc('accept_follow_request', {
-        follow_id: follow_id
-      });
+      const { error } = await supabase.rpc('accept_follow_request', { follow_id });
       if (error) throw error;
 
-      // Marquer la notification comme lue
-      await markAsRead(notification.id);
+      // Mark ALL follow_request notifications from this follower as read (handles duplicates)
+      const relatedNotifIds = notifications
+        .filter(n => n.type === 'follow_request' && n.data?.follower_id === follower_id)
+        .map(n => n.id);
+      
+      for (const nid of relatedNotifIds) {
+        await supabase.from('notifications').update({ read: true }).eq('id', nid);
+      }
 
-      // Ajouter à la liste des demandes acceptées
-      setAcceptedFollows(prev => new Set([...prev, notification.id]));
+      // Optimistic UI: update local state immediately
+      setAcceptedFollows(prev => new Set([...prev, ...relatedNotifIds]));
+      setFollowStatuses(prev => new Map(prev).set(follower_id, 'accepted'));
+      setNotifications(prev => prev.map(n => 
+        relatedNotifIds.includes(n.id) ? { ...n, read: true } : n
+      ));
 
-      // Send push notification only (no DB notification to avoid duplicates)
-      const {
-        data: currentUserProfile
-      } = await supabase.from('profiles').select('display_name, avatar_url, user_id').eq('user_id', user?.id).single();
+      // Send push notification (FCM only, DB insert skipped by edge function)
+      const { data: currentUserProfile } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, user_id')
+        .eq('user_id', user.id)
+        .single();
       
       const acceptorName = currentUserProfile?.display_name || 'Un utilisateur';
-
       await sendPushNotification(
         follower_id,
         'Demande acceptée ! 🎉',
         `${acceptorName} a accepté votre demande de suivi`,
         'follow_accepted',
-        {
-          acceptor_id: user?.id,
-          acceptor_name: acceptorName,
-          acceptor_avatar: currentUserProfile?.avatar_url
-        }
+        { acceptor_id: user.id, acceptor_name: acceptorName, acceptor_avatar: currentUserProfile?.avatar_url }
       );
 
-      toast({
-        title: "Demande acceptée",
-        description: "Vous avez un nouvel abonné"
-      });
-      fetchNotifications();
+      toast({ title: "Demande acceptée", description: "Vous avez un nouvel abonné" });
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
       setPendingAcceptFollowNotification(null);
@@ -505,29 +515,30 @@ export const NotificationCenter = ({
     if (!user || notification.type !== 'follow_request') return;
     setLoading(true);
     try {
-      const {
-        follow_id,
-        follower_id
-      } = notification.data;
+      const { follow_id, follower_id } = notification.data;
 
       // Delete the follow request
-      const {
-        error
-      } = await supabase.from('user_follows').delete().eq('id', follow_id);
+      const { error } = await supabase.from('user_follows').delete().eq('id', follow_id);
       if (error) throw error;
 
-      // Mark notification as read
-      await markAsRead(notification.id);
-      toast({
-        title: "Demande refusée"
-      });
-      fetchNotifications();
+      // Mark ALL follow_request notifications from this follower as read
+      const relatedNotifIds = notifications
+        .filter(n => n.type === 'follow_request' && n.data?.follower_id === follower_id)
+        .map(n => n.id);
+      
+      for (const nid of relatedNotifIds) {
+        await supabase.from('notifications').update({ read: true }).eq('id', nid);
+      }
+
+      // Optimistic UI update
+      setFollowStatuses(prev => new Map(prev).set(follower_id, 'none'));
+      setNotifications(prev => prev.map(n => 
+        relatedNotifIds.includes(n.id) ? { ...n, read: true } : n
+      ));
+
+      toast({ title: "Demande refusée" });
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
       setPendingRejectFollowNotification(null);
