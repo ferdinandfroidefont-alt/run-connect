@@ -1,53 +1,49 @@
 
 
-## Diagnostic
+# Refonte LoadingScreen — Animation logo GPS premium
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+## Concept
 
-Deux problemes distincts :
+Animation séquentielle en 3 phases sur ~2s :
+1. **Phase 1 (0-400ms)** : Pin GPS bleu apparaît au centre avec scale+bounce
+2. **Phase 2 (400-1200ms)** : Ligne lumineuse bleue trace un parcours en forme de "R" via SVG path animation (`stroke-dashoffset`)
+3. **Phase 3 (1200-1800ms)** : Le tracé se transforme en logo complet avec glow + light sweep
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+Puis la barre de progression apparaît en fade-in avec les phrases dynamiques.
 
-## Solution en 2 parties
+## Approche technique
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+Tout dans `src/components/LoadingScreen.tsx` avec du CSS pur + framer-motion (déjà installé).
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+- **SVG path animation** : Un `<path>` qui dessine la forme du R-logo RunConnect. Utilise `stroke-dasharray` + `stroke-dashoffset` animés pour l'effet "tracé en cours"
+- **Pin GPS** : SVG pin bleu avec `motion.div` scale spring
+- **Glow effect** : `filter: drop-shadow()` animé sur le SVG final
+- **Light sweep** : pseudo-element gradient linéaire qui translate de gauche à droite sur le logo
+- **Progress bar** : apparaît après l'animation logo, style identique mais plus raffiné
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+## Phases d'animation (timeline)
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+0ms        400ms       1200ms      1800ms      ~3500ms
+|--pin-----|---trace----|---glow----|---loading bar---|
+  scale-in   dashoffset    fill+glow   progress+phrases
+             animation     + sweep
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+## Phrases de chargement
+- "Connexion aux coureurs…"
+- "Chargement de la carte…"
+- "Synchronisation des séances…"
 
-### Partie 2 : Securiser la page bridge
+## Fichier impacté
+| Fichier | Changement |
+|---------|-----------|
+| `src/components/LoadingScreen.tsx` | Refonte complète avec animation SVG path |
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+## Design
+- Fond blanc pur
+- Bleu RunConnect `#007AFF` / `#3B82F6` comme couleur principale
+- Glow bleu clair autour du logo
+- Barre de progression fine et moderne
+- Typographie "RUNCONNECT" apparaît en fade après le logo
 
