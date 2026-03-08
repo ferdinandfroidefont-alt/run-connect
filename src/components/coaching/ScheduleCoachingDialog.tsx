@@ -13,7 +13,8 @@ import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { rccToSessionBlocks, type RCCResult } from "@/lib/rccParser";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
-import { MapPin, Calendar, Check, Clock, ChevronLeft, Send } from "lucide-react";
+import { LocationPickerMap } from "./LocationPickerMap";
+import { MapPin, Calendar, Check, Clock, ChevronLeft, Send, Map } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -54,6 +55,9 @@ export const ScheduleCoachingDialog = ({
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [locationLat, setLocationLat] = useState<number>(48.8566);
+  const [locationLng, setLocationLng] = useState<number>(2.3522);
 
   // Form state — mirrors CreateCoachingSessionDialog
   const [activityType, setActivityType] = useState("course");
@@ -74,6 +78,8 @@ export const ScheduleCoachingDialog = ({
       setLocationName(session.default_location_name || "");
       setCustomPace(session.pace_target || "");
       setCustomNotes("");
+      setLocationLat(session.default_location_lat || 48.8566);
+      setLocationLng(session.default_location_lng || 2.3522);
 
       if (suggestedDate) {
         try {
