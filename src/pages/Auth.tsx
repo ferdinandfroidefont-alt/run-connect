@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,19 +8,19 @@ import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { FcGoogle } from "react-icons/fc";
-import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import appIcon from '@/assets/app-icon.png';
+
+type AuthView = 'landing' | 'email-signin' | 'email-signup' | 'otp' | 'reset';
 
 const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [authStep, setAuthStep] = useState<'email' | 'otp' | 'password' | 'reset'>('email');
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [view, setView] = useState<AuthView>('landing');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [usernameOrEmail, setUsernameOrEmail] = useState("");
@@ -36,8 +36,8 @@ const Auth = () => {
   const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
 
+  // ── Existing useEffect: session check, referral, reset detection ──
   useEffect(() => {
-    // 🔥 NIVEAU 33: Détecter si profil créé mais redirection échouée
     const profileCreated = localStorage.getItem('profileCreatedSuccessfully');
     const profileCreatedAt = localStorage.getItem('profileCreatedAt');
     
@@ -45,7 +45,6 @@ const Auth = () => {
       const createdTime = parseInt(profileCreatedAt, 10);
       const timeSinceCreation = Date.now() - createdTime;
       
-      // Si profil créé il y a moins de 30 secondes, vérifier la session puis rediriger
       if (timeSinceCreation < 30000) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session) {
@@ -59,7 +58,6 @@ const Auth = () => {
         });
         return;
       } else {
-        // Nettoyer les vieux flags
         localStorage.removeItem('profileCreatedSuccessfully');
         localStorage.removeItem('profileCreatedAt');
       }
@@ -115,7 +113,7 @@ const Auth = () => {
     }
     
     if (isReset) {
-      setAuthStep('reset');
+      setView('reset');
       return;
     }
 
@@ -147,6 +145,8 @@ const Auth = () => {
     });
   }, [toast]);
 
+  // ── All existing handlers (unchanged) ──
+
   const forceCleanSession = async () => {
     try {
       await supabase.auth.signOut({ scope: 'global' });
@@ -166,8 +166,6 @@ const Auth = () => {
     try {
       setIsLoading(true);
       console.log('🔥 [GOOGLE AUTH] Starting...');
-      
-      // ✅ Nettoyer toute session existante avant nouvelle connexion
       console.log('🧹 [AUTH] Cleaning existing session before Google login...');
       await supabase.auth.signOut({ scope: 'local' });
       
@@ -224,8 +222,6 @@ const Auth = () => {
           return;
         } catch (nativeError: any) {
           console.error('🔥 [GOOGLE AUTH] Native error:', nativeError);
-          console.error('🔥 [GOOGLE AUTH] Error message:', nativeError.message);
-          console.error('🔥 [GOOGLE AUTH] Error stack:', nativeError.stack);
           toast({
             title: "Erreur Google Sign-In",
             description: nativeError.message || "Erreur lors de l'authentification",
@@ -235,7 +231,6 @@ const Auth = () => {
         }
       }
 
-      // 🍎 iOS: utiliser @capacitor/browser (SFSafariViewController) + deep link
       if (isNativeIOS()) {
         console.log('🍎 [GOOGLE AUTH] iOS detected, using Browser + appUrlOpen deep link...');
         try {
@@ -252,18 +247,8 @@ const Auth = () => {
             throw oauthError || new Error('No OAuth URL returned');
           }
 
-          console.log('🍎 [GOOGLE AUTH] OAuth URL obtained, opening Browser...');
-          console.log('🍎 [GOOGLE AUTH] Deep link callback will be handled by global listener in App.tsx');
-
-          // Ouvrir Safari via @capacitor/browser (SFSafariViewController, conforme Google)
           await Browser.open({ url: oauthData.url });
-
-          // Le retour deep link sera géré par le listener global dans App.tsx
-          // Timeout de sécurité pour remettre isLoading à false
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 120000);
-
+          setTimeout(() => { setIsLoading(false); }, 120000);
           return;
         } catch (iosError: any) {
           console.error('🍎 [GOOGLE AUTH] iOS error:', iosError);
@@ -297,11 +282,36 @@ const Auth = () => {
     }
   };
 
+  const handleAppleAuth = async () => {
+    try {
+      setIsLoading(true);
+      console.log('🍎 [APPLE AUTH] Starting...');
+      await supabase.auth.signOut({ scope: 'local' });
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('🍎 [APPLE AUTH] Error:', error);
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      if (authMode === 'signup') {
+      if (view === 'email-signup') {
         const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password: password.trim(),
@@ -327,12 +337,13 @@ const Auth = () => {
           }
         }
 
-        setAuthStep('otp');
+        setView('otp');
         toast({
           title: "Vérifiez votre email",
           description: "Un code de confirmation vous a été envoyé."
         });
       } else {
+        // OTP signin
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
@@ -345,7 +356,7 @@ const Auth = () => {
         
         setCaptchaToken(null);
         captchaRef.current?.resetCaptcha();
-        setAuthStep('otp');
+        setView('otp');
         toast({
           title: "Code envoyé !",
           description: "Vérifiez votre email pour le code à 6 chiffres."
@@ -362,8 +373,6 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Note: Ne PAS faire signOut avant verifyOtp - cela détruit la session et empêche la persistance
-      
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -410,7 +419,6 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // ✅ Nettoyer toute session existante avant nouvelle connexion
       console.log('🧹 [AUTH] Cleaning existing session before new login...');
       await supabase.auth.signOut({ scope: 'local' });
       
@@ -472,7 +480,7 @@ const Auth = () => {
         title: "Mot de passe mis à jour ✅",
         description: "Vous pouvez maintenant vous connecter."
       });
-      setAuthStep('email');
+      setView('landing');
       window.history.replaceState({}, '', '/auth');
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -516,412 +524,474 @@ const Auth = () => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-secondary flex flex-col bg-pattern" style={{ overflow: 'hidden' }}>
-      {/* iOS Header */}
-      <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10 }}>
-        <div className="flex items-center justify-center px-4 h-[56px]">
-          <h1 className="text-[17px] font-semibold">
-            {authStep === 'reset' ? 'Réinitialiser' : authMode === 'signup' ? 'Inscription' : 'Connexion'}
-          </h1>
+  const handleForgotPassword = async () => {
+    const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
+    if (!emailToUse) {
+      toast({
+        title: "Email requis",
+        description: "Entrez votre email pour réinitialiser le mot de passe",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!captchaToken) {
+      toast({
+        title: "Vérification requise",
+        description: "Validez le CAPTCHA d'abord",
+        variant: "destructive"
+      });
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+        redirectTo: 'https://run-connect.lovable.app/auth',
+        captchaToken
+      });
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
+      if (error) throw error;
+      toast({
+        title: "Email envoyé ✅",
+        description: "Vérifiez votre boîte mail"
+      });
+    } catch (error: any) {
+      setCaptchaToken(null);
+      captchaRef.current?.resetCaptcha();
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  // ── Apple icon SVG ──
+  const AppleIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+    </svg>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  LANDING VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderLanding = () => (
+    <div className="flex flex-col items-center justify-between min-h-full px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+      {/* Decorative SVG background */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }} viewBox="0 0 400 800" fill="none" preserveAspectRatio="xMidYMid slice">
+        <path d="M-50 600 Q100 400 200 500 T450 300 T200 100" stroke="hsl(var(--primary))" strokeWidth="2" fill="none"/>
+        <path d="M-50 700 Q150 500 250 600 T500 400 T250 200" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="none"/>
+      </svg>
+
+      {/* Top spacer */}
+      <div className="flex-1 min-h-[40px]" />
+
+      {/* Branding */}
+      <div className="flex flex-col items-center mb-10 relative z-10">
+        <img 
+          src={appIcon} 
+          alt="RunConnect" 
+          className="w-[88px] h-[88px] rounded-[22px] mb-5"
+          style={{ boxShadow: '0 8px 24px hsl(var(--primary) / 0.18)' }}
+        />
+        <h1 className="text-[28px] font-bold text-primary tracking-tight">RunConnect</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5 font-medium">
+          Chaque sortie commence ici.
+        </p>
+      </div>
+
+      {/* Action buttons */}
+      <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
+        {/* Google */}
+        <button
+          type="button"
+          onClick={handleGoogleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-card text-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(0 0% 0% / 0.06)' }}
+        >
+          <FcGoogle className="h-5 w-5" />
+          Continuer avec Google
+        </button>
+
+        {/* Apple */}
+        <button
+          type="button"
+          onClick={handleAppleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+        >
+          <AppleIcon />
+          Continuer avec Apple
+        </button>
+
+        {/* Email */}
+        <button
+          type="button"
+          onClick={() => setView('email-signin')}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
+        >
+          <Mail className="h-5 w-5" />
+          Continuer avec e-mail
+        </button>
+      </div>
+
+      {/* Bottom spacer */}
+      <div className="flex-1 min-h-[24px]" />
+
+      {/* Legal + link */}
+      <div className="w-full max-w-[340px] space-y-4 relative z-10">
+        <button
+          type="button"
+          onClick={() => setView('email-signin')}
+          className="w-full text-center text-[14px] text-primary font-medium py-2 active:opacity-70 transition-opacity"
+        >
+          Déjà inscrit ? Se connecter
+        </button>
+        <p className="text-[12px] text-muted-foreground/70 text-center leading-relaxed px-4">
+          En continuant, vous acceptez nos{' '}
+          <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
+          {' '}et notre{' '}
+          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>.
+        </p>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNIN VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderEmailSignin = () => (
+    <div className="px-4 py-6 space-y-5 pb-16">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <button type="button" onClick={() => { setView('landing'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <h2 className="text-[20px] font-bold text-foreground">Connexion</h2>
+      </div>
+
+      {/* Password signin */}
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Avec mot de passe</p>
+        </div>
+        <form onSubmit={handleUsernameOrEmailSignin} className="p-4 space-y-3">
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Pseudonyme ou email"
+              value={usernameOrEmail}
+              onChange={(e) => setUsernameOrEmail(e.target.value)}
+              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+            />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+            </button>
+          </div>
+
+          {!captchaToken && (
+            <CaptchaWidget
+              ref={captchaRef}
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+          )}
+          {captchaToken && (
+            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
+          )}
+
+          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Se connecter
+          </Button>
+        </form>
+      </div>
+
+      {/* Forgot password */}
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          disabled={!captchaToken}
+          className="w-full flex items-center justify-between px-4 py-3.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
+        >
+          <span className="text-[15px] text-primary font-medium">Mot de passe oublié ?</span>
+          <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 px-2">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[13px] text-muted-foreground">ou</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* OTP signin */}
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Connexion par code</p>
+        </div>
+        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+            />
+          </div>
+          {!captchaToken && (
+            <CaptchaWidget
+              ref={captchaRef}
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+          )}
+          {captchaToken && (
+            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
+          )}
+          <Button type="submit" variant="outline" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Recevoir un code
+          </Button>
+        </form>
+      </div>
+
+      {/* Go to signup */}
+      <button
+        type="button"
+        onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
+        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
+      >
+        Pas de compte ? Créer un compte
+      </button>
+
+      {/* Clean session */}
+      <button
+        type="button"
+        onClick={forceCleanSession}
+        className="w-full text-center text-[12px] text-muted-foreground/60 hover:text-destructive py-2"
+      >
+        Problème de connexion ? Nettoyer la session
+      </button>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNUP VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderEmailSignup = () => (
+    <div className="px-4 py-6 space-y-5 pb-16">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <button type="button" onClick={() => { setView('landing'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
+      </div>
+
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+            />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Mot de passe (min. 6 caractères)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+              minLength={6}
+            />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+              {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+            </button>
+          </div>
+
+          {!captchaToken && (
+            <CaptchaWidget
+              ref={captchaRef}
+              onVerify={(token) => setCaptchaToken(token)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+          )}
+          {captchaToken && (
+            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
+          )}
+
+          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Créer mon compte
+          </Button>
+        </form>
+        <div className="px-4 pb-4">
+          <ReferralCodeInput />
         </div>
       </div>
 
-      <div id="auth-scroll-container" className="scroll-momentum" style={{ flex: '1 1 0%', minHeight: 0 }}>
-        <div className="px-4 py-6 space-y-6 pb-16">
-          {/* Logo Section */}
-          <div className="flex flex-col items-center pt-4 pb-2">
-            <img 
-              src={appIcon} 
-              alt="RunConnect" 
-              className="w-20 h-20 rounded-[18px] mb-4"
-              style={{ boxShadow: '0 4px 12px hsl(211 100% 50% / 0.2)' }}
-            />
-            <h2 className="text-2xl font-bold text-primary">RunConnect</h2>
-            <p className="text-[13px] text-muted-foreground mt-1">
-              {authMode === 'signup' ? 'Créez votre compte' : 'Bienvenue !'}
-            </p>
-          </div>
+      <button
+        type="button"
+        onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
+        className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
+      >
+        Déjà inscrit ? Se connecter
+      </button>
+    </div>
+  );
 
-          {/* Password Reset Form */}
-          {authStep === 'reset' && (
-            <div className="space-y-4">
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <div className="px-4 py-3 border-b border-border">
-                  <p className="text-[13px] text-muted-foreground">Nouveau mot de passe</p>
-                </div>
-                <form onSubmit={handlePasswordReset} className="p-4 space-y-4">
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      type={showNewPassword ? "text" : "password"}
-                      placeholder="Nouveau mot de passe"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-                      required
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      {showNewPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirmer le mot de passe"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-                      required
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-                  </div>
-                  <Button type="submit" className="w-full h-12 rounded-[10px]" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Mettre à jour le mot de passe
-                  </Button>
-                </form>
-              </div>
-            </div>
-          )}
+  // ══════════════════════════════════════════════
+  // ██  OTP VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderOtp = () => (
+    <div className="px-4 py-6 space-y-5 pb-16">
+      <div className="flex items-center gap-3 mb-2">
+        <button type="button" onClick={() => { setView('email-signin'); setOtp(''); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <h2 className="text-[20px] font-bold text-foreground">Vérification</h2>
+      </div>
 
-          {/* OTP Verification */}
-          {authStep === 'otp' && (
-            <div className="space-y-4">
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <div className="px-4 py-3 border-b border-border text-center">
-                  <p className="text-[15px] font-medium">Vérification</p>
-                  <p className="text-[13px] text-muted-foreground mt-1">
-                    Code envoyé à : <span className="font-medium text-foreground">{email}</span>
-                  </p>
-                </div>
-                <form onSubmit={handleOtpSubmit} className="p-6 space-y-6">
-                  <div className="flex justify-center">
-                    <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  <p className="text-[12px] text-muted-foreground text-center">Le code expire dans 5 minutes</p>
-                  <Button type="submit" className="w-full h-12 rounded-[10px]" disabled={isLoading || otp.length !== 6}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Vérifier le code
-                  </Button>
-                </form>
-              </div>
-
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <button
-                  type="button"
-                  onClick={resendOtp}
-                  className="w-full flex items-center justify-between px-4 py-3 active:bg-secondary/50 transition-colors"
-                >
-                  <span className="text-[15px] text-primary">Renvoyer le code</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-                </button>
-                <div className="h-px bg-border ml-4" />
-                <button
-                  type="button"
-                  onClick={() => { setAuthStep('email'); setOtp(''); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 active:bg-secondary/50 transition-colors"
-                >
-                  <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-[15px]">Retour</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Email/Password Forms */}
-          {authStep === 'email' && (
-            <div className="space-y-4">
-              {/* Google Sign-In */}
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <button
-                  type="button"
-                  onClick={handleGoogleAuth}
-                  disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-4 active:bg-secondary/50 transition-colors disabled:opacity-50"
-                >
-                  <FcGoogle className="h-6 w-6" />
-                  <span className="text-[17px] font-medium">Continuer avec Google</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-4 px-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-[13px] text-muted-foreground">ou</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {authMode === 'signup' ? (
-                /* Signup Form */
-                <div className="bg-card rounded-[10px] overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border">
-                    <p className="text-[13px] text-muted-foreground uppercase tracking-wider">Créer un compte</p>
-                  </div>
-                  <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-                        required
-                      />
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Mot de passe (min. 6 caractères)"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                      </button>
-                    </div>
-
-                    {!captchaToken && (
-                      <CaptchaWidget
-                        ref={captchaRef}
-                        onVerify={(token) => setCaptchaToken(token)}
-                        onExpire={() => setCaptchaToken(null)}
-                        onError={() => setCaptchaToken(null)}
-                      />
-                    )}
-                    {captchaToken && (
-                      <div className="text-center text-[13px] text-green-600">✅ Vérification réussie</div>
-                    )}
-
-                    <Button type="submit" className="w-full h-12 rounded-[10px]" disabled={isLoading || !captchaToken}>
-                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Continuer
-                    </Button>
-                  </form>
-                  <div className="px-4 pb-4">
-                    <ReferralCodeInput />
-                  </div>
-                </div>
-              ) : (
-                /* Signin Form */
-                <>
-                  {/* OTP Signin */}
-                  <div className="bg-card rounded-[10px] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-[13px] text-muted-foreground uppercase tracking-wider">Connexion par code</p>
-                    </div>
-                    <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          type="email"
-                          placeholder="Email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-                          required
-                        />
-                      </div>
-                      {!captchaToken && (
-                        <CaptchaWidget
-                          ref={captchaRef}
-                          onVerify={(token) => setCaptchaToken(token)}
-                          onExpire={() => setCaptchaToken(null)}
-                          onError={() => setCaptchaToken(null)}
-                        />
-                      )}
-                      {captchaToken && (
-                        <div className="text-center text-[13px] text-green-600">✅ Vérification réussie</div>
-                      )}
-                      <Button type="submit" className="w-full h-12 rounded-[10px]" disabled={isLoading || !captchaToken}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Recevoir un code
-                      </Button>
-                    </form>
-                  </div>
-
-                  {/* Password Signin */}
-                  <div className="bg-card rounded-[10px] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-[13px] text-muted-foreground uppercase tracking-wider">Ou avec mot de passe</p>
-                    </div>
-                    <form onSubmit={handleUsernameOrEmailSignin} className="p-4 space-y-3">
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          type="text"
-                          placeholder="Pseudonyme ou email"
-                          value={usernameOrEmail}
-                          onChange={(e) => setUsernameOrEmail(e.target.value)}
-                          className="pl-11 h-12 rounded-[10px] bg-secondary border-0"
-                          required
-                        />
-                      </div>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Mot de passe"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2"
-                        >
-                          {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                        </button>
-                      </div>
-
-                      {!captchaToken && (
-                        <CaptchaWidget
-                          ref={captchaRef}
-                          onVerify={(token) => setCaptchaToken(token)}
-                          onExpire={() => setCaptchaToken(null)}
-                          onError={() => setCaptchaToken(null)}
-                        />
-                      )}
-                      {captchaToken && (
-                        <div className="text-center text-[13px] text-green-600">✅ Vérification réussie</div>
-                      )}
-
-                      <Button type="submit" variant="outline" className="w-full h-12 rounded-[10px]" disabled={isLoading || !captchaToken}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Se connecter
-                      </Button>
-                    </form>
-                  </div>
-
-                  {/* Forgot Password */}
-                  <div className="bg-card rounded-[10px] overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
-                        if (!emailToUse) {
-                          toast({
-                            title: "Email requis",
-                            description: "Entrez votre email pour réinitialiser le mot de passe",
-                            variant: "destructive"
-                          });
-                          return;
-                        }
-                        if (!captchaToken) {
-                          toast({
-                            title: "Vérification requise",
-                            description: "Validez le CAPTCHA d'abord",
-                            variant: "destructive"
-                          });
-                          return;
-                        }
-                        try {
-                          const { error } = await supabase.auth.resetPasswordForEmail(emailToUse, {
-                            redirectTo: 'https://run-connect.lovable.app/auth',
-                            captchaToken
-                          });
-                          setCaptchaToken(null);
-                          captchaRef.current?.resetCaptcha();
-                          if (error) throw error;
-                          toast({
-                            title: "Email envoyé ✅",
-                            description: "Vérifiez votre boîte mail"
-                          });
-                        } catch (error: any) {
-                          setCaptchaToken(null);
-                          captchaRef.current?.resetCaptcha();
-                          toast({ title: "Erreur", description: error.message, variant: "destructive" });
-                        }
-                      }}
-                      disabled={!captchaToken}
-                      className="w-full flex items-center justify-between px-4 py-3 active:bg-secondary/50 transition-colors disabled:opacity-50"
-                    >
-                      <span className="text-[15px] text-primary">🔑 Mot de passe oublié ?</span>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Toggle Auth Mode */}
-              <div className="bg-card rounded-[10px] overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setAuthMode(authMode === 'signup' ? 'signin' : 'signup')}
-                  className="w-full flex items-center justify-center px-4 py-4 active:bg-secondary/50 transition-colors"
-                >
-                  <span className="text-[15px] text-primary">
-                    {authMode === 'signup' ? "Déjà inscrit ? Connectez-vous" : "Pas de compte ? Inscrivez-vous"}
-                  </span>
-                </button>
-              </div>
-
-              {/* Clean Session */}
-              <button
-                type="button"
-                onClick={forceCleanSession}
-                className="w-full text-center text-[13px] text-muted-foreground hover:text-destructive py-2"
-              >
-                Problème de connexion ? Nettoyer la session
-              </button>
-
-              {/* iOS Debug: Test deep link scheme */}
-              {(window as any).detectedPlatform === 'ios' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const testUrl = 'runconnect://test';
-                    console.log('🔧 [DEBUG] Testing deep link scheme:', testUrl);
-                    toast({
-                      title: "🔧 Test Deep Link",
-                      description: `Ouverture de ${testUrl}...`,
-                    });
-                    // On iOS, window.location.href is the correct way to trigger a custom scheme
-                    // Browser.open() is for HTTP URLs only
-                    setTimeout(() => {
-                      window.location.href = testUrl;
-                    }, 500);
-                  }}
-                  className="w-full text-center text-[11px] text-muted-foreground/50 py-1"
-                >
-                  🔧 Debug: Tester scheme iOS
-                </button>
-              )}
-            </div>
-          )}
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <div className="px-4 py-3 border-b border-border text-center">
+          <p className="text-[13px] text-muted-foreground mt-1">
+            Code envoyé à : <span className="font-medium text-foreground">{email}</span>
+          </p>
         </div>
+        <form onSubmit={handleOtpSubmit} className="p-6 space-y-6">
+          <div className="flex justify-center">
+            <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+          <p className="text-[12px] text-muted-foreground text-center">Le code expire dans 5 minutes</p>
+          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || otp.length !== 6}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Vérifier le code
+          </Button>
+        </form>
+      </div>
+
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <button type="button" onClick={resendOtp} className="w-full flex items-center justify-between px-4 py-3.5 active:bg-secondary/50 transition-colors">
+          <span className="text-[15px] text-primary font-medium">Renvoyer le code</span>
+          <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+        </button>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  RESET VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderReset = () => (
+    <div className="px-4 py-6 space-y-5 pb-16">
+      <div className="flex items-center gap-3 mb-2">
+        <button type="button" onClick={() => { setView('landing'); window.history.replaceState({}, '', '/auth'); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <h2 className="text-[20px] font-bold text-foreground">Réinitialiser</h2>
+      </div>
+
+      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-[13px] text-muted-foreground font-medium">Nouveau mot de passe</p>
+        </div>
+        <form onSubmit={handlePasswordReset} className="p-4 space-y-4">
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type={showNewPassword ? "text" : "password"}
+              placeholder="Nouveau mot de passe"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+              minLength={6}
+            />
+            <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+              {showNewPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+            </button>
+          </div>
+          <div className="relative">
+            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirmer le mot de passe"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
+              required
+              minLength={6}
+            />
+            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+              {showConfirmPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+            </button>
+          </div>
+          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mettre à jour le mot de passe
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  MAIN RENDER  ██
+  // ══════════════════════════════════════════════
+  return (
+    <div className="fixed inset-0 flex flex-col" style={{ overflow: 'hidden', backgroundColor: 'hsl(220 14% 97%)' }}>
+      {/* Scrollable content — no header bar on landing for cleaner look */}
+      {view !== 'landing' && (
+        <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="h-[12px]" />
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {view === 'landing' && renderLanding()}
+        {view === 'email-signin' && renderEmailSignin()}
+        {view === 'email-signup' && renderEmailSignup()}
+        {view === 'otp' && renderOtp()}
+        {view === 'reset' && renderReset()}
       </div>
 
       <ProfileSetupDialog
