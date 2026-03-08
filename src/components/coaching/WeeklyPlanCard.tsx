@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, CheckCircle2, Clock, ChevronRight } from "lucide-react";
+import { Pencil, CheckCircle2, Clock } from "lucide-react";
 import { parseRCC, computeRCCSummary, type ParsedBlock } from "@/lib/rccParser";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SessionData {
   title: string;
@@ -105,16 +105,16 @@ export const WeeklyPlanCard = ({
 
   return (
     <div
-      className={`bg-card rounded-none overflow-hidden transition-all ${
-        onClick ? "cursor-pointer active:scale-[0.98]" : ""
-      } ${isDone ? "opacity-80" : ""}`}
+      className={`bg-card rounded-xl mx-4 mb-2 overflow-hidden transition-all border ${
+        isDone ? "border-green-500/20 bg-green-500/[0.03]" : "border-border/30"
+      } ${onClick ? "cursor-pointer active:scale-[0.98]" : ""}`}
       onClick={onClick}
     >
       <div className="p-4">
         <div className="flex items-start gap-3">
           {/* Checkbox or status */}
           {showCheckbox && onCheck ? (
-            <button
+            <motion.button
               onClick={(e) => { e.stopPropagation(); onCheck(); }}
               disabled={disabled}
               className={`mt-0.5 h-7 w-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
@@ -122,9 +122,21 @@ export const WeeklyPlanCard = ({
                   ? "bg-green-500 border-green-500"
                   : "border-muted-foreground/30 hover:border-primary"
               }`}
+              whileTap={{ scale: 0.85 }}
             >
-              {isDone && <CheckCircle2 className="h-5 w-5 text-white" />}
-            </button>
+              <AnimatePresence>
+                {isDone && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  >
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
           ) : isDone ? (
             <div className="mt-0.5 h-7 w-7 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
               <CheckCircle2 className="h-5 w-5 text-white" />
@@ -143,7 +155,7 @@ export const WeeklyPlanCard = ({
                   {dayLabel}
                 </p>
                 <p className={`text-[16px] font-semibold leading-tight mt-0.5 ${
-                  isDone ? "line-through text-muted-foreground" : "text-foreground"
+                  isDone ? "text-muted-foreground" : "text-foreground"
                 }`}>
                   {session.title}
                 </p>
