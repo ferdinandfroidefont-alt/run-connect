@@ -322,12 +322,80 @@ jobs:
             SWIFT_COMPILATION_MODE=wholemodule \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
 
+      - name: 🔍 Extract build errors summary
+        if: always()
+        run: |
+          LOG="$RUNNER_TEMP/xcodebuild.log"
+          if [ ! -f "$LOG" ]; then
+            echo "⚠️ No xcodebuild.log found"
+            exit 0
+          fi
+
+          echo "::group::🔴 Build Errors"
+          grep -nE "error:|fatal error:|ARCHIVE FAILED|linker command failed" "$LOG" | tail -40 || echo "No error: lines found"
+          echo "::endgroup::"
+
+          echo "::group::⚠️ Warnings & CodeSign"
+          grep -nE "warning:.*signing|CodeSign|No signing certificate|provisioning profile" "$LOG" | tail -20 || echo "None"
+          echo "::endgroup::"
+
+          echo "::group::📜 PhaseScriptExecution failures"
+          grep -nE "PhaseScriptExecution|Run custom shell script" "$LOG" | tail -10 || echo "None"
+          echo "::endgroup::"
+
+          # --- GitHub Step Summary (markdown) ---
+          {
+            echo "## 🍎 iOS Build Diagnostic"
+            echo ""
+            echo "### Errors"
+            echo '```'
+            grep -nE "error:|fatal error:|ARCHIVE FAILED|linker command failed" "$LOG" | tail -30 || echo "No errors found"
+            echo '```'
+            echo ""
+
+            # Hints
+            if grep -qE "No signing certificate|provisioning profile" "$LOG"; then
+              echo "💡 **Hint**: Signing/provisioning issue detected. Check certificates & profiles in secrets."
+            fi
+            if grep -qE "module map|SwiftCompile.*error" "$LOG"; then
+              echo "💡 **Hint**: Swift compilation or module mapping error. Check pod dependencies."
+            fi
+            if grep -qE "PhaseScriptExecution.*failed" "$LOG"; then
+              echo "💡 **Hint**: A CocoaPods/Build Phase script failed. Check Podfile or build phases."
+            fi
+            if grep -qE "duplicate symbol\|multiple commands produce" "$LOG"; then
+              echo "💡 **Hint**: Duplicate symbol/resource conflict. Check linked frameworks."
+            fi
+
+            echo ""
+            echo "### Last 20 lines of log"
+            echo '```'
+            tail -20 "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "✅ Diagnostic summary written to job summary"
+
       - name: 📋 Upload xcodebuild log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: xcodebuild-log
           path: ${{ runner.temp }}/xcodebuild.log
+
+      - name: ✅ Verify archive exists
+        run: |
+          if [ ! -d "$RUNNER_TEMP/App.xcarchive" ]; then
+            echo "❌ App.xcarchive NOT found — build failed!"
+            echo ""
+            echo "=== Root cause (extracted errors) ==="
+            grep -nE "error:|fatal error:" "$RUNNER_TEMP/xcodebuild.log" | tail -15 || echo "No error lines found"
+            echo ""
+            echo "=== Last 10 lines ==="
+            tail -10 "$RUNNER_TEMP/xcodebuild.log" || true
+            exit 1
+          fi
+          echo "✅ App.xcarchive exists"
 
       - name: 📦 Export IPA
         env:
