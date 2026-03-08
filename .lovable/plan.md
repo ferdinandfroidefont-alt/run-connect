@@ -1,25 +1,53 @@
 
 
-## Problem
+## Diagnostic
 
-Clicking a profile in search results calls `useProfileNavigation` which tries to open a `ProfilePreviewDialog` as an inline dialog. This dialog conflicts with the Search page's full-screen overlay (z-index 60), causing it to appear behind or be dismissed immediately.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-## Solution
+Deux problemes distincts :
 
-Replace the dialog-based approach with direct navigation to `/profile/:userId`. The Profile page already handles other users correctly -- it renders `ProfilePreviewDialog` with `onClose={() => navigate(-1)}` (line 636-644 of Profile.tsx). This means the user will:
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-1. Click a profile in search results
-2. Navigate to `/profile/:userId`
-3. See the ProfilePreviewDialog (with follow button, stats, etc.)
-4. Press "back" to return to search
+## Solution en 2 parties
 
-## Changes
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### `src/components/search/ProfilesTab.tsx`
-- Remove `useProfileNavigation` hook import and usage
-- Remove `ProfilePreviewDialog` component and its rendering
-- Replace `handleProfileClick` with `navigate(`/profile/${userId}`)` using react-router
-- Keep all other functionality (search, loading states, etc.)
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-This is a minimal, clean fix -- 3 lines removed, 1 line changed.
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
