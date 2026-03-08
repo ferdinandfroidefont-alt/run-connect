@@ -961,9 +961,9 @@ export default function MySessions() {
                 )}
               </div>
 
-              {/* Right column: Itinéraires */}
+              {/* Right column: Itinéraires + sub-filter */}
               <div className="w-1/2">
-                <div className="bg-secondary rounded-[10px] p-1">
+                <div className={`bg-secondary ${currentView === 'routes' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0.5`}>
                   <button
                     onClick={() => setCurrentView('routes')}
                     className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
@@ -975,6 +975,32 @@ export default function MySessions() {
                     Itinéraires
                   </button>
                 </div>
+                {currentView === 'routes' && (
+                  <div className="bg-secondary rounded-b-[10px] px-1 pb-1">
+                    <div className="flex gap-0.5">
+                      <button
+                        onClick={() => setRouteSource('created')}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          routeSource === 'created'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Créés
+                      </button>
+                      <button
+                        onClick={() => setRouteSource('feed')}
+                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                          routeSource === 'feed'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        Feed
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
