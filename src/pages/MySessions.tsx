@@ -1,5 +1,9 @@
 import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
+import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
+import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
+import { RouteDetailDialog } from '@/components/routes-feed/RouteDetailDialog';
+import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
 import { RouteEditDialog } from '@/components/RouteEditDialog';
 import { CreateSessionWizard } from '@/components/session-creation/CreateSessionWizard';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
