@@ -286,7 +286,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     }
   };
 
-
+  const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
     if (!q) return athletes;
     return athletes.filter(a => {
