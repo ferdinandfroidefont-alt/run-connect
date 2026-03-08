@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ElevationProfile3D } from './ElevationProfile3D';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Mountain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 
 interface ElevationProfile3DDialogProps {
   open: boolean;
@@ -41,13 +39,11 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
 
     const fetchElevations = async () => {
       if (!window.google?.maps) return;
-
       setLoading(true);
       try {
         const elevationService = new google.maps.ElevationService();
         const path = coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
         const samples = Math.min(512, Math.max(coordinates.length, 50));
-
         const result = await new Promise<google.maps.ElevationResult[]>((resolve, reject) => {
           elevationService.getElevationAlongPath(
             { path, samples },
@@ -57,7 +53,6 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
             }
           );
         });
-
         setElevations(result.map(r => r.elevation));
       } catch (error) {
         console.error('Erreur récupération élévations:', error);
@@ -100,30 +95,45 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent fullScreen className="p-0" aria-describedby={undefined}>
-        {/* Standard back header */}
-        <div className="bg-card pt-[env(safe-area-inset-top)] border-b border-border/30 z-20 relative">
-          <div className="flex items-center px-2 py-2">
+      <DialogContent fullScreen className="p-0 bg-black" aria-describedby={undefined}>
+        {/* Floating back button — glass style */}
+        <div className="absolute top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)]">
+          <div className="flex items-center justify-between px-3 py-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="text-primary gap-1"
+              className="bg-black/40 backdrop-blur-xl border border-white/15 text-white hover:bg-black/60 gap-1.5 rounded-full h-9 px-3"
             >
-              <ArrowLeft className="h-5 w-5" />
-              Retour
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-[13px]">Retour</span>
             </Button>
-            <h2 className="flex-1 text-center font-semibold text-foreground pr-16">
-              {routeName || 'Vue 3D'}
-            </h2>
+
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-black/40 backdrop-blur-xl border border-white/15 rounded-full px-3 py-1.5 flex items-center gap-1.5"
+            >
+              <Mountain className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[13px] font-semibold text-white truncate max-w-[180px]">
+                {routeName || 'Vue 3D'}
+              </span>
+            </motion.div>
           </div>
         </div>
 
-        <div className="w-full flex-1 relative" style={{ height: 'calc(100% - 52px)' }}>
+        {/* Full-screen 3D view */}
+        <div className="w-full h-full relative">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-full bg-muted/10 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Chargement du relief...</p>
+            <div className="flex flex-col items-center justify-center h-full bg-black gap-4">
+              <div className="relative">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/20 animate-ping" />
+              </div>
+              <div className="text-center">
+                <p className="text-[15px] font-medium text-white">Chargement du relief</p>
+                <p className="text-[13px] text-white/50 mt-1">Préparation du survol 3D...</p>
+              </div>
             </div>
           ) : (
             <ElevationProfile3D
