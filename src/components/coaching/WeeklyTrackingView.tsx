@@ -212,7 +212,81 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     }
   };
 
-  const filtered = useMemo(() => {
+  // Load 4-week volume stats for selected athlete
+  useEffect(() => {
+    if (!selectedAthleteId) return;
+    const load4WeekStats = async () => {
+      const w0 = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const w4ago = subWeeks(w0, 4);
+      const { data: sessions4w } = await supabase
+        .from("coaching_sessions")
+        .select("id, distance_km, scheduled_at")
+        .eq("club_id", clubId)
+        .gte("scheduled_at", w4ago.toISOString())
+        .lte("scheduled_at", endOfWeek(currentWeek, { weekStartsOn: 1 }).toISOString());
+      if (!sessions4w || sessions4w.length === 0) { setFourWeekVolume(null); return; }
+      const sessionIds = sessions4w.map(s => s.id);
+      const { data: parts } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, status")
+        .eq("user_id", selectedAthleteId)
+        .in("coaching_session_id", sessionIds);
+      if (!parts) { setFourWeekVolume(null); return; }
+
+      const completedIds = new Set(parts.filter(p => p.status === "completed").map(p => p.coaching_session_id));
+      let currentVol = 0, prevVol = 0;
+      const w2ago = subWeeks(w0, 2);
+      sessions4w.forEach(s => {
+        if (!completedIds.has(s.id)) return;
+        const km = Number(s.distance_km) || 0;
+        if (new Date(s.scheduled_at) >= w2ago) currentVol += km;
+        else prevVol += km;
+      });
+      setFourWeekVolume({ current: currentVol, previous: prevVol });
+
+      // Compute streak
+      let streak = 0;
+      const allParts = parts.filter(p => p.status === "completed").map(p => p.coaching_session_id);
+      const weekSessions = sessions4w
+        .filter(s => new Date(s.scheduled_at) <= new Date())
+        .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+      for (const s of weekSessions) {
+        if (allParts.includes(s.id)) streak++;
+        else break;
+      }
+      setCompletionStreak(streak);
+    };
+    load4WeekStats();
+  }, [selectedAthleteId, clubId, currentWeek]);
+
+  // Send reminder to athletes who haven't completed past sessions
+  const handleSendReminder = async () => {
+    const now = new Date();
+    const lateAthletes = athletes.filter(a => {
+      return Object.entries(a.days).some(([dayKey, d]) => {
+        return new Date(dayKey) < now && d.status !== "completed";
+      });
+    });
+    if (lateAthletes.length === 0) {
+      toast.info("Tous les athlètes sont à jour !");
+      return;
+    }
+    setSendingReminder(true);
+    try {
+      await Promise.all(
+        lateAthletes.map(a =>
+          sendPushNotification(a.userId, "⏰ Rappel de votre coach", "N'oubliez pas de valider vos séances !", "coaching_reminder")
+        )
+      );
+      toast.success(`Rappel envoyé à ${lateAthletes.length} athlète${lateAthletes.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+
     const q = normalizeSearchValue(search);
     if (!q) return athletes;
     return athletes.filter(a => {
