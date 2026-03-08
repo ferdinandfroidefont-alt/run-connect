@@ -11,13 +11,13 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// Cursive "R" path — starts bottom-left (pin location), sweeps up, loops for the R bowl, diagonal leg
-const R_PATH = "M 30,170 C 30,170 28,120 30,80 C 32,50 35,30 55,20 C 75,10 100,12 110,30 C 120,48 115,70 95,78 C 80,84 55,80 45,75 L 45,75 C 45,75 50,78 60,90 C 70,102 90,140 110,170";
-const R_PATH_LENGTH = 520;
+// Cursive "R" path — tall stem from pin, wide round bowl, strong diagonal leg
+const R_PATH = "M 25,185 C 25,185 22,140 24,95 C 26,55 28,25 32,15 C 32,15 38,8 55,8 C 75,8 105,10 120,28 C 135,46 130,72 112,82 C 98,90 70,88 50,82 L 50,82 C 55,88 70,105 85,125 C 100,145 120,170 140,185";
+const R_PATH_LENGTH = 620;
 
 // Pin position = start of the R path
-const PIN_X = 30;
-const PIN_Y = 170;
+const PIN_X = 25;
+const PIN_Y = 185;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin' | 'trace' | 'glow' | 'loading'>('pin');
@@ -84,7 +84,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
       {/* Main logo area */}
       <div className="flex flex-col items-center">
-        <div className="relative" style={{ width: 140, height: 200 }}>
+        <div className="relative" style={{ width: 165, height: 210 }}>
 
           {/* GPS Pin — always visible, appears first with spring */}
           <motion.svg
@@ -129,9 +129,9 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           {showTrace && (
             <motion.svg
               className="absolute inset-0"
-              width="140"
-              height="200"
-              viewBox="0 0 140 200"
+              width="165"
+              height="210"
+              viewBox="0 0 165 210"
               fill="none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
