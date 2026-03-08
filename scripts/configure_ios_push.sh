@@ -29,31 +29,27 @@ if ! grep -q "MessagingDelegate" "$DELEGATE"; then
   echo "✅ MessagingDelegate conformance added"
 fi
 
-# ─── CRITICAL FIX: Add FirebaseApp.configure() ───
-# Capacitor's AppDelegate does NOT call super.application(...)
-# It just has: func application(_ application:..., didFinishLaunchingWithOptions...) -> Bool { return true }
-# We must match the actual function signature, not super.application
-if ! grep -q "FirebaseApp.configure" "$DELEGATE"; then
-  # Strategy: insert after the opening brace of didFinishLaunchingWithOptions
+# ─── Firebase auto-initializes via GoogleService-Info.plist ───
+# Do NOT call FirebaseApp.configure() manually — the Firebase/Messaging pod
+# + GoogleService-Info.plist triggers auto-init before didFinishLaunchingWithOptions.
+# Calling configure() again causes SIGABRT (FIRApp.m:110).
+# We only need to set the MessagingDelegate.
+if ! grep -q "Messaging.messaging().delegate = self" "$DELEGATE"; then
   sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
-        if FirebaseApp.app() == nil { FirebaseApp.configure() }\
         Messaging.messaging().delegate = self\
-        print("[PUSH][IOS] Firebase configured + MessagingDelegate set")
+        print("[PUSH][IOS] MessagingDelegate set (Firebase auto-configured via plist)")
 ' "$DELEGATE"
-  echo "✅ FirebaseApp.configure() injected via didFinishLaunchingWithOptions pattern"
+  echo "✅ Messaging.delegate injected (no manual FirebaseApp.configure)"
 fi
 
-# ─── HARD ASSERTION: FirebaseApp.configure() MUST be present ───
-if ! grep -q "FirebaseApp.configure" "$DELEGATE"; then
+# ─── HARD ASSERTION: MessagingDelegate MUST be set ───
+if ! grep -q "Messaging.messaging().delegate = self" "$DELEGATE"; then
   echo ""
-  echo "❌ FATAL: FirebaseApp.configure() injection FAILED"
-  echo "The sed pattern did not match the AppDelegate structure."
-  echo "--- Full AppDelegate.swift content ---"
+  echo "❌ FATAL: Messaging.messaging().delegate injection FAILED"
   cat "$DELEGATE"
-  echo "--- end ---"
   exit 1
 fi
-echo "✅ FirebaseApp.configure() confirmed present"
+echo "✅ Messaging.messaging().delegate confirmed present"
 
 # Always use update mode to replace any existing methods with instrumented version
 python3 scripts/inject_ios_push.py --mode update
