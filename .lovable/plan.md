@@ -1,53 +1,117 @@
 
 
-## Diagnostic
+## Plan: Feed communautaire d'itinéraires
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Concept
+Ajouter sous l'onglet "Itinéraires" de la page "Mes Séances" deux sous-onglets : **Créés** (existant) et **Feed** (nouveau). Le Feed affiche les itinéraires publics d'autres utilisateurs, avec filtres par sport/distance, notation par etoiles, commentaires, photos geolocaliseees sur le parcours.
 
-Deux problemes distincts :
+### Modifications base de donnees (3 nouvelles tables + 1 colonne)
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+**1. Colonne sur `routes`**
+```sql
+ALTER TABLE routes ADD COLUMN is_public boolean DEFAULT false;
+ALTER TABLE routes ADD COLUMN activity_type text DEFAULT 'course';
+```
++ Mise a jour RLS pour permettre SELECT sur routes publiques par tout utilisateur authentifie.
 
-## Solution en 2 parties
+**2. Table `route_photos`**
+```sql
+CREATE TABLE route_photos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id uuid REFERENCES routes(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid NOT NULL,
+  photo_url text NOT NULL,
+  lat numeric,
+  lng numeric,
+  caption text,
+  created_at timestamptz DEFAULT now()
+);
+```
+RLS: auteur peut CRUD, tout authentifie peut SELECT sur routes publiques.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+**3. Table `route_ratings`**
+```sql
+CREATE TABLE route_ratings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id uuid REFERENCES routes(id) ON DELETE CASCADE NOT NULL,
+  user_id uuid NOT NULL,
+  rating smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment text,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(route_id, user_id)
+);
+```
+RLS: auteur peut INSERT/UPDATE/DELETE ses propres ratings, tout authentifie peut SELECT.
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+**4. Storage bucket `route-photos`** (public)
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### Fichiers front a creer
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+**1. `src/hooks/useRoutesFeed.tsx`**
+- Hook qui charge les routes publiques (`is_public = true`) avec profils createurs, moyenne ratings, nombre de photos
+- Filtres : activite, distance max (geolocalisee), distance du parcours
+- Pagination / infinite scroll
+
+**2. `src/components/routes-feed/RoutesFeedCard.tsx`**
+- Carte reprenant le style DiscoverCard (pastel par activite)
+- Minimap du parcours avec markers photo (petites vignettes rondes sur la carte)
+- Stats (distance, denivele, duree estimee)
+- Note moyenne (etoiles)
+- Avatar + nom du createur
+- Bouton "Voir" qui ouvre le detail
+
+**3. `src/components/routes-feed/RoutesFeedFilters.tsx`**
+- Meme structure que DiscoverFilters : pills sport en haut, filtre distance max
+- Filtre supplementaire : distance du parcours (slider km)
+
+**4. `src/components/routes-feed/RouteDetailDialog.tsx`**
+- Dialog plein ecran avec :
+  - Carte Google Maps grande avec polyline + markers photos (vignettes rondes cliquables)
+  - Click sur marker photo → affichage plein ecran (lightbox)
+  - Stats completes
+  - Section notation : etoiles cliquables + champ commentaire
+  - Liste des avis existants (avatar, etoiles, commentaire, date)
+  - Bouton "Copier l'itineraire" (clone la route dans ses propres routes)
+  - Bouton "Mode Entrainement"
+
+**5. `src/components/routes-feed/RoutePhotoUploader.tsx`**
+- Composant pour ajouter des photos a un itineraire
+- L'utilisateur place la photo sur le parcours (click sur la carte ou auto-position)
+- Upload vers bucket `route-photos`
+
+### Modifications fichiers existants
+
+**1. `src/pages/MySessions.tsx`**
+- Sous l'onglet "Itineraires" : ajouter sous-onglets "Crées" / "Feed" (meme pattern que Creees/Rejointes sous Seances)
+- Etat `routeSource: 'created' | 'feed'`
+- Si `feed` → afficher composant RoutesFeed
+- Ajouter toggle "Publier" sur les RouteCard existantes (switch `is_public`)
+
+**2. `src/components/RouteCard.tsx`**
+- Ajouter un switch ou bouton pour toggle `is_public`
+- Afficher un badge "Public" si publie
+- Ajouter bouton "Ajouter photos" qui ouvre RoutePhotoUploader
+
+### Architecture technique
+
+```text
+MySessions
+  ├── Seances [Creees | Rejointes]
+  └── Itineraires [Crées | Feed]
+                          │
+                    RoutesFeedFilters (sport pills + distance)
+                          │
+                    RoutesFeedCard[] (infinite scroll)
+                          │
+                    RouteDetailDialog
+                      ├── Carte + photos geo
+                      ├── Notation etoiles
+                      └── Commentaires
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Ordre d'implementation
+1. Migration DB (colonnes routes + tables route_photos, route_ratings + bucket)
+2. Hook `useRoutesFeed`
+3. Composants feed (filters, card, detail dialog, photo uploader)
+4. Integration dans MySessions (sous-onglets + toggle public sur RouteCard)
 
