@@ -1,26 +1,53 @@
 
 
-# Fix: SafeFirebaseInit.m path mismatch in Xcode project
+## Diagnostic
 
-## Root Cause
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-The Ruby script adds the file reference with path `App/SafeFirebaseInit.m` relative to the `App` group. Since the `App` group already resolves to `ios/App/App/`, Xcode looks for the file at `ios/App/App/App/SafeFirebaseInit.m` (triple `App`) -- but the script creates it at `ios/App/App/SafeFirebaseInit.m` (double `App`).
+Deux problemes distincts :
 
-## Fix
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-In `scripts/configure_ios_push.sh` line 101, change:
-```ruby
-file_ref = app_group.new_file("App/#{m_file}")
+## Solution en 2 parties
+
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
-to:
-```ruby
-file_ref = app_group.new_file(m_file)
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
 ```
 
-This makes the file reference relative to the `App` group (which is already `ios/App/App/`), so Xcode will correctly resolve to `ios/App/App/SafeFirebaseInit.m`.
+### Fichiers modifies
 
-Same fix needed for the `.h` file if it's also referenced (though only `.m` is in compile sources, the bridging header import uses `#import "SafeFirebaseInit.h"` which resolves via header search paths, so it's fine).
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-### Files to edit
-1. `scripts/configure_ios_push.sh` -- line 101: remove `"App/"` prefix
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
