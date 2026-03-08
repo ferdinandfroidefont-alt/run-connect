@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Phone, Smartphone, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +24,7 @@ interface ContactSuggestion {
 export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { isNative, hasPermission, requestPermissions, contacts: deviceContacts, loadContacts } = useContacts();
   const [loading, setLoading] = useState(false);
   const [contactSuggestions, setContactSuggestions] = useState<ContactSuggestion[]>([]);
@@ -507,7 +509,7 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
         </div>
       ) : (
         filteredContacts.map((contact) => (
-          <Card key={contact.user_id} className="glass-card">
+          <Card key={contact.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors" onClick={() => navigate(`/profile/${contact.user_id}`)}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
@@ -533,7 +535,10 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
                 <Button
                   size="sm"
-                  onClick={() => sendFollowRequest(contact.user_id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    sendFollowRequest(contact.user_id);
+                  }}
                   disabled={friendsMap.has(contact.user_id)}
                 >
                   {friendsMap.has(contact.user_id) ? "Ami" : "Suivre"}
