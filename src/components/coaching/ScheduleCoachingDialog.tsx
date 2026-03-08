@@ -112,8 +112,8 @@ export const ScheduleCoachingDialog = ({
           session_type: "footing",
           scheduled_at: new Date(scheduledAt).toISOString(),
           location_name: locationName.trim(),
-          location_lat: 48.8566,
-          location_lng: 2.3522,
+          location_lat: locationLat,
+          location_lng: locationLng,
           distance_km: session.distance_km,
           session_blocks: sessionBlocks,
           coaching_session_id: session.id,
@@ -262,12 +262,23 @@ export const ScheduleCoachingDialog = ({
               <MapPin className="h-3 w-3" />
               Lieu *
             </Label>
-            <Input
-              placeholder="Parc, stade, forêt..."
-              value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
-              className="h-9"
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Parc, stade, forêt..."
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                className="h-9 flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setShowMapPicker(true)}
+              >
+                <Map className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Personal adjustments */}
