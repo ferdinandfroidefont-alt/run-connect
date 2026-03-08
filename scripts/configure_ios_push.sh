@@ -36,7 +36,7 @@ fi
 if ! grep -q "FirebaseApp.configure" "$DELEGATE"; then
   # Strategy: insert after the opening brace of didFinishLaunchingWithOptions
   sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
-        FirebaseApp.configure()\
+        if FirebaseApp.app() == nil { FirebaseApp.configure() }\
         Messaging.messaging().delegate = self\
         print("[PUSH][IOS] Firebase configured + MessagingDelegate set")
 ' "$DELEGATE"
