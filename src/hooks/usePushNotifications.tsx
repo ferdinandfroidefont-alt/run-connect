@@ -307,7 +307,7 @@ export const usePushNotifications = () => {
       updateDebug({ selectedFinalToken: pushToken.substring(0, 20) + '...' });
 
       if ((window as any).AndroidBridge?.saveUserIdForFCM) {
-        try { (window as any).AndroidBridge.saveUserIdForFCM(user.id); } catch {}
+        try { (window as any).AndroidBridge.saveUserIdForFCM(resolvedUserId); } catch {}
       }
       return true;
     } catch (e: any) {
