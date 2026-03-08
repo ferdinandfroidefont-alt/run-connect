@@ -34,14 +34,18 @@ fi
 # We call configure() only if it hasn't been done yet, then set the delegate.
 if ! grep -q "Messaging.messaging().delegate = self" "$DELEGATE"; then
   sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
-        if FirebaseApp.app() == nil {\
-            FirebaseApp.configure()\
-            print("[PUSH][IOS] FirebaseApp.configure() called (was nil)")\
-        } else {\
-            print("[PUSH][IOS] FirebaseApp already configured (auto-init via plist)")\
-        }\
-        Messaging.messaging().delegate = self\
-        print("[PUSH][IOS] MessagingDelegate set, traceId=boot")
+        // Firebase auto-configures via GoogleService-Info.plist\
+        // Deferred to DispatchQueue.main.async to prevent double-init SIGABRT\
+        DispatchQueue.main.async {\
+            if FirebaseApp.app() == nil {\
+                FirebaseApp.configure()\
+                print("[PUSH][IOS] FirebaseApp.configure() called manually (auto-init failed), traceId=boot")\
+            } else {\
+                print("[PUSH][IOS] FirebaseApp already configured (auto-init OK), traceId=boot")\
+            }\
+            Messaging.messaging().delegate = self\
+            print("[PUSH][IOS] MessagingDelegate set, traceId=boot")\
+        }
 ' "$DELEGATE"
   echo "✅ FirebaseApp.configure() (nil-guarded) + Messaging.delegate injected"
 fi
