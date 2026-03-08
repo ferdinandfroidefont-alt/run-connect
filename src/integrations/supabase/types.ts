@@ -1149,13 +1149,91 @@ export type Database = {
         }
         Relationships: []
       }
+      route_photos: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          photo_url: string
+          route_id: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          photo_url: string
+          route_id: string
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          photo_url?: string
+          route_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_photos_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      route_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          rating: number
+          route_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating: number
+          route_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          rating?: number
+          route_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_ratings_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routes: {
         Row: {
+          activity_type: string | null
           coordinates: Json
           created_at: string
           created_by: string
           description: string | null
           id: string
+          is_public: boolean | null
           max_elevation: number | null
           min_elevation: number | null
           name: string
@@ -1167,11 +1245,13 @@ export type Database = {
           waypoints: Json | null
         }
         Insert: {
+          activity_type?: string | null
           coordinates: Json
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
+          is_public?: boolean | null
           max_elevation?: number | null
           min_elevation?: number | null
           name: string
@@ -1183,11 +1263,13 @@ export type Database = {
           waypoints?: Json | null
         }
         Update: {
+          activity_type?: string | null
           coordinates?: Json
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
+          is_public?: boolean | null
           max_elevation?: number | null
           min_elevation?: number | null
           name?: string
