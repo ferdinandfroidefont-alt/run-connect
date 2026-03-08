@@ -380,37 +380,37 @@ export const CoachingSessionDetail = ({
 
             {/* Coach view: completion rate */}
             {isCoach && participations.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2 p-4 bg-card rounded-none">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Taux de complétion</span>
-                  <span className="text-muted-foreground">{completionRate}%</span>
+                  <span className="font-semibold">Taux de complétion</span>
+                  <span className="text-[15px] font-bold text-foreground">{completionRate}%</span>
                 </div>
-                <Progress value={completionRate} className="h-2" />
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span>📨 {sentCount} envoyée(s)</span>
-                  <span>📍 {scheduledCount} programmée(s)</span>
-                  <span>✅ {completedCount} fait(s)</span>
-                  {missedCount > 0 && <span>❌ {missedCount} manquée(s)</span>}
+                <Progress value={completionRate} className="h-2.5" />
+                <div className="flex flex-wrap gap-3 text-[12px] text-muted-foreground mt-1">
+                  <span>📨 {sentCount} envoyée{sentCount > 1 ? "s" : ""}</span>
+                  <span>📍 {scheduledCount} programmée{scheduledCount > 1 ? "s" : ""}</span>
+                  <span>✅ {completedCount} fait{completedCount > 1 ? "s" : ""}</span>
+                  {missedCount > 0 && <span>❌ {missedCount} manquée{missedCount > 1 ? "s" : ""}</span>}
                 </div>
               </div>
             )}
 
             {/* Batch feedback */}
             {isCoach && withoutFeedback.length > 0 && (
-              <div className="space-y-2 p-3 rounded-none bg-card">
-                <p className="text-sm font-medium">Feedback global</p>
+              <div className="space-y-2 p-4 bg-card rounded-none">
+                <p className="text-[14px] font-semibold text-foreground">Feedback global</p>
                 <Textarea
                   placeholder="Écrire un feedback pour tous les athlètes sans retour..."
                   value={batchFeedback}
                   onChange={(e) => setBatchFeedback(e.target.value)}
                   rows={2}
-                  className="text-sm"
+                  className="text-[13px] bg-secondary/50 border-0 rounded-xl"
                 />
                 <Button
                   size="sm"
                   onClick={handleBatchFeedback}
                   disabled={!batchFeedback.trim() || sendingBatch}
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
                   {sendingBatch ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
