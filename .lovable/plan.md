@@ -1,46 +1,53 @@
 
 
-# Fix Voice Messages — Private Bucket + Signed URLs
+## Diagnostic
 
-## Root Cause
-The `message-files` storage bucket is **private**, but the code calls `supabase.storage.from('message-files').getPublicUrl(filePath)` which only works for public buckets. The generated URLs return a 404, causing "Erreur audio".
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-## Solution
-Use **signed URLs** (temporary, authenticated) instead of public URLs.
+Deux problemes distincts :
 
-### Changes
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**1. `src/pages/Messages.tsx` — Upload function**
-In `uploadVoiceMessage` and `uploadFile`: replace `getPublicUrl()` with `createSignedUrl()` (e.g. 1 year expiry). Store the **file path** in `file_url` instead of the full public URL, so we can regenerate signed URLs later.
+## Solution en 2 parties
 
-Actually, simpler approach: keep storing the full storage path, and generate signed URLs at display time. This way expired URLs can be refreshed.
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-- In `uploadVoiceMessage`: store the `filePath` (e.g. `userId/voice-xxx.webm`) as `file_url` instead of the public URL.
-- Same for `uploadFile` for non-image files in the message-files bucket.
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-**2. `src/components/VoiceMessagePlayer.tsx` — Playback**
-- Accept a `storagePath` prop (or detect if the `src` is a storage path vs full URL).
-- On mount/play, call `supabase.storage.from('message-files').createSignedUrl(path, 3600)` to get a temporary URL.
-- Use that signed URL for playback.
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-**3. Backward compatibility**
-- Existing messages already have full public URLs stored in `file_url`. These won't work anymore regardless.
-- Detect if `file_url` contains the storage base URL and extract the path, then generate a signed URL.
-- Helper function: `getSignedAudioUrl(fileUrl: string)` that extracts the path from old URLs or uses the path directly, then calls `createSignedUrl`.
-
-### Implementation Detail
-
-```text
-Helper: getMessageFileSignedUrl(fileUrlOrPath)
-  → if starts with storage base URL, extract path after /message-files/
-  → if already a relative path, use directly
-  → call supabase.storage.from('message-files').createSignedUrl(path, 3600)
-  → return signed URL
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-Update `VoiceMessagePlayer` to resolve the signed URL before playing, keeping the audio element creation in the user gesture context (iOS requirement).
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### Files to edit
-- `src/components/VoiceMessagePlayer.tsx` — add signed URL resolution
-- `src/pages/Messages.tsx` — fix upload to store path, add helper
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 

@@ -1,10 +1,46 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Pause, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VoiceMessagePlayerProps {
   src: string;
   isMine?: boolean;
 }
+
+const SUPABASE_STORAGE_BASE = 'dbptgehpknjsoisirviz.supabase.co/storage/v1/object';
+
+/**
+ * Extracts the storage path from a full public URL or returns the path as-is.
+ * Handles both old full URLs and new relative paths.
+ */
+const extractStoragePath = (fileUrlOrPath: string): string => {
+  // Already a relative path (no http)
+  if (!fileUrlOrPath.startsWith('http')) return fileUrlOrPath;
+
+  // Extract path after /message-files/
+  const marker = '/message-files/';
+  const idx = fileUrlOrPath.indexOf(marker);
+  if (idx !== -1) return fileUrlOrPath.substring(idx + marker.length);
+
+  // Fallback: return as-is
+  return fileUrlOrPath;
+};
+
+const getSignedAudioUrl = async (fileUrlOrPath: string): Promise<string | null> => {
+  const path = extractStoragePath(fileUrlOrPath);
+  console.log('🔑 Generating signed URL for path:', path);
+
+  const { data, error } = await supabase.storage
+    .from('message-files')
+    .createSignedUrl(path, 3600);
+
+  if (error) {
+    console.error('❌ Signed URL error:', error);
+    return null;
+  }
+
+  return data.signedUrl;
+};
 
 export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'error' | 'unsupported'>('idle');
@@ -12,6 +48,7 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animRef = useRef<number | null>(null);
+  const signedUrlRef = useRef<string | null>(null);
 
   const cleanup = useCallback(() => {
     if (animRef.current) {
@@ -65,14 +102,20 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
 
       setStatus('loading');
 
-      // Create Audio element immediately in user gesture context
+      // Resolve signed URL
+      if (!signedUrlRef.current) {
+        const signedUrl = await getSignedAudioUrl(src);
+        if (!signedUrl) {
+          setStatus('error');
+          return;
+        }
+        signedUrlRef.current = signedUrl;
+      }
+
+      // Create Audio element
       const audio = new Audio();
       audioRef.current = audio;
       audio.preload = 'auto';
-
-      // Unlock audio context immediately (iOS Safari requirement)
-      audio.play().catch(() => {});
-      audio.pause();
 
       const canPlayWebm =
         audio.canPlayType('audio/webm;codecs=opus') !== '' ||
@@ -98,17 +141,17 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
 
       audio.onerror = (e) => {
         console.error('❌ Audio playback error:', e, audio.error);
+        // Invalidate signed URL so next attempt gets a fresh one
+        signedUrlRef.current = null;
         setStatus('error');
         cleanup();
       };
 
-      // Set source and wait for it to be ready, then play
-      audio.src = src;
-      
+      audio.src = signedUrlRef.current;
+
       await new Promise<void>((resolve, reject) => {
         audio.oncanplaythrough = () => resolve();
         audio.onerror = () => reject(new Error('Audio load failed'));
-        // Timeout fallback
         setTimeout(() => resolve(), 3000);
       });
 
@@ -118,6 +161,7 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
       animRef.current = requestAnimationFrame(updateProgress);
     } catch (error) {
       console.error('❌ Voice message play failed:', error);
+      signedUrlRef.current = null;
       setStatus('error');
       cleanup();
     }
