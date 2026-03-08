@@ -98,7 +98,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           {/* GPS Pin — always visible, appears first with spring */}
           <motion.svg
             className="absolute"
-            style={{ left: PIN_X - 12, top: PIN_Y - 32 }}
+            style={{ left: PIN_X - 12, top: PIN_Y - 34 }}
             width="24"
             height="34"
             viewBox="0 0 24 34"
