@@ -319,6 +319,19 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   if (!selectedAthlete) {
     return (
       <div className="space-y-4">
+        {/* Reminder button */}
+        <div className="px-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full rounded-xl h-10 gap-2 text-[13px] font-semibold"
+            onClick={handleSendReminder}
+            disabled={sendingReminder}
+          >
+            {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+            Relancer les athlètes en retard
+          </Button>
+        </div>
         {/* Search */}
         <div className="relative px-4">
           <Search className="absolute left-7.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -501,13 +514,29 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           </div>
         </div>
 
-        {/* Volume by type */}
-        {volumeByType.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {volumeByType.map(([type, km]) => (
-              <Badge key={type} className={`text-[10px] px-2 py-0.5 rounded-lg border-0 ${getObjectiveColor(type)}`}>
-                {type} {Math.round(km * 10) / 10} km
+        {/* 4-week trends & streak */}
+        {(fourWeekVolume || completionStreak > 0) && (
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/20">
+            {fourWeekVolume && (
+              <div className="flex items-center gap-1.5">
+                {fourWeekVolume.current >= fourWeekVolume.previous ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                )}
+                <span className="text-[12px] text-muted-foreground">
+                  {Math.round(fourWeekVolume.current * 10) / 10} km / 4 sem
+                </span>
+              </div>
+            )}
+            {completionStreak > 0 && (
+              <Badge className="bg-orange-500/15 text-orange-600 border-0 rounded-lg text-[11px] px-2 py-0.5 gap-1">
+                <Flame className="h-3 w-3" />
+                {completionStreak} séances d'affilée
               </Badge>
+            )}
+          </div>
+        )}
             ))}
           </div>
         )}
