@@ -1227,7 +1227,7 @@ export default function MySessions() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="divide-y divide-border">
                   {routes.map((route) => (
                     <RouteCard
                       key={route.id}
