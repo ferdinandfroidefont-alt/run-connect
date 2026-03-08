@@ -39,16 +39,29 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-const getRouteCenter = (coordinates: any): { lat: number; lng: number } | null => {
-  if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
-  const first = coordinates[0];
-  if (first?.lat !== undefined && first?.lng !== undefined) {
-    return { lat: Number(first.lat), lng: Number(first.lng) };
+/** Find the minimum distance from user position to any point along the route */
+const getMinDistanceToRoute = (
+  userLat: number,
+  userLng: number,
+  coordinates: any
+): number => {
+  if (!Array.isArray(coordinates) || coordinates.length === 0) return Infinity;
+  let minDist = Infinity;
+  for (const point of coordinates) {
+    let lat: number, lng: number;
+    if (point?.lat !== undefined && point?.lng !== undefined) {
+      lat = Number(point.lat);
+      lng = Number(point.lng);
+    } else if (Array.isArray(point) && point.length >= 2) {
+      lat = Number(point[0]);
+      lng = Number(point[1]);
+    } else {
+      continue;
+    }
+    const d = calculateDistance(userLat, userLng, lat, lng);
+    if (d < minDist) minDist = d;
   }
-  if (Array.isArray(first) && first.length >= 2) {
-    return { lat: Number(first[0]), lng: Number(first[1]) };
-  }
-  return null;
+  return minDist;
 };
 
 export const useRoutesFeed = () => {
@@ -56,7 +69,9 @@ export const useRoutesFeed = () => {
   const { position, loading: locationLoading, getCurrentPosition } = useGeolocation();
   const [routes, setRoutes] = useState<FeedRoute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [maxDistance, setMaxDistance] = useState(50);
+  const [maxProximity, setMaxProximity] = useState(50);
+  const [maxRouteDistance, setMaxRouteDistance] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState<number>(0);
   const [selectedActivities, setSelectedActivities] = useState<string[]>(
     ACTIVITY_TYPES.map(a => a.value)
   );
@@ -91,27 +106,23 @@ export const useRoutesFeed = () => {
         return;
       }
 
-      // Get creator profiles
       const creatorIds = [...new Set(routesData.map(r => r.created_by))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url')
         .in('user_id', creatorIds);
 
-      // Get ratings aggregated
       const routeIds = routesData.map(r => r.id);
       const { data: ratings } = await supabase
         .from('route_ratings')
         .select('route_id, rating')
         .in('route_id', routeIds);
 
-      // Get photo counts
       const { data: photos } = await supabase
         .from('route_photos')
         .select('route_id')
         .in('route_id', routeIds);
 
-      // Aggregate ratings
       const ratingMap = new Map<string, { sum: number; count: number }>();
       (ratings || []).forEach(r => {
         const entry = ratingMap.get(r.route_id) || { sum: 0, count: 0 };
@@ -120,7 +131,6 @@ export const useRoutesFeed = () => {
         ratingMap.set(r.route_id, entry);
       });
 
-      // Aggregate photo counts
       const photoCountMap = new Map<string, number>();
       (photos || []).forEach(p => {
         photoCountMap.set(p.route_id, (photoCountMap.get(p.route_id) || 0) + 1);
@@ -128,9 +138,8 @@ export const useRoutesFeed = () => {
 
       const feedRoutes: FeedRoute[] = routesData
         .map(route => {
-          const center = getRouteCenter(route.coordinates);
-          const distanceFromUser = position && center
-            ? calculateDistance(position.lat, position.lng, center.lat, center.lng)
+          const distanceFromUser = position
+            ? getMinDistanceToRoute(position.lat, position.lng, route.coordinates)
             : 0;
           const creator = profiles?.find(p => p.user_id === route.created_by);
           const ratingInfo = ratingMap.get(route.id);
@@ -155,8 +164,10 @@ export const useRoutesFeed = () => {
           };
         })
         .filter(route => {
-          if (position && route.distance_from_user > maxDistance) return false;
+          if (position && route.distance_from_user > maxProximity) return false;
           if (selectedActivities.length > 0 && !selectedActivities.includes(route.activity_type)) return false;
+          if (maxRouteDistance && route.total_distance && route.total_distance > maxRouteDistance) return false;
+          if (minRating > 0 && route.avg_rating < minRating) return false;
           return true;
         })
         .sort((a, b) => {
@@ -171,7 +182,7 @@ export const useRoutesFeed = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, position, maxDistance, selectedActivities]);
+  }, [user, position, maxProximity, maxRouteDistance, minRating, selectedActivities]);
 
   useEffect(() => {
     loadRoutes();
@@ -197,8 +208,12 @@ export const useRoutesFeed = () => {
     routes,
     loading: loading || locationLoading,
     hasLocation: !!position,
-    maxDistance,
-    setMaxDistance,
+    maxProximity,
+    setMaxProximity,
+    maxRouteDistance,
+    setMaxRouteDistance,
+    minRating,
+    setMinRating,
     selectedActivities,
     toggleActivity,
     toggleAllActivities,
