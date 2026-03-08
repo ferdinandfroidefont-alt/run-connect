@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { Loader } from '@googlemaps/js-api-loader';
+import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,8 +32,24 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
   const mapRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
-    if (!mapContainer.current || !window.google || !route.coordinates?.length) return;
+    if (!mapContainer.current || !route.coordinates?.length) return;
 
+    const initMap = async () => {
+      if (!window.google?.maps) {
+        try {
+          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
+            body: { type: 'get-key' }
+          });
+          const googleMapsApiKey = apiKeyData?.apiKey || '';
+          if (!googleMapsApiKey) return;
+          const loader = new Loader({ apiKey: googleMapsApiKey, version: 'weekly', libraries: ['geometry'] });
+          await loader.importLibrary('maps');
+        } catch (e) {
+          console.error('Failed to load Google Maps', e);
+          return;
+        }
+      }
+      if (!mapContainer.current) return;
     const path = route.coordinates.map((coord: any) => {
       if (coord.lat !== undefined && coord.lng !== undefined) {
         return { lat: Number(coord.lat), lng: Number(coord.lng) };
@@ -69,6 +87,11 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
     });
 
     mapRef.current.fitBounds(bounds, 20);
+
+    return () => { mapRef.current = null; };
+    };
+
+    initMap();
 
     return () => { mapRef.current = null; };
   }, [route.coordinates]);
