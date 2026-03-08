@@ -202,7 +202,7 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-full h-[100dvh] p-0 m-0 rounded-none border-0 overflow-y-auto [&>button]:hidden">
+        <DialogContent fullScreen hideCloseButton className="overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 z-50 bg-card border-b border-border">
             <div className="flex items-center justify-between px-4 py-3">
