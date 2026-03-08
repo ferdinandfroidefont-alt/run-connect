@@ -769,7 +769,7 @@ export const NotificationCenter = ({
                      </div>
                    </div>
                 </CardContent>
-              </Card>)}
+              </Card>})}
           </div>
         </ScrollArea>
         
