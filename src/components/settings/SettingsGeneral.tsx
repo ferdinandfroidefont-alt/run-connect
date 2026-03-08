@@ -17,7 +17,7 @@ interface SettingsGeneralProps {
 
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const { user } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
