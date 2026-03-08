@@ -29,17 +29,21 @@ if ! grep -q "MessagingDelegate" "$DELEGATE"; then
   echo "✅ MessagingDelegate conformance added"
 fi
 
-# ─── Firebase auto-initializes via GoogleService-Info.plist ───
-# Do NOT call FirebaseApp.configure() manually — the Firebase/Messaging pod
-# + GoogleService-Info.plist triggers auto-init before didFinishLaunchingWithOptions.
-# Calling configure() again causes SIGABRT (FIRApp.m:110).
-# We only need to set the MessagingDelegate.
+# ─── Firebase configure with nil guard to prevent double-init SIGABRT ───
+# The Firebase/Messaging pod MAY auto-init via GoogleService-Info.plist.
+# We call configure() only if it hasn't been done yet, then set the delegate.
 if ! grep -q "Messaging.messaging().delegate = self" "$DELEGATE"; then
   sed -i '' '/func application.*didFinishLaunchingWithOptions.*-> Bool {/a\
+        if FirebaseApp.app() == nil {\
+            FirebaseApp.configure()\
+            print("[PUSH][IOS] FirebaseApp.configure() called (was nil)")\
+        } else {\
+            print("[PUSH][IOS] FirebaseApp already configured (auto-init via plist)")\
+        }\
         Messaging.messaging().delegate = self\
-        print("[PUSH][IOS] MessagingDelegate set (Firebase auto-configured via plist)")
+        print("[PUSH][IOS] MessagingDelegate set, traceId=boot")
 ' "$DELEGATE"
-  echo "✅ Messaging.delegate injected (no manual FirebaseApp.configure)"
+  echo "✅ FirebaseApp.configure() (nil-guarded) + Messaging.delegate injected"
 fi
 
 # ─── HARD ASSERTION: MessagingDelegate MUST be set ───
