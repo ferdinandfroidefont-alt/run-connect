@@ -13,7 +13,8 @@ import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { rccToSessionBlocks, type RCCResult } from "@/lib/rccParser";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
-import { MapPin, Calendar, Check, Clock, ChevronLeft, Send } from "lucide-react";
+import { LocationPickerMap } from "./LocationPickerMap";
+import { MapPin, Calendar, Check, Clock, ChevronLeft, Send, Map } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -54,6 +55,9 @@ export const ScheduleCoachingDialog = ({
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [locationLat, setLocationLat] = useState<number>(48.8566);
+  const [locationLng, setLocationLng] = useState<number>(2.3522);
 
   // Form state — mirrors CreateCoachingSessionDialog
   const [activityType, setActivityType] = useState("course");
@@ -74,6 +78,8 @@ export const ScheduleCoachingDialog = ({
       setLocationName(session.default_location_name || "");
       setCustomPace(session.pace_target || "");
       setCustomNotes("");
+      setLocationLat(session.default_location_lat || 48.8566);
+      setLocationLng(session.default_location_lng || 2.3522);
 
       if (suggestedDate) {
         try {
@@ -106,8 +112,8 @@ export const ScheduleCoachingDialog = ({
           session_type: "footing",
           scheduled_at: new Date(scheduledAt).toISOString(),
           location_name: locationName.trim(),
-          location_lat: 48.8566,
-          location_lng: 2.3522,
+          location_lat: locationLat,
+          location_lng: locationLng,
           distance_km: session.distance_km,
           session_blocks: sessionBlocks,
           coaching_session_id: session.id,
@@ -256,12 +262,23 @@ export const ScheduleCoachingDialog = ({
               <MapPin className="h-3 w-3" />
               Lieu *
             </Label>
-            <Input
-              placeholder="Parc, stade, forêt..."
-              value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
-              className="h-9"
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Parc, stade, forêt..."
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                className="h-9 flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setShowMapPicker(true)}
+              >
+                <Map className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Personal adjustments */}
@@ -284,6 +301,14 @@ export const ScheduleCoachingDialog = ({
               rows={2}
             />
           </div>
+
+          {/* RCC Blocks preview — auto-filled from coaching session */}
+          {parsedResult.blocks.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Détail de la séance</Label>
+              <RCCBlocksPreview blocks={parsedResult.blocks} />
+            </div>
+          )}
         </div>
 
         {/* Sticky footer */}
@@ -301,6 +326,18 @@ export const ScheduleCoachingDialog = ({
             )}
           </Button>
         </div>
+
+        <LocationPickerMap
+          isOpen={showMapPicker}
+          onClose={() => setShowMapPicker(false)}
+          onSelect={(name, lat, lng) => {
+            setLocationName(name);
+            setLocationLat(lat);
+            setLocationLng(lng);
+          }}
+          initialLat={locationLat}
+          initialLng={locationLng}
+        />
       </DialogContent>
     </Dialog>
   );

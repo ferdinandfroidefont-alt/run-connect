@@ -1,0 +1,1 @@
+ALTER TABLE public.club_groups ADD COLUMN IF NOT EXISTS avatar_url TEXT;

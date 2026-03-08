@@ -170,6 +170,7 @@ export type Database = {
       }
       club_groups: {
         Row: {
+          avatar_url: string | null
           club_id: string
           color: string
           created_at: string
@@ -177,6 +178,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          avatar_url?: string | null
           club_id: string
           color?: string
           created_at?: string
@@ -184,6 +186,7 @@ export type Database = {
           name: string
         }
         Update: {
+          avatar_url?: string | null
           club_id?: string
           color?: string
           created_at?: string
