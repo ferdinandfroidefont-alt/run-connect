@@ -198,30 +198,36 @@ export const usePushNotifications = () => {
   }, [user, updateDebug]);
 
   /** Save token — iOS ONLY uses edge function (has APNs hex guard), Android uses client */
-  const savePushToken = useCallback(async (pushToken: string): Promise<boolean> => {
+  const savePushToken = useCallback(async (pushToken: string, overrideUserId?: string): Promise<boolean> => {
     const platform = detectPlatform();
 
     // ── iOS: REJECT raw APNs hex tokens on the frontend ──
     if (platform === 'ios' && isApnsHexToken(pushToken)) {
       log('[SAVE] 🍎 BLOCKED: APNs hex-64 token on iOS — waiting for real FCM token via fcmTokenReady');
       updateDebug({ apnsHexDetected: true, lastError: 'APNs hex token blocked, waiting for FCM' });
-      // Store as pending but do NOT save to DB
       pendingTokenRef.current = pushToken;
       (window as any).__pendingApnsToken = pushToken;
       return false;
     }
 
-    if (!user) {
-      log('[SAVE] No user, storing token pending');
-      setToken(pushToken);
-      pendingTokenRef.current = pushToken;
-      (window as any).__pendingPushToken = pushToken;
-      return false;
+    // ── Resolve userId: prefer override, then React state, then fresh session ──
+    let resolvedUserId = overrideUserId || user?.id || null;
+
+    if (!resolvedUserId) {
+      log('[SAVE] No user in React state, trying getSession()...');
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        resolvedUserId = sess?.session?.user?.id || null;
+        if (resolvedUserId) {
+          log('[SAVE] ✅ Got userId from getSession(): ' + resolvedUserId.substring(0, 8));
+        }
+      } catch (e) {
+        logError('[SAVE] getSession() failed:', e);
+      }
     }
 
-    const { data: sess } = await supabase.auth.getSession();
-    if (!sess?.session?.user) {
-      log('[SAVE] Session not ready, deferring');
+    if (!resolvedUserId) {
+      log('[SAVE] No user anywhere, storing token pending');
       setToken(pushToken);
       pendingTokenRef.current = pushToken;
       (window as any).__pendingPushToken = pushToken;
@@ -232,7 +238,7 @@ export const usePushNotifications = () => {
       const { data: existing } = await supabase
         .from('profiles')
         .select('push_token')
-        .eq('user_id', user.id)
+        .eq('user_id', resolvedUserId)
         .maybeSingle();
 
       if (!existing) {
@@ -254,7 +260,7 @@ export const usePushNotifications = () => {
       // ── iOS: always use edge function (server-side APNs guard) ──
       if (platform === 'ios') {
         log('[SAVE] 🍎 iOS: saving via edge function only (server-side validation)');
-        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, resolvedUserId, platform);
         if (edgeSaved) {
           setToken(pushToken);
           pendingTokenRef.current = null;
@@ -277,12 +283,12 @@ export const usePushNotifications = () => {
           push_token_updated_at: new Date().toISOString(),
           notifications_enabled: true
         })
-        .eq('user_id', user.id);
+        .eq('user_id', resolvedUserId);
 
       if (error) {
         logError('[SAVE] Client save error:', error.code, error.message);
         log('[SAVE] Trying edge function fallback...');
-        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, resolvedUserId, platform);
         if (edgeSaved) {
           setToken(pushToken);
           pendingTokenRef.current = null;
@@ -301,7 +307,7 @@ export const usePushNotifications = () => {
       updateDebug({ selectedFinalToken: pushToken.substring(0, 20) + '...' });
 
       if ((window as any).AndroidBridge?.saveUserIdForFCM) {
-        try { (window as any).AndroidBridge.saveUserIdForFCM(user.id); } catch {}
+        try { (window as any).AndroidBridge.saveUserIdForFCM(resolvedUserId); } catch {}
       }
       return true;
     } catch (e: any) {
@@ -602,30 +608,39 @@ export const usePushNotifications = () => {
     init();
   }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug]);
 
-  // ─── useEffect #2: PENDING TOKEN SAVE ────────────────────
+  // ─── useEffect #2: PENDING TOKEN SAVE (with delayed retry) ────────────────────
 
   useEffect(() => {
     if (!user) return;
 
-    const pending = pendingTokenRef.current || (window as any).__pendingPushToken;
-    if (pending && typeof pending === 'string' && pending.length > 50 && !isApnsHexToken(pending)) {
-      log('[PENDING] User available + valid pending token found');
-      savePushToken(pending).then(saved => {
-        if (saved) {
-          pendingTokenRef.current = null;
-          (window as any).__pendingPushToken = null;
-        } else {
-          const platform = detectPlatform();
-          saveTokenViaEdgeFunction(pending, user.id, platform).then(edgeSaved => {
-            if (edgeSaved) {
-              pendingTokenRef.current = null;
-              (window as any).__pendingPushToken = null;
-              setIsRegistered(true);
-            }
-          });
-        }
-      });
-    }
+    const tryPending = () => {
+      const pending = pendingTokenRef.current || (window as any).__pendingPushToken;
+      if (pending && typeof pending === 'string' && pending.length > 50 && !isApnsHexToken(pending)) {
+        log('[PENDING] User available + valid pending token found');
+        savePushToken(pending).then(saved => {
+          if (saved) {
+            pendingTokenRef.current = null;
+            (window as any).__pendingPushToken = null;
+          } else {
+            const platform = detectPlatform();
+            saveTokenViaEdgeFunction(pending, user.id, platform).then(edgeSaved => {
+              if (edgeSaved) {
+                pendingTokenRef.current = null;
+                (window as any).__pendingPushToken = null;
+                setIsRegistered(true);
+              }
+            });
+          }
+        });
+      }
+    };
+
+    // Immediate attempt
+    tryPending();
+
+    // Delayed retry after 2s to catch tokens that arrived during auth restoration
+    const retryTimer = setTimeout(tryPending, 2000);
+    return () => clearTimeout(retryTimer);
   }, [user, savePushToken, detectPlatform, saveTokenViaEdgeFunction]);
 
   // ─── useEffect #3: TOKEN RETRY ───────────────────────────
@@ -720,9 +735,30 @@ export const usePushNotifications = () => {
     return () => clearInterval(retryTimer);
   }, [user, isNative, token, updateDebug]);
 
-  // ─── useEffect #5: fcmTokenReady listener (PRIMARY iOS path) ────
+  // ─── useEffect #5: fcmTokenReady + userAuthenticatedWithFCMToken listeners ────
 
   useEffect(() => {
+    /** Save FCM token with dynamic user resolution (bypasses stale closure) */
+    const saveTokenDynamic = async (fcmToken: string, knownUserId?: string) => {
+      // Try known userId first, then React state, then fresh session
+      let userId = knownUserId || user?.id || null;
+      if (!userId) {
+        try {
+          const { data: sess } = await supabase.auth.getSession();
+          userId = sess?.session?.user?.id || null;
+        } catch {}
+      }
+
+      if (userId) {
+        log('[DYNAMIC-SAVE] Saving token for userId=' + userId.substring(0, 8) + '...');
+        await savePushToken(fcmToken, userId);
+      } else {
+        log('[DYNAMIC-SAVE] No user found, storing as pending');
+        pendingTokenRef.current = fcmToken;
+        (window as any).__pendingPushToken = fcmToken;
+      }
+    };
+
     const handleFcmTokenReady = async (event: Event) => {
       const customEvent = event as CustomEvent<{ token: string; platform: string; traceId?: string }>;
       const t = customEvent.detail?.token;
@@ -732,9 +768,8 @@ export const usePushNotifications = () => {
       updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: t?.length || null, traceId });
 
       if (t && t.length > 50) {
-        // Reject if somehow still an APNs hex token
         if (isApnsHexToken(t)) {
-          logError('[EVENT] fcmTokenReady received APNs hex token — this should not happen. Firebase may not be initialized.');
+          logError('[EVENT] fcmTokenReady received APNs hex token — Firebase may not be initialized.');
           updateDebug({ lastError: 'fcmTokenReady got APNs hex — Firebase not initialized?' });
           return;
         }
@@ -751,11 +786,28 @@ export const usePushNotifications = () => {
         (window as any).__pendingPushToken = t;
         setIsRegistered(true);
         updateDebug({ selectedFinalToken: t.substring(0, 20) + '...' });
-        await savePushToken(t);
+        await saveTokenDynamic(t);
+      }
+    };
+
+    // 🔥 FIX: Listen for userAuthenticatedWithFCMToken (dispatched by useAuth after SIGNED_IN)
+    const handleAuthWithToken = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ token: string; userId: string }>;
+      const { token: fcmToken, userId } = customEvent.detail || {};
+
+      log('[EVENT] 🔥 userAuthenticatedWithFCMToken received userId=' + userId?.substring(0, 8) + ' tokenLen=' + fcmToken?.length);
+
+      if (fcmToken && userId && fcmToken.length > 50 && !isApnsHexToken(fcmToken)) {
+        setToken(fcmToken);
+        pendingTokenRef.current = fcmToken;
+        setIsRegistered(true);
+        updateDebug({ selectedFinalToken: fcmToken.substring(0, 20) + '...' });
+        await saveTokenDynamic(fcmToken, userId);
       }
     };
 
     window.addEventListener('fcmTokenReady', handleFcmTokenReady);
+    window.addEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
     (window as any).__fcmListenerReady = true;
     document.dispatchEvent(new CustomEvent('ReactListenerReady'));
 
@@ -767,7 +819,7 @@ export const usePushNotifications = () => {
       pendingTokenRef.current = existingToken;
       setIsRegistered(true);
       updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: existingToken.length, selectedFinalToken: existingToken.substring(0, 20) + '...' });
-      savePushToken(existingToken);
+      saveTokenDynamic(existingToken);
     }
 
     // Fallback: if no fcmTokenReady after 15s on iOS, log warning
@@ -784,9 +836,10 @@ export const usePushNotifications = () => {
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
+      window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
       if (fallbackTimer) clearTimeout(fallbackTimer);
     };
-  }, [savePushToken, updateDebug, token, isRegistered]);
+  }, [savePushToken, updateDebug, token, isRegistered, user]);
 
   // ─── useEffect #6: App resume ────────────────────────────
 
