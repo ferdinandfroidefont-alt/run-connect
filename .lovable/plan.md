@@ -1,50 +1,53 @@
 
 
-# Photo Gallery for Routes Feed
+## Diagnostic
 
-## Concept
-Add a third sub-tab "Photos" under the "Itinéraires" section in MySessions. It displays a masonry/grid gallery of all public route photos. Clicking a photo opens a sheet showing the photo full-size + a list of all routes that pass near that photo's location (using lat/lng from `route_photos`).
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-## Architecture
+Deux problemes distincts :
 
-### 1. New hook: `src/hooks/useRoutePhotosGallery.tsx`
-- Fetches all `route_photos` joined with `routes` (where `routes.is_public = true`)
-- Enriches with `profiles` for the photographer
-- If user has geolocation, sorts by proximity to user
-- Exposes: `photos`, `loading`, `refresh`
-- On photo click: queries `routes` to find all routes whose coordinates pass within ~500m of the photo's `lat/lng` (reuse `calculateDistance` from `useRoutesFeed`)
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### 2. New component: `src/components/routes-feed/RoutePhotosGallery.tsx`
-- Renders a 2-column grid of photos (aspect-ratio preserved via `aspect-ratio` CSS)
-- Each photo card shows: thumbnail, route name overlay, photographer avatar
-- On click: opens `RoutePhotoDetailSheet`
+## Solution en 2 parties
 
-### 3. New component: `src/components/routes-feed/RoutePhotoDetailSheet.tsx`
-- Sheet (bottom drawer) showing:
-  - Full-size photo + caption
-  - Photographer info (avatar + name)
-  - "Routes passing here" section: list of `RoutesFeedCard`-style mini cards
-  - Click a route → opens `RouteDetailDialog`
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### 4. Edit `src/pages/MySessions.tsx`
-- Add `'photos'` to the `routeSource` state type (currently `'created' | 'feed'`)
-- Add third sub-tab button "Photos" (with Camera icon) under Itinéraires
-- Render `RoutePhotosGallery` when `routeSource === 'photos'`
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-### Data flow
-```text
-route_photos (lat, lng, photo_url, caption)
-  → gallery grid
-    → click photo
-      → sheet with photo + nearby routes list
-        → click route → RouteDetailDialog
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-### Files to create
-1. `src/hooks/useRoutePhotosGallery.tsx`
-2. `src/components/routes-feed/RoutePhotosGallery.tsx`
-3. `src/components/routes-feed/RoutePhotoDetailSheet.tsx`
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### Files to edit
-1. `src/pages/MySessions.tsx` — add "Photos" sub-tab + render gallery
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
