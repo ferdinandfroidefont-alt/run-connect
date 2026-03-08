@@ -218,7 +218,7 @@ export const ProfilesTab = ({ searchQuery }: { searchQuery: string }) => {
                 </div>
               </div>
               
-              <div className="flex-1 min-w-0" onClick={() => handleProfileClick(profile.user_id)}>
+              <div className="flex-1 min-w-0">
                 <h4 className="font-semibold truncate">{profile.display_name}</h4>
                 <p className="text-sm text-muted-foreground truncate">@{profile.username}</p>
                 {profile.bio && (
