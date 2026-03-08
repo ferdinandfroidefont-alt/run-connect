@@ -76,6 +76,24 @@ const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: strin
   missed: { label: "Non effectuée", emoji: "❌", color: "destructive" },
 };
 
+function getSessionGradient(title: string, activityType: string): string {
+  const t = (title + " " + activityType).toLowerCase();
+  if (t.includes("vma") || t.includes("interval") || t.includes("fractionné")) return "from-red-500/20 via-red-500/10 to-transparent";
+  if (t.includes("seuil") || t.includes("tempo")) return "from-orange-500/20 via-orange-500/10 to-transparent";
+  if (t.includes("récup") || t.includes("recup") || t.includes("recovery")) return "from-blue-400/20 via-blue-400/10 to-transparent";
+  if (t.includes("ppg") || t.includes("renforcement")) return "from-purple-500/20 via-purple-500/10 to-transparent";
+  return "from-green-500/20 via-green-500/10 to-transparent";
+}
+
+function getSessionEmoji(activityType: string): string {
+  switch (activityType) {
+    case "trail": return "⛰️";
+    case "cycling": return "🚴";
+    case "swimming": return "🏊";
+    default: return "🏃";
+  }
+}
+
 export const CoachingSessionDetail = ({
   isOpen,
   onClose,
@@ -254,22 +272,33 @@ export const CoachingSessionDetail = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4 px-0 space-y-4">
-            {/* Session Info */}
-            <div className="space-y-2 p-3 rounded-none bg-card">
-              <div className="flex items-center gap-2 text-sm">
+          <div className="flex-1 overflow-y-auto py-0 px-0 space-y-4">
+            {/* Session Hero Header */}
+            <div className={`bg-gradient-to-br ${getSessionGradient(session.title, session.activity_type)} p-5`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-12 w-12 rounded-2xl bg-card/80 flex items-center justify-center text-[24px]">
+                  {getSessionEmoji(session.activity_type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    {format(new Date(session.scheduled_at), "EEEE d MMMM", { locale: fr })}
+                  </p>
+                  <p className="text-[18px] font-bold text-foreground leading-tight truncate">{session.title}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[13px] text-muted-foreground flex-wrap">
                 <ActivityIcon activityType={session.activity_type} size="sm" />
                 <span>{getActivityLabel(session.activity_type)}</span>
                 {session.distance_km && <span>• {session.distance_km} km</span>}
                 {session.pace_target && <span>• {session.pace_target}</span>}
               </div>
               {session.description && (
-                <p className="text-sm text-muted-foreground">{session.description}</p>
+                <p className="text-[13px] text-muted-foreground mt-2">{session.description}</p>
               )}
               {session.coach_notes && (
-                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 mt-2">
-                  <p className="text-xs font-medium text-primary mb-0.5">📝 Notes du coach</p>
-                  <p className="text-xs">{session.coach_notes}</p>
+                <div className="p-2.5 rounded-xl bg-card/60 border border-primary/20 mt-3">
+                  <p className="text-[11px] font-semibold text-primary mb-0.5">📝 Notes du coach</p>
+                  <p className="text-[12px] text-foreground">{session.coach_notes}</p>
                 </div>
               )}
             </div>
@@ -351,37 +380,37 @@ export const CoachingSessionDetail = ({
 
             {/* Coach view: completion rate */}
             {isCoach && participations.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2 p-4 bg-card rounded-none">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Taux de complétion</span>
-                  <span className="text-muted-foreground">{completionRate}%</span>
+                  <span className="font-semibold">Taux de complétion</span>
+                  <span className="text-[15px] font-bold text-foreground">{completionRate}%</span>
                 </div>
-                <Progress value={completionRate} className="h-2" />
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span>📨 {sentCount} envoyée(s)</span>
-                  <span>📍 {scheduledCount} programmée(s)</span>
-                  <span>✅ {completedCount} fait(s)</span>
-                  {missedCount > 0 && <span>❌ {missedCount} manquée(s)</span>}
+                <Progress value={completionRate} className="h-2.5" />
+                <div className="flex flex-wrap gap-3 text-[12px] text-muted-foreground mt-1">
+                  <span>📨 {sentCount} envoyée{sentCount > 1 ? "s" : ""}</span>
+                  <span>📍 {scheduledCount} programmée{scheduledCount > 1 ? "s" : ""}</span>
+                  <span>✅ {completedCount} fait{completedCount > 1 ? "s" : ""}</span>
+                  {missedCount > 0 && <span>❌ {missedCount} manquée{missedCount > 1 ? "s" : ""}</span>}
                 </div>
               </div>
             )}
 
             {/* Batch feedback */}
             {isCoach && withoutFeedback.length > 0 && (
-              <div className="space-y-2 p-3 rounded-none bg-card">
-                <p className="text-sm font-medium">Feedback global</p>
+              <div className="space-y-2 p-4 bg-card rounded-none">
+                <p className="text-[14px] font-semibold text-foreground">Feedback global</p>
                 <Textarea
                   placeholder="Écrire un feedback pour tous les athlètes sans retour..."
                   value={batchFeedback}
                   onChange={(e) => setBatchFeedback(e.target.value)}
                   rows={2}
-                  className="text-sm"
+                  className="text-[13px] bg-secondary/50 border-0 rounded-xl"
                 />
                 <Button
                   size="sm"
                   onClick={handleBatchFeedback}
                   disabled={!batchFeedback.trim() || sendingBatch}
-                  className="w-full"
+                  className="w-full rounded-xl"
                 >
                   {sendingBatch ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

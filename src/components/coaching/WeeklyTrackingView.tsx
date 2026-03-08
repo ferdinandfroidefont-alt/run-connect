@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList, Bell, TrendingUp, TrendingDown, Flame, Loader2 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ActivityIcon } from "@/lib/activityIcons";
+import { toast } from "sonner";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -91,11 +93,15 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
 
 export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
+  const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [fourWeekVolume, setFourWeekVolume] = useState<{ current: number; previous: number } | null>(null);
+  const [completionStreak, setCompletionStreak] = useState(0);
+
   const [activeTab, setActiveTab] = useState("sessions");
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -206,6 +212,80 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     }
   };
 
+  // Load 4-week volume stats for selected athlete
+  useEffect(() => {
+    if (!selectedAthleteId) return;
+    const load4WeekStats = async () => {
+      const w0 = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      const w4ago = subWeeks(w0, 4);
+      const { data: sessions4w } = await supabase
+        .from("coaching_sessions")
+        .select("id, distance_km, scheduled_at")
+        .eq("club_id", clubId)
+        .gte("scheduled_at", w4ago.toISOString())
+        .lte("scheduled_at", endOfWeek(currentWeek, { weekStartsOn: 1 }).toISOString());
+      if (!sessions4w || sessions4w.length === 0) { setFourWeekVolume(null); return; }
+      const sessionIds = sessions4w.map(s => s.id);
+      const { data: parts } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, status")
+        .eq("user_id", selectedAthleteId)
+        .in("coaching_session_id", sessionIds);
+      if (!parts) { setFourWeekVolume(null); return; }
+
+      const completedIds = new Set(parts.filter(p => p.status === "completed").map(p => p.coaching_session_id));
+      let currentVol = 0, prevVol = 0;
+      const w2ago = subWeeks(w0, 2);
+      sessions4w.forEach(s => {
+        if (!completedIds.has(s.id)) return;
+        const km = Number(s.distance_km) || 0;
+        if (new Date(s.scheduled_at) >= w2ago) currentVol += km;
+        else prevVol += km;
+      });
+      setFourWeekVolume({ current: currentVol, previous: prevVol });
+
+      // Compute streak
+      let streak = 0;
+      const allParts = parts.filter(p => p.status === "completed").map(p => p.coaching_session_id);
+      const weekSessions = sessions4w
+        .filter(s => new Date(s.scheduled_at) <= new Date())
+        .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
+      for (const s of weekSessions) {
+        if (allParts.includes(s.id)) streak++;
+        else break;
+      }
+      setCompletionStreak(streak);
+    };
+    load4WeekStats();
+  }, [selectedAthleteId, clubId, currentWeek]);
+
+  // Send reminder to athletes who haven't completed past sessions
+  const handleSendReminder = async () => {
+    const now = new Date();
+    const lateAthletes = athletes.filter(a => {
+      return Object.entries(a.days).some(([dayKey, d]) => {
+        return new Date(dayKey) < now && d.status !== "completed";
+      });
+    });
+    if (lateAthletes.length === 0) {
+      toast.info("Tous les athlètes sont à jour !");
+      return;
+    }
+    setSendingReminder(true);
+    try {
+      await Promise.all(
+        lateAthletes.map(a =>
+          sendPushNotification(a.userId, "⏰ Rappel de votre coach", "N'oubliez pas de valider vos séances !", "coaching_reminder")
+        )
+      );
+      toast.success(`Rappel envoyé à ${lateAthletes.length} athlète${lateAthletes.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
   const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
     if (!q) return athletes;
@@ -239,6 +319,19 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   if (!selectedAthlete) {
     return (
       <div className="space-y-4">
+        {/* Reminder button */}
+        <div className="px-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full rounded-xl h-10 gap-2 text-[13px] font-semibold"
+            onClick={handleSendReminder}
+            disabled={sendingReminder}
+          >
+            {sendingReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+            Relancer les athlètes en retard
+          </Button>
+        </div>
         {/* Search */}
         <div className="relative px-4">
           <Search className="absolute left-7.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -421,14 +514,27 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           </div>
         </div>
 
-        {/* Volume by type */}
-        {volumeByType.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {volumeByType.map(([type, km]) => (
-              <Badge key={type} className={`text-[10px] px-2 py-0.5 rounded-lg border-0 ${getObjectiveColor(type)}`}>
-                {type} {Math.round(km * 10) / 10} km
+        {/* 4-week trends & streak */}
+        {(fourWeekVolume || completionStreak > 0) && (
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/20">
+            {fourWeekVolume && (
+              <div className="flex items-center gap-1.5">
+                {fourWeekVolume.current >= fourWeekVolume.previous ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                )}
+                <span className="text-[12px] text-muted-foreground">
+                  {Math.round(fourWeekVolume.current * 10) / 10} km / 4 sem
+                </span>
+              </div>
+            )}
+            {completionStreak > 0 && (
+              <Badge className="bg-orange-500/15 text-orange-600 border-0 rounded-lg text-[11px] px-2 py-0.5 gap-1">
+                <Flame className="h-3 w-3" />
+                {completionStreak} séances d'affilée
               </Badge>
-            ))}
+            )}
           </div>
         )}
       </div>

@@ -287,7 +287,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       {sessions.length > 0 && (
         <div className="bg-card rounded-none px-4 py-4">
           <WeeklyBarChart
-            sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km }))}
+            sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km, title: s.title, objective: s.objective }))}
             weekDays={weekDays}
           />
         </div>
@@ -295,10 +295,10 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Session list */}
       {sessions.length === 0 ? (
-        <div className="bg-card rounded-none p-8 text-center">
-          <CalendarDays className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-          <p className="text-[16px] font-semibold text-foreground mb-1">Pas de séance</p>
-          <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine</p>
+        <div className="bg-card rounded-xl mx-4 p-8 text-center">
+          <div className="text-[40px] mb-3">🏃‍♂️</div>
+          <p className="text-[16px] font-semibold text-foreground mb-1">Semaine libre</p>
+          <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine. Profitez-en pour récupérer !</p>
         </div>
       ) : (
         <div className="space-y-0">

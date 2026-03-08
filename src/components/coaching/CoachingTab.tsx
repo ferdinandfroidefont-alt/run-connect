@@ -3,9 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { CalendarDays, BookOpen, BarChart3, Users, FileText } from "lucide-react";
+import { CalendarDays, BookOpen, BarChart3, Users, FileText, Sparkles } from "lucide-react";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
@@ -225,16 +226,36 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         <>
           {/* Hero Card */}
           <Card className="mb-5 overflow-hidden rounded-none border-x-0">
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
-              {/* Big number */}
-              <div className="text-center mb-3">
-                <span className="text-[42px] font-bold leading-none text-foreground">
-                  {stats.totalSessions}
-                </span>
-                <p className="text-[13px] text-muted-foreground mt-1">
-                  séance{stats.totalSessions > 1 ? "s" : ""} programmée{stats.totalSessions > 1 ? "s" : ""}
-                </p>
-              </div>
+            <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5">
+              {stats.totalSessions === 0 ? (
+                /* Engaging empty state */
+                <div className="text-center py-4">
+                  <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary/15 mb-3">
+                    <Sparkles className="h-7 w-7 text-primary" />
+                  </div>
+                  <p className="text-[17px] font-bold text-foreground mb-1">Planifiez votre semaine</p>
+                  <p className="text-[13px] text-muted-foreground mb-4 max-w-[240px] mx-auto">
+                    Créez des séances pour vos athlètes et suivez leur progression
+                  </p>
+                  <Button
+                    onClick={() => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); }}
+                    className="rounded-2xl h-10 px-5 text-[13px] font-semibold gap-2"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Créer un plan hebdo
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Big number */}
+                  <div className="text-center mb-3">
+                    <span className="text-[42px] font-bold leading-none text-foreground">
+                      {stats.totalSessions}
+                    </span>
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                      séance{stats.totalSessions > 1 ? "s" : ""} programmée{stats.totalSessions > 1 ? "s" : ""}
+                    </p>
+                  </div>
 
               {/* Sub-stats row */}
               <div className="flex justify-center gap-6 mb-4">
@@ -265,6 +286,8 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
                   <span>🔵 Récup</span>
                 </div>
               </div>
+                </>
+              )}
             </div>
           </Card>
 

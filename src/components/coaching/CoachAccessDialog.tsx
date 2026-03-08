@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Plus, Users, ChevronLeft, Dumbbell } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { GraduationCap, Plus, Users, ChevronLeft, Dumbbell, Sparkles } from "lucide-react";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { AthleteWeeklyDialog } from "./AthleteWeeklyDialog";
 import { startOfWeek, endOfWeek } from "date-fns";
@@ -39,6 +40,7 @@ export const CoachAccessDialog = ({
   const [loadingCoach, setLoadingCoach] = useState(true);
   const [loadingAthlete, setLoadingAthlete] = useState(true);
   const [openCoachingClubId, setOpenCoachingClubId] = useState<string | null>(null);
+  const [totalAthletes, setTotalAthletes] = useState(0);
 
   const loading = loadingCoach || loadingAthlete;
 
@@ -70,8 +72,17 @@ export const CoachAccessDialog = ({
         setClubs(
           (convs || []).map((c) => ({ conversation_id: c.id, group_name: c.group_name }))
         );
+
+        // Count total athletes across all clubs
+        const { count } = await supabase
+          .from("group_members")
+          .select("id", { count: "exact", head: true })
+          .in("conversation_id", clubIds)
+          .eq("is_coach", false);
+        setTotalAthletes(count || 0);
       } else {
         setClubs([]);
+        setTotalAthletes(0);
       }
     } catch (error) {
       console.error("Error loading coach clubs:", error);
@@ -156,6 +167,8 @@ export const CoachAccessDialog = ({
     }
   };
 
+  const hasContent = clubs.length > 0 || athleteClubs.length > 0;
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -171,10 +184,38 @@ export const CoachAccessDialog = ({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto bg-secondary px-0">
+            {/* Hero Section */}
+            <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent px-6 py-8 text-center">
+              <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/15 mb-4">
+                <GraduationCap className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-[22px] font-bold text-foreground mb-1">Mode Coach</h2>
+              {hasContent ? (
+                <div className="flex items-center justify-center gap-3 mt-2">
+                  <Badge className="bg-primary/10 text-primary border-0 rounded-lg px-3 py-1 text-[13px] font-semibold">
+                    {clubs.length} club{clubs.length > 1 ? "s" : ""}
+                  </Badge>
+                  {totalAthletes > 0 && (
+                    <Badge className="bg-primary/10 text-primary border-0 rounded-lg px-3 py-1 text-[13px] font-semibold">
+                      {totalAthletes} athlète{totalAthletes > 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[14px] text-muted-foreground mt-1">
+                  Planifiez et suivez l'entraînement de vos athlètes
+                </p>
+              )}
+              <Badge className="mt-3 bg-amber-500/15 text-amber-600 border-0 rounded-full px-3 py-1 text-[11px] font-bold gap-1">
+                <Sparkles className="h-3 w-3" />
+                PRO
+              </Badge>
+            </div>
+
             {loading ? (
               <div className="p-4 space-y-2">
                 {[1, 2].map((i) => (
-                  <div key={i} className="h-12 bg-card rounded-none animate-pulse" />
+                  <div key={i} className="h-12 bg-card rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : (
@@ -205,36 +246,57 @@ export const CoachAccessDialog = ({
                 {athleteClubs.length > 0 && (
                   <div>
                     <IOSListGroup header="MON PLAN COACHING" flush>
-                      {athleteClubs.map((club, i) => (
-                        <IOSListItem
-                          key={club.clubId}
-                          icon={Dumbbell}
-                          iconBgColor="bg-orange-500"
-                          title="Mon plan coaching"
-                          subtitle={`${club.clubName} · ${club.completed}/${club.total} cette semaine`}
-                          onClick={() => setOpenCoachingClubId(club.clubId)}
-                          showSeparator={i < athleteClubs.length - 1}
-                        />
-                      ))}
+                      {athleteClubs.map((club, i) => {
+                        const pct = club.total > 0 ? Math.round((club.completed / club.total) * 100) : 0;
+                        return (
+                          <IOSListItem
+                            key={club.clubId}
+                            icon={Dumbbell}
+                            iconBgColor="bg-orange-500"
+                            title="Mon plan coaching"
+                            subtitle={`${club.clubName} · ${club.completed}/${club.total} cette semaine`}
+                            rightElement={
+                              club.total > 0 ? (
+                                <Badge
+                                  className={`text-[11px] px-2 py-0.5 rounded-lg border-0 ${
+                                    pct >= 80 ? "bg-green-500/15 text-green-600" :
+                                    pct >= 50 ? "bg-orange-500/15 text-orange-600" :
+                                    "bg-red-500/15 text-red-600"
+                                  }`}
+                                >
+                                  {pct}%
+                                </Badge>
+                              ) : undefined
+                            }
+                            onClick={() => setOpenCoachingClubId(club.clubId)}
+                            showSeparator={i < athleteClubs.length - 1}
+                          />
+                        );
+                      })}
                     </IOSListGroup>
                   </div>
                 )}
 
                 {/* Empty state */}
-                {clubs.length === 0 && athleteClubs.length === 0 && (
-                  <div className="text-center py-8 px-4">
-                    <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Aucun club ou programme d'entraînement
+                {!hasContent && (
+                  <div className="text-center py-10 px-6">
+                    <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-muted mb-4">
+                      <Users className="h-7 w-7 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[16px] font-semibold text-foreground mb-1">
+                      Créez votre premier club
+                    </p>
+                    <p className="text-[13px] text-muted-foreground mb-4 max-w-[260px] mx-auto">
+                      Commencez à planifier des entraînements pour vos athlètes
                     </p>
                     <Button
-                      variant="outline"
                       onClick={() => {
                         onClose();
                         onCreateClub();
                       }}
+                      className="rounded-2xl h-11 px-6 text-[14px] font-semibold gap-2"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
+                      <Plus className="h-4 w-4" />
                       Créer un club
                     </Button>
                   </div>
