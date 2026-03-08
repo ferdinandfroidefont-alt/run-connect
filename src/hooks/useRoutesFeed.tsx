@@ -97,7 +97,6 @@ export const useRoutesFeed = () => {
         .from('routes')
         .select('*')
         .eq('is_public', true)
-        .neq('created_by', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
