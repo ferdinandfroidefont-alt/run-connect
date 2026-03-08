@@ -475,10 +475,17 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   // ── Resolve target members for a group ──
   const getMembersForGroup = (groupId: string): ClubMember[] => {
+    // If specific athletes are targeted, always use that filter
+    if (targetAthletes.length > 0) {
+      return members.filter(m => targetAthletes.includes(m.user_id));
+    }
     if (groupId === "club") return members;
     const group = groups.find(g => g.id === groupId);
     return group ? members.filter(m => group.memberIds.includes(m.user_id)) : members;
   };
+
+  // Check if we have a valid target (group selected, athletes selected, or explicitly club)
+  const hasValidTarget = activeGroupId !== "club" || targetAthletes.length > 0 || members.length > 0;
 
   // ── Count total sessions across all groups ──
   const totalSessionsCount = useMemo(() => {
@@ -1235,16 +1242,25 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {totalSessionsCount > 0 && (
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <span className="text-[13px] text-muted-foreground">
-                {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {groupsWithPlans.map(id =>
-                  id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
-                ).join(", ")}
+                {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {
+                  targetAthletes.length > 0
+                    ? `${targetAthletes.length} athlète${targetAthletes.length > 1 ? "s" : ""}`
+                    : groupsWithPlans.map(id =>
+                        id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
+                      ).join(", ")
+                }
               </span>
             </div>
+          )}
+          {activeGroupId === "club" && targetAthletes.length === 0 && totalSessionsCount > 0 && (
+            <p className="text-[12px] text-destructive text-center">
+              Sélectionnez un groupe ou un athlète pour envoyer
+            </p>
           )}
           <Button
             className="w-full h-12 text-[17px] font-semibold rounded-xl"
             onClick={handleSendPlan}
-            disabled={totalSessionsCount === 0 || sending}
+            disabled={totalSessionsCount === 0 || sending || (activeGroupId === "club" && targetAthletes.length === 0)}
           >
             {sending ? (
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
