@@ -89,6 +89,10 @@ export default function MySessions() {
   const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
+  const [routeSource, setRouteSource] = useState<'created' | 'feed'>('created');
+  const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
+  const [showRouteDetail, setShowRouteDetail] = useState(false);
+  const routesFeed = useRoutesFeed();
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
