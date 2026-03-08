@@ -55,7 +55,6 @@ interface ProfilePreviewDialogProps {
 export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { sendPushNotification } = useSendNotification();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
