@@ -941,20 +941,16 @@ const Messages = () => {
 
       setUploadProgress('Envoi du message...');
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('message-files')
-        .getPublicUrl(filePath);
+      console.log('File uploaded successfully, path:', filePath);
 
-      console.log('File uploaded successfully, public URL:', publicUrl);
-
-      // Send message with file attachment
+      // Send message with file attachment (store path, not public URL)
       const { error } = await supabase
         .from('messages')
         .insert([{
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: file.type.startsWith('image/') ? 'Image partagée' : 'Fichier partagé',
-          file_url: publicUrl,
+          file_url: filePath,
           file_type: file.type,
           file_name: file.name,
           message_type: 'file'
@@ -1016,17 +1012,13 @@ const Messages = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('message-files')
-        .getPublicUrl(filePath);
-
       const { error } = await supabase
         .from('messages')
         .insert([{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: '📸 Photo',
-          file_url: publicUrl,
+          file_url: filePath,
           file_type: 'image/jpeg',
           file_name: fileToUpload.name,
           message_type: 'image'
@@ -1085,20 +1077,16 @@ const Messages = () => {
         throw uploadError;
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('message-files')
-        .getPublicUrl(filePath);
+      console.log('🎤 Message vocal uploadé, path:', filePath);
 
-      console.log('🎤 Message vocal uploadé:', publicUrl);
-
-      // Send message with voice attachment
+      // Send message with voice attachment (store path, not public URL)
       const { error } = await supabase
         .from('messages')
         .insert([{
           conversation_id: selectedConversation.id,
           sender_id: user.id,
           content: `Message vocal (${duration}s)`,
-          file_url: publicUrl,
+          file_url: filePath,
           file_type: 'audio/webm',
           file_name: fileName,
           message_type: 'voice'
