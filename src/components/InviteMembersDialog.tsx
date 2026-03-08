@@ -158,13 +158,17 @@ export const InviteMembersDialog = ({ open, onOpenChange, clubId, onMemberInvite
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-        <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" />
+      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
+          <button onClick={() => onOpenChange(false)} className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
+            <Search className="h-5 w-5" />
+            <span className="text-[15px]">Retour</span>
+          </button>
+          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
             Inviter des membres
-          </DialogTitle>
-        </DialogHeader>
+          </span>
+          <div className="min-w-[70px]" />
+        </div>
 
         <div className="space-y-4 flex-1 min-h-0">
           {/* Search Input */}
