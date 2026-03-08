@@ -1,53 +1,81 @@
 
 
-## Diagnostic
+# Refonte complète du Classement — Niveau world-class
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+## Constat actuel
+Le classement actuel est fonctionnel mais basique : podium plat avec des barres colorées, liste monotone, bouton "Voir plus" oldschool, pas de mouvement de rang, pas de recherche, header fade. Ca ressemble à un prototype, pas à une app utilisée par des millions.
 
-Deux problemes distincts :
+## Ce que Strava fait bien (et ce qu'on va dépasser)
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+Strava : liste propre, segment tabs, sticky "my rank". C'est clean mais **statique et sans émotion**.
 
-## Solution en 2 parties
+Notre approche : **dynamique, sociale, et addictive**.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+---
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+## Design — Nouvelle architecture visuelle
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### 1. Hero Header immersif avec "Ma Position"
+Au lieu d'un simple header texte, un **gradient hero** qui affiche directement ta position en gros, ton rang, et les points. Toujours visible, sticky. L'utilisateur sait immédiatement où il en est sans scroller.
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+┌─────────────────────────────┐
+│  ← Classement               │  sticky backdrop-blur
+│  ┌───────────────────────┐  │
+│  │  #42  ·  Top 3.2%     │  │  ta position en gros
+│  │  1,847 pts · Or 🥇    │  │  rank badge inline
+│  │  ▲ 5 places cette sem. │  │  mouvement de rang
+│  └───────────────────────┘  │
+│  [Général] [Running] [Amis] │  segment control iOS
+└─────────────────────────────┘
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+### 2. Podium 3D-like repensé
+- Fond **gradient sombre** (pas blanc) pour créer du contraste
+- Avatars plus gros avec **glow effect** par rang (or=glow jaune, argent=glow gris)
+- **Points animés** avec `framer-motion` counter
+- Les 3 barres en dégradé avec **glassmorphism**
+- Badge de mouvement de rang (▲3, ▼1) sous chaque nom
 
-### Partie 2 : Securiser la page bridge
+### 3. Segment Control iOS au lieu de pill buttons
+Remplacer la barre de boutons par un vrai **segmented control** natif iOS (comme Strava) : `Général | Running | Vélo | Amis | Clubs`. Plus propre, plus pro.
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+### 4. Liste avec infinite scroll + rank movement
+- **Supprimer le bouton "Voir plus"** → infinite scroll avec `IntersectionObserver`
+- Chaque row affiche un **indicateur de mouvement** (▲ vert / ▼ rouge / = gris) pour le changement de position sur la semaine
+- Row du current user toujours **highlighted** avec un subtil gradient primary
+- Séparateurs fins `ml-14` style iOS natif
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+### 5. Floating "Ma Position" pill
+Quand l'utilisateur scrolle loin de sa position, un **pill flottant** apparaît en bas : `"#42 · Voir ma position"` — tap pour auto-scroll smooth jusqu'à sa ligne.
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+### 6. Recherche inline
+Un champ de recherche discret en haut de la liste pour **chercher un ami** dans le classement. Strava ne l'a pas — nous oui.
 
-### Fichiers modifies
+### 7. Empty state premium
+Si aucun résultat (filtre club sans membres, etc.) : illustration + message engageant au lieu du vide.
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+---
 
-### Apres le deploy
+## Fichiers impactés
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+| Fichier | Changement |
+|---------|-----------|
+| `src/pages/Leaderboard.tsx` | Refonte complète : hero header, infinite scroll, search, floating pill, nouveau podium |
+| `src/components/leaderboard/FilterBar.tsx` | Remplacement par un segmented control iOS natif |
+| `src/components/leaderboard/ScrollToMyRankButton.tsx` | Redesign en floating pill glassmorphism |
+
+## Composants supprimés (plus utilisés dans la page)
+- `MyRankCard.tsx` → remplacé par le hero header inline
+- `SeasonStatsCard.tsx` → déjà retiré
+- `LeaderboardCard.tsx` → remplacé par le nouveau `LeaderboardRow` inline
+
+## Détails techniques
+
+- **Infinite scroll** : `useRef` + `IntersectionObserver` sur un sentinel div en bas de liste, incrémente `currentPage` automatiquement
+- **Rank movement** : nouveau champ `rank_change` calculé côté client en comparant le rang actuel vs le rang de la semaine précédente (requête supplémentaire légère)
+- **Animated counter** : `framer-motion` `useMotionValue` + `useTransform` pour animer les points dans le hero
+- **Segment control** : div flex avec `transform translateX` animé sur le slider actif, pas de librairie externe
+- **Search** : filtre client-side sur le `leaderboard` state existant avec debounce 300ms
+- **Glow effect podium** : `box-shadow` avec couleur du rang + blur 20px
 
