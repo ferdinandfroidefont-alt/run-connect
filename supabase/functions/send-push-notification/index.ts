@@ -283,20 +283,31 @@ serve(async (req) => {
     }
 
     // 6. Create notification record
-    const { data: notifData, error: notifError } = await supabaseClient
-      .from('notifications')
-      .insert({ user_id, title, message: body, type: type || 'info', data: data || {} })
-      .select('id')
-      .single();
+    // Skip DB insert for types handled by DB triggers to avoid duplicates
+    const triggerHandledTypes = ['follow_request', 'follow_accepted', 'follow_back', 'follower_removed'];
+    const skipDbInsert = triggerHandledTypes.includes(type || '');
+    
+    let notificationId: string | null = null;
+    
+    if (!skipDbInsert) {
+      const { data: notifData, error: notifError } = await supabaseClient
+        .from('notifications')
+        .insert({ user_id, title, message: body, type: type || 'info', data: data || {} })
+        .select('id')
+        .single();
 
-    if (notifError) {
-      return new Response(
-        JSON.stringify({ error: 'Erreur création notification', stage: 'DB_INSERT', push_token: profile.push_token }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (notifError) {
+        return new Response(
+          JSON.stringify({ error: 'Erreur création notification', stage: 'DB_INSERT', push_token: profile.push_token }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      notificationId = notifData?.id ?? null;
+    } else {
+      console.log(`ℹ️ [DB] Skipping notification insert for type '${type}' (handled by DB trigger)`);
     }
 
-    const notificationId = notifData?.id;
+    // notificationId already set above
 
     // 7. Customize content by type
     let finalTitle = title;
