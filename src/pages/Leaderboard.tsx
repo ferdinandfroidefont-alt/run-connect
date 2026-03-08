@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, Crown, Medal, ArrowLeft } from "lucide-react";
+import { Crown, ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -11,17 +9,8 @@ import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 import { FilterBar, FilterType, ActivityType } from "@/components/leaderboard/FilterBar";
-import { MyRankCard } from "@/components/leaderboard/MyRankCard";
-import { SeasonStatsCard } from "@/components/leaderboard/SeasonStatsCard";
-import { LeaderboardCard } from "@/components/leaderboard/LeaderboardCard";
-import { ScrollToMyRankButton } from "@/components/leaderboard/ScrollToMyRankButton";
-import { WeeklyChallengesCard } from "@/components/leaderboard/WeeklyChallengesCard";
-import { BadgesToUnlockCard } from "@/components/leaderboard/BadgesToUnlockCard";
-import { ProgressionChart } from "@/components/leaderboard/ProgressionChart";
-import { StreakBadge } from "@/components/StreakBadge";
-import { CollapsibleSection } from "@/components/leaderboard/CollapsibleSection";
-import { Trophy as TrophyIcon, Flame, TrendingUp, Calendar, Target, Award } from "lucide-react";
-
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface LeaderboardUser {
   user_id: string;
@@ -43,10 +32,159 @@ interface Club {
   name: string;
 }
 
+const USERS_PER_PAGE = 20;
+
+const getRankColor = (rank: string) => {
+  switch (rank) {
+    case 'diamant': return 'from-cyan-400 to-cyan-500';
+    case 'platine': return 'from-purple-400 to-purple-600';
+    case 'or': return 'from-yellow-400 to-yellow-600';
+    case 'argent': return 'from-gray-300 to-gray-500';
+    case 'bronze': return 'from-amber-500 to-amber-700';
+    default: return 'from-muted to-muted';
+  }
+};
+
+const getRankRing = (rank: string) => {
+  switch (rank) {
+    case 'diamant': return 'ring-2 ring-cyan-400';
+    case 'platine': return 'ring-2 ring-purple-500';
+    case 'or': return 'ring-2 ring-yellow-500';
+    case 'argent': return 'ring-2 ring-gray-400';
+    case 'bronze': return 'ring-2 ring-amber-600';
+    default: return 'ring-1 ring-border';
+  }
+};
+
+const getUserRank = (points: number): string => {
+  if (points >= 5000) return 'diamant';
+  if (points >= 3000) return 'platine';
+  if (points >= 2000) return 'or';
+  if (points >= 1000) return 'argent';
+  if (points >= 500) return 'bronze';
+  return 'novice';
+};
+
+const getCurrentSeasonDates = () => {
+  const startRef = new Date('2024-08-15');
+  const now = new Date();
+  const seasonDuration = 45 * 24 * 60 * 60 * 1000;
+  const timeSinceStart = now.getTime() - startRef.getTime();
+  const seasonsElapsed = Math.floor(timeSinceStart / seasonDuration);
+  const currentSeasonStart = new Date(startRef.getTime() + (seasonsElapsed * seasonDuration));
+  const currentSeasonEnd = new Date(currentSeasonStart.getTime() + seasonDuration - 1);
+  return { start: currentSeasonStart, end: currentSeasonEnd, number: seasonsElapsed + 1 };
+};
+
+/* ───── Podium ───── */
+const Podium = ({ top3, onTap, getRankRing }: { top3: LeaderboardUser[]; onTap: (id: string) => void; getRankRing: (r: string) => string }) => {
+  if (top3.length === 0) return null;
+  const [first, second, third] = top3;
+
+  const PodiumSlot = ({ u, size, barH, barColor, pos }: { u?: LeaderboardUser; size: number; barH: string; barColor: string; pos: number }) => {
+    if (!u) return <div className="w-20" />;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: pos * 0.1, duration: 0.4 }}
+        className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
+        onClick={() => onTap(u.user_id)}
+      >
+        {pos === 0 && <Crown className="h-5 w-5 text-yellow-500 mb-1" />}
+        <Avatar className={cn(`mb-1.5`, getRankRing(u.user_rank))} style={{ width: size, height: size }}>
+          <AvatarImage src={u.profile?.avatar_url} />
+          <AvatarFallback className="text-sm font-bold bg-secondary">
+            {u.profile?.username?.[0]?.toUpperCase() || '?'}
+          </AvatarFallback>
+        </Avatar>
+        <p className="font-semibold text-[13px] truncate max-w-[80px] text-center">{u.profile?.username}</p>
+        <p className="text-[12px] text-muted-foreground font-medium">{u.seasonal_points.toLocaleString()} pts</p>
+        <div className={cn("w-[72px] rounded-t-xl flex items-center justify-center mt-2", barH, barColor)}>
+          <span className="text-lg font-black text-white">{u.rank}</span>
+        </div>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="pt-4 pb-0 px-4">
+      <div className="flex items-end justify-center gap-3">
+        <PodiumSlot u={second} size={56} barH="h-12" barColor="bg-gradient-to-t from-gray-500 to-gray-400" pos={1} />
+        <PodiumSlot u={first} size={68} barH="h-16" barColor="bg-gradient-to-t from-yellow-600 to-yellow-400" pos={0} />
+        <PodiumSlot u={third} size={52} barH="h-10" barColor="bg-gradient-to-t from-amber-700 to-amber-500" pos={2} />
+      </div>
+    </div>
+  );
+};
+
+/* ───── Row ───── */
+const LeaderboardRow = ({ u, isMe, onClick, index }: { u: LeaderboardUser; isMe: boolean; onClick: () => void; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, x: -10 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: Math.min(index * 0.03, 0.6), duration: 0.25 }}
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-secondary/60 transition-colors",
+      isMe && "bg-primary/5"
+    )}
+  >
+    {/* Rank number */}
+    <div className="w-8 text-center">
+      <span className={cn("text-[15px] font-bold tabular-nums", isMe ? "text-primary" : "text-muted-foreground")}>
+        {u.rank}
+      </span>
+    </div>
+
+    {/* Avatar with rank indicator */}
+    <div className="relative">
+      <Avatar className={cn("h-10 w-10", getRankRing(u.user_rank))}>
+        <AvatarImage src={u.profile?.avatar_url} />
+        <AvatarFallback className="text-xs font-bold bg-secondary">
+          {u.profile?.username?.[0]?.toUpperCase() || '?'}
+        </AvatarFallback>
+      </Avatar>
+      {u.user_rank !== 'novice' && (
+        <div className={cn("absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-gradient-to-br border-2 border-card", getRankColor(u.user_rank))} />
+      )}
+    </div>
+
+    {/* Name */}
+    <div className="flex-1 min-w-0">
+      <p className={cn("text-[15px] truncate", isMe ? "font-bold" : "font-medium")}>
+        {u.profile?.display_name || u.profile?.username}
+      </p>
+      {u.profile?.display_name && u.profile?.username && (
+        <p className="text-[12px] text-muted-foreground truncate">@{u.profile.username}</p>
+      )}
+    </div>
+
+    {/* Points */}
+    <div className="flex items-center gap-1.5">
+      <span className={cn("text-[15px] font-semibold tabular-nums", isMe ? "text-primary" : "text-foreground")}>
+        {u.seasonal_points.toLocaleString()}
+      </span>
+      <span className="text-[12px] text-muted-foreground">pts</span>
+    </div>
+    <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+  </motion.div>
+);
+
+/* ───── Separator ───── */
+const RankGap = () => (
+  <div className="flex items-center justify-center py-2 px-6">
+    <div className="flex-1 border-t border-dashed border-border/50" />
+    <span className="px-3 text-[11px] text-muted-foreground/50 font-medium">•••</span>
+    <div className="flex-1 border-t border-dashed border-border/50" />
+  </div>
+);
+
+/* ───── Main Page ───── */
 const Leaderboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -54,296 +192,160 @@ const Leaderboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
-  const [seasonStats, setSeasonStats] = useState<any>(null);
   const [userClubs, setUserClubs] = useState<Club[]>([]);
   const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
-  const [userPoints, setUserPoints] = useState(0);
   const myRankRef = useRef<HTMLDivElement>(null);
-  
+
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
-
-
-  const USERS_PER_PAGE = 10;
 
   useEffect(() => {
     if (user) {
       setCurrentPage(1);
       fetchLeaderboard();
-      fetchSeasonStats();
       fetchUserClubs();
     }
   }, [user, activeFilter, selectedClubs]);
 
   useEffect(() => {
-    if (user && currentPage > 1) {
-      fetchLeaderboard();
-    }
+    if (user && currentPage > 1) fetchLeaderboard();
   }, [currentPage]);
 
   const fetchUserClubs = async () => {
     if (!user) return;
-    
     const { data: membershipData } = await supabase
       .from('group_members')
       .select('conversation_id')
       .eq('user_id', user.id);
-    
-    if (!membershipData || membershipData.length === 0) {
-      setUserClubs([]);
-      return;
-    }
-    
+    if (!membershipData?.length) { setUserClubs([]); return; }
     const clubIds = membershipData.map(m => m.conversation_id);
     const { data: clubsData } = await supabase
       .from('conversations')
       .select('id, group_name')
       .in('id', clubIds)
       .eq('is_group', true);
-    
-    if (clubsData) {
-      setUserClubs(clubsData.map(c => ({ id: c.id, name: c.group_name || 'Club sans nom' })));
-    }
-  };
-
-  const fetchSeasonStats = async () => {
-    if (!user) return;
-    
-    try {
-      const seasonDates = getCurrentSeasonDates();
-      
-      // Get user scores
-      const { data: scoresData } = await supabase
-        .from('user_scores')
-        .select('seasonal_points')
-        .eq('user_id', user.id)
-        .single();
-
-      // Fetch sessions joined
-      const { count: sessionsJoinedCount } = await supabase
-        .from('session_participants')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('joined_at', seasonDates.start.toISOString())
-        .lte('joined_at', seasonDates.end.toISOString());
-
-      // Fetch sessions created
-      const { count: sessionsCreatedCount } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('organizer_id', user.id)
-        .gte('created_at', seasonDates.start.toISOString())
-        .lte('created_at', seasonDates.end.toISOString());
-
-      // Get badges count
-      const { count: badgesCount } = await supabase
-        .from('user_badges')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('unlocked_at', seasonDates.start.toISOString())
-        .lte('unlocked_at', seasonDates.end.toISOString());
-
-      // Fetch friends referred
-      const { count: referralsCount } = await supabase
-        .from('referrals')
-        .select('id', { count: 'exact', head: true })
-        .eq('referrer_id', user.id)
-        .gte('created_at', seasonDates.start.toISOString())
-        .lte('created_at', seasonDates.end.toISOString());
-
-      setSeasonStats({
-        sessionsJoined: sessionsJoinedCount || 0,
-        sessionsCreated: sessionsCreatedCount || 0,
-        totalPoints: scoresData?.seasonal_points || 0,
-        badgesWon: badgesCount || 0,
-        friendsReferred: referralsCount || 0,
-      });
-
-      setUserPoints(scoresData?.seasonal_points || 0);
-    } catch (error) {
-      console.error('Error fetching season stats:', error);
-    }
+    if (clubsData) setUserClubs(clubsData.map(c => ({ id: c.id, name: c.group_name || 'Club sans nom' })));
   };
 
   const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      // Déterminer le rank de l'utilisateur d'abord
       let currentUserRank: number | null = null;
       if (user && currentPage === 1) {
         const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10000,
-          offset_count: 0,
-          order_by_column: 'seasonal_points'
+          limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
         });
-        
         const rankIndex = allData?.findIndex((u: any) => u.user_id === user.id);
         currentUserRank = rankIndex !== undefined && rankIndex >= 0 ? rankIndex + 1 : null;
         setUserRank(currentUserRank);
+        setTotalUsers(allData?.length || 0);
       }
 
-      // Logique de chargement différente selon si user dans TOP 10 ou non
-      const userInTop10 = currentUserRank !== null && currentUserRank <= 10;
-      
+      const userInTop = currentUserRank !== null && currentUserRank <= USERS_PER_PAGE;
       let finalData: any[] = [];
-      
-      if (currentPage === 1 && !userInTop10 && currentUserRank !== null) {
-        // User PAS dans TOP 10: charger TOP 10 + contexte user (rank-1, rank, rank+1)
-        const { data: top10Data } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10,
-          offset_count: 0,
-          order_by_column: 'seasonal_points'
-        });
 
-        // Charger les 3 utilisateurs autour du user (rank-1, rank, rank+1)
+      if (currentPage === 1 && !userInTop && currentUserRank !== null) {
+        const { data: topData } = await supabase.rpc('get_complete_leaderboard', {
+          limit_count: USERS_PER_PAGE, offset_count: 0, order_by_column: 'seasonal_points'
+        });
         const contextOffset = Math.max(0, currentUserRank - 2);
         const { data: contextData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 3,
-          offset_count: contextOffset,
-          order_by_column: 'seasonal_points'
+          limit_count: 3, offset_count: contextOffset, order_by_column: 'seasonal_points'
         });
-
-        // Combiner et dédupliquer
-        const combinedIds = new Set();
-        finalData = [...(top10Data || []), ...(contextData || [])].filter((item: any) => {
-          if (combinedIds.has(item.user_id)) return false;
-          combinedIds.add(item.user_id);
+        const seen = new Set();
+        finalData = [...(topData || []), ...(contextData || [])].filter((item: any) => {
+          if (seen.has(item.user_id)) return false;
+          seen.add(item.user_id);
           return true;
         });
-        
-        setHasMoreUsers(false); // Pas de "Load more" quand user pas dans TOP 10
+        setHasMoreUsers(false);
       } else {
-        // User dans TOP 10 OU pagination normale
         const offset = (currentPage - 1) * USERS_PER_PAGE;
-        
-        // Filtrage par activité spécifique
         const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
+
         if (activityTypes.includes(activeFilter as ActivityType)) {
           const { data: activityData, error: activityError } = await supabase
             .from('session_participants')
-            .select(`
-              user_id,
-              points_awarded,
-              sessions!inner(activity_type)
-            `)
+            .select('user_id, points_awarded, sessions!inner(activity_type)')
             .eq('sessions.activity_type', activeFilter)
             .gte('joined_at', getCurrentSeasonDates().start.toISOString())
             .lte('joined_at', getCurrentSeasonDates().end.toISOString());
-
           if (activityError) throw activityError;
 
-          const userPointsMap = new Map<string, number>();
+          const userPtsMap = new Map<string, number>();
           activityData?.forEach(item => {
-            const currentPoints = userPointsMap.get(item.user_id) || 0;
-            userPointsMap.set(item.user_id, currentPoints + (item.points_awarded || 0));
+            userPtsMap.set(item.user_id, (userPtsMap.get(item.user_id) || 0) + (item.points_awarded || 0));
           });
-
-          const userIds = Array.from(userPointsMap.keys());
+          const userIds = Array.from(userPtsMap.keys());
           if (userIds.length > 0) {
             const { data: profilesData } = await supabase
               .from('profiles')
               .select('user_id, username, display_name, avatar_url, is_premium')
               .in('user_id', userIds);
-
-            const combinedData = profilesData?.map(profile => ({
-              user_id: profile.user_id,
-              seasonal_points: userPointsMap.get(profile.user_id) || 0,
-              total_points: userPointsMap.get(profile.user_id) || 0,
-              weekly_points: 0,
-              username: profile.username,
-              display_name: profile.display_name,
-              avatar_url: profile.avatar_url,
-              is_premium: profile.is_premium
+            const combined = profilesData?.map(p => ({
+              user_id: p.user_id, seasonal_points: userPtsMap.get(p.user_id) || 0,
+              total_points: userPtsMap.get(p.user_id) || 0, weekly_points: 0,
+              username: p.username, display_name: p.display_name,
+              avatar_url: p.avatar_url, is_premium: p.is_premium
             })) || [];
-
-            combinedData.sort((a, b) => b.seasonal_points - a.seasonal_points);
-            
-            finalData = combinedData.slice(offset, offset + USERS_PER_PAGE);
-            setTotalUsers(combinedData.length);
-            setHasMoreUsers(offset + USERS_PER_PAGE < combinedData.length);
+            combined.sort((a, b) => b.seasonal_points - a.seasonal_points);
+            finalData = combined.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(combined.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < combined.length);
           }
-        }
-        // Filtrage par amis
-        else if (activeFilter === 'friends') {
+        } else if (activeFilter === 'friends') {
           const { data: friendsData } = await supabase
-            .from('user_follows')
-            .select('following_id')
-            .eq('follower_id', user!.id)
-            .eq('status', 'accepted');
-
+            .from('user_follows').select('following_id')
+            .eq('follower_id', user!.id).eq('status', 'accepted');
           const friendIds = friendsData?.map(f => f.following_id) || [];
-          
           if (friendIds.length > 0) {
-            const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
-              limit_count: 10000,
-              offset_count: 0,
-              order_by_column: 'seasonal_points'
+            const { data: lbData } = await supabase.rpc('get_complete_leaderboard', {
+              limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
             });
-
-            const filteredData = leaderboardData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
-            finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
-            setTotalUsers(filteredData.length);
-            setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+            const filtered = lbData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
+            finalData = filtered.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(filtered.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < filtered.length);
           }
-        }
-        // Filtrage par clubs
-        else if (activeFilter === 'clubs' && selectedClubs.length > 0) {
+        } else if (activeFilter === 'clubs' && selectedClubs.length > 0) {
           const { data: membersData } = await supabase
-            .from('group_members')
-            .select('user_id')
-            .in('conversation_id', selectedClubs);
-
+            .from('group_members').select('user_id').in('conversation_id', selectedClubs);
           const memberIds = [...new Set(membersData?.map(m => m.user_id) || [])];
-          
           if (memberIds.length > 0) {
-            const { data: leaderboardData } = await supabase.rpc('get_complete_leaderboard', {
-              limit_count: 10000,
-              offset_count: 0,
-              order_by_column: 'seasonal_points'
+            const { data: lbData } = await supabase.rpc('get_complete_leaderboard', {
+              limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
             });
-
-            const filteredData = leaderboardData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
-            finalData = filteredData.slice(offset, offset + USERS_PER_PAGE);
-            setTotalUsers(filteredData.length);
-            setHasMoreUsers(offset + USERS_PER_PAGE < filteredData.length);
+            const filtered = lbData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
+            finalData = filtered.slice(offset, offset + USERS_PER_PAGE);
+            setTotalUsers(filtered.length);
+            setHasMoreUsers(offset + USERS_PER_PAGE < filtered.length);
           }
-        }
-        // Classement général
-        else {
+        } else {
           const { data: totalCountData } = await supabase.rpc('get_leaderboard_total_count');
           setTotalUsers(totalCountData || 0);
-
           const { data, error } = await supabase.rpc('get_complete_leaderboard', {
-            limit_count: USERS_PER_PAGE,
-            offset_count: offset,
-            order_by_column: 'seasonal_points'
+            limit_count: USERS_PER_PAGE, offset_count: offset, order_by_column: 'seasonal_points'
           });
-
           if (error) throw error;
           finalData = data || [];
           setHasMoreUsers(finalData.length === USERS_PER_PAGE);
         }
       }
 
-      const formattedData = finalData?.map((item: any, index: number) => ({
+      const formatted = finalData?.map((item: any) => ({
         user_id: item.user_id,
         total_points: item.total_points,
         weekly_points: item.weekly_points,
         seasonal_points: item.seasonal_points,
         profile: {
-          username: item.username,
-          display_name: item.display_name,
-          avatar_url: item.avatar_url,
-          is_premium: item.is_premium
+          username: item.username, display_name: item.display_name,
+          avatar_url: item.avatar_url, is_premium: item.is_premium
         },
         rank: finalData.findIndex((u: any) => u.user_id === item.user_id) + 1,
         user_rank: getUserRank(activeFilter === 'general' ? item.seasonal_points : item.total_points)
       })) || [];
 
-      if (currentPage === 1) {
-        setLeaderboard(formattedData);
-      } else {
-        setLeaderboard(prev => [...prev, ...formattedData]);
-      }
+      if (currentPage === 1) setLeaderboard(formatted);
+      else setLeaderboard(prev => [...prev, ...formatted]);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     } finally {
@@ -351,378 +353,118 @@ const Leaderboard = () => {
     }
   };
 
-  const getCurrentSeasonDates = () => {
-    const startRef = new Date('2024-08-15');
-    const now = new Date();
-    const seasonDuration = 45 * 24 * 60 * 60 * 1000;
-    const timeSinceStart = now.getTime() - startRef.getTime();
-    const seasonsElapsed = Math.floor(timeSinceStart / seasonDuration);
-    const currentSeasonStart = new Date(startRef.getTime() + (seasonsElapsed * seasonDuration));
-    const currentSeasonEnd = new Date(currentSeasonStart.getTime() + seasonDuration - 1);
-    
-    return {
-      start: currentSeasonStart,
-      end: currentSeasonEnd,
-      number: seasonsElapsed + 1
-    };
-  };
-
-  const getUserRank = (points: number): string => {
-    if (points >= 5000) return 'diamant';
-    if (points >= 3000) return 'platine';
-    if (points >= 2000) return 'or';
-    if (points >= 1000) return 'argent';
-    if (points >= 500) return 'bronze';
-    return 'novice';
-  };
-
-  const getUserLevel = (points: number): 'novice' | 'confirmed' | 'elite' => {
-    if (points >= 3000) return 'elite';
-    if (points >= 1000) return 'confirmed';
-    return 'novice';
-  };
-
-  const getNextRankInfo = (currentPoints: number) => {
-    const ranks = [
-      { name: 'Bronze', points: 500 },
-      { name: 'Argent', points: 1000 },
-      { name: 'Or', points: 2000 },
-      { name: 'Platine', points: 3000 },
-      { name: 'Diamant', points: 5000 },
-    ];
-
-    const nextRank = ranks.find(r => r.points > currentPoints);
-    return nextRank || { name: 'Maximum', points: currentPoints };
-  };
-
-  const scrollToMyRank = () => {
-    if (myRankRef.current) {
-      myRankRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
-
-  const isMyRankVisible = () => {
-    if (!userRank) return true;
-    const startRank = (currentPage - 1) * USERS_PER_PAGE + 1;
-    const endRank = currentPage * USERS_PER_PAGE;
-    return userRank >= startRank && userRank <= endRank;
-  };
-
-  const loadMoreUsers = () => {
-    setCurrentPage(prev => prev + 1);
-  };
-
-  const getRankBorder = (userRank: string) => {
-    switch (userRank) {
-      case 'diamant': return 'ring-2 ring-cyan-400';
-      case 'platine': return 'ring-2 ring-purple-500';
-      case 'or': return 'ring-2 ring-yellow-500';
-      case 'argent': return 'ring-2 ring-gray-400';
-      case 'bronze': return 'ring-2 ring-amber-600';
-      default: return 'ring-1 ring-border';
-    }
-  };
-
-  const PodiumDisplay = ({ top3 }: { top3: LeaderboardUser[] }) => {
-    if (top3.length === 0) return null;
-    
-    const [first, second, third] = top3;
-    
-    return (
-      <div className="py-4">
-        <div className="flex items-end justify-center gap-2">
-          {/* 2ème place */}
-          {second && (
-            <div 
-              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigateToProfile(second.user_id)}
-            >
-              <Avatar className={`h-14 w-14 mb-2 ${getRankBorder(second.user_rank)}`}>
-                <AvatarImage src={second.profile?.avatar_url} />
-                <AvatarFallback className="text-sm font-semibold bg-secondary">
-                  {second.profile?.username?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <p className="font-medium text-[13px] truncate max-w-[70px] text-center">
-                {second.profile?.username}
-              </p>
-              <p className="text-[13px] text-muted-foreground">{second.seasonal_points} pts</p>
-              <div className="w-16 h-10 bg-gray-400 rounded-t-lg flex items-center justify-center mt-2">
-                <span className="text-xl font-bold text-white">2</span>
-              </div>
-            </div>
-          )}
-          
-          {/* 1ère place */}
-          {first && (
-            <div 
-              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigateToProfile(first.user_id)}
-            >
-              <Crown className="h-5 w-5 text-yellow-500 mb-1" />
-              <Avatar className={`h-16 w-16 mb-2 ${getRankBorder(first.user_rank)}`}>
-                <AvatarImage src={first.profile?.avatar_url} />
-                <AvatarFallback className="text-base font-semibold bg-secondary">
-                  {first.profile?.username?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <p className="font-semibold text-[15px] truncate max-w-[80px] text-center">
-                {first.profile?.username}
-              </p>
-              <p className="text-[13px] text-muted-foreground">{first.seasonal_points} pts</p>
-              <div className="w-18 h-14 bg-yellow-500 rounded-t-lg flex items-center justify-center mt-2">
-                <span className="text-2xl font-bold text-white">1</span>
-              </div>
-            </div>
-          )}
-          
-          {/* 3ème place */}
-          {third && (
-            <div 
-              className="flex flex-col items-center cursor-pointer active:opacity-70 transition-opacity"
-              onClick={() => navigateToProfile(third.user_id)}
-            >
-              <Avatar className={`h-14 w-14 mb-2 ${getRankBorder(third.user_rank)}`}>
-                <AvatarImage src={third.profile?.avatar_url} />
-                <AvatarFallback className="text-sm font-semibold bg-secondary">
-                  {third.profile?.username?.[0]?.toUpperCase() || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <p className="font-medium text-[13px] truncate max-w-[70px] text-center">
-                {third.profile?.username}
-              </p>
-              <p className="text-[13px] text-muted-foreground">{third.seasonal_points} pts</p>
-              <div className="w-16 h-8 bg-amber-600 rounded-t-lg flex items-center justify-center mt-2">
-                <span className="text-xl font-bold text-white">3</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
+  /* ── Loading ── */
   if (loading && currentPage === 1) {
     return (
-      <div className="h-full bg-secondary pb-24 overflow-y-auto">
-        {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
+      <div className="h-full bg-background overflow-y-auto scroll-momentum">
+        <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/50">
           <div className="flex items-center justify-between px-4 py-3">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-1 text-primary"
-            >
+            <button onClick={() => navigate('/')} className="flex items-center gap-1 text-primary">
               <ArrowLeft className="h-5 w-5" />
-              <span className="text-[17px]">Retour</span>
             </button>
-            <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
-            <div className="w-16" />
+            <h1 className="text-[17px] font-semibold">Classement</h1>
+            <div className="w-8" />
           </div>
         </div>
-        <div className="py-4">
-          <LeaderboardSkeleton />
-        </div>
+        <div className="py-4"><LeaderboardSkeleton /></div>
       </div>
     );
   }
 
   const top3 = leaderboard.slice(0, 3);
-  const restOfLeaderboard = leaderboard.slice(3);
-  const nextRank = getNextRankInfo(userPoints);
+  const rest = leaderboard.slice(3);
+  const userInTop = userRank !== null && userRank <= USERS_PER_PAGE;
 
   return (
-    <div className="h-full bg-secondary pb-8 overflow-y-auto">
-      {/* Status bar area removed for cleaner iOS look */}
-      {/* iOS Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border">
+    <div className="h-full bg-background overflow-y-auto scroll-momentum">
+      {/* Header — frosted glass */}
+      <div className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-primary"
-          >
+          <button onClick={() => navigate('/')} className="flex items-center gap-1 text-primary">
             <ArrowLeft className="h-5 w-5" />
-            <span className="text-[17px]">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
-          <div className="w-16" />
+          <div className="text-center">
+            <h1 className="text-[17px] font-semibold">Classement</h1>
+            <p className="text-[11px] text-muted-foreground">{totalUsers.toLocaleString()} coureurs · Saison {getCurrentSeasonDates().number}</p>
+          </div>
+          <div className="w-8" />
         </div>
       </div>
 
-      <div className="py-4 space-y-4">
-        {/* Filtres */}
-        <FilterBar 
+      {/* Filters */}
+      <div className="pt-2">
+        <FilterBar
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={(f) => { setActiveFilter(f); setCurrentPage(1); }}
           selectedClubs={selectedClubs}
           onClubsChange={setSelectedClubs}
           userClubs={userClubs}
         />
-
-        {/* Top 3 Podium */}
-        <div className="bg-card overflow-hidden">
-          <PodiumDisplay top3={top3} />
-        </div>
-
-        {/* Liste du classement */}
-        <div className="bg-card overflow-hidden">
-          {(() => {
-            const userInTop10 = userRank !== null && userRank <= 10;
-            
-            if (currentPage === 1 && !userInTop10 && userRank !== null) {
-              const top10Users = restOfLeaderboard.filter(u => u.rank <= 10);
-              const userContextUsers = restOfLeaderboard.filter(u => u.rank > 10);
-              const needTopSeparator = userRank > 12;
-              
-              return (
-                <>
-                  {top10Users.map((userItem) => {
-                    const isCurrentUser = userItem.user_id === user?.id;
-                    return (
-                      <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
-                        <LeaderboardCard
-                          rank={userItem.rank}
-                          username={userItem.profile.username}
-                          displayName={userItem.profile.display_name}
-                          avatarUrl={userItem.profile.avatar_url}
-                          points={userItem.seasonal_points}
-                          level={getUserLevel(userItem.seasonal_points)}
-                          isPremium={userItem.profile.is_premium}
-                          userRank={userItem.user_rank}
-                          onClick={() => navigateToProfile(userItem.user_id)}
-                          highlight={isCurrentUser}
-                        />
-                      </div>
-                    );
-                  })}
-                  
-                  {needTopSeparator && (
-                    <div className="flex items-center justify-center py-1">
-                      <div className="w-full h-px bg-border opacity-30"></div>
-                      <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
-                      <div className="w-full h-px bg-border opacity-30"></div>
-                    </div>
-                  )}
-                  
-                  {userContextUsers.map((userItem) => {
-                    const isCurrentUser = userItem.user_id === user?.id;
-                    return (
-                      <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
-                        <LeaderboardCard
-                          rank={userItem.rank}
-                          username={userItem.profile.username}
-                          displayName={userItem.profile.display_name}
-                          avatarUrl={userItem.profile.avatar_url}
-                          points={userItem.seasonal_points}
-                          level={getUserLevel(userItem.seasonal_points)}
-                          isPremium={userItem.profile.is_premium}
-                          userRank={userItem.user_rank}
-                          onClick={() => navigateToProfile(userItem.user_id)}
-                          highlight={isCurrentUser}
-                        />
-                      </div>
-                    );
-                  })}
-                  
-                  <div className="flex items-center justify-center py-1">
-                    <div className="w-full h-px bg-border opacity-30"></div>
-                    <span className="px-3 text-muted-foreground text-xs opacity-30">...</span>
-                    <div className="w-full h-px bg-border opacity-30"></div>
-                  </div>
-                </>
-              );
-            } else {
-              return restOfLeaderboard.map((userItem) => {
-                const isCurrentUser = userItem.user_id === user?.id;
-                return (
-                  <div key={userItem.user_id} ref={isCurrentUser ? myRankRef : null}>
-                    <LeaderboardCard
-                      rank={userItem.rank}
-                      username={userItem.profile.username}
-                      displayName={userItem.profile.display_name}
-                      avatarUrl={userItem.profile.avatar_url}
-                      points={userItem.seasonal_points}
-                      level={getUserLevel(userItem.seasonal_points)}
-                      isPremium={userItem.profile.is_premium}
-                      userRank={userItem.user_rank}
-                      onClick={() => navigateToProfile(userItem.user_id)}
-                      highlight={isCurrentUser}
-                    />
-                  </div>
-                );
-              });
-            }
-          })()}
-        </div>
-
-        {/* Bouton Charger plus */}
-        {hasMoreUsers && !loading && (
-          <div className="flex justify-center pt-4">
-            <Button
-              onClick={loadMoreUsers}
-              variant="secondary"
-              className="rounded-full px-6"
-            >
-              Charger plus
-            </Button>
-          </div>
-        )}
-
-        {/* Défis de la semaine */}
-        <CollapsibleSection title="Défis de la semaine" icon={<Target className="h-[18px] w-[18px] text-white" />} iconBg="bg-purple-500">
-          <WeeklyChallengesCard />
-        </CollapsibleSection>
-
-        {/* Badges à débloquer */}
-        <CollapsibleSection title="Badges à débloquer" icon={<Award className="h-[18px] w-[18px] text-white" />} iconBg="bg-amber-500">
-          <BadgesToUnlockCard />
-        </CollapsibleSection>
-
-        {/* Mon rang actuel */}
-        {userRank && (
-          <CollapsibleSection title="Mon Classement" icon={<TrophyIcon className="h-[18px] w-[18px] text-white" />} iconBg="bg-yellow-500">
-            <MyRankCard
-              currentRank={userRank}
-              totalUsers={totalUsers}
-              currentPoints={userPoints}
-              nextRankName={nextRank.name}
-              nextRankPoints={nextRank.points}
-              userRank={getUserRank(userPoints)}
-            />
-          </CollapsibleSection>
-        )}
-
-        {/* Streak */}
-        {user && (
-          <CollapsibleSection title="Série" icon={<Flame className="h-[18px] w-[18px] text-white" />} iconBg="bg-orange-500">
-            <StreakBadge userId={user.id} variant="full" />
-          </CollapsibleSection>
-        )}
-
-        {/* Progression Chart */}
-        <CollapsibleSection title="Ma Progression" icon={<TrendingUp className="h-[18px] w-[18px] text-white" />} iconBg="bg-blue-500">
-          <ProgressionChart />
-        </CollapsibleSection>
-
-        {/* Statistiques de la saison */}
-        {seasonStats && (
-          <CollapsibleSection title="Ma Saison" icon={<Calendar className="h-[18px] w-[18px] text-white" />} iconBg="bg-green-500">
-            <SeasonStatsCard
-              sessionsJoined={seasonStats.sessionsJoined}
-              sessionsCreated={seasonStats.sessionsCreated}
-              totalPoints={seasonStats.totalPoints}
-              badgesWon={seasonStats.badgesWon}
-              friendsReferred={seasonStats.friendsReferred}
-            />
-          </CollapsibleSection>
-        )}
       </div>
 
-      {/* Dialog de prévisualisation */}
+      {/* Podium */}
+      <div className="bg-card">
+        <Podium top3={top3} onTap={navigateToProfile} getRankRing={getRankRing} />
+      </div>
+
+      {/* Divider */}
+      <div className="h-px bg-border/50" />
+
+      {/* Ranking list */}
+      <div className="bg-card">
+        {(() => {
+          if (currentPage === 1 && !userInTop && userRank !== null) {
+            const topUsers = rest.filter(u => u.rank <= USERS_PER_PAGE);
+            const contextUsers = rest.filter(u => u.rank > USERS_PER_PAGE);
+            return (
+              <>
+                {topUsers.map((u, i) => {
+                  const isMe = u.user_id === user?.id;
+                  return (
+                    <div key={u.user_id} ref={isMe ? myRankRef : null}>
+                      <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} index={i} />
+                      {i < topUsers.length - 1 && <div className="h-px bg-border/30 ml-14" />}
+                    </div>
+                  );
+                })}
+                {contextUsers.length > 0 && <RankGap />}
+                {contextUsers.map((u, i) => {
+                  const isMe = u.user_id === user?.id;
+                  return (
+                    <div key={u.user_id} ref={isMe ? myRankRef : null}>
+                      <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} index={topUsers.length + i} />
+                      {i < contextUsers.length - 1 && <div className="h-px bg-border/30 ml-14" />}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          }
+          return rest.map((u, i) => {
+            const isMe = u.user_id === user?.id;
+            return (
+              <div key={u.user_id} ref={isMe ? myRankRef : null}>
+                <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} index={i} />
+                {i < rest.length - 1 && <div className="h-px bg-border/30 ml-14" />}
+              </div>
+            );
+          });
+        })()}
+      </div>
+
+      {/* Load more */}
+      {hasMoreUsers && !loading && (
+        <div className="flex justify-center py-6">
+          <Button onClick={() => setCurrentPage(p => p + 1)} variant="secondary" className="rounded-full px-8 text-[15px]">
+            Voir plus
+          </Button>
+        </div>
+      )}
+
+      <div className="h-24" />
+
       {showProfilePreview && selectedUserId && (
-        <ProfilePreviewDialog
-          userId={selectedUserId}
-          onClose={closeProfilePreview}
-        />
+        <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
       )}
     </div>
   );
