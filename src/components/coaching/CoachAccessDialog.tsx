@@ -206,10 +206,6 @@ export const CoachAccessDialog = ({
                   Planifiez et suivez l'entraînement de vos athlètes
                 </p>
               )}
-              <Badge className="mt-3 bg-amber-500/15 text-amber-600 border-0 rounded-full px-3 py-1 text-[11px] font-bold gap-1">
-                <Sparkles className="h-3 w-3" />
-                PRO
-              </Badge>
             </div>
 
             {loading ? (
