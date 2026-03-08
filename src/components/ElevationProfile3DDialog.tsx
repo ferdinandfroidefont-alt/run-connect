@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ElevationProfile3D } from './ElevationProfile3D';
-import { ArrowLeft, Loader2, Mountain } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 
 interface ElevationProfile3DDialogProps {
   open: boolean;
