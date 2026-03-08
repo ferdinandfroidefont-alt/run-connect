@@ -355,6 +355,12 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
           }
         />
       </CardContent>
+
+      <RoutePhotoUploader
+        routeId={route.id}
+        open={showPhotoUploader}
+        onOpenChange={setShowPhotoUploader}
+      />
     </Card>
   );
 };
