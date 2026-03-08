@@ -1256,7 +1256,7 @@ export default function MySessions() {
                 </div>
               )}
             </>
-          ) : (
+          ) : routeSource === 'feed' ? (
             <>
               {/* Routes Feed */}
               <RoutesFeedFilters
