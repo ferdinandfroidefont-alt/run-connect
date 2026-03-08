@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSendNotification } from "@/hooks/useSendNotification";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList, Bell, TrendingUp, TrendingDown, Flame, Loader2 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ActivityIcon } from "@/lib/activityIcons";
+import { toast } from "sonner";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
