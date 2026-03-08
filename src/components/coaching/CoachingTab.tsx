@@ -11,7 +11,7 @@ import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "./CoachingDraftsList";
-import { AthleteWeeklyView } from "./AthleteWeeklyView";
+import { CoachingDraftsList } from "./CoachingDraftsList";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
