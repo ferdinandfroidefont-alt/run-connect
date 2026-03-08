@@ -93,11 +93,15 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
 
 export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
+  const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [fourWeekVolume, setFourWeekVolume] = useState<{ current: number; previous: number } | null>(null);
+  const [completionStreak, setCompletionStreak] = useState(0);
+
   const [activeTab, setActiveTab] = useState("sessions");
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
