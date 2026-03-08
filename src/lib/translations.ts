@@ -630,6 +630,7 @@ export const translations: Record<Language, any> = {
       filter: 'Filtrar',
       yes: 'Sim',
       no: 'Não',
+      error: 'Erro',
     },
     confirmPresence: {
       title: 'Confirmar Presença',
@@ -801,6 +802,7 @@ export const translations: Record<Language, any> = {
       filter: 'Filtern',
       yes: 'Ja',
       no: 'Nein',
+      error: 'Fehler',
     },
     confirmPresence: {
       title: 'Anwesenheit bestätigen',
@@ -972,6 +974,7 @@ export const translations: Record<Language, any> = {
       filter: '筛选',
       yes: '是',
       no: '否',
+      error: '错误',
     },
     confirmPresence: {
       title: '确认出席',
@@ -1143,6 +1146,7 @@ export const translations: Record<Language, any> = {
       filter: 'تصفية',
       yes: 'نعم',
       no: 'لا',
+      error: 'خطأ',
     },
     confirmPresence: {
       title: 'تأكيد الحضور',
