@@ -458,6 +458,7 @@ export const translations: Record<Language, any> = {
       filter: 'Filtrar',
       yes: 'Sí',
       no: 'No',
+      error: 'Error',
     },
     confirmPresence: {
       title: 'Confirmar Presencia',
