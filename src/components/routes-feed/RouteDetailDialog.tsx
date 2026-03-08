@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
@@ -11,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send
+  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, Upload, MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -25,6 +26,7 @@ interface RoutePhoto {
   lng: number | null;
   caption: string | null;
   user_id: string;
+  profile?: { display_name: string; avatar_url: string | null };
 }
 
 interface RouteRating {
@@ -59,7 +61,27 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<RoutePhoto | null>(null);
+
+  // Photo upload via map long-press
+  const [addPhotoMode, setAddPhotoMode] = useState(false);
+  const [pinLocation, setPinLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const longPressListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const pinMarkerRef = useRef<google.maps.Marker | null>(null);
+
+  const resetPhotoForm = () => {
+    setAddPhotoMode(false);
+    setPinLocation(null);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setPhotoCaption('');
+    if (pinMarkerRef.current) { pinMarkerRef.current.setMap(null); pinMarkerRef.current = null; }
+  };
 
   const loadDetails = useCallback(async () => {
     if (!route) return;
@@ -69,26 +91,33 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
       supabase.from('route_ratings').select('*').eq('route_id', route.id).order('created_at', { ascending: false }),
     ]);
 
-    setPhotos((photosRes.data || []) as RoutePhoto[]);
-
+    const photosData = (photosRes.data || []) as RoutePhoto[];
     const ratingsData = (ratingsRes.data || []) as RouteRating[];
-    // Load profiles for ratings
-    const userIds = [...new Set(ratingsData.map(r => r.user_id))];
-    if (userIds.length > 0) {
+
+    // Load profiles for photos & ratings
+    const allUserIds = [...new Set([...photosData.map(p => p.user_id), ...ratingsData.map(r => r.user_id)])];
+    let profilesMap: Record<string, any> = {};
+    if (allUserIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, username, display_name, avatar_url')
-        .in('user_id', userIds);
-
-      ratingsData.forEach(r => {
-        const p = profiles?.find(pr => pr.user_id === r.user_id);
-        if (p) r.profile = { username: p.username || 'user', display_name: p.display_name || 'Utilisateur', avatar_url: p.avatar_url };
-      });
+        .in('user_id', allUserIds);
+      profiles?.forEach(p => { profilesMap[p.user_id] = p; });
     }
 
+    photosData.forEach(p => {
+      const prof = profilesMap[p.user_id];
+      if (prof) p.profile = { display_name: prof.display_name || 'Utilisateur', avatar_url: prof.avatar_url };
+    });
+
+    ratingsData.forEach(r => {
+      const prof = profilesMap[r.user_id];
+      if (prof) r.profile = { username: prof.username || 'user', display_name: prof.display_name || 'Utilisateur', avatar_url: prof.avatar_url };
+    });
+
+    setPhotos(photosData);
     setRatings(ratingsData);
 
-    // Set my existing rating
     const myExisting = ratingsData.find(r => r.user_id === user?.id);
     if (myExisting) {
       setMyRating(myExisting.rating);
@@ -101,6 +130,7 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
 
   useEffect(() => {
     if (open && route) loadDetails();
+    if (!open) resetPhotoForm();
   }, [open, route, loadDetails]);
 
   // Init map
@@ -132,7 +162,7 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
         path, geodesic: true, strokeColor: '#5B7CFF', strokeOpacity: 0.9, strokeWeight: 4, map: mapRef.current,
       });
 
-      // Add photo markers
+      // Add photo markers as circles with photo thumbnails
       photos.forEach(photo => {
         if (photo.lat && photo.lng && mapRef.current) {
           const marker = new google.maps.Marker({
@@ -140,11 +170,24 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
             map: mapRef.current,
             icon: {
               url: photo.photo_url,
-              scaledSize: new google.maps.Size(36, 36),
-              anchor: new google.maps.Point(18, 18),
+              scaledSize: new google.maps.Size(40, 40),
+              anchor: new google.maps.Point(20, 20),
             },
           });
-          marker.addListener('click', () => setSelectedPhoto(photo.photo_url));
+
+          // Create a circular border overlay
+          new google.maps.Circle({
+            center: { lat: Number(photo.lat), lng: Number(photo.lng) },
+            radius: 15,
+            map: mapRef.current,
+            fillColor: '#5B7CFF',
+            fillOpacity: 0.15,
+            strokeColor: '#5B7CFF',
+            strokeWeight: 2,
+            clickable: false,
+          });
+
+          marker.addListener('click', () => setSelectedPhoto(photo));
         }
       });
 
@@ -153,6 +196,95 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
 
     return () => { clearTimeout(timer); mapRef.current = null; };
   }, [open, route, photos]);
+
+  // Long press listener for adding photos
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    // Clean previous listener
+    if (longPressListenerRef.current) {
+      google.maps.event.removeListener(longPressListenerRef.current);
+      longPressListenerRef.current = null;
+    }
+
+    if (addPhotoMode) {
+      // On long press (rightclick on mobile acts as long press, we use click in add mode)
+      longPressListenerRef.current = mapRef.current.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setPinLocation({ lat, lng });
+
+        // Show pin marker
+        if (pinMarkerRef.current) pinMarkerRef.current.setMap(null);
+        pinMarkerRef.current = new google.maps.Marker({
+          position: { lat, lng },
+          map: mapRef.current!,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 14,
+            fillColor: '#5B7CFF',
+            fillOpacity: 0.9,
+            strokeColor: '#fff',
+            strokeWeight: 3,
+          },
+          animation: google.maps.Animation.DROP,
+        });
+      });
+    }
+
+    return () => {
+      if (longPressListenerRef.current) {
+        google.maps.event.removeListener(longPressListenerRef.current);
+        longPressListenerRef.current = null;
+      }
+    };
+  }, [addPhotoMode]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!user || !photoFile || !pinLocation || !route) return;
+    setUploading(true);
+    try {
+      const ext = photoFile.name.split('.').pop();
+      const filePath = `${user.id}/${route.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('route-photos')
+        .upload(filePath, photoFile);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('route-photos')
+        .getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase
+        .from('route_photos')
+        .insert({
+          route_id: route.id,
+          user_id: user.id,
+          photo_url: publicUrl,
+          lat: pinLocation.lat,
+          lng: pinLocation.lng,
+          caption: photoCaption || null,
+        });
+      if (insertError) throw insertError;
+
+      toast.success('📸 Photo ajoutée sur l\'itinéraire !');
+      resetPhotoForm();
+      loadDetails();
+    } catch (e: any) {
+      toast.error(e.message || 'Erreur lors de l\'upload');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const submitRating = async () => {
     if (!user || !route || myRating === 0) return;
@@ -202,21 +334,100 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent fullScreen hideCloseButton className="p-0">
-          <div className="flex-1 overflow-y-auto">
+        <DialogContent fullScreen hideCloseButton className="p-0 overflow-x-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {/* Header */}
             <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
               <div className="flex items-center justify-between px-4 py-3">
                 <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="gap-1 text-primary p-0 h-auto">
                   <ArrowLeft className="h-5 w-5" /> Retour
                 </Button>
+                {user && (
+                  <Button
+                    variant={addPhotoMode ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (addPhotoMode) resetPhotoForm();
+                      else setAddPhotoMode(true);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Camera className="h-4 w-4" />
+                    {addPhotoMode ? 'Annuler' : 'Ajouter photo'}
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Map */}
-            <div ref={mapContainer} className="w-full h-64 bg-secondary" />
+            {/* Add photo mode banner */}
+            {addPhotoMode && !pinLocation && (
+              <div className="bg-primary/10 border-b border-primary/20 px-4 py-3 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-[13px] text-primary font-medium">Appuyez sur la carte pour placer votre photo</p>
+              </div>
+            )}
 
-            <div className="p-4 space-y-6 pb-24">
+            {/* Map */}
+            <div ref={mapContainer} className={cn(
+              "w-full bg-secondary transition-all",
+              addPhotoMode ? "h-80" : "h-64"
+            )} />
+
+            {/* Photo upload form (after pin placed) */}
+            {addPhotoMode && pinLocation && (
+              <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border space-y-3 animate-in slide-in-from-top-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MapPin className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold">Position sélectionnée</p>
+                    <p className="text-[11px] text-muted-foreground">{pinLocation.lat.toFixed(5)}, {pinLocation.lng.toFixed(5)}</p>
+                  </div>
+                </div>
+
+                {photoPreview ? (
+                  <div className="relative">
+                    <img src={photoPreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 rounded-full"
+                      onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors"
+                  >
+                    <Upload className="h-6 w-6" />
+                    <span className="text-[13px]">Choisir une photo</span>
+                  </button>
+                )}
+
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+
+                <Input
+                  placeholder="Légende (facultatif)"
+                  value={photoCaption}
+                  onChange={e => setPhotoCaption(e.target.value)}
+                  className="text-[14px]"
+                />
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={resetPhotoForm} className="flex-1">Annuler</Button>
+                  <Button onClick={handleUploadPhoto} disabled={!photoFile || uploading} className="flex-1 gap-1.5">
+                    <Camera className="h-4 w-4" />
+                    {uploading ? 'Upload...' : 'Publier'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 space-y-6 pb-24 overflow-x-hidden">
               {/* Route info */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -269,13 +480,19 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                   </h3>
                   <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
                     {photos.map(photo => (
-                      <img
-                        key={photo.id}
-                        src={photo.photo_url}
-                        alt={photo.caption || 'Photo'}
-                        className="h-24 w-24 object-cover rounded-xl shrink-0 cursor-pointer active:opacity-80"
-                        onClick={() => setSelectedPhoto(photo.photo_url)}
-                      />
+                      <div key={photo.id} className="shrink-0 relative group">
+                        <img
+                          src={photo.photo_url}
+                          alt={photo.caption || 'Photo'}
+                          className="h-24 w-24 object-cover rounded-2xl cursor-pointer active:opacity-80 ring-2 ring-border"
+                          onClick={() => setSelectedPhoto(photo)}
+                        />
+                        {photo.caption && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 rounded-b-2xl px-1.5 py-0.5">
+                            <p className="text-[10px] text-white truncate">{photo.caption}</p>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -331,21 +548,31 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
         </DialogContent>
       </Dialog>
 
-      {/* Photo lightbox */}
+      {/* Photo lightbox with details */}
       {selectedPhoto && (
         <div
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center"
           onClick={() => setSelectedPhoto(null)}
         >
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 text-white"
+            className="absolute top-4 right-4 text-white z-10"
             onClick={() => setSelectedPhoto(null)}
           >
             <X className="h-6 w-6" />
           </Button>
-          <img src={selectedPhoto} alt="Photo" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
+          <img src={selectedPhoto.photo_url} alt="Photo" className="max-w-[90vw] max-h-[70vh] object-contain rounded-lg" />
+          {(selectedPhoto.caption || selectedPhoto.profile) && (
+            <div className="mt-4 text-center px-6" onClick={e => e.stopPropagation()}>
+              {selectedPhoto.caption && (
+                <p className="text-white text-[15px] mb-1">{selectedPhoto.caption}</p>
+              )}
+              {selectedPhoto.profile && (
+                <p className="text-white/60 text-[13px]">par {selectedPhoto.profile.display_name}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>
