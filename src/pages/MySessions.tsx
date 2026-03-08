@@ -1202,9 +1202,9 @@ export default function MySessions() {
                 </div>
               )}
             </>
-          ) : (
+          ) : routeSource === 'created' ? (
             <>
-              {/* Routes */}
+              {/* Created Routes */}
               {routesLoading ? (
                 <div className="space-y-px">
                   {[1, 2].map((i) => (
@@ -1234,10 +1234,65 @@ export default function MySessions() {
                       route={route}
                       onEdit={() => editRoute(route)}
                       onDelete={() => confirmDeleteRoute(route.id)}
+                      onPublishToggle={async (isPublic) => {
+                        await supabase.from('routes').update({ is_public: isPublic }).eq('id', route.id);
+                        loadUserRoutes();
+                      }}
+                      isPublic={(route as any).is_public || false}
                     />
                   ))}
                 </div>
               )}
+            </>
+          ) : (
+            <>
+              {/* Routes Feed */}
+              <RoutesFeedFilters
+                maxDistance={routesFeed.maxDistance}
+                setMaxDistance={routesFeed.setMaxDistance}
+                selectedActivities={routesFeed.selectedActivities}
+                toggleActivity={routesFeed.toggleActivity}
+                toggleAllActivities={routesFeed.toggleAllActivities}
+              />
+              {routesFeed.loading ? (
+                <div className="space-y-px">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-card p-4 animate-pulse">
+                      <div className="h-40 bg-secondary rounded mb-3" />
+                      <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-secondary rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : routesFeed.routes.length === 0 ? (
+                <div className="bg-card p-8 text-center">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire trouvé</p>
+                  <p className="text-[15px] text-muted-foreground">
+                    {routesFeed.hasLocation
+                      ? 'Aucun itinéraire public dans cette zone'
+                      : 'Activez la localisation pour voir les itinéraires proches'}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {routesFeed.routes.map((route, i) => (
+                    <RoutesFeedCard
+                      key={route.id}
+                      route={route}
+                      index={i}
+                      onClick={(r) => { setSelectedFeedRoute(r); setShowRouteDetail(true); }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <RouteDetailDialog
+                route={selectedFeedRoute}
+                open={showRouteDetail}
+                onOpenChange={setShowRouteDetail}
+                onRefresh={routesFeed.refresh}
+              />
             </>
           )}
         </div>
