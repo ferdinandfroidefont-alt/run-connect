@@ -1248,8 +1248,12 @@ export default function MySessions() {
             <>
               {/* Routes Feed */}
               <RoutesFeedFilters
-                maxDistance={routesFeed.maxDistance}
-                setMaxDistance={routesFeed.setMaxDistance}
+                maxProximity={routesFeed.maxProximity}
+                setMaxProximity={routesFeed.setMaxProximity}
+                maxRouteDistance={routesFeed.maxRouteDistance}
+                setMaxRouteDistance={routesFeed.setMaxRouteDistance}
+                minRating={routesFeed.minRating}
+                setMinRating={routesFeed.setMinRating}
                 selectedActivities={routesFeed.selectedActivities}
                 toggleActivity={routesFeed.toggleActivity}
                 toggleAllActivities={routesFeed.toggleAllActivities}
