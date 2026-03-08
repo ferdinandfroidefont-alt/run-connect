@@ -98,7 +98,7 @@ app_group = project.main_group.find_subpath('App', false) || project.main_group
 # Add SafeFirebaseInit.m if not already present
 m_file = 'SafeFirebaseInit.m'
 unless app_target.source_build_phase.files.any? { |f| f.file_ref&.path&.include?(m_file) }
-  file_ref = app_group.new_file("App/#{m_file}")
+  file_ref = app_group.new_file(m_file)
   app_target.source_build_phase.add_file_reference(file_ref)
   puts "✅ #{m_file} added to Xcode project compile sources"
 else
