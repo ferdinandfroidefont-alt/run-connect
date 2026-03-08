@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useSendNotification } from "@/hooks/useSendNotification";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -341,25 +340,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           throw error;
         }
 
-        const { data: followerProfile } = await supabase
-          .from('profiles')
-          .select('display_name, username, avatar_url')
-          .eq('user_id', user.id)
-          .single();
-
-        if (followerProfile) {
-          await sendPushNotification(
-            userId,
-            'Nouvelle demande de suivi',
-            `${followerProfile.display_name || followerProfile.username} souhaite vous suivre`,
-            'follow_request',
-            {
-              follower_id: user.id,
-              follower_name: followerProfile.display_name || followerProfile.username,
-              follower_avatar: followerProfile.avatar_url
-            }
-          );
-        }
+        // DB trigger handles notification creation, edge function handles FCM push via useFollow
+        // No manual sendPushNotification needed here
 
         setFollowRequestSent(true);
         toast({ title: "Demande de suivi envoyée" });
