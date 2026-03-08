@@ -1,65 +1,53 @@
 
 
-# Fix iOS SIGABRT Crash — Firebase Double-Init (Definitive)
+## Diagnostic
 
-## Problem
-Build 234 still crashes with `SIGABRT` at `+[FIRApp configure]` (FIRApp.m:110). The `DispatchQueue.main.async` fix didn't work because the async block runs during the same run loop drain, and `FirebaseApp.app()` returns nil even though another component (Capacitor plugin or Firebase pod internal) has already started initialization — causing a double-init NSException.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-**Swift cannot catch NSExceptions** (`@try/@catch` is Objective-C only). The nil guard is unreliable due to Firebase internal state races.
+Deux problemes distincts :
 
-## Solution: ObjC Crash Guard
-Create a tiny Objective-C helper that wraps `FirebaseApp.configure()` in `@try/@catch`. This is the **only guaranteed way** to prevent SIGABRT from double-init in Swift/ObjC mixed projects.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### Files to create/edit
+## Solution en 2 parties
 
-**1. `scripts/configure_ios_push.sh`** — Complete rewrite of the Firebase init injection:
-- Create `ios/App/App/SafeFirebaseInit.h` + `SafeFirebaseInit.m` (ObjC wrapper with `@try/@catch`)
-- Append import to existing `ios/App/App/App-Bridging-Header.h` (Capacitor provides this)
-- Replace the injected Swift code: call `SafeFirebaseInit.configure()` instead of `FirebaseApp.configure()`
-- Keep everything else (imports, MessagingDelegate, inject_ios_push.py call, assertions)
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### ObjC Wrapper (created by script at build time)
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-```objc
-// SafeFirebaseInit.h
-#import <Foundation/Foundation.h>
-@interface SafeFirebaseInit : NSObject
-+ (BOOL)configure;
-@end
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-// SafeFirebaseInit.m
-#import "SafeFirebaseInit.h"
-@import FirebaseCore;
-@implementation SafeFirebaseInit
-+ (BOOL)configure {
-    @try {
-        if (![FIRApp defaultApp]) {
-            [FIRApp configure];
-            NSLog(@"[PUSH][IOS] FirebaseApp.configure() SUCCESS");
-            return YES;
-        } else {
-            NSLog(@"[PUSH][IOS] FirebaseApp already configured");
-            return YES;
-        }
-    } @catch (NSException *e) {
-        NSLog(@"[PUSH][IOS] FirebaseApp.configure() caught exception: %@", e.reason);
-        return [FIRApp defaultApp] != nil;
-    }
-}
-@end
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-### Injected Swift (replaces current DispatchQueue.main.async block)
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-```swift
-// Synchronous, crash-safe Firebase init
-let _ = SafeFirebaseInit.configure()
-Messaging.messaging().delegate = self
-print("[PUSH][IOS] MessagingDelegate set, traceId=boot")
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
 ```
 
-No more `DispatchQueue.main.async` — runs synchronously in `didFinishLaunchingWithOptions` which is the recommended Firebase pattern, but now crash-safe.
+### Fichiers modifies
 
-### Files to edit
-1. **`scripts/configure_ios_push.sh`** — add ObjC file creation + update injection block
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
