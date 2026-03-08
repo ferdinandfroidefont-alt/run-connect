@@ -238,7 +238,7 @@ export const usePushNotifications = () => {
       const { data: existing } = await supabase
         .from('profiles')
         .select('push_token')
-        .eq('user_id', user.id)
+        .eq('user_id', resolvedUserId)
         .maybeSingle();
 
       if (!existing) {
@@ -260,7 +260,7 @@ export const usePushNotifications = () => {
       // ── iOS: always use edge function (server-side APNs guard) ──
       if (platform === 'ios') {
         log('[SAVE] 🍎 iOS: saving via edge function only (server-side validation)');
-        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, resolvedUserId, platform);
         if (edgeSaved) {
           setToken(pushToken);
           pendingTokenRef.current = null;
@@ -283,12 +283,12 @@ export const usePushNotifications = () => {
           push_token_updated_at: new Date().toISOString(),
           notifications_enabled: true
         })
-        .eq('user_id', user.id);
+        .eq('user_id', resolvedUserId);
 
       if (error) {
         logError('[SAVE] Client save error:', error.code, error.message);
         log('[SAVE] Trying edge function fallback...');
-        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, user.id, platform);
+        const edgeSaved = await saveTokenViaEdgeFunction(pushToken, resolvedUserId, platform);
         if (edgeSaved) {
           setToken(pushToken);
           pendingTokenRef.current = null;
