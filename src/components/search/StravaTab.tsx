@@ -199,7 +199,7 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
   return (
     <div className="p-4 space-y-3">
       {filteredFriends.map((friend) => (
-        <Card key={friend.user_id} className="glass-card">
+        <Card key={friend.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors" onClick={() => navigate(`/profile/${friend.user_id}`)}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12">
@@ -221,7 +221,10 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleStartConversation(friend)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartConversation(friend);
+                }}
               >
                 <MessageCircle className="h-5 w-5" />
               </Button>
