@@ -537,9 +537,6 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
             )}
           </div>
         )}
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Tabs: Séances | Commentaires */}
