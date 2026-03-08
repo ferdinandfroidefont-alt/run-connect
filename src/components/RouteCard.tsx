@@ -294,6 +294,36 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
             <Box className="h-3.5 w-3.5" />
             Vue 3D du parcours
           </Button>
+          {/* Publish toggle & Photo upload */}
+          {onPublishToggle && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <div className="flex items-center gap-2">
+                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Public</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {isPublic && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPhotoUploader(true)}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <Camera className="h-3 w-3" /> Photo
+                  </Button>
+                )}
+                <Switch
+                  checked={isPublic}
+                  onCheckedChange={onPublishToggle}
+                />
+              </div>
+            </div>
+          )}
+          {isPublic && (
+            <Badge variant="secondary" className="mt-1 text-[10px] gap-1">
+              <Globe className="h-2.5 w-2.5" /> Publié dans le feed
+            </Badge>
+          )}
         </div>
 
         {/* 3D Dialog */}
