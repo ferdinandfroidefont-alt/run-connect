@@ -28,6 +28,11 @@ interface TrainingState {
   sessionTitle: string;
   routeName: string;
   nextTurn: TurnInstruction | null;
+  distanceTraveled: number;
+  elevationGain: number;
+  averageSpeed: number;
+  activityType: string;
+  traveledPath: Coord[];
 }
 
 // Haversine distance in meters
@@ -78,7 +83,6 @@ function calculateRemainingDistance(segmentIndex: number, projected: Coord, rout
   return remaining;
 }
 
-// Detect turns from route coordinates
 function detectTurns(route: Coord[]): TurnInstruction[] {
   const turns: TurnInstruction[] = [];
   if (route.length < 3) return turns;
@@ -92,12 +96,11 @@ function detectTurns(route: Coord[]): TurnInstruction[] {
     const angle2 = Math.atan2(c.lng - b.lng, c.lat - b.lat);
     let diff = (angle2 - angle1) * 180 / Math.PI;
 
-    // Normalize to -180..180
     while (diff > 180) diff -= 360;
     while (diff < -180) diff += 360;
 
     const absDiff = Math.abs(diff);
-    if (absDiff < 25) continue; // straight, skip
+    if (absDiff < 25) continue;
 
     let direction: TurnInstruction['direction'];
     if (absDiff > 150) {
@@ -114,7 +117,6 @@ function detectTurns(route: Coord[]): TurnInstruction[] {
   return turns;
 }
 
-// Calculate distance along route from segmentIndex to a target point index
 function distanceAlongRoute(fromSegIdx: number, fromProjected: Coord, toPointIdx: number, route: Coord[]): number {
   if (toPointIdx <= fromSegIdx) return 0;
   let dist = haversine(fromProjected, route[fromSegIdx + 1]);
@@ -139,6 +141,11 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
     sessionTitle: '',
     routeName: '',
     nextTurn: null,
+    distanceTraveled: 0,
+    elevationGain: 0,
+    averageSpeed: 0,
+    activityType: 'running',
+    traveledPath: [],
   });
 
   const watchIdRef = useRef<string | number | null>(null);
@@ -152,6 +159,9 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
   const turnsRef = useRef<TurnInstruction[]>([]);
   const vibratedTurnIdxRef = useRef<number>(-1);
   const orientationHandlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
+  const lastAltitudeRef = useRef<number | null>(null);
+  const distanceTraveledRef = useRef<number>(0);
+  const elevationGainRef = useRef<number>(0);
 
   // Load session & route data
   useEffect(() => {
@@ -160,7 +170,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
         if (routeId) {
           const { data: route, error: routeError } = await supabase
             .from('routes')
-            .select('name, coordinates')
+            .select('name, coordinates, activity_type')
             .eq('id', routeId)
             .single();
 
@@ -188,6 +198,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
             loading: false,
             sessionTitle: route.name,
             routeName: route.name,
+            activityType: route.activity_type || 'running',
           }));
           return;
         }
@@ -199,7 +210,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
 
         const { data: session, error: sessionError } = await supabase
           .from('sessions')
-          .select('title, route_id')
+          .select('title, route_id, activity_type')
           .eq('id', sessionId)
           .single();
 
@@ -238,6 +249,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
           loading: false,
           sessionTitle: session.title,
           routeName: route.name,
+          activityType: (session as any).activity_type || 'running',
         }));
       } catch (err) {
         setState(s => ({ ...s, loading: false, error: 'Erreur de chargement' }));
@@ -247,7 +259,7 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
     loadData();
   }, [sessionId, routeId]);
 
-  const handlePosition = useCallback((lat: number, lng: number, accuracy: number, gpsHeading?: number | null) => {
+  const handlePosition = useCallback((lat: number, lng: number, accuracy: number, gpsHeading?: number | null, altitude?: number | null) => {
     if (accuracy > 50) return;
 
     let newPos: Coord = { lat, lng };
@@ -260,16 +272,41 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
           lng: (prevPositionRef.current.lng + newPos.lng) / 2,
         };
       }
+      // Accumulate distance traveled (only if reasonable movement, >2m)
+      const moved = haversine(prevPositionRef.current, newPos);
+      if (moved > 2 && moved < 100) {
+        distanceTraveledRef.current += moved;
+      }
     }
     prevPositionRef.current = newPos;
 
+    // Track elevation gain
+    if (altitude != null && !isNaN(altitude)) {
+      if (lastAltitudeRef.current != null) {
+        const delta = altitude - lastAltitudeRef.current;
+        if (delta > 0.5) { // only positive, with 0.5m threshold to filter noise
+          elevationGainRef.current += delta;
+        }
+      }
+      lastAltitudeRef.current = altitude;
+    }
+
     setState(prev => {
-      if (prev.routeCoordinates.length < 2) return { ...prev, userPosition: newPos };
+      const updatedTraveledPath = [...prev.traveledPath, newPos];
+
+      if (prev.routeCoordinates.length < 2) {
+        return {
+          ...prev,
+          userPosition: newPos,
+          traveledPath: updatedTraveledPath,
+          distanceTraveled: distanceTraveledRef.current,
+          elevationGain: elevationGainRef.current,
+        };
+      }
 
       const { segmentIndex, minDist, projected } = projectOnRoute(newPos, prev.routeCoordinates);
       const remaining = calculateRemainingDistance(segmentIndex, projected, prev.routeCoordinates);
 
-      // Off-route detection (20m threshold)
       const now = Date.now();
       let isOffRoute = prev.isOffRoute;
       if (minDist > 20) {
@@ -287,15 +324,12 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
         isOffRoute = false;
       }
 
-      // Find next turn ahead of current position
       let nextTurn: TurnInstruction | null = null;
       const turns = turnsRef.current;
       for (const turn of turns) {
         if (turn.segmentIndex > segmentIndex) {
           const dist = distanceAlongRoute(segmentIndex, projected, turn.segmentIndex, prev.routeCoordinates);
           nextTurn = { ...turn, distanceMeters: Math.round(dist) };
-
-          // Vibrate at 50m before turn
           if (dist < 50 && vibratedTurnIdxRef.current !== turn.segmentIndex) {
             vibratedTurnIdxRef.current = turn.segmentIndex;
             try { navigator.vibrate?.(100); } catch {}
@@ -311,6 +345,9 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
         isOffRoute,
         heading: gpsHeading ?? prev.heading,
         nextTurn,
+        traveledPath: updatedTraveledPath,
+        distanceTraveled: distanceTraveledRef.current,
+        elevationGain: elevationGainRef.current,
       };
     });
   }, []);
@@ -322,21 +359,21 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
           { enableHighAccuracy: true, timeout: 10000, minimumUpdateInterval: 3000 },
           (pos) => {
             if (pos) {
-              handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading);
+              handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading, pos.coords.altitude);
             }
           }
         );
         watchIdRef.current = id;
       } catch {
         watchIdRef.current = navigator.geolocation.watchPosition(
-          (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading),
+          (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading, pos.coords.altitude),
           () => {},
           { enableHighAccuracy: true, timeout: 10000 }
         );
       }
     } else {
       watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading),
+        (pos) => handlePosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.heading, pos.coords.altitude),
         () => {},
         { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -358,22 +395,30 @@ export function useTrainingMode(sessionId: string | undefined, routeId?: string 
     setState(s => ({ ...s, isActive: true, isPaused: false }));
     startTimeRef.current = Date.now();
     pausedElapsedRef.current = 0;
+    distanceTraveledRef.current = 0;
+    elevationGainRef.current = 0;
 
     timerRef.current = setInterval(() => {
       setState(s => {
         if (s.isPaused) return s;
-        return { ...s, elapsedTime: Math.floor((Date.now() - startTimeRef.current) / 1000) - pausedElapsedRef.current };
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000) - pausedElapsedRef.current;
+        const speedKmh = elapsed > 0 ? (distanceTraveledRef.current / 1000) / (elapsed / 3600) : 0;
+        return {
+          ...s,
+          elapsedTime: elapsed,
+          averageSpeed: Math.round(speedKmh * 10) / 10,
+          distanceTraveled: distanceTraveledRef.current,
+          elevationGain: elevationGainRef.current,
+        };
       });
     }, 1000);
 
-    // Wake lock
     try {
       if ('wakeLock' in navigator) {
         wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
       }
     } catch {}
 
-    // Compass
     const handleOrientation = (e: DeviceOrientationEvent) => {
       const h = (e as any).webkitCompassHeading ?? (e.alpha != null ? 360 - e.alpha : 0);
       setState(s => ({ ...s, heading: h }));

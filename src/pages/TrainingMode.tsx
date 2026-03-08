@@ -2,27 +2,29 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode, TurnInstruction } from '@/hooks/useTrainingMode';
 import { Loader } from '@googlemaps/js-api-loader';
-import { ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, Pause, Play, X, AlertTriangle, Navigation } from 'lucide-react';
+import { ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, Pause, Play, Square, AlertTriangle, Navigation, Locate, Mountain, Timer, Gauge, MapPin } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const PRIMARY_BLUE = 'hsl(221, 83%, 53%)';
+const TRAVELED_TEAL = '#14b8a6';
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
 ];
 
-function getTurnIcon(direction: TurnInstruction['direction']) {
+function getTurnIcon(direction: TurnInstruction['direction'], size = 'h-8 w-8') {
   switch (direction) {
-    case 'left': return <CornerUpLeft className="h-8 w-8" />;
-    case 'slight-left': return <CornerUpLeft className="h-8 w-8" />;
-    case 'right': return <CornerUpRight className="h-8 w-8" />;
-    case 'slight-right': return <CornerUpRight className="h-8 w-8" />;
-    case 'u-turn': return <RotateCcw className="h-8 w-8" />;
-    default: return <ArrowUp className="h-8 w-8" />;
+    case 'left': return <CornerUpLeft className={size} />;
+    case 'slight-left': return <CornerUpLeft className={size} />;
+    case 'right': return <CornerUpRight className={size} />;
+    case 'slight-right': return <CornerUpRight className={size} />;
+    case 'u-turn': return <RotateCcw className={size} />;
+    default: return <ArrowUp className={size} />;
   }
 }
 
@@ -42,9 +44,30 @@ function formatTurnDistance(meters: number) {
   return `${Math.round(meters)} m`;
 }
 
+function formatDistance(meters: number) {
+  if (meters >= 1000) return (meters / 1000).toFixed(2);
+  return (meters / 1000).toFixed(2);
+}
+
+function formatTime(seconds: number) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+interface NearbyParticipant {
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  distance: number;
+}
+
 export default function TrainingMode() {
   const { sessionId, routeId } = useParams<{ sessionId?: string; routeId?: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     routeCoordinates,
     userPosition,
@@ -55,6 +78,13 @@ export default function TrainingMode() {
     loading,
     error,
     nextTurn,
+    routeName,
+    distanceTraveled,
+    elevationGain,
+    averageSpeed,
+    activityType,
+    elapsedTime,
+    traveledPath,
     startTracking,
     stopTracking,
     pauseTracking,
@@ -65,9 +95,14 @@ export default function TrainingMode() {
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const borderPolylineRef = useRef<google.maps.Polyline | null>(null);
+  const traveledPolylineRef = useRef<google.maps.Polyline | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [nearbyParticipants, setNearbyParticipants] = useState<NearbyParticipant[]>([]);
+
+  const isCycling = activityType === 'cycling' || activityType === 'vélo' || activityType === 'velo';
+  const hasRoute = routeCoordinates.length > 1;
 
   // Fetch API key
   useEffect(() => {
@@ -83,10 +118,79 @@ export default function TrainingMode() {
     fetchKey();
   }, []);
 
+  // Nearby participants polling
+  useEffect(() => {
+    if (!sessionId || !userPosition || !user) return;
+    
+    const fetchNearby = async () => {
+      try {
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data } = await supabase
+          .from('live_tracking_points')
+          .select('user_id, lat, lng, recorded_at')
+          .eq('session_id', sessionId)
+          .neq('user_id', user.id)
+          .gte('recorded_at', fiveMinAgo)
+          .order('recorded_at', { ascending: false });
+
+        if (!data || data.length === 0) {
+          setNearbyParticipants([]);
+          return;
+        }
+
+        // Get latest point per user
+        const latestByUser = new Map<string, { lat: number; lng: number }>();
+        for (const pt of data) {
+          if (!latestByUser.has(pt.user_id)) {
+            latestByUser.set(pt.user_id, { lat: Number(pt.lat), lng: Number(pt.lng) });
+          }
+        }
+
+        const userIds = Array.from(latestByUser.keys());
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username, avatar_url')
+          .in('user_id', userIds);
+
+        const profileMap = new Map<string, { name: string; avatar: string | null }>();
+        profiles?.forEach(p => {
+          profileMap.set(p.user_id!, { name: p.display_name || p.username || 'Participant', avatar: p.avatar_url });
+        });
+
+        const R = 6371000;
+        const toRad = (d: number) => d * Math.PI / 180;
+        const participants: NearbyParticipant[] = [];
+
+        latestByUser.forEach((pos, uid) => {
+          const dLat = toRad(pos.lat - userPosition.lat);
+          const dLng = toRad(pos.lng - userPosition.lng);
+          const a = Math.sin(dLat/2)**2 + Math.cos(toRad(userPosition.lat)) * Math.cos(toRad(pos.lat)) * Math.sin(dLng/2)**2;
+          const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const info = profileMap.get(uid);
+          participants.push({
+            userId: uid,
+            name: info?.name || 'Participant',
+            avatarUrl: info?.avatar || null,
+            distance: Math.round(dist),
+          });
+        });
+
+        participants.sort((a, b) => a.distance - b.distance);
+        setNearbyParticipants(participants.slice(0, 3));
+      } catch {
+        // Silently fail
+      }
+    };
+
+    fetchNearby();
+    const interval = setInterval(fetchNearby, 15000);
+    return () => clearInterval(interval);
+  }, [sessionId, userPosition?.lat, userPosition?.lng, user?.id]);
+
   // Init map
   useEffect(() => {
-    if (routeCoordinates.length === 0 || mapReady || !apiKey) return;
-
+    if (mapReady || !apiKey) return;
+    // Allow map init even without route (free session tracking)
     const initMap = async () => {
       try {
         if (!(window as any).google?.maps) {
@@ -95,11 +199,12 @@ export default function TrainingMode() {
         }
         if (!mapRef.current) return;
 
-        const bounds = new google.maps.LatLngBounds();
-        routeCoordinates.forEach(c => bounds.extend(c));
+        const center = routeCoordinates.length > 0
+          ? { lat: routeCoordinates[0].lat, lng: routeCoordinates[0].lng }
+          : { lat: 48.8566, lng: 2.3522 }; // Default Paris
 
         const map = new google.maps.Map(mapRef.current, {
-          center: bounds.getCenter(),
+          center,
           zoom: 18,
           disableDefaultUI: true,
           zoomControl: false,
@@ -111,29 +216,41 @@ export default function TrainingMode() {
           styles: MAP_STYLES,
         });
 
-        // White border polyline (underneath)
-        const borderPoly = new google.maps.Polyline({
-          path: routeCoordinates,
-          strokeColor: '#FFFFFF',
-          strokeOpacity: 1,
-          strokeWeight: 11,
-          geodesic: true,
-        });
-        borderPoly.setMap(map);
+        if (routeCoordinates.length > 1) {
+          const borderPoly = new google.maps.Polyline({
+            path: routeCoordinates,
+            strokeColor: '#FFFFFF',
+            strokeOpacity: 1,
+            strokeWeight: 11,
+            geodesic: true,
+          });
+          borderPoly.setMap(map);
 
-        // Blue route polyline (on top)
-        const polyline = new google.maps.Polyline({
-          path: routeCoordinates,
-          strokeColor: PRIMARY_BLUE,
-          strokeOpacity: 1,
-          strokeWeight: 7,
+          const polyline = new google.maps.Polyline({
+            path: routeCoordinates,
+            strokeColor: PRIMARY_BLUE,
+            strokeOpacity: 1,
+            strokeWeight: 7,
+            geodesic: true,
+          });
+          polyline.setMap(map);
+
+          polylineRef.current = polyline;
+          borderPolylineRef.current = borderPoly;
+        }
+
+        // Traveled path polyline
+        const traveledPoly = new google.maps.Polyline({
+          path: [],
+          strokeColor: TRAVELED_TEAL,
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
           geodesic: true,
         });
-        polyline.setMap(map);
+        traveledPoly.setMap(map);
+        traveledPolylineRef.current = traveledPoly;
 
         googleMapRef.current = map;
-        polylineRef.current = polyline;
-        borderPolylineRef.current = borderPoly;
         setMapReady(true);
       } catch (err) {
         console.error('Map init error:', err);
@@ -153,7 +270,6 @@ export default function TrainingMode() {
     const cx = size / 2;
     const cy = size / 2;
 
-    // Halo
     const gradient = ctx.createRadialGradient(cx, cy, 6, cx, cy, size / 2);
     gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
     gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.2)');
@@ -163,7 +279,6 @@ export default function TrainingMode() {
     ctx.arc(cx, cy, size / 2, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Direction arrow
     const rad = (h - 90) * Math.PI / 180;
     ctx.save();
     ctx.translate(cx, cy);
@@ -178,7 +293,6 @@ export default function TrainingMode() {
     ctx.fill();
     ctx.restore();
 
-    // Center dot
     ctx.fillStyle = '#3b82f6';
     ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
     ctx.shadowBlur = 8;
@@ -227,7 +341,7 @@ export default function TrainingMode() {
       const map = googleMapRef.current!;
       updateMarker(map, { lat, lng }, 0);
       map.panTo({ lat, lng });
-      map.panBy(0, -150);
+      map.panBy(0, -100);
       map.setZoom(18);
     };
 
@@ -256,8 +370,14 @@ export default function TrainingMode() {
     updateMarker(map, userPosition, heading);
     map.setHeading(heading);
     map.panTo(userPosition);
-    map.panBy(0, -150);
+    map.panBy(0, -100);
   }, [userPosition, heading, mapReady, updateMarker]);
+
+  // Update traveled polyline
+  useEffect(() => {
+    if (!traveledPolylineRef.current || traveledPath.length === 0) return;
+    traveledPolylineRef.current.setPath(traveledPath);
+  }, [traveledPath]);
 
   // Auto-start tracking
   useEffect(() => {
@@ -277,13 +397,20 @@ export default function TrainingMode() {
     else pauseTracking();
   }, [isPaused, pauseTracking, resumeTracking]);
 
+  const handleRecenter = useCallback(() => {
+    if (!googleMapRef.current || !userPosition) return;
+    googleMapRef.current.panTo(userPosition);
+    googleMapRef.current.panBy(0, -100);
+    googleMapRef.current.setZoom(18);
+  }, [userPosition]);
+
   // --- LOADING ---
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-[15px] text-muted-foreground">Chargement de la navigation...</p>
+          <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-[15px] text-muted-foreground">Chargement...</p>
         </div>
       </div>
     );
@@ -311,7 +438,7 @@ export default function TrainingMode() {
 
       {/* Direction banner */}
       <div
-        className="absolute top-0 left-0 right-0 z-[9999] bg-primary text-primary-foreground"
+        className="absolute top-0 left-0 right-0 z-[9999]"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <AnimatePresence mode="wait">
@@ -321,44 +448,77 @@ export default function TrainingMode() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center justify-center gap-3 px-4 py-4"
+              className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center justify-center gap-3 px-5 py-5"
+              style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
             >
-              <Pause className="h-6 w-6 opacity-80" />
-              <span className="text-[17px] font-semibold">Navigation en pause</span>
+              <motion.div
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              >
+                <Pause className="h-6 w-6 text-white" />
+              </motion.div>
+              <span className="text-[18px] font-semibold text-white">En pause</span>
             </motion.div>
-          ) : nextTurn ? (
+          ) : hasRoute && nextTurn ? (
             <motion.div
               key={`turn-${nextTurn.segmentIndex}`}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center gap-4 px-5 py-4"
+              className="mx-3 mt-2 rounded-2xl backdrop-blur-xl overflow-hidden"
+              style={{ backgroundColor: 'rgba(59, 130, 246, 0.92)' }}
             >
-              <div className="flex-shrink-0">
-                {getTurnIcon(nextTurn.direction)}
+              <div className="flex items-center gap-4 px-5 py-4">
+                <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                  {getTurnIcon(nextTurn.direction, 'h-7 w-7 text-white')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[28px] font-bold text-white leading-none">
+                    {formatTurnDistance(nextTurn.distanceMeters)}
+                  </p>
+                  <p className="text-[15px] text-white/80 mt-1">
+                    {getTurnLabel(nextTurn.direction)}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[22px] font-bold leading-tight">
-                  {formatTurnDistance(nextTurn.distanceMeters)}
-                </p>
-                <p className="text-[14px] opacity-80 mt-0.5">
-                  {getTurnLabel(nextTurn.direction)}
-                </p>
-              </div>
+              {routeName && (
+                <div className="px-5 pb-3 pt-0">
+                  <p className="text-[13px] text-white/60 truncate">{routeName}</p>
+                </div>
+              )}
             </motion.div>
-          ) : (
+          ) : hasRoute ? (
             <motion.div
               key="straight"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center gap-4 px-5 py-4"
+              className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center gap-4 px-5 py-4"
+              style={{ backgroundColor: 'rgba(59, 130, 246, 0.92)' }}
             >
-              <div className="flex-shrink-0">
-                <Navigation className="h-8 w-8" />
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                <Navigation className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-[17px] font-semibold">Suivez l'itinéraire</p>
+                <p className="text-[17px] font-semibold text-white">Suivez l'itinéraire</p>
+                {routeName && <p className="text-[13px] text-white/60 mt-0.5 truncate">{routeName}</p>}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="free"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center gap-4 px-5 py-4"
+              style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+                <MapPin className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] font-semibold text-white">Suivi de séance</p>
+                <p className="text-[13px] text-white/60 mt-0.5">GPS actif</p>
               </div>
             </motion.div>
           )}
@@ -373,42 +533,131 @@ export default function TrainingMode() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="absolute z-[9999]"
-            style={{ top: 'calc(env(safe-area-inset-top) + 80px)', left: 16, right: 16 }}
+            style={{ top: 'calc(env(safe-area-inset-top) + 100px)', left: 12, right: 12 }}
           >
-            <div className="bg-[#FF9500] text-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+            <div className="bg-[#FF9500] text-white rounded-2xl px-5 py-3.5 flex items-center gap-3 shadow-lg">
               <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-              <p className="text-[15px] font-medium">Vous êtes hors parcours</p>
+              <p className="text-[15px] font-semibold">Hors parcours</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating controls */}
-      <div
-        className="absolute bottom-0 left-0 right-0 z-[9999] flex items-center justify-center gap-5"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 32px)' }}
-      >
-        {/* Quit button */}
-        <button
-          onClick={handleQuit}
-          className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg transition-transform active:scale-90"
-          style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
-        >
-          <X className="h-5 w-5 text-white" />
-        </button>
+      {/* Nearby participants */}
+      <AnimatePresence>
+        {nearbyParticipants.length > 0 && isActive && !isPaused && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="absolute z-[9998] flex flex-col gap-1.5"
+            style={{ top: 'calc(env(safe-area-inset-top) + 110px)', left: 12 }}
+          >
+            {nearbyParticipants.map(p => (
+              <div
+                key={p.userId}
+                className="flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-lg"
+                style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+              >
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {p.avatarUrl ? (
+                    <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-white font-bold">{p.name.charAt(0)}</span>
+                  )}
+                </div>
+                <span className="text-[12px] text-white font-medium truncate max-w-[80px]">{p.name.split(' ')[0]}</span>
+                <span className="text-[11px] text-white/60">{p.distance > 999 ? `${(p.distance/1000).toFixed(1)}km` : `${p.distance}m`}</span>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Pause / Resume button */}
-        <button
-          onClick={handlePauseToggle}
-          className="w-14 h-14 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg transition-transform active:scale-90"
-          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-        >
-          {isPaused ? (
-            <Play className="h-6 w-6 text-white" />
-          ) : (
-            <Pause className="h-6 w-6 text-white" />
-          )}
-        </button>
+      {/* Stats panel + Controls */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-[9999]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {/* Stats panel */}
+        {isActive && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mx-3 mb-3 rounded-[20px] backdrop-blur-xl overflow-hidden"
+            style={{ backgroundColor: 'rgba(255,255,255,0.88)', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}
+          >
+            <div className={`grid ${isCycling ? 'grid-cols-4' : 'grid-cols-3'} divide-x divide-black/10`}>
+              {/* Distance */}
+              <div className="flex flex-col items-center justify-center py-4 px-2">
+                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
+                  {formatDistance(distanceTraveled)}
+                </span>
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">km</span>
+              </div>
+
+              {/* Time */}
+              <div className="flex flex-col items-center justify-center py-4 px-2">
+                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
+                  {formatTime(elapsedTime)}
+                </span>
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">temps</span>
+              </div>
+
+              {/* Speed (cycling only) */}
+              {isCycling && (
+                <div className="flex flex-col items-center justify-center py-4 px-2">
+                  <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
+                    {averageSpeed.toFixed(1)}
+                  </span>
+                  <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">km/h</span>
+                </div>
+              )}
+
+              {/* Elevation */}
+              <div className="flex flex-col items-center justify-center py-4 px-2">
+                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
+                  +{Math.round(elevationGain)}
+                </span>
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">m D+</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Control buttons */}
+        <div className="flex items-center justify-center gap-6 pb-6 pt-1">
+          {/* Stop */}
+          <button
+            onClick={handleQuit}
+            className="w-[52px] h-[52px] rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
+          >
+            <Square className="h-5 w-5 text-white" fill="white" />
+          </button>
+
+          {/* Pause / Resume */}
+          <button
+            onClick={handlePauseToggle}
+            className="w-[72px] h-[72px] rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-90 backdrop-blur-lg"
+            style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
+          >
+            {isPaused ? (
+              <Play className="h-8 w-8 text-white ml-1" fill="white" />
+            ) : (
+              <Pause className="h-8 w-8 text-white" fill="white" />
+            )}
+          </button>
+
+          {/* Re-center */}
+          <button
+            onClick={handleRecenter}
+            className="w-[44px] h-[44px] rounded-full flex items-center justify-center shadow-lg backdrop-blur-md transition-transform active:scale-90"
+            style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
+          >
+            <Locate className="h-5 w-5 text-gray-700" />
+          </button>
+        </div>
       </div>
     </div>
   );
