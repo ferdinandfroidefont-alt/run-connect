@@ -65,9 +65,14 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
 
       setStatus('loading');
 
+      // Create Audio element immediately in user gesture context
       const audio = new Audio();
       audioRef.current = audio;
       audio.preload = 'auto';
+
+      // Unlock audio context immediately (iOS Safari requirement)
+      audio.play().catch(() => {});
+      audio.pause();
 
       const canPlayWebm =
         audio.canPlayType('audio/webm;codecs=opus') !== '' ||
@@ -97,8 +102,16 @@ export const VoiceMessagePlayer = ({ src, isMine }: VoiceMessagePlayerProps) => 
         cleanup();
       };
 
-      // IMPORTANT: source + play directly in user gesture context (no pre-fetch)
+      // Set source and wait for it to be ready, then play
       audio.src = src;
+      
+      await new Promise<void>((resolve, reject) => {
+        audio.oncanplaythrough = () => resolve();
+        audio.onerror = () => reject(new Error('Audio load failed'));
+        // Timeout fallback
+        setTimeout(() => resolve(), 3000);
+      });
+
       await audio.play();
 
       setStatus('playing');
