@@ -32,7 +32,7 @@ echo "✅ SafeFirebaseInit.h created"
 
 cat > "$SAFE_INIT_M" << 'OBJC_M_EOF'
 #import "SafeFirebaseInit.h"
-@import FirebaseCore;
+#import <FirebaseCore/FirebaseCore.h>
 
 @implementation SafeFirebaseInit
 

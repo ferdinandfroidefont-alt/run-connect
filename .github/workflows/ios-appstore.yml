@@ -313,7 +313,8 @@ jobs:
             -destination "generic/platform=iOS" \
             clean archive \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            CODE_SIGN_STYLE=Manual
+            CODE_SIGN_STYLE=Manual \
+            CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES=YES
 
       - name: 📦 Export IPA
         env:
