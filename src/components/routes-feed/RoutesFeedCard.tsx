@@ -62,7 +62,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
     new google.maps.Polyline({
       path,
       geodesic: true,
-      strokeColor: '#ef4444',
+      strokeColor: '#5B7CFF',
       strokeOpacity: 0.8,
       strokeWeight: 3,
       map: mapRef.current,

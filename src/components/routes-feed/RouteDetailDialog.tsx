@@ -129,7 +129,7 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
       });
 
       new google.maps.Polyline({
-        path, geodesic: true, strokeColor: '#ef4444', strokeOpacity: 0.9, strokeWeight: 4, map: mapRef.current,
+        path, geodesic: true, strokeColor: '#5B7CFF', strokeOpacity: 0.9, strokeWeight: 4, map: mapRef.current,
       });
 
       // Add photo markers
