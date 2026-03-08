@@ -202,129 +202,131 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent fullScreen hideCloseButton className="overflow-y-auto">
-          {/* Header */}
-          <div className="sticky top-0 z-50 bg-card border-b border-border">
-            <div className="flex items-center justify-between px-4 py-3">
-              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="gap-1 text-primary p-0 h-auto">
-                <ArrowLeft className="h-5 w-5" /> Retour
-              </Button>
-            </div>
-          </div>
-
-          {/* Map */}
-          <div ref={mapContainer} className="w-full h-64 bg-secondary" />
-
-          <div className="p-4 space-y-6 pb-24">
-            {/* Route info */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="gap-1">
-                  <ActivityIcon activityType={route.activity_type} size="sm" />
-                  {ACTIVITY_TYPES.find(a => a.value === route.activity_type)?.label}
-                </Badge>
-              </div>
-              <h2 className="text-[22px] font-bold">{route.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={route.creator.avatar_url || undefined} />
-                  <AvatarFallback className="text-[10px]">{route.creator.username?.[0]?.toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <span className="text-[14px] text-muted-foreground">par {route.creator.display_name}</span>
+        <DialogContent fullScreen hideCloseButton className="p-0">
+          <div className="flex-1 overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border">
+              <div className="flex items-center justify-between px-4 py-3">
+                <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="gap-1 text-primary p-0 h-auto">
+                  <ArrowLeft className="h-5 w-5" /> Retour
+                </Button>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1.5 text-[15px]">
-                <Route className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold">{formatDistance(route.total_distance)}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[15px]">
-                <Mountain className="h-4 w-4 text-muted-foreground" />
-                <span>{route.total_elevation_gain ? `${Math.round(route.total_elevation_gain)} m D+` : 'N/A'}</span>
-              </div>
-            </div>
+            {/* Map */}
+            <div ref={mapContainer} className="w-full h-64 bg-secondary" />
 
-            {route.description && (
-              <p className="text-[15px] text-muted-foreground">{route.description}</p>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button onClick={copyRoute} variant="outline" className="flex-1 gap-2">
-                <Copy className="h-4 w-4" /> Copier l'itinéraire
-              </Button>
-              <Button onClick={() => { onOpenChange(false); navigate(`/training/route/${route.id}`); }} className="flex-1 gap-2">
-                <Navigation className="h-4 w-4" /> Entraînement
-              </Button>
-            </div>
-
-            {/* Photos */}
-            {photos.length > 0 && (
+            <div className="p-4 space-y-6 pb-24">
+              {/* Route info */}
               <div>
-                <h3 className="text-[17px] font-semibold mb-3 flex items-center gap-2">
-                  <Camera className="h-5 w-5" /> Photos ({photos.length})
-                </h3>
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-                  {photos.map(photo => (
-                    <img
-                      key={photo.id}
-                      src={photo.photo_url}
-                      alt={photo.caption || 'Photo'}
-                      className="h-24 w-24 object-cover rounded-xl shrink-0 cursor-pointer active:opacity-80"
-                      onClick={() => setSelectedPhoto(photo.photo_url)}
-                    />
-                  ))}
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="secondary" className="gap-1">
+                    <ActivityIcon activityType={route.activity_type} size="sm" />
+                    {ACTIVITY_TYPES.find(a => a.value === route.activity_type)?.label}
+                  </Badge>
+                </div>
+                <h2 className="text-[22px] font-bold">{route.name}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={route.creator.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px]">{route.creator.username?.[0]?.toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-[14px] text-muted-foreground">par {route.creator.display_name}</span>
                 </div>
               </div>
-            )}
 
-            {/* Rating form */}
-            <div className="bg-secondary rounded-xl p-4 space-y-3">
-              <h3 className="text-[17px] font-semibold">Votre avis</h3>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <button key={i} onClick={() => setMyRating(i + 1)}>
-                    <Star className={cn("h-7 w-7", i < myRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
-                  </button>
-                ))}
+              {/* Stats */}
+              <div className="flex gap-4">
+                <div className="flex items-center gap-1.5 text-[15px]">
+                  <Route className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{formatDistance(route.total_distance)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[15px]">
+                  <Mountain className="h-4 w-4 text-muted-foreground" />
+                  <span>{route.total_elevation_gain ? `${Math.round(route.total_elevation_gain)} m D+` : 'N/A'}</span>
+                </div>
               </div>
-              <Textarea
-                placeholder="Commentaire (optionnel)"
-                value={myComment}
-                onChange={e => setMyComment(e.target.value)}
-                className="bg-card"
-              />
-              <Button onClick={submitRating} disabled={myRating === 0 || submitting} className="w-full gap-2">
-                <Send className="h-4 w-4" /> Envoyer
-              </Button>
-            </div>
 
-            {/* Existing ratings */}
-            {ratings.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-[17px] font-semibold">Avis ({ratings.length})</h3>
-                {ratings.map(r => (
-                  <div key={r.id} className="bg-card rounded-xl p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarImage src={r.profile?.avatar_url || undefined} />
-                        <AvatarFallback className="text-[10px]">{r.profile?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-[14px] font-medium">{r.profile?.display_name || 'Utilisateur'}</span>
-                      <div className="flex items-center gap-0.5 ml-auto">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <Star key={i} className={cn("h-3 w-3", i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
-                        ))}
-                      </div>
-                    </div>
-                    {r.comment && <p className="text-[14px] text-muted-foreground">{r.comment}</p>}
-                    <p className="text-[12px] text-muted-foreground/60">{format(new Date(r.created_at), 'dd MMM yyyy', { locale: fr })}</p>
+              {route.description && (
+                <p className="text-[15px] text-muted-foreground">{route.description}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button onClick={copyRoute} variant="outline" className="flex-1 gap-2">
+                  <Copy className="h-4 w-4" /> Copier l'itinéraire
+                </Button>
+                <Button onClick={() => { onOpenChange(false); navigate(`/training/route/${route.id}`); }} className="flex-1 gap-2">
+                  <Navigation className="h-4 w-4" /> Entraînement
+                </Button>
+              </div>
+
+              {/* Photos */}
+              {photos.length > 0 && (
+                <div>
+                  <h3 className="text-[17px] font-semibold mb-3 flex items-center gap-2">
+                    <Camera className="h-5 w-5" /> Photos ({photos.length})
+                  </h3>
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+                    {photos.map(photo => (
+                      <img
+                        key={photo.id}
+                        src={photo.photo_url}
+                        alt={photo.caption || 'Photo'}
+                        className="h-24 w-24 object-cover rounded-xl shrink-0 cursor-pointer active:opacity-80"
+                        onClick={() => setSelectedPhoto(photo.photo_url)}
+                      />
+                    ))}
                   </div>
-                ))}
+                </div>
+              )}
+
+              {/* Rating form */}
+              <div className="bg-secondary rounded-xl p-4 space-y-3">
+                <h3 className="text-[17px] font-semibold">Votre avis</h3>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <button key={i} onClick={() => setMyRating(i + 1)}>
+                      <Star className={cn("h-7 w-7", i < myRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                    </button>
+                  ))}
+                </div>
+                <Textarea
+                  placeholder="Commentaire (optionnel)"
+                  value={myComment}
+                  onChange={e => setMyComment(e.target.value)}
+                  className="bg-card"
+                />
+                <Button onClick={submitRating} disabled={myRating === 0 || submitting} className="w-full gap-2">
+                  <Send className="h-4 w-4" /> Envoyer
+                </Button>
               </div>
-            )}
+
+              {/* Existing ratings */}
+              {ratings.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-[17px] font-semibold">Avis ({ratings.length})</h3>
+                  {ratings.map(r => (
+                    <div key={r.id} className="bg-card rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={r.profile?.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px]">{r.profile?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-[14px] font-medium">{r.profile?.display_name || 'Utilisateur'}</span>
+                        <div className="flex items-center gap-0.5 ml-auto">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star key={i} className={cn("h-3 w-3", i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
+                          ))}
+                        </div>
+                      </div>
+                      {r.comment && <p className="text-[14px] text-muted-foreground">{r.comment}</p>}
+                      <p className="text-[12px] text-muted-foreground/60">{format(new Date(r.created_at), 'dd MMM yyyy', { locale: fr })}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
