@@ -1,53 +1,33 @@
 
 
-## Diagnostic
+# Redesign Loading Screen "R" to Match Reference
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+## What needs to change
 
-Deux problemes distincts :
+The current SVG `R_PATH` produces a thin, simple cursive R. The reference image shows a much more **fluid, swooping, calligraphic R** with:
+- A wide sweeping curve starting from the top, flowing down-left where the GPS pin sits
+- A large round bowl curving right and up
+- A bold diagonal leg sweeping to the bottom-right
+- **Variable stroke width** feel (thick in the middle, thin at tips)
+- Deep navy-to-bright-blue gradient with white shine streaks
+- The GPS pin integrated at the start point of the curve (left side, mid-height)
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Changes — `src/components/LoadingScreen.tsx`
 
-## Solution en 2 parties
+1. **Redesign `R_PATH`**: New SVG path that mimics the reference's swooping calligraphic shape — starts top-right, sweeps left-down to the pin position, curves into a wide bowl right, then kicks down into a diagonal leg.
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+2. **Multi-layer stroke for depth**: Instead of one stroke + one glow, use 3 layers:
+   - Wide blur layer (soft glow, ~14px, light blue)
+   - Medium main stroke (~7px, gradient dark-to-light blue)  
+   - Thin bright highlight stroke (~2px, white/light blue, offset) for the "shine" effect
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+3. **Gradient update**: Use a richer gradient from `#0033AA` (navy) → `#0066FF` (blue) → `#66AAFF` (sky) to match the reference's color depth.
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+4. **Pin repositioned**: Move the GPS pin to the new path's start point (left side of the curve, roughly mid-height), matching the reference where the pin sits at the inner curl.
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+5. **SVG viewBox enlarged**: Increase to ~200×220 to accommodate the wider, more expressive shape.
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+6. **Light sweep preserved**: Keep the existing shine animation but make it slightly more prominent.
 
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+All animation phases (pin → trace → glow → loading) stay the same — only the visual shape and rendering change.
 
