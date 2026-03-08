@@ -64,7 +64,7 @@ export const RoutePreview = ({ coordinates, activityType }: RoutePreviewProps) =
     polyline.current = new google.maps.Polyline({
       path: path,
       geodesic: true,
-      strokeColor: getActivityColor(activityType),
+      strokeColor: '#5B7CFF',
       strokeOpacity: 0.8,
       strokeWeight: 3,
       map: map.current

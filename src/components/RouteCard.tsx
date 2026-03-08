@@ -105,7 +105,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     polyline.current = new google.maps.Polyline({
       path,
       geodesic: true,
-      strokeColor: 'hsl(var(--primary))',
+      strokeColor: '#5B7CFF',
       strokeOpacity: 0.9,
       strokeWeight: 3,
       map: map.current
