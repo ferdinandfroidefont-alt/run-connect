@@ -11,13 +11,22 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// Cursive "R" path — tall stem from pin, wide round bowl, strong diagonal leg
-const R_PATH = "M 25,185 C 25,185 22,140 24,95 C 26,55 28,25 32,15 C 32,15 38,8 55,8 C 75,8 105,10 120,28 C 135,46 130,72 112,82 C 98,90 70,88 50,82 L 50,82 C 55,88 70,105 85,125 C 100,145 120,170 140,185";
-const R_PATH_LENGTH = 620;
+// Calligraphic swooping "R" — starts top-right, sweeps left-down to pin,
+// curves into wide bowl right, then kicks into bold diagonal leg
+const R_PATH =
+  "M 155,18 C 130,10 95,12 75,35 C 55,58 48,85 50,110 " +       // top sweep down-left to pin area
+  "C 52,130 60,115 80,100 C 100,85 135,75 155,85 " +              // bowl curving right
+  "C 175,95 170,120 145,130 C 120,140 85,135 65,125 " +           // bowl closing back left
+  "L 65,125 C 75,140 100,165 125,185 C 140,197 160,205 175,210";  // diagonal leg down-right
+const R_PATH_LENGTH = 750;
 
-// Pin position = start of the R path
-const PIN_X = 25;
-const PIN_Y = 185;
+// Pin sits at the inner curl (left side, mid-height)
+const PIN_X = 48;
+const PIN_Y = 112;
+
+// SVG dimensions
+const SVG_W = 200;
+const SVG_H = 225;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin' | 'trace' | 'glow' | 'loading'>('pin');
@@ -84,7 +93,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
       {/* Main logo area */}
       <div className="flex flex-col items-center">
-        <div className="relative" style={{ width: 165, height: 210 }}>
+        <div className="relative" style={{ width: SVG_W, height: SVG_H }}>
 
           {/* GPS Pin — always visible, appears first with spring */}
           <motion.svg
@@ -100,7 +109,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           >
             <path
               d="M12 0C5.373 0 0 5.373 0 12c0 9 12 21 12 21s12-12 12-21C24 5.373 18.627 0 12 0z"
-              fill="hsl(var(--primary))"
+              fill="#0044CC"
             />
             <circle cx="12" cy="11" r="4.5" fill="white" />
           </motion.svg>
@@ -111,7 +120,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               <motion.div
                 className="absolute rounded-full"
                 style={{
-                  border: '2px solid hsl(var(--primary))',
+                  border: '2px solid #0055EE',
                   width: 32,
                   height: 32,
                   left: PIN_X - 16,
@@ -125,30 +134,36 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
             )}
           </AnimatePresence>
 
-          {/* R cursive trace — glow layer */}
+          {/* R cursive trace — multi-layer */}
           {showTrace && (
             <motion.svg
               className="absolute inset-0"
-              width="165"
-              height="210"
-              viewBox="0 0 165 210"
+              width={SVG_W}
+              height={SVG_H}
+              viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               fill="none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
             >
               <defs>
-                <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" />
-                  <stop offset="100%" stopColor="hsl(217 91% 68%)" />
+                <linearGradient id="rGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#0033AA" />
+                  <stop offset="50%" stopColor="#0066FF" />
+                  <stop offset="100%" stopColor="#66AAFF" />
+                </linearGradient>
+                <linearGradient id="rHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
+                  <stop offset="50%" stopColor="rgba(180,220,255,0.6)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
                 </linearGradient>
               </defs>
 
-              {/* Glow layer */}
+              {/* Layer 1: Wide soft glow */}
               <motion.path
                 d={R_PATH}
-                stroke="hsl(217 91% 68%)"
-                strokeWidth={10}
+                stroke="#4488FF"
+                strokeWidth={14}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
@@ -156,14 +171,14 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 initial={{ strokeDashoffset: R_PATH_LENGTH }}
                 animate={{ strokeDashoffset: 0 }}
                 transition={{ duration: 0.85, delay: 0.05, ease: 'easeInOut' }}
-                style={{ filter: 'blur(4px)' }}
+                style={{ filter: 'blur(6px)', opacity: 0.5 }}
               />
 
-              {/* Main stroke */}
+              {/* Layer 2: Main gradient stroke */}
               <motion.path
                 d={R_PATH}
-                stroke="url(#blueGradient)"
-                strokeWidth={5}
+                stroke="url(#rGradient)"
+                strokeWidth={7}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
@@ -171,16 +186,32 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 initial={{ strokeDashoffset: R_PATH_LENGTH }}
                 animate={{ strokeDashoffset: 0 }}
                 transition={{ duration: 0.85, delay: 0.05, ease: 'easeInOut' }}
+              />
+
+              {/* Layer 3: Thin bright highlight (shine) */}
+              <motion.path
+                d={R_PATH}
+                stroke="url(#rHighlight)"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                strokeDasharray={R_PATH_LENGTH}
+                initial={{ strokeDashoffset: R_PATH_LENGTH }}
+                animate={{ strokeDashoffset: 0 }}
+                transition={{ duration: 0.85, delay: 0.08, ease: 'easeInOut' }}
+                style={{ opacity: 0.8 }}
               />
 
               {/* Moving dot along path during trace */}
               {phase === 'trace' && (
                 <motion.circle
-                  r="4"
-                  fill="hsl(var(--primary))"
+                  r="5"
+                  fill="#3399FF"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 1, 0] }}
                   transition={{ duration: 0.85, times: [0, 0.05, 0.85, 1] }}
+                  style={{ filter: 'blur(1px)' }}
                 >
                   <animateMotion dur="0.85s" path={R_PATH} fill="freeze" />
                 </motion.circle>
@@ -199,7 +230,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               <motion.div
                 className="absolute inset-0"
                 style={{
-                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.7) 50%, transparent 60%)',
+                  background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.8) 50%, transparent 65%)',
                 }}
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
@@ -211,7 +242,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
         {/* App name */}
         <motion.h1
-          className="text-primary text-[28px] font-bold tracking-[0.08em] mt-2 mb-8"
+          className="text-[28px] font-bold tracking-[0.08em] mt-2 mb-8"
+          style={{ color: '#0044CC' }}
           initial={{ opacity: 0, y: 8 }}
           animate={showTrace ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
           transition={{ delay: 0.4, duration: 0.3 }}
@@ -232,7 +264,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 <motion.div
                   className="h-full rounded-full"
                   style={{
-                    background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(217 91% 68%))',
+                    background: 'linear-gradient(90deg, #0033AA, #0066FF, #66AAFF)',
                     width: `${progress}%`,
                   }}
                   transition={{ duration: 0.05 }}
