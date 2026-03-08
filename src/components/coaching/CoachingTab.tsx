@@ -11,7 +11,6 @@ import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "./WeeklyTrackingDialog";
 import { ClubGroupsManagerDialog } from "./ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "./CoachingDraftsList";
-import { AthleteWeeklyView } from "./AthleteWeeklyView";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -343,12 +342,6 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
         </IOSListGroup>
       )}
 
-      {/* Athlete weekly view — always shown (self-coaching support) */}
-      <AthleteWeeklyView
-        clubId={clubId}
-        sessions={sessions}
-        onSessionClick={(s) => setSelectedSession(s)}
-      />
 
       {/* Dialogs */}
       <CoachingDraftsList
