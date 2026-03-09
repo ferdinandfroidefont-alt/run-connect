@@ -798,63 +798,69 @@ const Profile = () => {
         {/* Objectifs personnels - Own profile only */}
         {!isViewingOtherUser && <PersonalGoals />}
 
-        {/* Classement, Badges & Activités - iOS Style Group */}
-        {!isViewingOtherUser ? (
-          <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)}>
-            <div className="h-px bg-border ml-[54px]" />
-            <PersonalRecords records={{
-              running_records: profile?.running_records,
-              cycling_records: profile?.cycling_records,
-              swimming_records: profile?.swimming_records,
-              triathlon_records: profile?.triathlon_records,
-              walking_records: profile?.walking_records
-            }} />
-            <div className="h-px bg-border ml-[54px]" />
-            <div onClick={() => navigate('/my-sessions')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                <Route className="h-[18px] w-[18px] text-white" />
+        {/* Séances & Parcours links */}
+        <div className="px-4">
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <div onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/80 flex items-center justify-center">
+                <Route className="h-[18px] w-[18px] text-primary-foreground" />
               </div>
               <div className="flex-1">
-                <p className="text-[17px] text-foreground">Voir mes séances et itinéraires</p>
+                <p className="text-[17px] text-foreground">{!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}</p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
             </div>
-            <div className="h-px bg-border ml-[54px]" />
-            <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-purple-500 flex items-center justify-center">
-                <MapPin className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[17px] text-foreground">Créer un parcours</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </div>
-          </ProfileStatsGroup>
-        ) : (
-          <ProfileStatsGroup userId={viewingUserId || ''}>
-            <div className="h-px bg-border ml-[54px]" />
-            <PersonalRecords records={{
-              running_records: profile?.running_records,
-              cycling_records: profile?.cycling_records,
-              swimming_records: profile?.swimming_records,
-              triathlon_records: profile?.triathlon_records,
-              walking_records: profile?.walking_records
-            }} />
-            <div className="h-px bg-border ml-[54px]" />
-            <div onClick={() => navigate(`/my-sessions?user=${viewingUserId}`)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-teal-500 flex items-center justify-center">
-                <Route className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[17px] text-foreground">Voir ses séances et itinéraires</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </div>
-          </ProfileStatsGroup>
-        )}
+            {!isViewingOtherUser && (
+              <>
+                <div className="h-px bg-border ml-[54px]" />
+                <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+                  <div className="h-[30px] w-[30px] rounded-[7px] bg-accent/80 flex items-center justify-center">
+                    <MapPin className="h-[18px] w-[18px] text-accent-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[17px] text-foreground">Créer un parcours</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
-        {/* iOS List Groups */}
-        
+        {/* Collapsible Achievements Section */}
+        <div className="px-4">
+          <Collapsible>
+            <CollapsibleTrigger className="w-full flex items-center justify-between py-2 group">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide">
+                Succès & Records
+              </p>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3">
+              {/* Personal Goals - Own profile only */}
+              {!isViewingOtherUser && <PersonalGoals />}
+
+              {/* Classement, Badges & Activités */}
+              {!isViewingOtherUser ? (
+                <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
+              ) : (
+                <ProfileStatsGroup userId={viewingUserId || ''} />
+              )}
+
+              {/* Personal Records */}
+              <div className="bg-card rounded-[10px] overflow-hidden">
+                <PersonalRecords records={{
+                  running_records: profile?.running_records,
+                  cycling_records: profile?.cycling_records,
+                  swimming_records: profile?.swimming_records,
+                  triathlon_records: profile?.triathlon_records,
+                  walking_records: profile?.walking_records
+                }} />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
         {/* Informations Section - Own Profile (editing form) */}
         {!isViewingOtherUser && isEditing && <div className="bg-card overflow-hidden">
             <div className="px-4 py-4 space-y-4">
@@ -910,56 +916,6 @@ const Profile = () => {
               </div>
           </div>}
 
-
-
-        {/* Common Clubs - Other Users */}
-        {isViewingOtherUser && commonClubs.length > 0 && <div>
-            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
-              Clubs en commun ({commonClubs.length})
-            </p>
-            <div className="bg-card overflow-hidden">
-              {commonClubs.map((club, index) => <div key={club.club_id} className="relative">
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
-                      <Users className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[17px] text-foreground">{club.club_name}</p>
-                      {club.club_description && <p className="text-[13px] text-muted-foreground truncate">{club.club_description}</p>}
-                    </div>
-                  </div>
-                  {index < commonClubs.length - 1 && <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />}
-                </div>)}
-            </div>
-          </div>}
-
-        {/* Connection History - Admin Only */}
-        {isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && connectionHistory.length > 0 && <div>
-            <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
-              Historique des connexions
-            </p>
-            <div className="bg-card overflow-hidden">
-              {connectionHistory.map((log, index) => <div key={index} className="relative">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-[15px] text-muted-foreground">{log.action}</span>
-                    <span className="text-[13px] font-mono text-muted-foreground">
-                      {new Date(log.timestamp).toLocaleString('fr-FR', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-                    </span>
-                  </div>
-                  {index < connectionHistory.length - 1 && <div className="absolute bottom-0 left-4 right-0 h-px bg-border" />}
-                </div>)}
-            </div>
-          </div>}
-
-        {/* Historique d'activité */}
-        <ActivityTimeline userId={viewingUserId || user?.id || ''} />
-
-        
         {/* Admin Premium Manager - Creator only */}
         {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
           <div className="bg-card rounded-[10px] overflow-hidden">
@@ -978,7 +934,6 @@ const Profile = () => {
             </button>
           </div>
         )}
-        
 
         {/* Strava Connect Section */}
         <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
@@ -991,9 +946,6 @@ const Profile = () => {
 
         {/* Report User Dialog */}
         <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
-
-        {/* Reliability Details Dialog - Pour tous les profils */}
-        <ReliabilityDetailsDialog open={showReliabilityDetails} onOpenChange={setShowReliabilityDetails} userName={profile?.username || profile?.display_name || ''} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
 
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
