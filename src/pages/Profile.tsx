@@ -112,7 +112,6 @@ const Profile = () => {
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const {
     toast
   } = useToast();
