@@ -119,7 +119,7 @@ export const RecentActivities = ({ userId, limit = 5 }: RecentActivitiesProps) =
           <div key={activity.id}>
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center flex-shrink-0">
-                {Icon ? <Icon className="h-[16px] w-[16px] text-primary" /> : <Activity className="h-[16px] w-[16px] text-primary" />}
+                <Icon className="h-[16px] w-[16px] text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-medium text-foreground truncate">{activity.title}</p>
