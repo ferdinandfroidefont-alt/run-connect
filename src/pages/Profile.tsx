@@ -175,7 +175,7 @@ const Profile = () => {
         fetchProfile();
       }
       fetchFollowCounts();
-      fetchReliabilityRate(); // Fetch for all profiles
+      // fetchReliabilityRate removed - no longer shown on profile
       if (!isViewingOtherUser) {
         fetchUserRoutes();
       } else {
@@ -270,33 +270,6 @@ const Profile = () => {
       });
     } finally {
       setRoutesLoading(false);
-    }
-  };
-  const fetchReliabilityRate = async () => {
-    const targetUserId = viewingUserId || user?.id;
-    if (!targetUserId) return;
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from('user_stats').select('reliability_rate, total_sessions_completed, total_sessions_joined').eq('user_id', targetUserId).maybeSingle();
-      if (error && error.code !== 'PGRST116') throw error;
-      if (data) {
-        setReliabilityRate(data.reliability_rate || 100);
-        setTotalSessionsJoined(data.total_sessions_joined || 0);
-        setTotalSessionsCompleted(data.total_sessions_completed || 0);
-      }
-
-      // Compter les sessions créées
-      const {
-        count: createdCount
-      } = await supabase.from('sessions').select('id', {
-        count: 'exact',
-        head: true
-      }).eq('organizer_id', targetUserId);
-      setTotalSessionsCreated(createdCount || 0);
-    } catch (error) {
-      console.error('Error fetching reliability rate:', error);
     }
   };
 
