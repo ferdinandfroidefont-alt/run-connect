@@ -5,15 +5,13 @@ import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Camera, Users, Heart, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award } from "lucide-react";
+import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award, ChevronDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -25,17 +23,14 @@ import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
-import { UserActivityChart } from "@/components/UserActivityChart";
-import { ReliabilityBadge } from "@/components/ReliabilityBadge";
-import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ProfileRankBadgeCompact } from "@/components/profile/ProfileRankBadgeCompact";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
-import { StreakBadge } from "@/components/StreakBadge";
-import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
+import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
+import { RecentActivities } from "@/components/profile/RecentActivities";
+import { SportsBadges } from "@/components/profile/SportsBadges";
 interface Profile {
   username: string;
   display_name: string | null;
