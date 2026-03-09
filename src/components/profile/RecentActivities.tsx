@@ -111,7 +111,8 @@ export const RecentActivities = ({ userId, limit = 5 }: RecentActivitiesProps) =
   return (
     <div className="bg-card rounded-[10px] overflow-hidden">
       {activities.map((activity, index) => {
-        const Icon = getActivityIcon(activity.activity_type);
+        const config = getActivityConfig(activity.activity_type);
+        const Icon = config.icon;
         const timeAgo = formatDistanceToNow(new Date(activity.scheduled_at), { addSuffix: true, locale: fr });
 
         return (
