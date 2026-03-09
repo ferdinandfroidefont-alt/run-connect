@@ -109,14 +109,9 @@ const Profile = () => {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const [showAdminPremium, setShowAdminPremium] = useState(false);
-  const [reliabilityRate, setReliabilityRate] = useState(0);
-  const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
-  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
-  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
-  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const {
     toast
