@@ -749,37 +749,6 @@ const Profile = () => {
             @{profile?.username}
           </p>
 
-          {/* Bio */}
-          {profile?.bio && (
-            <p className="text-[14px] text-muted-foreground text-center max-w-[300px] mb-3 leading-relaxed">
-              {profile.bio}
-            </p>
-          )}
-          
-          {/* Stats Row */}
-          <div className="flex items-center justify-center gap-6 py-3 w-full">
-            <button 
-              onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }} 
-              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
-            >
-              <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnés</p>
-            </button>
-            <div className="w-px h-8 bg-border/60" />
-            <button 
-              onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }} 
-              className="text-center min-w-[60px] active:opacity-70 transition-opacity"
-            >
-              <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Abonnements</p>
-            </button>
-            <div className="w-px h-8 bg-border/60" />
-            <div className="text-center min-w-[60px]">
-              <div className="text-[20px] font-bold text-foreground">{reliabilityRate}%</div>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Réputé</p>
-            </div>
-          </div>
-
           {/* Action Buttons */}
           {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
             <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
@@ -796,9 +765,35 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Streak Badge */}
-        {!isViewingOtherUser && user && <StreakBadge userId={user.id} variant="full" />}
-        {isViewingOtherUser && viewingUserId && <StreakBadge userId={viewingUserId} variant="full" />}
+        {/* Sports Badges */}
+        <div className="px-4">
+          <SportsBadges
+            runningRecords={profile?.running_records}
+            cyclingRecords={profile?.cycling_records}
+            swimmingRecords={profile?.swimming_records}
+            triathlonRecords={profile?.triathlon_records}
+            walkingRecords={profile?.walking_records}
+          />
+        </div>
+
+        {/* Quick Stats */}
+        <div className="px-4">
+          <ProfileQuickStats
+            userId={viewingUserId || user?.id || ''}
+            followerCount={followerCount}
+            followingCount={followingCount}
+            onFollowersClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+            onFollowingClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+          />
+        </div>
+
+        {/* Recent Activities */}
+        <div className="px-4">
+          <p className="text-[13px] text-muted-foreground uppercase tracking-wide pb-2">
+            Activités récentes
+          </p>
+          <RecentActivities userId={viewingUserId || user?.id || ''} />
+        </div>
 
         {/* Objectifs personnels - Own profile only */}
         {!isViewingOtherUser && <PersonalGoals />}
