@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Activity, ChevronRight } from "lucide-react";
-import { getActivityIcon } from "@/lib/activityIcons";
+import { Activity } from "lucide-react";
+import { getActivityConfig } from "@/lib/activityIcons";
 
 interface ActivityItem {
   id: string;
