@@ -8,18 +8,17 @@ import { OnlineStatus } from "./OnlineStatus";
 import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserPlus, UserMinus, Crown, Calendar, Loader2, Flag, MoreVertical, ArrowLeft, ChevronRight, Users, MapPin, Activity, Shield, MessageCircle } from "lucide-react";
-import { OrganizerRatingBadge } from "@/components/OrganizerRatingBadge";
-import { StreakBadge } from "@/components/StreakBadge";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ArrowLeft, ChevronDown, MessageCircle } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
-import { ActivityTimeline } from "@/components/profile/ActivityTimeline";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
+import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
+import { RecentActivities } from "@/components/profile/RecentActivities";
+import { SportsBadges } from "@/components/profile/SportsBadges";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { motion, AnimatePresence } from "framer-motion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Profile {
   user_id: string;
@@ -66,12 +65,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [reliabilityRate, setReliabilityRate] = useState(0);
-  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
-  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
-  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
-  const [showReliabilityDetails, setShowReliabilityDetails] = useState(false);
-  const [commonClubs, setCommonClubs] = useState<any[]>([]);
 
   const isOwnProfile = userId === user?.id;
 
@@ -79,43 +72,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (userId) {
       fetchProfile();
       fetchFollowCounts();
-      fetchReliabilityRate();
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
-        fetchCommonClubs();
       }
     }
   }, [userId, user, isOwnProfile]);
 
-  const fetchCommonClubs = async () => {
-    if (!user || !userId || isOwnProfile) return;
-    try {
-      const { data, error } = await supabase.rpc('get_common_clubs', {
-        user_1_id: user.id,
-        user_2_id: userId
-      });
-      if (error) throw error;
-      setCommonClubs(data || []);
-    } catch (error) {
-      console.error('Error fetching common clubs:', error);
-    }
-  };
-
   const fetchProfile = async () => {
     if (!userId) return;
-    
     try {
       setLoading(true);
-      
       if (isOwnProfile) {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
           .single();
-
         if (error) throw error;
         setProfile(data);
       } else {
@@ -125,16 +99,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           .eq('user_id', userId)
           .eq('is_private', false)
           .single();
-
         if (error) throw error;
         setProfile(data);
       }
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le profil",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Impossible de charger le profil", variant: "destructive" });
       onClose();
     } finally {
       setLoading(false);
@@ -150,13 +119,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         .eq('follower_id', user.id)
         .eq('following_id', userId)
         .maybeSingle();
-
       if (followData) {
         setIsFollowing(followData.status === 'accepted');
         setFollowRequestSent(followData.status === 'pending');
-      } else {
-        setIsFollowing(false);
-        setFollowRequestSent(false);
       }
     } catch (error) {
       console.error('Error checking follow status:', error);
@@ -166,30 +131,25 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const checkFriendStatus = async () => {
     if (!user || !userId || isOwnProfile) return;
     try {
-      const { data: friendsData } = await supabase.rpc('are_users_friends', {
-        user1_id: user.id,
-        user2_id: userId
-      });
-      setAreFriends(friendsData || false);
+      const { data } = await supabase.rpc('are_users_friends', { user1_id: user.id, user2_id: userId });
+      setAreFriends(data || false);
     } catch (error) {
       console.error('Error checking friend status:', error);
-      setAreFriends(false);
     }
   };
 
   const checkBlockedStatus = async () => {
     if (!user || !userId || isOwnProfile) return;
     try {
-      const { data: blockedData } = await supabase
+      const { data } = await supabase
         .from('blocked_users')
         .select('id')
         .eq('blocker_id', user.id)
         .eq('blocked_id', userId)
         .maybeSingle();
-      setIsBlocked(!!blockedData);
+      setIsBlocked(!!data);
     } catch (error) {
       console.error('Error checking blocked status:', error);
-      setIsBlocked(false);
     }
   };
 
@@ -197,24 +157,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (!user || !userId) return;
     try {
       setActionLoading(true);
-      const { error } = await supabase
-        .from('blocked_users')
-        .delete()
-        .eq('blocker_id', user.id)
-        .eq('blocked_id', userId);
+      const { error } = await supabase.from('blocked_users').delete().eq('blocker_id', user.id).eq('blocked_id', userId);
       if (error) throw error;
       setIsBlocked(false);
-      toast({
-        title: "Utilisateur débloqué",
-        description: "Cette personne peut maintenant vous contacter à nouveau",
-      });
-    } catch (error: any) {
-      console.error('Unblock user error:', error);
-      toast({
-        title: "Erreur", 
-        description: "Impossible de débloquer cet utilisateur",
-        variant: "destructive",
-      });
+      toast({ title: "Utilisateur débloqué" });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de débloquer", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
@@ -223,48 +171,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const fetchFollowCounts = async () => {
     if (!userId) return;
     try {
-      const { data: followerData } = await supabase
-        .from('user_follows')
-        .select('id', { count: 'exact' })
-        .eq('following_id', userId)
-        .eq('status', 'accepted');
-
-      const { data: followingData } = await supabase
-        .from('user_follows')
-        .select('id', { count: 'exact' })
-        .eq('follower_id', userId)
-        .eq('status', 'accepted');
-
-      setFollowerCount(followerData?.length || 0);
-      setFollowingCount(followingData?.length || 0);
+      const [followerRes, followingRes] = await Promise.all([
+        supabase.from('user_follows').select('id', { count: 'exact' }).eq('following_id', userId).eq('status', 'accepted'),
+        supabase.from('user_follows').select('id', { count: 'exact' }).eq('follower_id', userId).eq('status', 'accepted'),
+      ]);
+      setFollowerCount(followerRes.data?.length || 0);
+      setFollowingCount(followingRes.data?.length || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
-    }
-  };
-
-  const fetchReliabilityRate = async () => {
-    if (!userId) return;
-    try {
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      if (data) {
-        setReliabilityRate(data.reliability_rate || 100);
-        setTotalSessionsJoined(data.total_sessions_joined || 0);
-        setTotalSessionsCompleted(data.total_sessions_completed || 0);
-      }
-
-      const { count: createdCount } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('organizer_id', userId);
-      setTotalSessionsCreated(createdCount || 0);
-    } catch (error) {
-      console.error('Error fetching reliability rate:', error);
     }
   };
 
@@ -272,30 +186,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (!user || !userId) return;
     try {
       setActionLoading(true);
-      const { error: blockError } = await supabase
-        .from('blocked_users')
-        .insert({ blocker_id: user.id, blocked_id: userId });
-      if (blockError) throw blockError;
-
-      await supabase
-        .from('user_follows')
-        .delete()
+      const { error } = await supabase.from('blocked_users').insert({ blocker_id: user.id, blocked_id: userId });
+      if (error) throw error;
+      await supabase.from('user_follows').delete()
         .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
-
-      toast({
-        title: "Utilisateur bloqué",
-        description: "Cette personne ne peut plus vous contacter ni voir vos séances",
-      });
+      toast({ title: "Utilisateur bloqué" });
       setIsFollowing(false);
       setFollowRequestSent(false);
       setAreFriends(false);
       onClose();
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de bloquer cet utilisateur",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de bloquer", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
@@ -306,42 +207,23 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     setActionLoading(true);
     try {
       if (isFollowing || followRequestSent) {
-        const { error } = await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', userId);
+        const { error } = await supabase.from('user_follows').delete().eq('follower_id', user.id).eq('following_id', userId);
         if (error) throw error;
-
         if (isFollowing) {
           setFollowerCount(prev => Math.max(0, prev - 1));
           setAreFriends(false);
           toast({ title: "Vous ne suivez plus cette personne" });
         } else {
-          toast({ title: "Demande de suivi annulée" });
+          toast({ title: "Demande annulée" });
         }
         setIsFollowing(false);
         setFollowRequestSent(false);
       } else {
-        const { error } = await supabase
-          .from('user_follows')
-          .insert({
-            follower_id: user.id,
-            following_id: userId,
-            status: 'pending'
-          });
-
+        const { error } = await supabase.from('user_follows').insert({ follower_id: user.id, following_id: userId, status: 'pending' });
         if (error) {
-          if (error.code === '23505') {
-            toast({ title: "Demande déjà envoyée", description: "Vous avez déjà envoyé une demande de suivi" });
-            return;
-          }
+          if (error.code === '23505') { toast({ title: "Demande déjà envoyée" }); return; }
           throw error;
         }
-
-        // DB trigger handles notification creation, edge function handles FCM push via useFollow
-        // No manual sendPushNotification needed here
-
         setFollowRequestSent(true);
         toast({ title: "Demande de suivi envoyée" });
       }
@@ -362,7 +244,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     <Dialog open={!!userId} onOpenChange={() => onClose()}>
       <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-background sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
 
-        {/* Floating Header — translucent glass */}
+        {/* Floating Header */}
         <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),12px)] pb-2">
           <button
             onClick={onClose}
@@ -410,22 +292,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <div className="pb-8">
               {/* ===== Hero: Cover + Avatar + Identity ===== */}
               <div className="relative">
-                {/* Cover — taller, with cinematic gradient overlay */}
                 <div className="h-56 w-full overflow-hidden">
                   {profile.cover_image_url ? (
-                    <img
-                      src={profile.cover_image_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={profile.cover_image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-primary via-primary/70 to-accent" />
                   )}
-                  {/* Cinematic bottom fade */}
                   <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
                 </div>
 
-                {/* Avatar overlapping cover — larger, with ring */}
                 <div className="absolute left-1/2 -translate-x-1/2 -bottom-14">
                   <div className="relative">
                     <Avatar className="h-28 w-28 ring-[5px] ring-background shadow-2xl">
@@ -434,7 +309,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    {/* Premium checkmark */}
                     {profile.is_premium && (
                       <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary border-[3px] border-background flex items-center justify-center shadow-md">
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -442,7 +316,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         </svg>
                       </div>
                     )}
-                    {/* Online indicator */}
                     {!isOwnProfile && areFriends && (
                       <OnlineStatus userId={profile.user_id} />
                     )}
@@ -450,7 +323,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </div>
               </div>
 
-              {/* Spacer for overlapping avatar */}
               <div className="h-16" />
 
               {/* Identity */}
@@ -459,9 +331,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   <h1 className="text-[22px] font-bold text-foreground tracking-tight">
                     {profile.display_name || profile.username}
                   </h1>
-                  {profile.is_premium && (
-                    <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                  )}
+                  {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
                 </div>
                 <p className="text-[14px] text-muted-foreground mt-0.5">@{profile.username}</p>
 
@@ -471,35 +341,28 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </p>
                 )}
 
-                {/* Inline badges */}
-                <div className="flex flex-wrap justify-center gap-1.5 mt-3">
-                  <OrganizerRatingBadge userId={profile.user_id} />
-                  <StreakBadge userId={profile.user_id} variant="compact" />
+                {/* Sports Badges */}
+                <div className="mt-3">
+                  <SportsBadges
+                    runningRecords={profile.running_records}
+                    cyclingRecords={profile.cycling_records}
+                    swimmingRecords={profile.swimming_records}
+                    triathlonRecords={profile.triathlon_records}
+                    walkingRecords={profile.walking_records}
+                  />
                 </div>
               </div>
 
-              {/* ===== Stats Row — Instagram style ===== */}
-              <div className="flex items-stretch justify-center mt-5 mx-5 bg-card rounded-2xl overflow-hidden" style={{ boxShadow: 'var(--shadow-sm)' }}>
-                <div className="flex-1 py-3.5 text-center active:bg-secondary/60 transition-colors">
-                  <p className="text-[20px] font-bold text-foreground leading-none">{followerCount}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 font-medium">Abonnés</p>
-                </div>
-                <div className="w-px bg-border/50 my-2.5" />
-                <div className="flex-1 py-3.5 text-center active:bg-secondary/60 transition-colors">
-                  <p className="text-[20px] font-bold text-foreground leading-none">{followingCount}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 font-medium">Abonnements</p>
-                </div>
-                <div className="w-px bg-border/50 my-2.5" />
-                <button
-                  onClick={() => setShowReliabilityDetails(true)}
-                  className="flex-1 py-3.5 text-center active:bg-secondary/60 transition-colors"
-                >
-                  <p className="text-[20px] font-bold text-foreground leading-none">{Math.round(reliabilityRate)}%</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 font-medium">Fiabilité</p>
-                </button>
+              {/* Quick Stats */}
+              <div className="mx-5 mt-4">
+                <ProfileQuickStats
+                  userId={profile.user_id}
+                  followerCount={followerCount}
+                  followingCount={followingCount}
+                />
               </div>
 
-              {/* ===== Action Buttons ===== */}
+              {/* Action Buttons */}
               {!isOwnProfile && (
                 <div className="flex gap-2.5 mx-5 mt-4">
                   <Button
@@ -507,83 +370,61 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     disabled={actionLoading}
                     variant={isFollowing ? "outline" : "default"}
                     className={`flex-1 h-11 rounded-xl text-[15px] font-semibold transition-all ${
-                      isFollowing
-                        ? "border-border"
-                        : followRequestSent
-                          ? "bg-muted text-muted-foreground hover:bg-muted"
-                          : ""
+                      isFollowing ? "border-border" : followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
                     }`}
                   >
                     {actionLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isFollowing ? (
-                      "Abonné ✓"
-                    ) : followRequestSent ? (
-                      "En attente"
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4 mr-1.5" />
-                        Suivre
-                      </>
+                    ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
+                      <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
                     )}
                   </Button>
                   {isFollowing && (
-                    <Button
-                      variant="outline"
-                      className="h-11 rounded-xl px-4 border-border"
-                    >
+                    <Button variant="outline" className="h-11 rounded-xl px-4 border-border">
                       <MessageCircle className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* ===== Following / Own Profile Content ===== */}
+              {/* Content based on follow status */}
               {(isFollowing || isOwnProfile) ? (
-                <div className="mt-5 space-y-3">
-                  {/* Streak */}
-                  <StreakBadge userId={profile.user_id} variant="full" />
+                <div className="mt-5 space-y-3 px-4">
+                  {/* Recent Activities */}
+                  <div>
+                    <p className="text-[13px] text-muted-foreground uppercase tracking-wide pb-2">
+                      Activités récentes
+                    </p>
+                    <RecentActivities userId={profile.user_id} limit={5} />
+                  </div>
 
-                  {/* Stats Group + Records */}
-                  <ProfileStatsGroup userId={profile.user_id}>
-                    <div className="h-px bg-border ml-[54px]" />
-                    <PersonalRecords records={{
-                      running_records: profile.running_records,
-                      cycling_records: profile.cycling_records,
-                      swimming_records: profile.swimming_records,
-                      triathlon_records: profile.triathlon_records,
-                      walking_records: profile.walking_records,
-                    }} />
-                  </ProfileStatsGroup>
-
-                  {/* Common Clubs */}
-                  {!isOwnProfile && commonClubs.length > 0 && (
-                    <div>
-                      <p className="ios-section-header">Clubs en commun</p>
-                      <div className="bg-card overflow-hidden">
-                        {commonClubs.map((club: any, index: number) => (
-                          <div key={club.id}>
-                            <div className="flex items-center px-4 py-[11px]">
-                              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
-                                <Users className="h-4 w-4 text-primary" />
-                              </div>
-                              <span className="text-[15px] font-medium text-foreground">{club.group_name}</span>
-                            </div>
-                            {index < commonClubs.length - 1 && <div className="h-px bg-border ml-[54px]" />}
-                          </div>
-                        ))}
+                  {/* Collapsible Achievements */}
+                  <Collapsible>
+                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 group">
+                      <p className="text-[13px] text-muted-foreground uppercase tracking-wide">
+                        Succès & Records
+                      </p>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3">
+                      <ProfileStatsGroup userId={profile.user_id} />
+                      <div className="bg-card rounded-[10px] overflow-hidden">
+                        <PersonalRecords records={{
+                          running_records: profile.running_records,
+                          cycling_records: profile.cycling_records,
+                          swimming_records: profile.swimming_records,
+                          triathlon_records: profile.triathlon_records,
+                          walking_records: profile.walking_records,
+                        }} />
                       </div>
-                    </div>
-                  )}
-
-                  {/* Activity Timeline */}
-                  <ActivityTimeline userId={profile.user_id} />
+                    </CollapsibleContent>
+                  </Collapsible>
 
                   {/* Member Since */}
-                  <div className="bg-card overflow-hidden">
+                  <div className="bg-card rounded-[10px] overflow-hidden">
                     <div className="flex items-center p-4 gap-3">
                       <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-4 w-4 text-primary" />
+                        <Crown className="h-4 w-4 text-primary" />
                       </div>
                       <div>
                         <p className="text-[15px] font-medium text-foreground">Membre depuis</p>
@@ -594,7 +435,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
                   {/* Danger Actions */}
                   {!isOwnProfile && (
-                    <div className="bg-card overflow-hidden">
+                    <div className="bg-card rounded-[10px] overflow-hidden">
                       <button
                         onClick={handleFollowToggle}
                         disabled={actionLoading}
@@ -621,8 +462,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   )}
                 </div>
               ) : !isOwnProfile ? (
-                /* === Not following: minimal info + CTA === */
                 <div className="mt-5 px-5 space-y-4">
+                  <div className="bg-card rounded-[10px] p-6 text-center">
+                    <div className="text-4xl mb-3">🔒</div>
+                    <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                      Suivez cette personne pour voir ses activités
+                    </p>
+                  </div>
                   <p className="text-center text-[13px] text-muted-foreground">
                     Membre depuis {memberSince}
                   </p>
@@ -638,10 +485,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       </DialogContent>
 
       {isOwnProfile && (
-        <SettingsDialog 
-          open={showSettingsDialog} 
-          onOpenChange={(open) => setShowSettingsDialog(open)} 
-        />
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
       )}
 
       {!isOwnProfile && profile && (
@@ -652,16 +496,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           reportedUsername={profile.username}
         />
       )}
-
-      <ReliabilityDetailsDialog
-        open={showReliabilityDetails}
-        onOpenChange={setShowReliabilityDetails}
-        userName={profile?.username || profile?.display_name || ''}
-        reliabilityRate={reliabilityRate}
-        totalSessionsCreated={totalSessionsCreated}
-        totalSessionsJoined={totalSessionsJoined}
-        totalSessionsCompleted={totalSessionsCompleted}
-      />
     </Dialog>
   );
 };
