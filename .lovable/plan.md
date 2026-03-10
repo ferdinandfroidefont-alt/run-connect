@@ -1,53 +1,55 @@
 
 
-## Diagnostic
+# Plan: Le pin CRÉE le chemin — animation façon app mondiale
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+## Probleme actuel
 
-Deux problemes distincts :
+Le pin suit le path comme un passager. L'animation montre le path qui se dessine indépendamment, et le pin est juste posé dessus avec `animateMotion`. Le pin ne donne pas l'impression de **créer** la trace.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Nouvelle approche
 
-## Solution en 2 parties
+Utiliser un **requestAnimationFrame loop** qui :
+1. Calcule la position du pin sur le path à chaque frame via `SVGPathElement.getPointAtLength()`
+2. Met à jour le `strokeDashoffset` du path pour que la trace s'arrête exactement là où le pin se trouve
+3. Le pin est positionné via `transform: translate()` au point calculé — pas via `animateMotion`
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+Cela crée l'illusion que le pin **pose** la trace derrière lui, comme un stylo sur du papier.
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+## Détails techniques
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### Fichier : `src/components/LoadingScreen.tsx`
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+**Remplacer** l'approche actuelle (framer-motion `strokeDashoffset` + `animateMotion`) par :
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+1. **Ref sur le path SVG** : `pathRef = useRef<SVGPathElement>(null)` pour accéder à `getTotalLength()` et `getPointAtLength(t)`
 
-### Partie 2 : Securiser la page bridge
+2. **Animation loop** (phase `trace`) :
+   ```
+   rAF → elapsed / TRACE_DURATION → progress 0→1
+   point = pathRef.getPointAtLength(progress * totalLength)
+   setPinPosition({ x: point.x, y: point.y })
+   setTraceOffset(totalLength * (1 - progress))
+   ```
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+3. **Pin SVG** : positionné via `transform={translate(pinPos.x - 12, pinPos.y - 32)}` — le pin est toujours au bout de la trace
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+4. **Halo GPS** : cercle centré sur `pinPos` avec pulse CSS animation
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+5. **3 layers de trace** : même visuel (glow + gradient + highlight) mais `strokeDashoffset` contrôlé par state, pas framer-motion
 
-### Fichiers modifies
+6. **Timeline** :
+   - 0-0.4s : pin-drop (spring bounce au point de départ M55,195)
+   - 0.4s-2.4s : rAF loop, pin crée la trace
+   - 2.4s+ : complete → loading
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+7. **Easing** : `linear` pour vitesse constante du pin, ou léger `easeInOut` pour un feel plus naturel
 
-### Apres le deploy
+### Ce qui change vs actuel
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+| Avant | Après |
+|-------|-------|
+| `animateMotion` (pin suit le path) | `getPointAtLength` (pin positionné manuellement) |
+| `motion.path strokeDashoffset` (framer) | `strokeDashoffset` via state (synchro exacte) |
+| Pin et trace animés séparément | Une seule boucle rAF contrôle les deux |
+| Halos via `<animate>` SMIL | Halos via CSS/framer au point du pin |
 
