@@ -1,57 +1,53 @@
 
 
-# Plan: Pin trace le R comme un parcours GPS
+## Diagnostic
 
-## Concept
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-Le pin GPS devient l'élément actif qui "dessine" le R en se deplacant le long du path. La ligne apparait derriere lui comme une trace GPS.
+Deux problemes distincts :
 
-## Approche technique
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-Réécrire `LoadingScreen.tsx` avec cette logique :
+## Solution en 2 parties
 
-### 1. Pin qui suit le path SVG
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-Utiliser `<animateMotion>` sur le pin SVG lui-meme (pas un cercle séparé) pour qu'il se déplace le long de `R_PATH` pendant 2 secondes. Le pin est un groupe SVG (`<g>`) contenant le marker + un halo GPS animé.
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-### 2. Trace GPS derrière le pin
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-Synchroniser le `strokeDashoffset` de la ligne avec le mouvement du pin :
-- `strokeDasharray={R_PATH_LENGTH}` 
-- `initial={{ strokeDashoffset: R_PATH_LENGTH }}` → `animate={{ strokeDashoffset: 0 }}`
-- Même durée (2s) et même easing (`linear`) que le pin pour que la trace suive exactement
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-### 3. Timeline révisée
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-| Phase | Durée | Action |
-|-------|-------|--------|
-| `pin-drop` | 0-0.4s | Pin apparait avec spring bounce + pulse GPS |
-| `trace` | 0.4-2.4s | Pin se déplace, trace se dessine (2s, linear) |
-| `complete` | 2.4-2.7s | Glow sweep, texte RUNCONNECT apparait |
-| `loading` | 2.7s+ | Barre de progression + phrases |
+### Partie 2 : Securiser la page bridge
 
-### 4. Détails visuels
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-**Pin** : Même SVG pin actuel mais en tant que `<g>` dans le SVG principal avec :
-- `<animateMotion dur="2s" path={R_PATH} rotate="auto" fill="freeze" />`
-- Halo GPS : cercle avec `animate={{ scale: [1, 2], opacity: [0.4, 0] }}` en boucle pendant la trace
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-**Trace** : 3 layers conservés (glow blur + gradient principal + highlight) mais avec :
-- Durée 2s au lieu de 0.85s
-- Easing `linear` pour vitesse constante
-- Démarrage synchronisé avec le pin
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-**Fin** : Pin reste à la position finale du path (grâce à `fill="freeze"`), texte apparait en fade
+### Fichiers modifies
 
-### 5. Changements dans le fichier
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-**Fichier**: `src/components/LoadingScreen.tsx`
+### Apres le deploy
 
-- Supprimer le pin SVG séparé (lignes 98-115) et le pulse ring séparé (118-134)
-- Intégrer le pin comme `<g>` à l'intérieur du SVG principal avec `<animateMotion>`
-- Ajouter un cercle halo GPS qui pulse autour du pin pendant le tracé
-- Ajuster les timeouts : pin-drop 0.4s, trace start 0.4s, complete 2.5s, loading 2.8s
-- Changer durée trace de 0.85s à 2s
-- Changer easing de `easeInOut` à `linear` pour vitesse constante
-- Le "moving dot" (lignes 207-217) est remplacé par le pin lui-même
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
