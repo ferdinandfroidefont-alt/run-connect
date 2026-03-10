@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const loadingPhrases = [
@@ -11,26 +11,36 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// Clean stylized "R": vertical stem + rounded bowl + swooping athletic leg
 const R_PATH =
   "M 55,195 L 55,30 " +
   "C 55,15 65,10 80,10 L 120,10 " +
   "C 150,10 165,25 165,50 " +
   "C 165,75 150,90 120,90 L 55,90 " +
   "M 100,90 C 115,105 140,140 170,195";
-const R_PATH_LENGTH = 820;
 
 const SVG_W = 200;
 const SVG_H = 210;
+const TRACE_DURATION = 2;
+const PIN_DROP_DELAY = 400; // ms
 
-const TRACE_DURATION = 2; // seconds
+// Start point of the path
+const START_X = 55;
+const START_Y = 195;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin-drop' | 'trace' | 'complete' | 'loading'>('pin-drop');
   const [progress, setProgress] = useState(0);
   const [currentPhrase, setCurrentPhrase] = useState(loadingPhrases[0]);
   const [phraseOpacity, setPhraseOpacity] = useState(1);
-  const traceStarted = useRef(false);
+
+  // Pin position & trace offset driven by rAF
+  const [pinPos, setPinPos] = useState({ x: START_X, y: START_Y });
+  const [traceOffset, setTraceOffset] = useState(1); // 1 = fully hidden, 0 = fully drawn
+  const [totalLength, setTotalLength] = useState(820);
+
+  const pathRef = useRef<SVGPathElement>(null);
+  const rafRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);
 
   // White background for status bar
   useEffect(() => {
@@ -42,13 +52,54 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     };
   }, []);
 
-  // Animation timeline
+  // Measure real path length
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('trace'), 500);
-    const t2 = setTimeout(() => setPhase('complete'), 500 + TRACE_DURATION * 1000 + 100);
-    const t3 = setTimeout(() => setPhase('loading'), 500 + TRACE_DURATION * 1000 + 400);
+    if (pathRef.current) {
+      setTotalLength(pathRef.current.getTotalLength());
+    }
+  }, []);
+
+  // rAF animation loop for the trace phase
+  const animateTrace = useCallback((timestamp: number) => {
+    if (!startTimeRef.current) startTimeRef.current = timestamp;
+    const elapsed = (timestamp - startTimeRef.current) / 1000;
+    const t = Math.min(elapsed / TRACE_DURATION, 1);
+
+    // Slight easeInOut for natural feel
+    const eased = t < 0.5
+      ? 2 * t * t
+      : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    if (pathRef.current) {
+      const len = pathRef.current.getTotalLength();
+      const point = pathRef.current.getPointAtLength(eased * len);
+      setPinPos({ x: point.x, y: point.y });
+      setTraceOffset(1 - eased);
+    }
+
+    if (t < 1) {
+      rafRef.current = requestAnimationFrame(animateTrace);
+    }
+  }, []);
+
+  // Phase timeline
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase('trace'), PIN_DROP_DELAY);
+    const t2 = setTimeout(() => setPhase('complete'), PIN_DROP_DELAY + TRACE_DURATION * 1000 + 100);
+    const t3 = setTimeout(() => setPhase('loading'), PIN_DROP_DELAY + TRACE_DURATION * 1000 + 400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
+
+  // Start rAF when trace phase begins
+  useEffect(() => {
+    if (phase === 'trace') {
+      startTimeRef.current = 0;
+      rafRef.current = requestAnimationFrame(animateTrace);
+    }
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [phase, animateTrace]);
 
   // Progress bar + phrases
   useEffect(() => {
@@ -84,8 +135,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   }, [progress, onLoadingComplete]);
 
   const isTracing = phase === 'trace';
-  const showPath = phase !== 'pin-drop';
+  const showTrace = phase !== 'pin-drop';
   const isComplete = phase === 'complete' || phase === 'loading';
+
+  const dashOffset = traceOffset * totalLength;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ background: '#FFFFFF' }}>
@@ -109,117 +162,125 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 <stop offset="50%" stopColor="rgba(180,220,255,0.6)" />
                 <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
               </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
             </defs>
 
-            {/* Layer 1: Wide soft glow */}
-            {showPath && (
-              <motion.path
+            {/* Hidden measurement path */}
+            <path
+              ref={pathRef}
+              d={R_PATH}
+              fill="none"
+              stroke="none"
+            />
+
+            {/* Layer 1: Wide soft glow behind the trace */}
+            {showTrace && (
+              <path
                 d={R_PATH}
                 stroke="#4488FF"
                 strokeWidth={14}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={R_PATH_LENGTH}
-                initial={{ strokeDashoffset: R_PATH_LENGTH }}
-                animate={{ strokeDashoffset: 0 }}
-                transition={{ duration: TRACE_DURATION, ease: 'linear' }}
+                strokeDasharray={totalLength}
+                strokeDashoffset={dashOffset}
                 style={{ filter: 'blur(6px)', opacity: 0.5 }}
               />
             )}
 
             {/* Layer 2: Main gradient stroke */}
-            {showPath && (
-              <motion.path
+            {showTrace && (
+              <path
                 d={R_PATH}
                 stroke="url(#rGradient)"
                 strokeWidth={7}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={R_PATH_LENGTH}
-                initial={{ strokeDashoffset: R_PATH_LENGTH }}
-                animate={{ strokeDashoffset: 0 }}
-                transition={{ duration: TRACE_DURATION, ease: 'linear' }}
+                strokeDasharray={totalLength}
+                strokeDashoffset={dashOffset}
               />
             )}
 
             {/* Layer 3: Thin bright highlight */}
-            {showPath && (
-              <motion.path
+            {showTrace && (
+              <path
                 d={R_PATH}
                 stroke="url(#rHighlight)"
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                strokeDasharray={R_PATH_LENGTH}
-                initial={{ strokeDashoffset: R_PATH_LENGTH }}
-                animate={{ strokeDashoffset: 0 }}
-                transition={{ duration: TRACE_DURATION, ease: 'linear' }}
+                strokeDasharray={totalLength}
+                strokeDashoffset={dashOffset}
                 style={{ opacity: 0.8 }}
               />
             )}
 
-            {/* GPS Pin that follows the path */}
-            <g style={{ visibility: phase === 'pin-drop' && !isTracing ? 'visible' : 'visible' }}>
-              {/* GPS halo pulse — loops during trace */}
-              {(isTracing || phase === 'pin-drop') && (
-                <>
-                  <circle r="10" fill="none" stroke="#0055EE" strokeWidth="2" opacity="0">
-                    <animateMotion dur={`${TRACE_DURATION}s`} path={R_PATH} fill="freeze" begin="0.5s" />
-                    <animate attributeName="r" values="6;18;6" dur="1s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.5;0;0.5" dur="1s" repeatCount="indefinite" />
-                  </circle>
-                  <circle r="10" fill="none" stroke="#0055EE" strokeWidth="1.5" opacity="0">
-                    <animateMotion dur={`${TRACE_DURATION}s`} path={R_PATH} fill="freeze" begin="0.5s" />
-                    <animate attributeName="r" values="6;24;6" dur="1.4s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.3;0;0.3" dur="1.4s" repeatCount="indefinite" />
-                  </circle>
-                </>
-              )}
+            {/* GPS Halo pulse at pin position */}
+            {(isTracing || phase === 'pin-drop') && (
+              <>
+                <circle
+                  cx={pinPos.x}
+                  cy={pinPos.y}
+                  r="6"
+                  fill="none"
+                  stroke="#0055EE"
+                  strokeWidth="2"
+                  opacity="0.4"
+                >
+                  <animate attributeName="r" values="6;18;6" dur="1s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.5;0;0.5" dur="1s" repeatCount="indefinite" />
+                </circle>
+                <circle
+                  cx={pinPos.x}
+                  cy={pinPos.y}
+                  r="6"
+                  fill="none"
+                  stroke="#0055EE"
+                  strokeWidth="1.5"
+                  opacity="0.3"
+                >
+                  <animate attributeName="r" values="6;24;6" dur="1.4s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" values="0.3;0;0.3" dur="1.4s" repeatCount="indefinite" />
+                </circle>
+              </>
+            )}
 
-              {/* The pin itself */}
-              <g>
-                {/* Pin drop animation: starts scaled to 0, bounces in */}
-                {phase === 'pin-drop' && (
-                  <g transform="translate(55, 195)">
-                    <motion.g
-                      initial={{ scale: 0, y: -20 }}
-                      animate={{ scale: 1, y: 0 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.05 }}
-                    >
-                      <g transform="translate(-12, -32)">
-                        <path
-                          d="M12 0C5.373 0 0 5.373 0 12c0 9 12 21 12 21s12-12 12-21C24 5.373 18.627 0 12 0z"
-                          fill="#0044CC"
-                        />
-                        <circle cx="12" cy="11" r="4.5" fill="white" />
-                      </g>
-                    </motion.g>
-                  </g>
-                )}
-
-                {/* Pin moving along path during trace + stays at end */}
-                {showPath && (
-                  <g>
-                    <g transform="translate(-12, -32)">
-                      <path
-                        d="M12 0C5.373 0 0 5.373 0 12c0 9 12 21 12 21s12-12 12-21C24 5.373 18.627 0 12 0z"
-                        fill="#0044CC"
-                      />
-                      <circle cx="12" cy="11" r="4.5" fill="white" />
-                    </g>
-                    <animateMotion
-                      dur={`${TRACE_DURATION}s`}
-                      path={R_PATH}
-                      fill="freeze"
-                      begin="0.5s"
+            {/* The GPS Pin — positioned at pinPos, CREATING the trace */}
+            {phase === 'pin-drop' ? (
+              <g transform={`translate(${START_X}, ${START_Y})`}>
+                <motion.g
+                  initial={{ scale: 0, y: -20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.05 }}
+                >
+                  <g transform="translate(-12, -32)">
+                    <path
+                      d="M12 0C5.373 0 0 5.373 0 12c0 9 12 21 12 21s12-12 12-21C24 5.373 18.627 0 12 0z"
+                      fill="#0044CC"
+                      filter="url(#glow)"
                     />
+                    <circle cx="12" cy="11" r="4.5" fill="white" />
                   </g>
-                )}
+                </motion.g>
               </g>
-            </g>
+            ) : (
+              <g transform={`translate(${pinPos.x - 12}, ${pinPos.y - 32})`}>
+                <path
+                  d="M12 0C5.373 0 0 5.373 0 12c0 9 12 21 12 21s12-12 12-21C24 5.373 18.627 0 12 0z"
+                  fill="#0044CC"
+                  filter="url(#glow)"
+                />
+                <circle cx="12" cy="11" r="4.5" fill="white" />
+              </g>
+            )}
           </svg>
 
           {/* Light sweep on complete */}
