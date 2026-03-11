@@ -98,7 +98,7 @@ interface InteractiveMapProps {
 }
 
 // Factory function to create HTMLMarker class when Google Maps is loaded
-const createHTMLMarkerClass = () => {
+const createHTMLMarkerClass = (): any => {
   return class HTMLMarker extends google.maps.OverlayView {
     private position: google.maps.LatLng;
     private content: HTMLDivElement;
