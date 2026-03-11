@@ -52,8 +52,17 @@ const initialDebug: PushDebugState = {
   timestamp: new Date().toISOString(),
 };
 
-/** Check if token is a raw APNs hex token (64 hex chars) — NOT a valid FCM token */
-const isApnsHexToken = (t: string): boolean => /^[A-Fa-f0-9]{64}$/.test(t);
+/** 
+ * Check if token is a raw APNs hex token — NOT a valid FCM token.
+ * Apple says APNs tokens are variable length (don't hardcode 64).
+ * FCM tokens always contain non-hex chars like : _ -
+ * APNs tokens are pure hex, typically 64 chars but can be 32-128.
+ */
+const isApnsHexToken = (t: string): boolean => {
+  if (t.length < 32 || t.length > 200) return false;
+  // If token is ALL hex chars, it's likely APNs (FCM tokens always contain non-hex chars)
+  return /^[A-Fa-f0-9]+$/.test(t) && t.length <= 128;
+};
 
 export const usePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
