@@ -52,8 +52,17 @@ const initialDebug: PushDebugState = {
   timestamp: new Date().toISOString(),
 };
 
-/** Check if token is a raw APNs hex token (64 hex chars) — NOT a valid FCM token */
-const isApnsHexToken = (t: string): boolean => /^[A-Fa-f0-9]{64}$/.test(t);
+/** 
+ * Check if token is a raw APNs hex token — NOT a valid FCM token.
+ * Apple says APNs tokens are variable length (don't hardcode 64).
+ * FCM tokens always contain non-hex chars like : _ -
+ * APNs tokens are pure hex, typically 64 chars but can be 32-128.
+ */
+const isApnsHexToken = (t: string): boolean => {
+  if (t.length < 32 || t.length > 200) return false;
+  // If token is ALL hex chars, it's likely APNs (FCM tokens always contain non-hex chars)
+  return /^[A-Fa-f0-9]+$/.test(t) && t.length <= 128;
+};
 
 export const usePushNotifications = () => {
   const [isRegistered, setIsRegistered] = useState(false);
@@ -822,22 +831,70 @@ export const usePushNotifications = () => {
       saveTokenDynamic(existingToken);
     }
 
-    // Fallback: if no fcmTokenReady after 15s on iOS, log warning
+    // Fallback: if no fcmTokenReady after 15s on iOS, actively try to recover
     const platform = Capacitor.getPlatform();
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     if (platform === 'ios') {
-      fallbackTimer = setTimeout(() => {
-        if (!token && !pendingTokenRef.current) {
-          logError('[FALLBACK] ⚠️ No fcmTokenReady received after 15s on iOS — Firebase may not be initialized in AppDelegate');
-          updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Verify FirebaseApp.configure() in AppDelegate.' });
+      fallbackTimer = setTimeout(async () => {
+        // Check if we already have a valid token
+        const currentToken = token || pendingTokenRef.current;
+        if (currentToken && !isApnsHexToken(currentToken)) return;
+
+        logError('[FALLBACK] ⚠️ No fcmTokenReady after 15s on iOS — attempting active recovery');
+        updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Attempting recovery...' });
+
+        // 1. Re-check window buffers one more time
+        const bufferedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+        if (bufferedToken && typeof bufferedToken === 'string' && bufferedToken.length > 50 && !isApnsHexToken(bufferedToken)) {
+          log('[FALLBACK] Found buffered FCM token, saving...');
+          setToken(bufferedToken);
+          pendingTokenRef.current = bufferedToken;
+          setIsRegistered(true);
+          updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bufferedToken.length, selectedFinalToken: bufferedToken.substring(0, 20) + '...' });
+          await saveTokenDynamic(bufferedToken);
+          return;
+        }
+
+        // 2. Re-call register() to trigger a fresh APNs→FCM exchange
+        try {
+          const status = await PushNotifications.checkPermissions();
+          if (status.receive === 'granted') {
+            log('[FALLBACK] Re-calling register() on iOS...');
+            updateDebug({ registerCalled: true });
+            await PushNotifications.register();
+          }
+        } catch (e: any) {
+          logError('[FALLBACK] register() retry error:', e);
         }
       }, 15000);
+
+      // 3. Also listen for pageshow (back-forward cache restore)
+      const handlePageShow = () => {
+        const buffered = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+        if (buffered && typeof buffered === 'string' && buffered.length > 50 && !isApnsHexToken(buffered)) {
+          log('[PAGESHOW] FCM token found after page restore');
+          setToken(buffered);
+          pendingTokenRef.current = buffered;
+          setIsRegistered(true);
+          saveTokenDynamic(buffered);
+        }
+      };
+      window.addEventListener('pageshow', handlePageShow);
+
+      // Cleanup pageshow listener in the return
+      const originalCleanup = () => {
+        window.removeEventListener('pageshow', handlePageShow);
+      };
+      // Store for cleanup
+      (window as any).__pushPageshowCleanup = originalCleanup;
     }
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
       window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
       if (fallbackTimer) clearTimeout(fallbackTimer);
+      const pageshowCleanup = (window as any).__pushPageshowCleanup;
+      if (pageshowCleanup) { pageshowCleanup(); delete (window as any).__pushPageshowCleanup; }
     };
   }, [savePushToken, updateDebug, token, isRegistered, user]);
 
