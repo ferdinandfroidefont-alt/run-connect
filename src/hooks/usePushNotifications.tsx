@@ -831,16 +831,62 @@ export const usePushNotifications = () => {
       saveTokenDynamic(existingToken);
     }
 
-    // Fallback: if no fcmTokenReady after 15s on iOS, log warning
+    // Fallback: if no fcmTokenReady after 15s on iOS, actively try to recover
     const platform = Capacitor.getPlatform();
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     if (platform === 'ios') {
-      fallbackTimer = setTimeout(() => {
-        if (!token && !pendingTokenRef.current) {
-          logError('[FALLBACK] ⚠️ No fcmTokenReady received after 15s on iOS — Firebase may not be initialized in AppDelegate');
-          updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Verify FirebaseApp.configure() in AppDelegate.' });
+      fallbackTimer = setTimeout(async () => {
+        // Check if we already have a valid token
+        const currentToken = token || pendingTokenRef.current;
+        if (currentToken && !isApnsHexToken(currentToken)) return;
+
+        logError('[FALLBACK] ⚠️ No fcmTokenReady after 15s on iOS — attempting active recovery');
+        updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Attempting recovery...' });
+
+        // 1. Re-check window buffers one more time
+        const bufferedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+        if (bufferedToken && typeof bufferedToken === 'string' && bufferedToken.length > 50 && !isApnsHexToken(bufferedToken)) {
+          log('[FALLBACK] Found buffered FCM token, saving...');
+          setToken(bufferedToken);
+          pendingTokenRef.current = bufferedToken;
+          setIsRegistered(true);
+          updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bufferedToken.length, selectedFinalToken: bufferedToken.substring(0, 20) + '...' });
+          await saveTokenDynamic(bufferedToken);
+          return;
+        }
+
+        // 2. Re-call register() to trigger a fresh APNs→FCM exchange
+        try {
+          const status = await PushNotifications.checkPermissions();
+          if (status.receive === 'granted') {
+            log('[FALLBACK] Re-calling register() on iOS...');
+            updateDebug({ registerCalled: true });
+            await PushNotifications.register();
+          }
+        } catch (e: any) {
+          logError('[FALLBACK] register() retry error:', e);
         }
       }, 15000);
+
+      // 3. Also listen for pageshow (back-forward cache restore)
+      const handlePageShow = () => {
+        const buffered = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+        if (buffered && typeof buffered === 'string' && buffered.length > 50 && !isApnsHexToken(buffered)) {
+          log('[PAGESHOW] FCM token found after page restore');
+          setToken(buffered);
+          pendingTokenRef.current = buffered;
+          setIsRegistered(true);
+          saveTokenDynamic(buffered);
+        }
+      };
+      window.addEventListener('pageshow', handlePageShow);
+
+      // Cleanup pageshow listener in the return
+      const originalCleanup = () => {
+        window.removeEventListener('pageshow', handlePageShow);
+      };
+      // Store for cleanup
+      (window as any).__pushPageshowCleanup = originalCleanup;
     }
 
     return () => {
