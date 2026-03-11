@@ -98,7 +98,7 @@ interface InteractiveMapProps {
 }
 
 // Factory function to create HTMLMarker class when Google Maps is loaded
-const createHTMLMarkerClass = () => {
+const createHTMLMarkerClass = (): any => {
   return class HTMLMarker extends google.maps.OverlayView {
     private position: google.maps.LatLng;
     private content: HTMLDivElement;
@@ -113,13 +113,13 @@ const createHTMLMarkerClass = () => {
       this.content.addEventListener('click', this.onClick);
     }
     onAdd() {
-      const panes = this.getPanes();
+      const panes = (this as any).getPanes();
       if (panes) {
         panes.overlayMouseTarget.appendChild(this.content);
       }
     }
     draw() {
-      const overlayProjection = this.getProjection();
+      const overlayProjection = (this as any).getProjection();
       if (overlayProjection) {
         const pos = overlayProjection.fromLatLngToDivPixel(this.position);
         if (pos) {
