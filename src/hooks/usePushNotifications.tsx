@@ -893,6 +893,8 @@ export const usePushNotifications = () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
       window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
       if (fallbackTimer) clearTimeout(fallbackTimer);
+      const pageshowCleanup = (window as any).__pushPageshowCleanup;
+      if (pageshowCleanup) { pageshowCleanup(); delete (window as any).__pushPageshowCleanup; }
     };
   }, [savePushToken, updateDebug, token, isRegistered, user]);
 

@@ -40,6 +40,8 @@ SWIFT_METHODS = '''
                 return
             }
             print("[PUSH][IOS] FCM token fetch SUCCESS length=\\(fcmToken.count) prefix=\\(fcmToken.prefix(20))...")
+            // Persist to UserDefaults as fallback
+            UserDefaults.standard.set(fcmToken, forKey: "fcm_token")
             self?.injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
         }
     }
@@ -57,7 +59,21 @@ SWIFT_METHODS = '''
         }
         let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
         print("[PUSH][IOS] messaging(didReceiveRegistrationToken) length=\\(fcmToken.count) prefix=\\(fcmToken.prefix(20))... traceId=\\(traceId)")
+        // Persist to UserDefaults as fallback
+        UserDefaults.standard.set(fcmToken, forKey: "fcm_token")
         injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
+    }
+
+    // MARK: - Scene-aware key window helper (iOS 13+)
+    private func keyWindowRootVC() -> UIViewController? {
+        if #available(iOS 13.0, *) {
+            let scenes = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+            let keyWindow = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }
+            return keyWindow?.rootViewController
+        } else {
+            return UIApplication.shared.windows.first?.rootViewController
+        }
     }
 
     // MARK: - FCM Token WebView Bridge
@@ -77,10 +93,19 @@ SWIFT_METHODS = '''
         }
 
         func inject(attempt: Int) {
-            DispatchQueue.main.async {
-                guard let window = UIApplication.shared.windows.first,
-                      let rootVC = window.rootViewController else {
-                    print("[PUSH][IOS] No rootViewController (attempt \\(attempt))")
+            DispatchQueue.main.async { [weak self] in
+                guard let rootVC = self?.keyWindowRootVC() else {
+                    print("[PUSH][IOS] No rootViewController (attempt \\(attempt)/8)")
+                    if attempt < 8 {
+                        let delay = min(Double(attempt) * 1.0, 4.0)
+                        print("[PUSH][IOS] Retrying rootVC in \\(delay)s...")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            inject(attempt: attempt + 1)
+                        }
+                    } else {
+                        print("[PUSH][IOS] ❌ GAVE UP finding rootViewController after 8 attempts")
+                        // Token is still in UserDefaults for later retrieval
+                    }
                     return
                 }
                 if let bridge = findBridge(from: rootVC) {
@@ -99,15 +124,16 @@ SWIFT_METHODS = '''
                         }
                     }
                 } else {
-                    print("[PUSH][IOS] CAPBridgeViewController NOT FOUND attempt=\\(attempt)")
-                    if attempt < 5 {
-                        let delay = Double(attempt) * 2.0
-                        print("[PUSH][IOS] Retrying in \\(delay)s...")
+                    print("[PUSH][IOS] CAPBridgeViewController NOT FOUND attempt=\\(attempt)/8")
+                    if attempt < 8 {
+                        let delay = min(Double(attempt) * 1.0, 4.0)
+                        print("[PUSH][IOS] Retrying bridge in \\(delay)s...")
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                             inject(attempt: attempt + 1)
                         }
                     } else {
-                        print("[PUSH][IOS] ❌ GAVE UP finding CAPBridgeViewController after 5 attempts")
+                        print("[PUSH][IOS] ❌ GAVE UP finding CAPBridgeViewController after 8 attempts")
+                        // Token is still in UserDefaults for later retrieval
                     }
                 }
             }
