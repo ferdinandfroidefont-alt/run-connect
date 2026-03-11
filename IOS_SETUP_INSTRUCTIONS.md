@@ -37,7 +37,7 @@ npx cap sync ios
 2. Sélectionner votre projet RunConnect
 3. Cliquer sur **"Ajouter une application"** → **iOS**
 4. Renseigner :
-   - **Bundle ID :** `app.runconnect` (IMPORTANT: exactement celui-ci)
+   - **Bundle ID :** `com.ferdi.runconnect` (⚠️ IMPORTANT: doit correspondre exactement à l'appId dans `capacitor.config.ts` et au workflow CI)
    - **Nom de l'app :** RunConnect
    - **App Store ID :** (laisser vide)
 5. Cliquer sur **"Enregistrer l'application"**
