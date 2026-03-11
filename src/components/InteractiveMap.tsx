@@ -113,7 +113,7 @@ const createHTMLMarkerClass = (): any => {
       this.content.addEventListener('click', this.onClick);
     }
     onAdd() {
-      const panes = this.getPanes();
+      const panes = (this as any).getPanes();
       if (panes) {
         panes.overlayMouseTarget.appendChild(this.content);
       }
