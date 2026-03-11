@@ -182,8 +182,8 @@ npx cap sync ios
 3. Faire défiler vers le bas jusqu'à la section **iOS settings**
 
 4. Ajouter :
-   - **iOS Bundle ID :** `app.runconnect`
-   - **iOS URL Scheme :** `app.runconnect`
+   - **iOS Bundle ID :** `com.ferdi.runconnect`
+   - **iOS URL Scheme :** `com.ferdi.runconnect`
 
 5. Cliquer sur **"Save"**
 
