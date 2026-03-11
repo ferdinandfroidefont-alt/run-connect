@@ -119,7 +119,7 @@ const createHTMLMarkerClass = (): any => {
       }
     }
     draw() {
-      const overlayProjection = this.getProjection();
+      const overlayProjection = (this as any).getProjection();
       if (overlayProjection) {
         const pos = overlayProjection.fromLatLngToDivPixel(this.position);
         if (pos) {
