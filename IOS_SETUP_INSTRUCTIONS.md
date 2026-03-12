@@ -301,8 +301,8 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 - [ ] `LSApplicationQueriesSchemes` contient googlechrome et googlechromes
 
 ### Configuration OAuth
-- [ ] Supabase Dashboard → iOS Bundle ID ajouté (`app.runconnect`)
-- [ ] Supabase Dashboard → iOS URL Scheme configuré (`app.runconnect`)
+- [ ] Supabase Dashboard → iOS Bundle ID ajouté (`com.ferdi.runconnect`)
+- [ ] Supabase Dashboard → iOS URL Scheme configuré (`com.ferdi.runconnect`)
 
 ### Tests
 - [ ] Build iOS réussit dans Xcode
