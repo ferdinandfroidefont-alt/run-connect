@@ -152,10 +152,10 @@ npx cap sync ios
     <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>app.runconnect</string>
+            <string>com.ferdi.runconnect</string>
         </array>
         <key>CFBundleURLName</key>
-        <string>app.runconnect</string>
+        <string>com.ferdi.runconnect</string>
     </dict>
 </array>
 
@@ -289,7 +289,7 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 
 ### Configuration Firebase
 - [ ] App iOS créée dans Firebase Console
-- [ ] Bundle ID = `app.runconnect`
+- [ ] Bundle ID = `com.ferdi.runconnect`
 - [ ] `GoogleService-Info.plist` téléchargé
 - [ ] `GoogleService-Info.plist` ajouté dans Xcode (avec "Copy items if needed")
 - [ ] Clé APNs (.p8) générée
@@ -301,8 +301,8 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 - [ ] `LSApplicationQueriesSchemes` contient googlechrome et googlechromes
 
 ### Configuration OAuth
-- [ ] Supabase Dashboard → iOS Bundle ID ajouté (`app.runconnect`)
-- [ ] Supabase Dashboard → iOS URL Scheme configuré (`app.runconnect`)
+- [ ] Supabase Dashboard → iOS Bundle ID ajouté (`com.ferdi.runconnect`)
+- [ ] Supabase Dashboard → iOS URL Scheme configuré (`com.ferdi.runconnect`)
 
 ### Tests
 - [ ] Build iOS réussit dans Xcode
@@ -323,7 +323,7 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 **Solution :** Dans Xcode → Signing & Capabilities → Team → sélectionner votre compte Apple Developer
 
 ### Erreur OAuth : "Invalid redirect_uri"
-**Solution :** Vérifier que le iOS URL Scheme dans Supabase est bien `app.runconnect`
+**Solution :** Vérifier que le iOS URL Scheme dans Supabase est bien `com.ferdi.runconnect`
 
 ### Push notifications ne fonctionnent pas
 **Solution :** Les push notifications ne fonctionnent PAS sur simulateur iOS. Tester sur un iPhone physique avec la clé APNs configurée

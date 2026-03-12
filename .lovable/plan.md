@@ -1,57 +1,53 @@
 
 
-# Plan: Fix iOS Push Token NULL — Firebase Bundle ID Mismatch
+## Diagnostic
 
-## Cause racine confirmée
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-Le diagnostic utilisateur montre :
-- `apnsHexDetected: true` → APNs fonctionne, iOS envoie un token
-- `fcmTokenEventReceived: false` → Firebase ne renvoie jamais de token FCM
-- `backendProfilePushToken: null` → rien en DB
+Deux problemes distincts :
 
-**Raison** : Le `GoogleService-Info.plist` en CI correspond à une app Firebase `app.runconnect`, mais l'app est compilée et signée en `com.ferdi.runconnect`. Firebase Messaging ne peut pas faire l'échange APNs→FCM si le bundle ID ne correspond pas.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-## Actions requises
+## Solution en 2 parties
 
-### 1. (Config manuelle — P0) Régénérer le GoogleService-Info.plist
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-L'utilisateur doit :
-1. Aller dans Firebase Console → Project Settings → Apps iOS
-2. Vérifier si une app avec bundle ID `com.ferdi.runconnect` existe. Si non, en créer une
-3. Télécharger le nouveau `GoogleService-Info.plist` correspondant à `com.ferdi.runconnect`
-4. Encoder en base64 : `base64 -i GoogleService-Info.plist | pbcopy`
-5. Mettre à jour le secret GitHub `IOS_GOOGLE_SERVICE_INFO_BASE64` avec cette valeur
-6. Relancer le workflow CI
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-### 2. (Code) Améliorer le message d'erreur de `testNotification`
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-Quand `fcmTokenEventReceived` est `false` sur iOS, le toast actuel dit juste "token: null". Ajouter un message explicite qui oriente vers la cause Firebase.
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-**Fichier** : `src/hooks/usePushNotifications.tsx`
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-Dans la fonction `testNotification` (ligne ~522-529), quand le token est null sur iOS, afficher un message plus utile :
-- Si `pushDebug.apnsHexDetected === true` ET `pushDebug.fcmTokenEventReceived === false` → "Token FCM non reçu. Vérifiez que le GoogleService-Info.plist correspond au bundle ID com.ferdi.runconnect"
-- Sinon : message actuel
+### Partie 2 : Securiser la page bridge
 
-### 3. (Code) Corriger les références `app.runconnect` restantes dans IOS_SETUP_INSTRUCTIONS.md
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-La checklist mentionne encore `app.runconnect` pour Firebase et OAuth. Harmoniser tout sur `com.ferdi.runconnect`.
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-**Fichier** : `IOS_SETUP_INSTRUCTIONS.md` — lignes 155, 158, 292, 304-305, 326
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-## Résumé des changements code
+### Fichiers modifies
 
-| Fichier | Changement |
-|---------|-----------|
-| `src/hooks/usePushNotifications.tsx` | Toast `testNotification` plus explicite sur iOS quand FCM bridge échoue |
-| `IOS_SETUP_INSTRUCTIONS.md` | Remplacer les dernières refs `app.runconnect` par `com.ferdi.runconnect` dans la checklist |
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-## Impact attendu
+### Apres le deploy
 
-Après régénération du plist avec le bon bundle ID + rebuild CI :
-- Firebase recevra le token APNs et le convertira en FCM
-- `messaging(didReceiveRegistrationToken)` sera appelé côté natif
-- Le bridge WebView injectera le token FCM → `fcmTokenEventReceived: true`
-- `save-push-token` stockera le token → `push_token` non-null en DB
-- "Tester les notifications" fonctionnera
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
