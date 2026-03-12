@@ -152,10 +152,10 @@ npx cap sync ios
     <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>app.runconnect</string>
+            <string>com.ferdi.runconnect</string>
         </array>
         <key>CFBundleURLName</key>
-        <string>app.runconnect</string>
+        <string>com.ferdi.runconnect</string>
     </dict>
 </array>
 
