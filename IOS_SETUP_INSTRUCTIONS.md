@@ -323,7 +323,7 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 **Solution :** Dans Xcode → Signing & Capabilities → Team → sélectionner votre compte Apple Developer
 
 ### Erreur OAuth : "Invalid redirect_uri"
-**Solution :** Vérifier que le iOS URL Scheme dans Supabase est bien `app.runconnect`
+**Solution :** Vérifier que le iOS URL Scheme dans Supabase est bien `com.ferdi.runconnect`
 
 ### Push notifications ne fonctionnent pas
 **Solution :** Les push notifications ne fonctionnent PAS sur simulateur iOS. Tester sur un iPhone physique avec la clé APNs configurée

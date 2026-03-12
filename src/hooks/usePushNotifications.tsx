@@ -520,9 +520,12 @@ export const usePushNotifications = () => {
         }
 
         if (!dbToken || dbToken.length < 50) {
+          const isIosApnsMismatch = pushDebug.current.apnsHexDetected && !pushDebug.current.fcmTokenEventReceived;
           toast({
-            title: "Aucun token enregistré",
-            description: `user_id: ${user.id?.substring(0, 8)}... — token: ${dbToken ? dbToken.substring(0, 10) + '...' : 'null'}`,
+            title: isIosApnsMismatch ? "Token FCM non reçu" : "Aucun token enregistré",
+            description: isIosApnsMismatch
+              ? "APNs OK mais Firebase ne renvoie pas de token FCM. Vérifiez que le GoogleService-Info.plist correspond au bundle ID com.ferdi.runconnect"
+              : `user_id: ${user.id?.substring(0, 8)}... — token: ${dbToken ? dbToken.substring(0, 10) + '...' : 'null'}`,
             variant: "destructive"
           });
           return;
