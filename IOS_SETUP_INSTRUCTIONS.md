@@ -289,7 +289,7 @@ xcrun simctl spawn booted log stream --predicate 'process == "RunConnect"'
 
 ### Configuration Firebase
 - [ ] App iOS créée dans Firebase Console
-- [ ] Bundle ID = `app.runconnect`
+- [ ] Bundle ID = `com.ferdi.runconnect`
 - [ ] `GoogleService-Info.plist` téléchargé
 - [ ] `GoogleService-Info.plist` ajouté dans Xcode (avec "Copy items if needed")
 - [ ] Clé APNs (.p8) générée
