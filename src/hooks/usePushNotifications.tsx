@@ -520,7 +520,7 @@ export const usePushNotifications = () => {
         }
 
         if (!dbToken || dbToken.length < 50) {
-          const isIosApnsMismatch = pushDebug.current.apnsHexDetected && !pushDebug.current.fcmTokenEventReceived;
+          const isIosApnsMismatch = pushDebug.apnsHexDetected && !pushDebug.fcmTokenEventReceived;
           toast({
             title: isIosApnsMismatch ? "Token FCM non reçu" : "Aucun token enregistré",
             description: isIosApnsMismatch
