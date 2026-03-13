@@ -262,58 +262,17 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             </div>
           </div>
 
-          {/* ─── DEBUG iOS Push (temporaire) ─── */}
-          <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-orange-500 uppercase tracking-wider px-4">
-              🔧 Debug iOS Push (temporaire)
-            </h3>
-            <div className="bg-card overflow-hidden">
-              <DebugRow label="isNative" value={String(isNative)} ok={isNative} />
-              <DebugRow label="permission" value={pushDebug.permissionResult || 'not checked'} ok={pushDebug.permissionResult === 'granted'} />
-              <DebugRow label="register() called" value={String(pushDebug.registerCalled)} ok={pushDebug.registerCalled} />
-              <DebugRow label="registration event" value={String(pushDebug.registrationEventReceived)} ok={pushDebug.registrationEventReceived} />
-              <DebugRow label="APNs hex detected" value={String(pushDebug.apnsHexDetected)} ok={pushDebug.apnsHexDetected ? undefined : true} />
-              <DebugRow label="fcmTokenReady event" value={String(pushDebug.fcmTokenEventReceived)} ok={pushDebug.fcmTokenEventReceived} />
-              <DebugRow label="FCM token length" value={String(pushDebug.fcmTokenLength || 'null')} ok={pushDebug.fcmTokenLength ? pushDebug.fcmTokenLength > 50 : false} />
-              <DebugRow label="save attempted" value={String(pushDebug.saveAttempted)} />
-              <DebugRow
-                label="save response"
-                value={pushDebug.saveResponse ? `${pushDebug.saveResponse.status}` : 'none'}
-                ok={pushDebug.saveResponse?.status === 200}
-              />
-              <DebugRow
-                label="DB push_token"
-                value={pushDebug.backendProfilePushToken ? `${pushDebug.backendProfilePushToken.substring(0, 12)}... (${pushDebug.backendProfilePushToken.length})` : 'null'}
-                ok={!!pushDebug.backendProfilePushToken && pushDebug.backendProfilePushToken.length > 50}
-              />
-              <DebugRow label="traceId" value={pushDebug.traceId || 'none'} />
-              {pushDebug.lastError && (
-                <DebugRow label="❌ error" value={pushDebug.lastError.substring(0, 60)} ok={false} />
-              )}
-              <DebugRow label="updated" value={pushDebug.timestamp} />
-
-              <div className="flex gap-2 px-4 py-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => refreshDebugFromBackend()}
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Actualiser
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={copyDebugDiagnostic}
-                >
-                  <Copy className="h-3 w-3" />
-                  Copier diagnostic
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* ─── Diagnostic Push iOS ─── */}
+          <PushDiagnosticPanel
+            pushDebug={pushDebug}
+            permissionStatus={permissionStatus}
+            isNative={isNative}
+            isRegistered={isRegistered}
+            userId={user?.id}
+            requestPermissions={requestPermissions}
+            checkPermissionStatus={checkPermissionStatus}
+            refreshDebugFromBackend={refreshDebugFromBackend}
+          />
         </div>
       </ScrollArea>
     </motion.div>
