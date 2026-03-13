@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
+import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
 
 interface Profile {
   notifications_enabled?: boolean;
