@@ -1,57 +1,53 @@
 
 
-# Panneau diagnostic push iOS détaillé
+## Diagnostic
 
-## Ce qui existe
-L'écran `SettingsNotifications.tsx` (lignes 264-315) affiche un debug basique avec des `DebugRow` bruts et deux boutons (Actualiser / Copier). Le hook `usePushNotifications` expose déjà tout via `pushDebug: PushDebugState` — toutes les données nécessaires sont disponibles.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-## Ce qui change
+Deux problemes distincts :
 
-**Fichier unique** : `src/components/settings/SettingsNotifications.tsx`
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-Remplacer la section "Debug iOS Push (temporaire)" (lignes 264-315) par un panneau diagnostic structuré en 6 sections :
+## Solution en 2 parties
 
-### 1. Sections du panneau
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-Chaque section est un groupe visuel avec header coloré et indicateur de sévérité (pastille verte/orange/rouge) :
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-| Section | Données affichées | Source `pushDebug` |
-|---------|------------------|--------------------|
-| **Permissions** | permissionRequested, permissionResult, granted/denied/prompt | pushDebug + permissionStatus |
-| **Enregistrement natif** | registerCalled, registrationEventReceived, isRegistered, isNative | pushDebug + props hook |
-| **Token APNs** | apnsHexDetected, longueur token, version masquée (8 premiers + 8 derniers chars) | pushDebug.selectedFinalToken si APNs |
-| **Token FCM** | fcmTokenEventReceived, fcmTokenLength, selectedFinalToken masqué | pushDebug |
-| **Sauvegarde backend** | saveAttempted, saveResponse (status), backendProfilePushToken masqué, user_id masqué | pushDebug + user.id |
-| **Diagnostic automatique** | Message humain généré selon l'état (voir logique ci-dessous) | Calculé |
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-### 2. Logique de diagnostic automatique
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-Fonction `getDiagnostic()` retournant `{ message: string; severity: 'success' | 'warning' | 'error' }` :
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-- **!isNative** → error : "L'application n'est pas en environnement natif, les push ne sont pas disponibles."
-- **permissionStatus.denied** → error : "Les notifications sont refusées par l'utilisateur."
-- **!permissionStatus.granted** → warning : "Les permissions n'ont pas encore été accordées."
-- **apnsHexDetected && !fcmTokenEventReceived** → error : "APNs OK mais FCM absent : problème probable de configuration Firebase iOS (GoogleService-Info.plist, bundle ID, APNs key)."
-- **fcmTokenEventReceived && !saveAttempted** → warning : "Token FCM obtenu mais sauvegarde non tentée."
-- **saveAttempted && saveResponse?.status !== 200** → error : "Le token FCM a été obtenu mais n'a pas pu être sauvegardé en base (status: X)."
-- **backendProfilePushToken && length > 50** → success : "Chaîne push complète : permissions ✓, token FCM ✓, sauvegarde backend ✓."
-- Sinon → warning : "État indéterminé, relancez le diagnostic."
+### Partie 2 : Securiser la page bridge
 
-### 3. Boutons d'action (3 boutons)
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-- **Copier le diagnostic** : JSON complet (existant, enrichi)
-- **Relancer l'enregistrement push** : appelle `requestPermissions()` puis `refreshDebugFromBackend()`
-- **Tester la récupération du token** : appelle `checkPermissionStatus()` puis `refreshDebugFromBackend()`
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-### 4. Horodatage et sévérité visuelle
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-- Horodatage du dernier diagnostic affiché en bas
-- Bandeau coloré en haut du diagnostic : vert (success), orange (warning), rouge (error) basé sur `getDiagnostic().severity`
+### Fichiers modifies
 
-### 5. Style
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-Réutilise les patterns existants du fichier (iOS-style cards, `bg-card`, `text-[13px]` mono pour valeurs, sections avec headers uppercase). Masquage des tokens : `abc12345...xyz98765` (8+8 chars).
+### Apres le deploy
 
-## Aucun changement dans le hook
-Toutes les données sont déjà exposées par `usePushNotifications`. Pas de modification de `usePushNotifications.tsx`.
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 

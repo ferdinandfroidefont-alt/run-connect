@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft, ChevronRight, RefreshCw, Copy } from "lucide-react";
+import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
+import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
 
 interface Profile {
   notifications_enabled?: boolean;
@@ -101,22 +102,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     }
   };
 
-  const copyDebugDiagnostic = () => {
-    const diagnostic = {
-      ...pushDebug,
-      user_id: user?.id?.substring(0, 8) + '...',
-      isNative,
-      isRegistered,
-      permissionStatus,
-      platform: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 60) : 'unknown',
-    };
-    const text = JSON.stringify(diagnostic, null, 2);
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      toast({ title: "Copié", description: "Diagnostic copié dans le presse-papiers" });
-    }
-  };
-
   const notificationItems = [
     { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
@@ -127,14 +112,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-primary', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
   ];
 
-  const DebugRow = ({ label, value, ok }: { label: string; value: string; ok?: boolean }) => (
-    <div className="flex items-center justify-between py-1 px-4">
-      <span className="text-[12px] text-muted-foreground font-mono">{label}</span>
-      <span className={`text-[12px] font-mono ${ok === true ? 'text-green-500' : ok === false ? 'text-red-500' : 'text-foreground'}`}>
-        {value}
-      </span>
-    </div>
-  );
 
   return (
     <motion.div
@@ -261,58 +238,17 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             </div>
           </div>
 
-          {/* ─── DEBUG iOS Push (temporaire) ─── */}
-          <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-orange-500 uppercase tracking-wider px-4">
-              🔧 Debug iOS Push (temporaire)
-            </h3>
-            <div className="bg-card overflow-hidden">
-              <DebugRow label="isNative" value={String(isNative)} ok={isNative} />
-              <DebugRow label="permission" value={pushDebug.permissionResult || 'not checked'} ok={pushDebug.permissionResult === 'granted'} />
-              <DebugRow label="register() called" value={String(pushDebug.registerCalled)} ok={pushDebug.registerCalled} />
-              <DebugRow label="registration event" value={String(pushDebug.registrationEventReceived)} ok={pushDebug.registrationEventReceived} />
-              <DebugRow label="APNs hex detected" value={String(pushDebug.apnsHexDetected)} ok={pushDebug.apnsHexDetected ? undefined : true} />
-              <DebugRow label="fcmTokenReady event" value={String(pushDebug.fcmTokenEventReceived)} ok={pushDebug.fcmTokenEventReceived} />
-              <DebugRow label="FCM token length" value={String(pushDebug.fcmTokenLength || 'null')} ok={pushDebug.fcmTokenLength ? pushDebug.fcmTokenLength > 50 : false} />
-              <DebugRow label="save attempted" value={String(pushDebug.saveAttempted)} />
-              <DebugRow
-                label="save response"
-                value={pushDebug.saveResponse ? `${pushDebug.saveResponse.status}` : 'none'}
-                ok={pushDebug.saveResponse?.status === 200}
-              />
-              <DebugRow
-                label="DB push_token"
-                value={pushDebug.backendProfilePushToken ? `${pushDebug.backendProfilePushToken.substring(0, 12)}... (${pushDebug.backendProfilePushToken.length})` : 'null'}
-                ok={!!pushDebug.backendProfilePushToken && pushDebug.backendProfilePushToken.length > 50}
-              />
-              <DebugRow label="traceId" value={pushDebug.traceId || 'none'} />
-              {pushDebug.lastError && (
-                <DebugRow label="❌ error" value={pushDebug.lastError.substring(0, 60)} ok={false} />
-              )}
-              <DebugRow label="updated" value={pushDebug.timestamp} />
-
-              <div className="flex gap-2 px-4 py-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => refreshDebugFromBackend()}
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Actualiser
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={copyDebugDiagnostic}
-                >
-                  <Copy className="h-3 w-3" />
-                  Copier diagnostic
-                </Button>
-              </div>
-            </div>
-          </div>
+          {/* ─── Diagnostic Push iOS ─── */}
+          <PushDiagnosticPanel
+            pushDebug={pushDebug}
+            permissionStatus={permissionStatus}
+            isNative={isNative}
+            isRegistered={isRegistered}
+            userId={user?.id}
+            requestPermissions={requestPermissions}
+            checkPermissionStatus={checkPermissionStatus}
+            refreshDebugFromBackend={refreshDebugFromBackend}
+          />
         </div>
       </ScrollArea>
     </motion.div>
