@@ -102,40 +102,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     }
   };
 
-  const copyDebugDiagnostic = () => {
-    const diagnostic = {
-      ...pushDebug,
-      user_id: user?.id?.substring(0, 8) + '...',
-      isNative,
-      isRegistered,
-      permissionStatus,
-      platform: typeof navigator !== 'undefined' ? navigator.userAgent.substring(0, 60) : 'unknown',
-    };
-    const text = JSON.stringify(diagnostic, null, 2);
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      toast({ title: "Copié", description: "Diagnostic copié dans le presse-papiers" });
-    }
-  };
 
-  const notificationItems = [
-    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
-    { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
-    { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
-    { key: 'notif_friend_session', icon: Users, color: 'bg-violet-500', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
-    { key: 'notif_club_invitation', icon: Users, color: 'bg-destructive', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
-    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-green-500', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
-    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-primary', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
-  ];
 
-  const DebugRow = ({ label, value, ok }: { label: string; value: string; ok?: boolean }) => (
-    <div className="flex items-center justify-between py-1 px-4">
-      <span className="text-[12px] text-muted-foreground font-mono">{label}</span>
-      <span className={`text-[12px] font-mono ${ok === true ? 'text-green-500' : ok === false ? 'text-red-500' : 'text-foreground'}`}>
-        {value}
-      </span>
-    </div>
-  );
 
   return (
     <motion.div
