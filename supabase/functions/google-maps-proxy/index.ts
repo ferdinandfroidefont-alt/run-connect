@@ -17,17 +17,20 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    if (!apiKey) {
-      throw new Error("GOOGLE_MAPS_API_KEY n'est pas configuré");
-    }
-
+    // Use browser-specific key for client-side Maps JS API, fallback to general key
+    const browserApiKey = Deno.env.get("GOOGLE_MAPS_BROWSER_API_KEY");
+    const serverApiKey = Deno.env.get("GOOGLE_MAPS_SERVER_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
+    
     const body = await req.json();
     const { address, lat, lng, type }: GeocodeRequest = body || {};
     
-    // Si on demande juste la clé API
+    // Si on demande juste la clé API (pour le navigateur)
     if (type === 'get-key') {
-      return new Response(JSON.stringify({ apiKey }), {
+      const keyToReturn = browserApiKey || serverApiKey;
+      if (!keyToReturn) {
+        throw new Error("Aucune clé API Google Maps configurée");
+      }
+      return new Response(JSON.stringify({ apiKey: keyToReturn }), {
         status: 200,
         headers: {
           "Content-Type": "application/json",
@@ -35,6 +38,11 @@ const handler = async (req: Request): Promise<Response> => {
         },
       });
     }
+
+    if (!serverApiKey) {
+      throw new Error("GOOGLE_MAPS_API_KEY n'est pas configuré");
+    }
+    const apiKey = serverApiKey;
 
     let url = "";
 
