@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// firebase-auth is called from native WebView without Origin header — keep permissive CORS
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -24,8 +25,7 @@ serve(async (req) => {
       throw new Error('Missing Firebase ID Token');
     }
 
-    console.log('🎫 [FIREBASE AUTH] Token length:', idToken.length);
-    console.log('🎫 [FIREBASE AUTH] Token preview:', idToken.substring(0, 50) + '...');
+    // Token length validated, proceeding with verification
 
     // 1. Vérifier le Firebase ID Token avec Firebase API
     const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
@@ -114,7 +114,7 @@ serve(async (req) => {
     };
     
     const tempPassword = generateSecurePassword();
-    console.log('🔐 [FIREBASE AUTH] Secure password generated (length:', tempPassword.length, ')');
+    console.log('🔐 [FIREBASE AUTH] Secure password generated');
 
     if (!supabaseUser) {
       console.log('👤 [FIREBASE AUTH] Creating new Supabase user for:', tokenInfo.email);
@@ -210,8 +210,7 @@ serve(async (req) => {
     const signInData = sessionData;
 
     console.log('✅ [FIREBASE AUTH] Session created successfully with valid tokens');
-    console.log('🎫 [FIREBASE AUTH] Access token length:', signInData.session.access_token.length);
-    console.log('🎫 [FIREBASE AUTH] Refresh token length:', signInData.session.refresh_token.length);
+    console.log('✅ [FIREBASE AUTH] Session created successfully');
 
     return new Response(
       JSON.stringify({

@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, verifyCronSecret } from "../_shared/cors.ts";
 
 interface NotificationPayload {
   user_id: string;
@@ -16,13 +12,18 @@ interface NotificationPayload {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (!verifyCronSecret(req)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
   try {
     const payload: NotificationPayload = await req.json();
-    console.log('📱 [CHALLENGE_NOTIF] Payload reçu:', payload);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -44,9 +45,6 @@ serve(async (req) => {
       throw new Error('event_type invalide');
     }
 
-    console.log(`📤 Envoi notification: ${title}`);
-
-    // Appeler l'edge function send-push-notification
     const { data, error } = await supabase.functions.invoke('send-push-notification', {
       body: {
         user_id: payload.user_id,
@@ -62,22 +60,17 @@ serve(async (req) => {
     });
 
     if (error) {
-      console.error('❌ Erreur envoi push:', error);
       return new Response(
         JSON.stringify({ error: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('✅ Notification envoyée:', data);
-
     return new Response(
       JSON.stringify({ success: true, data }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: any) {
-    console.error('❌ Exception:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

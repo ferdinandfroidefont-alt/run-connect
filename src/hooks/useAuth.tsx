@@ -31,43 +31,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('🔍 SUBSCRIPTION CHECK: Starting check for user', session.user?.email);
       
-      // Pour ferdinand.froidefont@gmail.com, vérifier directement dans la base
-      if (session.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 SUBSCRIPTION CHECK: Admin user detected, checking database directly');
-        
-        const { data: directCheck, error: directError } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        console.log('🔍 SUBSCRIPTION CHECK: Direct database result', { directCheck, directError });
-        
-        if (directCheck && directCheck.subscribed) {
-          console.log('🔍 SUBSCRIPTION CHECK: Setting admin premium access');
-          setSubscriptionInfo({
-            subscribed: true,
-            subscription_tier: directCheck.subscription_tier,
-            subscription_end: directCheck.subscription_end
-          });
-          return;
-        }
-      }
-      
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
       
-      console.log('🔍 SUBSCRIPTION CHECK: Response received', { data, error });
-      
       if (error) {
         console.error('Error checking subscription:', error);
         return;
       }
       
-      console.log('🔍 SUBSCRIPTION CHECK: Setting subscription info', data);
       setSubscriptionInfo(data);
     } catch (error) {
       console.error('Error refreshing subscription:', error);
@@ -78,7 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
+        // Auth state changed
         
         setSession(session);
         setUser(session?.user ?? null);
@@ -90,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setTimeout(() => {
             const fcmToken = (window as any).fcmToken;
             if (fcmToken) {
-              console.log('🔥 [AUTH] Token FCM détecté après connexion, sauvegarde immédiate...');
+              // FCM token detected after sign-in
               
               // Dispatch un événement pour que usePushNotifications sauvegarde le token
               window.dispatchEvent(new CustomEvent('userAuthenticatedWithFCMToken', {
@@ -100,56 +74,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 500);
         }
         
-        // Force premium status for ferdinand.froidefont@gmail.com
-        if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-          console.log('🔍 ADMIN USER: Forcing premium access');
-          setSubscriptionInfo({
-            subscribed: true,
-            subscription_tier: 'Admin',
-            subscription_end: '2099-12-31T23:59:59+00:00'
-          });
+        // Check subscription when user signs in
+        if (session?.user) {
+          setTimeout(() => {
+            refreshSubscription();
+          }, 0);
         } else {
-          // Check subscription when user signs in
-          if (session?.user) {
-            setTimeout(() => {
-              refreshSubscription();
-            }, 0);
-          } else {
-            setSubscriptionInfo(null);
-          }
+          setSubscriptionInfo(null);
         }
       }
     );
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
-      console.log('🔄 Session access_token present:', !!session?.access_token);
-      console.log('🔄 Session refresh_token present:', !!session?.refresh_token);
-      
-      // Vérifier le localStorage
+      // Initial session check
       const storedSession = localStorage.getItem('sb-dbptgehpknjsoisirviz-auth-token');
-      console.log('🔄 LocalStorage session found:', !!storedSession);
       
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Force premium status for ferdinand.froidefont@gmail.com
-      if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 ADMIN USER: Forcing premium access on initial load');
-        setSubscriptionInfo({
-          subscribed: true,
-          subscription_tier: 'Admin',
-          subscription_end: '2099-12-31T23:59:59+00:00'
-        });
-      } else {
-        // Check subscription for existing session
-        if (session?.user) {
-          setTimeout(() => {
-            refreshSubscription();
-          }, 0);
-        }
+      // Check subscription for existing session
+      if (session?.user) {
+        setTimeout(() => {
+          refreshSubscription();
+        }, 0);
       }
     });
 

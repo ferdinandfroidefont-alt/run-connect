@@ -34,7 +34,7 @@ import ConfirmPresence from "./pages/ConfirmPresence";
 import TrainingMode from "./pages/TrainingMode";
 import SessionTracking from "./pages/SessionTracking";
 import AuthCallback from "./pages/AuthCallback";
-import { SecurityDashboard } from "./components/SecurityDashboard";
+// SecurityDashboard removed from production - only available in dev
 
 const queryClient = new QueryClient();
 
@@ -147,7 +147,7 @@ const App = () => {
                   <Route path="/about" element={<PageTransition><About /></PageTransition>} />
                   <Route path="/confirm-presence" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
                   <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
-                  <Route path="/security" element={<Layout><PageTransition><SecurityDashboard /></PageTransition></Layout>} />
+                  {/* /security route removed for production security */}
                   <Route path="/training/route/:routeId" element={<PageTransition><TrainingMode /></PageTransition>} />
                   <Route path="/training/:sessionId" element={<PageTransition><TrainingMode /></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><SessionTracking /></PageTransition>} />

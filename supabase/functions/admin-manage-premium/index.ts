@@ -1,18 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+let _corsHeaders: Record<string, string> = {};
 
-const json = (body: unknown, status = 200) =>
+const json = (body: unknown, status = 200, ch?: Record<string, string>) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...(ch || _corsHeaders), "Content-Type": "application/json" },
   });
 
 Deno.serve(async (req) => {
+  _corsHeaders = getCorsHeaders(req);
+  const corsHeaders = _corsHeaders;
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, corsHeaders);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -34,12 +34,15 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
-      return json({ error: "Unauthorized" }, 401);
+      return json({ error: "Unauthorized" }, 401, corsHeaders);
     }
 
-    const callerEmail = claimsData.claims.email;
-    if (callerEmail !== "ferdinand.froidefont@gmail.com") {
-      return json({ error: "Forbidden" }, 403);
+    const callerId = claimsData.claims.sub;
+
+    // Verify admin role via user_roles table
+    const { data: isAdmin } = await anonClient.rpc('has_role', { _user_id: callerId, _role: 'admin' });
+    if (!isAdmin) {
+      return json({ error: "Forbidden: admin role required" }, 403, corsHeaders);
     }
 
     const body = await req.json();

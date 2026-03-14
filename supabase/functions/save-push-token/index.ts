@@ -1,15 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-trace-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APNS_HEX_REGEX = /^[A-Fa-f0-9]{64}$/;
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -52,31 +50,38 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let jwtUserId: string | null = null;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const jwtToken = authHeader.replace('Bearer ', '');
-      const supabaseAuth = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        { global: { headers: { Authorization: authHeader } } }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error(`[SAVE-TOKEN][AUTH] Missing Authorization header traceId=${effectiveTraceId}`);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: JWT required', trace_id: effectiveTraceId }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
 
-      const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwtToken);
-      if (authError || !userData?.user) {
-        console.warn(`[SAVE-TOKEN][AUTH] JWT validation failed: ${authError?.message} traceId=${effectiveTraceId}`);
-      } else {
-        jwtUserId = userData.user.id;
-        console.log(`[SAVE-TOKEN][AUTH] jwt_present=true jwt_user=${jwtUserId?.substring(0, 8)}... match=${jwtUserId === user_id} traceId=${effectiveTraceId}`);
+    const jwtToken = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
-        if (jwtUserId !== user_id) {
-          console.error(`[SAVE-TOKEN][AUTH] user_id mismatch! jwt=${jwtUserId?.substring(0, 8)} payload=${user_id?.substring(0, 8)} traceId=${effectiveTraceId}`);
-          return new Response(
-            JSON.stringify({ error: 'user_id mismatch with JWT', trace_id: effectiveTraceId }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-    } else {
-      console.warn(`[SAVE-TOKEN][AUTH] No Authorization header traceId=${effectiveTraceId}`);
+    const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwtToken);
+    if (authError || !userData?.user) {
+      console.error(`[SAVE-TOKEN][AUTH] JWT validation failed: ${authError?.message} traceId=${effectiveTraceId}`);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid JWT', trace_id: effectiveTraceId }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    jwtUserId = userData.user.id;
+
+    if (jwtUserId !== user_id) {
+      console.error(`[SAVE-TOKEN][AUTH] user_id mismatch traceId=${effectiveTraceId}`);
+      return new Response(
+        JSON.stringify({ error: 'user_id mismatch with JWT', trace_id: effectiveTraceId }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Use service role for the actual update
