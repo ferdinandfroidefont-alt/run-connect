@@ -25,8 +25,7 @@ serve(async (req) => {
       throw new Error('Missing Firebase ID Token');
     }
 
-    console.log('🎫 [FIREBASE AUTH] Token length:', idToken.length);
-    console.log('🎫 [FIREBASE AUTH] Token preview:', idToken.substring(0, 50) + '...');
+    // Token length validated, proceeding with verification
 
     // 1. Vérifier le Firebase ID Token avec Firebase API
     const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
