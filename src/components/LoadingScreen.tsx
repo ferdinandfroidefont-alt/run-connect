@@ -30,8 +30,8 @@ const PIN_PATH = "M0-28C-8.5-28-15.5-21-15.5-12.5C-15.5-3 0 12 0 12S15.5-3 15.5-
 const TRACE_DURATION = 1.8;
 const PIN_DROP_DELAY = 500;
 
-const START_X = 60;
-const START_Y = 180;
+const START_X = 65;
+const START_Y = 175;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin-drop' | 'trace' | 'complete' | 'loading'>('pin-drop');
