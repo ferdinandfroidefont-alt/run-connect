@@ -1,55 +1,53 @@
 
 
-# Cause racine : GoogleService-Info.plist absent du bundle iOS
+## Diagnostic
 
-## Le problème
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-Le workflow CI (ligne 50) décode `GoogleService-Info.plist` vers `ios/App/App/GoogleService-Info.plist` sur le **filesystem**, mais **ne l'ajoute jamais au target Xcode** ("Copy Bundle Resources"). Au runtime, `[FIRApp configure]` cherche ce fichier dans le **main bundle** de l'app — il ne le trouve pas, retourne silencieusement sans erreur, et `Messaging.messaging().token()` ne génère jamais de token FCM.
+Deux problemes distincts :
 
-C'est pourquoi APNs fonctionne (c'est Apple, indépendant de Firebase) mais FCM échoue.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-## Correction
+## Solution en 2 parties
 
-**Fichier** : `scripts/configure_ios_push.sh`
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-Ajouter une étape Ruby (après l'étape 3 existante, SafeFirebaseInit.m) qui ajoute `GoogleService-Info.plist` au target App dans les "Copy Bundle Resources" du projet Xcode :
-
-```ruby
-# Add GoogleService-Info.plist to Xcode target resources
-plist_file = 'GoogleService-Info.plist'
-unless app_target.resources_build_phase.files.any? { |f| f.file_ref&.path&.include?(plist_file) }
-  file_ref = app_group.new_file(plist_file)
-  app_target.resources_build_phase.add_file_reference(file_ref)
-  puts "✅ #{plist_file} added to Copy Bundle Resources"
-else
-  puts "ℹ️ #{plist_file} already in resources"
-end
-```
-
-Cette logique sera intégrée dans le bloc Ruby existant (lignes 83-119) qui ajoute déjà `SafeFirebaseInit.m` aux compile sources, pour réutiliser les mêmes variables `project`, `app_target`, `app_group`.
-
-**Fichier** : `.github/workflows/ios-appstore.yml`
-
-Ajouter une assertion après le décodage du plist (après ligne 52) pour valider que le `BUNDLE_ID` dans le plist correspond à `com.ferdi.runconnect` :
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
 ```bash
-PLIST_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" ios/App/App/GoogleService-Info.plist)
-if [ "$PLIST_BUNDLE_ID" != "com.ferdi.runconnect" ]; then
-  echo "❌ FATAL: GoogleService-Info.plist BUNDLE_ID='$PLIST_BUNDLE_ID' ≠ 'com.ferdi.runconnect'"
-  exit 1
-fi
-echo "✅ GoogleService-Info.plist BUNDLE_ID verified: $PLIST_BUNDLE_ID"
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-## Résumé
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-| Vérification demandée | Statut |
-|---|---|
-| 1. FirebaseApp.configure (SafeFirebaseInit) | OK — mais échoue silencieusement car plist absent du bundle |
-| 2. Messaging.messaging().delegate | OK — configuré dans configure_ios_push.sh |
-| 3. Token APNs → Firebase Messaging | OK — `Messaging.messaging().apnsToken = deviceToken` présent |
-| 4. didReceiveRegistrationToken → WebView | OK — bridge avec retry et traceId |
-| 5. **GoogleService-Info.plist dans le target** | **MANQUANT — c'est le bug** |
-| 6. Firebase/Messaging pod | OK — ajouté dans le workflow |
-| 7. Bridge natif → WebView JS | OK — fcmTokenReady event dispatch |
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
