@@ -1,18 +1,32 @@
 // Shared CORS configuration for all edge functions
-const ALLOWED_ORIGINS = [
+const EXACT_ORIGINS = [
   'https://run-connect.lovable.app',
-  'https://id-preview--91401b07-9cff-4f05-94e7-3eb42a9b7a7a.lovable.app',
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:8080',
 ];
 
+const PREVIEW_PATTERNS = [
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/,
+  /^https:\/\/id-preview--[a-z0-9-]+\.lovable\.app$/,
+];
+
+function isOriginAllowed(origin: string): boolean {
+  if (EXACT_ORIGINS.includes(origin)) return true;
+  return PREVIEW_PATTERNS.some((re) => re.test(origin));
+}
+
 export function getCorsHeaders(req: Request) {
   const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowed = isOriginAllowed(origin);
+  if (!allowed) {
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+  }
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Origin': allowed ? origin : EXACT_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-trace-id, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Vary': 'Origin',
   };
 }
 

@@ -1,44 +1,53 @@
 
-Diagnostic rapide
-- Le symptôme actuel (`google-maps-proxy get-key failed: Failed to send a request to the Edge Function`) indique un échec réseau côté navigateur avant d’obtenir une vraie réponse JSON.
-- Le `Origin` vu dans les logs réseau est `https://91401b07-...lovableproject.com`.
-- La politique CORS actuelle (`supabase/functions/_shared/cors.ts`) n’autorise pas ce domaine (`*.lovableproject.com`) ; elle ne whitelist que `run-connect.lovable.app`, un preview `id-preview--...lovable.app`, et localhost.
-- Conséquence probable : préflight CORS rejeté, donc `supabase.functions.invoke(...)` remonte “Failed to send a request…”, et la carte affiche l’erreur.
 
-Plan de correction
-1) Corriger la whitelist CORS partagée (source unique)
-- Modifier `supabase/functions/_shared/cors.ts` pour accepter :
-  - les domaines exacts existants,
-  - et les patterns dynamiques de preview (`https://*.lovableproject.com` + `https://id-preview--*.lovable.app`).
-- Garder une logique stricte (pas de `*`) mais compatible avec les previews générés dynamiquement.
+## Diagnostic
 
-2) Renforcer les en-têtes CORS pour éviter les préflights fragiles
-- Dans `getCorsHeaders`, inclure aussi :
-  - `Access-Control-Allow-Methods: GET, POST, OPTIONS`
-  - `Vary: Origin`
-  - éventuellement `Access-Control-Max-Age`.
-- Conserver les headers déjà nécessaires à Supabase (`authorization`, `x-client-info`, `apikey`, `content-type`, `x-supabase-client-*`, etc.).
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-3) Sécuriser l’observabilité du proxy map
-- Dans `google-maps-proxy`, garder la réponse OPTIONS avec les headers CORS partagés.
-- Ajouter un log explicite côté fonction quand l’origin n’est pas autorisé (pour diagnostiquer immédiatement les prochains cas).
+Deux problemes distincts :
 
-4) Vérification après correction
-- Vérifier l’appel `google-maps-proxy` depuis les 3 domaines (preview lovable.app, preview lovableproject.com, prod run-connect).
-- Confirmer en console que l’erreur “Failed to send a request…” disparaît.
-- Confirmer que `Loader` Google Maps s’initialise et que la carte se rend sur `/`.
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-Détails techniques (implémentation ciblée)
-- Fichier principal à ajuster : `supabase/functions/_shared/cors.ts`
-- Approche recommandée :
-  - `isExplicitlyAllowed(origin)` via tableau existant
-  - `isPreviewAllowed(origin)` via regex sécurisées :
-    - `^https://[a-z0-9-]+\.lovableproject\.com$`
-    - `^https://id-preview--[a-z0-9-]+\.lovable\.app$`
-  - Si autorisé => renvoyer exactement `origin` dans `Access-Control-Allow-Origin`.
-- Impact positif collatéral : toutes les Edge Functions utilisant `getCorsHeaders` fonctionneront aussi dans les previews dynamiques (pas seulement Google Maps).
+## Solution en 2 parties
 
-Critères d’acceptation
-- Plus d’erreur toast “Erreur lors du chargement de la carte”.
-- Plus de message console `Failed to send a request to the Edge Function` pour `google-maps-proxy`.
-- Carte visible et interactive sur les 3 domaines.
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
+
