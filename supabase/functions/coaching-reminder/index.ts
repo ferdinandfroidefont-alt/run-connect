@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { getCorsHeaders, verifyCronSecret } from "../_shared/cors.ts";
 
 interface FirebaseServiceAccount {
   type: string;
@@ -89,19 +85,25 @@ async function sendFCM(accessToken: string, projectId: string, token: string, ti
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('❌ FCM failed:', response.status, JSON.stringify(err));
+      console.error('FCM failed:', response.status, JSON.stringify(err));
       return false;
     }
     return true;
   } catch (e) {
-    console.error('❌ FCM exception:', e);
+    console.error('FCM exception:', e);
     return false;
   }
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!verifyCronSecret(req)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
@@ -110,7 +112,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Tomorrow range (UTC)
     const now = new Date();
     const tomorrowStart = new Date(now);
     tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
@@ -118,9 +119,6 @@ serve(async (req) => {
     const tomorrowEnd = new Date(tomorrowStart);
     tomorrowEnd.setUTCHours(23, 59, 59, 999);
 
-    console.log(`📅 Checking sessions between ${tomorrowStart.toISOString()} and ${tomorrowEnd.toISOString()}`);
-
-    // 1. Get coaching sessions scheduled tomorrow
     const { data: sessions, error: sessErr } = await supabaseClient
       .from('coaching_sessions')
       .select('id, title, scheduled_at')
@@ -129,13 +127,9 @@ serve(async (req) => {
 
     if (sessErr) throw sessErr;
     if (!sessions || sessions.length === 0) {
-      console.log('✅ No sessions tomorrow');
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`📋 Found ${sessions.length} sessions tomorrow`);
-
-    // 2. Firebase setup
     const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
     if (!saJson) {
       return new Response(JSON.stringify({ error: 'Firebase not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -146,7 +140,6 @@ serve(async (req) => {
     let totalSent = 0;
 
     for (const session of sessions) {
-      // 3. Get participations with status sent/scheduled
       const { data: participations } = await supabaseClient
         .from('coaching_participations')
         .select('user_id')
@@ -157,7 +150,6 @@ serve(async (req) => {
 
       const userIds = participations.map(p => p.user_id);
 
-      // 4. Get push tokens
       const { data: profiles } = await supabaseClient
         .from('profiles')
         .select('user_id, push_token, notifications_enabled')
@@ -179,11 +171,8 @@ serve(async (req) => {
       }
     }
 
-    console.log(`✅ Sent ${totalSent} reminders`);
     return new Response(JSON.stringify({ sent: totalSent }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
   } catch (error) {
-    console.error('❌ Error:', error);
     return new Response(JSON.stringify({ error: String(error) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
