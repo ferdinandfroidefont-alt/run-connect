@@ -4,6 +4,7 @@ const EXACT_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:8080',
+  'capacitor://localhost',
 ];
 
 const PREVIEW_PATTERNS = [
