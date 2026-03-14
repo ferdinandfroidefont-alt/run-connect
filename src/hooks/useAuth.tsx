@@ -74,23 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 500);
         }
         
-        // Force premium status for ferdinand.froidefont@gmail.com
-        if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-          console.log('🔍 ADMIN USER: Forcing premium access');
-          setSubscriptionInfo({
-            subscribed: true,
-            subscription_tier: 'Admin',
-            subscription_end: '2099-12-31T23:59:59+00:00'
-          });
+        // Check subscription when user signs in
+        if (session?.user) {
+          setTimeout(() => {
+            refreshSubscription();
+          }, 0);
         } else {
-          // Check subscription when user signs in
-          if (session?.user) {
-            setTimeout(() => {
-              refreshSubscription();
-            }, 0);
-          } else {
-            setSubscriptionInfo(null);
-          }
+          setSubscriptionInfo(null);
         }
       }
     );
