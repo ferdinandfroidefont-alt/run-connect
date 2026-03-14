@@ -286,7 +286,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               </>
             )}
 
-            {/* GPS Pin */}
+            {/* GPS Pin — moving during trace, integrated into R on complete */}
             {phase === 'pin-drop' ? (
               <g transform={`translate(${START_X}, ${START_Y})`}>
                 <motion.g
@@ -310,6 +310,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 </motion.g>
               </g>
             ) : !isComplete ? (
+              /* Moving pin during trace */
               <g transform={`translate(${pinPos.x - 14}, ${pinPos.y - 38})`} filter="url(#pinGlow)">
                 <path
                   d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 24.5 14 24.5S28 24.5 28 14C28 6.268 21.732 0 14 0z"
@@ -323,7 +324,23 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 <circle cx="14" cy="13" r="5.5" fill="white" />
                 <circle cx="14" cy="13" r="2.5" fill="#0055EE" opacity="0.7" />
               </g>
-            ) : null}
+            ) : (
+              /* Final state: integrated GPS pin at bottom-left of R (like the app icon) */
+              <motion.g
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <g transform={`translate(${START_X}, ${START_Y + 8})`} filter="url(#pinShadow)">
+                  <path
+                    d={PIN_PATH}
+                    fill="url(#rGrad)"
+                  />
+                  <circle cx="0" cy="-14" r="5" fill="white" />
+                  <circle cx="0" cy="-14" r="2.2" fill="#0055EE" opacity="0.7" />
+                </g>
+              </motion.g>
+            )}
           </svg>
 
           {/* Light sweep shimmer on complete */}
