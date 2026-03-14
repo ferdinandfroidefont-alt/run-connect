@@ -51,15 +51,6 @@ jobs:
           echo "✅ GoogleService-Info.plist added"
           echo "📋 Plist size: $(wc -c < ios/App/App/GoogleService-Info.plist) bytes"
 
-      # 🔍 AJOUT : vérifier que le plist Firebase est correct
-      - name: 🔍 Verify decoded Firebase plist
-        run: |
-          echo "=== Firebase plist check ==="
-          /usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" ios/App/App/GoogleService-Info.plist || true
-          /usr/libexec/PlistBuddy -c "Print :GOOGLE_APP_ID" ios/App/App/GoogleService-Info.plist || true
-          /usr/libexec/PlistBuddy -c "Print :PROJECT_ID" ios/App/App/GoogleService-Info.plist || true
-          echo "=== end ==="
-
       - name: 📲 Configure Push Notification entitlements
         run: |
           cat > ios/App/App/App.entitlements << 'ENTITLEMENTS_EOF'
@@ -104,15 +95,103 @@ jobs:
 
       - name: 🔢 Set build number
         run: |
+          # Use GitHub run number as build number (auto-increments with each workflow run)
           BUILD_NUMBER="${{ github.run_number }}"
+          
+          # If user provided a specific build number, use that instead
           if [ -n "${{ github.event.inputs.build_number }}" ]; then
             BUILD_NUMBER="${{ github.event.inputs.build_number }}"
           fi
+          
           echo "📋 Setting build number to: $BUILD_NUMBER"
+          
+          # Update Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "ios/App/App/Info.plist"
+          
+          # Also update project.pbxproj for consistency
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" \
             ios/App/App.xcodeproj/project.pbxproj
+          
           echo "✅ Build number set to $BUILD_NUMBER"
+
+      - name: 📝 Configure Info.plist permissions
+        run: |
+          INFO_PLIST="ios/App/App/Info.plist"
+          
+          # Contacts
+          /usr/libexec/PlistBuddy -c "Add :NSContactsUsageDescription string 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSContactsUsageDescription 'RunConnect a besoin d'\''accéder à vos contacts pour trouver vos amis qui utilisent l'\''application et les inviter à rejoindre vos sessions.'" "$INFO_PLIST"
+          
+          # Photo Library (lecture)
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour définir votre photo de profil.'" "$INFO_PLIST"
+          
+          # Photo Library (écriture)
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'RunConnect a besoin d'\''accéder à vos photos pour enregistrer des images.'" "$INFO_PLIST"
+          
+          # Location (en utilisation)
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position pour afficher les sessions à proximité et enregistrer vos parcours.'" "$INFO_PLIST"
+          
+          # Location (toujours)
+          /usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSLocationAlwaysAndWhenInUseUsageDescription 'RunConnect a besoin d'\''accéder à votre position en arrière-plan pour suivre vos sessions d'\''entraînement.'" "$INFO_PLIST"
+          
+          # Camera
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'RunConnect a besoin d'\''accéder à la caméra pour prendre des photos de profil.'" "$INFO_PLIST"
+          
+          # Microphone
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'RunConnect peut avoir besoin du microphone pour enregistrer des messages audio.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription 'RunConnect peut avoir besoin du microphone pour enregistrer des messages audio.'" "$INFO_PLIST"
+          
+          # User Tracking (requis si AdMob/tracking activé)
+          /usr/libexec/PlistBuddy -c "Add :NSUserTrackingUsageDescription string 'RunConnect utilise le suivi pour améliorer votre expérience et afficher des publicités pertinentes.'" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSUserTrackingUsageDescription 'RunConnect utilise le suivi pour améliorer votre expérience et afficher des publicités pertinentes.'" "$INFO_PLIST"
+          
+          # Encryption exemption declaration (uses only standard Apple encryption: HTTPS, TLS, Firebase Auth)
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$INFO_PLIST" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$INFO_PLIST"
+          
+          echo "✅ Info.plist permissions configured"
+          echo "✅ Encryption exemption declared"
+          
+          # Afficher les clés pour vérification
+          echo "📋 Permissions in Info.plist:"
+          /usr/libexec/PlistBuddy -c "Print :NSContactsUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSPhotoLibraryUsageDescription" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Print :NSLocationWhenInUseUsageDescription" "$INFO_PLIST"
+
+      - name: 🔗 Configure Deep Link URL Type (runconnect://)
+        run: |
+          INFO_PLIST="ios/App/App/Info.plist"
+          
+          # Check if runconnect scheme already exists
+          if plutil -p "$INFO_PLIST" | grep -q '"runconnect"'; then
+            echo "✅ runconnect scheme already present"
+          else
+            # Check if CFBundleURLTypes key exists
+            if plutil -extract CFBundleURLTypes json "$INFO_PLIST" >/dev/null 2>&1; then
+              # Array exists — use PlistBuddy to append (handles any array size)
+              IDX=$(/usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST" | grep -c "Dict")
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX dict" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLName string com.ferdi.runconnect" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes array" "$INFO_PLIST"
+              /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:$IDX:CFBundleURLSchemes:0 string runconnect" "$INFO_PLIST"
+              echo "✅ Deep link URL Type appended via PlistBuddy (index $IDX)"
+            else
+              # Array doesn't exist — create it with the entry directly
+              plutil -insert CFBundleURLTypes \
+                -json '[{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}]' \
+                "$INFO_PLIST"
+              echo "✅ Deep link URL Type created via plutil"
+            fi
+          fi
+          
+          # Verify final state
+          echo "📋 Final CFBundleURLTypes:"
+          plutil -p "$INFO_PLIST" | grep -A5 -i "urlschemes\|runconnect\|CFBundleURL"
 
       - name: 🔧 Update Bundle Identifier
         run: |
@@ -144,6 +223,9 @@ jobs:
           echo "$IOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERT_PATH"
           echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
 
+          echo "📋 Certificate size: $(wc -c < "$CERT_PATH") bytes"
+          echo "📋 Profile size: $(wc -c < "$PROFILE_PATH") bytes"
+
           security create-keychain -p "" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "" "$KEYCHAIN_PATH"
@@ -160,11 +242,58 @@ jobs:
 
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin <<< "$(security cms -D -i "$PROFILE_PATH")")
 
+          echo "📋 Profile UUID: $PROFILE_UUID"
+
+          if [ -z "$PROFILE_UUID" ]; then
+            echo "❌ ERROR: Failed to extract UUID"
+            exit 1
+          fi
+
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
 
           echo "profile_uuid=$PROFILE_UUID" >> $GITHUB_OUTPUT
           echo "keychain_path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
+
+          echo "✅ Keychain and profile configured"
+
+      - name: 🔧 Configure App signing
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_UUID: ${{ steps.keychain.outputs.profile_uuid }}
+        run: |
+          cd ios/App
+
+          echo "📋 Team ID: $APPLE_TEAM_ID"
+          echo "📋 Profile UUID: $PROFILE_UUID"
+
+          ruby << 'RUBY_SCRIPT'
+          require 'xcodeproj'
+
+          project = Xcodeproj::Project.open('App.xcodeproj')
+          app_target = project.targets.find { |t| t.name == 'App' }
+
+          unless app_target
+            puts "❌ App target not found!"
+            exit 1
+          end
+
+          team_id = ENV['APPLE_TEAM_ID']
+          profile_uuid = ENV['PROFILE_UUID']
+
+          app_target.build_configurations.each do |config|
+            config.build_settings['CODE_SIGN_STYLE'] = 'Manual'
+            config.build_settings['DEVELOPMENT_TEAM'] = team_id
+            config.build_settings['CODE_SIGN_IDENTITY'] = 'Apple Distribution'
+            config.build_settings['CODE_SIGN_IDENTITY[sdk=iphoneos*]'] = 'Apple Distribution'
+            config.build_settings['PROVISIONING_PROFILE'] = profile_uuid
+            config.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = ''
+            config.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'App/App.entitlements'
+          end
+
+          project.save
+          puts "✅ Signing + entitlements configured for App target"
+          RUBY_SCRIPT
 
       - name: 📦 Install CocoaPods
         run: |
@@ -175,6 +304,7 @@ jobs:
         run: |
           set -o pipefail
           cd ios/App
+
           xcodebuild archive \
             -workspace App.xcworkspace \
             -scheme App \
@@ -192,15 +322,141 @@ jobs:
             SWIFT_COMPILATION_MODE=wholemodule \
             2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
 
-      # 🔍 AJOUT : vérifier que Firebase est dans l'app finale
-      - name: 🔍 Verify GoogleService-Info.plist inside built app
+      - name: 🔍 Extract build errors summary
+        if: always()
         run: |
-          APP_PLIST="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/GoogleService-Info.plist"
-          if [ ! -f "$APP_PLIST" ]; then
-            echo "❌ GoogleService-Info.plist NOT found in built app bundle"
+          LOG="$RUNNER_TEMP/xcodebuild.log"
+          if [ ! -f "$LOG" ]; then
+            echo "⚠️ No xcodebuild.log found"
+            exit 0
+          fi
+
+          echo "::group::🔴 Build Errors"
+          grep -nE "error:|fatal error:|ARCHIVE FAILED|linker command failed" "$LOG" | tail -40 || echo "No error: lines found"
+          echo "::endgroup::"
+
+          echo "::group::⚠️ Warnings & CodeSign"
+          grep -nE "warning:.*signing|CodeSign|No signing certificate|provisioning profile" "$LOG" | tail -20 || echo "None"
+          echo "::endgroup::"
+
+          echo "::group::📜 PhaseScriptExecution failures"
+          grep -nE "PhaseScriptExecution|Run custom shell script" "$LOG" | tail -10 || echo "None"
+          echo "::endgroup::"
+
+          # --- GitHub Step Summary (markdown) ---
+          {
+            echo "## 🍎 iOS Build Diagnostic"
+            echo ""
+            echo "### Errors"
+            echo '```'
+            grep -nE "error:|fatal error:|ARCHIVE FAILED|linker command failed" "$LOG" | tail -30 || echo "No errors found"
+            echo '```'
+            echo ""
+
+            # Hints
+            if grep -qE "No signing certificate|provisioning profile" "$LOG"; then
+              echo "💡 **Hint**: Signing/provisioning issue detected. Check certificates & profiles in secrets."
+            fi
+            if grep -qE "module map|SwiftCompile.*error" "$LOG"; then
+              echo "💡 **Hint**: Swift compilation or module mapping error. Check pod dependencies."
+            fi
+            if grep -qE "PhaseScriptExecution.*failed" "$LOG"; then
+              echo "💡 **Hint**: A CocoaPods/Build Phase script failed. Check Podfile or build phases."
+            fi
+            if grep -qE "duplicate symbol\|multiple commands produce" "$LOG"; then
+              echo "💡 **Hint**: Duplicate symbol/resource conflict. Check linked frameworks."
+            fi
+
+            echo ""
+            echo "### Last 20 lines of log"
+            echo '```'
+            tail -20 "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "✅ Diagnostic summary written to job summary"
+
+      - name: 📋 Upload xcodebuild log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ${{ runner.temp }}/xcodebuild.log
+
+      - name: ✅ Verify archive exists
+        run: |
+          if [ ! -d "$RUNNER_TEMP/App.xcarchive" ]; then
+            echo "❌ App.xcarchive NOT found — build failed!"
+            echo ""
+            echo "=== Root cause (extracted errors) ==="
+            grep -nE "error:|fatal error:" "$RUNNER_TEMP/xcodebuild.log" | tail -15 || echo "No error lines found"
+            echo ""
+            echo "=== Last 10 lines ==="
+            tail -10 "$RUNNER_TEMP/xcodebuild.log" || true
             exit 1
           fi
-          echo "✅ GoogleService-Info.plist found in built app bundle"
-          /usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" "$APP_PLIST" || true
-          /usr/libexec/PlistBuddy -c "Print :GOOGLE_APP_ID" "$APP_PLIST" || true
-          /usr/libexec/PlistBuddy -c "Print :PROJECT_ID" "$APP_PLIST" || true
+          echo "✅ App.xcarchive exists"
+
+      - name: 📦 Export IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_UUID: ${{ steps.keychain.outputs.profile_uuid }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.ferdi.runconnect</key>
+              <string>${PROFILE_UUID}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      # ✅ AJOUT : trouver le vrai fichier IPA (pas de wildcard)
+      - name: 🔍 Find IPA
+        id: find_ipa
+        run: |
+          IPA_PATH=$(ls "$RUNNER_TEMP/export/"*.ipa | head -n 1)
+          echo "Found IPA at: $IPA_PATH"
+          echo "ipa_path=$IPA_PATH" >> $GITHUB_OUTPUT
+
+      - name: 📦 Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: ${{ steps.find_ipa.outputs.ipa_path }}
+
+      # ✅ MODIF : utiliser le chemin exact
+      - name: 🚀 Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ steps.find_ipa.outputs.ipa_path }}
+          issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+          api-key-id: ${{ secrets.ASC_KEY_ID }}
+          api-private-key: ${{ secrets.ASC_API_KEY_P8 }}
+
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          security delete-keychain "${{ steps.keychain.outputs.keychain_path }}" || true
