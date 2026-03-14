@@ -114,7 +114,7 @@ serve(async (req) => {
     };
     
     const tempPassword = generateSecurePassword();
-    console.log('🔐 [FIREBASE AUTH] Secure password generated (length:', tempPassword.length, ')');
+    console.log('🔐 [FIREBASE AUTH] Secure password generated');
 
     if (!supabaseUser) {
       console.log('👤 [FIREBASE AUTH] Creating new Supabase user for:', tokenInfo.email);
