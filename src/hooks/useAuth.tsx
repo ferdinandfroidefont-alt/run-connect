@@ -87,33 +87,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('🔄 INITIAL SESSION CHECK:', session?.user?.email);
-      console.log('🔄 Session access_token present:', !!session?.access_token);
-      console.log('🔄 Session refresh_token present:', !!session?.refresh_token);
-      
-      // Vérifier le localStorage
+      // Initial session check
       const storedSession = localStorage.getItem('sb-dbptgehpknjsoisirviz-auth-token');
-      console.log('🔄 LocalStorage session found:', !!storedSession);
       
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Force premium status for ferdinand.froidefont@gmail.com
-      if (session?.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 ADMIN USER: Forcing premium access on initial load');
-        setSubscriptionInfo({
-          subscribed: true,
-          subscription_tier: 'Admin',
-          subscription_end: '2099-12-31T23:59:59+00:00'
-        });
-      } else {
-        // Check subscription for existing session
-        if (session?.user) {
-          setTimeout(() => {
-            refreshSubscription();
-          }, 0);
-        }
+      // Check subscription for existing session
+      if (session?.user) {
+        setTimeout(() => {
+          refreshSubscription();
+        }, 0);
       }
     });
 

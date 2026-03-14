@@ -238,17 +238,19 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             </div>
           </div>
 
-          {/* ─── Diagnostic Push iOS ─── */}
-          <PushDiagnosticPanel
-            pushDebug={pushDebug}
-            permissionStatus={permissionStatus}
-            isNative={isNative}
-            isRegistered={isRegistered}
-            userId={user?.id}
-            requestPermissions={requestPermissions}
-            checkPermissionStatus={checkPermissionStatus}
-            refreshDebugFromBackend={refreshDebugFromBackend}
-          />
+          {/* ─── Diagnostic Push iOS (dev only) ─── */}
+          {import.meta.env.DEV && (
+            <PushDiagnosticPanel
+              pushDebug={pushDebug}
+              permissionStatus={permissionStatus}
+              isNative={isNative}
+              isRegistered={isRegistered}
+              userId={user?.id}
+              requestPermissions={requestPermissions}
+              checkPermissionStatus={checkPermissionStatus}
+              refreshDebugFromBackend={refreshDebugFromBackend}
+            />
+          )}
         </div>
       </ScrollArea>
     </motion.div>
