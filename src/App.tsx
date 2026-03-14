@@ -34,7 +34,7 @@ import ConfirmPresence from "./pages/ConfirmPresence";
 import TrainingMode from "./pages/TrainingMode";
 import SessionTracking from "./pages/SessionTracking";
 import AuthCallback from "./pages/AuthCallback";
-import { SecurityDashboard } from "./components/SecurityDashboard";
+// SecurityDashboard removed from production - only available in dev
 
 const queryClient = new QueryClient();
 
