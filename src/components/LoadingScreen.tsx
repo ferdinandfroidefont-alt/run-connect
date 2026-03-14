@@ -11,21 +11,27 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// R path — generous size, centered in viewBox
+// Swoopy R path — inspired by the app icon shape
+// Starts bottom-left (pin location), goes up, swoops right for the R curve, leg swoops down-right
 const R_PATH =
-  "M 60,180 L 60,40 " +
-  "C 60,20 75,12 95,12 L 140,12 " +
-  "C 175,12 192,30 192,58 " +
-  "C 192,86 175,104 140,104 L 60,104 " +
-  "M 110,104 C 130,125 158,158 195,180";
+  "M 65,175 L 65,65 " +                          // vertical stroke up
+  "C 65,35 85,20 115,20 " +                       // top-left curve
+  "L 145,20 " +                                    // top horizontal
+  "C 185,20 205,42 200,72 " +                     // R bump top
+  "C 195,98 170,108 140,105 " +                   // R bump bottom curve back
+  "L 95,105 " +                                    // back to spine
+  "M 120,105 C 145,130 175,160 210,178";           // leg swooping down-right
 
-const SVG_W = 250;
+const SVG_W = 260;
 const SVG_H = 200;
+
+// Pin shape as SVG path (teardrop GPS marker) — used for the final integrated pin
+const PIN_PATH = "M0-28C-8.5-28-15.5-21-15.5-12.5C-15.5-3 0 12 0 12S15.5-3 15.5-12.5C15.5-21 8.5-28 0-28Z";
 const TRACE_DURATION = 1.8;
 const PIN_DROP_DELAY = 500;
 
-const START_X = 60;
-const START_Y = 180;
+const START_X = 65;
+const START_Y = 175;
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [phase, setPhase] = useState<'pin-drop' | 'trace' | 'complete' | 'loading'>('pin-drop');
@@ -280,7 +286,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               </>
             )}
 
-            {/* GPS Pin */}
+            {/* GPS Pin — moving during trace, integrated into R on complete */}
             {phase === 'pin-drop' ? (
               <g transform={`translate(${START_X}, ${START_Y})`}>
                 <motion.g
@@ -304,6 +310,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 </motion.g>
               </g>
             ) : !isComplete ? (
+              /* Moving pin during trace */
               <g transform={`translate(${pinPos.x - 14}, ${pinPos.y - 38})`} filter="url(#pinGlow)">
                 <path
                   d="M14 0C6.268 0 0 6.268 0 14c0 10.5 14 24.5 14 24.5S28 24.5 28 14C28 6.268 21.732 0 14 0z"
@@ -317,7 +324,23 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 <circle cx="14" cy="13" r="5.5" fill="white" />
                 <circle cx="14" cy="13" r="2.5" fill="#0055EE" opacity="0.7" />
               </g>
-            ) : null}
+            ) : (
+              /* Final state: integrated GPS pin at bottom-left of R (like the app icon) */
+              <motion.g
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <g transform={`translate(${START_X}, ${START_Y + 8})`} filter="url(#pinShadow)">
+                  <path
+                    d={PIN_PATH}
+                    fill="url(#rGrad)"
+                  />
+                  <circle cx="0" cy="-14" r="5" fill="white" />
+                  <circle cx="0" cy="-14" r="2.2" fill="#0055EE" opacity="0.7" />
+                </g>
+              </motion.g>
+            )}
           </svg>
 
           {/* Light sweep shimmer on complete */}
