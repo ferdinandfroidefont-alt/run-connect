@@ -31,43 +31,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('🔍 SUBSCRIPTION CHECK: Starting check for user', session.user?.email);
       
-      // Pour ferdinand.froidefont@gmail.com, vérifier directement dans la base
-      if (session.user?.email === 'ferdinand.froidefont@gmail.com') {
-        console.log('🔍 SUBSCRIPTION CHECK: Admin user detected, checking database directly');
-        
-        const { data: directCheck, error: directError } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        console.log('🔍 SUBSCRIPTION CHECK: Direct database result', { directCheck, directError });
-        
-        if (directCheck && directCheck.subscribed) {
-          console.log('🔍 SUBSCRIPTION CHECK: Setting admin premium access');
-          setSubscriptionInfo({
-            subscribed: true,
-            subscription_tier: directCheck.subscription_tier,
-            subscription_end: directCheck.subscription_end
-          });
-          return;
-        }
-      }
-      
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
       
-      console.log('🔍 SUBSCRIPTION CHECK: Response received', { data, error });
-      
       if (error) {
         console.error('Error checking subscription:', error);
         return;
       }
       
-      console.log('🔍 SUBSCRIPTION CHECK: Setting subscription info', data);
       setSubscriptionInfo(data);
     } catch (error) {
       console.error('Error refreshing subscription:', error);
