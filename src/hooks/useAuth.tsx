@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setTimeout(() => {
             const fcmToken = (window as any).fcmToken;
             if (fcmToken) {
-              console.log('🔥 [AUTH] Token FCM détecté après connexion, sauvegarde immédiate...');
+              // FCM token detected after sign-in
               
               // Dispatch un événement pour que usePushNotifications sauvegarde le token
               window.dispatchEvent(new CustomEvent('userAuthenticatedWithFCMToken', {
