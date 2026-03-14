@@ -34,7 +34,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.google-maps-proxy]
-verify_jwt = true
+verify_jwt = false
 
 [functions.season-reset]
 verify_jwt = false
