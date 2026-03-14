@@ -796,13 +796,23 @@ export const InteractiveMap = ({
       try {
         // Récupérer la clé API Google Maps depuis Supabase
         const {
-          data: apiKeyData
+          data: apiKeyData,
+          error: apiKeyError
         } = await supabase.functions.invoke('google-maps-proxy', {
           body: {
             type: 'get-key'
           }
         });
-        const googleMapsApiKey = apiKeyData?.apiKey || 'FALLBACK_KEY';
+
+        if (apiKeyError) {
+          throw new Error(`google-maps-proxy get-key failed: ${apiKeyError.message}`);
+        }
+
+        const googleMapsApiKey = apiKeyData?.apiKey;
+        if (!googleMapsApiKey) {
+          throw new Error('Google Maps API key indisponible');
+        }
+
         const loader = new Loader({
           apiKey: googleMapsApiKey,
           version: 'weekly',
