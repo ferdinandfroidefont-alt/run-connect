@@ -105,6 +105,16 @@ else
   puts "ℹ️ #{m_file} already in compile sources"
 end
 
+# Add GoogleService-Info.plist to Copy Bundle Resources
+plist_file = 'GoogleService-Info.plist'
+unless app_target.resources_build_phase.files.any? { |f| f.file_ref&.path&.include?(plist_file) }
+  plist_ref = app_group.new_file(plist_file)
+  app_target.resources_build_phase.add_file_reference(plist_ref)
+  puts "✅ #{plist_file} added to Copy Bundle Resources"
+else
+  puts "ℹ️ #{plist_file} already in Copy Bundle Resources"
+end
+
 # Ensure bridging header is set
 app_target.build_configurations.each do |config|
   existing = config.build_settings['SWIFT_OBJC_BRIDGING_HEADER']

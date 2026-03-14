@@ -50,6 +50,13 @@ jobs:
           echo "$GOOGLE_SERVICE_INFO" | base64 --decode > ios/App/App/GoogleService-Info.plist
           echo "✅ GoogleService-Info.plist added"
           echo "📋 Plist size: $(wc -c < ios/App/App/GoogleService-Info.plist) bytes"
+          # Validate BUNDLE_ID matches expected value
+          PLIST_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" ios/App/App/GoogleService-Info.plist)
+          if [ "$PLIST_BUNDLE_ID" != "com.ferdi.runconnect" ]; then
+            echo "❌ FATAL: GoogleService-Info.plist BUNDLE_ID='$PLIST_BUNDLE_ID' ≠ 'com.ferdi.runconnect'"
+            exit 1
+          fi
+          echo "✅ GoogleService-Info.plist BUNDLE_ID verified: $PLIST_BUNDLE_ID"
 
       - name: 📲 Configure Push Notification entitlements
         run: |
