@@ -1,14 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-const json = (body: unknown, status = 200, corsHeaders: Record<string, string>) =>
+let _corsHeaders: Record<string, string> = {};
+
+const json = (body: unknown, status = 200, ch?: Record<string, string>) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...(ch || _corsHeaders), "Content-Type": "application/json" },
   });
 
 Deno.serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  _corsHeaders = getCorsHeaders(req);
+  const corsHeaders = _corsHeaders;
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
