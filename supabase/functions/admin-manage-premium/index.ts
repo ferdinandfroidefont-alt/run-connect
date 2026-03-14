@@ -34,9 +34,12 @@ Deno.serve(async (req) => {
       return json({ error: "Unauthorized" }, 401);
     }
 
-    const callerEmail = claimsData.claims.email;
-    if (callerEmail !== "ferdinand.froidefont@gmail.com") {
-      return json({ error: "Forbidden" }, 403);
+    const callerId = claimsData.claims.sub;
+
+    // Verify admin role via user_roles table
+    const { data: isAdmin } = await anonClient.rpc('has_role', { _user_id: callerId, _role: 'admin' });
+    if (!isAdmin) {
+      return json({ error: "Forbidden: admin role required" }, 403, corsHeaders);
     }
 
     const body = await req.json();

@@ -210,8 +210,7 @@ serve(async (req) => {
     const signInData = sessionData;
 
     console.log('✅ [FIREBASE AUTH] Session created successfully with valid tokens');
-    console.log('🎫 [FIREBASE AUTH] Access token length:', signInData.session.access_token.length);
-    console.log('🎫 [FIREBASE AUTH] Refresh token length:', signInData.session.refresh_token.length);
+    console.log('✅ [FIREBASE AUTH] Session created successfully');
 
     return new Response(
       JSON.stringify({
