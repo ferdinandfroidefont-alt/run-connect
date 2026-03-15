@@ -189,7 +189,7 @@ export const RoutePhotosGallery = () => {
 
   return (
     <>
-      <div className="relative flex-1" style={{ minHeight: '500px' }}>
+      <div className="relative w-full" style={{ height: 'calc(100vh - 220px)', minHeight: '400px' }}>
         <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
 
         {/* Count badge */}
