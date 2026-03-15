@@ -25,8 +25,8 @@ const REVEAL_DELAY = 1200;  // ms from start
 const EXIT_DELAY = 1500;    // ms from start
 const TOTAL_DURATION = 1700;
 
-const START_X = 60;
-const START_Y = 180;
+const START_X = 62;
+const START_Y = 185;
 
 // Pin SVG path (teardrop)
 const PIN_PATH = "M0-28C-8.5-28-15.5-21-15.5-12.5C-15.5-3 0 12 0 12S15.5-3 15.5-12.5C15.5-21 8.5-28 0-28Z";
