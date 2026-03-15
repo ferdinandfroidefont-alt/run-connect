@@ -251,8 +251,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               />
             </div>
 
-            {/* Shimmer light sweep on reveal */}
-            {isRevealed && (
+            {/* Shimmer light sweep — only when logo fully visible */}
+            {showShimmer && (
               <motion.div
                 className="absolute inset-0 overflow-hidden pointer-events-none"
                 initial={{ opacity: 0 }}
