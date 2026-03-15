@@ -2,52 +2,89 @@
 
 ## Diagnostic
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+La carte fonctionne sur le web mais pas dans les apps natives (Android WebView / Capacitor iOS). Deux causes identifiées :
 
-Deux problemes distincts :
+### Cause 1 : Restriction du referrer sur la clé Google Maps
+La clé `GOOGLE_MAPS_BROWSER_API_KEY` est restreinte par "HTTP referrers" dans la Google Cloud Console (domaines web). Or, dans un **Android WebView**, le header `Referer` n'est pas envoyé de la même façon — Google rejette la requête avec `ApiTargetBlockedMapError`.
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+### Cause 2 : CORS pour les apps natives
+Les requêtes depuis un Android WebView chargeant `https://run-connect.lovable.app` envoient bien cet Origin (déjà autorisé). Mais les apps Capacitor envoient `capacitor://localhost` (déjà ajouté) ou parfois un Origin vide/null, ce qui peut provoquer un rejet silencieux.
 
-## Solution en 2 parties
+---
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+## Plan de correction
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+### 1. Modifier `google-maps-proxy` pour renvoyer la clé non restreinte aux apps natives
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+Ajouter un paramètre optionnel `platform` dans le body de la requête `get-key`. Si `platform === 'android'` ou `platform === 'ios'`, renvoyer la clé serveur (non restreinte par referrer) au lieu de la clé browser.
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+// Dans google-maps-proxy/index.ts
+if (type === 'get-key') {
+  const isNative = body.platform === 'android' || body.platform === 'ios';
+  const keyToReturn = isNative 
+    ? (serverApiKey || browserApiKey)   // clé sans restriction referrer
+    : (browserApiKey || serverApiKey);  // clé avec restriction referrer
+  ...
+}
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+### 2. Modifier les appels `get-key` côté frontend pour passer la plateforme
 
-### Partie 2 : Securiser la page bridge
+Créer un petit helper réutilisable :
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+```typescript
+// src/lib/googleMapsKey.ts
+import { isReallyNative, getPlatform } from './nativeDetection';
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+export function getKeyBody() {
+  const body: any = { type: 'get-key' };
+  if (isReallyNative()) {
+    body.platform = getPlatform(); // 'android' ou 'ios'
+  }
+  return body;
+}
 ```
 
-### Fichiers modifies
+Mettre à jour les ~7 fichiers qui appellent `google-maps-proxy` avec `type: 'get-key'` :
+- `src/components/InteractiveMap.tsx`
+- `src/pages/TrainingMode.tsx`
+- `src/pages/SessionTracking.tsx`
+- `src/components/feed/MiniMapPreview.tsx`
+- `src/components/routes-feed/RoutesFeedCard.tsx`
+- `src/components/routes-feed/RouteDetailDialog.tsx`
+- `src/components/ElevationProfile3D.tsx`
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+### 3. Gérer les Origins vides/null dans le CORS
 
-### Apres le deploy
+Dans `_shared/cors.ts`, si l'Origin est vide et que le `User-Agent` contient des marqueurs natifs (ex: `wv`, `WebView`), autoriser la requête. Cela couvre les cas WebView Android où l'Origin peut être absent.
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+```typescript
+function isOriginAllowed(origin: string): boolean {
+  if (!origin || origin === 'null') return false; // handled separately
+  if (EXACT_ORIGINS.includes(origin)) return true;
+  return PREVIEW_PATTERNS.some((re) => re.test(origin));
+}
+
+// In getCorsHeaders:
+if (!origin || origin === 'null') {
+  // Native WebView — no CORS enforcement needed, allow through
+  return { 'Access-Control-Allow-Origin': '*', ... };
+}
+```
+
+### 4. Redéployer la fonction `google-maps-proxy`
+
+Après les modifications, redéployer la Edge Function pour appliquer les changements.
+
+---
+
+## Fichiers modifiés
+
+| Fichier | Changement |
+|---|---|
+| `supabase/functions/google-maps-proxy/index.ts` | Lire `platform` du body, renvoyer la clé serveur si natif |
+| `supabase/functions/_shared/cors.ts` | Gérer Origin vide/null pour les WebViews |
+| `src/lib/googleMapsKey.ts` | Nouveau helper pour construire le body `get-key` |
+| 7 fichiers composants | Utiliser le helper au lieu de `{ type: 'get-key' }` |
 
