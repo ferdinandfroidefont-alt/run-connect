@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
       if (!window.google?.maps) {
         try {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           const googleMapsApiKey = apiKeyData?.apiKey || '';
           if (!googleMapsApiKey) return;

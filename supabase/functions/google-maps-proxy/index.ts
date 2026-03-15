@@ -22,14 +22,20 @@ const handler = async (req: Request): Promise<Response> => {
     const serverApiKey = Deno.env.get("GOOGLE_MAPS_SERVER_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
     
     const body = await req.json();
-    const { address, lat, lng, type }: GeocodeRequest = body || {};
+    const { address, lat, lng, type, platform }: GeocodeRequest & { platform?: string } = body || {};
     
-    // Si on demande juste la clé API (pour le navigateur)
+    // Si on demande juste la clé API
     if (type === 'get-key') {
-      const keyToReturn = browserApiKey || serverApiKey;
+      const isNative = platform === 'android' || platform === 'ios';
+      // Native apps need the unrestricted server key (no HTTP referrer restriction)
+      // Web apps use the browser key (restricted by HTTP referrer)
+      const keyToReturn = isNative
+        ? (serverApiKey || browserApiKey)
+        : (browserApiKey || serverApiKey);
       if (!keyToReturn) {
         throw new Error("Aucune clé API Google Maps configurée");
       }
+      console.log(`[google-maps-proxy] get-key for platform=${platform || 'web'}, native=${isNative}`);
       return new Response(JSON.stringify({ apiKey: keyToReturn }), {
         status: 200,
         headers: {

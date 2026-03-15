@@ -1,6 +1,7 @@
 import { RouteDialog } from './RouteDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { SessionFilters } from './SessionFilters';
@@ -799,9 +800,7 @@ export const InteractiveMap = ({
           data: apiKeyData,
           error: apiKeyError
         } = await supabase.functions.invoke('google-maps-proxy', {
-          body: {
-            type: 'get-key'
-          }
+          body: getKeyBody()
         });
 
         if (apiKeyError) {

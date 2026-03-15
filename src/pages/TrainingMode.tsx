@@ -8,6 +8,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getKeyBody } from '@/lib/googleMapsKey';
 
 const PRIMARY_BLUE = 'hsl(221, 83%, 53%)';
 const TRAVELED_TEAL = '#14b8a6';
@@ -108,7 +109,7 @@ export default function TrainingMode() {
   useEffect(() => {
     const fetchKey = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('google-maps-proxy', { body: { type: 'get-key' } });
+        const { data, error } = await supabase.functions.invoke('google-maps-proxy', { body: getKeyBody() });
         if (error) throw error;
         if (data?.apiKey) setApiKey(data.apiKey);
       } catch (err) {

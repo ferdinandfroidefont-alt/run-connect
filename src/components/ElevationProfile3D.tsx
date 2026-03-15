@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Mountain, MapPin, TrendingUp } from 'lucide-react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -108,7 +109,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       try {
         if (!window.google?.maps) {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           const apiKey = apiKeyData?.apiKey || '';
           const loader = new Loader({ apiKey, version: 'weekly', libraries: ['geometry', 'places'] });

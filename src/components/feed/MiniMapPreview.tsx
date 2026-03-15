@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader } from '@googlemaps/js-api-loader';
 import { generateRoundProfileMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
+import { getKeyBody } from '@/lib/googleMapsKey';
 
 interface MiniMapPreviewProps {
   lat: number;
@@ -44,7 +45,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
         if (!window.google?.maps) {
           // Need to load Google Maps
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           
           const googleMapsApiKey = apiKeyData?.apiKey || '';

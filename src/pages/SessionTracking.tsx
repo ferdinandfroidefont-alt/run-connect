@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { imageUrlToBase64 } from '@/lib/map-marker-generator';
 
@@ -39,7 +40,7 @@ export default function SessionTracking() {
     const fetchKey = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' },
+          body: getKeyBody(),
         });
         if (error) throw error;
         if (data?.apiKey) setApiKey(data.apiKey);

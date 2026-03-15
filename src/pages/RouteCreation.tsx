@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getKeyBody } from '@/lib/googleMapsKey';
 
 import { ElevationProfile } from '@/components/ElevationProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -176,7 +177,7 @@ export const RouteCreation = () => {
     const initializeMap = async () => {
       try {
         const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' }
+          body: getKeyBody()
         });
         
         const googleMapsApiKey = apiKeyData?.apiKey || 'FALLBACK_KEY';
