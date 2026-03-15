@@ -19,6 +19,18 @@ function isOriginAllowed(origin: string): boolean {
 
 export function getCorsHeaders(req: Request) {
   const origin = req.headers.get('Origin') || '';
+  
+  // Native WebViews (Android/iOS) may send empty or 'null' Origin
+  // In that case, allow the request with wildcard
+  if (!origin || origin === 'null') {
+    return {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-push-trace-id, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+      'Vary': 'Origin',
+    };
+  }
+
   const allowed = isOriginAllowed(origin);
   if (!allowed) {
     console.warn(`[CORS] Blocked origin: ${origin}`);

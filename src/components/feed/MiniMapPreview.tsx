@@ -45,7 +45,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
         if (!window.google?.maps) {
           // Need to load Google Maps
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           
           const googleMapsApiKey = apiKeyData?.apiKey || '';
