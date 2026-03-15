@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader } from '@googlemaps/js-api-loader';
 import { generateRoundProfileMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
+import { getKeyBody } from '@/lib/googleMapsKey';
 
 interface MiniMapPreviewProps {
   lat: number;
