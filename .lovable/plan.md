@@ -1,49 +1,53 @@
 
 
-## Refonte de l'animation de chargement RunConnect
+## Diagnostic
 
-### Objectif
-Recréer le `LoadingScreen.tsx` avec un R fidèle au logo officiel (image fournie) et une animation plus fluide et premium en 1.7s.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### Analyse du logo officiel
-Le R officiel est très différent du path actuel :
-- C'est une courbe fluide type "route" — pas un R typographique avec des segments droits
-- Départ en bas-gauche (pin GPS), monte en courbe vers la droite
-- Swoope vers la gauche en haut, puis revient en courbe large vers la droite
-- La jambe descend en courbe fluide vers le bas-droite
-- Effet de volume/3D avec un dégradé bleu profond → bleu clair + reflets lumineux aux extrémités
+Deux problemes distincts :
 
-### Changements prévus
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**Fichier unique** : `src/components/LoadingScreen.tsx`
+## Solution en 2 parties
 
-1. **Nouveau R_PATH** — Redessin complet en courbes de Bézier pour reproduire la forme fluide du logo officiel (swoopy road shape)
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-2. **Phases simplifiées** (durée totale ~1.7s) :
-   - `appear` (0-200ms) : point lumineux apparaît au départ du tracé
-   - `trace` (200ms-1200ms) : le point lumineux avance et dessine le R progressivement avec un trail glow
-   - `reveal` (1200ms-1500ms) : le tracé se transforme en logo complet (épaisseur + gradient final), effet shimmer traverse la courbe
-   - `pulse-exit` (1500ms-1700ms) : pin GPS pulse, logo monte légèrement, fade out vers l'app
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-3. **Effets visuels** :
-   - Point lumineux blanc/cyan qui précède le tracé (leading dot)
-   - Trail glow derrière le point (3 couches : blur large, blur moyen, trait net)
-   - Transition du trait fin → épaisseur finale du logo
-   - Shimmer light sweep sur la courbe du R
-   - Pin GPS avec pulsation subtile à la fin
-   - Le tout monte de ~20px et fade pour la transition
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-4. **Style** :
-   - Fond blanc pur
-   - Gradient bleu identique au logo : `#0044CC` → `#0088FF` → `#33BBFF`
-   - Reflets lumineux cyan aux extrémités des courbes
-   - Pas de barre de progression ni de phrases (animation trop courte)
-   - Texte "RUNCONNECT" apparaît pendant le reveal
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-### Détails techniques
-- Utilise `requestAnimationFrame` + `getPointAtLength` pour le tracé (existant, optimisé)
-- `strokeDasharray/offset` pour le dessin progressif
-- `framer-motion` pour le pin drop, shimmer, et transition finale
-- Le leading dot est un cercle SVG positionné au point courant du path avec un filtre glow
-- Durée totale contrôlée : `TRACE_DURATION = 1.0s`, phases avant/après ~350ms chacune
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
