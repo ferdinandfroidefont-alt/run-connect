@@ -5,18 +5,16 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-// Swoopy R path — faithful to the official RunConnect logo
-// Starts bottom-left (GPS pin), curves up, swoops left at top, curves right for the bump, leg swoops down-right
+// Swoopy R path — single continuous fluid curve matching the official logo
+// Like a winding road: pin(bottom-left) → up → swoops LEFT at top → curves back RIGHT → leg down-right
 const R_PATH =
-  "M 60,180 " +
-  "C 55,140 50,100 55,70 " +       // stem curves up from pin
-  "C 60,40 75,22 100,18 " +         // top-left curve
-  "C 125,14 155,18 170,30 " +       // across the top
-  "C 190,45 195,70 180,88 " +       // R bump curve down
-  "C 168,102 145,105 120,100 " +    // bump curves back to spine
-  "L 90,95 " +                       // connect to spine
-  "M 115,100 " +
-  "C 135,120 160,150 195,180";       // leg swooping down-right
+  "M 62,185 " +                                    // start at GPS pin
+  "C 58,155 52,125 50,95 " +                       // stem going up, slight left lean
+  "C 48,65 55,35 85,22 " +                         // curves toward top-left
+  "C 115,9 160,8 195,25 " +                        // wide swoop across top to the RIGHT
+  "C 220,38 225,65 205,82 " +                      // R bump curves down
+  "C 185,100 155,108 125,100 " +                   // bump returns left smoothly
+  "C 145,115 170,145 205,182";                      // leg flows down-right seamlessly
 
 const SVG_W = 260;
 const SVG_H = 210;
