@@ -94,6 +94,16 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const isExit = phase === 'exit';
   const dashOffset = (1 - traceProgress) * totalLength;
 
+  // Stroke thickens in last 20% of trace
+  const thickenFactor = traceProgress > 0.8 ? (traceProgress - 0.8) / 0.2 : 0;
+  const currentStrokeWidth = 4 + thickenFactor * 10; // 4 → 14
+  const glowStrokeWidth = 8 + thickenFactor * 12;
+  const softGlowStrokeWidth = 14 + thickenFactor * 14;
+
+  // Logo image opacity: starts fading in at 80% trace, full at reveal
+  const logoOpacity = isRevealed ? 1 : (traceProgress > 0.8 ? Math.min((traceProgress - 0.8) * 5, 1) : 0);
+  const showShimmer = isRevealed && logoOpacity >= 1;
+
   return (
     <AnimatePresence>
       <motion.div
@@ -116,12 +126,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
         <div className="flex flex-col items-center relative">
           <div className="relative" style={{ width: SVG_W, height: SVG_H }}>
             
-            {/* SVG trace layer — visible during trace, fades out on reveal */}
-            <motion.div
-              className="absolute inset-0"
-              animate={isRevealed ? { opacity: 0 } : { opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
+            {/* SVG trace layer — stays visible, no fade out */}
+            <div className="absolute inset-0">
               <svg
                 width={SVG_W} height={SVG_H}
                 viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -153,12 +159,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 {/* Hidden measurement path */}
                 <path ref={pathRef} d={R_PATH} fill="none" stroke="none" />
 
-                {/* Wide soft glow trail */}
+                {/* Wide soft glow trail — thickens */}
                 {isTracing && (
                   <path
                     d={R_PATH}
                     stroke="#55AAFF"
-                    strokeWidth={14}
+                    strokeWidth={softGlowStrokeWidth}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     fill="none"
@@ -168,12 +174,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   />
                 )}
 
-                {/* Medium glow trail */}
+                {/* Medium glow trail — thickens */}
                 {isTracing && (
                   <path
                     d={R_PATH}
                     stroke="url(#rGlow)"
-                    strokeWidth={8}
+                    strokeWidth={glowStrokeWidth}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     fill="none"
@@ -183,12 +189,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   />
                 )}
 
-                {/* Main solid trace */}
+                {/* Main solid trace — thickens */}
                 {isTracing && (
                   <path
                     d={R_PATH}
                     stroke="url(#rGrad)"
-                    strokeWidth={4}
+                    strokeWidth={currentStrokeWidth}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     fill="none"
@@ -197,8 +203,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   />
                 )}
 
-                {/* Leading dot */}
-                {isTracing && (
+                {/* Leading dot — hidden once logo starts appearing */}
+                {isTracing && logoOpacity < 0.5 && (
                   <g filter="url(#dotGlow)">
                     <circle cx={dotPos.x} cy={dotPos.y} r="6" fill="#FFFFFF" opacity="0.9" />
                     <circle cx={dotPos.x} cy={dotPos.y} r="3.5" fill="#33CCFF" />
@@ -223,21 +229,19 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 )}
 
                 {/* Small pin at start during trace */}
-                {isTracing && (
+                {isTracing && logoOpacity < 0.5 && (
                   <g transform={`translate(${START_X}, ${START_Y + 6})`} filter="url(#pinShadow)">
                     <path d={PIN_PATH} fill="url(#rGrad)" transform="scale(0.7)" />
                     <circle cx="0" cy="-14" r="3.5" fill="white" transform="scale(0.7)" />
                   </g>
                 )}
               </svg>
-            </motion.div>
+            </div>
 
-            {/* Real logo image — fades in on reveal */}
-            <motion.div
+            {/* Real logo image — progressive fade-in starting at 80% trace */}
+            <div
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={isRevealed ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.92 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
+              style={{ opacity: logoOpacity, transition: 'opacity 0.15s ease-out' }}
             >
               <img
                 src={logoImage}
@@ -245,10 +249,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 className="w-full h-full object-contain"
                 style={{ maxWidth: SVG_W, maxHeight: SVG_H }}
               />
-            </motion.div>
+            </div>
 
-            {/* Shimmer light sweep on reveal */}
-            {isRevealed && (
+            {/* Shimmer light sweep — only when logo fully visible */}
+            {showShimmer && (
               <motion.div
                 className="absolute inset-0 overflow-hidden pointer-events-none"
                 initial={{ opacity: 0 }}
