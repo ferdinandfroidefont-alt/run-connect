@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Mountain, MapPin, TrendingUp } from 'lucide-react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
