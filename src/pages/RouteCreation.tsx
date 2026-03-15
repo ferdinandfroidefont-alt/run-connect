@@ -177,7 +177,7 @@ export const RouteCreation = () => {
     const initializeMap = async () => {
       try {
         const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' }
+          body: getKeyBody()
         });
         
         const googleMapsApiKey = apiKeyData?.apiKey || 'FALLBACK_KEY';

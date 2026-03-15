@@ -145,7 +145,7 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
       if (!window.google?.maps) {
         try {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           const googleMapsApiKey = apiKeyData?.apiKey || '';
           if (!googleMapsApiKey) return;

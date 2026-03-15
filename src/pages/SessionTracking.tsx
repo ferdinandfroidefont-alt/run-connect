@@ -40,7 +40,7 @@ export default function SessionTracking() {
     const fetchKey = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { type: 'get-key' },
+          body: getKeyBody(),
         });
         if (error) throw error;
         if (data?.apiKey) setApiKey(data.apiKey);

@@ -39,7 +39,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
       if (!window.google?.maps) {
         try {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           const googleMapsApiKey = apiKeyData?.apiKey || '';
           if (!googleMapsApiKey) return;

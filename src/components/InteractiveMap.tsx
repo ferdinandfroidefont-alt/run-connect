@@ -800,9 +800,7 @@ export const InteractiveMap = ({
           data: apiKeyData,
           error: apiKeyError
         } = await supabase.functions.invoke('google-maps-proxy', {
-          body: {
-            type: 'get-key'
-          }
+          body: getKeyBody()
         });
 
         if (apiKeyError) {

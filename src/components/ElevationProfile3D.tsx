@@ -109,7 +109,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       try {
         if (!window.google?.maps) {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { type: 'get-key' }
+            body: getKeyBody()
           });
           const apiKey = apiKeyData?.apiKey || '';
           const loader = new Loader({ apiKey, version: 'weekly', libraries: ['geometry', 'places'] });
