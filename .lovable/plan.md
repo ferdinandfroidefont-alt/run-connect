@@ -1,78 +1,53 @@
-## Refonte complète de la page Profil
 
-### Analyse de la maquette
 
-D'après l'image annotée, la nouvelle page profil doit avoir :
+## Diagnostic
 
-1. **Header** : barre retour habituelle de l'app (flèche ←) + nom tronqué en titre + trois petits points (menu ···) pour signaler/bloquer
-2. **Section identité** : Photo de profil à gauche + à droite : pseudo, âge,, sport favoris ,  pays (drapeau)
-3. **Stats** : SUIVIS X | FOLLOWERS Y (cliquables)+ bouton "envoyer un message" à côté 
-4. **Bio** : texte bio
-5. **Onglets filtrables** : TOTAUX | 30 JOURS | 7 JOURS
-6. **Contenu sous onglets** : Séances créées > avec le nombres , Itinéraires créés avec le nombre , et uniquement pour ses 2 Séances rejointes, Records sport  unqiuement pour item cliquable ouvre une page dédiée
-7. **Séances récentes** : bouton en bas qui ouvre une page avec liste de séances (style feed)
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### Architecture
+Deux problemes distincts :
 
-**Fichier principal** : `src/pages/Profile.tsx` — refonte complète
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**Ce qui est conservé** :
+## Solution en 2 parties
 
-- Toute la logique data (fetchProfile, fetchFollowCounts, updateProfile, uploadAvatar, etc.)
-- Les sous-composants existants (`ProfileQuickStats`, `SportsBadges`, `ProfileStatsGroup`, `PersonalRecords`, `RecentActivities`)
-- Les dialogs (FollowDialog, SettingsDialog, ReportUserDialog, ImageCropEditor, AdminPremiumManager)
-- Le `ProfilePreviewDialog` (utilisé quand on consulte un autre profil)
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-**Ce qui change** :
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-- Suppression du cover image hero (bandeau Facebook-style)
-- Nouveau layout iOS Inset Grouped :
-  - Header sticky avec titre tronqué + bouton retour + menu ···
-  - Section identité horizontale : avatar à gauche, infos à droite (pseudo, âge, sports favoris avec drapeaux)
-  - Bouton message à côté (pour profil tiers)
-  - Ligne "Suivis X | Followers Y" cliquable
-  - Bio sous les stats
-  - **Onglets période** (Totaux / 30 jours / 7 jours) pour filtrer les stats ci-dessous
-  - Groupe iOS inset : Séances créées, Itinéraires créés, Séances rejointes, Records sport — chaque ligne cliquable avec ChevronRight, ouvre une page/dialog
-  - Bouton "Séances récentes" en bas, ouvre un dialog/page avec la liste
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
 
-### Détails techniques
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
 
-**Header** :
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-- `sticky top-0 z-20 bg-secondary` avec `ArrowLeft` (navigate(-1) si viewing other, sinon hidden) + titre tronqué `truncate max-w-[200px]` + `MoreVertical` dropdown (Signaler, Bloquer pour tiers / Paramètres pour soi)
+### Partie 2 : Securiser la page bridge
 
-**Section identité** :
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
 
-- Layout horizontal `flex items-center gap-4 px-4 py-4`
-- Avatar 80px à gauche avec badge premium
-- À droite : display_name (bold), @username (muted), âge, SportsBadges inline
-- Pour profil tiers : bouton MessageCircle à côté
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
 
-**Stats Suivis/Followers** :
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
 
-- Ligne horizontale simple avec séparateur, cliquable → ouvre FollowDialog
+### Fichiers modifies
 
-**Onglets période** :
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
 
-- `useState<'total' | '30days' | '7days'>('total')`
-- 3 boutons style tabs iOS (bg-card rounded-lg, bouton actif en primary)
-- Filtre passé aux composants de stats
+### Apres le deploy
 
-**Groupe liens (IOSListGroup style)** :
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
-- Séances créées → count dynamique → ouvre `/my-sessions`
-- Itinéraires créés → count dynamique → navigue vers routes
-- Séances rejointes → count dynamique → ouvre `/my-sessions`
-- Records sport → ouvre un dialog PersonalRecords
-- Chaque ligne = IOSListItem avec icône colorée, titre, valeur, ChevronRight
-
-**Séances récentes** :
-
-- Bouton large en bas (style card cliquable) → ouvre un dialog plein écran avec `RecentActivities` en version longue
-
-### Fichiers modifiés
-
-1. `**src/pages/Profile.tsx**` — Refonte complète du rendu, conservation de toute la logique existante
-
-Le `ProfilePreviewDialog` reste inchangé (utilisé pour les profils tiers via route `/profile/:userId`).
