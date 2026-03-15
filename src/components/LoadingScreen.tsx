@@ -94,6 +94,16 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const isExit = phase === 'exit';
   const dashOffset = (1 - traceProgress) * totalLength;
 
+  // Stroke thickens in last 20% of trace
+  const thickenFactor = traceProgress > 0.8 ? (traceProgress - 0.8) / 0.2 : 0;
+  const currentStrokeWidth = 4 + thickenFactor * 10; // 4 → 14
+  const glowStrokeWidth = 8 + thickenFactor * 12;
+  const softGlowStrokeWidth = 14 + thickenFactor * 14;
+
+  // Logo image opacity: starts fading in at 80% trace, full at reveal
+  const logoOpacity = isRevealed ? 1 : (traceProgress > 0.8 ? Math.min((traceProgress - 0.8) * 5, 1) : 0);
+  const showShimmer = isRevealed && logoOpacity >= 1;
+
   return (
     <AnimatePresence>
       <motion.div
