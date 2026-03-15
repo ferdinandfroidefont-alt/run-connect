@@ -1,53 +1,47 @@
 
 
-## Diagnostic
+## Problem
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+Edge function logs show every `get-key` request as `platform=web, native=false` — including from iOS. The browser-restricted API key is returned, which fails in WKWebView (no HTTP referrer).
 
-Deux problemes distincts :
+**Root cause**: `isReallyNative()` in `nativeDetection.ts` only checks Capacitor flags and `AndroidBridge`. iOS WKWebView loading the hosted web URL has none of these, so it's detected as "web".
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+## Fix
 
-## Solution en 2 parties
+### 1. Enhance `nativeDetection.ts` — add iOS WebView detection via User-Agent
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+Add UA-based fallback detection for iOS (standalone WKWebView without Capacitor):
+- Check `navigator.userAgent` for `iPhone`/`iPad` combined with non-Safari indicators (e.g., no `Safari/` token, or presence of `Mobile/` without `CriOS`/`FxiOS` — typical of in-app WebViews)
+- Also check `window.navigator.standalone` (iOS home screen apps)
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+Update `getPlatform()` to return `'ios'` or `'android'` based on UA when Capacitor detection fails.
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+### 2. Files modified
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+| File | Change |
+|---|---|
+| `src/lib/nativeDetection.ts` | Add UA-based iOS WebView detection in `isReallyNative()` and `getPlatform()` |
+
+No other files need changes — `getKeyBody()` already calls these functions, and all 8 map components already use `getKeyBody()`.
+
+### 3. Detection logic
+
+```text
+isReallyNative():
+  1. window.CapacitorForceNative → true
+  2. Capacitor.isNativePlatform() → true
+  3. window.AndroidBridge → true
+  4. window.fcmToken → true
+  5. NEW: iOS standalone mode (navigator.standalone) → true
+  6. NEW: UA = iPhone/iPad + NOT regular Safari browser → true
+     (WKWebView apps don't include "Safari/" in UA)
+  7. NEW: UA = Android + "wv" flag → true (Android WebView)
+
+getPlatform():
+  1. Capacitor.getPlatform() if native
+  2. NEW: UA fallback → 'ios' if iPhone/iPad, 'android' if Android+wv
+  3. Default: 'web'
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+This is a single-file change that will make the proxy return the unrestricted server key for native apps.
 
