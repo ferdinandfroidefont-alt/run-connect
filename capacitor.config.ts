@@ -35,7 +35,8 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
-    backgroundColor: '#FFFFFF'
+    backgroundColor: '#FFFFFF',
+    appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };
 
