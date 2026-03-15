@@ -1,30 +1,53 @@
 
 
-## Probleme
+## Diagnostic
 
-Le R actuel est un simple trait SVG stroke — ca ne ressemble pas du tout au logo officiel qui a une forme organique, epaisse, avec un effet 3D/gradient et des courbes fluides specifiques.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-Reproduire cette forme complexe avec un `strokeWidth` sur un path est impossible — le logo a des epaisseurs variables, des reflets, et une geometrie tres specifique.
+Deux problemes distincts :
 
-## Solution
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-Utiliser **l'image du logo officiel** comme etat final revele, et garder l'animation de trace (trait fin + point lumineux) uniquement pour la phase d'animation.
+## Solution en 2 parties
 
-1. **Copier le logo uploade** dans `src/assets/runconnect-r-logo.png`
-2. **Phase trace** : garder le trait fin anime actuel (leading dot + glow trail) — ca reste visuellement premium
-3. **Phase reveal** : au lieu d'epaissir le stroke, faire un **crossfade** du trait vers l'image du vrai logo par-dessus, avec un scale-up subtil
-4. **Pin GPS** : integre dans l'image du logo, donc pas besoin de le dessiner separement en phase reveal
-5. **Shimmer** : appliquer le light sweep par-dessus l'image du logo
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### Flux visuel
-```text
-appear:     pin GPS drop au point de depart
-trace:      point lumineux trace le R en trait fin (1s)
-reveal:     trait fin fade out + image logo fade in (0.3s) + shimmer
-exit:       logo + texte montent et fade out
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
 ```
 
 ### Fichiers modifies
-- `src/assets/runconnect-r-logo.png` — copie du logo uploade
-- `src/components/LoadingScreen.tsx` — import de l'image, crossfade du stroke vers l'image en phase reveal
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
