@@ -1,27 +1,53 @@
 
 
-## Problème de zoom iOS vs Android
+## Diagnostic
 
-### Diagnostic
-L'app apparaît légèrement zoomée sur iPhone 12 et légèrement dézoomée sur Android. Causes probables :
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-1. **Viewport meta** (ligne 6 de `index.html`) : `maximum-scale=1.0` est correct, mais il manque `minimum-scale=1.0` — certains navigateurs Android peuvent réduire l'échelle par défaut
-2. **CSS `position: fixed` sur html/body** (ligne 122 de `index.css`) : combiné avec `100%` height au lieu de `100dvh`, peut causer des décalages sur iOS avec la barre d'adresse dynamique
-3. **Pas de `-webkit-text-size-adjust`** : iOS Safari peut ajuster automatiquement la taille du texte, donnant l'impression d'un léger zoom
+Deux problemes distincts :
 
-### Corrections
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**`index.html`** — viewport meta plus strict :
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+## Solution en 2 parties
+
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-**`src/index.css`** — normaliser le comportement cross-platform :
-- Ajouter `-webkit-text-size-adjust: 100%` et `text-size-adjust: 100%` sur `html` pour empêcher iOS d'auto-ajuster les tailles de texte
-- Ajouter `touch-action: pan-x pan-y` sur `html` pour éviter les zoom gestuels résiduels
-- Utiliser `100dvh` au lieu de `100%` sur `html, body` pour cohérence avec `#root`
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-### Fichiers modifiés
-- `index.html` — ajout `minimum-scale=1.0`
-- `src/index.css` — ajout `text-size-adjust`, `touch-action`, normalisation hauteur
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
