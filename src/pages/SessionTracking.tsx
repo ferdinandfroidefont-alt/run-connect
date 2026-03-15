@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { imageUrlToBase64 } from '@/lib/map-marker-generator';
 
