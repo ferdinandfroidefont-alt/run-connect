@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getKeyBody } from '@/lib/googleMapsKey';
 
 import { ElevationProfile } from '@/components/ElevationProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
