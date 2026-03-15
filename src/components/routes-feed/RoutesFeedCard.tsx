@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
+import { getKeyBody } from '@/lib/googleMapsKey';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
