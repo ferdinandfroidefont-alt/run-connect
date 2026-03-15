@@ -370,7 +370,7 @@ const Profile = () => {
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => shareProfile(profile?.username || '')}>
+              <DropdownMenuItem onClick={() => shareProfile({ username: profile?.username || '', displayName: profile?.display_name })}>
                 Partager le profil
               </DropdownMenuItem>
             </DropdownMenuContent>
