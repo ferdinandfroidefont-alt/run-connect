@@ -7,35 +7,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import {
-  Settings, Crown, Camera, ChevronRight, ChevronLeft,
-  MoreVertical, Flag, MessageCircle, Route, MapPin,
-  Calendar, Trophy, Award, Clock, Loader2
-} from "lucide-react";
+import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award, ChevronDown } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
+import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
+import { PushNotificationButton } from "@/components/PushNotificationButton";
+
+import { StravaConnect } from "@/components/StravaConnect";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
+
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
+import { PersonalGoals } from "@/components/profile/PersonalGoals";
+import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
-import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
-import { StravaConnect } from "@/components/StravaConnect";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 interface Profile {
   username: string;
   display_name: string | null;
@@ -61,7 +56,6 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
-
 interface UserRoute {
   id: string;
   name: string;
@@ -70,16 +64,29 @@ interface UserRoute {
   total_elevation_gain: number | null;
   created_at: string;
 }
-
 const Profile = () => {
-  const { user, signOut, subscriptionInfo, refreshSubscription } = useAuth();
-  const { userProfile: globalProfile, refreshProfile: refreshGlobalProfile } = useUserProfile();
+  const {
+    user,
+    signOut,
+    subscriptionInfo,
+    refreshSubscription
+  } = useAuth();
+  
+
+  const {
+    userProfile: globalProfile,
+    refreshProfile: refreshGlobalProfile
+  } = useUserProfile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { userId: urlUserId } = useParams();
-  const viewingUserId = urlUserId || searchParams.get('user');
+  const {
+    userId: urlUserId
+  } = useParams();
+  const viewingUserId = urlUserId || searchParams.get('user'); // ID de l'utilisateur à voir via URL ou query param
   const isViewingOtherUser = viewingUserId && viewingUserId !== user?.id;
-  const { shareProfile } = useShareProfile();
+  const {
+    shareProfile
+  } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -92,128 +99,188 @@ const Profile = () => {
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
+  const [commonClubs, setCommonClubs] = useState<any[]>([]);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [settingsFocus, setSettingsFocus] = useState<string>("");
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
   const [showAdminPremium, setShowAdminPremium] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string>("");
+  const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const {
+    toast
+  } = useToast();
+  const {
+    selectFromGallery,
+    loading: cameraLoading
+  } = useCamera();
+  const {
+    t
+  } = useLanguage();
 
-  // Stats counts
-  const [sessionsCreatedCount, setSessionsCreatedCount] = useState(0);
-  const [sessionsJoinedCount, setSessionsJoinedCount] = useState(0);
-  const [routesCreatedCount, setRoutesCreatedCount] = useState(0);
-
-  // Period filter
-  const [periodFilter, setPeriodFilter] = useState<'total' | '30days' | '7days'>('total');
-
-  // Dialogs
-  const [showRecordsDialog, setShowRecordsDialog] = useState(false);
-  const [showRecentActivities, setShowRecentActivities] = useState(false);
-
-  const { toast } = useToast();
-  const { selectFromGallery, loading: cameraLoading } = useCamera();
-  const { t } = useLanguage();
-
-  // =================== DATA FETCHING (preserved from original) ===================
-
+  // Vérifier si on arrive avec un message d'erreur
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam === 'not_friends') {
-      toast({ title: "Non autorisé", description: "Vous n'êtes pas amis donc vous n'êtes pas autorisé à envoyer un message", variant: "destructive" });
+      toast({
+        title: "Non autorisé",
+        description: "Vous n'êtes pas amis donc vous n'êtes pas autorisé à envoyer un message",
+        variant: "destructive"
+      });
+      // Nettoyer l'URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('error');
-      navigate({ search: newParams.toString() }, { replace: true });
+      navigate({
+        search: newParams.toString()
+      }, {
+        replace: true
+      });
     }
   }, [searchParams, toast, navigate]);
 
+  // Ouvrir automatiquement les paramètres si tab=settings
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     const focusParam = searchParams.get('focus');
     if (tabParam === 'settings' && !isViewingOtherUser) {
       setSettingsFocus(focusParam || "");
       setShowSettingsDialog(true);
+      // Nettoyer l'URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('tab');
       newParams.delete('focus');
-      navigate({ search: newParams.toString() }, { replace: true });
+      navigate({
+        search: newParams.toString()
+      }, {
+        replace: true
+      });
     }
   }, [searchParams, navigate, isViewingOtherUser]);
-
   useEffect(() => {
     if (user) {
+      // Si on regarde son propre profil, utiliser le profil global
       if (!isViewingOtherUser && globalProfile) {
+        console.log('✅ [Profile] Using global profile:', globalProfile.username);
         setProfile(globalProfile);
         setFormData(globalProfile);
         setLoading(false);
       } else {
+        // Sinon charger le profil spécifique
         fetchProfile();
       }
       fetchFollowCounts();
-      fetchStatsCounts();
+      // fetchReliabilityRate removed - no longer shown on profile
+      if (!isViewingOtherUser) {
+        fetchUserRoutes();
+      } else {
+        fetchCommonClubs();
+        // Fetch connection history only for creator
+        if (user?.email === 'ferdinand.froidefont@gmail.com') {
+          fetchConnectionHistory();
+        }
+      }
+    }
+    // Check notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
-
-  useEffect(() => {
-    if (user) {
-      fetchStatsCounts();
-    }
-  }, [periodFilter, user, viewingUserId]);
-
-  useEffect(() => {
-    fetchAdminStatus();
-  }, [user?.id, viewingUserId]);
-
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
     try {
-      const { data: followerData } = await supabase.rpc('get_follower_count', { profile_user_id: targetUserId });
-      const { data: followingData } = await supabase.rpc('get_following_count', { profile_user_id: targetUserId });
+      // Get follower count
+      const {
+        data: followerData
+      } = await supabase.rpc('get_follower_count', {
+        profile_user_id: targetUserId
+      });
+
+      // Get following count
+      const {
+        data: followingData
+      } = await supabase.rpc('get_following_count', {
+        profile_user_id: targetUserId
+      });
       setFollowerCount(followerData || 0);
       setFollowingCount(followingData || 0);
     } catch (error) {
       console.error('Error fetching follow counts:', error);
     }
   };
-
-  const fetchStatsCounts = async () => {
-    const targetUserId = viewingUserId || user?.id;
-    if (!targetUserId) return;
-
-    let dateFilter: string | null = null;
-    if (periodFilter === '30days') {
-      dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    } else if (periodFilter === '7days') {
-      dateFilter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    }
-
+  const fetchCommonClubs = async () => {
+    if (!user || !viewingUserId) return;
     try {
-      let createdQuery = supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('organizer_id', targetUserId);
-      let joinedQuery = supabase.from('session_participants').select('id', { count: 'exact', head: true }).eq('user_id', targetUserId);
-      let routesQuery = supabase.from('routes').select('id', { count: 'exact', head: true }).eq('created_by', targetUserId);
-
-      if (dateFilter) {
-        createdQuery = createdQuery.gte('created_at', dateFilter);
-        joinedQuery = joinedQuery.gte('joined_at', dateFilter);
-        routesQuery = routesQuery.gte('created_at', dateFilter);
-      }
-
-      const [createdRes, joinedRes, routesRes] = await Promise.all([createdQuery, joinedQuery, routesQuery]);
-
-      setSessionsCreatedCount(createdRes.count || 0);
-      setSessionsJoinedCount(joinedRes.count || 0);
-      setRoutesCreatedCount(routesRes.count || 0);
+      const {
+        data,
+        error
+      } = await supabase.rpc('get_common_clubs', {
+        user_1_id: user.id,
+        user_2_id: viewingUserId
+      });
+      if (error) throw error;
+      setCommonClubs(data || []);
     } catch (error) {
-      console.error('Error fetching stats counts:', error);
+      console.error('Error fetching common clubs:', error);
+    }
+  };
+  const fetchConnectionHistory = async () => {
+    if (!viewingUserId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
+    try {
+      // Fetch audit logs for login activities for this user
+      const {
+        data,
+        error
+      } = await supabase.from('audit_log').select('timestamp, details, action').eq('user_id', viewingUserId).in('action', ['LOGIN', 'LOGOUT', 'SESSION_START', 'SESSION_END']).order('timestamp', {
+        ascending: false
+      }).limit(10);
+      if (error) {
+        console.error('Error fetching connection history:', error);
+        return;
+      }
+      setConnectionHistory(data || []);
+    } catch (error) {
+      console.error('Error fetching connection history:', error);
+    }
+  };
+  const fetchUserRoutes = async () => {
+    if (!user) return;
+    setRoutesLoading(true);
+    try {
+      const {
+        data,
+        error
+      } = await supabase.from('routes').select('id, name, description, total_distance, total_elevation_gain, created_at').eq('created_by', user.id).order('created_at', {
+        ascending: false
+      });
+      if (error) throw error;
+      setUserRoutes(data || []);
+    } catch (error) {
+      console.error('Error fetching user routes:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger vos parcours",
+        variant: "destructive"
+      });
+    } finally {
+      setRoutesLoading(false);
     }
   };
 
+  // Vérifier le rôle admin via la fonction sécurisée has_role
   const fetchAdminStatus = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
     try {
-      const { data, error } = await supabase.rpc('has_role', { _user_id: targetUserId, _role: 'admin' });
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: targetUserId,
+        _role: 'admin'
+      });
       if (error) throw error;
       setIsAdmin(data === true);
     } catch (error) {
@@ -222,49 +289,109 @@ const Profile = () => {
     }
   };
 
+  // Appeler fetchAdminStatus quand l'utilisateur change
+  useEffect(() => {
+    fetchAdminStatus();
+  }, [user?.id, viewingUserId]);
+  const deleteRoute = async (routeId: string) => {
+    try {
+      const {
+        error
+      } = await supabase.from('routes').delete().eq('id', routeId).eq('created_by', user?.id);
+      if (error) throw error;
+      setUserRoutes(prev => prev.filter(route => route.id !== routeId));
+      toast({
+        title: "Parcours supprimé",
+        description: "Le parcours a été supprimé avec succès"
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le parcours",
+        variant: "destructive"
+      });
+    }
+  };
   const fetchProfile = async (retryCount = 0) => {
     try {
       const targetUserId = viewingUserId || user?.id;
       if (!targetUserId) return;
+      console.log(`🔍 [Profile] Fetching profile (attempt ${retryCount + 1}/3)`);
+      console.log(`🔍 [Profile] Target User ID:`, targetUserId);
+      console.log(`🔍 [Profile] Is viewing other user:`, isViewingOtherUser);
       if (isViewingOtherUser) {
-        const { data, error } = await supabase.rpc('get_public_profile_safe', { profile_user_id: targetUserId });
+        // Viewing another user's profile - use public profile function
+        const {
+          data,
+          error
+        } = await supabase.rpc('get_public_profile_safe', {
+          profile_user_id: targetUserId
+        });
         if (error) throw error;
         if (data && data.length > 0) {
-          const publicProfile = { ...data[0], phone: null, notifications_enabled: false, rgpd_accepted: false, security_rules_accepted: false };
+          // Pour les profils publics, on ajoute des valeurs par défaut pour les champs manquants
+          const publicProfile = {
+            ...data[0],
+            phone: null,
+            // Les profils publics ne montrent pas le téléphone
+            notifications_enabled: false,
+            rgpd_accepted: false,
+            security_rules_accepted: false
+          };
+          console.log(`✅ [Profile] Public profile loaded:`, publicProfile.username);
           setProfile(publicProfile);
           setFormData(publicProfile);
         }
       } else {
-        const { data, error } = await supabase.from('profiles').select('*').eq('user_id', targetUserId).single();
+        // Viewing own profile - get full profile
+        const {
+          data,
+          error
+        } = await supabase.from('profiles').select('*').eq('user_id', targetUserId).single();
         if (error) {
+          // Si l'erreur est liée à l'authentification, retry
           if (error.message.includes('JWT') && retryCount < 2) {
+            console.warn(`⚠️ Auth error, retrying in 1s... (${retryCount + 1}/3)`);
             await new Promise(resolve => setTimeout(resolve, 1000));
             return fetchProfile(retryCount + 1);
           }
           throw error;
         }
+        console.log(`✅ [Profile] Own profile loaded:`, data?.username);
         setProfile(data);
         setFormData(data);
       }
     } catch (error: any) {
-      console.error('Fetch profile error:', error);
-      toast({ title: "Erreur", description: "Impossible de charger le profil.", variant: "destructive" });
+      console.error(`❌ [Profile] Fetch profile error:`, error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le profil. Reconnectez-vous si le problème persiste.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
-
-  // =================== AVATAR & PROFILE UPDATE (preserved) ===================
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Vérifier le type de fichier
       if (!file.type.startsWith('image/')) {
-        toast({ title: "Erreur", description: "Veuillez sélectionner un fichier image.", variant: "destructive" });
+        toast({
+          title: "Erreur",
+          description: "Veuillez sélectionner un fichier image.",
+          variant: "destructive"
+        });
         return;
       }
+
+      // Vérifier la taille du fichier (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "Erreur", description: "La taille du fichier ne doit pas dépasser 5MB.", variant: "destructive" });
+        toast({
+          title: "Erreur",
+          description: "La taille du fichier ne doit pas dépasser 5MB.",
+          variant: "destructive"
+        });
         return;
       }
       const reader = new FileReader();
@@ -276,386 +403,523 @@ const Profile = () => {
       reader.readAsDataURL(file);
     }
   };
-
   const handleCropComplete = (croppedImageBlob: Blob) => {
-    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', { type: 'image/jpeg' });
+    // Créer un fichier à partir du blob croppé
+    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', {
+      type: 'image/jpeg'
+    });
     setAvatarFile(croppedFile);
+
+    // Créer l'URL de prévisualisation
     const previewUrl = URL.createObjectURL(croppedImageBlob);
     setAvatarPreview(previewUrl);
     setShowCropEditor(false);
   };
-
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Erreur", description: "L'image ne doit pas dépasser 10MB.", variant: "destructive" });
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `cover-${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const coverUrl = data.publicUrl;
+      const { error: updateError } = await supabase.from('profiles').update({ cover_image_url: coverUrl } as any).eq('user_id', user.id);
+      if (updateError) throw updateError;
+      setProfile(prev => prev ? { ...prev, cover_image_url: coverUrl } : null);
+      setCoverPreview(coverUrl);
+      await refreshGlobalProfile();
+      toast({ title: "Photo de couverture mise à jour !" });
+    } catch (error: any) {
+      console.error('Error uploading cover:', error);
+      toast({ title: "Erreur", description: "Impossible de mettre à jour la couverture", variant: "destructive" });
+    } finally {
+      setCoverUploading(false);
+    }
+  };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
       const filePath = `${user?.id}/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const {
+        error: uploadError
+      } = await supabase.storage.from('avatars').upload(filePath, file);
+      if (uploadError) {
+        throw uploadError;
+      }
+      const {
+        data
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
       return data.publicUrl;
     } catch (error) {
       console.error('Erreur upload avatar:', error);
       return null;
     }
   };
-
   const updateProfile = async () => {
     try {
       setLoading(true);
       let avatarUrl = formData.avatar_url;
+
+      // Upload nouvel avatar si sélectionné
       if (avatarFile) {
         const uploadedUrl = await uploadAvatar(avatarFile);
         if (uploadedUrl) {
           avatarUrl = uploadedUrl;
         } else {
-          toast({ title: "Erreur", description: "Impossible d'uploader la photo de profil.", variant: "destructive" });
+          toast({
+            title: "Erreur",
+            description: "Impossible d'uploader la photo de profil.",
+            variant: "destructive"
+          });
           setLoading(false);
           return;
         }
       }
-      const { error } = await supabase.from('profiles').update({ ...formData, avatar_url: avatarUrl }).eq('user_id', user?.id);
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        ...formData,
+        avatar_url: avatarUrl
+      }).eq('user_id', user?.id);
       if (error) throw error;
-      setProfile({ ...profile!, ...formData, avatar_url: avatarUrl });
+      setProfile({
+        ...profile!,
+        ...formData,
+        avatar_url: avatarUrl
+      });
       setIsEditing(false);
       setAvatarFile(null);
       setAvatarPreview("");
+
+      // Rafraîchir le profil global
       await refreshGlobalProfile();
-      toast({ title: "Profil mis à jour !", description: "Vos modifications ont été sauvegardées." });
+      toast({
+        title: "Profil mis à jour !",
+        description: "Vos modifications ont été sauvegardées."
+      });
     } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer votre adresse email.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const {
+        error
+      } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: window.AndroidBridge ? 'app.runconnect://auth' : `${window.location.origin}/auth`
+      });
+      if (error) throw error;
+      toast({
+        title: "Email envoyé !",
+        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      try {
+        const permission = await Notification.requestPermission();
+        setNotificationPermission(permission);
 
-  // =================== RENDERING ===================
-
-  // Viewing another user → delegate to ProfilePreviewDialog
+        // Update profile with new permission
+        if (user) {
+          await supabase.from('profiles').update({
+            notifications_enabled: permission === 'granted'
+          }).eq('user_id', user.id);
+        }
+        toast({
+          title: permission === 'granted' ? "Notifications activées" : "Notifications refusées",
+          description: permission === 'granted' ? "Vous recevrez désormais des notifications." : "Vous ne recevrez pas de notifications."
+        });
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    }
+  };
+  const updatePrivacySettings = async (field: string, value: boolean) => {
+    if (!user) return;
+    try {
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        [field]: value
+      }).eq('user_id', user.id);
+      if (error) throw error;
+      setProfile(prev => prev ? {
+        ...prev,
+        [field]: value
+      } : null);
+      toast({
+        title: "Paramètres mis à jour",
+        description: "Vos préférences ont été sauvegardées."
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les paramètres",
+        variant: "destructive"
+      });
+    }
+  };
+  // When viewing another user's profile, show ProfilePreviewDialog instead of full profile
   if (isViewingOtherUser && viewingUserId) {
     return (
       <div className="h-full bg-secondary">
-        <ProfilePreviewDialog userId={viewingUserId} onClose={() => navigate(-1)} />
+        <ProfilePreviewDialog
+          userId={viewingUserId}
+          onClose={() => navigate(-1)}
+        />
       </div>
     );
   }
 
   if (loading) {
-    return (
-      <div className="h-full bg-secondary flex items-center justify-center">
+    return <div className="h-full bg-secondary flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+      </div>;
   }
-
-  const periodLabels = { total: 'Totaux', '30days': '30 jours', '7days': '7 jours' };
-
-  return (
-    <div className="h-full bg-secondary overflow-y-auto pb-24">
-      {/* ===== HEADER ===== */}
-      <div className="sticky top-0 z-20 bg-secondary/95 backdrop-blur-md border-b border-border/50">
-        <div className="flex items-center justify-between h-11 px-4">
-          <div className="w-10" />
-          <h1 className="text-[17px] font-semibold text-foreground truncate max-w-[200px]">
-            {profile?.display_name || profile?.username || 'Profil'}
-          </h1>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="w-10 h-10 flex items-center justify-center">
-                <MoreVertical className="h-5 w-5 text-foreground" />
+  return <div className="h-full bg-secondary overflow-y-auto">
+      {/* Cover Image - Facebook Style */}
+      <div className="relative">
+        {/* Cover Photo */}
+        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
+          {(coverPreview || profile?.cover_image_url) ? (
+            <img 
+              src={coverPreview || profile?.cover_image_url || ''} 
+              alt="Couverture" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
+          )}
+          {/* Overlay gradient for readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          
+          {/* Top bar buttons */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 z-10">
+            {isViewingOtherUser ? (
+              <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white drop-shadow-lg">
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-                <Settings className="h-4 w-4 mr-2" />
-                Paramètres
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => shareProfile({ username: profile?.username || '', displayName: profile?.display_name })}>
-                Partager le profil
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            ) : <div className="w-16" />}
+            <div className="flex items-center gap-2">
+              {!isViewingOtherUser && (
+                <>
+                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
+                    <Camera className="h-4 w-4 text-white" />
+                    <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+                  </label>
+                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                    <Settings className="h-4 w-4 text-white" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {coverUploading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+          )}
         </div>
-      </div>
 
-      <div className="max-w-md mx-auto space-y-5 pt-4">
-        {/* ===== IDENTITY SECTION ===== */}
-        <div className="flex items-center gap-4 px-4">
-          {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-20 w-20 ring-2 ring-border shadow-lg">
+        {/* Avatar overlapping cover */}
+        <div className="relative flex justify-center" style={{ marginTop: '-50px' }}>
+          <div className="relative">
+            <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
-              <AvatarFallback className="text-xl bg-gradient-to-br from-primary/20 to-primary/40">
+              <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/20 to-primary/40">
                 {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
             {profile?.is_premium && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-full bg-green-500 border-2 border-secondary flex items-center justify-center">
-                <span className="text-white text-[10px]">✓</span>
+              <div className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-green-500 border-3 border-card flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
               </div>
             )}
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const file = await selectFromGallery();
-                  if (file) handleAvatarChange({ target: { files: [file] } } as any);
-                } catch (error) {
-                  toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                }
-              }}
-              disabled={cameraLoading}
-              className="absolute bottom-0 left-0 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
-            >
-              <Camera className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-[20px] font-bold text-foreground truncate">
-                {profile?.display_name || profile?.username}
-              </h2>
-              {profile?.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
-            </div>
-            <p className="text-[14px] text-muted-foreground">@{profile?.username}</p>
-            {profile?.age && (
-              <p className="text-[13px] text-muted-foreground mt-0.5">{profile.age} ans</p>
-            )}
-            {/* Sports badges inline */}
-            <div className="mt-1">
-              <SportsBadges
-                runningRecords={profile?.running_records}
-                cyclingRecords={profile?.cycling_records}
-                swimmingRecords={profile?.swimming_records}
-                triathlonRecords={profile?.triathlon_records}
-                walkingRecords={profile?.walking_records}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ===== FOLLOWS + MESSAGE ROW ===== */}
-        <div className="px-4">
-          <div className="bg-card rounded-[10px] overflow-hidden flex items-center">
-            <button
-              onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-              className="flex-1 py-3 text-center active:bg-secondary/60 transition-colors border-r border-border/50"
-            >
-              <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
-              <p className="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wide">Abonnés</p>
-            </button>
-            <button
-              onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-              className="flex-1 py-3 text-center active:bg-secondary/60 transition-colors border-r border-border/50"
-            >
-              <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
-              <p className="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wide">Suivis</p>
-            </button>
-            {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-              <button
-                onClick={() => navigate('/subscription')}
-                className="flex-1 py-3 text-center active:bg-secondary/60 transition-colors"
+            {isEditing && !isViewingOtherUser && (
+              <button 
+                type="button" 
+                onClick={async () => {
+                  try {
+                    const file = await selectFromGallery();
+                    if (file) {
+                      handleAvatarChange({ target: { files: [file] } } as any);
+                    }
+                  } catch (error) {
+                    console.error('❌ Erreur sélection galerie:', error);
+                    toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
+                  }
+                }} 
+                disabled={cameraLoading} 
+                className="absolute bottom-0 left-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
               >
-                <Crown className="h-5 w-5 text-yellow-500 mx-auto" />
-                <p className="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wide">Premium</p>
+                <Camera className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
         </div>
+      </div>
 
-        {/* ===== BIO ===== */}
-        {profile?.bio && (
-          <div className="px-4">
-            <p className="text-[15px] text-foreground leading-relaxed">{profile.bio}</p>
+      {isEditing && !isViewingOtherUser && (
+        <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
+      )}
+
+      <div className="max-w-md mx-auto pb-4 space-y-4">
+        {/* Name, username, bio */}
+        <div className="flex flex-col items-center pt-3 pb-2 px-4">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <h2 className="text-[22px] font-bold text-foreground">
+              {profile?.display_name || profile?.username}
+            </h2>
+            {profile?.is_premium && (
+              <Crown className="h-4 w-4 text-yellow-500" />
+            )}
           </div>
-        )}
+          
+          <p className="text-[14px] text-muted-foreground mb-2">
+            @{profile?.username}
+          </p>
 
-        {/* ===== PERIOD TABS ===== */}
-        <div className="px-4">
-          <div className="bg-card rounded-[10px] p-1 flex gap-1">
-            {(['total', '30days', '7days'] as const).map((period) => (
-              <button
-                key={period}
-                onClick={() => setPeriodFilter(period)}
-                className={`flex-1 py-2 rounded-[8px] text-[13px] font-semibold transition-colors ${
-                  periodFilter === period
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground active:bg-secondary'
-                }`}
-              >
-                {periodLabels[period]}
-              </button>
-            ))}
-          </div>
+          {/* Action Buttons */}
+          {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
+            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
+              <Crown className="h-3.5 w-3.5" />
+              Devenir Premium
+            </Button>
+          )}
+          
+          {isViewingOtherUser && (
+            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
+              <Flag className="h-3.5 w-3.5" />
+              Signaler
+            </Button>
+          )}
         </div>
 
-        {/* ===== STATS LIST (iOS Inset Grouped) ===== */}
+        {/* Sports Badges */}
         <div className="px-4">
-          <IOSListGroup>
-            <IOSListItem
-              icon={Calendar}
-              iconBgColor="bg-primary"
-              title="Séances créées"
-              value={String(sessionsCreatedCount)}
-              onClick={() => navigate('/my-sessions')}
-            />
-            <IOSListItem
-              icon={Route}
-              iconBgColor="bg-green-500"
-              title="Itinéraires créés"
-              value={String(routesCreatedCount)}
-              onClick={() => navigate('/my-sessions')}
-            />
-            <IOSListItem
-              icon={Trophy}
-              iconBgColor="bg-orange-500"
-              title="Séances rejointes"
-              value={String(sessionsJoinedCount)}
-              showSeparator={false}
-            />
-          </IOSListGroup>
-        </div>
-
-        {/* ===== RECORDS (clickable) ===== */}
-        <div className="px-4">
-          <IOSListGroup>
-            <IOSListItem
-              icon={Award}
-              iconBgColor="bg-yellow-500"
-              title="Records sportifs"
-              onClick={() => setShowRecordsDialog(true)}
-              showSeparator={false}
-            />
-          </IOSListGroup>
-        </div>
-
-        {/* ===== CLASSEMENT, BADGES, ACTIVITÉS ===== */}
-        <div className="px-4">
-          <ProfileStatsGroup
-            userId={user?.id || ''}
-            onSettingsClick={() => setShowSettingsDialog(true)}
-            onInfoClick={() => setIsEditing(!isEditing)}
+          <SportsBadges
+            runningRecords={profile?.running_records}
+            cyclingRecords={profile?.cycling_records}
+            swimmingRecords={profile?.swimming_records}
+            triathlonRecords={profile?.triathlon_records}
+            walkingRecords={profile?.walking_records}
           />
         </div>
 
-        {/* ===== STRAVA ===== */}
-        <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
-
-        {/* ===== RECENT ACTIVITIES BUTTON ===== */}
+        {/* Quick Stats */}
         <div className="px-4">
-          <button
-            onClick={() => setShowRecentActivities(true)}
-            className="w-full bg-card rounded-[10px] flex items-center gap-3 px-4 py-3.5 active:bg-secondary transition-colors"
-          >
-            <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
-              <Clock className="h-[18px] w-[18px] text-white" />
-            </div>
-            <span className="flex-1 text-left text-[17px] text-foreground">Séances récentes</span>
-            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-          </button>
+          <ProfileQuickStats
+            userId={viewingUserId || user?.id || ''}
+            followerCount={followerCount}
+            followingCount={followingCount}
+            onFollowersClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+            onFollowingClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+          />
         </div>
 
-        {/* ===== ADMIN PREMIUM (creator only) ===== */}
-        {user?.email === 'ferdinand.froidefont@gmail.com' && (
-          <div className="px-4">
-            <IOSListGroup>
-              <IOSListItem
-                icon={Crown}
-                iconBgColor="bg-yellow-500"
-                title="Gestion Premium"
-                subtitle="Offrir ou retirer des abonnements"
-                onClick={() => setShowAdminPremium(true)}
-                showSeparator={false}
-              />
-            </IOSListGroup>
-          </div>
-        )}
+        {/* Recent Activities */}
+        <div className="px-4">
+          <p className="text-[13px] text-muted-foreground uppercase tracking-wide pb-2">
+            Activités récentes
+          </p>
+          <RecentActivities userId={viewingUserId || user?.id || ''} />
+        </div>
 
-        {/* ===== EDITING FORM (inline, own profile) ===== */}
-        {isEditing && (
-          <div className="px-4">
-            <div className="bg-card rounded-[10px] overflow-hidden">
-              <div className="px-4 py-4 space-y-4">
+        {/* Objectifs personnels - Own profile only */}
+        {!isViewingOtherUser && <PersonalGoals />}
+
+        {/* Séances & Parcours links */}
+        <div className="px-4">
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <div onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/80 flex items-center justify-center">
+                <Route className="h-[18px] w-[18px] text-primary-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[17px] text-foreground">{!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </div>
+            {!isViewingOtherUser && (
+              <>
+                <div className="h-px bg-border ml-[54px]" />
+                <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
+                  <div className="h-[30px] w-[30px] rounded-[7px] bg-accent/80 flex items-center justify-center">
+                    <MapPin className="h-[18px] w-[18px] text-accent-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[17px] text-foreground">Créer un parcours</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Collapsible Achievements Section */}
+        <div className="px-4">
+          <Collapsible>
+            <CollapsibleTrigger className="w-full flex items-center justify-between py-2 group">
+              <p className="text-[13px] text-muted-foreground uppercase tracking-wide">
+                Succès & Records
+              </p>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3">
+              {/* Personal Goals - Own profile only */}
+              {!isViewingOtherUser && <PersonalGoals />}
+
+              {/* Classement, Badges & Activités */}
+              {!isViewingOtherUser ? (
+                <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
+              ) : (
+                <ProfileStatsGroup userId={viewingUserId || ''} />
+              )}
+
+              {/* Personal Records */}
+              <div className="bg-card rounded-[10px] overflow-hidden">
+                <PersonalRecords records={{
+                  running_records: profile?.running_records,
+                  cycling_records: profile?.cycling_records,
+                  swimming_records: profile?.swimming_records,
+                  triathlon_records: profile?.triathlon_records,
+                  walking_records: profile?.walking_records
+                }} />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        {/* Informations Section - Own Profile (editing form) */}
+        {!isViewingOtherUser && isEditing && <div className="bg-card overflow-hidden">
+            <div className="px-4 py-4 space-y-4">
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
-                  <Input value={formData.username || ''} onChange={e => setFormData({ ...formData, username: e.target.value })} className="h-11 rounded-[8px]" />
+                  <Input value={formData.username || ''} onChange={e => setFormData({
+              ...formData,
+              username: e.target.value
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Nom d'affichage</label>
-                  <Input value={formData.display_name || ''} onChange={e => setFormData({ ...formData, display_name: e.target.value })} className="h-11 rounded-[8px]" />
+                  <Input value={formData.display_name || ''} onChange={e => setFormData({
+              ...formData,
+              display_name: e.target.value
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Âge</label>
-                  <Input type="number" value={formData.age || ''} onChange={e => setFormData({ ...formData, age: parseInt(e.target.value) || null })} className="h-11 rounded-[8px]" />
+                  <Input type="number" value={formData.age || ''} onChange={e => setFormData({
+              ...formData,
+              age: parseInt(e.target.value) || null
+            })} className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Téléphone</label>
-                  <Input value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="06 12 34 56 78" className="h-11 rounded-[8px]" />
+                  <Input value={formData.phone || ''} onChange={e => setFormData({
+              ...formData,
+              phone: e.target.value
+            })} placeholder="06 12 34 56 78" className="h-11 rounded-[8px]" />
                 </div>
                 <div>
                   <label className="text-[13px] text-muted-foreground mb-1 block">Bio</label>
-                  <Input value={formData.bio || ''} onChange={e => setFormData({ ...formData, bio: e.target.value })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-[8px]" />
+                  <Input value={formData.bio || ''} onChange={e => setFormData({
+              ...formData,
+              bio: e.target.value
+            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-[8px]" />
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-[8px]">
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sauvegarder
                   </Button>
-                  <Button variant="outline" onClick={() => { setIsEditing(false); setAvatarFile(null); setAvatarPreview(""); setFormData(profile || {}); }} className="flex-1 h-11 rounded-[8px]">
+                  <Button variant="outline" onClick={() => {
+              setIsEditing(false);
+              setAvatarFile(null);
+              setAvatarPreview("");
+              setFormData(profile || {});
+            }} className="flex-1 h-11 rounded-[8px]">
                     Annuler
                   </Button>
                 </div>
               </div>
-            </div>
+          </div>}
+
+        {/* Admin Premium Manager - Creator only */}
+        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
+          <div className="bg-card rounded-[10px] overflow-hidden">
+            <button
+              onClick={() => setShowAdminPremium(true)}
+              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+            >
+              <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
+                <Crown className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[17px] text-foreground">Gestion Premium</p>
+                <p className="text-[13px] text-muted-foreground">Offrir ou retirer des abonnements</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            </button>
           </div>
         )}
+
+        {/* Strava Connect Section */}
+        <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+
+        {/* Follow Dialog */}
+        <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
+
+        {/* Settings Dialog */}
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
+
+        {/* Report User Dialog */}
+        <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
+
+        {/* Image Crop Editor */}
+        <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+
+        {/* Admin Premium Manager Dialog */}
+        <AdminPremiumManager open={showAdminPremium} onOpenChange={setShowAdminPremium} />
       </div>
-
-      {/* ===== DIALOGS ===== */}
-      <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
-      <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
-      <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
-      <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
-      <AdminPremiumManager open={showAdminPremium} onOpenChange={setShowAdminPremium} />
-
-      {/* Records Dialog */}
-      <Dialog open={showRecordsDialog} onOpenChange={setShowRecordsDialog}>
-        <DialogContent className="sm:max-w-md p-0 max-h-[80vh] overflow-y-auto">
-          <div className="p-4">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Award className="h-5 w-5 text-yellow-500" />
-              Records sportifs
-            </h3>
-            <PersonalRecords records={{
-              running_records: profile?.running_records,
-              cycling_records: profile?.cycling_records,
-              swimming_records: profile?.swimming_records,
-              triathlon_records: profile?.triathlon_records,
-              walking_records: profile?.walking_records,
-            }} />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Recent Activities Dialog */}
-      <Dialog open={showRecentActivities} onOpenChange={setShowRecentActivities}>
-        <DialogContent className="sm:max-w-md p-0 max-h-[85vh] overflow-y-auto">
-          <div className="p-4">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-500" />
-              Séances récentes
-            </h3>
-            <RecentActivities userId={user?.id || ''} />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Hidden file input for avatar */}
-      <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
-    </div>
-  );
+    </div>;
 };
-
 export default Profile;
