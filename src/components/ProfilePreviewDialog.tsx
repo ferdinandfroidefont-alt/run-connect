@@ -537,10 +537,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       {/* Follow Dialog */}
       {showFollowDialog && userId && (
         <FollowDialog
-          userId={userId}
-          isOpen={showFollowDialog}
-          onClose={() => setShowFollowDialog(false)}
-          defaultTab={followDialogTab}
+          open={showFollowDialog}
+          onOpenChange={setShowFollowDialog}
+          type={followDialogTab}
+          followerCount={followerCount}
+          followingCount={followingCount}
+          targetUserId={userId}
         />
       )}
 
