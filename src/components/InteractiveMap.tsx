@@ -1644,7 +1644,7 @@ export const InteractiveMap = ({
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+      
 
       <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
 
