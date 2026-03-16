@@ -208,7 +208,7 @@ export const InteractiveMap = ({
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
