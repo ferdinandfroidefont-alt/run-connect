@@ -11,7 +11,7 @@ import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { NotificationCenter } from './NotificationCenter';
 import { StreakBadge } from './StreakBadge';
 import { SettingsDialog } from './SettingsDialog';
-import { ProfileDialog } from './ProfileDialog';
+
 import { UserSessionsDialog } from './UserSessionsDialog';
 import { LevelSliderFilter } from './LevelSliderFilter';
 
