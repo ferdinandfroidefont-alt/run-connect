@@ -1,53 +1,66 @@
 
 
-## Diagnostic
+## Refonte complète de ProfilePreviewDialog
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Ce qui change
+Remplacement total du design actuel (hero cover centré) par un layout iOS "Inset Grouped" conforme à la maquette : identité horizontale (avatar gauche, infos droite), filtrage par période, stats dynamiques, et liens cliquables vers records et séances récentes.
 
-Deux problemes distincts :
+### Structure nouvelle
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
-
-## Solution en 2 parties
-
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+┌─────────────────────────────────┐
+│ ← DISPLAY NAME...        •••   │  Header fixe
+├─────────────────────────────────┤
+│ [Avatar]  Pseudo                │
+│           Âge                   │
+│           🇫🇷 Sport favori      │
+│                                 │
+│  [Suivre]  [Message]            │  Boutons action
+├─────────────────────────────────┤
+│  Suivis  4    Abonnés  3        │  Quick stats row
+├─────────────────────────────────┤
+│  Bio text...                    │
+├─────────────────────────────────┤
+│ TOTAUX | 30 JOURS | 7 JOURS    │  Filtre période
+├─────────────────────────────────┤
+│ Séances créées          12      │
+│ Itinéraires créés        3      │  Stats filtrées
+│ Séances rejointes        8      │
+├─────────────────────────────────┤
+│ Records sport            >      │  Cliquable → dialog
+│ Séances récentes         >      │  Cliquable → dialog/liste
+└─────────────────────────────────┘
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+### Changements concrets dans `ProfilePreviewDialog.tsx`
 
-### Partie 2 : Securiser la page bridge
+1. **Supprimer** le hero cover/avatar centré, le layout vertical
+2. **Header** : bar avec `ArrowLeft` + nom tronqué + dropdown "..." (bloquer/signaler)
+3. **Section identité horizontale** : Avatar (80px) à gauche, à droite pseudo, âge, sport favori (détecté depuis les records non-vides)
+4. **Boutons** : "Suivre" + icône "Message" (visible si amis, navigue vers conversation)
+5. **Stats row** : Suivis + Abonnés (cliquables → FollowDialog)
+6. **Bio** : texte simple dans une card
+7. **Filtre période** : tabs TOTAUX / 30 JOURS / 7 JOURS, requête Supabase filtrée dynamiquement pour compter :
+   - Séances créées (`sessions.organizer_id`)
+   - Itinéraires créés (`routes.created_by`)
+   - Séances rejointes (`session_participants.user_id`)
+8. **Records sport** : IOSListItem cliquable → ouvre `PersonalRecords` dialog
+9. **Séances récentes** : IOSListItem cliquable → ouvre un dialog/sheet avec `RecentActivities`
+10. **Profil privé** : si non-follower, afficher seulement identité + bouton suivre + message "Profil privé"
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+### Fichier modifié
+- `src/components/ProfilePreviewDialog.tsx` — réécriture complète
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+### Logique de filtrage période
+```typescript
+const now = new Date();
+const dateFilter = period === '30d' 
+  ? new Date(now.getTime() - 30*24*60*60*1000).toISOString()
+  : period === '7d'
+  ? new Date(now.getTime() - 7*24*60*60*1000).toISOString()
+  : null; // totaux = pas de filtre
 ```
 
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Navigation message
+Réutilise la logique existante : vérifier `are_users_friends`, chercher conversation existante ou en créer une, naviguer vers `/messages?conversation=...`.
 
