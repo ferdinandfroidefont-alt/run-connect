@@ -1,31 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
-import { SettingsDialog } from "./SettingsDialog";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ArrowLeft, ChevronDown, MessageCircle } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ArrowLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
-import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
+import { FollowDialog } from "./FollowDialog";
+import { useNavigate } from "react-router-dom";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface Profile {
   user_id: string;
   username: string;
   display_name: string | null;
   avatar_url: string | null;
-  cover_image_url?: string | null;
   age: number | null;
   bio: string | null;
   is_premium: boolean;
@@ -38,12 +35,6 @@ interface Profile {
   cycling_records: any;
   swimming_records: any;
   triathlon_records: any;
-  strava_connected?: boolean;
-  strava_verified_at?: string;
-  strava_user_id?: string;
-  instagram_connected?: boolean;
-  instagram_verified_at?: string;
-  instagram_username?: string;
 }
 
 interface ProfilePreviewDialogProps {
@@ -51,9 +42,29 @@ interface ProfilePreviewDialogProps {
   onClose: () => void;
 }
 
+type PeriodFilter = 'total' | '30d' | '7d';
+
+const getFavoriteSport = (profile: Profile): string | null => {
+  const sports = [
+    { key: 'running_records', label: '🏃 Course' },
+    { key: 'cycling_records', label: '🚴 Vélo' },
+    { key: 'swimming_records', label: '🏊 Natation' },
+    { key: 'triathlon_records', label: '🏅 Triathlon' },
+    { key: 'walking_records', label: '🚶 Marche' },
+  ];
+  for (const sport of sports) {
+    const records = (profile as any)[sport.key];
+    if (records && typeof records === 'object' && Object.keys(records).length > 0) {
+      return sport.label;
+    }
+  }
+  return null;
+};
+
 export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -62,9 +73,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followingCount, setFollowingCount] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [areFriends, setAreFriends] = useState(false);
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [period, setPeriod] = useState<PeriodFilter>('total');
+  const [stats, setStats] = useState({ sessionsCreated: 0, routesCreated: 0, sessionsJoined: 0 });
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [showFollowDialog, setShowFollowDialog] = useState(false);
+  const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
+  const [showRecordsSheet, setShowRecordsSheet] = useState(false);
+  const [showActivitiesSheet, setShowActivitiesSheet] = useState(false);
 
   const isOwnProfile = userId === user?.id;
 
@@ -80,29 +97,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   }, [userId, user, isOwnProfile]);
 
+  useEffect(() => {
+    if (userId && (isFollowing || isOwnProfile)) {
+      fetchStats();
+    }
+  }, [userId, period, isFollowing, isOwnProfile]);
+
   const fetchProfile = async () => {
     if (!userId) return;
     try {
       setLoading(true);
-      if (isOwnProfile) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        if (error) throw error;
-        setProfile(data);
-      } else {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*, last_seen, is_online')
-          .eq('user_id', userId)
-          .eq('is_private', false)
-          .single();
-        if (error) throw error;
-        setProfile(data);
-      }
-    } catch (error: any) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (error) throw error;
+      setProfile(data);
+    } catch {
       toast({ title: "Erreur", description: "Impossible de charger le profil", variant: "destructive" });
       onClose();
     } finally {
@@ -110,96 +122,78 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const fetchStats = async () => {
+    if (!userId) return;
+    setStatsLoading(true);
+    try {
+      const dateFilter = period === '30d'
+        ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        : period === '7d'
+        ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
+      let sessionsQuery = supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('organizer_id', userId);
+      let routesQuery = supabase.from('routes').select('id', { count: 'exact', head: true }).eq('created_by', userId);
+      let joinedQuery = supabase.from('session_participants').select('id', { count: 'exact', head: true }).eq('user_id', userId);
+
+      if (dateFilter) {
+        sessionsQuery = sessionsQuery.gte('created_at', dateFilter);
+        routesQuery = routesQuery.gte('created_at', dateFilter);
+        joinedQuery = joinedQuery.gte('joined_at', dateFilter);
+      }
+
+      const [sessionsRes, routesRes, joinedRes] = await Promise.all([sessionsQuery, routesQuery, joinedQuery]);
+      setStats({
+        sessionsCreated: sessionsRes.count || 0,
+        routesCreated: routesRes.count || 0,
+        sessionsJoined: joinedRes.count || 0,
+      });
+    } catch {
+      console.error('Error fetching stats');
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
   const checkFollowStatus = async () => {
     if (!user || !userId) return;
-    try {
-      const { data: followData } = await supabase
-        .from('user_follows')
-        .select('status')
-        .eq('follower_id', user.id)
-        .eq('following_id', userId)
-        .maybeSingle();
-      if (followData) {
-        setIsFollowing(followData.status === 'accepted');
-        setFollowRequestSent(followData.status === 'pending');
-      }
-    } catch (error) {
-      console.error('Error checking follow status:', error);
+    const { data } = await supabase
+      .from('user_follows')
+      .select('status')
+      .eq('follower_id', user.id)
+      .eq('following_id', userId)
+      .maybeSingle();
+    if (data) {
+      setIsFollowing(data.status === 'accepted');
+      setFollowRequestSent(data.status === 'pending');
     }
   };
 
   const checkFriendStatus = async () => {
     if (!user || !userId || isOwnProfile) return;
-    try {
-      const { data } = await supabase.rpc('are_users_friends', { user1_id: user.id, user2_id: userId });
-      setAreFriends(data || false);
-    } catch (error) {
-      console.error('Error checking friend status:', error);
-    }
+    const { data } = await supabase.rpc('are_users_friends', { user1_id: user.id, user2_id: userId });
+    setAreFriends(data || false);
   };
 
   const checkBlockedStatus = async () => {
     if (!user || !userId || isOwnProfile) return;
-    try {
-      const { data } = await supabase
-        .from('blocked_users')
-        .select('id')
-        .eq('blocker_id', user.id)
-        .eq('blocked_id', userId)
-        .maybeSingle();
-      setIsBlocked(!!data);
-    } catch (error) {
-      console.error('Error checking blocked status:', error);
-    }
-  };
-
-  const handleUnblockUser = async () => {
-    if (!user || !userId) return;
-    try {
-      setActionLoading(true);
-      const { error } = await supabase.from('blocked_users').delete().eq('blocker_id', user.id).eq('blocked_id', userId);
-      if (error) throw error;
-      setIsBlocked(false);
-      toast({ title: "Utilisateur débloqué" });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de débloquer", variant: "destructive" });
-    } finally {
-      setActionLoading(false);
-    }
+    const { data } = await supabase
+      .from('blocked_users')
+      .select('id')
+      .eq('blocker_id', user.id)
+      .eq('blocked_id', userId)
+      .maybeSingle();
+    setIsBlocked(!!data);
   };
 
   const fetchFollowCounts = async () => {
     if (!userId) return;
-    try {
-      const [followerRes, followingRes] = await Promise.all([
-        supabase.from('user_follows').select('id', { count: 'exact' }).eq('following_id', userId).eq('status', 'accepted'),
-        supabase.from('user_follows').select('id', { count: 'exact' }).eq('follower_id', userId).eq('status', 'accepted'),
-      ]);
-      setFollowerCount(followerRes.data?.length || 0);
-      setFollowingCount(followingRes.data?.length || 0);
-    } catch (error) {
-      console.error('Error fetching follow counts:', error);
-    }
-  };
-
-  const handleBlockUser = async () => {
-    if (!user || !userId) return;
-    try {
-      setActionLoading(true);
-      const { error } = await supabase.from('blocked_users').insert({ blocker_id: user.id, blocked_id: userId });
-      if (error) throw error;
-      await supabase.from('user_follows').delete()
-        .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
-      toast({ title: "Utilisateur bloqué" });
-      setIsFollowing(false);
-      setFollowRequestSent(false);
-      setAreFriends(false);
-      onClose();
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de bloquer", variant: "destructive" });
-    } finally {
-      setActionLoading(false);
-    }
+    const [followerRes, followingRes] = await Promise.all([
+      supabase.from('user_follows').select('id', { count: 'exact', head: true }).eq('following_id', userId).eq('status', 'accepted'),
+      supabase.from('user_follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId).eq('status', 'accepted'),
+    ]);
+    setFollowerCount(followerRes.count || 0);
+    setFollowingCount(followingRes.count || 0);
   };
 
   const handleFollowToggle = async () => {
@@ -207,8 +201,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     setActionLoading(true);
     try {
       if (isFollowing || followRequestSent) {
-        const { error } = await supabase.from('user_follows').delete().eq('follower_id', user.id).eq('following_id', userId);
-        if (error) throw error;
+        await supabase.from('user_follows').delete().eq('follower_id', user.id).eq('following_id', userId);
         if (isFollowing) {
           setFollowerCount(prev => Math.max(0, prev - 1));
           setAreFriends(false);
@@ -234,260 +227,358 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const handleBlockUser = async () => {
+    if (!user || !userId) return;
+    setActionLoading(true);
+    try {
+      await supabase.from('blocked_users').insert({ blocker_id: user.id, blocked_id: userId });
+      await supabase.from('user_follows').delete()
+        .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
+      toast({ title: "Utilisateur bloqué" });
+      setIsFollowing(false);
+      setFollowRequestSent(false);
+      setAreFriends(false);
+      onClose();
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!user || !userId) return;
+    setActionLoading(true);
+    try {
+      await supabase.from('blocked_users').delete().eq('blocker_id', user.id).eq('blocked_id', userId);
+      setIsBlocked(false);
+      toast({ title: "Utilisateur débloqué" });
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!user || !userId) return;
+    try {
+      // Check for existing conversation
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(participant_1.eq.${user.id},participant_2.eq.${userId}),and(participant_1.eq.${userId},participant_2.eq.${user.id})`)
+        .eq('is_group', false)
+        .maybeSingle();
+
+      if (existing) {
+        onClose();
+        navigate(`/messages?conversation=${existing.id}`);
+      } else {
+        const { data: newConv, error } = await supabase
+          .from('conversations')
+          .insert({ participant_1: user.id, participant_2: userId })
+          .select('id')
+          .single();
+        if (error) throw error;
+        onClose();
+        navigate(`/messages?conversation=${newConv.id}`);
+      }
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'ouvrir la conversation", variant: "destructive" });
+    }
+  };
+
   if (!userId) return null;
 
-  const memberSince = profile?.created_at
-    ? format(new Date(profile.created_at), "MMMM yyyy", { locale: fr })
-    : "";
+  const favoriteSport = profile ? getFavoriteSport(profile) : null;
+  const canViewContent = isFollowing || isOwnProfile;
+
+  const periodTabs: { key: PeriodFilter; label: string }[] = [
+    { key: 'total', label: 'Totaux' },
+    { key: '30d', label: '30 jours' },
+    { key: '7d', label: '7 jours' },
+  ];
 
   return (
-    <Dialog open={!!userId} onOpenChange={() => onClose()}>
-      <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-background sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
+    <>
+      <Dialog open={!!userId} onOpenChange={() => onClose()}>
+        <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
 
-        {/* Floating Header */}
-        <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-3 pt-[max(env(safe-area-inset-top),12px)] pb-2">
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform"
-          >
-            <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
-          </button>
-
-          {!isOwnProfile ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 rounded-full bg-background/60 backdrop-blur-xl flex items-center justify-center shadow-sm active:scale-95 transition-transform">
-                  <MoreVertical className="h-[18px] w-[18px] text-foreground" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-background border-border shadow-lg z-50 rounded-xl">
-                {isBlocked ? (
-                  <DropdownMenuItem onClick={handleUnblockUser} className="text-emerald-600 cursor-pointer">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Débloquer
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={handleBlockUser} className="text-destructive cursor-pointer">
-                    <UserMinus className="h-4 w-4 mr-2" />
-                    Bloquer
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive cursor-pointer">
-                  <Flag className="h-4 w-4 mr-2" />
-                  Signaler
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="w-8" />
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center flex-1">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : profile ? (
-          <ScrollArea className="flex-1">
-            <div className="pb-8">
-              {/* ===== Hero: Cover + Avatar + Identity ===== */}
-              <div className="relative">
-                <div className="h-56 w-full overflow-hidden">
-                  {profile.cover_image_url ? (
-                    <img src={profile.cover_image_url} alt="" className="w-full h-full object-cover" />
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-secondary border-b border-border/50">
+            <button onClick={onClose} className="h-8 w-8 flex items-center justify-center active:scale-95 transition-transform">
+              <ArrowLeft className="h-5 w-5 text-primary" />
+            </button>
+            <h1 className="text-[17px] font-semibold text-foreground truncate max-w-[200px]">
+              {profile?.display_name || profile?.username || 'Profil'}
+            </h1>
+            {!isOwnProfile ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-8 w-8 flex items-center justify-center active:scale-95 transition-transform">
+                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background border-border shadow-lg z-50 rounded-xl">
+                  {isBlocked ? (
+                    <DropdownMenuItem onClick={handleUnblockUser} className="text-emerald-600 cursor-pointer">
+                      <UserPlus className="h-4 w-4 mr-2" /> Débloquer
+                    </DropdownMenuItem>
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary via-primary/70 to-accent" />
+                    <DropdownMenuItem onClick={handleBlockUser} className="text-destructive cursor-pointer">
+                      <UserMinus className="h-4 w-4 mr-2" /> Bloquer
+                    </DropdownMenuItem>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-                </div>
+                  <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive cursor-pointer">
+                    <Flag className="h-4 w-4 mr-2" /> Signaler
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : <div className="w-8" />}
+          </div>
 
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-14">
-                  <div className="relative">
-                    <Avatar className="h-28 w-28 ring-[5px] ring-background shadow-2xl">
-                      <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                        {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {profile.is_premium && (
-                      <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary border-[3px] border-background flex items-center justify-center shadow-md">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+          {loading ? (
+            <div className="flex items-center justify-center flex-1">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : profile ? (
+            <ScrollArea className="flex-1">
+              <div className="pb-8">
+
+                {/* ── Identity Card ── */}
+                <div className="mx-4 mt-4">
+                  <div className="bg-card rounded-[10px] p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                          <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                            {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        {!isOwnProfile && areFriends && (
+                          <OnlineStatus userId={profile.user_id} />
+                        )}
                       </div>
-                    )}
-                    {!isOwnProfile && areFriends && (
-                      <OnlineStatus userId={profile.user_id} />
+                      <div className="flex-1 min-w-0 pt-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[18px] font-bold text-foreground truncate">
+                            {profile.display_name || profile.username}
+                          </p>
+                          {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
+                        </div>
+                        <p className="text-[14px] text-muted-foreground">@{profile.username}</p>
+                        {profile.age && (
+                          <p className="text-[14px] text-muted-foreground mt-0.5">{profile.age} ans</p>
+                        )}
+                        {favoriteSport && (
+                          <p className="text-[13px] text-muted-foreground mt-0.5">{favoriteSport}</p>
+                        )}
+                        <div className="mt-2">
+                          <SportsBadges
+                            runningRecords={profile.running_records}
+                            cyclingRecords={profile.cycling_records}
+                            swimmingRecords={profile.swimming_records}
+                            triathlonRecords={profile.triathlon_records}
+                            walkingRecords={profile.walking_records}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    {!isOwnProfile && (
+                      <div className="flex gap-2.5 mt-4">
+                        <Button
+                          onClick={handleFollowToggle}
+                          disabled={actionLoading}
+                          variant={isFollowing ? "outline" : "default"}
+                          className={`flex-1 h-10 rounded-xl text-[14px] font-semibold ${
+                            followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
+                          }`}
+                        >
+                          {actionLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
+                            <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
+                          )}
+                        </Button>
+                        {areFriends && (
+                          <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-4 border-border">
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
 
-              <div className="h-16" />
-
-              {/* Identity */}
-              <div className="flex flex-col items-center px-6 pt-1">
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-[22px] font-bold text-foreground tracking-tight">
-                    {profile.display_name || profile.username}
-                  </h1>
-                  {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
+                {/* ── Follow Stats ── */}
+                <div className="mx-4 mt-3">
+                  <div className="bg-card rounded-[10px] flex">
+                    <button
+                      onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
+                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-l-[10px]"
+                    >
+                      <p className="text-[18px] font-bold text-foreground">{followingCount}</p>
+                      <p className="text-[12px] text-muted-foreground">Suivis</p>
+                    </button>
+                    <div className="w-px bg-border my-2" />
+                    <button
+                      onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
+                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-r-[10px]"
+                    >
+                      <p className="text-[18px] font-bold text-foreground">{followerCount}</p>
+                      <p className="text-[12px] text-muted-foreground">Abonnés</p>
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[14px] text-muted-foreground mt-0.5">@{profile.username}</p>
 
+                {/* ── Bio ── */}
                 {profile.bio && (
-                  <p className="text-[14px] text-foreground/80 text-center max-w-[300px] mt-3 leading-relaxed">
-                    {profile.bio}
-                  </p>
+                  <div className="mx-4 mt-3">
+                    <div className="bg-card rounded-[10px] p-4">
+                      <p className="text-[14px] text-foreground/80 leading-relaxed">{profile.bio}</p>
+                    </div>
+                  </div>
                 )}
 
-                {/* Sports Badges */}
-                <div className="mt-3">
-                  <SportsBadges
-                    runningRecords={profile.running_records}
-                    cyclingRecords={profile.cycling_records}
-                    swimmingRecords={profile.swimming_records}
-                    triathlonRecords={profile.triathlon_records}
-                    walkingRecords={profile.walking_records}
-                  />
-                </div>
-              </div>
+                {/* ── Content (visible if following or own) ── */}
+                {canViewContent ? (
+                  <>
+                    {/* Period Filter */}
+                    <div className="mx-4 mt-4">
+                      <div className="bg-muted rounded-[8px] p-0.5 flex">
+                        {periodTabs.map(tab => (
+                          <button
+                            key={tab.key}
+                            onClick={() => setPeriod(tab.key)}
+                            className={`flex-1 py-1.5 text-[13px] font-medium rounded-[7px] transition-all ${
+                              period === tab.key
+                                ? 'bg-card text-foreground shadow-sm'
+                                : 'text-muted-foreground'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-              {/* Quick Stats */}
-              <div className="mx-5 mt-4">
-                <ProfileQuickStats
-                  userId={profile.user_id}
-                  followerCount={followerCount}
-                  followingCount={followingCount}
-                />
-              </div>
+                    {/* Stats */}
+                    <div className="mx-4 mt-3">
+                      <IOSListGroup>
+                        <IOSListItem
+                          icon={CalendarDays}
+                          iconBgColor="bg-primary"
+                          title="Séances créées"
+                          value={statsLoading ? '…' : String(stats.sessionsCreated)}
+                          showChevron={false}
+                        />
+                        <IOSListItem
+                          icon={Route}
+                          iconBgColor="bg-emerald-500"
+                          title="Itinéraires créés"
+                          value={statsLoading ? '…' : String(stats.routesCreated)}
+                          showChevron={false}
+                        />
+                        <IOSListItem
+                          icon={MapPin}
+                          iconBgColor="bg-orange-500"
+                          title="Séances rejointes"
+                          value={statsLoading ? '…' : String(stats.sessionsJoined)}
+                          showChevron={false}
+                          showSeparator={false}
+                        />
+                      </IOSListGroup>
+                    </div>
 
-              {/* Action Buttons */}
-              {!isOwnProfile && (
-                <div className="flex gap-2.5 mx-5 mt-4">
-                  <Button
-                    onClick={handleFollowToggle}
-                    disabled={actionLoading}
-                    variant={isFollowing ? "outline" : "default"}
-                    className={`flex-1 h-11 rounded-xl text-[15px] font-semibold transition-all ${
-                      isFollowing ? "border-border" : followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
-                    }`}
-                  >
-                    {actionLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
-                      <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
-                    )}
-                  </Button>
-                  {isFollowing && (
-                    <Button variant="outline" className="h-11 rounded-xl px-4 border-border">
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {/* Content based on follow status */}
-              {(isFollowing || isOwnProfile) ? (
-                <div className="mt-5 space-y-3 px-4">
-                  {/* Recent Activities */}
-                  <div>
-                    <p className="text-[13px] text-muted-foreground uppercase tracking-wide pb-2">
-                      Activités récentes
-                    </p>
-                    <RecentActivities userId={profile.user_id} limit={5} />
-                  </div>
-
-                  {/* Collapsible Achievements */}
-                  <Collapsible>
-                    <CollapsibleTrigger className="w-full flex items-center justify-between py-2 group">
-                      <p className="text-[13px] text-muted-foreground uppercase tracking-wide">
-                        Succès & Records
+                    {/* Records & Recent */}
+                    <div className="mx-4">
+                      <IOSListGroup>
+                        <IOSListItem
+                          icon={Trophy}
+                          iconBgColor="bg-yellow-500"
+                          title="Records sport"
+                          onClick={() => setShowRecordsSheet(true)}
+                        />
+                        <IOSListItem
+                          icon={CalendarDays}
+                          iconBgColor="bg-blue-500"
+                          title="Séances récentes"
+                          onClick={() => setShowActivitiesSheet(true)}
+                          showSeparator={false}
+                        />
+                      </IOSListGroup>
+                    </div>
+                  </>
+                ) : !isOwnProfile ? (
+                  <div className="mx-4 mt-5">
+                    <div className="bg-card rounded-[10px] p-6 text-center">
+                      <div className="text-4xl mb-3">🔒</div>
+                      <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
+                      <p className="text-[13px] text-muted-foreground mt-1">
+                        Suivez cette personne pour voir ses activités
                       </p>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-3">
-                      <ProfileStatsGroup userId={profile.user_id} />
-                      <div className="bg-card rounded-[10px] overflow-hidden">
-                        <PersonalRecords records={{
-                          running_records: profile.running_records,
-                          cycling_records: profile.cycling_records,
-                          swimming_records: profile.swimming_records,
-                          triathlon_records: profile.triathlon_records,
-                          walking_records: profile.walking_records,
-                        }} />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Member Since */}
-                  <div className="bg-card rounded-[10px] overflow-hidden">
-                    <div className="flex items-center p-4 gap-3">
-                      <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Crown className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-[15px] font-medium text-foreground">Membre depuis</p>
-                        <p className="text-[12px] text-muted-foreground">{memberSince}</p>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Danger Actions */}
-                  {!isOwnProfile && (
-                    <div className="bg-card rounded-[10px] overflow-hidden">
-                      <button
-                        onClick={handleFollowToggle}
-                        disabled={actionLoading}
-                        className="w-full flex items-center px-4 py-[11px] active:bg-muted/50 transition-colors"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-destructive/10 flex items-center justify-center mr-3">
-                          <UserMinus className="h-4 w-4 text-destructive" />
-                        </div>
-                        <span className="text-[15px] text-destructive font-medium">
-                          {actionLoading ? 'Chargement...' : 'Ne plus suivre'}
-                        </span>
-                      </button>
-                      <div className="h-px bg-border ml-[54px]" />
-                      <button
-                        onClick={() => setShowReportDialog(true)}
-                        className="w-full flex items-center px-4 py-[11px] active:bg-muted/50 transition-colors"
-                      >
-                        <div className="h-[30px] w-[30px] rounded-[7px] bg-destructive/10 flex items-center justify-center mr-3">
-                          <Flag className="h-4 w-4 text-destructive" />
-                        </div>
-                        <span className="text-[15px] text-destructive font-medium">Signaler</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : !isOwnProfile ? (
-                <div className="mt-5 px-5 space-y-4">
-                  <div className="bg-card rounded-[10px] p-6 text-center">
-                    <div className="text-4xl mb-3">🔒</div>
-                    <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
-                    <p className="text-[13px] text-muted-foreground mt-1">
-                      Suivez cette personne pour voir ses activités
-                    </p>
-                  </div>
-                  <p className="text-center text-[13px] text-muted-foreground">
-                    Membre depuis {memberSince}
-                  </p>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center flex-1 flex items-center justify-center">
+              <p className="text-muted-foreground">Profil non trouvé</p>
             </div>
-          </ScrollArea>
-        ) : (
-          <div className="text-center flex-1 flex items-center justify-center">
-            <p className="text-muted-foreground">Profil non trouvé</p>
-          </div>
-        )}
-      </DialogContent>
+          )}
+        </DialogContent>
+      </Dialog>
 
-      {isOwnProfile && (
-        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+      {/* Follow Dialog */}
+      {showFollowDialog && userId && (
+        <FollowDialog
+          userId={userId}
+          isOpen={showFollowDialog}
+          onClose={() => setShowFollowDialog(false)}
+          defaultTab={followDialogTab}
+        />
       )}
 
+      {/* Records Sheet */}
+      <Sheet open={showRecordsSheet} onOpenChange={setShowRecordsSheet}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-[17px]">Records sport</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-full pb-8">
+            {profile && (
+              <PersonalRecords records={{
+                running_records: profile.running_records,
+                cycling_records: profile.cycling_records,
+                swimming_records: profile.swimming_records,
+                triathlon_records: profile.triathlon_records,
+                walking_records: profile.walking_records,
+              }} />
+            )}
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Recent Activities Sheet */}
+      <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-full pb-8">
+            <div className="p-4">
+              {userId && <RecentActivities userId={userId} limit={20} />}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Report Dialog */}
       {!isOwnProfile && profile && (
         <ReportUserDialog
           isOpen={showReportDialog}
@@ -496,6 +587,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           reportedUsername={profile.username}
         />
       )}
-    </Dialog>
+    </>
   );
 };
