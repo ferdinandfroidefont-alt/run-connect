@@ -23,8 +23,8 @@ export const RoutePhotosGallery = () => {
     let cancelled = false;
 
     const initMap = async () => {
-      if (!window.google?.maps) {
-        try {
+      try {
+        if (!window.google?.maps) {
           const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
             body: getKeyBody()
           });
@@ -33,10 +33,14 @@ export const RoutePhotosGallery = () => {
           const loader = new Loader({ apiKey: key, version: 'weekly', libraries: ['marker'] });
           await loader.importLibrary('maps');
           await loader.importLibrary('marker');
-        } catch (e) {
-          console.error('Failed to load Google Maps', e);
-          return;
+        } else if (!window.google.maps.marker) {
+          // Maps already loaded but marker library missing — import it
+          const loader = new Loader({ apiKey: ' ', version: 'weekly' });
+          await loader.importLibrary('marker');
         }
+      } catch (e) {
+        console.error('Failed to load Google Maps', e);
+        return;
       }
       if (cancelled || !mapContainer.current) return;
 
