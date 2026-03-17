@@ -429,7 +429,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         .eq('user_id', userId)
         .maybeSingle();
 
-      const profileData = {
+      const profileData: Record<string, any> = {
         username: username.trim(),
         display_name: displayName.trim(),
         age: calculatedAge,
@@ -437,6 +437,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         bio: bio.trim(),
         avatar_url: uploadedUrl,
       };
+      if (favoriteSport) profileData.favorite_sport = favoriteSport;
+      if (country) profileData.country = country;
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
