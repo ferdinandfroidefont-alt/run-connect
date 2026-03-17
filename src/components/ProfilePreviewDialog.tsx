@@ -35,6 +35,8 @@ interface Profile {
   cycling_records: any;
   swimming_records: any;
   triathlon_records: any;
+  favorite_sport: string | null;
+  country: string | null;
 }
 
 interface ProfilePreviewDialogProps {
