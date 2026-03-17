@@ -1,53 +1,47 @@
 
 
-## Diagnostic
+## Plan: Refactoring the "Déjà inscrit" Sign-In Page
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Current State
+- The **landing** page has 3 buttons: Google, Apple, Email → this is the signup flow
+- Clicking "Déjà inscrit ? Se connecter" goes to `email-signin` which shows email/password form + OTP — no Google/Apple options
+- The user wants the sign-in page to mirror the landing page structure: 3 options (Google, Apple, Email) but with "Vous n'avez pas de compte ?" at the bottom instead
 
-Deux problemes distincts :
+### Changes to `src/pages/Auth.tsx`
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+**Refactor `renderEmailSignin()`** to become a sign-in landing page:
 
-## Solution en 2 parties
+1. **Replace the current email-signin view** with a layout similar to `renderLanding()`:
+   - Header with back arrow + "Connexion" title
+   - 3 buttons: "Se connecter avec Google", "Se connecter avec Apple", "Se connecter avec e-mail"
+   - Google button calls `handleGoogleAuth`
+   - Apple button calls `handleAppleAuth`
+   - Email button navigates to a new view `email-signin-form` that contains the current email/password + OTP form
+   - Bottom link: "Vous n'avez pas de compte ? S'inscrire" → goes to `email-signup`
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+2. **Add a new AuthView value** `'email-signin-form'` to the type:
+   - `type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset'`
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+3. **Move current email-signin form content** into `renderEmailSigninForm()`:
+   - Same password login + OTP sections as today
+   - Back button goes to `email-signin` (the new 3-button page)
+   - Bottom link: "Vous n'avez pas de compte ? S'inscrire"
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+4. **Update the landing page** bottom link text:
+   - Change "Déjà inscrit ? Se connecter" to navigate to the new `email-signin` view (already does this)
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+5. **Update main render** to include the new `email-signin-form` view.
+
+### Summary of Flow
+```text
+Landing (signup)                  Sign-in landing
+┌──────────────────┐             ┌──────────────────┐
+│  Google           │             │  ← Connexion     │
+│  Apple            │             │  Google           │
+│  Email    ────────┼──signup──►  │  Apple            │
+│                   │             │  Email ───► form  │
+│ Déjà inscrit? ───┼────────────►│                   │
+│                   │             │ Pas de compte? ──►│ signup
+└──────────────────┘             └──────────────────┘
 ```
-
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
 
