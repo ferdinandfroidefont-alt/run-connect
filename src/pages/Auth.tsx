@@ -1075,7 +1075,7 @@ const Auth = () => {
   return (
     <div className="fixed inset-0 flex flex-col" style={{ overflow: 'hidden', backgroundColor: 'hsl(220 14% 97%)' }}>
       {/* Scrollable content — no header bar on landing for cleaner look */}
-      {view !== 'landing' && (
+      {view !== 'landing' && view !== 'email-signin' && (
         <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           <div className="h-[12px]" />
         </div>
