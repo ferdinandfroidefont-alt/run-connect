@@ -548,6 +548,48 @@ export const ProfileDialog = ({
                         />
                       </div>
                       <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Sport favori</label>
+                        <select
+                          value={formData.favorite_sport || ''}
+                          onChange={e => setFormData({ ...formData, favorite_sport: e.target.value || null })}
+                          className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="running">🏃 Course à pied</option>
+                          <option value="cycling">🚴 Vélo</option>
+                          <option value="triathlon">🏅 Triathlon</option>
+                          <option value="swimming">🏊 Natation</option>
+                          <option value="walking">🚶 Marche</option>
+                          <option value="trail">⛰️ Trail</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Pays</label>
+                        <select
+                          value={formData.country || ''}
+                          onChange={e => setFormData({ ...formData, country: e.target.value || null })}
+                          className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="FR">🇫🇷 France</option>
+                          <option value="BE">🇧🇪 Belgique</option>
+                          <option value="CH">🇨🇭 Suisse</option>
+                          <option value="CA">🇨🇦 Canada</option>
+                          <option value="LU">🇱🇺 Luxembourg</option>
+                          <option value="MA">🇲🇦 Maroc</option>
+                          <option value="TN">🇹🇳 Tunisie</option>
+                          <option value="DZ">🇩🇿 Algérie</option>
+                          <option value="SN">🇸🇳 Sénégal</option>
+                          <option value="CI">🇨🇮 Côte d'Ivoire</option>
+                          <option value="ES">🇪🇸 Espagne</option>
+                          <option value="PT">🇵🇹 Portugal</option>
+                          <option value="DE">🇩🇪 Allemagne</option>
+                          <option value="IT">🇮🇹 Italie</option>
+                          <option value="GB">🇬🇧 Royaume-Uni</option>
+                          <option value="US">🇺🇸 États-Unis</option>
+                        </select>
+                      </div>
+                      <div>
                         <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
                         <Input 
                           value={formData.bio || ''} 
