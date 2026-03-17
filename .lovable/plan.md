@@ -1,53 +1,47 @@
 
 
-## Diagnostic
+## Plan: Remplacer le SVG du LoadingScreen par le nouveau design Runconnect
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Nouveau design
+Le SVG fourni utilise un viewBox `0 0 1024 1536` avec :
+- **Globe** : cercle à (512, 650) r=350, dégradé radial `#A0D8FF` → `#0D47A1`
+- **Lettre R stylisée** : path englobant le globe, dégradé linéaire `#4FC3F7` → `#0052A4`
+- **Marqueur GPS** : pion à ~(480, 1250) avec cercle blanc intérieur
+- **Ombre portée** : filtre dropShadow sur globe et R
+- **Fond blanc** `#FFFFFF`
 
-Deux problemes distincts :
+### Changements dans `src/components/LoadingScreen.tsx`
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+1. **Remplacer les constantes SVG** :
+   - `CHEMIN_R` → nouveau path R (`M 180,550 C 350,150 ...`)
+   - `CONTINENTS` → supprimé (plus de continents verts, le globe est uni avec dégradé)
+   - `MARQUEUR` → nouveau path pion (`M 420,1200 C 400,1150 ...`) + cercle blanc à (500, 1225) r=35
+   - `ETOILE` → supprimé (pas d'étoile dans le nouveau SVG)
 
-## Solution en 2 parties
+2. **Mettre à jour viewBox et dimensions** :
+   - `SVG_W = 1024`, `SVG_H = 1536`
+   - Container ratio ajusté (~220px large, ~330px haut pour respecter le ratio 2:3)
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+3. **Mettre à jour les dégradés/defs** :
+   - `globeGrad` : radial `#A0D8FF` → `#0D47A1`
+   - `rGrad` : linéaire `#4FC3F7` → `#0052A4`
+   - `dropShadow` : feDropShadow dx=0 dy=30 stdDeviation=30
+   - Supprimer `grad_terre_mer`, `grad_chemin_r`, `grad_marqueur`
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+4. **Mettre à jour les éléments SVG rendus** :
+   - Globe : `<circle cx="512" cy="650" r="350" fill="url(#globeGrad)">`
+   - R : nouveau path avec `fill="url(#rGrad)"`
+   - Marqueur : nouveau path + cercle blanc
+   - Supprimer étoile et continents
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+5. **Adapter les animations** :
+   - Le tracé progressif suit le nouveau path R (plus grand, forme différente)
+   - Le marqueur GPS bounce à sa nouvelle position (420, 1200)
+   - Le globe fade-in reste identique mais centré sur (512, 650)
+   - Fond changé en `#FFFFFF`
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+6. **Texte RUNCONNECT** : dégradé mis à jour avec les nouvelles couleurs (`#4FC3F7` → `#0052A4`)
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Fichier modifié
+- `src/components/LoadingScreen.tsx`
 
