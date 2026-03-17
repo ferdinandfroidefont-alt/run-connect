@@ -327,9 +327,10 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
 
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-secondary border-b border-border/50">
-            <button onClick={onClose} className="h-8 w-8 flex items-center justify-center active:scale-95 transition-transform">
-              <ArrowLeft className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between px-2 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-card border-b border-border/50">
+            <button onClick={onClose} className="flex items-center gap-0.5 active:opacity-60 transition-opacity px-1 py-1">
+              <ChevronLeft className="h-5 w-5 text-primary" />
+              <span className="text-[17px] text-primary">Retour</span>
             </button>
             <h1 className="text-[17px] font-semibold text-foreground truncate max-w-[200px]">
               {profile?.display_name || profile?.username || 'Profil'}
