@@ -624,7 +624,7 @@ const Auth = () => {
         {/* Email */}
         <button
           type="button"
-          onClick={() => setView('email-signin')}
+          onClick={() => setView('email-signup')}
           disabled={isLoading}
           className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
           style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
