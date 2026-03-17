@@ -622,37 +622,41 @@ export const ProfileDialog = ({
                       value={profile?.username || 'Non renseigné'}
                       showChevron={false}
                     />
-                    {profile?.display_name && (
-                      <IOSListItem
-                        icon={User}
-                        iconBgColor="bg-purple-500"
-                        iconColor="text-white"
-                        title="Nom"
-                        value={profile.display_name}
-                        showChevron={false}
-                      />
-                    )}
-                    {profile?.age && (
-                      <IOSListItem
-                        icon={Calendar}
-                        iconBgColor="bg-pink-500"
-                        iconColor="text-white"
-                        title="Âge"
-                        value={`${profile.age} ans`}
-                        showChevron={false}
-                      />
-                    )}
-                    {profile?.phone && (
-                      <IOSListItem
-                        icon={Heart}
-                        iconBgColor="bg-green-500"
-                        iconColor="text-white"
-                        title="Téléphone"
-                        value={profile.phone}
-                        showChevron={false}
-                        showSeparator={false}
-                      />
-                    )}
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
+                      title="Nom"
+                      value={profile?.display_name || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Calendar}
+                      iconBgColor="bg-pink-500"
+                      iconColor="text-white"
+                      title="Âge"
+                      value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Heart}
+                      iconBgColor="bg-green-500"
+                      iconColor="text-white"
+                      title="Téléphone"
+                      value={profile?.phone || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Sport favori"
+                      value={profile?.favorite_sport || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Pays"
+                      value={profile?.country || 'Non renseigné'}
+                      showChevron={false}
+                      showSeparator={false}
+                    />
                   </IOSListGroup>
 
                   {/* Actions */}
