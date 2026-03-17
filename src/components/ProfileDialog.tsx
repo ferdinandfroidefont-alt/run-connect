@@ -28,6 +28,8 @@ interface Profile {
   age: number | null;
   bio: string | null;
   phone: string | null;
+  favorite_sport?: string | null;
+  country?: string | null;
   is_premium: boolean;
   is_admin?: boolean;
   walking_records?: any;
