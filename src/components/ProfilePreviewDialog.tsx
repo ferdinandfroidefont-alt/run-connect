@@ -428,7 +428,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                             <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
                           )}
                         </Button>
-                        {areFriends && (
+                        {isFollowing && (
                           <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-4 border-border">
                             <MessageCircle className="h-4 w-4" />
                           </Button>
