@@ -677,12 +677,12 @@ export const ProfileDialog = ({
                     />
                     <IOSListItem
                       title="Sport favori"
-                      value={profile?.favorite_sport || 'Non renseigné'}
+                      value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       title="Pays"
-                      value={profile?.country || 'Non renseigné'}
+                      value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
                       showChevron={false}
                       showSeparator={false}
                     />
