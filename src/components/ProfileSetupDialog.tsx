@@ -119,6 +119,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setPhone(formState.phone || '');
             setBio(formState.bio || '');
             setPassword(formState.password || '');
+            setFavoriteSport(formState.favoriteSport || '');
+            setCountry(formState.country || '');
           }
           // NE PAS nettoyer - on garde pour la prochaine tentative
         }
