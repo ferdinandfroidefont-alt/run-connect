@@ -761,6 +761,42 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       required
                     />
                   </div>
+                  <div className="h-px bg-border ml-[54px]" />
+
+                  {/* Favorite Sport */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF6B00] flex items-center justify-center">
+                      <Dumbbell className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Select value={favoriteSport} onValueChange={setFavoriteSport}>
+                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
+                        <SelectValue placeholder="Sport favori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SPORTS_OPTIONS.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
+
+                  {/* Country */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#30B0C7] flex items-center justify-center">
+                      <Globe className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Select value={country} onValueChange={setCountry}>
+                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
+                        <SelectValue placeholder="Pays" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES_OPTIONS.map(c => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
