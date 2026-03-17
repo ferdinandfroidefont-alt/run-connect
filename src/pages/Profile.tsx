@@ -39,6 +39,8 @@ interface Profile {
   age: number | null;
   bio: string | null;
   phone: string | null;
+  favorite_sport?: string | null;
+  country?: string | null;
   is_premium: boolean;
   is_admin?: boolean;
   notifications_enabled?: boolean;
@@ -865,6 +867,42 @@ const Profile = () => {
               ...formData,
               bio: e.target.value
             })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-[8px]" />
+                </div>
+                <div>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Sport favori</label>
+                  <select
+                    value={formData.favorite_sport || ''}
+                    onChange={e => setFormData({ ...formData, favorite_sport: e.target.value || null })}
+                    className="w-full h-11 rounded-[8px] bg-background border border-input px-3 text-[15px]"
+                  >
+                    <option value="">Non spécifié</option>
+                    <option value="running">🏃 Course à pied</option>
+                    <option value="cycling">🚴 Cyclisme</option>
+                    <option value="triathlon">🏅 Triathlon</option>
+                    <option value="swimming">🏊 Natation</option>
+                    <option value="walking">🚶 Marche</option>
+                    <option value="trail">🏔️ Trail</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[13px] text-muted-foreground mb-1 block">Pays</label>
+                  <select
+                    value={formData.country || ''}
+                    onChange={e => setFormData({ ...formData, country: e.target.value || null })}
+                    className="w-full h-11 rounded-[8px] bg-background border border-input px-3 text-[15px]"
+                  >
+                    <option value="">Non spécifié</option>
+                    <option value="france">🇫🇷 France</option>
+                    <option value="belgique">🇧🇪 Belgique</option>
+                    <option value="suisse">🇨🇭 Suisse</option>
+                    <option value="canada">🇨🇦 Canada</option>
+                    <option value="luxembourg">🇱🇺 Luxembourg</option>
+                    <option value="maroc">🇲🇦 Maroc</option>
+                    <option value="tunisie">🇹🇳 Tunisie</option>
+                    <option value="algerie">🇩🇿 Algérie</option>
+                    <option value="senegal">🇸🇳 Sénégal</option>
+                    <option value="cote_ivoire">🇨🇮 Côte d'Ivoire</option>
+                  </select>
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-[8px]">

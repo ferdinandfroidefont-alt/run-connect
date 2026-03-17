@@ -51,10 +51,6 @@ export const RoutePhotosGallery = () => {
         disableDefaultUI: true,
         zoomControl: true,
         gestureHandling: 'greedy',
-        styles: [
-          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-          { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-        ],
       });
 
       setMapReady(true);

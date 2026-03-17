@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { RecentActivities } from "@/components/profile/RecentActivities";
-import { SportsBadges } from "@/components/profile/SportsBadges";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
@@ -400,15 +400,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {profile.country && COUNTRY_FLAGS[profile.country] && (
                           <p className="text-[13px] text-muted-foreground mt-0.5">{COUNTRY_FLAGS[profile.country]}</p>
                         )}
-                        <div className="mt-2">
-                          <SportsBadges
-                            runningRecords={profile.running_records}
-                            cyclingRecords={profile.cycling_records}
-                            swimmingRecords={profile.swimming_records}
-                            triathlonRecords={profile.triathlon_records}
-                            walkingRecords={profile.walking_records}
-                          />
-                        </div>
                       </div>
                     </div>
 

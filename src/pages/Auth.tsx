@@ -166,8 +166,7 @@ const Auth = () => {
     try {
       setIsLoading(true);
       console.log('🔥 [GOOGLE AUTH] Starting...');
-      console.log('🧹 [AUTH] Cleaning existing session before Google login...');
-      await supabase.auth.signOut({ scope: 'local' });
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
       
       const isNativeAvailable = await isNativeGoogleSignInAvailable();
       console.log('🔥 [GOOGLE AUTH] Native available:', isNativeAvailable);
@@ -286,7 +285,7 @@ const Auth = () => {
     try {
       setIsLoading(true);
       console.log('🍎 [APPLE AUTH] Starting...');
-      await supabase.auth.signOut({ scope: 'local' });
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
@@ -420,7 +419,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       console.log('🧹 [AUTH] Cleaning existing session before new login...');
-      await supabase.auth.signOut({ scope: 'local' });
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
       
       let emailToUse = usernameOrEmail;
       
