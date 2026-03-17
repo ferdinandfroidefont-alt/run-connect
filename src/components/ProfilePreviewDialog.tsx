@@ -400,15 +400,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {profile.country && COUNTRY_FLAGS[profile.country] && (
                           <p className="text-[13px] text-muted-foreground mt-0.5">{COUNTRY_FLAGS[profile.country]}</p>
                         )}
-                        <div className="mt-2">
-                          <SportsBadges
-                            runningRecords={profile.running_records}
-                            cyclingRecords={profile.cycling_records}
-                            swimmingRecords={profile.swimming_records}
-                            triathlonRecords={profile.triathlon_records}
-                            walkingRecords={profile.walking_records}
-                          />
-                        </div>
                       </div>
                     </div>
 
