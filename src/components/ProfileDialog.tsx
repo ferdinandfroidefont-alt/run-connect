@@ -28,6 +28,8 @@ interface Profile {
   age: number | null;
   bio: string | null;
   phone: string | null;
+  favorite_sport?: string | null;
+  country?: string | null;
   is_premium: boolean;
   is_admin?: boolean;
   walking_records?: any;
@@ -41,6 +43,35 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
+
+const SPORT_LABELS: Record<string, string> = {
+  running: '🏃 Course à pied',
+  cycling: '🚴 Vélo',
+  swimming: '🏊 Natation',
+  triathlon: '🏅 Triathlon',
+  walking: '🚶 Marche',
+  trail: '⛰️ Trail',
+};
+
+const COUNTRY_LABELS: Record<string, string> = {
+  FR: '🇫🇷 France',
+  BE: '🇧🇪 Belgique',
+  CH: '🇨🇭 Suisse',
+  CA: '🇨🇦 Canada',
+  LU: '🇱🇺 Luxembourg',
+  MA: '🇲🇦 Maroc',
+  TN: '🇹🇳 Tunisie',
+  DZ: '🇩🇿 Algérie',
+  SN: '🇸🇳 Sénégal',
+  CI: "🇨🇮 Côte d'Ivoire",
+  ES: '🇪🇸 Espagne',
+  PT: '🇵🇹 Portugal',
+  DE: '🇩🇪 Allemagne',
+  IT: '🇮🇹 Italie',
+  GB: '🇬🇧 Royaume-Uni',
+  US: '🇺🇸 États-Unis',
+};
+
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -546,6 +577,48 @@ export const ProfileDialog = ({
                         />
                       </div>
                       <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Sport favori</label>
+                        <select
+                          value={formData.favorite_sport || ''}
+                          onChange={e => setFormData({ ...formData, favorite_sport: e.target.value || null })}
+                          className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="running">🏃 Course à pied</option>
+                          <option value="cycling">🚴 Vélo</option>
+                          <option value="triathlon">🏅 Triathlon</option>
+                          <option value="swimming">🏊 Natation</option>
+                          <option value="walking">🚶 Marche</option>
+                          <option value="trail">⛰️ Trail</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[13px] font-medium text-muted-foreground">Pays</label>
+                        <select
+                          value={formData.country || ''}
+                          onChange={e => setFormData({ ...formData, country: e.target.value || null })}
+                          className="mt-1 w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="">Non renseigné</option>
+                          <option value="FR">🇫🇷 France</option>
+                          <option value="BE">🇧🇪 Belgique</option>
+                          <option value="CH">🇨🇭 Suisse</option>
+                          <option value="CA">🇨🇦 Canada</option>
+                          <option value="LU">🇱🇺 Luxembourg</option>
+                          <option value="MA">🇲🇦 Maroc</option>
+                          <option value="TN">🇹🇳 Tunisie</option>
+                          <option value="DZ">🇩🇿 Algérie</option>
+                          <option value="SN">🇸🇳 Sénégal</option>
+                          <option value="CI">🇨🇮 Côte d'Ivoire</option>
+                          <option value="ES">🇪🇸 Espagne</option>
+                          <option value="PT">🇵🇹 Portugal</option>
+                          <option value="DE">🇩🇪 Allemagne</option>
+                          <option value="IT">🇮🇹 Italie</option>
+                          <option value="GB">🇬🇧 Royaume-Uni</option>
+                          <option value="US">🇺🇸 États-Unis</option>
+                        </select>
+                      </div>
+                      <div>
                         <label className="text-[13px] font-medium text-muted-foreground">Bio</label>
                         <Input 
                           value={formData.bio || ''} 
@@ -578,37 +651,41 @@ export const ProfileDialog = ({
                       value={profile?.username || 'Non renseigné'}
                       showChevron={false}
                     />
-                    {profile?.display_name && (
-                      <IOSListItem
-                        icon={User}
-                        iconBgColor="bg-purple-500"
-                        iconColor="text-white"
-                        title="Nom"
-                        value={profile.display_name}
-                        showChevron={false}
-                      />
-                    )}
-                    {profile?.age && (
-                      <IOSListItem
-                        icon={Calendar}
-                        iconBgColor="bg-pink-500"
-                        iconColor="text-white"
-                        title="Âge"
-                        value={`${profile.age} ans`}
-                        showChevron={false}
-                      />
-                    )}
-                    {profile?.phone && (
-                      <IOSListItem
-                        icon={Heart}
-                        iconBgColor="bg-green-500"
-                        iconColor="text-white"
-                        title="Téléphone"
-                        value={profile.phone}
-                        showChevron={false}
-                        showSeparator={false}
-                      />
-                    )}
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
+                      title="Nom"
+                      value={profile?.display_name || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Calendar}
+                      iconBgColor="bg-pink-500"
+                      iconColor="text-white"
+                      title="Âge"
+                      value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Heart}
+                      iconBgColor="bg-green-500"
+                      iconColor="text-white"
+                      title="Téléphone"
+                      value={profile?.phone || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Sport favori"
+                      value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Pays"
+                      value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
+                      showChevron={false}
+                      showSeparator={false}
+                    />
                   </IOSListGroup>
 
                   {/* Actions */}
