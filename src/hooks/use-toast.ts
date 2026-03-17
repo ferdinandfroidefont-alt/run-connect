@@ -140,6 +140,16 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Only show destructive (error) toasts — suppress all success/info toasts
+  if (props.variant !== "destructive") {
+    const id = genId()
+    return {
+      id,
+      dismiss: () => {},
+      update: () => {},
+    }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>
