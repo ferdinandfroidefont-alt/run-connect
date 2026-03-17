@@ -657,16 +657,112 @@ const Auth = () => {
   );
 
   // ══════════════════════════════════════════════
-  // ██  EMAIL SIGNIN VIEW  ██
+  // ██  EMAIL SIGNIN VIEW (3 buttons)  ██
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
+    <div className="flex flex-col items-center justify-between min-h-full px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+      {/* Decorative SVG background */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }} viewBox="0 0 400 800" fill="none" preserveAspectRatio="xMidYMid slice">
+        <path d="M-50 600 Q100 400 200 500 T450 300 T200 100" stroke="hsl(var(--primary))" strokeWidth="2" fill="none"/>
+        <path d="M-50 700 Q150 500 250 600 T500 400 T250 200" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="none"/>
+      </svg>
+
+      {/* Header with back arrow */}
+      <div className="w-full max-w-[340px] relative z-10">
+        <button type="button" onClick={() => setView('landing')} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+      </div>
+
+      {/* Top spacer */}
+      <div className="flex-1 min-h-[40px]" />
+
+      {/* Branding */}
+      <div className="flex flex-col items-center mb-10 relative z-10">
+        <img 
+          src={appIcon} 
+          alt="RunConnect" 
+          className="w-[88px] h-[88px] rounded-[22px] mb-5"
+          style={{ boxShadow: '0 8px 24px hsl(var(--primary) / 0.18)' }}
+        />
+        <h1 className="text-[28px] font-bold text-primary tracking-tight">Connexion</h1>
+        <p className="text-[15px] text-muted-foreground mt-1.5 font-medium">
+          Content de vous revoir !
+        </p>
+      </div>
+
+      {/* Action buttons */}
+      <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
+        {/* Google */}
+        <button
+          type="button"
+          onClick={handleGoogleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-card text-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.08), 0 0 0 1px hsl(0 0% 0% / 0.06)' }}
+        >
+          <FcGoogle className="h-5 w-5" />
+          Se connecter avec Google
+        </button>
+
+        {/* Apple */}
+        <button
+          type="button"
+          onClick={handleAppleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+        >
+          <AppleIcon />
+          Se connecter avec Apple
+        </button>
+
+        {/* Email */}
+        <button
+          type="button"
+          onClick={() => setView('email-signin-form')}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-primary text-primary-foreground text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 2px 8px hsl(var(--primary) / 0.3)' }}
+        >
+          <Mail className="h-5 w-5" />
+          Se connecter avec e-mail
+        </button>
+      </div>
+
+      {/* Bottom spacer */}
+      <div className="flex-1 min-h-[24px]" />
+
+      {/* Bottom link */}
+      <div className="w-full max-w-[340px] space-y-4 relative z-10">
+        <button
+          type="button"
+          onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
+          className="w-full text-center text-[14px] text-primary font-medium py-2 active:opacity-70 transition-opacity"
+        >
+          Vous n'avez pas de compte ? S'inscrire
+        </button>
+        <p className="text-[12px] text-muted-foreground/70 text-center leading-relaxed px-4">
+          En continuant, vous acceptez nos{' '}
+          <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
+          {' '}et notre{' '}
+          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>.
+        </p>
+      </div>
+    </div>
+  );
+
+  // ══════════════════════════════════════════════
+  // ██  EMAIL SIGNIN FORM VIEW  ██
+  // ══════════════════════════════════════════════
+  const renderEmailSigninForm = () => (
     <div className="px-4 py-6 space-y-5 pb-16">
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
-        <button type="button" onClick={() => { setView('landing'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+        <button type="button" onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h2 className="text-[20px] font-bold text-foreground">Connexion</h2>
+        <h2 className="text-[20px] font-bold text-foreground">Connexion par e-mail</h2>
       </div>
 
       {/* Password signin */}
@@ -781,7 +877,7 @@ const Auth = () => {
         onClick={() => { setView('email-signup'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }}
         className="w-full text-center text-[15px] text-primary font-medium py-3 active:opacity-70 transition-opacity"
       >
-        Pas de compte ? Créer un compte
+        Vous n'avez pas de compte ? S'inscrire
       </button>
 
       {/* Clean session */}
