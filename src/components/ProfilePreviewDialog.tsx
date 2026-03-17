@@ -46,7 +46,26 @@ interface ProfilePreviewDialogProps {
 
 type PeriodFilter = 'total' | '30d' | '7d';
 
+const SPORT_LABELS: Record<string, string> = {
+  running: '🏃 Course à pied',
+  cycling: '🚴 Vélo',
+  swimming: '🏊 Natation',
+  triathlon: '🏅 Triathlon',
+  walking: '🚶 Marche',
+  trail: '⛰️ Trail',
+};
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  FR: '🇫🇷 France', BE: '🇧🇪 Belgique', CH: '🇨🇭 Suisse', CA: '🇨🇦 Canada',
+  LU: '🇱🇺 Luxembourg', MA: '🇲🇦 Maroc', TN: '🇹🇳 Tunisie', SN: '🇸🇳 Sénégal',
+  CI: "🇨🇮 Côte d'Ivoire", ES: '🇪🇸 Espagne', PT: '🇵🇹 Portugal', DE: '🇩🇪 Allemagne',
+  IT: '🇮🇹 Italie', GB: '🇬🇧 Royaume-Uni', US: '🇺🇸 États-Unis',
+};
+
 const getFavoriteSport = (profile: Profile): string | null => {
+  if (profile.favorite_sport && SPORT_LABELS[profile.favorite_sport]) {
+    return SPORT_LABELS[profile.favorite_sport];
+  }
   const sports = [
     { key: 'running_records', label: '🏃 Course' },
     { key: 'cycling_records', label: '🚴 Vélo' },
