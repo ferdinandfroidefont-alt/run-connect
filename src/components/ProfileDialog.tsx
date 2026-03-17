@@ -43,6 +43,35 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
+
+const SPORT_LABELS: Record<string, string> = {
+  running: '🏃 Course à pied',
+  cycling: '🚴 Vélo',
+  swimming: '🏊 Natation',
+  triathlon: '🏅 Triathlon',
+  walking: '🚶 Marche',
+  trail: '⛰️ Trail',
+};
+
+const COUNTRY_LABELS: Record<string, string> = {
+  FR: '🇫🇷 France',
+  BE: '🇧🇪 Belgique',
+  CH: '🇨🇭 Suisse',
+  CA: '🇨🇦 Canada',
+  LU: '🇱🇺 Luxembourg',
+  MA: '🇲🇦 Maroc',
+  TN: '🇹🇳 Tunisie',
+  DZ: '🇩🇿 Algérie',
+  SN: '🇸🇳 Sénégal',
+  CI: "🇨🇮 Côte d'Ivoire",
+  ES: '🇪🇸 Espagne',
+  PT: '🇵🇹 Portugal',
+  DE: '🇩🇪 Allemagne',
+  IT: '🇮🇹 Italie',
+  GB: '🇬🇧 Royaume-Uni',
+  US: '🇺🇸 États-Unis',
+};
+
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
