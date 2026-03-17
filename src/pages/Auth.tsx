@@ -285,7 +285,7 @@ const Auth = () => {
     try {
       setIsLoading(true);
       console.log('🍎 [APPLE AUTH] Starting...');
-      await supabase.auth.signOut({ scope: 'local' });
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
