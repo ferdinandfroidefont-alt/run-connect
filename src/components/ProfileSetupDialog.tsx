@@ -9,7 +9,8 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff } from "lucide-react";
+import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe, Dumbbell } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
 
@@ -26,6 +27,33 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
 }
 
+const SPORTS_OPTIONS = [
+  { value: 'running', label: '🏃 Course à pied' },
+  { value: 'cycling', label: '🚴 Vélo' },
+  { value: 'swimming', label: '🏊 Natation' },
+  { value: 'triathlon', label: '🏅 Triathlon' },
+  { value: 'walking', label: '🚶 Marche' },
+  { value: 'trail', label: '⛰️ Trail' },
+];
+
+const COUNTRIES_OPTIONS = [
+  { value: 'FR', label: '🇫🇷 France' },
+  { value: 'BE', label: '🇧🇪 Belgique' },
+  { value: 'CH', label: '🇨🇭 Suisse' },
+  { value: 'CA', label: '🇨🇦 Canada' },
+  { value: 'LU', label: '🇱🇺 Luxembourg' },
+  { value: 'MA', label: '🇲🇦 Maroc' },
+  { value: 'TN', label: '🇹🇳 Tunisie' },
+  { value: 'SN', label: '🇸🇳 Sénégal' },
+  { value: 'CI', label: '🇨🇮 Côte d\'Ivoire' },
+  { value: 'ES', label: '🇪🇸 Espagne' },
+  { value: 'PT', label: '🇵🇹 Portugal' },
+  { value: 'DE', label: '🇩🇪 Allemagne' },
+  { value: 'IT', label: '🇮🇹 Italie' },
+  { value: 'GB', label: '🇬🇧 Royaume-Uni' },
+  { value: 'US', label: '🇺🇸 États-Unis' },
+];
+
 interface FormState {
   username: string;
   displayName: string;
@@ -33,6 +61,8 @@ interface FormState {
   phone: string;
   bio: string;
   password: string;
+  favoriteSport: string;
+  country: string;
   timestamp: number;
 }
 
@@ -47,6 +77,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
+  const [favoriteSport, setFavoriteSport] = useState("");
+  const [country, setCountry] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
@@ -87,6 +119,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setPhone(formState.phone || '');
             setBio(formState.bio || '');
             setPassword(formState.password || '');
+            setFavoriteSport(formState.favoriteSport || '');
+            setCountry(formState.country || '');
           }
           // NE PAS nettoyer - on garde pour la prochaine tentative
         }
@@ -395,7 +429,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         .eq('user_id', userId)
         .maybeSingle();
 
-      const profileData = {
+      const profileData: Record<string, any> = {
         username: username.trim(),
         display_name: displayName.trim(),
         age: calculatedAge,
@@ -403,6 +437,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         bio: bio.trim(),
         avatar_url: uploadedUrl,
       };
+      if (favoriteSport) profileData.favorite_sport = favoriteSport;
+      if (country) profileData.country = country;
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
@@ -547,6 +583,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       phone,
       bio,
       password,
+      favoriteSport,
+      country,
       timestamp: Date.now()
     };
     sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(formState));
@@ -722,6 +760,42 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                       required
                     />
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
+
+                  {/* Favorite Sport */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF6B00] flex items-center justify-center">
+                      <Dumbbell className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Select value={favoriteSport} onValueChange={setFavoriteSport}>
+                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
+                        <SelectValue placeholder="Sport favori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SPORTS_OPTIONS.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="h-px bg-border ml-[54px]" />
+
+                  {/* Country */}
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#30B0C7] flex items-center justify-center">
+                      <Globe className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <Select value={country} onValueChange={setCountry}>
+                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
+                        <SelectValue placeholder="Pays" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES_OPTIONS.map(c => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

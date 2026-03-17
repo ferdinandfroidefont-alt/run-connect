@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ArrowLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
@@ -35,6 +35,8 @@ interface Profile {
   cycling_records: any;
   swimming_records: any;
   triathlon_records: any;
+  favorite_sport: string | null;
+  country: string | null;
 }
 
 interface ProfilePreviewDialogProps {
@@ -44,7 +46,26 @@ interface ProfilePreviewDialogProps {
 
 type PeriodFilter = 'total' | '30d' | '7d';
 
+const SPORT_LABELS: Record<string, string> = {
+  running: '🏃 Course à pied',
+  cycling: '🚴 Vélo',
+  swimming: '🏊 Natation',
+  triathlon: '🏅 Triathlon',
+  walking: '🚶 Marche',
+  trail: '⛰️ Trail',
+};
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  FR: '🇫🇷 France', BE: '🇧🇪 Belgique', CH: '🇨🇭 Suisse', CA: '🇨🇦 Canada',
+  LU: '🇱🇺 Luxembourg', MA: '🇲🇦 Maroc', TN: '🇹🇳 Tunisie', SN: '🇸🇳 Sénégal',
+  CI: "🇨🇮 Côte d'Ivoire", ES: '🇪🇸 Espagne', PT: '🇵🇹 Portugal', DE: '🇩🇪 Allemagne',
+  IT: '🇮🇹 Italie', GB: '🇬🇧 Royaume-Uni', US: '🇺🇸 États-Unis',
+};
+
 const getFavoriteSport = (profile: Profile): string | null => {
+  if (profile.favorite_sport && SPORT_LABELS[profile.favorite_sport]) {
+    return SPORT_LABELS[profile.favorite_sport];
+  }
   const sports = [
     { key: 'running_records', label: '🏃 Course' },
     { key: 'cycling_records', label: '🚴 Vélo' },
@@ -306,9 +327,10 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
 
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-secondary border-b border-border/50">
-            <button onClick={onClose} className="h-8 w-8 flex items-center justify-center active:scale-95 transition-transform">
-              <ArrowLeft className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between px-2 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-card border-b border-border/50">
+            <button onClick={onClose} className="flex items-center gap-0.5 active:opacity-60 transition-opacity px-1 py-1">
+              <ChevronLeft className="h-5 w-5 text-primary" />
+              <span className="text-[17px] text-primary">Retour</span>
             </button>
             <h1 className="text-[17px] font-semibold text-foreground truncate max-w-[200px]">
               {profile?.display_name || profile?.username || 'Profil'}
@@ -375,6 +397,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {favoriteSport && (
                           <p className="text-[13px] text-muted-foreground mt-0.5">{favoriteSport}</p>
                         )}
+                        {profile.country && COUNTRY_FLAGS[profile.country] && (
+                          <p className="text-[13px] text-muted-foreground mt-0.5">{COUNTRY_FLAGS[profile.country]}</p>
+                        )}
                         <div className="mt-2">
                           <SportsBadges
                             runningRecords={profile.running_records}
@@ -404,7 +429,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                             <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
                           )}
                         </Button>
-                        {areFriends && (
+                        {isFollowing && (
                           <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-4 border-border">
                             <MessageCircle className="h-4 w-4" />
                           </Button>

@@ -913,10 +913,12 @@ export type Database = {
           avatar_model_id: string | null
           avatar_url: string | null
           bio: string | null
+          country: string | null
           cover_image_url: string | null
           created_at: string
           cycling_records: Json | null
           display_name: string | null
+          favorite_sport: string | null
           id: string
           instagram_access_token: string | null
           instagram_connected: boolean | null
@@ -969,10 +971,12 @@ export type Database = {
           avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
+          favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
           instagram_connected?: boolean | null
@@ -1025,10 +1029,12 @@ export type Database = {
           avatar_model_id?: string | null
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
+          favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
           instagram_connected?: boolean | null
