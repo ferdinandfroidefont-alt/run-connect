@@ -1084,6 +1084,7 @@ const Auth = () => {
       <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         {view === 'landing' && renderLanding()}
         {view === 'email-signin' && renderEmailSignin()}
+        {view === 'email-signin-form' && renderEmailSigninForm()}
         {view === 'email-signup' && renderEmailSignup()}
         {view === 'otp' && renderOtp()}
         {view === 'reset' && renderReset()}
