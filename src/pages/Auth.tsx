@@ -15,7 +15,7 @@ import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import appIcon from '@/assets/app-icon.png';
 
-type AuthView = 'landing' | 'email-signin' | 'email-signup' | 'otp' | 'reset';
+type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
 const Auth = () => {
   const navigate = useNavigate();
