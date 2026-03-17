@@ -892,16 +892,22 @@ const Profile = () => {
                     className="w-full h-11 rounded-[8px] bg-background border border-input px-3 text-[15px]"
                   >
                     <option value="">Non spécifié</option>
-                    <option value="france">🇫🇷 France</option>
-                    <option value="belgique">🇧🇪 Belgique</option>
-                    <option value="suisse">🇨🇭 Suisse</option>
-                    <option value="canada">🇨🇦 Canada</option>
-                    <option value="luxembourg">🇱🇺 Luxembourg</option>
-                    <option value="maroc">🇲🇦 Maroc</option>
-                    <option value="tunisie">🇹🇳 Tunisie</option>
-                    <option value="algerie">🇩🇿 Algérie</option>
-                    <option value="senegal">🇸🇳 Sénégal</option>
-                    <option value="cote_ivoire">🇨🇮 Côte d'Ivoire</option>
+                    <option value="FR">🇫🇷 France</option>
+                    <option value="BE">🇧🇪 Belgique</option>
+                    <option value="CH">🇨🇭 Suisse</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                    <option value="LU">🇱🇺 Luxembourg</option>
+                    <option value="MA">🇲🇦 Maroc</option>
+                    <option value="TN">🇹🇳 Tunisie</option>
+                    <option value="DZ">🇩🇿 Algérie</option>
+                    <option value="SN">🇸🇳 Sénégal</option>
+                    <option value="CI">🇨🇮 Côte d'Ivoire</option>
+                    <option value="ES">🇪🇸 Espagne</option>
+                    <option value="PT">🇵🇹 Portugal</option>
+                    <option value="DE">🇩🇪 Allemagne</option>
+                    <option value="IT">🇮🇹 Italie</option>
+                    <option value="GB">🇬🇧 Royaume-Uni</option>
+                    <option value="US">🇺🇸 États-Unis</option>
                   </select>
                 </div>
                 <div className="flex gap-2 pt-2">

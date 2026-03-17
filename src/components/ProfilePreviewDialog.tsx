@@ -57,9 +57,9 @@ const SPORT_LABELS: Record<string, string> = {
 
 const COUNTRY_FLAGS: Record<string, string> = {
   FR: '🇫🇷 France', BE: '🇧🇪 Belgique', CH: '🇨🇭 Suisse', CA: '🇨🇦 Canada',
-  LU: '🇱🇺 Luxembourg', MA: '🇲🇦 Maroc', TN: '🇹🇳 Tunisie', SN: '🇸🇳 Sénégal',
-  CI: "🇨🇮 Côte d'Ivoire", ES: '🇪🇸 Espagne', PT: '🇵🇹 Portugal', DE: '🇩🇪 Allemagne',
-  IT: '🇮🇹 Italie', GB: '🇬🇧 Royaume-Uni', US: '🇺🇸 États-Unis',
+  LU: '🇱🇺 Luxembourg', MA: '🇲🇦 Maroc', TN: '🇹🇳 Tunisie', DZ: '🇩🇿 Algérie',
+  SN: '🇸🇳 Sénégal', CI: "🇨🇮 Côte d'Ivoire", ES: '🇪🇸 Espagne', PT: '🇵🇹 Portugal',
+  DE: '🇩🇪 Allemagne', IT: '🇮🇹 Italie', GB: '🇬🇧 Royaume-Uni', US: '🇺🇸 États-Unis',
 };
 
 const getFavoriteSport = (profile: Profile): string | null => {
@@ -394,12 +394,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {profile.age && (
                           <p className="text-[14px] text-muted-foreground mt-0.5">{profile.age} ans</p>
                         )}
-                        {favoriteSport && (
-                          <p className="text-[13px] text-muted-foreground mt-0.5">{favoriteSport}</p>
-                        )}
-                        {profile.country && COUNTRY_FLAGS[profile.country] && (
-                          <p className="text-[13px] text-muted-foreground mt-0.5">{COUNTRY_FLAGS[profile.country]}</p>
-                        )}
+                        <p className="text-[13px] text-muted-foreground mt-0.5">
+                          {favoriteSport || 'Sport non renseigné'}
+                        </p>
+                        <p className="text-[13px] text-muted-foreground mt-0.5">
+                          {(profile.country && COUNTRY_FLAGS[profile.country]) || 'Pays non renseigné'}
+                        </p>
                       </div>
                     </div>
 
