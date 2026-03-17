@@ -419,7 +419,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       console.log('🧹 [AUTH] Cleaning existing session before new login...');
-      await supabase.auth.signOut({ scope: 'local' });
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
       
       let emailToUse = usernameOrEmail;
       
