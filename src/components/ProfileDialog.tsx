@@ -676,11 +676,17 @@ export const ProfileDialog = ({
                       showChevron={false}
                     />
                     <IOSListItem
+                      icon={Footprints}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
                       title="Sport favori"
                       value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
+                      icon={Globe}
+                      iconBgColor="bg-indigo-500"
+                      iconColor="text-white"
                       title="Pays"
                       value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
                       showChevron={false}
