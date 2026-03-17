@@ -581,6 +581,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       phone,
       bio,
       password,
+      favoriteSport,
+      country,
       timestamp: Date.now()
     };
     sessionStorage.setItem(FORM_STATE_KEY, JSON.stringify(formState));
