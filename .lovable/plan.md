@@ -1,32 +1,53 @@
 
 
-## Plan: Remplacer l'animation de chargement par le nouveau SVG globe/R
+## Diagnostic
 
-### Concept
-Remplacer le logo R multi-couches actuel par le nouveau SVG "globe terrestre + chemin R + marqueur GPS + étoile". Conserver la mécanique d'animation existante (phases appear → trace → reveal → exit) en l'adaptant aux nouveaux éléments.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### Animation adaptée au nouveau SVG
+Deux problemes distincts :
 
-1. **Phase "appear"** — Le marqueur GPS (`marqueur_position`) tombe avec un spring bounce à sa position (168, 362)
-2. **Phase "trace"** — Le chemin R (`chemin_r`) se dessine progressivement via strokeDasharray/offset, un point lumineux suit le tracé. Le globe (`terre` + `continents`) se révèle en parallèle avec un fade-in + scale
-3. **Phase "reveal"** — Tout est visible, shimmer sweep + étoile pulse
-4. **Phase "exit"** — Fade out vers le haut
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-### Changements dans `src/components/LoadingScreen.tsx`
+## Solution en 2 parties
 
-- **Supprimer** les constantes LAYER_1–5 et l'ancien TRACE_PATH
-- **Nouveau TRACE_PATH** : basé sur le `chemin_r` du SVG (le path en forme de R), converti en centerline pour le dash animation
-- **Nouveau viewBox** : `0 0 512 512` (comme le SVG fourni)
-- **Nouveaux éléments SVG** :
-  - Globe (cercle gradient radial + continents) — masqué par le reveal progressif
-  - Chemin R (path gradient linéaire) — tracé progressivement
-  - Étoile (en haut) — apparaît au reveal avec un pulse
-  - Marqueur GPS — animation spring à l'appear
-- **Gradients/defs** : reprendre les `grad_terre_mer`, `grad_chemin_r`, `grad_marqueur` du SVG fourni
-- **Fond** : passer de `#FFFFFF` à `#f7f9fc`
-- **Taille container** : ajuster à ~220x220 (carré, ratio 1:1 du nouveau SVG)
-- **Texte RUNCONNECT** : conservé en dessous, même style
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-### Fichier modifié
-- `src/components/LoadingScreen.tsx` — réécriture complète du contenu SVG et adaptation des animations
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
