@@ -391,15 +391,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
                         </div>
                         <p className="text-[14px] text-muted-foreground">@{profile.username}</p>
-                        {profile.age && (
-                          <p className="text-[14px] text-muted-foreground mt-0.5">{profile.age} ans</p>
-                        )}
-                        <p className="text-[13px] text-muted-foreground mt-0.5">
-                          {favoriteSport || 'Sport non renseigné'}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground mt-0.5">
-                          {(profile.country && COUNTRY_FLAGS[profile.country]) || 'Pays non renseigné'}
-                        </p>
                       </div>
                     </div>
 
@@ -428,6 +419,38 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* ── Info Rows (Nom, Pseudo, Âge, Sport, Pays) ── */}
+                <div className="mx-4 mt-3">
+                  <IOSListGroup>
+                    <IOSListItem
+                      title="Nom"
+                      value={profile.display_name || '—'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Pseudo"
+                      value={`@${profile.username}`}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Âge"
+                      value={profile.age ? `${profile.age} ans` : '—'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Sport favori"
+                      value={favoriteSport || '—'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      title="Pays"
+                      value={(profile.country && COUNTRY_FLAGS[profile.country]) || '—'}
+                      showChevron={false}
+                      showSeparator={false}
+                    />
+                  </IOSListGroup>
                 </div>
 
                 {/* ── Follow Stats ── */}
