@@ -11,7 +11,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { useCamera } from "@/hooks/useCamera";
