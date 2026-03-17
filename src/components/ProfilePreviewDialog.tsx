@@ -511,7 +511,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Records & Recent */}
-                    <div className="mx-4">
+                    <div className="mx-4 mt-3">
                       <IOSListGroup>
                         <IOSListItem
                           icon={Trophy}
