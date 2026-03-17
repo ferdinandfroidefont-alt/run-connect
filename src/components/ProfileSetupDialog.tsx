@@ -27,6 +27,33 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
 }
 
+const SPORTS_OPTIONS = [
+  { value: 'running', label: '🏃 Course à pied' },
+  { value: 'cycling', label: '🚴 Vélo' },
+  { value: 'swimming', label: '🏊 Natation' },
+  { value: 'triathlon', label: '🏅 Triathlon' },
+  { value: 'walking', label: '🚶 Marche' },
+  { value: 'trail', label: '⛰️ Trail' },
+];
+
+const COUNTRIES_OPTIONS = [
+  { value: 'FR', label: '🇫🇷 France' },
+  { value: 'BE', label: '🇧🇪 Belgique' },
+  { value: 'CH', label: '🇨🇭 Suisse' },
+  { value: 'CA', label: '🇨🇦 Canada' },
+  { value: 'LU', label: '🇱🇺 Luxembourg' },
+  { value: 'MA', label: '🇲🇦 Maroc' },
+  { value: 'TN', label: '🇹🇳 Tunisie' },
+  { value: 'SN', label: '🇸🇳 Sénégal' },
+  { value: 'CI', label: '🇨🇮 Côte d\'Ivoire' },
+  { value: 'ES', label: '🇪🇸 Espagne' },
+  { value: 'PT', label: '🇵🇹 Portugal' },
+  { value: 'DE', label: '🇩🇪 Allemagne' },
+  { value: 'IT', label: '🇮🇹 Italie' },
+  { value: 'GB', label: '🇬🇧 Royaume-Uni' },
+  { value: 'US', label: '🇺🇸 États-Unis' },
+];
+
 interface FormState {
   username: string;
   displayName: string;
@@ -34,6 +61,8 @@ interface FormState {
   phone: string;
   bio: string;
   password: string;
+  favoriteSport: string;
+  country: string;
   timestamp: number;
 }
 
