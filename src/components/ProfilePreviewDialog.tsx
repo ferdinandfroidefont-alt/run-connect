@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ArrowLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
