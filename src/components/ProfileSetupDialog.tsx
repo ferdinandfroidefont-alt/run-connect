@@ -393,8 +393,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: "Erreur", description: "La photo de profil est obligatoire.", variant: "destructive" });
       return;
     }
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6) {
-      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6 || !country) {
+      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires (dont le pays).", variant: "destructive" });
       return;
     }
     
