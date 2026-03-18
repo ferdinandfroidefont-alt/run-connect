@@ -1,47 +1,53 @@
 
 
-## Plan: Refonte de l'écran Classement — Bloc scrollable et structure fixe
+## Diagnostic
 
-### Problème actuel
-L'écran actuel scrolle entièrement (page entière). Le leaderboard n'est pas dans un bloc délimité. La structure manque de densité.
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### Changement principal : `src/pages/Leaderboard.tsx`
+Deux problemes distincts :
 
-**Structure fixe (pas de scroll page)** :
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-```text
-┌─────────────────────────────┐
-│ HEADER FIXE (📘 + 🎯)      │  ← sticky top
-├─────────────────────────────┤
-│ CARTE UTILISATEUR           │  ← fixe
-├─────────────────────────────┤
-│ FILTRES (2 barres)          │  ← fixe
-├─────────────────────────────┤
-│ 🎁 Récompense saison        │  ← fixe
-├─────────────────────────────┤
-│ Recherche + info saison     │  ← fixe
-├─────────────────────────────┤
-│ ┌─────────────────────────┐ │
-│ │  BLOC LEADERBOARD       │ │  ← flex-1, overflow-y-auto
-│ │  (scroll interne seul)  │ │
-│ │  #1 🥇 ...              │ │
-│ │  #2 🥈 ...              │ │
-│ │  #3 🥉 ...              │ │
-│ │  #4 ...                 │ │
-│ │  ...                    │ │
-│ │  ───── user épinglé ──  │ │
-│ └─────────────────────────┘ │
-└─────────────────────────────┘
+## Solution en 2 parties
+
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
+
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
 ```
 
-**Modifications concrètes** :
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
 
-1. Le conteneur racine passe de `overflow-y-auto` à `flex flex-col overflow-hidden` (pas de scroll global)
-2. Header, carte, filtres, récompense, recherche = partie fixe en haut
-3. Le bloc leaderboard = `flex-1 overflow-hidden` contenant une carte arrondie (`mx-3 rounded-xl border shadow-sm bg-card`) avec scroll interne (`overflow-y-auto`)
-4. Si l'utilisateur n'est pas visible dans la liste scrollable → sa ligne apparaît épinglée en bas du bloc avec fond `bg-primary/5`
-5. Supprimer le `<div className="h-24" />` spacer en bas (plus nécessaire)
-6. L'IntersectionObserver pour infinite scroll s'attache au conteneur scroll interne au lieu de la page
+### Partie 2 : Securiser la page bridge
 
-**Aucun autre fichier ne change** — FilterBar, MyRankCard, RulesSheet, SeasonRewardBanner restent identiques.
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 
