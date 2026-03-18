@@ -12,8 +12,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exit, setExit] = useState(false);
 
   useEffect(() => {
-    document.documentElement.style.backgroundColor = '#FFFFFF';
-    document.body.style.backgroundColor = '#FFFFFF';
+    document.documentElement.style.backgroundColor = 'hsl(220, 14%, 97%)';
+    document.body.style.backgroundColor = 'hsl(220, 14%, 97%)';
     return () => {
       document.documentElement.style.removeProperty('background-color');
       document.body.style.removeProperty('background-color');
