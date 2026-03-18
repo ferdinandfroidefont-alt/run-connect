@@ -163,28 +163,43 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
                 {/* Per-layer gradients for 3D depth */}
                 <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#e8f0fc" />
-                  <stop offset="40%" stopColor="#dce8f8" />
-                  <stop offset="100%" stopColor="#d0dff4" />
+                  <stop offset="0%" stopColor="#edf3fd" />
+                  <stop offset="20%" stopColor="#e8f0fc" />
+                  <stop offset="45%" stopColor="#dfe9f9" />
+                  <stop offset="70%" stopColor="#d6e3f6" />
+                  <stop offset="90%" stopColor="#d0dff4" />
+                  <stop offset="100%" stopColor="#ccdcf2" />
                 </linearGradient>
                 <linearGradient id="grad2" x1="0%" y1="10%" x2="100%" y2="90%">
-                  <stop offset="0%" stopColor="#c8dcf5" />
-                  <stop offset="50%" stopColor="#b9d1f1" />
-                  <stop offset="100%" stopColor="#a8c5ed" />
+                  <stop offset="0%" stopColor="#cce0f7" />
+                  <stop offset="20%" stopColor="#c4d9f4" />
+                  <stop offset="45%" stopColor="#bdd4f2" />
+                  <stop offset="65%" stopColor="#b4cdef" />
+                  <stop offset="85%" stopColor="#acc7ec" />
+                  <stop offset="100%" stopColor="#a5c2ea" />
                 </linearGradient>
                 <linearGradient id="grad3" x1="10%" y1="0%" x2="90%" y2="100%">
-                  <stop offset="0%" stopColor="#82bffc" />
-                  <stop offset="50%" stopColor="#67abf8" />
+                  <stop offset="0%" stopColor="#8cc5fc" />
+                  <stop offset="18%" stopColor="#80bdfb" />
+                  <stop offset="38%" stopColor="#74b5f9" />
+                  <stop offset="58%" stopColor="#67abf8" />
+                  <stop offset="78%" stopColor="#5aa2f6" />
                   <stop offset="100%" stopColor="#4e9af5" />
                 </linearGradient>
                 <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#3a8af9" />
-                  <stop offset="35%" stopColor="#2072f7" />
+                  <stop offset="0%" stopColor="#4090fa" />
+                  <stop offset="18%" stopColor="#3586f9" />
+                  <stop offset="38%" stopColor="#2a7cf8" />
+                  <stop offset="55%" stopColor="#2072f7" />
+                  <stop offset="75%" stopColor="#1d68ec" />
                   <stop offset="100%" stopColor="#1a5ee0" />
                 </linearGradient>
                 <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#1a55e0" />
-                  <stop offset="50%" stopColor="#1244d4" />
+                  <stop offset="0%" stopColor="#1c5ae2" />
+                  <stop offset="22%" stopColor="#1852db" />
+                  <stop offset="45%" stopColor="#154bd5" />
+                  <stop offset="68%" stopColor="#1244d0" />
+                  <stop offset="88%" stopColor="#0f3dc8" />
                   <stop offset="100%" stopColor="#0d38c0" />
                 </linearGradient>
 
@@ -197,7 +212,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
                 {/* Glow filter for dot */}
                 <filter id="dotGlow">
-                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feGaussianBlur stdDeviation="3" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -205,10 +220,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 </filter>
 
                 {/* Shadow for the logo — softer, more realistic */}
-                <filter id="logoShadow" x="-25%" y="-25%" width="150%" height="170%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="shadowBlur" />
-                  <feOffset dx="0" dy="5" in="shadowBlur" result="shadowOffset" />
-                  <feFlood floodColor="#4a7ec7" floodOpacity="0.15" result="shadowColor" />
+                <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="160%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="shadowBlur" />
+                  <feOffset dx="0" dy="3" in="shadowBlur" result="shadowOffset" />
+                  <feFlood floodColor="#4a7ec7" floodOpacity="0.10" result="shadowColor" />
                   <feComposite in="shadowColor" in2="shadowOffset" operator="in" result="shadow" />
                   <feMerge>
                     <feMergeNode in="shadow" />
@@ -218,11 +233,11 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
                 {/* Subtle glossy highlight */}
                 <filter id="glossy" x="-5%" y="-5%" width="110%" height="110%">
-                  <feSpecularLighting in="SourceAlpha" surfaceScale="3" specularConstant="0.4" specularExponent="25" result="specular">
+                  <feSpecularLighting in="SourceAlpha" surfaceScale="3" specularConstant="0.25" specularExponent="35" result="specular">
                     <fePointLight x="200" y="80" z="180" />
                   </feSpecularLighting>
                   <feComposite in="specular" in2="SourceAlpha" operator="in" result="specularClipped" />
-                  <feComposite in="SourceGraphic" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.12" k4="0" />
+                  <feComposite in="SourceGraphic" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.08" k4="0" />
                 </filter>
 
                 {/* Glow filter for reveal */}
