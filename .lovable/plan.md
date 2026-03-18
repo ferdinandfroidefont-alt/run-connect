@@ -1,53 +1,42 @@
 
 
-## Diagnostic
+## Plan: Polissage vectoriel premium du logo R
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Analyse du probleme
+Les paths actuels utilisent des courbes `C` mais avec des segments tres courts et des points de controle quasi-colineaires, ce qui cree un effet de facettes. Les degrades n'ont que 2-3 stops et l'ombre est trop epaisse (stdDeviation=10).
 
-Deux problemes distincts :
+### Ce qui ne change PAS
+- Animation, timing, phases, TRACE_PATH
+- Structure JSX, logique React
+- Silhouette globale du R
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+### Modifications dans `src/components/LoadingScreen.tsx`
 
-## Solution en 2 parties
+**1. Paths SVG (lignes 9-13)**
+- Retracer les 5 layers avec des courbes Bezier longues et fluides
+- Remplacer les suites de micro-segments `C` par des arcs continus avec points de controle espaces
+- Utiliser `S` (smooth cubic) pour garantir la continuite des tangentes aux jonctions
+- Conserver exactement la meme silhouette
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+**2. Degrades (lignes 165-189)**
+- Passer de 3 stops a 5-6 stops par gradient pour des transitions ultra-fluides
+- Ajouter des stops intermediaires avec des couleurs interpolees
+- Utiliser `radialGradient` sur la couche principale pour un effet de volume
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+**3. Ombre (lignes 208-217)**
+- Reduire `stdDeviation` de 10 a 6
+- Reduire `floodOpacity` de 0.15 a 0.10
+- Reduire `dy` offset de 5 a 3
+- Resultat: ombre plus fine et subtile
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+**4. Glossy (lignes 220-226)**
+- Reduire `specularConstant` de 0.4 a 0.25
+- Augmenter `specularExponent` de 25 a 35 pour un reflet plus concentre
+- Reduire k3 de 0.12 a 0.08 pour un effet plus subtil
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+**5. Dot glow (lignes 199-205)**
+- Reduire `stdDeviation` de 5 a 3
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Fichier modifie
+- `src/components/LoadingScreen.tsx` uniquement
 
