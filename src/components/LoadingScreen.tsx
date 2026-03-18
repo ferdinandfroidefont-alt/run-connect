@@ -30,7 +30,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     <AnimatePresence>
       <motion.div
         className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-        style={{ background: '#FFFFFF' }}
+        style={{ background: 'hsl(220, 14%, 97%)' }}
         animate={exit ? { opacity: 0 } : { opacity: 1 }}
         transition={{ duration: 0.2, ease: 'easeIn' }}
       >
