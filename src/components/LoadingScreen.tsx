@@ -212,7 +212,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
                 {/* Glow filter for dot */}
                 <filter id="dotGlow">
-                  <feGaussianBlur stdDeviation="5" result="blur" />
+                  <feGaussianBlur stdDeviation="3" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
