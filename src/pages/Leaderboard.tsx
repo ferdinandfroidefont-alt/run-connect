@@ -9,7 +9,7 @@ import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 import { FilterBar, FilterType, ActivityType, ScopeType } from "@/components/leaderboard/FilterBar";
-import { ScrollToMyRankButton } from "@/components/leaderboard/ScrollToMyRankButton";
+// ScrollToMyRankButton replaced by inline pinned row
 import { MyRankCard } from "@/components/leaderboard/MyRankCard";
 import { RulesSheet } from "@/components/leaderboard/RulesSheet";
 import { SeasonRewardBanner } from "@/components/leaderboard/SeasonRewardBanner";
