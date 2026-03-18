@@ -339,7 +339,6 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
           <div className="p-4">
             <MyRankCard
               currentRank={rank}
-              totalUsers={totalUsers}
               currentPoints={points}
               nextRankName={nextRank.name}
               nextRankPoints={nextRank.points}
