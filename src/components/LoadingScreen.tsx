@@ -140,6 +140,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               fill="none"
               style={{ overflow: 'visible' }}
+              shapeRendering="geometricPrecision"
             >
               <defs>
                 {/* Measurement path (hidden) */}
@@ -160,6 +161,33 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   />
                 </mask>
 
+                {/* Per-layer gradients for 3D depth */}
+                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e8f0fc" />
+                  <stop offset="40%" stopColor="#dce8f8" />
+                  <stop offset="100%" stopColor="#d0dff4" />
+                </linearGradient>
+                <linearGradient id="grad2" x1="0%" y1="10%" x2="100%" y2="90%">
+                  <stop offset="0%" stopColor="#c8dcf5" />
+                  <stop offset="50%" stopColor="#b9d1f1" />
+                  <stop offset="100%" stopColor="#a8c5ed" />
+                </linearGradient>
+                <linearGradient id="grad3" x1="10%" y1="0%" x2="90%" y2="100%">
+                  <stop offset="0%" stopColor="#82bffc" />
+                  <stop offset="50%" stopColor="#67abf8" />
+                  <stop offset="100%" stopColor="#4e9af5" />
+                </linearGradient>
+                <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#3a8af9" />
+                  <stop offset="35%" stopColor="#2072f7" />
+                  <stop offset="100%" stopColor="#1a5ee0" />
+                </linearGradient>
+                <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#1a55e0" />
+                  <stop offset="50%" stopColor="#1244d4" />
+                  <stop offset="100%" stopColor="#0d38c0" />
+                </linearGradient>
+
                 {/* Gradient for trace line */}
                 <linearGradient id="traceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#2072f7" />
@@ -176,9 +204,25 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   </feMerge>
                 </filter>
 
-                {/* Shadow for the logo */}
-                <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="160%">
-                  <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#7ca0d8" floodOpacity="0.18" />
+                {/* Shadow for the logo — softer, more realistic */}
+                <filter id="logoShadow" x="-25%" y="-25%" width="150%" height="170%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="shadowBlur" />
+                  <feOffset dx="0" dy="5" in="shadowBlur" result="shadowOffset" />
+                  <feFlood floodColor="#4a7ec7" floodOpacity="0.15" result="shadowColor" />
+                  <feComposite in="shadowColor" in2="shadowOffset" operator="in" result="shadow" />
+                  <feMerge>
+                    <feMergeNode in="shadow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+
+                {/* Subtle glossy highlight */}
+                <filter id="glossy" x="-5%" y="-5%" width="110%" height="110%">
+                  <feSpecularLighting in="SourceAlpha" surfaceScale="3" specularConstant="0.4" specularExponent="25" result="specular">
+                    <fePointLight x="200" y="80" z="180" />
+                  </feSpecularLighting>
+                  <feComposite in="specular" in2="SourceAlpha" operator="in" result="specularClipped" />
+                  <feComposite in="SourceGraphic" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.12" k4="0" />
                 </filter>
 
                 {/* Glow filter for reveal */}
@@ -201,11 +245,13 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
               {/* === MASKED LOGO LAYERS === */}
               <g mask="url(#revealMask)" filter={isRevealed ? "url(#logoShadow)" : undefined}>
-                <path d={LAYER_1} fill="#dce8f8" />
-                <path d={LAYER_2} fill="#b9d1f1" />
-                <path d={LAYER_3} fill="#67abf8" />
-                <path d={LAYER_4} fill="#2072f7" />
-                <path d={LAYER_5} fill="#1244d4" />
+                <g filter={isRevealed ? "url(#glossy)" : undefined}>
+                  <path d={LAYER_1} fill="url(#grad1)" strokeLinejoin="round" />
+                  <path d={LAYER_2} fill="url(#grad2)" strokeLinejoin="round" />
+                  <path d={LAYER_3} fill="url(#grad3)" strokeLinejoin="round" />
+                  <path d={LAYER_4} fill="url(#grad4)" strokeLinejoin="round" />
+                  <path d={LAYER_5} fill="url(#grad5)" strokeLinejoin="round" />
+                </g>
               </g>
 
               {/* Trace line on top (thin glowing line following the path) */}
