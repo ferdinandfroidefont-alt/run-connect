@@ -1,53 +1,39 @@
 
 
-## Diagnostic
+## Plan: Améliorer la qualité visuelle du logo R (sans toucher l'animation)
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Probleme actuel
+Les 5 couches du logo (LAYER_1 a LAYER_5) utilisent exclusivement des commandes `L` (lignes droites) et `M` (move-to), ce qui produit un rendu polygonal/facetté avec des angles visibles. Pas de courbes Bezier, donc un aspect "low-poly".
 
-Deux problemes distincts :
+### Ce qui ne change PAS
+- Aucun timing (APPEAR_DELAY, TRACE_DURATION, REVEAL_DELAY, EXIT_DELAY, TOTAL_DURATION)
+- Aucune phase d'animation (appear, trace, reveal, exit)
+- Aucune logique (animateTrace, dashOffset, maskStrokeWidth, etc.)
+- Le TRACE_PATH reste identique
+- La structure JSX reste identique
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+### Modifications prevues dans `src/components/LoadingScreen.tsx`
 
-## Solution en 2 parties
+**1. Remplacement des 5 layers SVG** (lignes 9-13)
+- Convertir chaque path de commandes `M...L...Z` en `M...C...Q...Z` avec des courbes Bezier cubiques et quadratiques
+- Lisser toutes les jonctions anguleuses pour un rendu fluide
+- Conserver la silhouette exacte du R mais avec des courbes parfaitement lisses
+- Chaque sous-path (séparé par `M`) sera converti individuellement
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+**2. Amelioration des degrades** (lignes ~163-168 et ~204-208)
+- Remplacer les fills plats par des `linearGradient` par couche pour un effet 3D subtil
+- Ajouter des stops intermediaires pour des transitions ultra-fluides entre les tons bleus
+- Palette conservee (#dce8f8, #b9d1f1, #67abf8, #2072f7, #1244d4) mais avec micro-variations
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+**3. Amelioration des filtres SVG** (lignes ~170-196)
+- `logoShadow`: ombre plus douce (stdDeviation plus eleve, opacite reduite)
+- Ajouter un filtre `feSpecularLighting` subtil pour un effet glossy
+- Anti-aliasing renforce via `shape-rendering="geometricPrecision"` sur le SVG root
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+**4. Bords nets**
+- Ajouter `shape-rendering="geometricPrecision"` au `<svg>` principal
+- Verifier `stroke-linejoin="round"` sur les paths du logo
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
-
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
-
-### Partie 2 : Securiser la page bridge
-
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
-
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
-
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
-
-### Fichiers modifies
-
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Fichier modifie
+- `src/components/LoadingScreen.tsx` uniquement
 
