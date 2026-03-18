@@ -223,6 +223,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   href="/logo-r.svg"
                   x="0" y="0"
                   width={SVG_W} height={SVG_H}
+                  filter="url(#recolorLogo)"
                   preserveAspectRatio="xMidYMid meet"
                 />
               </g>
