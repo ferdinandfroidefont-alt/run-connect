@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 export type ActivityType = 'running' | 'cycling' | 'walking' | 'course' | 'trail' | 'velo' | 'vtt' | 'bmx' | 'gravel' | 'marche' | 'natation' | 'swimming' | 'football' | 'basket' | 'basketball' | 'volley' | 'badminton' | 'pingpong' | 'tennis' | 'escalade' | 'petanque' | 'rugby' | 'handball' | 'fitness' | 'yoga' | 'musculation' | 'crossfit' | 'boxe' | 'arts_martiaux' | 'golf' | 'ski' | 'snowboard' | 'randonnee' | 'kayak' | 'surf';
+export type ScopeType = 'global' | 'local' | 'friends' | 'clubs';
 export type FilterType = 'general' | ActivityType | 'friends' | 'clubs';
 
 interface Club {
@@ -20,6 +21,8 @@ interface Club {
 }
 
 interface FilterBarProps {
+  activeScope: ScopeType;
+  onScopeChange: (scope: ScopeType) => void;
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
   selectedClubs: string[];
@@ -62,67 +65,99 @@ const additionalSports: { value: ActivityType; label: string; emoji: string }[] 
   { value: 'surf', label: 'Surf', emoji: '🏄' }
 ];
 
-type MainSegment = { value: FilterType; label: string };
+const scopeSegments: { value: ScopeType; label: string; emoji: string }[] = [
+  { value: 'global', label: 'Global', emoji: '🌍' },
+  { value: 'local', label: 'Local', emoji: '📍' },
+  { value: 'friends', label: 'Amis', emoji: '👥' },
+  { value: 'clubs', label: 'Clubs', emoji: '🏃' },
+];
+
+type SportSegment = { value: FilterType; label: string; emoji: string };
+const sportSegments: SportSegment[] = [
+  { value: 'general', label: 'Général', emoji: '🏆' },
+  { value: 'running', label: 'Running', emoji: '🏃' },
+  { value: 'cycling', label: 'Vélo', emoji: '🚴' },
+  { value: 'walking', label: 'Marche', emoji: '🚶' },
+];
+
+/* ── Segmented Control ── */
+const SegmentedControl = <T extends string>({
+  segments,
+  active,
+  onChange,
+}: {
+  segments: { value: T; label: string; emoji?: string }[];
+  active: T;
+  onChange: (v: T) => void;
+}) => {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [slider, setSlider] = useState({ left: 0, width: 0 });
+
+  const activeIdx = segments.findIndex(s => s.value === active);
+
+  useEffect(() => {
+    const btn = refs.current[activeIdx];
+    const container = containerRef.current;
+    if (btn && container) {
+      const cr = container.getBoundingClientRect();
+      const br = btn.getBoundingClientRect();
+      setSlider({ left: br.left - cr.left, width: br.width });
+    }
+  }, [active, activeIdx]);
+
+  return (
+    <div ref={containerRef} className="relative flex bg-secondary rounded-lg p-0.5">
+      {activeIdx >= 0 && (
+        <div
+          className="absolute top-0.5 bottom-0.5 bg-card rounded-md shadow-sm transition-all duration-200 ease-out z-0"
+          style={{ left: slider.left, width: slider.width }}
+        />
+      )}
+      {segments.map((seg, i) => (
+        <button
+          key={seg.value}
+          ref={el => { refs.current[i] = el; }}
+          onClick={() => onChange(seg.value)}
+          className={cn(
+            "relative z-10 flex-1 text-center py-1.5 text-[12px] font-medium rounded-md transition-colors whitespace-nowrap",
+            active === seg.value ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {seg.emoji && <span className="mr-0.5">{seg.emoji}</span>}
+          {seg.label}
+        </button>
+      ))}
+    </div>
+  );
+};
 
 export const FilterBar = ({
+  activeScope,
+  onScopeChange,
   activeFilter,
   onFilterChange,
   selectedClubs,
   onClubsChange,
-  userClubs
+  userClubs,
 }: FilterBarProps) => {
   const [showClubsDialog, setShowClubsDialog] = useState(false);
   const [showSportsDialog, setShowSportsDialog] = useState(false);
   const [tempSelectedClubs, setTempSelectedClubs] = useState<string[]>(selectedClubs);
-  const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0 });
-  const segmentRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const mainSegments: MainSegment[] = [
-    { value: 'general', label: 'Général' },
-    { value: 'running', label: 'Running' },
-    { value: 'cycling', label: 'Vélo' },
-    { value: 'walking', label: 'Marche' },
-    { value: 'friends', label: 'Amis' },
-  ];
+  const isAdditionalSport = (filter: FilterType): boolean =>
+    additionalSports.some(sport => sport.value === filter);
 
-  const isAdditionalSport = (filter: FilterType): boolean => {
-    return additionalSports.some(sport => sport.value === filter);
-  };
-
-  const activeMainIndex = mainSegments.findIndex(s => s.value === activeFilter);
-  const isMainActive = activeMainIndex >= 0;
-
-  // Update slider position
-  useEffect(() => {
-    if (!isMainActive) {
-      setSliderStyle({ left: 0, width: 0 });
-      return;
+  const handleScopeChange = (scope: ScopeType) => {
+    if (scope === 'clubs') {
+      setTempSelectedClubs(selectedClubs);
+      setShowClubsDialog(true);
     }
-    const btn = segmentRefs.current[activeMainIndex];
-    const container = containerRef.current;
-    if (btn && container) {
-      const containerRect = container.getBoundingClientRect();
-      const btnRect = btn.getBoundingClientRect();
-      setSliderStyle({
-        left: btnRect.left - containerRect.left,
-        width: btnRect.width,
-      });
-    }
-  }, [activeFilter, activeMainIndex, isMainActive]);
-
-  const handleClubsClick = () => {
-    setTempSelectedClubs(selectedClubs);
-    setShowClubsDialog(true);
+    onScopeChange(scope);
   };
 
   const handleApplyClubs = () => {
     onClubsChange(tempSelectedClubs);
-    if (tempSelectedClubs.length > 0) {
-      onFilterChange('clubs');
-    } else {
-      onFilterChange('general');
-    }
     setShowClubsDialog(false);
   };
 
@@ -135,81 +170,37 @@ export const FilterBar = ({
   const getActiveSportLabel = () => {
     const sport = additionalSports.find(s => s.value === activeFilter);
     if (sport) return `${sport.emoji} ${sport.label}`;
-    if (activeFilter === 'clubs') return `Clubs (${selectedClubs.length})`;
     return null;
   };
 
   return (
     <>
-      {/* iOS Segmented Control */}
-      <div className="flex items-center gap-2">
-        <div
-          ref={containerRef}
-          className="relative flex-1 flex bg-secondary rounded-lg p-0.5"
-        >
-          {/* Animated slider */}
-          {isMainActive && (
-            <div
-              className="absolute top-0.5 bottom-0.5 bg-card rounded-md shadow-sm transition-all duration-200 ease-out z-0"
-              style={{ left: sliderStyle.left, width: sliderStyle.width }}
-            />
-          )}
-          {mainSegments.map((seg, i) => (
-            <button
-              key={seg.value}
-              ref={(el) => { segmentRefs.current[i] = el; }}
-              onClick={() => onFilterChange(seg.value)}
-              className={cn(
-                "relative z-10 flex-1 text-center py-1.5 text-[13px] font-medium rounded-md transition-colors",
-                activeFilter === seg.value
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              {seg.label}
-            </button>
-          ))}
-        </div>
+      {/* Row 1: Scope */}
+      <SegmentedControl segments={scopeSegments} active={activeScope} onChange={handleScopeChange} />
 
-        {/* Extra buttons */}
-        <div className="flex gap-1.5 shrink-0">
-          {userClubs.length > 0 && (
-            <button
-              onClick={handleClubsClick}
-              className={cn(
-                "px-2.5 py-1.5 rounded-lg text-[12px] font-medium transition-colors",
-                activeFilter === 'clubs'
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground"
-              )}
-            >
-              {selectedClubs.length > 0 ? `Clubs (${selectedClubs.length})` : 'Clubs'}
-            </button>
-          )}
-          <button
-            onClick={() => setShowSportsDialog(true)}
-            className={cn(
-              "p-1.5 rounded-lg transition-colors",
-              isAdditionalSport(activeFilter)
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-muted-foreground"
-            )}
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+      {/* Row 2: Sport */}
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <div className="flex-1">
+          <SegmentedControl segments={sportSegments} active={activeFilter as string} onChange={(v) => onFilterChange(v as FilterType)} />
         </div>
+        <button
+          onClick={() => setShowSportsDialog(true)}
+          className={cn(
+            "p-1.5 rounded-lg transition-colors shrink-0",
+            isAdditionalSport(activeFilter) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+          )}
+        >
+          <Plus className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Active sport tag */}
-      {(isAdditionalSport(activeFilter) || activeFilter === 'clubs') && (
+      {isAdditionalSport(activeFilter) && (
         <div className="mt-1.5 flex items-center gap-2 px-1">
           <span className="text-[12px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
             {getActiveSportLabel()}
           </span>
-          <button
-            onClick={() => onFilterChange('general')}
-            className="text-[11px] text-muted-foreground underline"
-          >
+          <button onClick={() => onFilterChange('general')} className="text-[11px] text-muted-foreground underline">
             Réinitialiser
           </button>
         </div>
@@ -224,20 +215,12 @@ export const FilterBar = ({
           <div className="space-y-3 py-4">
             {userClubs.map((club) => (
               <div key={club.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={club.id}
-                  checked={tempSelectedClubs.includes(club.id)}
-                  onCheckedChange={() => toggleClub(club.id)}
-                />
-                <Label htmlFor={club.id} className="text-sm font-medium cursor-pointer">
-                  {club.name}
-                </Label>
+                <Checkbox id={club.id} checked={tempSelectedClubs.includes(club.id)} onCheckedChange={() => toggleClub(club.id)} />
+                <Label htmlFor={club.id} className="text-sm font-medium cursor-pointer">{club.name}</Label>
               </div>
             ))}
             {userClubs.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Vous n'êtes membre d'aucun club
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">Vous n'êtes membre d'aucun club</p>
             )}
           </div>
           <div className="flex justify-end gap-2">
@@ -259,10 +242,7 @@ export const FilterBar = ({
                 key={sport.value}
                 variant={activeFilter === sport.value ? "default" : "outline"}
                 className="h-20 flex-col gap-2"
-                onClick={() => {
-                  onFilterChange(sport.value);
-                  setShowSportsDialog(false);
-                }}
+                onClick={() => { onFilterChange(sport.value); setShowSportsDialog(false); }}
               >
                 <span className="text-2xl">{sport.emoji}</span>
                 <span className="text-sm">{sport.label}</span>
