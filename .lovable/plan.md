@@ -1,53 +1,68 @@
 
 
-## Diagnostic
+## Plan: Refonte complète de l'écran Classement
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Vue d'ensemble
+Réécrire `src/pages/Leaderboard.tsx` et adapter les composants associés pour créer un leaderboard moderne, dense, sans podium, avec carte utilisateur, double barre de filtres, bottom sheet Règles, bloc récompense saison, et ligne épinglée.
 
-Deux problemes distincts :
+### Fichiers à modifier
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+**1. `src/pages/Leaderboard.tsx`** — Réécriture complète
 
-## Solution en 2 parties
+Structure du rendu (de haut en bas) :
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+- **Header fixe** : titre "Classement" centré, bouton retour gauche, icônes 📘 (Règles) et 🎯 (Objectif) à droite
+- **Carte utilisateur** : rang, points, niveau avec emoji, barre XP vers prochain rang, variation dynamique ("+1 place 🔥"), PAS de "Top %"
+- **Double barre filtres** :
+  - Barre 1 (scope) : 🌍 Global / 📍 Local / 👥 Amis / 🏃 Clubs
+  - Barre 2 (sport) : 🏆 Général (défaut) / 🏃 Running / 🚴 Vélo / 🚶 Marche / ➕ autres
+- **Bloc récompense saison** : "🎁 Le #1 gagne un code promo exclusif"
+- **Barre recherche**
+- **Liste leaderboard** (scroll, PAS de podium) :
+  - Chaque ligne : rang, médaille pour top 3 (🥇🥈🥉), avatar, pseudo + @username, points, variation (+1 🔼 / -2 🔽)
+  - Si user pas visible → ligne épinglée en bas avec fond bleu
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
+Supprimer : composant `Podium`, appel à `Podium`, `topPercentage`, `top3`/`rest` split.
 
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
+**2. `src/components/leaderboard/FilterBar.tsx`** — Refactoring en double barre
 
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
-```
+Séparer en deux rangées :
+- Rangée 1 : scope (Global/Local/Amis/Clubs) — segmented control
+- Rangée 2 : sport (Général/Running/Vélo/Marche/+ autres) — segmented control + bouton Plus
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+Ajouter un nouveau type `ScopeType = 'global' | 'local' | 'friends' | 'clubs'` en plus du `FilterType` sport existant.
 
-### Partie 2 : Securiser la page bridge
+**3. `src/components/leaderboard/RulesSheet.tsx`** — Nouveau fichier
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+Bottom sheet (Sheet component) avec :
+- Titre "Comment gagner des points ?"
+- Liste des actions avec emojis et points
+- Note "Seules les activités vérifiées comptent ✅"
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+**4. `src/components/leaderboard/MyRankCard.tsx`** — Modifier
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+- Supprimer "Top %" section
+- Ajouter variation dynamique ("+1 place aujourd'hui 🔥")
+- Fond blanc, coins arrondis, ombre légère, accent bleu
+- Props : ajouter `rankChange: number`
 
-### Fichiers modifies
+**5. `src/components/leaderboard/SeasonRewardBanner.tsx`** — Nouveau fichier
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+Petit bloc : "🎁 Récompense saison — Le #1 gagne un code promo exclusif"
 
-### Apres le deploy
+**6. `src/components/leaderboard/ScrollToMyRankButton.tsx`** — Garder tel quel (ligne épinglée en bas quand user non visible)
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Logique conservée
+- Toute la logique de fetch (RPC `get_complete_leaderboard`, filtres activité/amis/clubs, pagination infinie) reste identique
+- `getUserRank()`, `getCurrentSeasonDates()`, rank helpers conservés
+- `ProfilePreviewDialog` conservé
+- Recherche conservée
+
+### Points clés du design
+- Pas de podium du tout — liste plate dès le #1
+- Top 3 distingués uniquement par médailles 🥇🥈🥉 dans la liste
+- Carte utilisateur compacte en haut (avant les filtres)
+- Double barre de filtres : scope + sport
+- Ligne utilisateur épinglée en bas si hors viewport
+- Espaces réduits, design dense iOS premium
 
