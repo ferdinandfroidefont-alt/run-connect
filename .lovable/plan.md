@@ -1,31 +1,53 @@
 
 
-## Plan: Corriger les couleurs du logo SVG
+## Diagnostic
 
-### Probleme
-Le fichier `public/logo-r.svg` contient 483 paths avec:
-- **Fond**: couleur `#f2f3f9` et variantes proches (gris-bleuté) au lieu de `#FFFFFF` pur
-- **Bleus du R**: nuances variées qui ne correspondent pas au bleu de l'app `#2072f7`
+Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
 
-### Approche
-Modifier directement le fichier `public/logo-r.svg` avec des remplacements de couleurs. Le SVG est un tracé vectoriel pixel-par-pixel avec ~480 paths colorés individuellement.
+Deux problemes distincts :
 
-### Modifications dans `public/logo-r.svg`
+1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
+2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
 
-**1. Fond → blanc pur**
-Remplacer toutes les couleurs de fond (near-white/light gray) par `#FFFFFF`:
-- `#f2f3f9`, `#edf2f3`, `#eff2f4`, `#e8ecf6`, `#dce8f8`, et variantes similaires proches du blanc
+## Solution en 2 parties
 
-**2. Bleus du R → palette centrée sur #2072f7**
-Remapper les couleurs bleues du R pour correspondre au bleu de l'app:
-- Les bleus foncés (type `#1244d4`, `#2c3e8a`) → garder/ajuster vers `#1244d4` (dark)
-- Les bleus moyens (type `#3a5bc7`, `#4a6dd4`, `#5b7cff`) → mapper vers `#2072f7` (primary)
-- Les bleus clairs (type `#6b8cf0`, `#7b9ceb`, `#a8b8e9`) → mapper vers `#67abf8` (light)
-- Les bleus très clairs (transition) → `#b9d1f1` / `#dce8f8`
+### Partie 1 : Rendre le workflow PlistBuddy infaillible
 
-**3. Aucune modification de l'animation**
-Le fichier `LoadingScreen.tsx` ne change pas.
+Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
 
-### Fichier modifié
-- `public/logo-r.svg` uniquement (remplacements de couleurs fill)
+```bash
+# Utiliser plutil pour ajouter le scheme de maniere fiable
+plutil -insert CFBundleURLTypes.-1 \
+  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
+  ios/App/App/Info.plist
+
+# Verifier
+plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```
+
+`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+
+### Partie 2 : Securiser la page bridge
+
+Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+
+```html
+<!-- Methode 1: location.href -->
+<script>window.location.href = deepLink;</script>
+
+<!-- Methode 2: iframe fallback -->
+<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
+```
+
+### Fichiers modifies
+
+1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
+2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+
+### Apres le deploy
+
+1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
+2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
+3. Installer la nouvelle build TestFlight
+4. Tester le flux Google OAuth
 

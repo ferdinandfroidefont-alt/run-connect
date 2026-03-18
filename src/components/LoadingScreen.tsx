@@ -197,6 +197,21 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 <filter id="pinShadow">
                   <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#2072f7" floodOpacity="0.3" />
                 </filter>
+
+                {/* Recolor logo: white bg + #2072f7 blue R */}
+                <filter id="recolorLogo" colorInterpolationFilters="sRGB" x="0" y="0" width="100%" height="100%">
+                  <feColorMatrix type="luminanceToAlpha" result="luma"/>
+                  <feComponentTransfer in="luma" result="mask">
+                    <feFuncA type="table" tableValues="1 0"/>
+                  </feComponentTransfer>
+                  <feFlood floodColor="#2072f7" result="color"/>
+                  <feComposite in="color" in2="mask" operator="in" result="coloredR"/>
+                  <feFlood floodColor="#FFFFFF" result="bg"/>
+                  <feMerge>
+                    <feMergeNode in="bg"/>
+                    <feMergeNode in="coloredR"/>
+                  </feMerge>
+                </filter>
               </defs>
 
               {/* Hidden path for measurement */}
@@ -208,6 +223,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   href="/logo-r.svg"
                   x="0" y="0"
                   width={SVG_W} height={SVG_H}
+                  filter="url(#recolorLogo)"
                   preserveAspectRatio="xMidYMid meet"
                 />
               </g>
