@@ -93,9 +93,7 @@
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.160.1",
     "vaul": "^0.9.9",
-    "zod": "^3.25.76",
-    "vite": "^5.4.19",
-    "@vitejs/plugin-react-swc": "^3.11.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
