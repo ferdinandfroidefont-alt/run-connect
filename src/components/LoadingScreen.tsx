@@ -233,11 +233,11 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
                 {/* Subtle glossy highlight */}
                 <filter id="glossy" x="-5%" y="-5%" width="110%" height="110%">
-                  <feSpecularLighting in="SourceAlpha" surfaceScale="3" specularConstant="0.4" specularExponent="25" result="specular">
+                  <feSpecularLighting in="SourceAlpha" surfaceScale="3" specularConstant="0.25" specularExponent="35" result="specular">
                     <fePointLight x="200" y="80" z="180" />
                   </feSpecularLighting>
                   <feComposite in="specular" in2="SourceAlpha" operator="in" result="specularClipped" />
-                  <feComposite in="SourceGraphic" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.12" k4="0" />
+                  <feComposite in="SourceGraphic" in2="specularClipped" operator="arithmetic" k1="0" k2="1" k3="0.08" k4="0" />
                 </filter>
 
                 {/* Glow filter for reveal */}
