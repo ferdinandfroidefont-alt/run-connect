@@ -220,10 +220,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 </filter>
 
                 {/* Shadow for the logo — softer, more realistic */}
-                <filter id="logoShadow" x="-25%" y="-25%" width="150%" height="170%">
-                  <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="shadowBlur" />
-                  <feOffset dx="0" dy="5" in="shadowBlur" result="shadowOffset" />
-                  <feFlood floodColor="#4a7ec7" floodOpacity="0.15" result="shadowColor" />
+                <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="160%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="shadowBlur" />
+                  <feOffset dx="0" dy="3" in="shadowBlur" result="shadowOffset" />
+                  <feFlood floodColor="#4a7ec7" floodOpacity="0.10" result="shadowColor" />
                   <feComposite in="shadowColor" in2="shadowOffset" operator="in" result="shadow" />
                   <feMerge>
                     <feMergeNode in="shadow" />
