@@ -399,8 +399,8 @@ const Leaderboard = () => {
         </div>
       </div>
 
-      {/* ── FIXED SECTION: User card + Filters + Season reward + Search ── */}
-      <div className="shrink-0 bg-secondary">
+      {/* ── SINGLE SCROLLABLE AREA ── */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain">
         {/* User Card */}
         {userRank && (
           <div className="pt-2 pb-1">
@@ -448,18 +448,15 @@ const Leaderboard = () => {
             />
           </div>
         </div>
-      </div>
 
-      {/* ── SCROLLABLE LEADERBOARD BLOCK ── */}
-      <div className="flex-1 min-h-0 px-3 pb-3">
-        <div className="h-full rounded-xl bg-card border border-border/40 shadow-sm overflow-hidden flex flex-col">
-          {/* Block header */}
-          <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-border/30 bg-secondary/30">
-            <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">🏆 Classement général</span>
-          </div>
+        {/* ── LEADERBOARD BLOCK ── */}
+        <div className="px-3 pb-3">
+          <div className="rounded-xl bg-card border border-border/40 shadow-sm">
+            {/* Block header */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/30 bg-secondary/30 rounded-t-xl">
+              <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">🏆 Classement général</span>
+            </div>
 
-          {/* Scrollable list */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain">
             {loading && leaderboard.length === 0 ? (
               <div className="p-4"><LeaderboardSkeleton /></div>
             ) : filteredLeaderboard.length === 0 ? (
