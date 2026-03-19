@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Couleur EXACTE de l'app React : HSL(217, 91%, 65%) = #5B7CFF -->
-    <color name="colorPrimary">#5B7CFF</color>
-    <color name="colorPrimaryDark">#4B6CD9</color>
-    <color name="colorAccent">#EC4899</color>
+    <!-- RunConnect Brand Blue (exact icon color) -->
+    <color name="colorPrimary">#2563EB</color>
+    <color name="colorPrimaryDark">#1D4ED8</color>
+    <color name="colorAccent">#2563EB</color>
     <color name="white">#FFFFFF</color>
-    <color name="progressBarBlue">#6EC6FF</color>
+    <color name="brandBlue">#2563EB</color>
     <!-- iOS Colors -->
-    <color name="iosBlue">#007AFF</color>
+    <color name="iosBlue">#2563EB</color>
     <color name="iosGray">#E5E5EA</color>
     <color name="iosSystemGray">#F2F2F7</color>
-    <!-- System Bars - CLAIR pour mode light -->
+    <!-- System Bars -->
     <color name="systemBarBlack">#000000</color>
     <color name="systemBarLight">#FFFFFF</color>
+    <color name="splashBlue">#2563EB</color>
 </resources>

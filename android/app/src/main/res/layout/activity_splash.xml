@@ -2,84 +2,33 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="@color/splashBlue"
     android:gravity="center"
     android:fitsSystemWindows="false">
 
-    <!-- Texte "Bienvenue sur" -->
-    <TextView
-        android:id="@+id/welcome_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@+id/app_name"
-        android:layout_marginTop="40dp"
-        android:layout_marginBottom="10dp"
-        android:text="Bienvenue sur"
-        android:textColor="@color/iosBlue"
-        android:textSize="18sp"
-        android:textStyle="normal"
-        android:fontFamily="sans-serif-light" />
-
-    <!-- Texte "RUNCONNECT" (plus grand) -->
-    <TextView
-        android:id="@+id/app_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@+id/app_logo"
-        android:layout_marginBottom="70dp"
-        android:text="RUNCONNECT"
-        android:textColor="@color/iosBlue"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.1" />
-
-    <!-- Logo de l'application (AGRANDI) -->
+    <!-- Logo de l'application (blanc sur fond bleu) -->
     <ImageView
         android:id="@+id/app_logo"
-        android:layout_width="160dp"
-        android:layout_height="160dp"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
         android:layout_centerInParent="true"
         android:src="@mipmap/ic_launcher"
         android:scaleType="fitCenter"
         android:contentDescription="Logo RunConnect" />
 
-    <!-- Container pour la ProgressBar -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Texte RUNCONNECT -->
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="80dp"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:paddingLeft="80dp"
-        android:paddingRight="80dp">
-
-        <!-- ProgressBar horizontale style iOS -->
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:max="100"
-            android:progress="0"
-            android:indeterminate="false"
-            android:progressTint="@color/iosBlue"
-            android:progressBackgroundTint="@color/iosGray" />
-
-        <!-- TextView pour afficher le pourcentage -->
-        <TextView
-            android:id="@+id/progress_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="0%"
-            android:textColor="@color/iosBlue"
-            android:textSize="14sp"
-            android:textStyle="normal"
-            android:fontFamily="sans-serif-light" />
-    </LinearLayout>
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/app_logo"
+        android:layout_marginTop="24dp"
+        android:text="RUNCONNECT"
+        android:textColor="@color/white"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.18" />
 
 </RelativeLayout>
