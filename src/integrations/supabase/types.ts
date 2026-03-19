@@ -2121,9 +2121,9 @@ export type Database = {
       }
       get_complete_leaderboard: {
         Args: {
-          limit_count?: number
-          offset_count?: number
-          order_by_column?: string
+          limit_count: number
+          offset_count: number
+          order_by_column: string
         }
         Returns: {
           avatar_url: string
