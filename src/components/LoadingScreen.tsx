@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import runconnectIcon from '@/assets/runconnect-icon.png';
+import runconnectIcon from '@/assets/runconnect-icon-splash.png';
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -40,7 +40,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
         >
-          {/* Icon with blend mode to show only white symbol */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -52,14 +51,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               style={{
                 width: 140,
                 height: 140,
-                mixBlendMode: 'lighten',
-                borderRadius: 30,
+                display: 'block',
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* App name */}
           <motion.h1
             className="text-[22px] font-bold tracking-[0.18em] mt-6 select-none"
             style={{ color: 'rgba(255,255,255,0.95)' }}
