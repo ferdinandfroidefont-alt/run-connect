@@ -53,7 +53,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 width: 140,
                 height: 140,
                 mixBlendMode: 'lighten',
-                borderRadius: 0,
+                borderRadius: 30,
               }}
               draggable={false}
             />
