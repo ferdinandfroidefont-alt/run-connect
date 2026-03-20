@@ -586,7 +586,7 @@ const Auth = () => {
         <img 
           src={appIcon} 
           alt="RunConnect" 
-          className="w-[88px] h-[88px] rounded-[22px] mb-5"
+          className="w-[88px] h-[88px] rounded-[22px] mb-5 overflow-hidden object-cover"
           style={{ boxShadow: '0 8px 24px hsl(var(--primary) / 0.18)' }}
         />
         <h1 className="text-[28px] font-bold text-primary tracking-tight">RunConnect</h1>
