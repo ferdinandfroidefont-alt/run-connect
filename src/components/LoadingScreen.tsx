@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import runconnectIcon from '@/assets/runconnect-icon-splash.png';
+import splashImage from '@/assets/runconnect-splash-logo.png';
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -12,8 +12,21 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
-    document.documentElement.style.backgroundColor = BRAND_BLUE;
-    document.body.style.backgroundColor = BRAND_BLUE;
+    // Force blue everywhere for immersive splash
+    const root = document.documentElement;
+    const body = document.body;
+    root.style.backgroundColor = BRAND_BLUE;
+    body.style.backgroundColor = BRAND_BLUE;
+
+    // Force meta theme-color for iOS status bar
+    let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement;
+    if (!metaTheme) {
+      metaTheme = document.createElement('meta');
+      metaTheme.name = 'theme-color';
+      document.head.appendChild(metaTheme);
+    }
+    const previousThemeColor = metaTheme.content;
+    metaTheme.content = BRAND_BLUE;
 
     const exitTimer = setTimeout(() => setExiting(true), 1800);
     const completeTimer = setTimeout(onLoadingComplete, 2200);
@@ -21,8 +34,9 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
+      root.style.removeProperty('background-color');
+      body.style.removeProperty('background-color');
+      metaTheme.content = previousThemeColor || '#FFFFFF';
     };
   }, [onLoadingComplete]);
 
@@ -40,32 +54,32 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
         >
+          {/* Blue fill behind safe areas */}
+          <div
+            className="fixed inset-0 z-[-1]"
+            style={{ background: BRAND_BLUE }}
+          />
+
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center"
           >
             <img
-              src={runconnectIcon}
+              src={splashImage}
               alt="RunConnect"
               style={{
-                width: 140,
-                height: 140,
-                display: 'block',
+                width: '100vw',
+                height: '100vh',
+                objectFit: 'contain',
+                position: 'fixed',
+                top: 0,
+                left: 0,
               }}
               draggable={false}
             />
           </motion.div>
-
-          <motion.h1
-            className="text-[22px] font-bold tracking-[0.18em] mt-6 select-none"
-            style={{ color: 'rgba(255,255,255,0.95)' }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' }}
-          >
-            RUNCONNECT
-          </motion.h1>
         </motion.div>
       ) : (
         <motion.div
