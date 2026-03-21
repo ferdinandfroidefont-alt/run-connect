@@ -46,6 +46,9 @@ export const useOnboarding = () => {
 
       if (error) {
         console.error('Error checking onboarding status:', error);
+        // Ne pas bloquer l’accueil : la carte reste utilisable, re-vérification au prochain focus
+        setNeedsOnboarding(false);
+        setNeedsProfileSetup(false);
         setLoading(false);
         return;
       }

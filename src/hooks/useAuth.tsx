@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,85 +25,104 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
 
-  const refreshSubscription = async () => {
-    if (!session) return;
-    
+  /** Lit la session courante via Supabase pour éviter une closure obsolète après SIGNED_IN. */
+  const refreshSubscription = useCallback(async () => {
     try {
-      console.log('🔍 SUBSCRIPTION CHECK: Starting check for user', session.user?.email);
-      
+      const { data: { session: active } } = await supabase.auth.getSession();
+      if (!active?.access_token) return;
+
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${active.access_token}`,
         },
       });
-      
+
       if (error) {
         console.error('Error checking subscription:', error);
         return;
       }
-      
+
       setSubscriptionInfo(data);
     } catch (error) {
       console.error('Error refreshing subscription:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // Auth state changed
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // 🔥 NIVEAU 21 : Sauvegarder le token FCM en attente après connexion
-        if (event === 'SIGNED_IN' && session?.user) {
-          // Attendre 500ms pour laisser React se stabiliser
-          setTimeout(() => {
-            const fcmToken = (window as any).fcmToken;
-            if (fcmToken) {
-              // FCM token detected after sign-in
-              
-              // Dispatch un événement pour que usePushNotifications sauvegarde le token
-              window.dispatchEvent(new CustomEvent('userAuthenticatedWithFCMToken', {
-                detail: { token: fcmToken, userId: session.user.id }
-              }));
-            }
-          }, 500);
-        }
-        
-        // Check subscription when user signs in
-        if (session?.user) {
-          setTimeout(() => {
-            refreshSubscription();
-          }, 0);
-        } else {
-          setSubscriptionInfo(null);
-        }
-      }
-    );
+    let mounted = true;
+    /** Débloque l’UI si getSession / listener restent bloqués (réseau très faible). */
+    const AUTH_LOADING_FAILSAFE_MS = 12_000;
+    const failSafe = setTimeout(() => {
+      if (!mounted) return;
+      console.warn('[Auth] Fail-safe: déblocage du chargement (timeout session)');
+      setLoading(false);
+    }, AUTH_LOADING_FAILSAFE_MS);
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      // Initial session check
-      const storedSession = localStorage.getItem('sb-dbptgehpknjsoisirviz-auth-token');
-      
+    const applySession = (session: Session | null) => {
+      if (!mounted) return;
+      clearTimeout(failSafe);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
-      // Check subscription for existing session
       if (session?.user) {
-        setTimeout(() => {
-          refreshSubscription();
-        }, 0);
+        queueMicrotask(() => {
+          void refreshSubscription();
+        });
+      } else {
+        setSubscriptionInfo(null);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      try {
+        applySession(session);
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          setTimeout(() => {
+            const fcmToken = (window as any).fcmToken;
+            if (fcmToken) {
+              window.dispatchEvent(
+                new CustomEvent('userAuthenticatedWithFCMToken', {
+                  detail: { token: fcmToken, userId: session.user.id },
+                })
+              );
+            }
+          }, 500);
+        }
+      } catch (e) {
+        console.error('[Auth] onAuthStateChange handler error:', e);
+        if (mounted) setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) console.error('[Auth] getSession error:', error);
+        if (!mounted) return;
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+          setLoading(false);
+          clearTimeout(failSafe);
+          if (session.user) {
+            queueMicrotask(() => {
+              void refreshSubscription();
+            });
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('[Auth] getSession rejected:', err);
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+      clearTimeout(failSafe);
+      subscription.unsubscribe();
+    };
+  }, [refreshSubscription]);
 
   const signOut = async () => {
     try {

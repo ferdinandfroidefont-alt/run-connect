@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -34,7 +35,21 @@ import ConfirmPresence from "./pages/ConfirmPresence";
 import TrainingMode from "./pages/TrainingMode";
 import SessionTracking from "./pages/SessionTracking";
 import AuthCallback from "./pages/AuthCallback";
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      retryDelay: (i) => Math.min(1500 * 2 ** i, 12_000),
+      refetchOnWindowFocus: false,
+      networkMode: "online",
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 const App = () => {
   // Show loading screen on all platforms
@@ -118,15 +133,16 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AppProvider>
-          <TooltipProvider>
-            <AdMobInitializer />
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AnimatePresence mode="wait">
-                <Routes>
+      <AppErrorBoundary>
+        <ThemeProvider>
+          <AppProvider>
+            <TooltipProvider>
+              <AdMobInitializer />
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AnimatePresence mode="wait">
+                  <Routes>
                   <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/" element={<Layout><PageTransition><Index /></PageTransition></Layout>} />
@@ -155,12 +171,13 @@ const App = () => {
                   {/* Route profil public (AVANT *) */}
                   <Route path="/p/:username" element={<PageTransition><PublicProfile /></PageTransition>} />
                   <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
-                </Routes>
-              </AnimatePresence>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AppProvider>
-      </ThemeProvider>
+                  </Routes>
+                </AnimatePresence>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AppProvider>
+        </ThemeProvider>
+      </AppErrorBoundary>
     </QueryClientProvider>
   );
 };

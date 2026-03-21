@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
 
@@ -68,10 +69,9 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">{t('common.loading')}</p>
-        </div>
+      <div className="h-full min-h-[50vh] bg-background flex flex-col items-center justify-center gap-3 px-6">
+        <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
+        <p className="text-sm text-muted-foreground text-center">{t('common.loading')}</p>
       </div>
     );
   }

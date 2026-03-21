@@ -5,6 +5,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
 import { useState, useEffect } from 'react';
+import { AppBootFallback } from '@/components/AppBootFallback';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,15 +47,13 @@ export const Layout = ({ children }: LayoutProps) => {
     }
   }, [user?.id]);
 
-  // Attendre que le profil soit stable avant de vérifier le consentement
+  // Une fois le chargement profil terminé (succès ou erreur), activer la logique consentement
   useEffect(() => {
-    if (userProfile && !profileLoading) {
-      const timer = setTimeout(() => {
-        setIsInitialized(true);
-      }, 100);
+    if (!profileLoading) {
+      const timer = setTimeout(() => setIsInitialized(true), 100);
       return () => clearTimeout(timer);
     }
-  }, [userProfile, profileLoading]);
+  }, [profileLoading]);
 
   // Callback pour ConsentDialog - fermeture immédiate garantie
   const handleConsentComplete = async () => {
@@ -66,8 +65,12 @@ export const Layout = ({ children }: LayoutProps) => {
     refreshProfile();
   };
 
-  if (loading || profileLoading) {
-    return <div className="min-h-screen bg-background" />;
+  if (loading) {
+    return <AppBootFallback phase="auth" />;
+  }
+
+  if (profileLoading) {
+    return <AppBootFallback phase="profile" />;
   }
 
   if (!user) {

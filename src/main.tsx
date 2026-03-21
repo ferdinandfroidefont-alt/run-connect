@@ -157,15 +157,28 @@ const initializeCapacitorPlugins = async () => {
 initializeCapacitorPlugins();
 
 // ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
-createRoot(document.getElementById("root")!).render(
-  <AuthProvider>
-    <UserProfileProvider>
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
-    </UserProfileProvider>
-  </AuthProvider>
-);
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  console.error("[main] Élément #root introuvable — impossible de monter React.");
+  document.body.innerHTML =
+    '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur de démarrage : interface introuvable. Réinstallez ou rechargez l’application.</p>';
+} else {
+  try {
+    createRoot(rootElement).render(
+      <AuthProvider>
+        <UserProfileProvider>
+          <LanguageProvider>
+            <App />
+          </LanguageProvider>
+        </UserProfileProvider>
+      </AuthProvider>
+    );
+  } catch (bootErr) {
+    console.error("[main] Échec du render initial:", bootErr);
+    rootElement.innerHTML =
+      '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur au lancement. Fermez et rouvrez l’application ou videz le cache.</p>';
+  }
+}
 
 // ✅ NIVEAU 28: Marquer que React est chargé
 (window as any).reactAlreadyLoaded = true;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { withTimeout } from '@/lib/promiseUtils';
 
 export interface UserProfile {
   id: string;
@@ -57,14 +58,31 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const PROFILE_FETCH_MS = 18_000;
+
     try {
       console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
-      
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+
+      let data: any = null;
+      let fetchError: any = null;
+      try {
+        const res = await withTimeout(
+          supabase.from('profiles').select('*').eq('user_id', user.id).single(),
+          PROFILE_FETCH_MS,
+          'profile_fetch'
+        );
+        data = res.data;
+        fetchError = res.error;
+      } catch (timeoutErr: unknown) {
+        const msg = timeoutErr instanceof Error ? timeoutErr.message : String(timeoutErr);
+        if (msg.includes('TIMEOUT')) {
+          console.error('❌ [UserProfile] Timeout chargement profil (réseau lent)');
+          setError('Connexion trop lente — impossible de charger le profil pour le moment');
+          setUserProfile(null);
+          return;
+        }
+        throw timeoutErr;
+      }
 
       if (fetchError) {
         // Retry on JWT/auth errors
