@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft } from 'lucide-react';
+import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -638,33 +638,37 @@ export const RouteCreation = () => {
     <div className="h-full relative bg-background overflow-x-hidden">
       {/* Barre de navigation iOS compacte */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 safe-area-top">
-        <div className="flex items-center justify-between h-11 px-2">
+        <div className="flex items-center justify-between h-11 px-ios-2">
           <button
             onClick={handleCancel}
-            className="flex items-center gap-1 text-primary active:opacity-60 px-2 py-1"
+            className="flex items-center gap-ios-1 text-primary active:opacity-60 px-ios-2 py-ios-1"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="text-[17px]">Retour</span>
+            <span className="text-ios-headline">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
+          <h1 className="text-ios-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
             {isEditMode ? "Modifier" : "Itinéraire"}
           </h1>
-          <div className="flex items-center gap-1">
-            <button
+          <div className="flex items-center gap-ios-1">
+            <Button
               onClick={handleFinish}
-              className="text-2xl active:scale-90 transition-transform px-2 py-1"
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 rounded-full text-primary active:scale-95"
               title="Valider"
             >
-              ✅
-            </button>
-            <button
+              <Check className="h-5 w-5" />
+            </Button>
+            <Button
               onClick={handleClear}
               disabled={waypoints.current.length === 0}
-              className="text-2xl active:scale-90 transition-transform px-2 py-1 disabled:opacity-30"
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 rounded-full text-destructive active:scale-95 disabled:opacity-30"
               title="Supprimer"
             >
-              🗑️
-            </button>
+              <Trash2 className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
@@ -675,25 +679,25 @@ export const RouteCreation = () => {
       {/* Loading / Error overlay */}
       {!isMapLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary z-[5]">
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-ios-3">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground">Chargement de la carte...</p>
+            <p className="text-ios-subheadline text-muted-foreground">Chargement de la carte...</p>
           </div>
         </div>
       )}
       {mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary z-[5]">
-          <div className="flex flex-col items-center gap-4 px-6 text-center">
+          <div className="flex flex-col items-center gap-ios-4 px-ios-6 text-center">
             <MapPin className="h-12 w-12 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Impossible de charger la carte. Vérifiez votre connexion.</p>
+            <p className="text-ios-subheadline text-muted-foreground">Impossible de charger la carte. Vérifiez votre connexion.</p>
             <Button variant="outline" onClick={() => navigate(-1)}>Retour</Button>
           </div>
         </div>
       )}
 
       {/* Toggle Mode */}
-      <div className="absolute left-4 top-12 z-10">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-xl p-1 shadow-lg flex gap-1">
+      <div className="absolute left-ios-4 top-12 z-10">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex gap-ios-1">
           <Button
             size="sm"
             variant={!isManualMode ? "default" : "ghost"}
@@ -713,13 +717,13 @@ export const RouteCreation = () => {
             Manuel
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-1 text-center">
+        <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
           {isManualMode ? "🛤️ Tracé libre hors-piste" : "🚶 Suit les chemins"}
         </p>
       </div>
 
       {/* Outils latéraux */}
-      <div className="absolute right-4 top-12 flex flex-col gap-2 z-10">
+      <div className="absolute right-ios-4 top-12 flex flex-col gap-ios-2 z-10">
         <Button
           size="icon"
           variant="outline"
@@ -766,19 +770,19 @@ export const RouteCreation = () => {
 
       {/* Stats flottantes */}
       {totalDistance > 0 && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-xl px-4 py-2 shadow-lg">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-1">
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg px-ios-4 py-ios-2 shadow-lg">
+          <div className="flex items-center gap-ios-4 text-ios-subheadline">
+            <div className="flex items-center gap-ios-1">
               <span className="text-muted-foreground">📏</span>
               <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
             </div>
             <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-ios-1">
               <span className="text-green-500">⬆️</span>
               <span className="font-semibold text-foreground">D+ {totalElevationGain}m</span>
             </div>
             <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-ios-1">
               <span className="text-red-500">⬇️</span>
               <span className="font-semibold text-foreground">D- {totalElevationLoss}m</span>
             </div>
@@ -789,13 +793,13 @@ export const RouteCreation = () => {
       {/* Profil d'élévation */}
       {routeElevations.length > 0 && (
         <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="mx-4 mb-4">
+          <div className="mx-ios-4 mb-ios-4">
             <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-lg shadow-lg overflow-hidden">
               <div 
-                className="flex items-center justify-between p-2 cursor-pointer hover:bg-background/90 transition-colors"
+                className="flex items-center justify-between p-ios-2 cursor-pointer hover:bg-background/90 transition-colors"
                 onClick={() => setShowElevationProfile(!showElevationProfile)}
               >
-                <span className="text-sm font-medium text-foreground">Profil d'élévation</span>
+                <span className="text-ios-subheadline font-medium text-foreground">Profil d'élévation</span>
                 {showElevationProfile ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 ) : (
@@ -804,7 +808,7 @@ export const RouteCreation = () => {
               </div>
               
               {showElevationProfile && (
-                <div className="p-4 pt-0">
+                <div className="p-ios-4 pt-0">
                   <ElevationProfile 
                     elevations={routeElevations}
                     coordinates={getAllCoordinates().map(c => ({ lat: c.lat(), lng: c.lng() }))}
@@ -818,8 +822,8 @@ export const RouteCreation = () => {
 
       {/* Instructions - seulement si pas encore de tracé */}
       {waypoints.current.length === 0 && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-4 py-2 shadow-lg">
-          <p className="text-sm text-foreground text-center">
+        <div className="absolute bottom-ios-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-ios-4 py-ios-2 shadow-lg">
+          <p className="text-ios-subheadline text-foreground text-center">
             👆 Cliquez sur la carte pour tracer votre parcours
           </p>
         </div>

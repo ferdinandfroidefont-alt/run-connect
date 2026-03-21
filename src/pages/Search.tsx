@@ -78,30 +78,30 @@ export default function Search() {
         className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
         {/* Header iOS style with safe area */}
-        <header className="bg-card border-b border-border px-4 pt-4 pb-3">
+        <header className="bg-card border-b border-border px-ios-4 pt-ios-4 pb-ios-3">
           <div className="relative flex items-center justify-center min-h-[44px]">
             {/* Bouton retour */}
             <button
               onClick={handleClose}
-              className="absolute left-0 flex items-center gap-1 text-primary active:opacity-70"
+              className="absolute left-0 flex items-center gap-ios-1 text-primary active:opacity-70"
             >
               <ChevronLeft className="h-6 w-6" />
-              <span className="text-[17px]">Retour</span>
+              <span className="text-ios-headline">Retour</span>
             </button>
 
             {/* Titre centré */}
-            <h1 className="text-[17px] font-semibold">Rechercher</h1>
+            <h1 className="text-ios-headline font-semibold">Rechercher</h1>
           </div>
 
           {/* Champ de recherche */}
-          <div className="mt-3 relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="mt-ios-3 relative">
+            <SearchIcon className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={inputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={getPlaceholder()}
-              className="pl-10 bg-secondary border-0 h-10 rounded-[10px]"
+              className="pl-ios-6 bg-secondary border-0 h-[44px] rounded-ios-md text-ios-subheadline"
             />
           </div>
         </header>
