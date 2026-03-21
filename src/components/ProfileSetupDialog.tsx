@@ -13,6 +13,7 @@ import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Gl
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
@@ -27,32 +28,11 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
 }
 
-const SPORTS_OPTIONS = [
-  { value: 'running', label: '🏃 Course à pied' },
-  { value: 'cycling', label: '🚴 Vélo' },
-  { value: 'swimming', label: '🏊 Natation' },
-  { value: 'triathlon', label: '🏅 Triathlon' },
-  { value: 'walking', label: '🚶 Marche' },
-  { value: 'trail', label: '⛰️ Trail' },
-];
+const SPORT_VALUES = ['running', 'cycling', 'swimming', 'triathlon', 'walking', 'trail'] as const;
 
-const COUNTRIES_OPTIONS = [
-  { value: 'FR', label: '🇫🇷 France' },
-  { value: 'BE', label: '🇧🇪 Belgique' },
-  { value: 'CH', label: '🇨🇭 Suisse' },
-  { value: 'CA', label: '🇨🇦 Canada' },
-  { value: 'LU', label: '🇱🇺 Luxembourg' },
-  { value: 'MA', label: '🇲🇦 Maroc' },
-  { value: 'TN', label: '🇹🇳 Tunisie' },
-  { value: 'SN', label: '🇸🇳 Sénégal' },
-  { value: 'CI', label: '🇨🇮 Côte d\'Ivoire' },
-  { value: 'ES', label: '🇪🇸 Espagne' },
-  { value: 'PT', label: '🇵🇹 Portugal' },
-  { value: 'DE', label: '🇩🇪 Allemagne' },
-  { value: 'IT', label: '🇮🇹 Italie' },
-  { value: 'GB', label: '🇬🇧 Royaume-Uni' },
-  { value: 'US', label: '🇺🇸 États-Unis' },
-];
+const COUNTRY_CODES = [
+  'FR', 'BE', 'CH', 'CA', 'LU', 'MA', 'TN', 'SN', 'CI', 'ES', 'PT', 'DE', 'IT', 'GB', 'US',
+] as const;
 
 interface FormState {
   username: string;
@@ -240,12 +220,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleFileSelection = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       sessionStorage.removeItem('photoSelectionInProgress');
-      toast({ title: "Erreur", description: "Veuillez sélectionner une image.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profileSetup.toastImageType'), variant: "destructive" });
       return;
     }
     if (file.size > 100 * 1024 * 1024) {
       sessionStorage.removeItem('photoSelectionInProgress');
-      toast({ title: "Erreur", description: "Taille max: 100MB.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profileSetup.toastImageSize'), variant: "destructive" });
       return;
     }
 
@@ -390,11 +370,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     e.preventDefault();
     
     if (!avatarFile) {
-      toast({ title: "Erreur", description: "La photo de profil est obligatoire.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profileSetup.toastPhotoRequired'), variant: "destructive" });
       return;
     }
     if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6 || !country) {
-      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires (dont le pays).", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
     
@@ -403,7 +383,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     try {
       const uploadedUrl = await uploadAvatar(avatarFile);
       if (!uploadedUrl) {
-        toast({ title: "Erreur", description: "Impossible d'uploader la photo.", variant: "destructive" });
+        toast({ title: t('common.error'), description: t('profileSetup.toastUploadFail'), variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -439,6 +419,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       };
       if (favoriteSport) profileData.favorite_sport = favoriteSport;
       if (country) profileData.country = country;
+      profileData.preferred_language = language;
+      profileData.language_manually_set = languageManuallySet;
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
@@ -518,8 +500,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       localStorage.setItem('profileCreatedAt', Date.now().toString());
 
       toast({
-        title: "Profil créé !",
-        description: "Bienvenue dans RunConnect !"
+        title: t('profileSetup.toastProfileCreatedTitle'),
+        description: t('profileSetup.toastProfileCreatedDesc')
       });
 
       // ✅ FIX: Guard against double-fire with isRedirecting
@@ -537,7 +519,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         navigate('/', { replace: true });
       }
     } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -615,9 +597,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 onClick={() => { onOpenChange(false); navigate('/auth'); }}
                 className="text-[15px] text-primary"
               >
-                Déjà connecté ?
+                {t('profileSetup.headerAlreadySignedIn')}
               </Button>
-              <h1 className="text-[17px] font-semibold">Créer mon profil</h1>
+              <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
               <div className="w-20" />
             </div>
           </div>
@@ -650,7 +632,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     )}
                   </button>
                 </div>
-                <p className="text-[13px] text-muted-foreground mt-2">Photo de profil *</p>
+                <p className="text-[13px] text-muted-foreground mt-2">{t('profileSetup.photoLabel')}</p>
                 
                 {/* Input React UNIQUE - C'est lui qui reçoit le fichier de manière fiable sur Android WebView */}
                 <input
@@ -676,7 +658,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <Input
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Nom d'utilisateur *"
+                      placeholder={t('profileSetup.usernamePh')}
                       className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                       required
                     />
@@ -691,7 +673,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <Input
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Pseudo *"
+                      placeholder={t('profileSetup.displayNamePh')}
                       className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                       required
                     />
@@ -708,7 +690,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Mot de passe (min. 6 car.) *"
+                        placeholder={t('profileSetup.passwordPh')}
                         className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                         required
                         minLength={6}
@@ -740,7 +722,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       />
                       {birthDate && (
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          {calculatedAge} ans
+                          {calculatedAge} {t('profileSetup.yearsUnit')}
                         </span>
                       )}
                     </div>
@@ -756,7 +738,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Téléphone *"
+                      placeholder={t('profileSetup.phonePh')}
                       className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
                       required
                     />
@@ -770,11 +752,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     </div>
                     <Select value={favoriteSport} onValueChange={setFavoriteSport}>
                       <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
-                        <SelectValue placeholder="Sport favori" />
+                        <SelectValue placeholder={t('profileSetup.sportPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {SPORTS_OPTIONS.map(s => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        {SPORT_VALUES.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {t(`profileSetup.sports.${value}`)}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -786,13 +770,21 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#30B0C7] flex items-center justify-center">
                       <Globe className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <Select value={country} onValueChange={setCountry}>
+                    <Select
+                      value={country}
+                      onValueChange={(v) => {
+                        setCountry(v);
+                        void suggestLanguageFromCountry(v);
+                      }}
+                    >
                       <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
-                        <SelectValue placeholder="Pays" />
+                        <SelectValue placeholder={t('profileSetup.countryPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {COUNTRIES_OPTIONS.map(c => (
-                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        {COUNTRY_CODES.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {t(`profileSetup.countries.${code}`)}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -813,7 +805,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     <Textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      placeholder="Parlez-nous de vous, vos sports favoris... *"
+                      placeholder={t('profileSetup.bioPh')}
                       className="flex-1 border-0 bg-transparent p-0 resize-none min-h-[80px] focus-visible:ring-0"
                       required
                     />
@@ -824,7 +816,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               {/* Referral Code */}
               <div className="space-y-2">
                 <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-                  Code de parrainage (optionnel)
+                  {t('profileSetup.sectionReferral')}
                 </h3>
                 <div className="bg-card rounded-[10px] p-4">
                   <ReferralCodeInput />
@@ -838,10 +830,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Créer mon compte
+                {t('profileSetup.submit')}
               </Button>
 
-              <p className="text-[13px] text-muted-foreground text-center">* Champs obligatoires</p>
+              <p className="text-[13px] text-muted-foreground text-center">{t('profileSetup.requiredFootnote')}</p>
             </form>
           </ScrollArea>
         </div>

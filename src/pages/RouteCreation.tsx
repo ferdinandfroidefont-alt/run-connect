@@ -35,6 +35,75 @@ interface EditRouteData {
   waypoints?: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
 }
 
+/** Chemin détaillé le long des routes (plus fidèle que overview_path seul). */
+function buildPathFromDirectionsResult(result: google.maps.DirectionsResult): google.maps.LatLng[] {
+  const route = result.routes[0];
+  if (!route) return [];
+  const path: google.maps.LatLng[] = [];
+  for (const leg of route.legs) {
+    for (const step of leg.steps) {
+      step.path.forEach((p) => path.push(p));
+    }
+  }
+  if (path.length > 0) return path;
+  return route.overview_path || [];
+}
+
+/** Échantillonnage géodésique pour estimer le dénivelé sur les segments « ligne droite ». */
+const DENSIFY_MAX_SEGMENT_M = 45;
+
+function densifyLatLngPath(points: google.maps.LatLng[]): google.maps.LatLng[] {
+  if (points.length < 2) return points;
+  const spherical = google.maps.geometry.spherical;
+  const out: google.maps.LatLng[] = [points[0]];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    const dist = spherical.computeDistanceBetween(a, b);
+    const steps = Math.max(1, Math.ceil(dist / DENSIFY_MAX_SEGMENT_M));
+    for (let k = 1; k <= steps; k++) {
+      out.push(spherical.interpolate(a, b, k / steps));
+    }
+  }
+  return out;
+}
+
+/** Positions le long du chemin, alignées sur le nombre d’échantillons d’élévation (profil / 3D). */
+function resamplePathEvenly(
+  points: google.maps.LatLng[],
+  sampleCount: number
+): Array<{ lat: number; lng: number }> {
+  if (points.length < 2 || sampleCount < 2) {
+    return points.map((p) => ({ lat: p.lat(), lng: p.lng() }));
+  }
+  const spherical = google.maps.geometry.spherical;
+  const cumulative: number[] = [0];
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    total += spherical.computeDistanceBetween(points[i], points[i + 1]);
+    cumulative.push(total);
+  }
+  if (total < 1e-6) {
+    return points.map((p) => ({ lat: p.lat(), lng: p.lng() }));
+  }
+  const out: Array<{ lat: number; lng: number }> = [];
+  for (let s = 0; s < sampleCount; s++) {
+    const distAlong = (total * s) / (sampleCount - 1);
+    let j = 0;
+    while (j < cumulative.length - 1 && cumulative[j + 1] < distAlong) j++;
+    const segStart = points[j];
+    const segEnd = points[j + 1];
+    const segLen = cumulative[j + 1] - cumulative[j];
+    const t = segLen < 1e-6 ? 0 : (distAlong - cumulative[j]) / segLen;
+    const p = spherical.interpolate(segStart, segEnd, Math.min(1, Math.max(0, t)));
+    out.push({ lat: p.lat(), lng: p.lng() });
+  }
+  return out;
+}
+
+/** Réduit le bruit des petites oscillations du MNE (m). */
+const ELEV_NOISE_THRESHOLD_M = 2;
+
 export const RouteCreation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -60,7 +129,10 @@ export const RouteCreation = () => {
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
+  const [elevationChartCoords, setElevationChartCoords] = useState<Array<{ lat: number; lng: number }>>([]);
   const [isManualMode, setIsManualMode] = useState(false);
+  /** Pour re-render (les refs waypoints/segments ne déclenchent pas de render). */
+  const [waypointCount, setWaypointCount] = useState(0);
   
   // Historique pour redo
   const undoHistory = useRef<Array<{
@@ -73,6 +145,13 @@ export const RouteCreation = () => {
   
   // Ref pour éviter stale closure dans le listener de click
   const isManualModeRef = useRef(false);
+
+  useEffect(() => {
+    isManualModeRef.current = isManualMode;
+  }, [isManualMode]);
+
+  /** Toujours invoquer la dernière version depuis le listener Maps (évite closures obsolètes). */
+  const addWaypointRef = useRef<(latLng: google.maps.LatLng) => Promise<void>>(async () => {});
 
   // Charger les données d'édition depuis localStorage
   useEffect(() => {
@@ -166,7 +245,8 @@ export const RouteCreation = () => {
 
     // Calculer les stats
     await updateElevationAndStats();
-    
+    setWaypointCount(waypoints.current.length);
+
     toast.success("Itinéraire chargé - modifiez les points");
   };
 
@@ -185,7 +265,7 @@ export const RouteCreation = () => {
         const loader = new Loader({
           apiKey: googleMapsApiKey,
           version: 'weekly',
-          libraries: ['geometry', 'places']
+          libraries: ['geometry', 'places'],
         });
 
         await loader.load();
@@ -225,10 +305,10 @@ export const RouteCreation = () => {
             });
         }
 
-        // Créer le parcours au clic
+        // Créer le parcours au clic (via ref = toujours la logique à jour)
         map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
           if (!event.latLng) return;
-          addWaypoint(event.latLng);
+          void addWaypointRef.current(event.latLng);
         });
 
       } catch (error) {
@@ -300,64 +380,76 @@ export const RouteCreation = () => {
     };
   };
 
-  // Créer un segment guidé (suivant les routes)
+  // Créer un segment guidé (suivant les routes / chemins)
   const createGuidedSegment = async (startPoint: google.maps.LatLng, endPoint: google.maps.LatLng): Promise<RouteSegment | null> => {
     if (!directionsService.current || !map.current) return null;
 
-    try {
-      const result = await new Promise<google.maps.DirectionsResult>((resolve, reject) => {
+    const requestRoute = (travelMode: google.maps.TravelMode) =>
+      new Promise<google.maps.DirectionsResult>((resolve, reject) => {
         directionsService.current!.route(
           {
             origin: startPoint,
             destination: endPoint,
-            travelMode: google.maps.TravelMode.WALKING,
-            optimizeWaypoints: false
+            travelMode,
           },
           (result, status) => {
-            if (status === 'OK' && result) {
+            if (status === 'OK' && result?.routes?.[0]) {
               resolve(result);
             } else {
-              reject(new Error(`Directions request failed: ${status}`));
+              reject(new Error(String(status)));
             }
           }
         );
       });
 
-      const coordinates = result.routes[0].overview_path;
-      
-      const polyline = new google.maps.Polyline({
-        path: coordinates,
-        geodesic: true,
-        strokeColor: '#3b82f6',
-        strokeOpacity: 1.0,
-        strokeWeight: 4,
-        map: map.current,
-      });
+    const travelModes = [
+      google.maps.TravelMode.WALKING,
+      google.maps.TravelMode.BICYCLING,
+      google.maps.TravelMode.DRIVING,
+    ];
 
-      return {
-        startPoint,
-        endPoint,
-        mode: 'guided',
-        polyline,
-        coordinates
-      };
-    } catch (error) {
-      console.error('Erreur création segment guidé:', error);
-      // Fallback vers segment manuel si guidé échoue
-      toast.error("Route introuvable, tracé en ligne droite");
-      return createManualSegment(startPoint, endPoint);
+    let lastStatus = 'UNKNOWN';
+    for (const mode of travelModes) {
+      try {
+        const result = await requestRoute(mode);
+        const coordinates = buildPathFromDirectionsResult(result);
+        if (coordinates.length >= 2) {
+          const polyline = new google.maps.Polyline({
+            path: coordinates,
+            geodesic: false,
+            strokeColor: '#3b82f6',
+            strokeOpacity: 1.0,
+            strokeWeight: 4,
+            map: map.current,
+          });
+
+          return {
+            startPoint,
+            endPoint,
+            mode: 'guided',
+            polyline,
+            coordinates,
+          };
+        }
+      } catch (e: unknown) {
+        lastStatus = e instanceof Error ? e.message : String(e);
+        console.warn('[RouteCreation] Directions mode', mode, lastStatus);
+      }
     }
+
+    console.error('Erreur création segment guidé (tous modes):', lastStatus);
+    toast.error("Route introuvable, tracé en ligne droite");
+    return createManualSegment(startPoint, endPoint);
   };
 
   const addWaypoint = async (latLng: google.maps.LatLng) => {
-    // Utiliser la ref pour obtenir la valeur actuelle (pas stale)
     const currentMode = isManualModeRef.current ? 'manual' : 'guided';
-    console.log('addWaypoint - mode actuel:', currentMode, 'isManualModeRef:', isManualModeRef.current);
-    
+
     if (waypoints.current.length === 0) {
       // Premier point - juste ajouter le marqueur
       waypoints.current.push(latLng);
       addWaypointMarker(latLng, 0, currentMode);
+      setWaypointCount(1);
     } else {
       // Points suivants - créer un segment depuis le dernier point
       const lastPoint = waypoints.current[waypoints.current.length - 1];
@@ -374,6 +466,7 @@ export const RouteCreation = () => {
 
       if (newSegment) {
         segments.current.push(newSegment);
+        setWaypointCount(waypoints.current.length);
         await updateElevationAndStats();
       }
     }
@@ -400,7 +493,7 @@ export const RouteCreation = () => {
     const allCoordinates = getAllCoordinates();
     if (allCoordinates.length === 0 || !elevationService.current) return;
 
-    // Calculer d'abord la distance totale
+    // Distance = somme des segments réellement tracés (sans sur-échantillonnage)
     let distance = 0;
     for (let i = 0; i < allCoordinates.length - 1; i++) {
       distance += google.maps.geometry.spherical.computeDistanceBetween(
@@ -410,15 +503,17 @@ export const RouteCreation = () => {
     }
     setTotalDistance(distance / 1000);
 
+    // Dénivelé : chemin densifié (indispensable pour le mode manuel = peu de points)
+    const pathForElevation = densifyLatLngPath(allCoordinates);
+
     try {
-      // Augmenter le nombre d'échantillons pour plus de précision
-      const numSamples = Math.min(512, Math.max(allCoordinates.length, 100));
-      
+      const numSamples = Math.min(512, Math.max(pathForElevation.length * 2, 96));
+
       const result = await new Promise<google.maps.ElevationResult[]>((resolve, reject) => {
         elevationService.current!.getElevationAlongPath(
           {
-            path: allCoordinates,
-            samples: numSamples
+            path: pathForElevation,
+            samples: numSamples,
           },
           (results, status) => {
             if (status === 'OK' && results) {
@@ -430,27 +525,26 @@ export const RouteCreation = () => {
         );
       });
 
-      const elevations = result.map(r => r.elevation);
-      
-      // Calculer D+ et D- AVANT setState pour éviter race condition
+      const elevations = result.map((r) => r.elevation);
+
       let elevationGain = 0;
       let elevationLoss = 0;
       for (let i = 1; i < elevations.length; i++) {
         const diff = elevations[i] - elevations[i - 1];
-        if (diff > 0) {
+        if (diff > ELEV_NOISE_THRESHOLD_M) {
           elevationGain += diff;
-        } else {
+        } else if (diff < -ELEV_NOISE_THRESHOLD_M) {
           elevationLoss += Math.abs(diff);
         }
       }
-      
-      // Mettre à jour tous les états en même temps
+
       setRouteElevations(elevations);
       setTotalElevationGain(Math.round(elevationGain));
       setTotalElevationLoss(Math.round(elevationLoss));
-      
+      setElevationChartCoords(resamplePathEvenly(pathForElevation, elevations.length));
     } catch (error) {
       console.error('Erreur lors de la récupération des altitudes:', error);
+      setElevationChartCoords([]);
     }
   };
 
@@ -458,8 +552,7 @@ export const RouteCreation = () => {
   const handleModeToggle = () => {
     const newMode = !isManualMode;
     setIsManualMode(newMode);
-    isManualModeRef.current = newMode; // Mettre à jour la ref aussi
-    console.log('Mode toggle - nouveau mode:', newMode ? 'manual' : 'guided');
+    isManualModeRef.current = newMode;
     toast.success(newMode ? "Mode manuel activé - prochains points en ligne droite" : "Mode guidé activé - prochains points sur routes");
   };
 
@@ -494,12 +587,14 @@ export const RouteCreation = () => {
     
     if (waypoints.current.length <= 1) {
       setRouteElevations([]);
+      setElevationChartCoords([]);
       setTotalDistance(0);
       setTotalElevationGain(0);
       setTotalElevationLoss(0);
     } else {
       await updateElevationAndStats();
     }
+    setWaypointCount(waypoints.current.length);
   };
 
   const handleRedo = async () => {
@@ -532,6 +627,7 @@ export const RouteCreation = () => {
     }
     
     setCanRedo(undoHistory.current.length > 0);
+    setWaypointCount(waypoints.current.length);
     await updateElevationAndStats();
   };
 
@@ -540,9 +636,11 @@ export const RouteCreation = () => {
     clearMarkers();
     clearSegments();
     setRouteElevations([]);
+    setElevationChartCoords([]);
     setTotalDistance(0);
     setTotalElevationGain(0);
     setTotalElevationLoss(0);
+    setWaypointCount(0);
   };
 
   const handleRecenter = async () => {
@@ -634,7 +732,9 @@ export const RouteCreation = () => {
     navigate('/?saveRoute=true');
   };
 
-   return (
+  addWaypointRef.current = addWaypoint;
+
+  return (
     <div className="h-full relative bg-background overflow-x-hidden">
       {/* Barre de navigation iOS compacte */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 safe-area-top">
@@ -768,60 +868,56 @@ export const RouteCreation = () => {
         </Button>
       </div>
 
-      {/* Stats flottantes */}
-      {totalDistance > 0 && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg px-ios-4 py-ios-2 shadow-lg">
-          <div className="flex items-center gap-ios-4 text-ios-subheadline">
-            <div className="flex items-center gap-ios-1">
-              <span className="text-muted-foreground">📏</span>
-              <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
+      {/* Distance / D+ / D- + profil d'élévation : bas d'écran pour ne pas masquer Guidé / Manuel */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto px-ios-4 w-full flex flex-col gap-ios-2">
+          {totalDistance > 0 && (
+            <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-ios-lg px-ios-4 py-ios-2.5 shadow-lg">
+              <div className="flex flex-wrap items-center justify-center gap-x-ios-4 gap-y-ios-1 text-ios-subheadline">
+                <div className="flex items-center gap-ios-1">
+                  <span className="text-muted-foreground">📏</span>
+                  <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
+                </div>
+                <div className="hidden sm:block w-px h-4 bg-border" />
+                <div className="flex items-center gap-ios-1">
+                  <span className="text-green-500">⬆️</span>
+                  <span className="font-semibold text-foreground">D+ {totalElevationGain}m</span>
+                </div>
+                <div className="hidden sm:block w-px h-4 bg-border" />
+                <div className="flex items-center gap-ios-1">
+                  <span className="text-red-500">⬇️</span>
+                  <span className="font-semibold text-foreground">D- {totalElevationLoss}m</span>
+                </div>
+              </div>
             </div>
-            <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-ios-1">
-              <span className="text-green-500">⬆️</span>
-              <span className="font-semibold text-foreground">D+ {totalElevationGain}m</span>
-            </div>
-            <div className="w-px h-4 bg-border" />
-            <div className="flex items-center gap-ios-1">
-              <span className="text-red-500">⬇️</span>
-              <span className="font-semibold text-foreground">D- {totalElevationLoss}m</span>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Profil d'élévation */}
-      {routeElevations.length > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="mx-ios-4 mb-ios-4">
+          {routeElevations.length > 0 && (
             <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-lg shadow-lg overflow-hidden">
-              <div 
+              <div
                 className="flex items-center justify-between p-ios-2 cursor-pointer hover:bg-background/90 transition-colors"
                 onClick={() => setShowElevationProfile(!showElevationProfile)}
               >
-                <span className="text-ios-subheadline font-medium text-foreground">Profil d'élévation</span>
+                <span className="text-ios-subheadline font-medium text-foreground">Profil d&apos;élévation</span>
                 {showElevationProfile ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 ) : (
                   <ChevronUp className="w-4 h-4 text-muted-foreground" />
                 )}
               </div>
-              
+
               {showElevationProfile && (
-                <div className="p-ios-4 pt-0">
-                  <ElevationProfile 
-                    elevations={routeElevations}
-                    coordinates={getAllCoordinates().map(c => ({ lat: c.lat(), lng: c.lng() }))}
-                  />
+                <div className="p-ios-4 pt-0 max-h-[40vh] overflow-y-auto">
+                  <ElevationProfile elevations={routeElevations} coordinates={elevationChartCoords} />
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Instructions - seulement si pas encore de tracé */}
-      {waypoints.current.length === 0 && (
+      {waypointCount === 0 && (
         <div className="absolute bottom-ios-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-ios-4 py-ios-2 shadow-lg">
           <p className="text-ios-subheadline text-foreground text-center">
             👆 Cliquez sur la carte pour tracer votre parcours

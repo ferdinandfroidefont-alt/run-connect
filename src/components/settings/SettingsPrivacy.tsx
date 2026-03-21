@@ -65,8 +65,11 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         title: "Consentement révoqué",
         description: "Vous allez être déconnecté.",
       });
-      
-      setTimeout(() => signOut(), 1000);
+
+      onClose();
+      setTimeout(() => {
+        void signOut();
+      }, 200);
     } catch (error) {
       console.error('Erreur révocation:', error);
       toast({

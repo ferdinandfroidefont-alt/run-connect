@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useFollow } from "@/hooks/useFollow";
+import { cn } from "@/lib/utils";
 
 interface FollowUser {
   user_id: string;
@@ -88,6 +89,13 @@ export const FollowDialog = ({
     userName: null,
   });
 
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const showRequestsTab = !targetUserId || targetUserId === user?.id;
+
+  useEffect(() => {
+    if (open) setActiveTab(type);
+  }, [open, type]);
+
   useEffect(() => {
     if (open && user) {
       fetchFollowData();
@@ -95,6 +103,17 @@ export const FollowDialog = ({
       fetchSentPendingRequests();
     }
   }, [open, user, targetUserId]);
+
+  /** Onglet actif centré dans la zone scroll (effet carrousel iOS) */
+  useLayoutEffect(() => {
+    if (!open || !tabScrollRef.current) return;
+    const root = tabScrollRef.current;
+    const node = root.querySelector<HTMLElement>(`[data-follow-tab="${activeTab}"]`);
+    if (!node) return;
+    requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    });
+  }, [activeTab, open, showRequestsTab]);
 
   const fetchPendingRequests = async () => {
     if (!user || targetUserId) return; // Only show pending for own profile
@@ -244,7 +263,7 @@ export const FollowDialog = ({
   const PendingRequestsList = () => {
     if (pendingRequests.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
           <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
             <Clock className="h-8 w-8 text-muted-foreground" />
           </div>
@@ -259,7 +278,7 @@ export const FollowDialog = ({
     }
 
     return (
-      <div className="pt-4">
+      <div className="pt-1">
         <div className="bg-card rounded-[10px] border border-border overflow-hidden">
           {pendingRequests.map((request, index) => (
             <div
@@ -322,7 +341,7 @@ export const FollowDialog = ({
   const SentPendingRequestsList = () => {
     if (sentPendingRequests.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
           <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
             <Clock className="h-8 w-8 text-muted-foreground" />
           </div>
@@ -337,7 +356,7 @@ export const FollowDialog = ({
     }
 
     return (
-      <div className="pt-4">
+      <div className="pt-1">
         <div className="bg-card rounded-[10px] border border-border overflow-hidden">
           {sentPendingRequests.map((request, index) => (
             <div
@@ -400,7 +419,7 @@ export const FollowDialog = ({
     
     if (users.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="flex min-h-[min(360px,55dvh)] flex-1 flex-col items-center justify-center px-4 py-8">
           <div className="h-16 w-16 rounded-full bg-secondary flex items-center justify-center mb-4">
             <Users className="h-8 w-8 text-muted-foreground" />
           </div>
@@ -498,71 +517,111 @@ export const FollowDialog = ({
       <DialogContent 
         hideCloseButton 
         fullScreen
-        className="bg-secondary !overflow-hidden"
+        className="flex flex-col gap-0 overflow-hidden bg-secondary p-0"
       >
         {/* iOS Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-background border-b border-border">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3 pt-[max(12px,env(safe-area-inset-top,0px))]">
           <div className="w-8" />
-          <h2 className="text-lg font-semibold text-foreground">Réseaux</h2>
+          <h2 className="text-[17px] font-semibold text-foreground">Réseaux</h2>
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="h-8 w-8 rounded-full hover:bg-secondary transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden bg-secondary">
-          {/* iOS Segmented Control */}
-          <div className="flex-shrink-0 relative z-10 py-2 bg-background border-b border-border">
-            <TabsList className="w-full mx-4" style={{ maxWidth: 'calc(100% - 2rem)' }}>
-              <TabsTrigger 
-                value="followers" 
-                className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-              >
-                <Users className="h-3.5 w-3.5" />
-                Abonnés
-                {followerCount > 0 && (
-                  <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                    {followerCount}
-                  </span>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary"
+        >
+          {/* Carrousel d’onglets : scroll horizontal, onglet actif centré */}
+          <div className="shrink-0 border-b border-border/80 bg-background/95 backdrop-blur-md">
+            <div
+              ref={tabScrollRef}
+              className={cn(
+                "flex w-full overflow-x-auto overscroll-x-contain scroll-smooth",
+                "snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none]",
+                "[&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]",
+                "px-[max(1rem,calc(50vw-76px))]"
+              )}
+            >
+              <TabsList
+                className={cn(
+                  "inline-flex h-auto min-h-[52px] w-max items-stretch gap-2 rounded-none border-0 bg-transparent py-2 pl-0 pr-0",
+                  "snap-none"
                 )}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="following" 
-                className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
-                <UserCheck className="h-3.5 w-3.5" />
-                Abonnements
-                {followingCount > 0 && (
-                  <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                    {followingCount}
-                  </span>
-                )}
-              </TabsTrigger>
-              {/* Pending requests tab - only for own profile */}
-              {(!targetUserId || targetUserId === user?.id) && (
-                <TabsTrigger 
-                  value="requests" 
-                  className="flex-1 gap-1 rounded-[8px] text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+                <TabsTrigger
+                  value="followers"
+                  data-follow-tab="followers"
+                  className={cn(
+                    "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
+                    "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
+                    "data-[state=active]:border-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
+                    "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
+                  )}
                 >
-                  <Clock className="h-3.5 w-3.5" />
-                  Demandes
-                  {(pendingRequests.length > 0 || sentPendingRequests.length > 0) && (
-                    <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
-                      {pendingRequests.length + sentPendingRequests.length}
+                  <Users className="h-4 w-4 shrink-0" />
+                  <span>Abonnés</span>
+                  {followerCount > 0 && (
+                    <span className="rounded-full bg-primary-foreground/25 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary-foreground group-data-[state=inactive]:bg-primary/15 group-data-[state=inactive]:text-primary">
+                      {followerCount}
                     </span>
                   )}
                 </TabsTrigger>
-              )}
-            </TabsList>
+                <TabsTrigger
+                  value="following"
+                  data-follow-tab="following"
+                  className={cn(
+                    "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
+                    "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
+                    "data-[state=active]:border-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md",
+                    "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
+                  )}
+                >
+                  <UserCheck className="h-4 w-4 shrink-0" />
+                  <span>Abonnements</span>
+                  {followingCount > 0 && (
+                    <span className="rounded-full bg-primary-foreground/25 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-primary-foreground group-data-[state=inactive]:bg-primary/15 group-data-[state=inactive]:text-primary">
+                      {followingCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+                {showRequestsTab && (
+                  <TabsTrigger
+                    value="requests"
+                    data-follow-tab="requests"
+                    className={cn(
+                      "group snap-center shrink-0 gap-1.5 rounded-[12px] border border-transparent px-5 py-2.5 text-[13px] font-semibold transition-all duration-300 ease-out",
+                      "min-h-[44px] min-w-[132px] justify-center data-[state=inactive]:text-muted-foreground",
+                      "data-[state=active]:border-destructive/25 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground data-[state=active]:shadow-md",
+                      "data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted/80"
+                    )}
+                  >
+                    <Clock className="h-4 w-4 shrink-0" />
+                    <span>Demandes</span>
+                    {(pendingRequests.length > 0 || sentPendingRequests.length > 0) && (
+                      <span className="rounded-full bg-destructive-foreground/30 px-1.5 py-0.5 text-[10px] font-bold text-destructive-foreground group-data-[state=inactive]:bg-destructive/15 group-data-[state=inactive]:text-destructive">
+                        {pendingRequests.length + sentPendingRequests.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+              </TabsList>
+            </div>
           </div>
 
-          <TabsContent value="followers" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
+          <TabsContent
+            value="followers"
+            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
+          >
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="flex flex-1 items-center justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
                 <UserList users={followers} showRemoveButton />
@@ -570,11 +629,14 @@ export const FollowDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="following" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
+          <TabsContent
+            value="following"
+            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
+          >
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="flex flex-1 items-center justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
                 <UserList users={following} showUnfollowButton />
@@ -582,45 +644,51 @@ export const FollowDialog = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="requests" className="flex-1 relative bg-secondary" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 overflow-y-auto px-0 pb-24">
-              {/* Sub-tabs for Received / Sent */}
-              <div className="flex gap-2 mb-4">
+          <TabsContent
+            value="requests"
+            className="m-0 mt-0 flex min-h-0 flex-1 flex-col overflow-hidden bg-secondary p-0 focus-visible:outline-none data-[state=inactive]:hidden"
+          >
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))] pt-3">
+              <div className="mb-3 flex shrink-0 gap-2">
                 <Button
-                  variant={requestsSubTab === 'received' ? 'default' : 'outline'}
+                  variant={requestsSubTab === "received" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setRequestsSubTab('received')}
-                  className="flex-1 rounded-full text-xs"
+                  onClick={() => setRequestsSubTab("received")}
+                  className="h-10 flex-1 rounded-full text-[12px] font-semibold"
                 >
                   Reçues
                   {pendingRequests.length > 0 && (
-                    <span className="ml-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full">
+                    <span className="ml-1.5 rounded-full bg-destructive-foreground/20 px-1.5 py-0.5 text-[10px]">
                       {pendingRequests.length}
                     </span>
                   )}
                 </Button>
                 <Button
-                  variant={requestsSubTab === 'sent' ? 'default' : 'outline'}
+                  variant={requestsSubTab === "sent" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setRequestsSubTab('sent')}
-                  className="flex-1 rounded-full text-xs"
+                  onClick={() => setRequestsSubTab("sent")}
+                  className="h-10 flex-1 rounded-full text-[12px] font-semibold"
                 >
                   Envoyées
                   {sentPendingRequests.length > 0 && (
-                    <span className="ml-1.5 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                    <span className="ml-1.5 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">
                       {sentPendingRequests.length}
                     </span>
                   )}
                 </Button>
               </div>
 
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                requestsSubTab === 'received' ? <PendingRequestsList /> : <SentPendingRequestsList />
-              )}
+              <div className="flex min-h-0 flex-1 flex-col">
+                {loading ? (
+                  <div className="flex flex-1 items-center justify-center py-12">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                ) : requestsSubTab === "received" ? (
+                  <PendingRequestsList />
+                ) : (
+                  <SentPendingRequestsList />
+                )}
+              </div>
             </div>
           </TabsContent>
         </Tabs>

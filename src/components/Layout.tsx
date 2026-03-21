@@ -22,6 +22,14 @@ export const Layout = ({ children }: LayoutProps) => {
     document.documentElement.style.backgroundColor = '#FFFFFF';
     document.body.style.backgroundColor = '#FFFFFF';
   }, []);
+
+  // Réserve l’espace sous les pages en position:fixed (Classement, etc.) quand la barre du bas est visible
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--layout-bottom-inset',
+      hideBottomNav ? '0px' : 'var(--bottom-nav-offset)'
+    );
+  }, [hideBottomNav]);
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
@@ -79,8 +87,10 @@ export const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="h-screen-safe bg-background flex flex-col overflow-x-hidden overflow-y-hidden">
-      <main className={`flex-1 overflow-auto scroll-momentum min-h-0 h-0 ${hideBottomNav ? "" : "ios-nav-padding"}`}>
-        <div className="animate-fade-in h-full relative w-full">
+      <main
+        className={`flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden scroll-momentum ${hideBottomNav ? "" : "ios-nav-padding"}`}
+      >
+        <div className="animate-fade-in h-full w-full relative">
           {children}
         </div>
       </main>

@@ -419,7 +419,7 @@ const Leaderboard = () => {
   const nextRankInfo = getNextRankInfo(userRankLabel);
 
   return (
-    <div className="fixed inset-0 flex min-h-0 flex-col bg-secondary">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary z-0">
       {/* ── FIXED HEADER ── */}
       <div className="z-50 shrink-0 border-b border-border/40 bg-card">
         <div className="flex items-center justify-between px-4 py-3">

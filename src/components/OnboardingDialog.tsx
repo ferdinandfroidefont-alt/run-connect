@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, Shield, FileText, Check, X, Languages, ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { languages, Language } from "@/lib/translations";
+import { Language } from "@/lib/translations";
+import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -56,13 +57,14 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
     setLoading(true);
     try {
-      setLanguage(selectedLanguage);
+      await setLanguage(selectedLanguage, { manual: true });
       
       const { error } = await (supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
           preferred_language: selectedLanguage,
+          language_manually_set: true,
           notifications_enabled: notificationPermission === 'granted',
           rgpd_accepted: acceptedRGPD,
           security_rules_accepted: acceptedSecurity,
@@ -82,8 +84,8 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
       onComplete();
     } catch (error: any) {
       toast({
-        title: "Erreur",
-        description: `Impossible de terminer: ${error.message}`,
+        title: t('common.error'),
+        description: `${t('onboarding.completeErrorPrefix')}${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -136,7 +138,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
 
                   <div className="bg-card rounded-[10px] overflow-hidden">
                     <div className="px-4 py-3 border-b border-border">
-                      <p className="text-[13px] text-muted-foreground uppercase tracking-wider">Langue</p>
+                      <p className="text-[13px] text-muted-foreground uppercase tracking-wider">{t('onboarding.languageSectionLabel')}</p>
                     </div>
                     <div className="p-4">
                       <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value as Language)}>
@@ -144,8 +146,10 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(languages).map(([code, { nativeName }]) => (
-                            <SelectItem key={code} value={code}>{nativeName}</SelectItem>
+                          {LANGUAGES_SORTED.map((code) => (
+                            <SelectItem key={code} value={code}>
+                              {LANGUAGE_INFO[code].nativeName}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -244,9 +248,9 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
                     <div className="h-16 w-16 rounded-full bg-[#34C759] flex items-center justify-center mb-4">
                       <Shield className="h-8 w-8 text-white" />
                     </div>
-                    <h2 className="text-xl font-bold">Conditions d'utilisation</h2>
+                    <h2 className="text-xl font-bold">{t('onboarding.termsTitle')}</h2>
                     <p className="text-[13px] text-muted-foreground mt-1 text-center">
-                      Veuillez accepter les conditions pour continuer
+                      {t('onboarding.termsSubtitle')}
                     </p>
                   </div>
 

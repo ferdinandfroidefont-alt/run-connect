@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -163,6 +164,7 @@ export default function MySessions() {
       }
 
       setLiveTrackingEnabled(true);
+      setLiveShareOptIn(selectedSession.id, true);
 
       if (Capacitor.isNativePlatform()) {
         const id = await Geolocation.watchPosition(
@@ -211,6 +213,7 @@ export default function MySessions() {
 
   const stopParticipantTracking = useCallback(async () => {
     setLiveTrackingEnabled(false);
+    if (selectedSession) setLiveShareOptIn(selectedSession.id, false);
     if (trackingWatchIdRef.current) {
       if (Capacitor.isNativePlatform()) {
         Geolocation.clearWatch({ id: trackingWatchIdRef.current });
@@ -655,7 +658,7 @@ export default function MySessions() {
             <div className="h-px bg-border" />
           </div>
 
-          <div className="p-4 space-y-6 pb-24">
+          <div className="p-4 space-y-6 pb-ios-4">
             {/* Session Header Card */}
             <IOSListGroup>
               <div className="p-4">
@@ -711,10 +714,12 @@ export default function MySessions() {
 
             {/* Live Tracking section for joined/created sessions (not yet ended) */}
             {(() => {
+              const liveOk = (selectedSession as any).live_tracking_enabled === true;
               const maxDur = (selectedSession as any).live_tracking_max_duration || 120;
               const sessionEndTime = new Date(selectedSession.scheduled_at).getTime() + maxDur * 60 * 1000;
               const isNotEnded = Date.now() < sessionEndTime;
-              const showTracking = (isViewingJoinedSession || sessionSource === 'created') && isNotEnded;
+              const showTracking =
+                liveOk && (isViewingJoinedSession || sessionSource === 'created') && isNotEnded;
               return showTracking;
             })() && (
               <IOSListGroup header="POSITION EN DIRECT">
@@ -885,7 +890,7 @@ export default function MySessions() {
                 Partager votre position
               </AlertDialogTitle>
               <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
-                En activant cette fonctionnalité, votre position GPS sera partagée en temps réel avec l'organisateur et les autres participants de cette séance. Votre position ne sera plus partagée une fois la séance terminée ou si vous désactivez manuellement.
+                Votre position est partagée en temps réel avec les participants qui consultent la carte, uniquement pendant le créneau horaire de la séance (jusqu’à la fin prévue). Vous pouvez arrêter le partage à tout moment ici. Les autres participants qui activent le suivi apparaîtront aussi sur la carte avec leur photo.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="border-t border-border">

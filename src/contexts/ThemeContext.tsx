@@ -1,32 +1,35 @@
-import { createContext, useContext } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 
-type Theme = 'light';
+const STORAGE_KEY = 'runconnect-ui-theme';
 
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+/** Synchronise la barre d’état / theme-color avec le thème résolu (web). */
+function ThemeMetaSync() {
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    const isDark = resolvedTheme === 'dark';
+    const themeColor = isDark ? '#1C1C1E' : '#F2F2F7';
+    const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (meta) meta.setAttribute('content', themeColor);
+  }, [resolvedTheme]);
+
+  return null;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};
-
-interface ThemeProviderProps {
-  children: React.ReactNode;
-}
-
-export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  const setTheme = () => {};
-
+export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
-    <ThemeContext.Provider value={{ theme: 'light', setTheme }}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey={STORAGE_KEY}
+      disableTransitionOnChange={false}
+    >
+      <ThemeMetaSync />
       {children}
-    </ThemeContext.Provider>
+    </NextThemesProvider>
   );
-};
+}
+
+export { useTheme };

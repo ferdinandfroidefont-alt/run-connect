@@ -23,11 +23,25 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/H76dhuQXTRgC2oGkzXjKoQYK4yk2/social-images/social-1757437159464-ChatGPT Image 25 août 2025, 14_38_34.png">
 
-    <meta name="theme-color" content="#2563EB" />
+    <meta name="theme-color" content="#F2F2F7" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Anti-flash thème (next-themes / runconnect-ui-theme) -->
+    <script>
+      (function () {
+        try {
+          var key = 'runconnect-ui-theme';
+          var t = localStorage.getItem(key);
+          var dark = false;
+          if (t === 'dark') dark = true;
+          else if (t === 'light') dark = false;
+          else dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
-  <body style="background-color:#2563EB;">
+  <body>
     <div id="root"></div>
     
     <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT (Fallback) -->

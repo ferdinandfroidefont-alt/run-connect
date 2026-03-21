@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,7 @@ interface Message {
 
 const Messages = () => {
   const { user, subscriptionInfo } = useAuth();
+  const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -2237,7 +2239,7 @@ const Messages = () => {
                 <div className="bg-card rounded-ios-lg shadow-xl border border-border">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
-                    theme={Theme.LIGHT}
+                    theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
                     width={320}
                     height={400}
                     searchPlaceHolder="Rechercher..."

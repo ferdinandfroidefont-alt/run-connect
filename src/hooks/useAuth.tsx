@@ -108,11 +108,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       console.log('🚪 [AUTH] Starting signOut...');
-      
-      // 1. D'abord déconnecter côté serveur
+
+      // 1. Déconnexion serveur
       await supabase.auth.signOut({ scope: 'global' });
-      
-      // 2. Nettoyer TOUS les tokens Supabase + flags de consentement du localStorage
+
+      // 2. Nettoyer tokens Supabase + flags consentement (localStorage)
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -120,27 +120,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
       console.log('🗑️ [AUTH] Removed localStorage keys:', keysToRemove);
-      
-      // 3. Vider sessionStorage
+
       sessionStorage.clear();
-      
-      // 4. Réinitialiser les états React
-      setUser(null);
-      setSession(null);
-      setSubscriptionInfo(null);
-      
-      console.log('✅ [AUTH] SignOut complete, redirecting...');
-      
-      // 5. Forcer un rechargement complet pour vider la mémoire React
-      window.location.href = '/auth';
+
+      // 3. Ne PAS appeler setUser(null) avant la navigation : sinon Layout rend
+      //    <Navigate to="/auth" /> en SPA alors qu’un Dialog peut encore avoir verrouillé
+      //    le body (pointer-events: none) → boutons Auth non cliquables jusqu’au reload app.
+      console.log('✅ [AUTH] SignOut complete, hard redirect...');
+      window.location.replace('/auth');
     } catch (error) {
       console.error('❌ [AUTH] Error signing out:', error);
-      // Forcer le nettoyage et la redirection même en cas d'erreur
       localStorage.clear();
       sessionStorage.clear();
-      window.location.href = '/auth';
+      window.location.replace('/auth');
     }
   };
 

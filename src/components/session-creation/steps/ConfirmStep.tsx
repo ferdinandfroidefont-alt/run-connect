@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat, Radio, MapPinned } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, RecurrenceType } from '../types';
@@ -113,8 +113,8 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        {/* Session preview card */}
-        <div className="rounded-2xl bg-card border border-border overflow-hidden">
+        {/* Session preview card — iOS premium */}
+        <div className="rounded-[16px] bg-card border border-border/70 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           {/* Image */}
           {imagePreview && (
             <div className="relative h-32">
@@ -172,16 +172,16 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             )}
 
             {/* Stats row */}
-            <div className="flex gap-4 pt-2 border-t border-border">
+            <div className="flex flex-wrap gap-4 pt-3 border-t border-border/80">
               {formData.max_participants && (
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                  <Users className="w-3.5 h-3.5 shrink-0" />
                   <span>{formData.max_participants} max</span>
                 </div>
               )}
               {formData.distance_km && (
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Ruler className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                  <Ruler className="w-3.5 h-3.5 shrink-0" />
                   <span>{formData.distance_km} km</span>
                 </div>
               )}
@@ -189,8 +189,45 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
           </div>
         </div>
 
+        {/* Live tracking — récapitulatif */}
+        <div
+          className={`rounded-[14px] border p-4 shadow-sm ${
+            formData.live_tracking_enabled
+              ? 'border-emerald-500/35 bg-emerald-500/[0.06]'
+              : 'border-border/60 bg-card'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`w-9 h-9 shrink-0 rounded-[10px] flex items-center justify-center ${
+                formData.live_tracking_enabled ? 'bg-emerald-500/20 text-emerald-700' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {formData.live_tracking_enabled ? (
+                <Radio className="w-4 h-4" />
+              ) : (
+                <MapPinned className="w-4 h-4" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold text-foreground">Live tracking</p>
+              <p className="text-[12px] text-muted-foreground leading-relaxed mt-1">
+                {formData.live_tracking_enabled ? (
+                  <>
+                    Activé : les participants pourront activer le partage de position depuis{' '}
+                    <span className="font-medium text-foreground">Mes séances</span> pendant le créneau horaire, et se
+                    voir sur la carte <span className="font-medium text-foreground">Suivre les participants</span>.
+                  </>
+                ) : (
+                  <>Désactivé : aucun partage de position sur la carte pour cette séance.</>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Visibility Selector - iOS Style */}
-        <div className="bg-card rounded-2xl p-4">
+        <div className="bg-card rounded-[14px] border border-border/60 p-4 shadow-sm">
           <VisibilitySelector
             visibilityType={formData.visibility_type}
             hiddenFromUsers={formData.hidden_from_users}
@@ -210,7 +247,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         )}
 
         {/* Recurrence Selector - iOS Style */}
-        <div className="bg-card rounded-2xl p-4">
+        <div className="bg-card rounded-[14px] border border-border/60 p-4 shadow-sm">
           <RecurrenceSelector
             recurrenceType={formData.recurrence_type}
             recurrenceCount={formData.recurrence_count}

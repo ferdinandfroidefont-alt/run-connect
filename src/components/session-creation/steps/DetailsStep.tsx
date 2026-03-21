@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Flame, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,15 @@ import {
   getDistanceUnit
 } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
@@ -51,6 +60,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onNext,
   onBack,
 }) => {
+  const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
   // Auto-generate title suggestion
   useEffect(() => {
     if (!formData.title && formData.activity_type && selectedLocation) {
@@ -280,24 +290,58 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             />
           </div>
 
-          {/* Live Tracking Toggle */}
-          <div className="bg-card rounded-2xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-                  <Radio className="w-4 h-4 text-white" />
+          {/* Live Tracking Toggle — avertissement avant activation */}
+          <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 shrink-0 rounded-[10px] bg-emerald-500/15 flex items-center justify-center ring-1 ring-emerald-500/25">
+                  <Radio className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Live Tracking</Label>
-                  <p className="text-[11px] text-muted-foreground">Les participants verront votre position en direct</p>
+                <div className="min-w-0">
+                  <Label className="text-[15px] font-semibold text-foreground">Live tracking</Label>
+                  <p className="text-[12px] text-muted-foreground leading-snug mt-0.5">
+                    Optionnel : les participants pourront partager leur position sur la carte pendant la séance.
+                  </p>
                 </div>
               </div>
               <Switch
                 checked={formData.live_tracking_enabled}
-                onCheckedChange={(checked) => onFormDataChange({ live_tracking_enabled: checked })}
+                onCheckedChange={(checked) => {
+                  if (checked) setLiveTrackingWarningOpen(true);
+                  else onFormDataChange({ live_tracking_enabled: false });
+                }}
               />
             </div>
           </div>
+
+          <AlertDialog open={liveTrackingWarningOpen} onOpenChange={setLiveTrackingWarningOpen}>
+            <AlertDialogContent className="rounded-[14px] max-w-[320px] p-0 gap-0 border-border/80 shadow-xl">
+              <AlertDialogHeader className="p-5 pb-3 space-y-2">
+                <AlertDialogTitle className="text-[17px] font-semibold text-center">
+                  Activer le live tracking ?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-[13px] text-muted-foreground text-center leading-relaxed">
+                  Si vous activez cette option, chaque participant pourra choisir de partager sa position en direct
+                  sur la carte pendant le créneau de la séance. Ce n’est pas obligatoire : le partage se fait depuis{' '}
+                  <span className="font-medium text-foreground">Mes séances</span> pour chacun. Vous pouvez l’arrêter à
+                  tout moment.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="border-t border-border">
+                <AlertDialogCancel className="w-full h-12 border-0 rounded-none text-[17px] font-normal text-primary hover:bg-secondary/60">
+                  Annuler
+                </AlertDialogCancel>
+              </div>
+              <div className="border-t border-border">
+                <AlertDialogAction
+                  className="w-full h-12 border-0 rounded-none bg-transparent hover:bg-secondary/60 text-[17px] font-semibold text-emerald-600"
+                  onClick={() => onFormDataChange({ live_tracking_enabled: true })}
+                >
+                  Activer pour cette séance
+                </AlertDialogAction>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
 

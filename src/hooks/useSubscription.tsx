@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { hasCreatorSupportAccess } from '@/lib/creatorSupportAccess';
 
 export type SubscriptionStatus = 'loading' | 'free' | 'premium' | 'expired' | 'expiring_soon' | 'past_due';
 
@@ -91,9 +92,15 @@ export const useSubscription = () => {
 
     try {
       console.log('🔄 [SUBSCRIPTION] Fetching from database...');
-      
-      // Admin override for specific user
-      if (user.email === 'ferdinand.froidefont@gmail.com') {
+
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      // Admin override (email ou pseudo support créateur)
+      if (hasCreatorSupportAccess(user.email, creatorProfile?.username)) {
         const adminState: SubscriptionState = {
           status: 'premium',
           tier: 'Admin',

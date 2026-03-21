@@ -1,12 +1,16 @@
 import { Toaster as Sonner, toast as sonnerToast } from "sonner"
 import { isReallyNative } from "@/lib/nativeDetection"
+import { useTheme } from "@/contexts/ThemeContext"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const ToasterInner = ({ ...props }: ToasterProps) => {
+  const { resolvedTheme } = useTheme()
+  const sonnerTheme = resolvedTheme === "dark" ? "dark" : "light"
+
   return (
     <Sonner
-      theme="light"
+      theme={sonnerTheme}
       className="toaster group"
       toastOptions={{
         classNames: {
@@ -22,6 +26,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       {...props}
     />
   )
+}
+
+const Toaster = (props: ToasterProps) => {
+  return <ToasterInner {...props} />
 }
 
 // 🔇 Wrapper pour désactiver les toasts non-error sur natif (iOS + Android)

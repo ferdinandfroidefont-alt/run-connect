@@ -7,6 +7,8 @@ import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -33,8 +35,10 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   };
 
   const handleSignOut = () => {
-    signOut();
+    // Fermer le dialog d’abord pour que Radix retire scroll-lock / pointer-events sur body,
+    // puis navigation forcée dans signOut (évite boutons Auth morts après déconnexion).
     onClose();
+    void signOut();
   };
 
   const handleDeleteAccount = async () => {
@@ -56,8 +60,8 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
         description: "Votre compte a été supprimé avec succès.",
       });
 
-      signOut();
       onClose();
+      void signOut();
     } catch (error: any) {
       console.error('Delete account error:', error);
       toast({
@@ -205,7 +209,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               </button>
 
               {/* Creator Mode */}
-              {user?.email === 'ferdinand.froidefont@gmail.com' && (
+              {hasCreatorSupportAccess(user?.email, userProfile?.username) && (
                 <>
                   <div className="h-px bg-border ml-[54px]" />
                   <button 
@@ -216,7 +220,8 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                       <Settings className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="text-[15px] font-medium text-primary">Créateur</p>
+                      <p className="text-[15px] font-medium text-primary">Support créateur</p>
+                      <p className="text-[12px] text-muted-foreground">Outils internes · RGPD</p>
                     </div>
                     <ChevronRight className="h-5 w-5 text-primary/50" />
                   </button>

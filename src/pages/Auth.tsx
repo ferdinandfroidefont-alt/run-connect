@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,10 @@ const Auth = () => {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
+
+  useLayoutEffect(() => {
+    resetBodyInteractionLocks();
+  }, []);
 
   // ── Existing useEffect: session check, referral, reset detection ──
   useEffect(() => {

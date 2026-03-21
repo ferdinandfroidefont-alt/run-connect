@@ -1,10 +1,40 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { translations, Language } from '@/lib/translations';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
+import { translations, Language, normalizeLanguageCode } from '@/lib/translations';
+import { getLanguageForCountry } from '@/lib/i18n/countryLanguage';
 import { supabase } from '@/integrations/supabase/client';
+
+const MANUAL_LS_KEY = 'app-language-manually-set';
+
+function getNestedString(obj: unknown, keys: string[]): string | undefined {
+  let v: unknown = obj;
+  for (const k of keys) {
+    if (v && typeof v === 'object' && k in (v as object)) {
+      v = (v as Record<string, unknown>)[k];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof v === 'string' ? v : undefined;
+}
+
+export type SetLanguageOptions = {
+  /** Si true (défaut), le choix utilisateur prime et bloque la suggestion pays. */
+  manual?: boolean;
+};
 
 interface LanguageContextType {
   language: Language;
-  setLanguage: (lang: Language) => void;
+  languageManuallySet: boolean;
+  setLanguage: (lang: Language, options?: SetLanguageOptions) => Promise<void>;
+  suggestLanguageFromCountry: (iso2: string | null | undefined) => Promise<void>;
   t: (key: string) => string;
 }
 
@@ -25,25 +55,47 @@ interface LanguageProviderProps {
 export const LanguageProvider = ({ children }: LanguageProviderProps) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('app-language');
-    return (saved as Language) || 'fr';
+    if (saved) return normalizeLanguageCode(saved);
+    return 'fr';
   });
+  const [languageManuallySet, setLanguageManuallySet] = useState(
+    () => localStorage.getItem(MANUAL_LS_KEY) === 'true'
+  );
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const languageManuallySetRef = useRef(languageManuallySet);
+  useEffect(() => {
+    languageManuallySetRef.current = languageManuallySet;
+  }, [languageManuallySet]);
 
   useEffect(() => {
     const loadLanguageFromProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('preferred_language')
+            .select('preferred_language, language_manually_set')
             .eq('user_id', user.id)
-            .maybeSingle() as any;
-          
-          if (profile?.preferred_language) {
-            setLanguageState(profile.preferred_language as Language);
-            localStorage.setItem('app-language', profile.preferred_language);
+            .maybeSingle();
+
+          if (profile) {
+            const row = profile as {
+              preferred_language?: string | null;
+              language_manually_set?: boolean | null;
+            };
+            if (typeof row.language_manually_set === 'boolean') {
+              setLanguageManuallySet(row.language_manually_set);
+              localStorage.setItem(MANUAL_LS_KEY, row.language_manually_set ? 'true' : 'false');
+            }
+            if (row.preferred_language) {
+              const norm = normalizeLanguageCode(row.preferred_language);
+              setLanguageState(norm);
+              localStorage.setItem('app-language', norm);
+            }
           }
         }
       } catch (error) {
@@ -62,47 +114,96 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     }
   }, [language, isLoaded]);
 
-  const setLanguage = async (lang: Language) => {
-    console.log('🌍 Changement de langue:', language, '→', lang);
-    
-    // Sauvegarder immédiatement dans localStorage
-    localStorage.setItem('app-language', lang);
-    
-    // Mettre à jour l'état
-    setLanguageState(lang);
-    
-    // Sauvegarder aussi dans la base de données (async, non-bloquant)
+  const persistManualFlag = useCallback(async (manual: boolean) => {
+    setLanguageManuallySet(manual);
+    languageManuallySetRef.current = manual;
+    localStorage.setItem(MANUAL_LS_KEY, manual ? 'true' : 'false');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
-        await (supabase
+        await supabase
           .from('profiles')
-          .update({ preferred_language: lang } as any)
-          .eq('user_id', user.id));
-        console.log('✅ Langue sauvegardée dans le profil');
+          .update({ language_manually_set: manual } as Record<string, unknown>)
+          .eq('user_id', user.id);
       }
     } catch (error) {
-      console.error('❌ Error saving language to profile:', error);
+      console.error('Error saving language_manually_set:', error);
+    }
+  }, []);
+
+  const setLanguage = async (lang: Language, options?: SetLanguageOptions) => {
+    const manual = options?.manual ?? true;
+    const normalized = normalizeLanguageCode(lang);
+
+    localStorage.setItem('app-language', normalized);
+    setLanguageState(normalized);
+
+    if (manual) {
+      await persistManualFlag(true);
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ preferred_language: normalized } as Record<string, unknown>)
+          .eq('user_id', user.id);
+      }
+    } catch (error) {
+      console.error('Error saving language to profile:', error);
     }
   };
 
-  const t = (key: string): string => {
-    const keys = key.split('.');
-    let value: any = translations[language];
-    
-    for (const k of keys) {
-      if (value && typeof value === 'object') {
-        value = value[k];
-      } else {
-        return key;
+  const suggestLanguageFromCountry = useCallback(async (iso2: string | null | undefined) => {
+    if (languageManuallySetRef.current) return;
+    const suggested = getLanguageForCountry(iso2);
+    if (!suggested) return;
+
+    localStorage.setItem('app-language', suggested);
+    setLanguageState(suggested);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ preferred_language: suggested } as Record<string, unknown>)
+          .eq('user_id', user.id);
       }
+    } catch (error) {
+      console.error('Error applying suggested language from country:', error);
     }
-    
-    return typeof value === 'string' ? value : key;
-  };
+  }, []);
+
+  const t = useCallback(
+    (key: string): string => {
+      const keys = key.split('.');
+      const fromCurrent = getNestedString(translations[language], keys);
+      if (fromCurrent !== undefined) return fromCurrent;
+      const fromEn = getNestedString(translations.en, keys);
+      if (fromEn !== undefined) return fromEn;
+      return key;
+    },
+    [language]
+  );
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider
+      value={{
+        language,
+        languageManuallySet,
+        setLanguage,
+        suggestLanguageFromCountry,
+        t,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   );

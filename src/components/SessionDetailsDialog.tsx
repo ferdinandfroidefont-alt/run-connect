@@ -26,10 +26,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
 import { RateSessionDialog } from './RateSessionDialog';
 import { OrganizerRatingBadge } from './OrganizerRatingBadge';
-import { LiveTrackingControls } from './LiveTrackingControls';
-import { LiveTrackingMap } from './LiveTrackingMap';
-import { useLiveTracking } from '@/hooks/useLiveTracking';
-
 interface SessionBlock {
   id: string;
   type: 'warmup' | 'interval' | 'cooldown' | 'steady';

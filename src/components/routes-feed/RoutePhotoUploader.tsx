@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Camera, Upload, X } from 'lucide-react';
+import { extractGpsFromImageFile } from '@/lib/exifGps';
 
 interface RoutePhotoUploaderProps {
   routeId: string;
@@ -21,18 +22,39 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [detectedGps, setDetectedGps] = useState<{ lat: number; lng: number } | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setSelectedFile(file);
     setPreview(URL.createObjectURL(file));
+    setDetectedGps(null);
+    try {
+      const coords = await extractGpsFromImageFile(file);
+      if (coords) {
+        setDetectedGps(coords);
+        toast.success('Localisation détectée automatiquement');
+      }
+    } catch {
+      /* pas de GPS : OK */
+    }
   };
 
   const handleUpload = async () => {
     if (!user || !selectedFile) return;
     setUploading(true);
     try {
+      let lat: number | null = detectedGps?.lat ?? null;
+      let lng: number | null = detectedGps?.lng ?? null;
+      if (lat == null || lng == null) {
+        const coords = await extractGpsFromImageFile(selectedFile);
+        if (coords) {
+          lat = coords.lat;
+          lng = coords.lng;
+        }
+      }
+
       const ext = selectedFile.name.split('.').pop();
       const filePath = `${user.id}/${routeId}/${Date.now()}.${ext}`;
 
@@ -53,6 +75,8 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
           user_id: user.id,
           photo_url: publicUrl,
           caption: caption || null,
+          lat,
+          lng,
         });
 
       if (insertError) throw insertError;
@@ -61,6 +85,7 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
       setSelectedFile(null);
       setPreview(null);
       setCaption('');
+      setDetectedGps(null);
       onPhotoUploaded?.();
       onOpenChange(false);
     } catch (e: any) {
@@ -74,6 +99,7 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
     setSelectedFile(null);
     setPreview(null);
     setCaption('');
+    setDetectedGps(null);
   };
 
   return (
@@ -121,6 +147,12 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
             value={caption}
             onChange={e => setCaption(e.target.value)}
           />
+
+          {detectedGps && (
+            <p className="text-[12px] text-muted-foreground">
+              Position GPS enregistrée avec la photo (modifiable plus tard sur la fiche itinéraire via la carte).
+            </p>
+          )}
 
           <Button
             onClick={handleUpload}

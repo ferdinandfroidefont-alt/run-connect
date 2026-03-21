@@ -67,7 +67,7 @@ export const BottomNavigation = () => {
   if (hideBottomNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 ios-nav-shell">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 ios-nav-shell pb-[env(safe-area-inset-bottom,0px)]">
       <div className="grid grid-cols-5 items-center h-[var(--nav-height)]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;

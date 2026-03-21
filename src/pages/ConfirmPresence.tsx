@@ -190,7 +190,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="fixed inset-0 bg-secondary flex flex-col overflow-x-hidden">
+    <div className="fixed-fill-with-bottom-nav bg-secondary flex flex-col overflow-x-hidden z-0">
       {/* iOS Header */}
       <div className="bg-card border-b border-border shrink-0">
         <div className="relative flex items-center justify-between px-4 py-3">
@@ -209,7 +209,7 @@ export default function ConfirmPresence() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="flex-1 overflow-y-auto p-4 pb-ios-4" style={{ WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
           <div className="bg-card border border-border rounded-[10px] p-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

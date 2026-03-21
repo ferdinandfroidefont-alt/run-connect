@@ -1,25 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Settings, Loader2, ArrowLeft, ChevronRight, MapPin } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { languages, Language } from "@/lib/translations";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 interface SettingsGeneralProps {
   onBack: () => void;
 }
 
+const THEME_MODES = [
+  { id: "light" as const, labelKey: "themeModeLight" as const, Icon: Sun },
+  { id: "dark" as const, labelKey: "themeModeDark" as const, Icon: Moon },
+  { id: "system" as const, labelKey: "themeModeSystem" as const, Icon: Monitor },
+];
+
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
 
   const handlePasswordReset = async () => {
     if (!user?.email) {
@@ -90,24 +106,114 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             <div className="bg-card overflow-hidden">
               {/* Language Selector */}
               <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
-                  <Languages className="h-[18px] w-[18px] text-white" />
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center">
+                  <Languages className="h-[18px] w-[18px] text-primary-foreground" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium">{t('settings.language')}</p>
+                  <p className="text-[13px] text-muted-foreground leading-snug">{t('settings.languageDescription')}</p>
                 </div>
-                <Select value={language} onValueChange={(value) => setLanguage(value as Language)}>
-                  <SelectTrigger className="w-[120px] h-9 text-[13px] border-0 bg-secondary/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999]" sideOffset={5}>
-                    {Object.entries(languages).map(([code, { nativeName }]) => (
-                      <SelectItem key={code} value={code}>{nativeName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={languageOpen}
+                      className="h-10 min-w-[140px] max-w-[min(200px,46vw)] shrink-0 justify-between rounded-[10px] border-0 bg-secondary/50 px-3 text-[13px] font-medium"
+                    >
+                      <span className="truncate">{LANGUAGE_INFO[language].nativeName}</span>
+                      <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[min(320px,calc(100vw-2rem))] p-0 z-[9999]" align="end" sideOffset={8}>
+                    <Command>
+                      <CommandInput placeholder={t('settings.languageSearchPlaceholder')} className="h-11" />
+                      <CommandList className="max-h-[min(320px,50vh)]">
+                        <CommandEmpty>{t('settings.noLanguageMatch')}</CommandEmpty>
+                        <CommandGroup>
+                          {LANGUAGES_SORTED.map((code) => (
+                            <CommandItem
+                              key={code}
+                              value={`${LANGUAGE_INFO[code].nativeName} ${LANGUAGE_INFO[code].name} ${code}`}
+                              onSelect={() => {
+                                void setLanguage(code, { manual: true });
+                                setLanguageOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4 shrink-0",
+                                  language === code ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <span className="truncate font-medium">{LANGUAGE_INFO[code].nativeName}</span>
+                                <span className="truncate text-xs text-muted-foreground">{LANGUAGE_INFO[code].name}</span>
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
+              <div className="h-px bg-border ml-4" />
+
+              {/* Thème : clair / sombre / système */}
+              <div className="px-4 py-3 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center shrink-0">
+                    <Moon className="h-[18px] w-[18px] text-primary-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium">{t("settings.theme")}</p>
+                    <p className="text-[13px] text-muted-foreground leading-snug">
+                      {t("settings.themeDescription")}
+                    </p>
+                  </div>
+                </div>
+                {!themeMounted ? (
+                  <div className="h-11 rounded-[12px] bg-secondary animate-pulse" />
+                ) : (
+                  <div
+                    className="flex rounded-[12px] bg-secondary/80 dark:bg-secondary p-1 gap-0.5 border border-border/50"
+                    role="tablist"
+                    aria-label={t("settings.theme")}
+                  >
+                    {THEME_MODES.map(({ id, labelKey, Icon }) => {
+                      const label =
+                        labelKey === "themeModeLight"
+                          ? t("settings.themeModeLight")
+                          : labelKey === "themeModeDark"
+                            ? t("settings.themeModeDark")
+                            : t("settings.themeModeSystem");
+                      const active = (theme ?? "system") === id;
+                      return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setTheme(id)}
+                        className={cn(
+                          "flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1.5 rounded-[10px] text-[11px] sm:text-[12px] font-semibold transition-all min-h-[44px]",
+                          active
+                            ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                            : "text-muted-foreground active:opacity-70 hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 opacity-90" />
+                        <span className="leading-tight text-center">{label}</span>
+                      </button>
+                    );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

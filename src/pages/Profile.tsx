@@ -26,12 +26,12 @@ import { ReportUserDialog } from "@/components/ReportUserDialog";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
-import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
+import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -111,7 +111,6 @@ const Profile = () => {
   const [settingsFocus, setSettingsFocus] = useState<string>("");
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
-  const [showAdminPremium, setShowAdminPremium] = useState(false);
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -183,7 +182,7 @@ const Profile = () => {
       } else {
         fetchCommonClubs();
         // Fetch connection history only for creator
-        if (user?.email === 'ferdinand.froidefont@gmail.com') {
+        if (hasCreatorSupportAccess(user?.email, globalProfile?.username)) {
           fetchConnectionHistory();
         }
       }
@@ -233,7 +232,7 @@ const Profile = () => {
     }
   };
   const fetchConnectionHistory = async () => {
-    if (!viewingUserId || !user || user.email !== 'ferdinand.froidefont@gmail.com') return;
+    if (!viewingUserId || !user || !hasCreatorSupportAccess(user.email, globalProfile?.username)) return;
     try {
       // Fetch audit logs for login activities for this user
       const {
@@ -923,25 +922,6 @@ const Profile = () => {
               </div>
           </div>}
 
-        {/* Admin Premium Manager - Creator only */}
-        {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
-          <div className="ios-card overflow-hidden">
-            <button
-              onClick={() => setShowAdminPremium(true)}
-              className="w-full flex items-center gap-ios-3 px-ios-4 py-ios-3 active:bg-secondary transition-colors"
-            >
-              <div className="h-[30px] w-[30px] rounded-ios-sm bg-yellow-500 flex items-center justify-center">
-                <Crown className="h-[18px] w-[18px] text-white" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="text-ios-headline text-foreground">Gestion Premium</p>
-                <p className="text-ios-footnote text-muted-foreground">Offrir ou retirer des abonnements</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </button>
-          </div>
-        )}
-
         {/* Strava Connect Section */}
         <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
 
@@ -957,8 +937,6 @@ const Profile = () => {
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
-        {/* Admin Premium Manager Dialog */}
-        <AdminPremiumManager open={showAdminPremium} onOpenChange={setShowAdminPremium} />
       </div>
     </div>;
 };
