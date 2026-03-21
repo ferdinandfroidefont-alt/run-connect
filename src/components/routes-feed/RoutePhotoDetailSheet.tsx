@@ -95,110 +95,129 @@ export const RoutePhotoDetailSheet = ({ photo, open, onOpenChange }: RoutePhotoD
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 overflow-y-auto">
+      <SheetContent
+        side="bottom"
+        className="h-[min(85dvh,820px)] max-h-[90dvh] p-0 gap-0 flex flex-col overflow-hidden border-t border-border"
+      >
         <SheetHeader className="sr-only">
           <SheetTitle>Détail photo</SheetTitle>
         </SheetHeader>
-        
-        {/* Full photo */}
-        <div className="relative w-full aspect-[4/3] bg-secondary">
-          <img
-            src={photo.photo_url}
-            alt={photo.caption || photo.route_name}
-            className="w-full h-full object-cover"
-          />
+
+        {/* Grab indicator + titre (pattern iOS) */}
+        <div className="shrink-0 pt-ios-2 pb-ios-1 px-ios-4 border-b border-border/60 bg-background">
+          <div className="mx-auto mb-ios-2 h-1 w-10 rounded-full bg-muted-foreground/25" aria-hidden />
+          <h2 className="text-ios-title3 font-semibold text-foreground text-center pr-ios-8">
+            Photo
+          </h2>
         </div>
 
-        <div className="p-4 space-y-4">
-          {/* Photographer */}
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={photo.photographer.avatar_url || undefined} />
-              <AvatarFallback>
-                {photo.photographer.username[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-[15px] font-semibold">
-                {photo.photographer.display_name || photo.photographer.username}
-              </p>
-              <p className="text-[13px] text-muted-foreground">
-                sur {photo.route_name}
-              </p>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          {/* Hero photo */}
+          <div className="px-ios-4 pt-ios-3">
+            <div className="relative w-full overflow-hidden rounded-ios-lg bg-secondary ring-1 ring-black/5 dark:ring-white/10">
+              <img
+                src={photo.photo_url}
+                alt={photo.caption || photo.route_name}
+                className="w-full aspect-[4/3] object-cover"
+              />
             </div>
           </div>
 
-          {/* Caption */}
-          {photo.caption && (
-            <p className="text-[15px] text-foreground">{photo.caption}</p>
-          )}
-
-          {/* Nearby routes */}
-          <div>
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Itinéraires à proximité
-            </h3>
-
-            {loadingRoutes ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="px-ios-4 py-ios-4 space-y-ios-4">
+            {/* Photographer — grouped inset */}
+            <div className="rounded-ios-lg border border-border bg-card/80 dark:bg-card/60 overflow-hidden p-ios-3">
+              <div className="flex items-center gap-ios-3">
+                <Avatar className="h-11 w-11 ring-2 ring-border/60">
+                  <AvatarImage src={photo.photographer.avatar_url || undefined} />
+                  <AvatarFallback className="text-ios-footnote">
+                    {photo.photographer.username[0]?.toUpperCase() || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="text-ios-headline font-semibold truncate">
+                    {photo.photographer.display_name || photo.photographer.username}
+                  </p>
+                  <p className="text-ios-footnote text-muted-foreground truncate">
+                    {photo.route_name}
+                  </p>
+                </div>
               </div>
-            ) : !photo.lat || !photo.lng ? (
-              <p className="text-[13px] text-muted-foreground py-3">
-                Position non disponible pour cette photo
-              </p>
-            ) : nearbyRoutes.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground py-3">
-                Aucun itinéraire trouvé à proximité
-              </p>
-            ) : (
-              <div className="space-y-0 divide-y divide-border rounded-xl overflow-hidden border border-border">
-                {nearbyRoutes.map(route => {
-                  const isSaved = savedRouteIds.has(route.id);
-                  const isSaving = savingRouteId === route.id;
-                  return (
-                    <div key={route.id} className="p-3 bg-card flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <ActivityIcon activityType={route.activity_type || 'course'} size="sm" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-medium truncate">{route.name}</p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                            <Route className="h-3 w-3" />
-                            {formatDistance(route.total_distance)}
-                          </span>
-                          {route.total_elevation_gain && (
-                            <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                              <Mountain className="h-3 w-3" />
-                              {Math.round(route.total_elevation_gain)} m
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 h-9 w-9"
-                        disabled={isSaving}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSaveRoute(route.id);
-                        }}
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isSaved ? (
-                          <BookmarkCheck className="h-5 w-5 text-primary fill-primary" />
-                        ) : (
-                          <Bookmark className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
+            </div>
+
+            {photo.caption && (
+              <p className="text-ios-subheadline text-foreground leading-relaxed px-ios-1">{photo.caption}</p>
             )}
+
+            {/* Nearby routes — liste groupée */}
+            <div>
+              <h3 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-ios-2 px-ios-1">
+                Itinéraires à proximité
+              </h3>
+
+              {loadingRoutes ? (
+                <div className="flex items-center justify-center py-ios-6 rounded-ios-lg border border-dashed border-border bg-secondary/40">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !photo.lat || !photo.lng ? (
+                <p className="text-ios-footnote text-muted-foreground py-ios-3 px-ios-1">
+                  Position non disponible pour cette photo
+                </p>
+              ) : nearbyRoutes.length === 0 ? (
+                <p className="text-ios-footnote text-muted-foreground py-ios-3 px-ios-1">
+                  Aucun itinéraire trouvé à proximité
+                </p>
+              ) : (
+                <div className="rounded-ios-lg border border-border overflow-hidden divide-y divide-border bg-card">
+                  {nearbyRoutes.map((route) => {
+                    const isSaved = savedRouteIds.has(route.id);
+                    const isSaving = savingRouteId === route.id;
+                    return (
+                      <div
+                        key={route.id}
+                        className="px-ios-3 py-ios-3 flex items-center gap-ios-3 active:bg-secondary/50 transition-colors"
+                      >
+                        <div className="h-10 w-10 rounded-ios-md bg-primary/10 flex items-center justify-center shrink-0">
+                          <ActivityIcon activityType={route.activity_type || 'course'} size="sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-ios-headline font-medium truncate">{route.name}</p>
+                          <div className="flex flex-wrap items-center gap-x-ios-3 gap-y-0.5 mt-0.5">
+                            <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
+                              <Route className="h-3 w-3 shrink-0" />
+                              {formatDistance(route.total_distance)}
+                            </span>
+                            {route.total_elevation_gain ? (
+                              <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
+                                <Mountain className="h-3 w-3 shrink-0" />
+                                {Math.round(route.total_elevation_gain)} m
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 h-10 w-10 rounded-full"
+                          disabled={isSaving}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSaveRoute(route.id);
+                          }}
+                        >
+                          {isSaving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isSaved ? (
+                            <BookmarkCheck className="h-5 w-5 text-primary fill-primary" />
+                          ) : (
+                            <Bookmark className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </SheetContent>

@@ -76,24 +76,6 @@ const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: strin
   missed: { label: "Non effectuée", emoji: "❌", color: "destructive" },
 };
 
-function getSessionGradient(title: string, activityType: string): string {
-  const t = (title + " " + activityType).toLowerCase();
-  if (t.includes("vma") || t.includes("interval") || t.includes("fractionné")) return "from-red-500/20 via-red-500/10 to-transparent";
-  if (t.includes("seuil") || t.includes("tempo")) return "from-orange-500/20 via-orange-500/10 to-transparent";
-  if (t.includes("récup") || t.includes("recup") || t.includes("recovery")) return "from-blue-400/20 via-blue-400/10 to-transparent";
-  if (t.includes("ppg") || t.includes("renforcement")) return "from-purple-500/20 via-purple-500/10 to-transparent";
-  return "from-green-500/20 via-green-500/10 to-transparent";
-}
-
-function getSessionEmoji(activityType: string): string {
-  switch (activityType) {
-    case "trail": return "⛰️";
-    case "cycling": return "🚴";
-    case "swimming": return "🏊";
-    default: return "🏃";
-  }
-}
-
 export const CoachingSessionDetail = ({
   isOpen,
   onClose,
@@ -262,43 +244,47 @@ export const CoachingSessionDetail = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent fullScreen hideCloseButton>
-          <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
+          <DialogHeader className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 px-ios-4 py-ios-3">
+            <DialogTitle className="flex items-center gap-ios-2 text-ios-headline font-semibold text-foreground">
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 -ml-ios-2 shrink-0 rounded-full touch-manipulation">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <GraduationCap className="h-5 w-5" />
-              <span className="truncate">{session.title}</span>
+              <GraduationCap className="h-5 w-5 text-primary shrink-0" />
+              <span className="truncate min-w-0">{session.title}</span>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-0 px-0 space-y-4">
-            {/* Session Hero Header */}
-            <div className={`bg-gradient-to-br ${getSessionGradient(session.title, session.activity_type)} p-5`}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-12 w-12 rounded-2xl bg-card/80 flex items-center justify-center text-[24px]">
-                  {getSessionEmoji(session.activity_type)}
+          <div className="flex-1 overflow-y-auto px-ios-4 py-ios-4 space-y-ios-4">
+            {/* En-tête séance — style iOS groupé */}
+            <div className="ios-card rounded-ios-lg border border-border bg-card overflow-hidden shadow-sm">
+              <div className="p-ios-4 bg-secondary/25 dark:bg-secondary/40 border-b border-border/60">
+                <div className="flex items-center gap-ios-3 mb-ios-2">
+                  <div className="h-12 w-12 rounded-ios-lg bg-card border border-border flex items-center justify-center shrink-0 shadow-sm">
+                    <ActivityIcon activityType={session.activity_type} size="md" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-ios-caption2 font-semibold text-muted-foreground uppercase tracking-wide">
+                      {format(new Date(session.scheduled_at), "EEEE d MMMM", { locale: fr })}
+                    </p>
+                    <p className="text-ios-title3 text-foreground leading-tight truncate mt-0.5">{session.title}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    {format(new Date(session.scheduled_at), "EEEE d MMMM", { locale: fr })}
-                  </p>
-                  <p className="text-[18px] font-bold text-foreground leading-tight truncate">{session.title}</p>
+                <div className="flex items-center gap-ios-2 text-ios-footnote text-muted-foreground flex-wrap">
+                  <ActivityIcon activityType={session.activity_type} size="sm" />
+                  <span>{getActivityLabel(session.activity_type)}</span>
+                  {session.distance_km ? <span className="tabular-nums">· {session.distance_km} km</span> : null}
+                  {session.pace_target ? <span>· {session.pace_target}</span> : null}
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[13px] text-muted-foreground flex-wrap">
-                <ActivityIcon activityType={session.activity_type} size="sm" />
-                <span>{getActivityLabel(session.activity_type)}</span>
-                {session.distance_km && <span>• {session.distance_km} km</span>}
-                {session.pace_target && <span>• {session.pace_target}</span>}
-              </div>
-              {session.description && (
-                <p className="text-[13px] text-muted-foreground mt-2">{session.description}</p>
-              )}
+              {session.description ? (
+                <p className="text-ios-footnote text-muted-foreground px-ios-4 py-ios-3 border-b border-border/60 leading-relaxed">
+                  {session.description}
+                </p>
+              ) : null}
               {session.coach_notes && (
-                <div className="p-2.5 rounded-xl bg-card/60 border border-primary/20 mt-3">
-                  <p className="text-[11px] font-semibold text-primary mb-0.5">📝 Notes du coach</p>
-                  <p className="text-[12px] text-foreground">{session.coach_notes}</p>
+                <div className="p-ios-3 m-ios-3 rounded-ios-lg bg-primary/8 border border-primary/15">
+                  <p className="text-ios-caption2 font-semibold text-primary mb-ios-1">Notes du coach</p>
+                  <p className="text-ios-footnote text-foreground leading-relaxed">{session.coach_notes}</p>
                 </div>
               )}
             </div>
@@ -310,33 +296,35 @@ export const CoachingSessionDetail = ({
 
             {/* Athlete actions */}
             {!isCoach && (
-              <div className="space-y-3">
+              <div className="space-y-ios-3">
                 {!myParticipation || myParticipation.status === "sent" ? (
-                  <div className="space-y-2">
+                  <div className="space-y-ios-2">
                     {myParticipation?.suggested_date && (
-                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-xs flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
+                      <div className="p-ios-3 rounded-ios-lg bg-secondary border border-border">
+                        <p className="text-ios-footnote text-foreground flex items-center gap-ios-2 flex-wrap">
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           <span className="font-medium">Le coach suggère :</span>
-                          {format(new Date(myParticipation.suggested_date), "EEE d MMM à HH:mm", { locale: fr })}
+                          <span className="text-muted-foreground">
+                            {format(new Date(myParticipation.suggested_date), "EEE d MMM à HH:mm", { locale: fr })}
+                          </span>
                         </p>
                       </div>
                     )}
-                    <Button onClick={() => setShowSchedule(true)} className="w-full">
-                      <Calendar className="h-4 w-4 mr-2" />
+                    <Button type="button" onClick={() => setShowSchedule(true)} className="w-full rounded-full h-11 text-ios-footnote font-semibold touch-manipulation">
+                      <Calendar className="h-4 w-4 mr-ios-2 shrink-0" />
                       Programmer ma séance
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={myParticipation.status === "completed" ? "default" : "secondary"}>
-                        {STATUS_CONFIG[myParticipation.status]?.emoji} {STATUS_CONFIG[myParticipation.status]?.label}
+                  <div className="ios-card rounded-ios-lg border border-border p-ios-3 space-y-ios-2 shadow-sm">
+                    <div className="flex items-center gap-ios-2">
+                      <Badge variant={myParticipation.status === "completed" ? "default" : "secondary"} className="rounded-full text-ios-caption1 font-medium">
+                        {STATUS_CONFIG[myParticipation.status]?.label}
                       </Badge>
                     </div>
 
                     {myParticipation.scheduled_at && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div className="text-ios-footnote text-muted-foreground flex items-center gap-ios-1 flex-wrap">
                         <Clock className="h-3 w-3" />
                         {format(new Date(myParticipation.scheduled_at), "EEE d MMM à HH:mm", { locale: fr })}
                         {myParticipation.location_name && (
@@ -349,28 +337,29 @@ export const CoachingSessionDetail = ({
                     )}
 
                     {myParticipation.custom_pace && (
-                      <p className="text-xs text-muted-foreground">🏃 Mon allure : {myParticipation.custom_pace}</p>
+                      <p className="text-ios-footnote text-muted-foreground">Allure : {myParticipation.custom_pace}</p>
                     )}
 
                     {myParticipation.status === "scheduled" && (
-                      <div className="space-y-2">
+                      <div className="space-y-ios-2 pt-ios-1 border-t border-border/60">
                         <Textarea
                           placeholder="Comment ça s'est passé ? (optionnel)"
                           value={athleteNote}
                           onChange={(e) => setAthleteNote(e.target.value)}
                           rows={2}
+                          className="rounded-ios-lg text-ios-footnote border-border bg-background"
                         />
-                        <Button size="sm" onClick={handleComplete}>
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                        <Button type="button" size="sm" onClick={handleComplete} className="rounded-full w-full sm:w-auto">
+                          <CheckCircle2 className="h-4 w-4 mr-ios-1 shrink-0" />
                           Marquer comme fait
                         </Button>
                       </div>
                     )}
 
                     {myParticipation.feedback && (
-                      <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-                        <p className="text-xs font-medium text-primary mb-1">Feedback du coach</p>
-                        <p className="text-sm">{myParticipation.feedback}</p>
+                      <div className="p-ios-3 rounded-ios-lg bg-primary/8 border border-primary/15">
+                        <p className="text-ios-footnote font-semibold text-primary mb-ios-1">Feedback du coach</p>
+                        <p className="text-ios-subheadline text-foreground leading-relaxed">{myParticipation.feedback}</p>
                       </div>
                     )}
                   </div>
@@ -380,37 +369,38 @@ export const CoachingSessionDetail = ({
 
             {/* Coach view: completion rate */}
             {isCoach && participations.length > 0 && (
-              <div className="space-y-2 p-4 bg-card rounded-none">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">Taux de complétion</span>
-                  <span className="text-[15px] font-bold text-foreground">{completionRate}%</span>
+              <div className="ios-card rounded-ios-lg border border-border p-ios-4 space-y-ios-2 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-ios-headline font-semibold text-foreground">Taux de complétion</span>
+                  <span className="text-ios-title3 font-bold text-foreground tabular-nums">{completionRate}%</span>
                 </div>
-                <Progress value={completionRate} className="h-2.5" />
-                <div className="flex flex-wrap gap-3 text-[12px] text-muted-foreground mt-1">
-                  <span>📨 {sentCount} envoyée{sentCount > 1 ? "s" : ""}</span>
-                  <span>📍 {scheduledCount} programmée{scheduledCount > 1 ? "s" : ""}</span>
-                  <span>✅ {completedCount} fait{completedCount > 1 ? "s" : ""}</span>
-                  {missedCount > 0 && <span>❌ {missedCount} manquée{missedCount > 1 ? "s" : ""}</span>}
+                <Progress value={completionRate} className="h-2 rounded-full" />
+                <div className="flex flex-wrap gap-x-ios-4 gap-y-ios-1 text-ios-caption1 text-muted-foreground">
+                  <span>{sentCount} envoyée{sentCount > 1 ? "s" : ""}</span>
+                  <span>{scheduledCount} programmée{scheduledCount > 1 ? "s" : ""}</span>
+                  <span>{completedCount} effectuée{completedCount > 1 ? "s" : ""}</span>
+                  {missedCount > 0 ? <span className="text-destructive">{missedCount} manquée{missedCount > 1 ? "s" : ""}</span> : null}
                 </div>
               </div>
             )}
 
             {/* Batch feedback */}
             {isCoach && withoutFeedback.length > 0 && (
-              <div className="space-y-2 p-4 bg-card rounded-none">
-                <p className="text-[14px] font-semibold text-foreground">Feedback global</p>
+              <div className="ios-card rounded-ios-lg border border-border p-ios-4 space-y-ios-2 shadow-sm">
+                <p className="text-ios-headline font-semibold text-foreground">Feedback global</p>
                 <Textarea
                   placeholder="Écrire un feedback pour tous les athlètes sans retour..."
                   value={batchFeedback}
                   onChange={(e) => setBatchFeedback(e.target.value)}
                   rows={2}
-                  className="text-[13px] bg-secondary/50 border-0 rounded-xl"
+                  className="text-ios-footnote rounded-ios-lg bg-secondary/50 border border-border/60"
                 />
                 <Button
+                  type="button"
                   size="sm"
                   onClick={handleBatchFeedback}
                   disabled={!batchFeedback.trim() || sendingBatch}
-                  className="w-full rounded-xl"
+                  className="w-full rounded-full"
                 >
                   {sendingBatch ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -424,79 +414,81 @@ export const CoachingSessionDetail = ({
 
             {/* Participants list */}
             <div>
-              <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <h4 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-ios-2 flex items-center gap-ios-2">
+                <Users className="h-4 w-4 shrink-0" />
                 Participants ({participations.length})
               </h4>
               {participations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun inscrit pour le moment</p>
+                <p className="text-ios-footnote text-muted-foreground">Aucun inscrit pour le moment</p>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="space-y-ios-2 max-h-52 overflow-y-auto pr-0.5">
                   {participations.map((p) => {
                     const statusConf = STATUS_CONFIG[p.status] || STATUS_CONFIG.sent;
                     return (
-                      <div key={p.id} className="flex items-start gap-3 p-2 rounded-lg bg-muted/30">
-                        <Avatar className="h-8 w-8">
+                      <div key={p.id} className="flex items-start gap-ios-3 p-ios-3 rounded-ios-lg bg-secondary/40 border border-border/60">
+                        <Avatar className="h-9 w-9 ring-2 ring-background">
                           <AvatarImage src={p.profile?.avatar_url || ""} />
                           <AvatarFallback>
                             {(p.profile?.username || "?").charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">
+                          <div className="flex items-center gap-ios-2 flex-wrap">
+                            <span className="text-ios-footnote font-semibold text-foreground truncate">
                               {p.profile?.display_name || p.profile?.username}
                             </span>
-                            <Badge variant="outline" className="text-xs">
-                              {statusConf.emoji}
+                            <Badge variant="outline" className="text-ios-caption2 rounded-full px-ios-2 py-0 font-normal border-border">
+                              {statusConf.label}
                             </Badge>
                           </div>
                           {p.suggested_date && isCoach && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              💡 Suggéré : {format(new Date(p.suggested_date), "d MMM HH:mm", { locale: fr })}
+                            <p className="text-ios-caption1 mt-0.5">
+                              Suggéré : {format(new Date(p.suggested_date), "d MMM HH:mm", { locale: fr })}
                             </p>
                           )}
                           {p.scheduled_at && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="text-ios-caption1 mt-0.5">
                               {format(new Date(p.scheduled_at), "d MMM HH:mm", { locale: fr })}
-                              {p.location_name && ` • ${p.location_name}`}
+                              {p.location_name && ` · ${p.location_name}`}
                             </p>
                           )}
                           {p.custom_pace && (
-                            <p className="text-xs text-muted-foreground">🏃 {p.custom_pace}</p>
+                            <p className="text-ios-caption1">{p.custom_pace}</p>
                           )}
                           {p.athlete_note && (
-                            <p className="text-xs text-muted-foreground mt-1">{p.athlete_note}</p>
+                            <p className="text-ios-caption1 mt-ios-1 leading-snug">{p.athlete_note}</p>
                           )}
                           {p.custom_notes && (
-                            <p className="text-xs text-muted-foreground mt-1 italic">{p.custom_notes}</p>
+                            <p className="text-ios-caption1 mt-ios-1 italic leading-snug">{p.custom_notes}</p>
                           )}
                           {p.feedback && (
-                            <div className="mt-1 p-1.5 rounded bg-primary/10 text-xs">
-                              <span className="font-medium text-primary">Coach: </span>
+                            <div className="mt-ios-2 p-ios-2 rounded-ios-md bg-primary/8 border border-primary/15 text-ios-caption1 leading-snug">
+                              <span className="font-semibold text-primary">Coach · </span>
                               {p.feedback}
                             </div>
                           )}
 
                           {/* Coach feedback input */}
                           {isCoach && !p.feedback && (
-                            <div className="flex gap-1 mt-2">
+                            <div className="flex gap-ios-1 mt-ios-2">
                               <Textarea
-                                placeholder="Feedback..."
+                                placeholder="Feedback…"
                                 value={feedbackMap[p.id] || ""}
                                 onChange={(e) =>
                                   setFeedbackMap((prev) => ({ ...prev, [p.id]: e.target.value }))
                                 }
                                 rows={1}
-                                className="text-xs min-h-[32px]"
+                                className="text-ios-caption1 min-h-[36px] rounded-ios-md border-border"
                               />
                               <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
+                                className="shrink-0 rounded-full h-9 w-9"
                                 onClick={() => handleSendFeedback(p.id, p.user_id)}
                                 disabled={!feedbackMap[p.id]?.trim()}
                               >
-                                <Send className="h-3 w-3" />
+                                <Send className="h-4 w-4" />
                               </Button>
                             </div>
                           )}

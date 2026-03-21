@@ -28,12 +28,14 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   hideCloseButton?: boolean;
   fullScreen?: boolean;
+  /** Classes additionnelles sur le bouton fermer (ex. décalage horizontal iPhone). */
+  closeButtonClassName?: string;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps>(
-  ({ className, children, hideCloseButton = false, fullScreen = false, ...props }, ref) => (
+  ({ className, children, hideCloseButton = false, fullScreen = false, closeButtonClassName, ...props }, ref) => (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
@@ -48,7 +50,12 @@ const DialogContent = React.forwardRef<
       >
         {children}
         {!hideCloseButton && (
-          <DialogPrimitive.Close className="absolute right-ios-3 top-ios-3 rounded-full p-ios-1 text-muted-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <DialogPrimitive.Close
+            className={cn(
+              "absolute right-ios-3 top-ios-3 rounded-full p-ios-1 text-muted-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              closeButtonClassName
+            )}
+          >
             <X className="h-4 w-4" />
             <span className="sr-only">Fermer</span>
           </DialogPrimitive.Close>

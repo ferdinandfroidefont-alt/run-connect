@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { Pencil, CheckCircle2, Clock } from "lucide-react";
 import { parseRCC, computeRCCSummary, type ParsedBlock } from "@/lib/rccParser";
 import { motion, AnimatePresence } from "framer-motion";
+import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 
 interface SessionData {
   title: string;
@@ -14,6 +15,7 @@ interface SessionData {
   activity_type?: string;
   pace_target?: string | null;
   rpe?: number | null;
+  session_blocks?: unknown;
 }
 
 interface WeeklyPlanCardProps {
@@ -163,17 +165,17 @@ export const WeeklyPlanCard = ({
 
               {/* Duration / distance / RPE badges */}
               <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
-                {session.rpe && (
+                {displayRpe != null && displayRpe >= 1 && (
                   <span
                     className="text-[11px] font-bold text-white rounded-md px-1.5 py-0.5"
                     style={{
-                      backgroundColor: session.rpe <= 3 ? 'hsl(142, 71%, 45%)' :
-                        session.rpe <= 6 ? 'hsl(45, 93%, 47%)' :
-                        session.rpe <= 8 ? 'hsl(25, 95%, 53%)' :
+                      backgroundColor: displayRpe <= 3 ? 'hsl(142, 71%, 45%)' :
+                        displayRpe <= 6 ? 'hsl(45, 93%, 47%)' :
+                        displayRpe <= 8 ? 'hsl(25, 95%, 53%)' :
                         'hsl(0, 84%, 60%)'
                     }}
                   >
-                    RPE {session.rpe}
+                    RPE {displayRpe}
                   </span>
                 )}
                 {estimatedDuration > 0 && (

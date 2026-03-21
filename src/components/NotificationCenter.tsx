@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -606,6 +608,7 @@ export const NotificationCenter = ({
   })();
 
   const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
+  const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <div className="relative cursor-pointer">
@@ -615,7 +618,16 @@ export const NotificationCenter = ({
             </Badge>}
         </div>
       </SheetTrigger>
-      <SheetContent side="top" className="w-full h-full min-h-screen p-6 border-0 max-w-none">
+      <SheetContent
+        side="top"
+        closeButtonClassName={isIosPhone ? "right-5 top-6" : undefined}
+        className={cn(
+          "w-full h-full min-h-screen border-0 max-w-none",
+          isIosPhone
+            ? "mx-auto max-w-lg py-6 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]"
+            : "p-6"
+        )}
+      >
         {/* Petite barre en haut comme dans MySessions */}
         <div className="w-full h-6 bg-background"></div>
         <SheetHeader>
@@ -625,7 +637,7 @@ export const NotificationCenter = ({
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
-          <div className="space-y-4 pr-4">
+          <div className={cn("space-y-4", isIosPhone ? "px-0.5 pr-3" : "pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
                 Aucune notification
               </p> : deduplicatedNotifications.map(notification => {

@@ -46,42 +46,6 @@ interface ProfilePreviewDialogProps {
 
 type PeriodFilter = 'total' | '30d' | '7d';
 
-const SPORT_LABELS: Record<string, string> = {
-  running: '🏃 Course à pied',
-  cycling: '🚴 Vélo',
-  swimming: '🏊 Natation',
-  triathlon: '🏅 Triathlon',
-  walking: '🚶 Marche',
-  trail: '⛰️ Trail',
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  FR: '🇫🇷 France', BE: '🇧🇪 Belgique', CH: '🇨🇭 Suisse', CA: '🇨🇦 Canada',
-  LU: '🇱🇺 Luxembourg', MA: '🇲🇦 Maroc', TN: '🇹🇳 Tunisie', DZ: '🇩🇿 Algérie',
-  SN: '🇸🇳 Sénégal', CI: "🇨🇮 Côte d'Ivoire", ES: '🇪🇸 Espagne', PT: '🇵🇹 Portugal',
-  DE: '🇩🇪 Allemagne', IT: '🇮🇹 Italie', GB: '🇬🇧 Royaume-Uni', US: '🇺🇸 États-Unis',
-};
-
-const getFavoriteSport = (profile: Profile): string | null => {
-  if (profile.favorite_sport && SPORT_LABELS[profile.favorite_sport]) {
-    return SPORT_LABELS[profile.favorite_sport];
-  }
-  const sports = [
-    { key: 'running_records', label: '🏃 Course' },
-    { key: 'cycling_records', label: '🚴 Vélo' },
-    { key: 'swimming_records', label: '🏊 Natation' },
-    { key: 'triathlon_records', label: '🏅 Triathlon' },
-    { key: 'walking_records', label: '🚶 Marche' },
-  ];
-  for (const sport of sports) {
-    const records = (profile as any)[sport.key];
-    if (records && typeof records === 'object' && Object.keys(records).length > 0) {
-      return sport.label;
-    }
-  }
-  return null;
-};
-
 export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -312,7 +276,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
   if (!userId) return null;
 
-  const favoriteSport = profile ? getFavoriteSport(profile) : null;
   const canViewContent = isFollowing || isOwnProfile;
 
   const periodTabs: { key: PeriodFilter; label: string }[] = [
@@ -419,38 +382,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     )}
                   </div>
-                </div>
-
-                {/* ── Info Rows (Nom, Pseudo, Âge, Sport, Pays) ── */}
-                <div className="mx-4 mt-3">
-                  <IOSListGroup>
-                    <IOSListItem
-                      title="Nom"
-                      value={profile.display_name || '—'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      title="Pseudo"
-                      value={`@${profile.username}`}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      title="Âge"
-                      value={profile.age ? `${profile.age} ans` : '—'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      title="Sport favori"
-                      value={favoriteSport || '—'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      title="Pays"
-                      value={(profile.country && COUNTRY_FLAGS[profile.country]) || '—'}
-                      showChevron={false}
-                      showSeparator={false}
-                    />
-                  </IOSListGroup>
                 </div>
 
                 {/* ── Follow Stats ── */}

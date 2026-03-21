@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +10,8 @@ import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import type { RCCResult, ParsedBlock } from "@/lib/rccParser";
+import { mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
+import { RCCBlocksPreview } from "./RCCBlocksPreview";
 
 const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -167,7 +167,15 @@ export const WeeklyPlanSessionEditor = ({
   };
 
   const handleParsedChange = (result: RCCResult) => {
-    update("parsedBlocks", result.blocks);
+    const merged = mergeParsedBlocksByIndex(result.blocks, session.parsedBlocks || []);
+    update("parsedBlocks", merged);
+  };
+
+  const handleBlockRpe = (index: number, payload: { rpe?: number; recoveryRpe?: number }) => {
+    const next = [...(session.parsedBlocks || [])];
+    if (!next[index]) return;
+    next[index] = { ...next[index], ...payload };
+    update("parsedBlocks", next);
   };
 
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
@@ -377,43 +385,6 @@ export const WeeklyPlanSessionEditor = ({
           />
         </div>
 
-        {/* RPE Slider */}
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-            RPE – Effort perçu (optionnel)
-          </label>
-          <div className="flex items-center gap-3">
-            <Slider
-              min={1}
-              max={10}
-              step={1}
-              value={[session.rpe || 5]}
-              onValueChange={([v]) => update("rpe", v)}
-              className="flex-1"
-            />
-            <span
-              className="inline-flex items-center justify-center h-8 w-10 rounded-lg text-[14px] font-bold text-white"
-              style={{
-                backgroundColor: !session.rpe ? 'hsl(var(--muted-foreground))' :
-                  session.rpe <= 3 ? 'hsl(142, 71%, 45%)' :
-                  session.rpe <= 6 ? 'hsl(45, 93%, 47%)' :
-                  session.rpe <= 8 ? 'hsl(25, 95%, 53%)' :
-                  'hsl(0, 84%, 60%)'
-              }}
-            >
-              {session.rpe || "–"}
-            </span>
-          </div>
-          {session.rpe && (
-            <button
-              type="button"
-              className="text-[11px] text-muted-foreground mt-1 hover:text-foreground"
-              onClick={() => update("rpe", undefined as any)}
-            >
-              Retirer le RPE
-            </button>
-          )}
-        </div>
       </div>
 
       <CoachingTemplatesDialog

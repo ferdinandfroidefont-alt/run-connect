@@ -18,6 +18,10 @@ export interface SessionBlock {
   effortPace?: string;
   recoveryDuration?: string;
   recoveryType?: 'trot' | 'marche' | 'statique';
+  /** RPE 1–10 pour ce segment */
+  rpe?: number;
+  /** RPE récup entre répétitions (blocs interval) */
+  recoveryRpe?: number;
 }
 
 export type SessionMode = 'simple' | 'structured';

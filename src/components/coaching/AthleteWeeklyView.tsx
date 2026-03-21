@@ -23,6 +23,8 @@ interface CoachingSession {
   club_id: string;
   objective?: string | null;
   rcc_code?: string | null;
+  rpe?: number | null;
+  session_blocks?: unknown;
 }
 
 interface Participation {
@@ -60,7 +62,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       // First fetch participations for this user in this club's sessions for the week
       const { data: allClubSessions } = await supabase.
       from("coaching_sessions").
-      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code").
+      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks").
       eq("club_id", clubId).
       gte("scheduled_at", weekStart.toISOString()).
       lte("scheduled_at", weekEnd.toISOString()).

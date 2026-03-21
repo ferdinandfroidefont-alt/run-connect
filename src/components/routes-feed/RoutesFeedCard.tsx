@@ -111,22 +111,26 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
 
   return (
     <div
-      className="bg-card border-b border-border overflow-hidden cursor-pointer active:bg-secondary/50 transition-colors animate-fade-in"
+      className="ios-card rounded-ios-lg border border-border overflow-hidden cursor-pointer active:opacity-90 transition-opacity shadow-sm animate-fade-in"
       style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}
       onClick={() => onClick(route)}
     >
       {/* Mini map */}
       <div className="relative h-40 bg-secondary">
         <div ref={mapContainer} className="absolute inset-0 w-full h-full" style={{ minHeight: '160px' }} />
-        <div className="absolute top-2 left-2">
-          <Badge variant="secondary" className="bg-card/90 text-xs gap-1">
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-card/90 via-card/40 to-transparent dark:from-card/85 dark:via-card/35"
+          aria-hidden
+        />
+        <div className="absolute top-ios-2 left-ios-2 z-[1]">
+          <Badge variant="secondary" className="bg-card/95 backdrop-blur-sm text-ios-caption1 gap-ios-1 rounded-full border border-border/60">
             <ActivityIcon activityType={route.activity_type} size="sm" />
             {ACTIVITY_TYPES.find(a => a.value === route.activity_type)?.label || route.activity_type}
           </Badge>
         </div>
         {route.distance_from_user > 0 && (
-          <div className="absolute top-2 right-2">
-            <Badge variant="secondary" className="bg-card/90 text-xs gap-1">
+          <div className="absolute top-ios-2 right-ios-2 z-[1]">
+            <Badge variant="secondary" className="bg-card/95 backdrop-blur-sm text-ios-caption1 gap-ios-1 rounded-full border border-border/60">
               <MapPin className="h-3 w-3" />
               {route.distance_from_user.toFixed(1)} km
             </Badge>
@@ -134,19 +138,19 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         )}
       </div>
 
-      <div className="p-4 space-y-3">
+      <div className="p-ios-4 space-y-ios-3">
         {/* Header with avatar */}
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar className="h-9 w-9 shrink-0">
+          <div className="flex items-center gap-ios-3 min-w-0">
+            <Avatar className="h-10 w-10 shrink-0 ring-2 ring-border/50">
               <AvatarImage src={route.creator.avatar_url || undefined} />
-              <AvatarFallback className="text-[13px]">
+              <AvatarFallback className="text-ios-footnote">
                 {route.creator.username?.[0]?.toUpperCase() || '?'}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <h3 className="text-[17px] font-semibold truncate">{route.name}</h3>
-              <p className="text-[13px] text-muted-foreground truncate">
+              <h3 className="text-ios-title3 font-semibold truncate leading-tight">{route.name}</h3>
+              <p className="text-ios-footnote text-muted-foreground truncate mt-0.5">
                 par {route.creator.display_name || route.creator.username}
               </p>
             </div>
@@ -154,40 +158,40 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         </div>
 
         {/* Stats */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 text-[13px]">
-            <Route className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{formatDistance(route.total_distance)}</span>
+        <div className="flex flex-wrap items-center gap-x-ios-4 gap-y-ios-1">
+          <div className="flex items-center gap-ios-1 text-ios-footnote">
+            <Route className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="font-medium text-foreground">{formatDistance(route.total_distance)}</span>
           </div>
-          <div className="flex items-center gap-1 text-[13px]">
-            <Mountain className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>{formatElevation(route.total_elevation_gain)}</span>
+          <div className="flex items-center gap-ios-1 text-ios-footnote">
+            <Mountain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-foreground">{formatElevation(route.total_elevation_gain)}</span>
           </div>
           {route.photo_count > 0 && (
-            <div className="flex items-center gap-1 text-[13px]">
-              <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>{route.photo_count}</span>
+            <div className="flex items-center gap-ios-1 text-ios-footnote">
+              <Camera className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-foreground">{route.photo_count}</span>
             </div>
           )}
         </div>
 
         {/* Rating */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-ios-2">
           <div className="flex items-center gap-0.5">
             {renderStars(route.avg_rating)}
           </div>
           {route.rating_count > 0 && (
-            <span className="text-[13px] text-muted-foreground">
+            <span className="text-ios-footnote text-muted-foreground">
               ({route.avg_rating.toFixed(1)}) · {route.rating_count} avis
             </span>
           )}
           {route.rating_count === 0 && (
-            <span className="text-[13px] text-muted-foreground">Aucun avis</span>
+            <span className="text-ios-footnote text-muted-foreground">Aucun avis</span>
           )}
         </div>
 
         {route.description && (
-          <p className="text-[13px] text-muted-foreground line-clamp-2">{route.description}</p>
+          <p className="text-ios-footnote text-muted-foreground line-clamp-2 leading-snug">{route.description}</p>
         )}
       </div>
     </div>

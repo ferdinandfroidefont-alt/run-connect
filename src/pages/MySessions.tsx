@@ -978,36 +978,39 @@ export default function MySessions() {
                 </div>
                 {currentView === 'routes' && (
                   <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
-                    <div className="flex gap-ios-1">
+                    <div className="flex gap-ios-1 touch-manipulation">
                       <button
+                        type="button"
                         onClick={() => setRouteSource('created')}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           routeSource === 'created'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            ? 'bg-card text-foreground shadow-sm'
                             : 'text-muted-foreground'
                         }`}
                       >
                         Créés
                       </button>
                       <button
+                        type="button"
                         onClick={() => setRouteSource('feed')}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           routeSource === 'feed'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            ? 'bg-card text-foreground shadow-sm'
                             : 'text-muted-foreground'
                         }`}
                       >
                         Feed
                       </button>
                       <button
+                        type="button"
                         onClick={() => setRouteSource('photos')}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors flex items-center justify-center gap-ios-1 ${
+                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors flex items-center justify-center gap-ios-1 ${
                           routeSource === 'photos'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            ? 'bg-card text-foreground shadow-sm'
                             : 'text-muted-foreground'
                         }`}
                       >
-                        <Camera className="h-3 w-3" />
+                        <Camera className="h-3.5 w-3.5 shrink-0" />
                         Photos
                       </button>
                     </div>
@@ -1257,8 +1260,7 @@ export default function MySessions() {
               )}
             </>
           ) : routeSource === 'feed' ? (
-            <>
-              {/* Routes Feed */}
+            <div className="space-y-ios-3 px-ios-4 pb-ios-2">
               <RoutesFeedFilters
                 maxProximity={routesFeed.maxProximity}
                 setMaxProximity={routesFeed.setMaxProximity}
@@ -1271,27 +1273,34 @@ export default function MySessions() {
                 toggleAllActivities={routesFeed.toggleAllActivities}
               />
               {routesFeed.loading ? (
-                <div className="space-y-px">
+                <div className="space-y-ios-3">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card p-4 animate-pulse">
-                      <div className="h-40 bg-secondary rounded mb-3" />
-                      <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-secondary rounded w-1/2" />
+                    <div
+                      key={i}
+                      className="ios-card rounded-ios-lg border border-border overflow-hidden animate-pulse"
+                    >
+                      <div className="h-40 bg-secondary" />
+                      <div className="p-ios-4 space-y-ios-2">
+                        <div className="h-4 bg-secondary rounded-ios-sm w-3/4" />
+                        <div className="h-3 bg-secondary rounded-ios-sm w-1/2" />
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : routesFeed.routes.length === 0 ? (
-                <div className="ios-card p-8 text-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-ios-headline font-medium text-foreground mb-ios-1">Aucun itinéraire trouvé</p>
-                  <p className="text-ios-subheadline text-muted-foreground">
+                <div className="ios-card rounded-ios-lg p-ios-8 text-center border border-border">
+                  <div className="mb-ios-4 inline-flex p-ios-4 rounded-full bg-secondary">
+                    <MapPin className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <p className="text-ios-headline font-semibold text-foreground mb-ios-1">Aucun itinéraire trouvé</p>
+                  <p className="text-ios-subheadline text-muted-foreground leading-relaxed">
                     {routesFeed.hasLocation
-                      ? 'Aucun itinéraire public dans cette zone'
-                      : 'Activez la localisation pour voir les itinéraires proches'}
+                      ? 'Aucun itinéraire public ne correspond à vos filtres dans cette zone.'
+                      : 'Activez la localisation pour voir les itinéraires proches de vous.'}
                   </p>
                 </div>
               ) : (
-                <div>
+                <div className="space-y-ios-3">
                   {routesFeed.routes.map((route, i) => (
                     <RoutesFeedCard
                       key={route.id}
@@ -1309,9 +1318,11 @@ export default function MySessions() {
                 onOpenChange={setShowRouteDetail}
                 onRefresh={routesFeed.refresh}
               />
-            </>
+            </div>
           ) : (
-            <RoutePhotosGallery />
+            <div className="pb-ios-2">
+              <RoutePhotosGallery />
+            </div>
           )}
         </div>
       </div>

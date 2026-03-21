@@ -3,7 +3,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { parseRCC, type RCCResult } from "@/lib/rccParser";
-import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { AlertCircle } from "lucide-react";
 
 interface RCCEditorProps {
@@ -119,10 +118,6 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
         </div>
       )}
 
-      {/* Live preview */}
-      {result.blocks.length > 0 && (
-        <RCCBlocksPreview blocks={result.blocks} />
-      )}
     </div>
   );
 };

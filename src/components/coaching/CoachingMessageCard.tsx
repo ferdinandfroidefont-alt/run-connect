@@ -52,34 +52,44 @@ export const CoachingMessageCard = ({ coachingSessionId, currentUserId }: Coachi
 
   return (
     <>
-      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 space-y-2 max-w-[280px]">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-primary" />
-          <span className="text-xs font-medium text-primary">Séance Coach</span>
+      <div className="max-w-[min(280px,100%)] ios-card rounded-ios-lg border border-border bg-card p-ios-3 space-y-ios-2 shadow-sm">
+        <div className="flex items-center gap-ios-2">
+          <div className="h-8 w-8 rounded-ios-md bg-primary/12 flex items-center justify-center shrink-0">
+            <GraduationCap className="h-4 w-4 text-primary" />
+          </div>
+          <span className="text-ios-footnote font-semibold text-foreground">Séance coach</span>
         </div>
 
-        <p className="font-medium text-sm">{session.title}</p>
+        <p className="text-ios-headline font-semibold text-foreground leading-snug">{session.title}</p>
 
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center flex-wrap gap-x-ios-2 gap-y-0.5 text-ios-caption1 text-muted-foreground">
           <ActivityIcon activityType={session.activity_type} size="sm" />
           <span>{getActivityLabel(session.activity_type)}</span>
-          {session.distance_km && <span>• {session.distance_km} km</span>}
+          {session.distance_km ? <span className="tabular-nums">· {session.distance_km} km</span> : null}
         </div>
 
         {session.session_blocks && Array.isArray(session.session_blocks) && session.session_blocks.length > 0 && (
-          <div className="mt-1">
+          <div className="pt-ios-1 border-t border-border/60">
             <CoachingBlocksPreview blocks={session.session_blocks} />
           </div>
         )}
 
         {!isScheduled ? (
-          <Button size="sm" className="w-full mt-2" onClick={() => setShowSchedule(true)}>
-            <Calendar className="h-3.5 w-3.5 mr-1" />
+          <Button
+            type="button"
+            size="sm"
+            className="w-full mt-ios-1 rounded-full h-9 text-ios-footnote font-medium touch-manipulation"
+            onClick={() => setShowSchedule(true)}
+          >
+            <Calendar className="h-3.5 w-3.5 mr-ios-1 shrink-0" />
             Programmer ma séance
           </Button>
         ) : (
-          <Badge variant="default" className="text-xs">
-            {participation?.status === "completed" ? "✅ Effectuée" : "📍 Programmée"}
+          <Badge
+            variant="secondary"
+            className="text-ios-caption1 font-medium rounded-full px-ios-3 py-0.5 border border-border bg-secondary"
+          >
+            {participation?.status === "completed" ? "Effectuée" : "Programmée"}
           </Badge>
         )}
       </div>

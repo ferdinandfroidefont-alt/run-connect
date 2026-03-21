@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -52,9 +51,9 @@ export const CreateCoachingSessionDialog = ({
   const [objective, setObjective] = useState("");
   const [rccCode, setRccCode] = useState("");
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
+  const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
-  const [rpe, setRpe] = useState<number | undefined>(undefined);
   // Recipients
   const [sendMode, setSendMode] = useState<"club" | "individual">("club");
   const [members, setMembers] = useState<ClubMember[]>([]);
@@ -132,8 +131,10 @@ export const CreateCoachingSessionDialog = ({
     setLoading(true);
     try {
       const targetIds = sendMode === "individual" ? Array.from(selectedAthletes) : [];
-      const sessionBlocks = parsedResult.blocks.length > 0 ? rccToSessionBlocks(parsedResult.blocks) : null;
+      const sessionBlocks =
+        parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : null;
       const title = `${objective.trim()}`;
+      const aggregatedRpe = aggregateRpeFromSessionBlocks(sessionBlocks);
 
       const { data: session, error } = await supabase
         .from("coaching_sessions")
@@ -152,7 +153,7 @@ export const CreateCoachingSessionDialog = ({
           rcc_code: rccCode.trim(),
           objective: objective.trim(),
           default_location_name: locationName.trim() || null,
-          rpe: rpe || null,
+          rpe: aggregatedRpe,
         } as any)
         .select("id")
         .single();
@@ -208,9 +209,9 @@ export const CreateCoachingSessionDialog = ({
     setObjective("");
     setRccCode("");
     setParsedResult({ blocks: [], errors: [] });
+    setParsedBlocks([]);
     setCoachNotes("");
     setLocationName("");
-    setRpe(undefined);
     setSendMode("club");
     setSelectedAthletes(new Set());
     setSearchQuery("");
@@ -220,6 +221,20 @@ export const CreateCoachingSessionDialog = ({
   const filteredMembers = members.filter(m =>
     !searchQuery || (m.display_name || m.username || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleParsedChange = (result: RCCResult) => {
+    setParsedResult(result);
+    setParsedBlocks((prev) => mergeParsedBlocksByIndex(result.blocks, prev));
+  };
+
+  const handleBlockRpe = (index: number, payload: { rpe?: number; recoveryRpe?: number }) => {
+    setParsedBlocks((prev) => {
+      const next = [...prev];
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], ...payload };
+      return next;
+    });
+  };
 
   const canSubmit = objective.trim().length > 0 && rccCode.trim().length > 0 && parsedResult.errors.length === 0 &&
     (sendMode === "club" || selectedAthletes.size > 0);
@@ -282,8 +297,15 @@ export const CreateCoachingSessionDialog = ({
             <RCCEditor
               value={rccCode}
               onChange={setRccCode}
-              onParsedChange={setParsedResult}
+              onParsedChange={handleParsedChange}
             />
+            {parsedBlocks.length > 0 && (
+              <RCCBlocksPreview
+                blocks={parsedBlocks}
+                editableRpe
+                onRpeChange={handleBlockRpe}
+              />
+            )}
 
             {/* Location */}
             <div className="space-y-1.5">
@@ -308,42 +330,6 @@ export const CreateCoachingSessionDialog = ({
                 onChange={e => setCoachNotes(e.target.value)}
                 rows={2}
               />
-            </div>
-
-            {/* RPE */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">RPE – Effort perçu (optionnel)</Label>
-              <div className="flex items-center gap-3">
-                <Slider
-                  min={1}
-                  max={10}
-                  step={1}
-                  value={[rpe || 5]}
-                  onValueChange={([v]) => setRpe(v)}
-                  className="flex-1"
-                />
-                <span
-                  className="inline-flex items-center justify-center h-7 w-9 rounded-md text-[13px] font-bold text-white"
-                  style={{
-                    backgroundColor: !rpe ? 'hsl(var(--muted-foreground))' :
-                      rpe <= 3 ? 'hsl(142, 71%, 45%)' :
-                      rpe <= 6 ? 'hsl(45, 93%, 47%)' :
-                      rpe <= 8 ? 'hsl(25, 95%, 53%)' :
-                      'hsl(0, 84%, 60%)'
-                  }}
-                >
-                  {rpe || "–"}
-                </span>
-              </div>
-              {rpe && (
-                <button
-                  type="button"
-                  className="text-[11px] text-muted-foreground hover:text-foreground"
-                  onClick={() => setRpe(undefined)}
-                >
-                  Retirer le RPE
-                </button>
-              )}
             </div>
 
             {/* Recipients */}

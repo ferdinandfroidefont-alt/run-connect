@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseRCC, computeRCCSummary } from "@/lib/rccParser";
+import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -71,7 +72,11 @@ export const MesocycleView = ({ clubId, currentWeek }: MesocycleViewProps) => {
       if (!entry) return;
 
       entry.sessions++;
-      if ((session as any).rpe) {
+      const fromBlocks = aggregateRpeFromSessionBlocks((session as any).session_blocks);
+      if (fromBlocks != null) {
+        entry.rpeSum += fromBlocks;
+        entry.rpeCount++;
+      } else if ((session as any).rpe) {
         entry.rpeSum += (session as any).rpe;
         entry.rpeCount++;
       }

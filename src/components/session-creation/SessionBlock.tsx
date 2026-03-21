@@ -1,11 +1,44 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, GripVertical, Flame, Snowflake, Zap, Activity } from 'lucide-react';
+import { X, Flame, Snowflake, Zap, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SessionBlock as SessionBlockType, BlockType, INTENSITY_LEVELS, RECOVERY_TYPES, getPacePlaceholder, isRunningActivity, isCyclingActivity } from './types';
+import { SessionBlock as SessionBlockType, BlockType, INTENSITY_LEVELS, RECOVERY_TYPES, getPacePlaceholder, isRunningActivity } from './types';
 import { cn } from '@/lib/utils';
+import { rpeChipColor } from '@/lib/sessionBlockRpe';
+
+function RpeTenPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: number;
+  onChange: (v: number | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 pt-2 border-t border-border/50">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex flex-wrap gap-0.5">
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(value === n ? undefined : n)}
+            className={cn(
+              'h-8 min-w-[28px] px-1 rounded-lg text-[11px] font-semibold transition-colors touch-manipulation',
+              value === n ? 'text-white shadow-sm' : 'bg-card text-muted-foreground hover:bg-card/80 active:scale-95'
+            )}
+            style={value === n ? { backgroundColor: rpeChipColor(n) } : undefined}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface SessionBlockProps {
   block: SessionBlockType;
@@ -47,7 +80,6 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
       {/* Block Header */}
       <div className="flex items-center justify-between px-3 py-2.5 bg-card/50">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-muted-foreground/50 cursor-grab" />
           <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", config.bgColor)}>
             <IconComponent className={cn("w-4 h-4", config.iconColor)} />
           </div>
@@ -150,6 +182,17 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
                 </div>
               </div>
             </div>
+
+            <RpeTenPicker
+              label="RPE effort (série)"
+              value={block.rpe}
+              onChange={(rpe) => onUpdate({ rpe })}
+            />
+            <RpeTenPicker
+              label="RPE récup (entre répétitions)"
+              value={block.recoveryRpe}
+              onChange={(recoveryRpe) => onUpdate({ recoveryRpe })}
+            />
           </>
         ) : (
           /* Warmup / Cooldown / Steady Block */
@@ -197,6 +240,8 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
                 ))}
               </div>
             </div>
+
+            <RpeTenPicker label="RPE du bloc" value={block.rpe} onChange={(rpe) => onUpdate({ rpe })} />
           </>
         )}
       </div>

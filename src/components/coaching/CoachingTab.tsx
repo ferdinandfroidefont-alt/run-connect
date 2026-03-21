@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
@@ -14,6 +12,12 @@ import { CoachingDraftsList } from "./CoachingDraftsList";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+function countSegmentFromRpe(r: number | undefined, volume: { v: number }, intensity: { v: number }, recovery: { v: number }) {
+  if (r == null || r < 1) return;
+  if (r <= 3) recovery.v++;
+  else if (r <= 6) volume.v++;
+  else intensity.v++;
+}
 
 interface CoachingSession {
   id: string;
@@ -30,6 +34,7 @@ interface CoachingSession {
   objective?: string | null;
   rcc_code?: string | null;
   rpe?: number | null;
+  session_blocks?: unknown;
 }
 
 interface CoachingTabProps {
@@ -86,7 +91,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     try {
       const { data: weekSessions } = await supabase
         .from("coaching_sessions")
-        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe")
+        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString())
@@ -169,26 +174,46 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   const segmentProportions = useMemo(() => {
     if (sessions.length === 0) return { volume: 34, intensity: 33, recovery: 33 };
     let volume = 0, intensity = 0, recovery = 0;
-    sessions.forEach(s => {
-      if (s.rpe) {
-        // RPE-based categorization
-        if (s.rpe <= 3) recovery++;
-        else if (s.rpe <= 6) volume++;
-        else intensity++;
+    const V = { v: volume }, I = { v: intensity }, R = { v: recovery };
+    sessions.forEach((s) => {
+      const blocks = s.session_blocks;
+      if (Array.isArray(blocks) && blocks.length > 0) {
+        let anyBlockRpe = false;
+        blocks.forEach((bl: any) => {
+          if (typeof bl?.rpe === "number") {
+            anyBlockRpe = true;
+            countSegmentFromRpe(bl.rpe, V, I, R);
+          }
+          if (bl?.type === "interval" && typeof bl?.recoveryRpe === "number") {
+            anyBlockRpe = true;
+            countSegmentFromRpe(bl.recoveryRpe, V, I, R);
+          }
+        });
+        if (!anyBlockRpe && s.rpe) {
+          countSegmentFromRpe(s.rpe, V, I, R);
+        }
+        if (!anyBlockRpe && !s.rpe) {
+          const obj = (s.objective || "").toLowerCase();
+          const title = (s.title || "").toLowerCase();
+          if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
+          else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
+          else V.v++;
+        }
+      } else if (s.rpe) {
+        countSegmentFromRpe(s.rpe, V, I, R);
       } else {
-        // Fallback: keyword-based
         const obj = (s.objective || "").toLowerCase();
         const title = (s.title || "").toLowerCase();
-        if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) {
-          recovery++;
-        } else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) {
-          intensity++;
-        } else {
-          volume++;
-        }
+        if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
+        else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
+        else V.v++;
       }
     });
+    volume = V.v;
+    intensity = I.v;
+    recovery = R.v;
     const total = volume + intensity + recovery;
+    if (total === 0) return { volume: 34, intensity: 33, recovery: 33 };
     return {
       volume: Math.round((volume / total) * 100),
       intensity: Math.round((intensity / total) * 100),
@@ -200,23 +225,25 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
   if (loading) {
     return (
-      <div className="bg-secondary min-h-[300px] p-4 space-y-4">
-        {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-[10px] animate-pulse" />)}
+      <div className="bg-secondary min-h-[300px] px-ios-4 py-ios-4 space-y-ios-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-14 ios-card rounded-ios-lg border border-border animate-pulse" />
+        ))}
       </div>
     );
   }
 
   const tools = [
-    { icon: FileText, label: "Brouillons", color: "bg-primary", onClick: () => setShowDrafts(true) },
-    { icon: CalendarDays, label: "Plan hebdo", color: "bg-blue-500", onClick: () => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); } },
-    { icon: Users, label: "Groupes", color: "bg-orange-500", onClick: () => setShowGroups(true) },
-    { icon: BarChart3, label: "Suivi", color: "bg-green-500", onClick: () => setShowTracking(true) },
+    { icon: FileText, label: "Brouillons", iconWrap: "bg-primary/15 text-primary", onClick: () => setShowDrafts(true) },
+    { icon: CalendarDays, label: "Plan hebdo", iconWrap: "bg-blue-500/15 text-blue-600 dark:text-blue-400", onClick: () => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); } },
+    { icon: Users, label: "Groupes", iconWrap: "bg-orange-500/15 text-orange-600 dark:text-orange-400", onClick: () => setShowGroups(true) },
+    { icon: BarChart3, label: "Suivi", iconWrap: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", onClick: () => setShowTracking(true) },
   ];
 
   return (
-    <div className="bg-secondary -mx-4 -mb-4 pt-2 pb-8 min-h-[400px] overflow-x-hidden">
+    <div className="bg-secondary -mx-4 -mb-4 pt-ios-2 pb-ios-8 min-h-[400px] overflow-x-hidden px-ios-4">
       {/* Week label */}
-      <p className="text-[13px] text-muted-foreground text-center mb-4">
+      <p className="text-ios-footnote text-muted-foreground text-center mb-ios-3">
         Semaine du {weekLabel}
       </p>
 
@@ -322,7 +349,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
-        <IOSListGroup header="PROCHAINES SÉANCES" flush>
+        <IOSListGroup header="Prochaines séances" className="mb-ios-4">
           {upcomingSessions.map((s, i) => (
             <IOSListItem
               key={s.id}

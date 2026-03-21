@@ -10,6 +10,10 @@ export interface ParsedBlock {
   repetitions?: number;
   recoveryDuration?: number; // seconds
   recoveryType?: 'trot' | 'marche' | 'statique';
+  /** RPE 1–10 pour ce segment (saisi par le coach, hors parsing RCC) */
+  rpe?: number;
+  /** RPE de la récup entre répétitions (blocs interval uniquement) */
+  recoveryRpe?: number;
 }
 
 export interface RCCError {
@@ -182,6 +186,59 @@ export function parseRCC(code: string): RCCResult {
   return { blocks, errors };
 }
 
+/** Conserve les RPE par index quand le code RCC change (best-effort). */
+export function mergeParsedBlocksByIndex(
+  newBlocks: ParsedBlock[],
+  previous: ParsedBlock[]
+): ParsedBlock[] {
+  return newBlocks.map((b, i) => ({
+    ...b,
+    rpe: previous[i]?.rpe,
+    recoveryRpe: b.type === "interval" ? previous[i]?.recoveryRpe : undefined,
+  }));
+}
+
+/** Restaure les RPE depuis session_blocks (DB) après parse RCC. */
+export function mergeStoredSessionBlocksIntoParsed(
+  blocks: ParsedBlock[],
+  stored: unknown
+): ParsedBlock[] {
+  if (!Array.isArray(stored)) return blocks;
+  return blocks.map((b, i) => {
+    const row = stored[i] as Record<string, unknown> | undefined;
+    return {
+      ...b,
+      rpe: typeof row?.rpe === "number" ? row.rpe : undefined,
+      recoveryRpe:
+        b.type === "interval" && typeof row?.recoveryRpe === "number" ? row.recoveryRpe : undefined,
+    };
+  });
+}
+
+/** Libellé lisible d’un bloc parsé (aperçu). */
+export function formatParsedBlockSummary(block: ParsedBlock): string {
+  if (block.type === "interval") {
+    const effort =
+      block.distance != null ? `${block.distance}m` : block.duration != null ? `${block.duration} min` : "?";
+    const pace = block.pace ? ` @ ${block.pace}` : "";
+    let rec = "";
+    if (block.recoveryDuration != null) {
+      const m = Math.floor(block.recoveryDuration / 60);
+      const s = block.recoveryDuration % 60;
+      rec =
+        m > 0
+          ? ` — récup ${m}'${String(s).padStart(2, "0")} ${block.recoveryType || "trot"}`
+          : ` — récup ${block.recoveryDuration}s`;
+    }
+    return `${block.repetitions ?? "?"}×${effort}${pace}${rec}`;
+  }
+  if (block.duration != null) {
+    const pace = block.pace ? ` — ${block.pace}` : "";
+    return `${block.duration} min${pace}`;
+  }
+  return block.raw || "—";
+}
+
 // Compute summary stats from parsed blocks
 export interface RCCSummary {
   totalDistanceKm: number;
@@ -249,23 +306,36 @@ export function computeRCCSummary(blocks: ParsedBlock[]): RCCSummary {
   };
 }
 
+function newBlockId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `b-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 // Convert ParsedBlock[] to the SessionBlock format used in the DB
 export function rccToSessionBlocks(blocks: ParsedBlock[]): any[] {
-  return blocks.map(b => {
-    if (b.type === 'interval') {
+  return blocks.map((b) => {
+    if (b.type === "interval") {
+      const effortDuration = b.distance != null ? `${b.distance}m` : b.duration != null ? `${b.duration}` : undefined;
+      const effortType = b.distance != null ? "distance" : "time";
       return {
-        type: 'interval',
+        id: newBlockId(),
+        type: "interval",
         repetitions: b.repetitions,
-        effortDuration: b.distance ? `${b.distance}m` : undefined,
+        effortDuration,
+        effortType,
         effortPace: b.pace,
         recoveryDuration: b.recoveryDuration ? `${b.recoveryDuration}s` : undefined,
-        recoveryType: b.recoveryType || 'trot',
+        recoveryType: b.recoveryType || "trot",
+        rpe: typeof b.rpe === "number" ? b.rpe : undefined,
+        recoveryRpe: typeof b.recoveryRpe === "number" ? b.recoveryRpe : undefined,
       };
     }
     return {
+      id: newBlockId(),
       type: b.type,
       duration: b.duration ? `${b.duration}` : undefined,
       pace: b.pace,
+      rpe: typeof b.rpe === "number" ? b.rpe : undefined,
     };
   });
 }

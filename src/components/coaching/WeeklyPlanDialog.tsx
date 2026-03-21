@@ -16,7 +16,8 @@ import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { parseRCC, rccToSessionBlocks, computeRCCSummary } from "@/lib/rccParser";
+import { parseRCC, rccToSessionBlocks, computeRCCSummary, mergeParsedBlocksByIndex, mergeStoredSessionBlocksIntoParsed } from "@/lib/rccParser";
+import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -217,7 +218,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             activityType: cs.activity_type || "running",
             objective: cs.objective || cs.title || "",
             rccCode: cs.rcc_code || "",
-            parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+            parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
             coachNotes: cs.coach_notes || "",
             locationName: cs.default_location_name || "",
             athleteOverrides: {},
@@ -260,7 +261,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           activityType: cs.activity_type || "running",
           objective: cs.objective || cs.title || "",
           rccCode: cs.rcc_code || "",
-          parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+          parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
           coachNotes: cs.coach_notes || "",
           locationName: cs.default_location_name || "",
           athleteOverrides: {},
@@ -569,7 +570,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         activityType: cs.activity_type || "running",
         objective: cs.objective || cs.title || "",
         rccCode: cs.rcc_code || "",
-        parsedBlocks: cs.rcc_code ? parseRCC(cs.rcc_code).blocks : [],
+        parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
         coachNotes: cs.coach_notes || "",
         locationName: cs.default_location_name || "",
         athleteOverrides: {},
@@ -601,8 +602,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         for (const session of groupSessions) {
           const scheduledDate = addDays(weekStart, session.dayIndex);
           scheduledDate.setHours(8, 0, 0, 0);
-          const { blocks } = parseRCC(session.rccCode);
-          const sessionBlocks = rccToSessionBlocks(blocks);
+          const { blocks: freshBlocks } = parseRCC(session.rccCode);
+          const mergedBlocks = mergeParsedBlocksByIndex(freshBlocks, session.parsedBlocks || []);
+          const sessionBlocks = rccToSessionBlocks(mergedBlocks);
+          const aggregatedRpe = aggregateRpeFromSessionBlocks(sessionBlocks);
 
           const { data: created, error } = await supabase
             .from("coaching_sessions")
@@ -621,7 +624,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               send_mode: sendMode,
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
-              rpe: session.rpe || null,
+              rpe: aggregatedRpe,
             } as any)
             .select("id")
             .single();

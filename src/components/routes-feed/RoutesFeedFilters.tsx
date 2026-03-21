@@ -39,15 +39,29 @@ export const RoutesFeedFilters = ({
     minRating > 0,
   ].filter(Boolean).length;
 
+  const summaryParts: string[] = [];
+  summaryParts.push(`≤ ${maxProximity} km`);
+  if (selectedActivities.length < ACTIVITY_TYPES.length) {
+    summaryParts.push(`${selectedActivities.length}/${ACTIVITY_TYPES.length} sports`);
+  }
+  if (maxRouteDistance !== null) {
+    summaryParts.push(`parcours ≤ ${maxRouteDistance} km`);
+  }
+  if (minRating > 0) {
+    summaryParts.push(`note ${minRating}+`);
+  }
+  const collapsedSummary = summaryParts.join(' · ');
+
   return (
-    <div className="bg-card border-b border-border">
+    <div className="ios-card rounded-ios-lg border border-border overflow-hidden shadow-sm">
       {/* Toggle bar */}
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2.5"
+        className="w-full flex items-center justify-between px-ios-4 py-ios-3 active:bg-secondary/60 transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-[14px] font-medium text-foreground">Filtres</span>
+        <div className="flex items-center gap-ios-2">
+          <span className="text-ios-subheadline font-semibold text-foreground">Filtres</span>
           {activeCount > 0 && (
             <span className="text-[11px] font-semibold bg-primary text-primary-foreground rounded-full h-5 min-w-5 flex items-center justify-center px-1.5">
               {activeCount}
@@ -60,17 +74,28 @@ export const RoutesFeedFilters = ({
         )} />
       </button>
 
+      {!expanded && (
+        <div className="px-ios-4 pb-ios-3 -mt-ios-1">
+          <p className="text-ios-footnote text-muted-foreground leading-snug line-clamp-2">
+            {activeCount === 0
+              ? `Rayon ${maxProximity} km · tous les sports · parcours sans limite`
+              : `${activeCount} réglage${activeCount > 1 ? 's' : ''} actif${activeCount > 1 ? 's' : ''} — ${collapsedSummary}`}
+          </p>
+        </div>
+      )}
+
       {expanded && (
         <>
           {/* Sports pills */}
-          <div className="px-4 py-3 border-t border-border">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+          <div className="px-ios-4 py-ios-3 border-t border-border/60">
+            <div className="flex items-center justify-between mb-ios-3">
+              <span className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide">
                 Sports
               </span>
               <button
+                type="button"
                 onClick={toggleAllActivities}
-                className="text-[13px] font-medium text-primary"
+                className="text-ios-footnote font-medium text-primary"
               >
                 {selectedActivities.length === ACTIVITY_TYPES.length
                   ? "Désélectionner tout"
@@ -80,18 +105,19 @@ export const RoutesFeedFilters = ({
 
             <div
               ref={scrollContainerRef}
-              className="overflow-x-auto scrollbar-hide -mx-4 px-4"
+              className="overflow-x-auto scrollbar-hide -mx-ios-4 px-ios-4"
             >
-              <div className="flex gap-2 pb-1">
+              <div className="flex gap-ios-2 pb-ios-1">
                 {ACTIVITY_TYPES.map(activity => (
                   <button
+                    type="button"
                     key={activity.value}
                     onClick={() => toggleActivity(activity.value)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all",
+                      "flex items-center gap-ios-2 px-ios-4 py-ios-2 rounded-full text-ios-footnote font-semibold whitespace-nowrap transition-all min-h-[36px]",
                       selectedActivities.includes(activity.value)
-                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                        : "bg-primary/8 text-primary"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                        : "bg-secondary text-foreground"
                     )}
                   >
                     <ActivityIcon activityType={activity.value} size="sm" />
@@ -103,11 +129,11 @@ export const RoutesFeedFilters = ({
           </div>
 
           {/* Proximity filter */}
-          <div className="px-4 py-3 border-t border-border">
+          <div className="px-ios-4 py-ios-3 border-t border-border/60">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span className="text-[15px] font-medium">Proximité</span>
+              <div className="flex items-center gap-ios-2">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-ios-headline font-medium">Proximité</span>
               </div>
               <div className="flex items-center gap-2">
                 <Input
@@ -118,20 +144,20 @@ export const RoutesFeedFilters = ({
                   min="1"
                   max="200"
                 />
-                <span className="text-[13px] text-muted-foreground">km</span>
+                <span className="text-ios-footnote text-muted-foreground">km</span>
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-1">
+            <p className="text-ios-caption1 text-muted-foreground mt-ios-1">
               Distance entre vous et le point le plus proche de l'itinéraire
             </p>
           </div>
 
           {/* Route distance filter */}
-          <div className="px-4 py-3 border-t border-border">
+          <div className="px-ios-4 py-ios-3 border-t border-border">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Route className="h-4 w-4 text-muted-foreground" />
-                <span className="text-[15px] font-medium">Longueur du parcours</span>
+              <div className="flex items-center gap-ios-2 min-w-0">
+                <Route className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-ios-headline font-medium truncate">Longueur du parcours</span>
               </div>
               <div className="flex items-center gap-2">
                 {maxRouteDistance ? (
@@ -147,37 +173,39 @@ export const RoutesFeedFilters = ({
                       min="1"
                       max="500"
                     />
-                    <span className="text-[13px] text-muted-foreground">km</span>
+                    <span className="text-ios-footnote text-muted-foreground">km</span>
                     <button
+                      type="button"
                       onClick={() => setMaxRouteDistance(null)}
-                      className="text-[12px] text-primary ml-1"
+                      className="text-ios-caption1 text-primary ml-ios-1"
                     >
                       ✕
                     </button>
                   </>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => setMaxRouteDistance(50)}
-                    className="text-[13px] font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full"
+                    className="text-ios-footnote font-medium text-primary bg-primary/10 px-ios-3 py-ios-1.5 rounded-full"
                   >
                     Filtrer
                   </button>
                 )}
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-1">
+            <p className="text-ios-caption1 text-muted-foreground mt-ios-1">
               Distance totale de l'itinéraire
             </p>
           </div>
 
           {/* Rating filter */}
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-muted-foreground" />
-                <span className="text-[15px] font-medium">Note minimum</span>
+          <div className="px-ios-4 py-ios-3 border-t border-border/60">
+            <div className="flex items-center justify-between mb-ios-2">
+              <div className="flex items-center gap-ios-2">
+                <Star className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-ios-headline font-medium">Note minimum</span>
               </div>
-              <span className="text-[15px] font-semibold text-foreground">
+              <span className="text-ios-headline font-semibold text-foreground">
                 {minRating > 0 ? `${minRating}+` : 'Toutes'}
               </span>
             </div>
@@ -185,9 +213,10 @@ export const RoutesFeedFilters = ({
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map(star => (
                   <button
+                    type="button"
                     key={star}
                     onClick={() => setMinRating(minRating === star ? 0 : star)}
-                    className="p-0.5"
+                    className="p-0.5 min-w-[36px] min-h-[36px] flex items-center justify-center"
                   >
                     <Star
                       className={cn(
@@ -202,8 +231,9 @@ export const RoutesFeedFilters = ({
               </div>
               {minRating > 0 && (
                 <button
+                  type="button"
                   onClick={() => setMinRating(0)}
-                  className="text-[12px] text-primary"
+                  className="text-ios-caption1 text-primary font-medium"
                 >
                   Réinitialiser
                 </button>

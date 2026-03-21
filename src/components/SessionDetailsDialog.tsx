@@ -44,6 +44,8 @@ interface SessionBlock {
   effortPace?: string;
   recoveryDuration?: string;
   recoveryType?: 'trot' | 'marche' | 'statique';
+  rpe?: number;
+  recoveryRpe?: number;
 }
 
 interface Session {
@@ -608,18 +610,27 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       }
                     };
                     const getBlockValue = () => {
+                      const rpeParts: string[] = [];
+                      if (typeof block.rpe === 'number' && block.rpe >= 1 && block.rpe <= 10) {
+                        rpeParts.push(`RPE ${block.rpe}`);
+                      }
+                      if (block.type === 'interval' && typeof block.recoveryRpe === 'number' && block.recoveryRpe >= 1 && block.recoveryRpe <= 10) {
+                        rpeParts.push(`récup RPE ${block.recoveryRpe}`);
+                      }
+                      const rpeSuffix = rpeParts.length ? ` · ${rpeParts.join(' · ')}` : '';
+
                       if (block.type === 'interval') {
                         const reps = block.repetitions || 1;
                         const effort = block.effortDuration || '0';
                         const effortUnit = block.effortType === 'time' ? 's' : 'm';
                         const pace = block.effortPace ? ` à ${block.effortPace}/km` : '';
                         const recovery = block.recoveryDuration ? ` r${block.recoveryDuration}s ${block.recoveryType || ''}` : '';
-                        return `${reps}×${effort}${effortUnit}${pace}${recovery}`;
+                        return `${reps}×${effort}${effortUnit}${pace}${recovery}${rpeSuffix}`;
                       } else {
                         const duration = block.duration || '0';
                         const unit = block.durationType === 'time' ? 'min' : 'm';
                         const pace = block.pace ? ` à ${block.pace}/km` : '';
-                        return `${duration}${unit}${pace}`;
+                        return `${duration}${unit}${pace}${rpeSuffix}`;
                       }
                     };
 

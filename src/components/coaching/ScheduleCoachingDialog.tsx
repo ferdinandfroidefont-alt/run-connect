@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
-import { rccToSessionBlocks, type RCCResult } from "@/lib/rccParser";
+import { parseRCC, rccToSessionBlocks, mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { LocationPickerMap } from "./LocationPickerMap";
 import { MapPin, Calendar, Check, Clock, ChevronLeft, Send, Map } from "lucide-react";
@@ -64,6 +64,7 @@ export const ScheduleCoachingDialog = ({
   const [objective, setObjective] = useState("");
   const [rccCode, setRccCode] = useState("");
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
+  const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
   const [locationName, setLocationName] = useState("");
   const [customPace, setCustomPace] = useState("");
@@ -81,6 +82,19 @@ export const ScheduleCoachingDialog = ({
       setLocationLat(session.default_location_lat || 48.8566);
       setLocationLng(session.default_location_lng || 2.3522);
 
+      const { blocks, errors } = parseRCC(session.rcc_code || "");
+      const stored = (session.session_blocks as any[]) || [];
+      const merged = blocks.map((b, i) => ({
+        ...b,
+        rpe: typeof stored[i]?.rpe === "number" ? stored[i].rpe : undefined,
+        recoveryRpe:
+          b.type === "interval" && typeof stored[i]?.recoveryRpe === "number"
+            ? stored[i].recoveryRpe
+            : undefined,
+      }));
+      setParsedBlocks(merged);
+      setParsedResult({ blocks, errors });
+
       if (suggestedDate) {
         try {
           const d = new Date(suggestedDate);
@@ -92,6 +106,11 @@ export const ScheduleCoachingDialog = ({
     }
   }, [isOpen, session, suggestedDate]);
 
+  const handleParsedChange = (r: RCCResult) => {
+    setParsedResult(r);
+    setParsedBlocks((prev) => mergeParsedBlocksByIndex(r.blocks, prev));
+  };
+
   if (!session) return null;
 
   const handleSchedule = async () => {
@@ -99,7 +118,8 @@ export const ScheduleCoachingDialog = ({
 
     setLoading(true);
     try {
-      const sessionBlocks = parsedResult.blocks.length > 0 ? rccToSessionBlocks(parsedResult.blocks) : session.session_blocks;
+      const sessionBlocks =
+        parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : session.session_blocks;
 
       // Create a real session on the map
       const { data: mapSession, error: sessionError } = await supabase
@@ -240,7 +260,7 @@ export const ScheduleCoachingDialog = ({
           <RCCEditor
             value={rccCode}
             onChange={setRccCode}
-            onParsedChange={setParsedResult}
+            onParsedChange={handleParsedChange}
           />
 
           {/* Date + Location */}
@@ -302,11 +322,10 @@ export const ScheduleCoachingDialog = ({
             />
           </div>
 
-          {/* RCC Blocks preview — auto-filled from coaching session */}
-          {parsedResult.blocks.length > 0 && (
+          {parsedBlocks.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-xs">Détail de la séance</Label>
-              <RCCBlocksPreview blocks={parsedResult.blocks} />
+              <RCCBlocksPreview blocks={parsedBlocks} />
             </div>
           )}
         </div>

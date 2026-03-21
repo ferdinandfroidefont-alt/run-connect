@@ -24,7 +24,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft } from 'lucide-react';
+import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -34,7 +34,6 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
-import { CheckCircle } from 'lucide-react';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 
@@ -91,6 +90,11 @@ const TIME_SLOTS = [
   { id: 'afternoon' as const, icon: Sun, label: '12h-18h', startHour: 12, endHour: 18, color: 'text-yellow-500' },
   { id: 'evening' as const, icon: Moon, label: '18h-23h', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
+
+/** Boutons flottants droite (classement / présence) — verre léger, même famille que LevelSlider */
+const MAP_RIGHT_FAB_BUTTON_CLASS =
+  'h-10 w-10 shrink-0 rounded-[12px] border border-white/55 bg-white/86 p-0 shadow-[0_2px_12px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-md transition-[transform,box-shadow,background-color] hover:bg-white/93 hover:shadow-[0_3px_14px_rgba(0,0,0,0.1)] active:scale-[0.97] dark:border-border/65 dark:bg-background/72 dark:hover:bg-background/82 flex items-center justify-center';
+
 interface InteractiveMapProps {
   initialLat?: number;
   initialLng?: number;
@@ -1555,14 +1559,13 @@ export const InteractiveMap = ({
             onLevelChange={(level) => setFilters(prev => ({ ...prev, level }))}
           />
 
-          {/* Leaderboard Button */}
-          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50" onClick={() => navigate('/leaderboard')} title="Classement">
-            <Crown className="h-5 w-5 text-amber-500" />
+          {/* Leaderboard + présence : même langage que LevelSlider (verre léger, ombre douce) */}
+          <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/leaderboard')} title="Classement">
+            <Crown className="h-[18px] w-[18px] text-amber-500/95" strokeWidth={1.65} aria-hidden />
           </Button>
 
-          {/* Confirm Presence Button */}
-          <Button variant="outline" className="h-12 w-12 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50" onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+          <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
+            <CheckCircle className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-500" strokeWidth={1.65} aria-hidden />
           </Button>
         </div>}
 

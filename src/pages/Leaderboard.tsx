@@ -107,69 +107,105 @@ const RankMovement = ({ change }: { change?: number }) => {
   );
 };
 
-const LeaderboardRow = ({ u, isMe, onClick, index }: { u: LeaderboardUser; isMe: boolean; onClick: () => void; index: number }) => {
-  const medal = getMedal(u.rank);
+const podiumRowClass = (rank: number) => {
+  if (rank === 1) {
+    return "bg-gradient-to-r from-amber-500/[0.14] via-amber-400/[0.08] to-transparent dark:from-amber-400/20 dark:via-amber-500/10 border-l-[3px] border-amber-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
+  }
+  if (rank === 2) {
+    return "bg-gradient-to-r from-slate-400/[0.18] via-slate-300/[0.08] to-transparent dark:from-slate-400/22 dark:via-slate-500/12 border-l-[3px] border-slate-400 dark:border-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]";
+  }
+  if (rank === 3) {
+    return "bg-gradient-to-r from-orange-800/[0.12] via-amber-800/[0.08] to-transparent dark:from-amber-900/25 dark:via-orange-900/12 border-l-[3px] border-amber-700 dark:border-amber-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+  }
+  return "";
+};
+
+const RankBadge = ({ rank, isMe }: { rank: number; isMe: boolean }) => {
+  const medal = getMedal(rank);
+  if (medal) {
+    return (
+      <div
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] shadow-sm",
+          rank === 1 && "bg-gradient-to-br from-amber-300/90 to-amber-600/90 ring-2 ring-amber-400/40",
+          rank === 2 && "bg-gradient-to-br from-slate-200 to-slate-400 ring-2 ring-slate-300/50 dark:from-slate-400 dark:to-slate-600",
+          rank === 3 && "bg-gradient-to-br from-amber-700 to-orange-900 ring-2 ring-amber-600/40"
+        )}
+      >
+        <span className="drop-shadow-sm">{medal}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/80 dark:bg-secondary/50">
+      <span className={cn("text-[13px] font-bold tabular-nums", isMe ? "text-primary" : "text-muted-foreground")}>
+        #{rank}
+      </span>
+    </div>
+  );
+};
+
+const LeaderboardRow = ({ u, isMe, onClick }: { u: LeaderboardUser; isMe: boolean; onClick: () => void }) => {
+  const podium = u.rank <= 3;
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-4 py-2.5 cursor-pointer active:bg-secondary/60 transition-colors",
-        isMe && "bg-primary/[0.06]"
+        "flex cursor-pointer items-center gap-3 rounded-[14px] px-3 py-3.5 transition-colors active:scale-[0.99] active:bg-secondary/70",
+        podium ? podiumRowClass(u.rank) : "border border-transparent hover:bg-secondary/40",
+        isMe && !podium && "bg-primary/[0.07] ring-1 ring-primary/15"
       )}
     >
-      <div className="w-8 flex items-center justify-center shrink-0">
-        {medal ? (
-          <span className="text-lg">{medal}</span>
-        ) : (
-          <span className={cn("text-[14px] font-bold tabular-nums", isMe ? "text-primary" : "text-muted-foreground")}>
-            #{u.rank}
-          </span>
-        )}
-      </div>
+      <RankBadge rank={u.rank} isMe={isMe} />
 
-      <div className="relative">
-        <Avatar className={cn("h-9 w-9", getRankRing(u.user_rank))}>
-          <AvatarImage src={u.profile?.avatar_url} />
-          <AvatarFallback className="text-xs font-bold bg-secondary">
+      <div className="relative shrink-0">
+        <Avatar
+          className={cn(
+            'h-11 w-11 shadow-md',
+            podium && u.rank === 1 && 'ring-2 ring-amber-400/50',
+            podium && u.rank === 2 && 'ring-2 ring-slate-300/60 dark:ring-slate-500/50',
+            podium && u.rank === 3 && 'ring-2 ring-amber-700/45',
+            !podium && getRankRing(u.user_rank)
+          )}
+        >
+          <AvatarImage src={u.profile?.avatar_url} className="object-cover" />
+          <AvatarFallback className="text-sm font-bold bg-secondary">
             {u.profile?.username?.[0]?.toUpperCase() || '?'}
           </AvatarFallback>
         </Avatar>
         {u.user_rank !== 'novice' && (
-          <div className={cn("absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-gradient-to-br border-[1.5px] border-card", getRankColor(u.user_rank))} />
+          <div
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-gradient-to-br border-2 border-card shadow-sm",
+              getRankColor(u.user_rank)
+            )}
+          />
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className={cn("text-[14px] truncate leading-tight", isMe ? "font-bold" : "font-medium")}>
+      <div className="min-w-0 flex-1">
+        <p className={cn("truncate text-[15px] leading-snug", isMe ? "font-bold text-foreground" : "font-semibold text-foreground")}>
           {u.profile?.display_name || u.profile?.username}
         </p>
         {u.profile?.username && (
-          <p className="text-[11px] text-muted-foreground truncate leading-tight">@{u.profile.username}</p>
+          <p className="truncate text-[12px] leading-snug text-muted-foreground">@{u.profile.username}</p>
         )}
       </div>
 
-      <div className="flex flex-col items-end gap-0.5 shrink-0">
-        <div className="flex items-center gap-1">
-          <span className={cn("text-[14px] font-semibold tabular-nums", isMe ? "text-primary" : "text-foreground")}>
+      <div className="flex shrink-0 flex-col items-end gap-0.5 pr-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className={cn("text-[15px] font-bold tabular-nums tracking-tight", isMe ? "text-primary" : "text-foreground")}>
             {u.seasonal_points.toLocaleString()}
           </span>
-          <span className="text-[11px] text-muted-foreground">pts</span>
+          <span className="text-[11px] font-medium text-muted-foreground">pts</span>
         </div>
         <RankMovement change={u.rank_change} />
       </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/35" />
     </div>
   );
 };
-
-const RankGap = () => (
-  <div className="flex items-center justify-center py-1.5 px-6">
-    <div className="flex-1 border-t border-dashed border-border/50" />
-    <span className="px-3 text-[11px] text-muted-foreground/50 font-medium">•••</span>
-    <div className="flex-1 border-t border-dashed border-border/50" />
-  </div>
-);
 
 /* ═══════ Main Page ═══════ */
 const Leaderboard = () => {
@@ -193,20 +229,23 @@ const Leaderboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showRules, setShowRules] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  /** Racine du scroll pour la liste (carte classement) — requis pour l’infinite scroll */
+  const [listScrollRoot, setListScrollRoot] = useState<HTMLDivElement | null>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
-  // Infinite scroll
+  // Infinite scroll (root = zone scroll interne à la card)
   useEffect(() => {
-    if (!sentinelRef.current || !hasMoreUsers || loading || loadingMore) return;
+    if (!listScrollRoot || !sentinelRef.current || !hasMoreUsers || loading || loadingMore) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage(p => p + 1); },
-      { root: scrollContainerRef.current, threshold: 0.1 }
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage((p) => p + 1);
+      },
+      { root: listScrollRoot, threshold: 0.1, rootMargin: "80px" }
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [hasMoreUsers, loading, loadingMore]);
+  }, [listScrollRoot, hasMoreUsers, loading, loadingMore]);
 
   const getEffectiveFilter = useCallback((): FilterType => {
     if (activeScope === 'friends') return 'friends';
@@ -380,30 +419,29 @@ const Leaderboard = () => {
   const nextRankInfo = getNextRankInfo(userRankLabel);
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-secondary">
+    <div className="fixed inset-0 flex min-h-0 flex-col bg-secondary">
       {/* ── FIXED HEADER ── */}
-      <div className="shrink-0 bg-card border-b border-border/40 z-50">
+      <div className="z-50 shrink-0 border-b border-border/40 bg-card">
         <div className="flex items-center justify-between px-4 py-3">
           <button onClick={() => navigate('/')} className="flex items-center text-primary">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-[17px] font-semibold">Classement</h1>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowRules(true)} className="text-primary active:opacity-60 transition-opacity">
+            <button onClick={() => setShowRules(true)} className="text-primary transition-opacity active:opacity-60">
               <BookOpen className="h-5 w-5" />
             </button>
-            <button className="text-primary active:opacity-60 transition-opacity">
+            <button className="text-primary transition-opacity active:opacity-60">
               <Target className="h-5 w-5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── SINGLE SCROLLABLE AREA ── */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overscroll-contain">
-        {/* User Card */}
-        {userRank && (
-          <div className="pt-2 pb-1">
+      {/* Zone haute fixe (pas de scroll page) */}
+      <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
+        <div className="shrink-0 space-y-2 px-3 pt-2">
+          {userRank && (
             <MyRankCard
               currentRank={userRank}
               currentPoints={userPoints}
@@ -412,83 +450,99 @@ const Leaderboard = () => {
               userRank={userRankLabel}
               rankChange={userRankChange}
             />
-          </div>
-        )}
+          )}
 
-        {/* Filters */}
-        <div className="px-3 py-1.5">
           <FilterBar
             activeScope={activeScope}
-            onScopeChange={(s) => { setActiveScope(s); setSearchQuery(''); }}
+            onScopeChange={(s) => {
+              setActiveScope(s);
+              setSearchQuery('');
+            }}
             activeFilter={activeFilter}
-            onFilterChange={(f) => { setActiveFilter(f); setSearchQuery(''); }}
+            onFilterChange={(f) => {
+              setActiveFilter(f);
+              setSearchQuery('');
+            }}
             selectedClubs={selectedClubs}
             onClubsChange={setSelectedClubs}
             userClubs={userClubs}
           />
-        </div>
 
-        {/* Season Reward */}
-        <div className="py-1">
-          <SeasonRewardBanner />
-        </div>
+          <div className="py-0.5">
+            <SeasonRewardBanner />
+          </div>
 
-        {/* Season info + Search */}
-        <div className="px-4 pt-1 pb-2 flex items-center gap-2">
-          <p className="text-[11px] text-muted-foreground shrink-0">
-            {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
-          </p>
-          <div className="flex-1 relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-7 text-[13px] rounded-md bg-card border-0"
-            />
+          <div className="flex items-center gap-2 pb-1">
+            <p className="shrink-0 text-[11px] text-muted-foreground">
+              {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
+            </p>
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 rounded-[10px] border-0 bg-card pl-8 text-[13px] shadow-sm"
+              />
+            </div>
           </div>
         </div>
 
-        {/* ── LEADERBOARD BLOCK ── */}
-        <div className="px-3 pb-3">
-          <div className="rounded-xl bg-card border border-border/40 shadow-sm">
-            {/* Block header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/30 bg-secondary/30 rounded-t-xl">
-              <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">🏆 Classement général</span>
+        {/* Carte classement : hauteur ~ reste d’écran, max ~70vh, scroll interne uniquement */}
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-1">
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col overflow-hidden',
+              'rounded-[20px] border border-border/50 bg-card/95 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]',
+              'backdrop-blur-md dark:border-border/60 dark:bg-card/90 dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
+            )}
+          >
+            <div className="shrink-0 border-b border-border/40 bg-secondary/25 px-4 pb-3 pt-4 dark:bg-secondary/20">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Classement général</p>
+              <p className="mt-1 text-[15px] font-semibold text-foreground">Saison en cours</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">Points saisonniers · mise à jour en direct</p>
             </div>
 
-            {loading && leaderboard.length === 0 ? (
-              <div className="p-4"><LeaderboardSkeleton /></div>
-            ) : filteredLeaderboard.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-6">
-                <span className="text-4xl mb-3">🏅</span>
-                <p className="text-[17px] font-semibold text-foreground mb-1">Aucun résultat</p>
-                <p className="text-[14px] text-muted-foreground text-center">
-                  {searchQuery ? "Aucun participant ne correspond" : "Aucun participant pour ce filtre"}
-                </p>
-              </div>
-            ) : (
-              <>
-                {filteredLeaderboard.map((u, i) => {
-                  const isMe = u.user_id === user?.id;
-                  return (
-                    <div key={u.user_id}>
-                      <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} index={i} />
-                      {i < filteredLeaderboard.length - 1 && <div className="h-px bg-border/30 ml-12" />}
-                    </div>
-                  );
-                })}
+            <div
+              ref={setListScrollRoot}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            >
+              {loading && leaderboard.length === 0 ? (
+                <div className="p-4">
+                  <LeaderboardSkeleton />
+                </div>
+              ) : filteredLeaderboard.length === 0 ? (
+                <div className="flex flex-col items-center justify-center px-6 py-16">
+                  <span className="mb-3 text-4xl">🏅</span>
+                  <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
+                  <p className="text-center text-[14px] text-muted-foreground">
+                    {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 px-2 py-3">
+                  {filteredLeaderboard.map((u) => {
+                    const isMe = u.user_id === user?.id;
+                    return (
+                      <LeaderboardRow
+                        key={u.user_id}
+                        u={u}
+                        isMe={isMe}
+                        onClick={() => navigateToProfile(u.user_id)}
+                      />
+                    );
+                  })}
 
-                {/* Infinite scroll sentinel */}
-                {hasMoreUsers && !searchQuery && (
-                  <div ref={sentinelRef} className="flex justify-center py-4">
-                    {loadingMore && (
-                      <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+                  {hasMoreUsers && !searchQuery && (
+                    <div ref={sentinelRef} className="flex justify-center py-5">
+                      {loadingMore && (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

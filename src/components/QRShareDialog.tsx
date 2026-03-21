@@ -8,6 +8,8 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { motion } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 
 interface QRShareDialogProps {
   open: boolean;
@@ -228,7 +230,15 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[100%] max-w-[100vw] h-full max-h-full sm:max-w-sm sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden overflow-x-hidden border-0 sm:border bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
+      <DialogContent
+        closeButtonClassName={isIosPhone ? "right-5 top-5" : undefined}
+        className={cn(
+          "h-full max-h-full rounded-none sm:rounded-lg p-0 overflow-hidden overflow-x-hidden border-0 sm:border bg-gradient-to-br from-background via-background to-primary/5 flex flex-col",
+          isIosPhone
+            ? "!w-[min(calc(100vw-32px),22rem)] !max-w-[min(calc(100vw-32px),22rem)] sm:!max-w-sm"
+            : "w-[100%] max-w-[100vw] sm:max-w-sm sm:max-h-[90vh]"
+        )}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -236,7 +246,12 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           className="relative"
         >
           {/* Header avec gradient */}
-          <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-cyan-400/20 px-6 pt-6 pb-4">
+          <div
+            className={cn(
+              "bg-gradient-to-r from-primary/20 via-primary/10 to-cyan-400/20 pt-6 pb-4",
+              isIosPhone ? "px-5" : "px-6"
+            )}
+          >
             <DialogHeader>
               <DialogTitle className="text-center text-lg font-bold">
                 Partager mon profil
@@ -244,7 +259,12 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             </DialogHeader>
           </div>
           
-          <div className="px-4 sm:px-6 pb-6 space-y-5 overflow-hidden">
+          <div
+            className={cn(
+              "pb-6 space-y-5 overflow-hidden",
+              isIosPhone ? "px-5" : "px-4 sm:px-6"
+            )}
+          >
             {/* Photo de profil avec effet glow */}
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -279,9 +299,14 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               className="flex justify-center"
             >
               <div className="flex justify-center overflow-hidden">
-                <div className="relative max-w-[280px]">
+                <div className={cn("relative w-max max-w-full mx-auto", isIosPhone ? "max-w-[248px]" : "max-w-[280px]")}>
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
-                  <div className="relative bg-gradient-to-br from-card to-card/80 p-4 rounded-2xl border border-primary/20 shadow-lg">
+                  <div
+                    className={cn(
+                      "relative bg-gradient-to-br from-card to-card/80 rounded-2xl border border-primary/20 shadow-lg",
+                      isIosPhone ? "p-3.5" : "p-4"
+                    )}
+                  >
                     {isLoading ? (
                       <div className="w-[240px] h-[240px] flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
