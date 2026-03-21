@@ -918,7 +918,7 @@ export default function MySessions() {
           </div>
           
           {/* iOS Segmented Control - Two columns layout */}
-          <div className="px-ios-4 pb-ios-3">
+          <div className="px-ios-4 pb-ios-2">
             <div className="flex gap-ios-1">
               {/* Left column: Séances + sub-filter */}
               <div className="w-1/2">
@@ -1020,12 +1020,12 @@ export default function MySessions() {
         </div>
 
 
-        {/* Content */}
-        <div className="py-ios-4">
+        {/* Content — pt compact sous le header (Créées/Rejointes → filtres) */}
+        <div className="pt-ios-2 pb-ios-4">
           {currentView === 'sessions' ? (
             <>
               {/* List/Calendar toggle */}
-              <div className="flex px-ios-4 mb-ios-2">
+              <div className="flex px-ios-4 mb-ios-1">
                 <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
                   <button
                     onClick={() => setSessionsDisplayMode('list')}
@@ -1046,8 +1046,8 @@ export default function MySessions() {
                 </div>
               </div>
 
-              {/* Filter Pills */}
-              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-4">
+              {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
+              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
@@ -1056,7 +1056,7 @@ export default function MySessions() {
                   <button
                     key={f.key}
                     onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
-                    className={`px-ios-4 py-ios-2 rounded-full text-ios-footnote font-medium whitespace-nowrap transition-colors ${
+                    className={`px-ios-3 py-1.5 min-h-[32px] rounded-full text-[12px] leading-tight font-medium whitespace-nowrap transition-colors ${
                       filter === f.key
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-card text-muted-foreground'
@@ -1076,10 +1076,10 @@ export default function MySessions() {
               ) : loading ? (
                 <div className="space-y-px">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card p-4 animate-pulse">
-                      <div className="flex gap-3">
-                        <div className="h-12 w-12 bg-secondary rounded-xl" />
-                        <div className="flex-1 space-y-2">
+                    <div key={i} className="bg-card p-ios-3 animate-pulse">
+                      <div className="flex gap-ios-2">
+                        <div className="h-10 w-10 bg-secondary rounded-ios-md" />
+                        <div className="flex-1 space-y-ios-2">
                           <div className="h-4 bg-secondary rounded w-3/4" />
                           <div className="h-3 bg-secondary rounded w-1/2" />
                         </div>
@@ -1135,12 +1135,12 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="ios-card p-ios-4 cursor-pointer active:bg-secondary transition-colors"
+                          className="ios-card p-ios-3 cursor-pointer active:bg-secondary transition-colors"
                         >
-                          <div className="flex items-start gap-ios-3">
-                            <ActivityIcon activityType={session.activity_type} size="lg" />
+                          <div className="flex items-start gap-ios-2">
+                            <ActivityIcon activityType={session.activity_type} size="md" />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-ios-2 mb-ios-1">
+                              <div className="flex items-center gap-1.5 mb-0.5">
                                 {sessionSource === 'joined' ? (
                                   <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
                                 ) : (
@@ -1167,22 +1167,22 @@ export default function MySessions() {
                                   </span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-ios-4 mt-ios-1 text-ios-footnote text-muted-foreground">
-                                <span className="flex items-center gap-ios-1">
-                                  <Calendar className="h-3.5 w-3.5" />
+                              <div className="flex items-center gap-ios-3 mt-0.5 text-[12px] text-muted-foreground leading-tight">
+                                <span className="flex items-center gap-0.5">
+                                  <Calendar className="h-3 w-3 shrink-0" />
                                   {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
                                 </span>
-                                <span className="flex items-center gap-ios-1">
-                                  <Clock className="h-3.5 w-3.5" />
+                                <span className="flex items-center gap-0.5">
+                                  <Clock className="h-3 w-3 shrink-0" />
                                   {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
                                 </span>
-                                <span className="flex items-center gap-ios-1">
-                                  <Users className="h-3.5 w-3.5" />
+                                <span className="flex items-center gap-0.5">
+                                  <Users className="h-3 w-3 shrink-0" />
                                   {session.current_participants || 0}
                                 </span>
                               </div>
                             </div>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground/50 mt-2" />
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
                           </div>
                         </div>
                       );
