@@ -1695,20 +1695,20 @@ const Messages = () => {
         <div className="max-w-md mx-auto w-full flex flex-col keyboard-aware-container" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           {/* iMessage Style Header */}
           <div className="shrink-0 bg-card border-b border-border/50 z-50">
-            <div className="flex items-center px-2 py-2">
+            <div className="flex items-center px-ios-2 py-ios-2">
               {/* Back button - Left */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedConversation(null)}
-                className="gap-1 text-primary p-0 h-auto font-normal shrink-0"
+                className="gap-ios-1 text-primary p-0 h-auto font-normal shrink-0"
               >
                 <ArrowLeft className="h-5 w-5" />
                 Retour
               </Button>
               
               {/* Center - Avatar and Name (stacked) */}
-              <div className="flex-1 flex flex-col items-center justify-center -ml-4">
+              <div className="flex-1 flex flex-col items-center justify-center -ml-ios-4">
                 {selectedConversation.is_group ? (
                   <div 
                     className="flex flex-col items-center cursor-pointer"
@@ -1729,8 +1729,8 @@ const Messages = () => {
                         <Users className="h-4 w-4" />
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex items-center gap-0.5 mt-0.5">
-                      <p className="font-semibold text-[13px] text-foreground">{selectedConversation.group_name}</p>
+                    <div className="flex items-center gap-ios-1 mt-ios-1">
+                      <p className="text-ios-footnote font-semibold text-foreground">{selectedConversation.group_name}</p>
                       <ChevronRight className="h-3 w-3 text-muted-foreground" />
                     </div>
                   </div>
@@ -1751,8 +1751,8 @@ const Messages = () => {
                       </Avatar>
                       <OnlineStatus userId={selectedConversation.other_participant?.user_id || ""} className="w-2 h-2" />
                     </div>
-                    <div className="flex items-center gap-0.5 mt-0.5">
-                      <p className="font-semibold text-[13px] text-foreground">
+                    <div className="flex items-center gap-ios-1 mt-ios-1">
+                      <p className="text-ios-footnote font-semibold text-foreground">
                         {selectedConversation.other_participant?.username || selectedConversation.other_participant?.display_name}
                       </p>
                       <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -1764,17 +1764,17 @@ const Messages = () => {
               {/* Right - Info button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-2 text-primary shrink-0">
+                  <button className="p-ios-2 text-primary shrink-0">
                     <MoreVertical className="h-5 w-5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-card border border-border rounded-[14px] shadow-lg">
+                <DropdownMenuContent align="end" className="w-56 bg-card border border-border rounded-ios-lg shadow-lg">
                   {!selectedConversation.is_group && (
                     <DropdownMenuItem 
                       onClick={() => navigate(`/profile?user=${selectedConversation.other_participant?.user_id}`)}
-                      className="py-3"
+                      className="py-ios-3"
                     >
-                      <User className="h-4 w-4 mr-3 text-primary" />
+                      <User className="h-4 w-4 mr-ios-3 text-primary" />
                       Voir le profil
                     </DropdownMenuItem>
                   )}
@@ -1784,9 +1784,9 @@ const Messages = () => {
                       setSelectedConversation(null);
                       setShowCreateGroup(true);
                     }}
-                    className="py-3"
+                    className="py-ios-3"
                   >
-                    <Users className="h-4 w-4 mr-3 text-primary" />
+                    <Users className="h-4 w-4 mr-ios-3 text-primary" />
                     Créer un groupe
                   </DropdownMenuItem>
                   
@@ -1807,10 +1807,10 @@ const Messages = () => {
                         supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
                       }
                     }}
-                    className="py-3 justify-between"
+                    className="py-ios-3 justify-between"
                   >
                     <div className="flex items-center">
-                      <span className="mr-3 text-lg">{!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}</span>
+                      <span className="mr-ios-3 text-lg">{!userNotifSettings.notifications_enabled ? "🔕" : isMuted ? "🔕" : "🔔"}</span>
                       <span>Notifications</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
@@ -1820,10 +1820,10 @@ const Messages = () => {
                   
                   <DropdownMenuItem 
                     onClick={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-                    className="py-3 justify-between"
+                    className="py-ios-3 justify-between"
                   >
                     <div className="flex items-center">
-                      <span className="mr-3 text-lg">📌</span>
+                      <span className="mr-ios-3 text-lg">📌</span>
                       <span>Épingler</span>
                     </div>
                     <span className="text-xs text-muted-foreground">
@@ -1833,9 +1833,9 @@ const Messages = () => {
                   
                   <DropdownMenuItem 
                     onClick={() => confirmDeleteConversation()}
-                    className="py-3 text-destructive focus:text-destructive"
+                    className="py-ios-3 text-destructive focus:text-destructive"
                   >
-                    <Trash2 className="h-4 w-4 mr-3" />
+                    <Trash2 className="h-4 w-4 mr-ios-3" />
                     {selectedConversation.is_group && selectedConversation.created_by !== user?.id 
                       ? "Quitter le club" 
                       : "Supprimer"
@@ -1848,7 +1848,7 @@ const Messages = () => {
 
           {/* Messages - iMessage style scrollable area */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="h-full px-3 pt-2 pb-2 space-y-0.5 bg-secondary">
+            <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -1881,7 +1881,7 @@ const Messages = () => {
                       {showHeader && (
                         <MessageSectionHeader timestamp={message.created_at} />
                       )}
-                      <div className="text-center py-2">
+                      <div className="text-center py-ios-2">
                         <span className="text-xs text-muted-foreground italic">
                           {message.sender?.username || message.sender?.display_name || ''} {message.content}
                         </span>
@@ -1897,13 +1897,13 @@ const Messages = () => {
                     )}
                     
                     <div
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-0.5`}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} py-ios-1`}
                       onClick={toggleTimestamp}
                     >
                       <div className={`max-w-[75%] ${isOwnMessage ? 'order-2' : 'order-1'} relative`}>
                         {/* Show sender info only for groups, not for DMs (iMessage style) */}
                         {shouldShowSenderInfo && (
-                          <div className="flex items-center gap-2 mb-1 ml-1">
+                          <div className="flex items-center gap-ios-2 mb-ios-1 ml-ios-1">
                             <span className="text-[11px] text-muted-foreground font-medium">
                               {message.sender.username || message.sender.display_name}
                             </span>
@@ -1968,14 +1968,14 @@ const Messages = () => {
                           {message.file_url && message.file_type?.startsWith('image/') && !message.deleted_at && (
                             <SignedImage 
                               fileUrl={message.file_url} 
-                              className="max-w-full h-auto rounded-[18px]"
+                              className="max-w-full h-auto rounded-ios-lg"
                               style={{ maxHeight: '240px' }}
                             />
                           )}
                           
                           {/* Emoji-only messages - Large display without bubble */}
                           {message.content && !message.deleted_at && isOnlyEmojis(message.content) && !message.message_type && !message.file_url && (
-                            <div className="py-0.5">
+                            <div className="py-ios-1">
                               <p className="text-[42px] leading-tight">{message.content}</p>
                             </div>
                           )}
@@ -1987,7 +1987,7 @@ const Messages = () => {
                             message.deleted_at ||
                             message.reply_to) && (
                             <div
-                              className={`rounded-[18px] px-3 py-2 ${
+                              className={`rounded-ios-lg px-ios-3 py-ios-2 ${
                                 isOwnMessage
                                   ? 'bg-primary text-primary-foreground'
                                   : 'bg-[#E5E5EA] text-black'
@@ -2008,14 +2008,14 @@ const Messages = () => {
                                 <>
                                   {/* Poll Card */}
                                   {message.message_type === 'poll' && message.content && (
-                                    <div className="mb-2">
+                                    <div className="mb-ios-2">
                                       <PollCard pollId={message.content} />
                                     </div>
                                   )}
 
                                   {/* Coaching session card */}
                                   {message.message_type === 'coaching_session' && message.content && (
-                                    <div className="mb-2">
+                                    <div className="mb-ios-2">
                                       <CoachingMessageCard
                                         coachingSessionId={message.content}
                                         currentUserId={user?.id || ""}
@@ -2026,44 +2026,44 @@ const Messages = () => {
                                   {/* Session sharing - iOS Card Style */}
                                   {message.message_type === 'session' && message.session && (
                                     <div 
-                                      className="mb-2 bg-background rounded-xl overflow-hidden shadow-sm border border-border/50 cursor-pointer active:scale-[0.98] transition-transform"
+                                      className="mb-ios-2 bg-background rounded-ios-lg overflow-hidden shadow-sm border border-border/50 cursor-pointer active:scale-[0.98] transition-transform"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleSessionClick(message.session);
                                       }}
                                     >
                                       {/* Header */}
-                                      <div className="px-3 py-2 bg-primary/10 border-b border-border/30">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                                      <div className="px-ios-3 py-ios-2 bg-primary/10 border-b border-border/30">
+                                        <div className="flex items-center gap-ios-2">
+                                          <div className="w-6 h-6 rounded-ios-sm bg-primary flex items-center justify-center">
                                             <Calendar className="h-3.5 w-3.5 text-primary-foreground" />
                                           </div>
                                           <span className="font-semibold text-sm text-foreground flex-1 truncate">{message.session.title}</span>
                                         </div>
                                       </div>
                                       {/* Content */}
-                                      <div className="p-3 space-y-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 rounded-md bg-[#FF3B30]/10 flex items-center justify-center">
+                                      <div className="p-ios-3 space-y-ios-2">
+                                        <div className="flex items-center gap-ios-2">
+                                          <div className="w-5 h-5 rounded-ios-sm bg-[#FF3B30]/10 flex items-center justify-center">
                                             <Clock className="h-3 w-3 text-[#FF3B30]" />
                                           </div>
                                           <span className="text-xs text-foreground">{format(new Date(message.session.scheduled_at), 'dd/MM à HH:mm')}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 rounded-md bg-[#34C759]/10 flex items-center justify-center">
+                                        <div className="flex items-center gap-ios-2">
+                                          <div className="w-5 h-5 rounded-ios-sm bg-[#34C759]/10 flex items-center justify-center">
                                             <MapPin className="h-3 w-3 text-[#34C759]" />
                                           </div>
                                           <span className="text-xs text-muted-foreground truncate">{message.session.location_name}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center">
+                                        <div className="flex items-center gap-ios-2">
+                                          <div className="w-5 h-5 rounded-ios-sm bg-primary/10 flex items-center justify-center">
                                             <Users className="h-3 w-3 text-primary" />
                                           </div>
                                           <span className="text-xs text-muted-foreground">{message.session.current_participants}/{message.session.max_participants} participants</span>
                                         </div>
                                       </div>
                                       {/* Footer CTA */}
-                                      <div className="px-3 py-2 bg-secondary/50 border-t border-border/30">
+                                      <div className="px-ios-3 py-ios-2 bg-secondary/50 border-t border-border/30">
                                         <span className="text-xs text-primary font-medium">Voir sur la carte →</span>
                                       </div>
                                     </div>
@@ -2071,11 +2071,11 @@ const Messages = () => {
 
                                   {/* Non-image file attachments (audio, files) */}
                                   {message.file_url && !message.file_type?.startsWith('image/') && (
-                                    <div className="mb-2">
+                                    <div className="mb-ios-2">
                                        {message.message_type === 'voice' || message.file_type?.startsWith('audio/') ? (
                                          <VoiceMessagePlayer src={message.file_url!} isMine={message.sender_id === user?.id} />
                                       ) : (
-                                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                                        <div className="flex items-center gap-ios-2 p-ios-2 bg-muted/50 rounded">
                                           <Paperclip className="h-4 w-4" />
                                           <span className="text-sm truncate">{message.file_name}</span>
                                         </div>
@@ -2167,7 +2167,7 @@ const Messages = () => {
                   }
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2">
+              <DialogFooter className="gap-ios-2">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -2199,7 +2199,7 @@ const Messages = () => {
                   Êtes-vous sûr de vouloir supprimer {selectedConversations.size} conversation(s) ? Cette action est irréversible.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2">
+              <DialogFooter className="gap-ios-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowBulkDeleteDialog(false)}
@@ -2218,7 +2218,7 @@ const Messages = () => {
 
            {/* iMessage Style Input */}
           <div 
-             className="shrink-0 w-full px-2 py-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
+             className="shrink-0 w-full px-ios-2 py-ios-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
           >
             {/* Reply Preview */}
             {replyTo && (
@@ -2232,9 +2232,9 @@ const Messages = () => {
             {showEmojiPicker && (
               <div 
                 ref={emojiPickerRef}
-                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+                className="absolute bottom-full mb-ios-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
               >
-                <div className="bg-card rounded-2xl shadow-xl border border-border">
+                <div className="bg-card rounded-ios-lg shadow-xl border border-border">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
                     theme={Theme.LIGHT}
@@ -2248,13 +2248,13 @@ const Messages = () => {
             )}
             
             {uploadProgress && (
-               <div className="flex items-center gap-2 px-4 py-2 bg-border rounded-full mb-2 mx-2">
+               <div className="flex items-center gap-ios-2 px-ios-4 py-ios-2 bg-border rounded-full mb-ios-2 mx-ios-2">
                 <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
               </div>
             )}
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-ios-2">
               {!isRecording && (
                 <>
                   {/* Plus button - opens attachment options */}
@@ -2267,12 +2267,12 @@ const Messages = () => {
                         <Plus className="h-6 w-6" strokeWidth={2} />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 bg-card border border-border rounded-[14px] shadow-lg">
+                    <DropdownMenuContent align="start" className="w-48 bg-card border border-border rounded-ios-lg shadow-lg">
                       <DropdownMenuItem 
                         onClick={() => fileInputRef.current?.click()}
-                        className="py-3"
+                        className="py-ios-3"
                       >
-                        <Paperclip className="h-4 w-4 mr-3 text-primary" />
+                        <Paperclip className="h-4 w-4 mr-ios-3 text-primary" />
                         Fichier
                       </DropdownMenuItem>
                       <DropdownMenuItem 
@@ -2288,25 +2288,25 @@ const Messages = () => {
                             });
                           }
                         }}
-                        className="py-3"
+                        className="py-ios-3"
                       >
-                        <Image className="h-4 w-4 mr-3 text-[#34C759]" />
+                        <Image className="h-4 w-4 mr-ios-3 text-[#34C759]" />
                         Photo
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="py-3"
+                        className="py-ios-3"
                       >
-                        <Smile className="h-4 w-4 mr-3 text-[#FF9500]" />
+                        <Smile className="h-4 w-4 mr-ios-3 text-[#FF9500]" />
                         Emoji
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           setTimeout(() => setShowCreatePoll(true), 300);
                         }}
-                        className="py-3"
+                        className="py-ios-3"
                       >
-                        <BarChart3 className="h-4 w-4 mr-3 text-[#5856D6]" />
+                        <BarChart3 className="h-4 w-4 mr-ios-3 text-[#5856D6]" />
                         Sondage
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -2336,7 +2336,7 @@ const Messages = () => {
                   />
                   
                   {/* iMessage input field */}
-                  <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-4 py-2">
+                  <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
                     <input
                       type="text"
                       placeholder="iMessage"
@@ -2373,8 +2373,8 @@ const Messages = () => {
               )}
               
               {isRecording && (
-                 <div className="flex-1 flex items-center gap-3">
-                   <div className="flex-1 flex items-center gap-2 bg-destructive/10 border border-destructive/30 rounded-full px-4 py-2">
+                 <div className="flex-1 flex items-center gap-ios-3">
+                   <div className="flex-1 flex items-center gap-ios-2 bg-destructive/10 border border-destructive/30 rounded-full px-ios-4 py-ios-2">
                      <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
                      <span className="text-[15px] font-medium text-destructive">
                        {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
@@ -2524,14 +2524,14 @@ const Messages = () => {
       <div className="h-full bg-secondary flex flex-col">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center min-h-[60px]">
+          <div className="px-ios-4 pt-ios-4 pb-ios-4 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="text-primary p-0 h-auto font-normal absolute left-4"
+                  className="text-primary p-0 h-auto font-normal absolute left-ios-4"
                 >
                   Annuler
                 </Button>
@@ -2543,7 +2543,7 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="text-destructive p-0 h-auto font-normal absolute right-4"
+                  className="text-destructive p-0 h-auto font-normal absolute right-ios-4"
                 >
                   Supprimer
                 </Button>
@@ -2551,7 +2551,7 @@ const Messages = () => {
             ) : (
               <>
                 <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
-                <div className="absolute right-4 flex items-center gap-2">
+                <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
                     size="icon"
@@ -2566,13 +2566,13 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-ios-3">
           {/* Quick Search Buttons */}
-          <div className="bg-card p-3">
-            <div className="grid grid-cols-5 gap-2">
+          <div className="ios-card p-ios-3">
+            <div className="grid grid-cols-5 gap-ios-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
                   <User className="h-5 w-5 text-white" />
@@ -2582,7 +2582,7 @@ const Messages = () => {
               
               <button
                 onClick={() => navigate('/search?tab=contacts')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
                   <Phone className="h-5 w-5 text-white" />
@@ -2592,7 +2592,7 @@ const Messages = () => {
               
               <button
                 onClick={() => navigate('/search?tab=clubs')}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
                   <Users className="h-5 w-5 text-white" />
@@ -2602,7 +2602,7 @@ const Messages = () => {
               
               <button
                 onClick={() => setShowCoachAccess(true)}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
                   <GraduationCap className="h-5 w-5 text-white" />
@@ -2612,7 +2612,7 @@ const Messages = () => {
 
               <button
                 onClick={() => setShowCreateGroup(true)}
-                className="flex flex-col items-center gap-1.5 py-3 rounded-[10px] active:bg-secondary transition-colors"
+                className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
                   <Plus className="h-5 w-5 text-white" />
@@ -2623,28 +2623,28 @@ const Messages = () => {
           </div>
 
           {/* Search Conversations */}
-          <div className="relative px-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative px-ios-4">
+            <Search className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une conversation..."
               value={conversationSearch}
               onChange={(e) => setConversationSearch(e.target.value)}
-              className="pl-9 h-9 bg-secondary border-0 rounded-[10px] text-[15px] placeholder:text-muted-foreground"
+              className="pl-ios-6 h-[44px] bg-secondary border-0 rounded-ios-md text-ios-subheadline placeholder:text-muted-foreground"
             />
           </div>
 
           {/* Conversations List */}
-          <div className="bg-card overflow-hidden">
+          <div className="ios-card overflow-hidden">
             {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-                <div className="mb-6 p-6 bg-secondary rounded-full">
+              <div className="flex flex-col items-center justify-center px-ios-6 py-[5rem] text-center">
+                <div className="mb-ios-6 p-ios-6 bg-secondary rounded-full">
                   <MessageCircle className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <div className="space-y-2 mb-8">
-                  <h3 className="text-[20px] font-semibold text-foreground">
+                <div className="space-y-ios-2 mb-ios-6">
+                  <h3 className="text-ios-title3 font-semibold text-foreground">
                     Aucune conversation
                   </h3>
-                  <p className="text-[15px] text-muted-foreground max-w-xs leading-relaxed">
+                  <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
                     Envoyez un message à un ami ou créez un club pour commencer à échanger.
                   </p>
                 </div>
@@ -2652,7 +2652,7 @@ const Messages = () => {
                   onClick={() => setShowNewConversation(true)}
                   className="w-full max-w-xs"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-5 w-5 mr-ios-2" />
                   Nouvelle conversation
                 </Button>
               </div>
@@ -2670,7 +2670,7 @@ const Messages = () => {
                     onSwipeRight={() => togglePinConversation(conversation.id)}
                   >
                     <div
-                      className={`flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors relative ${
+                      className={`flex items-center gap-ios-3 px-ios-4 py-ios-3 active:bg-secondary transition-colors relative ${
                         selectedConversations.has(conversation.id) ? 'bg-primary/5' : ''
                       }`}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
@@ -2683,7 +2683,7 @@ const Messages = () => {
                       }}
                     >
                       {isSelectionMode && (
-                        <div className="flex items-center mr-2">
+                        <div className="flex items-center mr-ios-2">
                           <input
                             type="checkbox"
                             checked={selectedConversations.has(conversation.id)}
@@ -2727,12 +2727,12 @@ const Messages = () => {
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between mb-0.5">
-                          <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex items-center justify-between mb-ios-1">
+                          <div className="flex items-center gap-ios-2 min-w-0">
                             {pinnedConversations.has(conversation.id) && (
                               <span className="text-[13px] flex-shrink-0">📌</span>
                             )}
-                            <p className="text-[17px] font-medium truncate">
+                            <p className="text-ios-headline font-medium truncate">
                               {conversation.is_group 
                                 ? conversation.group_name 
                                 : (conversation.other_participant?.username || "Utilisateur")
@@ -2741,7 +2741,7 @@ const Messages = () => {
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-[15px] truncate ${
+                          <p className={`text-ios-subheadline truncate ${
                             conversation.unread_count > 0 
                               ? 'text-foreground font-medium' 
                               : 'text-muted-foreground'
@@ -2749,11 +2749,11 @@ const Messages = () => {
                             {conversation.last_message ? (
                               <>
                                 {conversation.last_message.message_type === 'image' && (
-                                  <span className="inline-flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-ios-2">
                                     {conversation.last_message.file_url ? (
                                       <SignedImage 
                                         fileUrl={conversation.last_message.file_url} 
-                                        className="h-4 w-4 rounded-[3px] object-cover inline-block" 
+                                        className="h-4 w-4 rounded-ios-sm object-cover inline-block" 
                                       />
                                     ) : null}
                                     Photo
@@ -2783,7 +2783,7 @@ const Messages = () => {
                             )}
                           </p>
                           {conversation.unread_count > 0 && (
-                            <div className="h-5 min-w-5 px-1.5 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-2 animate-[pulse_2s_ease-in-out_infinite]">
+                            <div className="h-5 min-w-5 px-ios-1 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ml-ios-2 animate-[pulse_2s_ease-in-out_infinite]">
                               <span className="text-[11px] font-semibold text-primary-foreground">
                                 {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                               </span>
@@ -2793,7 +2793,7 @@ const Messages = () => {
                       </div>
                       
                       {/* Right column: time + camera */}
-                      <div className="flex items-center justify-center gap-2 flex-shrink-0 ml-2">
+                      <div className="flex items-center justify-center gap-ios-2 flex-shrink-0 ml-ios-2">
                         <span className="text-[13px] text-muted-foreground">
                           {(() => {
                             const date = new Date(conversation.last_message_date || conversation.updated_at);
@@ -2811,7 +2811,7 @@ const Messages = () => {
                         </span>
                         {!isSelectionMode && (
                           <button
-                            className="p-1 rounded-full active:bg-secondary transition-colors"
+                            className="p-ios-1 rounded-full active:bg-secondary transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleQuickCameraForConversation(conversation);
