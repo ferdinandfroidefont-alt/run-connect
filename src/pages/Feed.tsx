@@ -119,7 +119,7 @@ export default function Feed() {
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full bg-secondary pb-24 overflow-y-auto"
+      className="h-full bg-secondary ios-nav-padding overflow-y-auto"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -163,31 +163,31 @@ export default function Feed() {
           <>
             {loading && feedItems.length === 0 ? (
               // Skeleton loaders
-              <div className="space-y-3 pt-2">
+              <div className="space-y-ios-3 pt-ios-2">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="rounded-[14px] bg-card border border-border p-4 space-y-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
-                    <div className="flex items-center gap-3">
+                  <div key={i} className="ios-surface rounded-ios-lg bg-card p-ios-4 space-y-ios-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
+                    <div className="flex items-center gap-ios-3">
                       <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
-                      <div className="space-y-1.5 flex-1">
+                      <div className="space-y-ios-1 flex-1">
                         <div className="h-3.5 w-28 bg-muted rounded-full animate-pulse" />
                         <div className="h-2.5 w-16 bg-muted rounded-full animate-pulse" />
                       </div>
                       <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
                     </div>
                     <div className="h-5 w-3/4 bg-muted rounded-full animate-pulse" />
-                    <div className="flex gap-3">
+                    <div className="flex gap-ios-3">
                       <div className="h-4 w-24 bg-muted rounded-full animate-pulse" />
                       <div className="h-4 w-16 bg-muted rounded-full animate-pulse" />
                     </div>
-                    <div className="h-12 bg-muted rounded-[10px] animate-pulse" />
-                    <div className="h-32 bg-muted rounded-[10px] animate-pulse" />
+                    <div className="h-12 bg-muted rounded-ios-md animate-pulse" />
+                    <div className="h-32 bg-muted rounded-ios-md animate-pulse" />
                   </div>
                 ))}
               </div>
             ) : feedItems.length === 0 ? (
               <FeedEmptyState />
             ) : (
-              <div className="pt-1">
+              <div className="pt-ios-1">
                 {feedItems.map((session, index) => (
                   <FeedCard
                     key={session.id}
@@ -204,7 +204,7 @@ export default function Feed() {
 
             {/* Infinite scroll trigger */}
             {hasMore && feedItems.length > 0 && (
-              <div ref={observerTarget} className="flex justify-center py-6">
+              <div ref={observerTarget} className="flex justify-center py-ios-6">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
@@ -212,7 +212,7 @@ export default function Feed() {
             {/* End of feed */}
             {!hasMore && feedItems.length > 0 && (
               <div className="py-8 text-center">
-                <p className="text-[13px] text-muted-foreground">
+                <p className="text-ios-footnote text-muted-foreground">
                   Vous êtes à jour ! ✨
                 </p>
               </div>
@@ -222,21 +222,21 @@ export default function Feed() {
           // Discover Feed
           <>
             {loading ? (
-              <div className="py-4">
-                <div className="bg-card border border-border p-8 flex flex-col items-center justify-center gap-3">
+              <div className="py-ios-4">
+                <div className="ios-surface rounded-ios-lg p-8 flex flex-col items-center justify-center gap-ios-3">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-[15px] text-muted-foreground">Recherche...</p>
+                  <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
                 </div>
               </div>
             ) : discoverSessions.length === 0 ? (
-              <div className="py-4">
+              <div className="py-ios-4">
                 <DiscoverEmptyState 
                   hasLocation={hasLocation} 
                   onResetFilters={resetFilters} 
                 />
               </div>
             ) : (
-              <div className="py-4 space-y-3">
+              <div className="py-ios-4 space-y-ios-3">
                 {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}

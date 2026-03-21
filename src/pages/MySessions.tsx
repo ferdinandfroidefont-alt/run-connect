@@ -910,22 +910,22 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="min-h-full bg-secondary pb-8">
+      <div className="min-h-full bg-secondary pb-ios-6">
         {/* iOS Header */}
         <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-4 pt-4 pb-4 relative flex items-center justify-center">
-            <h1 className="text-[34px] font-bold tracking-tight text-center">Mes Séances</h1>
+          <div className="px-ios-4 pt-ios-4 pb-ios-4 relative flex items-center justify-center">
+            <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
           {/* iOS Segmented Control - Two columns layout */}
-          <div className="px-4 pb-3">
-            <div className="flex gap-1">
+          <div className="px-ios-4 pb-ios-3">
+            <div className="flex gap-ios-1">
               {/* Left column: Séances + sub-filter */}
               <div className="w-1/2">
-                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0.5`}>
+                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-ios-md' : 'rounded-ios-md'} p-ios-1 pb-ios-1`}>
                   <button
                     onClick={() => setCurrentView('sessions')}
-                    className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                    className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors ${
                       currentView === 'sessions'
                         ? 'bg-card text-foreground shadow-sm'
                         : 'text-muted-foreground'
@@ -935,11 +935,11 @@ export default function MySessions() {
                   </button>
                 </div>
                 {currentView === 'sessions' && (
-                  <div className="bg-secondary rounded-b-[10px] px-1 pb-1">
-                    <div className="flex gap-0.5">
+                  <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
+                    <div className="flex gap-ios-1">
                       <button
                         onClick={() => { setSessionSource('created'); setSessionPage(0); }}
-                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           sessionSource === 'created'
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground'
@@ -949,7 +949,7 @@ export default function MySessions() {
                       </button>
                       <button
                         onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
-                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           sessionSource === 'joined'
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground'
@@ -964,10 +964,10 @@ export default function MySessions() {
 
               {/* Right column: Itinéraires + sub-filter */}
               <div className="w-1/2">
-                <div className={`bg-secondary ${currentView === 'routes' ? 'rounded-t-[10px]' : 'rounded-[10px]'} p-1 pb-0.5`}>
+                <div className={`bg-secondary ${currentView === 'routes' ? 'rounded-t-ios-md' : 'rounded-ios-md'} p-ios-1 pb-ios-1`}>
                   <button
                     onClick={() => setCurrentView('routes')}
-                    className={`w-full py-2 text-[13px] font-semibold rounded-[8px] transition-colors ${
+                    className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors ${
                       currentView === 'routes'
                         ? 'bg-card text-foreground shadow-sm'
                         : 'text-muted-foreground'
@@ -977,11 +977,11 @@ export default function MySessions() {
                   </button>
                 </div>
                 {currentView === 'routes' && (
-                  <div className="bg-secondary rounded-b-[10px] px-1 pb-1">
-                    <div className="flex gap-0.5">
+                  <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
+                    <div className="flex gap-ios-1">
                       <button
                         onClick={() => setRouteSource('created')}
-                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           routeSource === 'created'
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground'
@@ -991,7 +991,7 @@ export default function MySessions() {
                       </button>
                       <button
                         onClick={() => setRouteSource('feed')}
-                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors ${
+                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
                           routeSource === 'feed'
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground'
@@ -1001,7 +1001,7 @@ export default function MySessions() {
                       </button>
                       <button
                         onClick={() => setRouteSource('photos')}
-                        className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[6px] transition-colors flex items-center justify-center gap-1 ${
+                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors flex items-center justify-center gap-ios-1 ${
                           routeSource === 'photos'
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'text-muted-foreground'
@@ -1021,15 +1021,15 @@ export default function MySessions() {
 
 
         {/* Content */}
-        <div className="py-4">
+        <div className="py-ios-4">
           {currentView === 'sessions' ? (
             <>
               {/* List/Calendar toggle */}
-              <div className="flex px-4 mb-2">
-                <div className="flex bg-card rounded-lg p-0.5 shrink-0">
+              <div className="flex px-ios-4 mb-ios-2">
+                <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
                   <button
                     onClick={() => setSessionsDisplayMode('list')}
-                    className={`p-1.5 rounded-md transition-colors ${
+                    className={`p-ios-1 rounded-ios-sm transition-colors ${
                       sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
@@ -1037,7 +1037,7 @@ export default function MySessions() {
                   </button>
                   <button
                     onClick={() => setSessionsDisplayMode('calendar')}
-                    className={`p-1.5 rounded-md transition-colors ${
+                    className={`p-ios-1 rounded-ios-sm transition-colors ${
                       sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                     }`}
                   >
@@ -1047,7 +1047,7 @@ export default function MySessions() {
               </div>
 
               {/* Filter Pills */}
-              <div className="flex gap-2 overflow-x-auto pb-1 px-4 mb-4">
+              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-4">
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
@@ -1056,7 +1056,7 @@ export default function MySessions() {
                   <button
                     key={f.key}
                     onClick={() => { setFilter(f.key as any); setSessionPage(0); }}
-                    className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                    className={`px-ios-4 py-ios-2 rounded-full text-ios-footnote font-medium whitespace-nowrap transition-colors ${
                       filter === f.key
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-card text-muted-foreground'
@@ -1088,15 +1088,15 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : filteredSessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-                  <div className="mb-6 p-6 bg-secondary rounded-full">
+                <div className="flex flex-col items-center justify-center px-ios-6 py-[5rem] text-center">
+                  <div className="mb-ios-6 p-ios-6 bg-secondary rounded-full">
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                   </div>
-                  <div className="space-y-2 mb-8">
-                    <h3 className="text-[20px] font-semibold text-foreground">
+                  <div className="space-y-ios-2 mb-ios-6">
+                    <h3 className="text-ios-title3 font-semibold text-foreground">
                       {sessionSource === 'created' ? 'Aucune séance créée' : 'Aucune séance rejointe'}
                     </h3>
-                    <p className="text-[15px] text-muted-foreground max-w-xs leading-relaxed">
+                    <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
                       {sessionSource === 'created'
                         ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
                         : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
@@ -1107,7 +1107,7 @@ export default function MySessions() {
                       onClick={() => navigate('/')}
                       className="w-full max-w-xs"
                     >
-                      <Plus className="h-5 w-5 mr-2" />
+                      <Plus className="h-5 w-5 mr-ios-2" />
                       Créer une séance
                     </Button>
                   )}
@@ -1135,12 +1135,12 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="bg-card p-4 cursor-pointer active:bg-secondary transition-colors"
+                          className="ios-card p-ios-4 cursor-pointer active:bg-secondary transition-colors"
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-ios-3">
                             <ActivityIcon activityType={session.activity_type} size="lg" />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-ios-2 mb-ios-1">
                                 {sessionSource === 'joined' ? (
                                   <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
                                 ) : (
@@ -1152,31 +1152,31 @@ export default function MySessions() {
                                   </Badge>
                                 )}
                               </div>
-                              <h3 className="text-[17px] font-semibold truncate">{session.title}</h3>
+                              <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
                               {/* Organizer info for joined sessions */}
                               {orgProfile && (
-                                <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className="flex items-center gap-ios-1 mt-ios-1">
                                   <Avatar className="h-4 w-4">
                                     <AvatarImage src={orgProfile.avatar_url || undefined} />
                                     <AvatarFallback className="text-[8px]">
                                       {orgProfile.username?.[0]?.toUpperCase() || '?'}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span className="text-[13px] text-muted-foreground truncate">
+                                  <span className="text-ios-footnote text-muted-foreground truncate">
                                     {orgProfile.display_name || orgProfile.username}
                                   </span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-4 mt-1 text-[13px] text-muted-foreground">
-                                <span className="flex items-center gap-1">
+                              <div className="flex items-center gap-ios-4 mt-ios-1 text-ios-footnote text-muted-foreground">
+                                <span className="flex items-center gap-ios-1">
                                   <Calendar className="h-3.5 w-3.5" />
                                   {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
                                 </span>
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-ios-1">
                                   <Clock className="h-3.5 w-3.5" />
                                   {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
                                 </span>
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-ios-1">
                                   <Users className="h-3.5 w-3.5" />
                                   {session.current_participants || 0}
                                 </span>
@@ -1209,8 +1209,8 @@ export default function MySessions() {
 
               {/* Organizer Stats - only for created sessions */}
               {sessionSource === 'created' && (
-                <div className="mt-3 pb-8">
-                  <div className="px-4"><OrganizerStatsCard /></div>
+                <div className="mt-ios-3 pb-ios-6">
+                  <div className="px-ios-4"><OrganizerStatsCard /></div>
                 </div>
               )}
             </>
@@ -1227,14 +1227,14 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : routes.length === 0 ? (
-                <div className="bg-card p-8 text-center">
+                <div className="ios-card p-8 text-center">
                   <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire</p>
-                  <p className="text-[15px] text-muted-foreground mb-4">
+                  <p className="text-ios-headline font-medium text-foreground mb-ios-1">Aucun itinéraire</p>
+                  <p className="text-ios-subheadline text-muted-foreground mb-ios-4">
                     Créez votre premier itinéraire
                   </p>
                   <Button onClick={openCreateRoute} className="rounded-full">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-ios-2" />
                     Créer un itinéraire
                   </Button>
                 </div>
@@ -1281,10 +1281,10 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : routesFeed.routes.length === 0 ? (
-                <div className="bg-card p-8 text-center">
+                <div className="ios-card p-8 text-center">
                   <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-[17px] font-medium text-foreground mb-1">Aucun itinéraire trouvé</p>
-                  <p className="text-[15px] text-muted-foreground">
+                  <p className="text-ios-headline font-medium text-foreground mb-ios-1">Aucun itinéraire trouvé</p>
+                  <p className="text-ios-subheadline text-muted-foreground">
                     {routesFeed.hasLocation
                       ? 'Aucun itinéraire public dans cette zone'
                       : 'Activez la localisation pour voir les itinéraires proches'}
@@ -1330,24 +1330,24 @@ export default function MySessions() {
 
       {/* Delete Session Confirmation Dialog - iOS Style */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
-          <AlertDialogHeader className="p-6 pb-4">
-            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+        <AlertDialogContent className="rounded-ios-lg max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-ios-6 pb-ios-4">
+            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
               Supprimer la séance
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
               Êtes-vous sûr de vouloir supprimer cette séance ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="border-t border-border">
-            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-ios-headline font-normal hover:bg-secondary/50">
               Annuler
             </AlertDialogCancel>
           </div>
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={handleDeleteSession}
-              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-ios-headline font-semibold"
             >
               Supprimer
             </AlertDialogAction>
@@ -1357,24 +1357,24 @@ export default function MySessions() {
 
       {/* Delete Route Confirmation Dialog - iOS Style */}
       <AlertDialog open={showRouteDeleteConfirm} onOpenChange={setShowRouteDeleteConfirm}>
-        <AlertDialogContent className="rounded-2xl max-w-[280px] p-0 gap-0">
-          <AlertDialogHeader className="p-6 pb-4">
-            <AlertDialogTitle className="text-center text-[17px] font-semibold">
+        <AlertDialogContent className="rounded-ios-lg max-w-[280px] p-0 gap-0">
+          <AlertDialogHeader className="p-ios-6 pb-ios-4">
+            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
               Supprimer l'itinéraire
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-[13px] text-muted-foreground">
+            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
               Êtes-vous sûr de vouloir supprimer cet itinéraire ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="border-t border-border">
-            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-[17px] font-normal hover:bg-secondary/50">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-ios-headline font-normal hover:bg-secondary/50">
               Annuler
             </AlertDialogCancel>
           </div>
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={deleteRoute}
-              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-[17px] font-semibold"
+              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-ios-headline font-semibold"
             >
               Supprimer
             </AlertDialogAction>

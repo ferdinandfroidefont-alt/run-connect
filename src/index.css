@@ -28,6 +28,11 @@ html, body {
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
+    --nav-height: 4.5rem;
+    --ios-motion-duration-fast: 140ms;
+    --ios-motion-duration-base: 220ms;
+    --ios-motion-duration-slow: 320ms;
+    --ios-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
     /* iOS System Colors - Pure Light Mode */
     --background: 0 0% 100%;              /* #F5F5F5 - iOS light */
@@ -217,6 +222,14 @@ html, body {
     box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04);
   }
 
+  .ios-surface {
+    @apply bg-card border border-border/60;
+  }
+
+  .ios-nav-shell {
+    @apply bg-background/95 backdrop-blur-xl border-t border-border/60;
+  }
+
   /* iOS Pastel Card Backgrounds */
   .ios-pastel-blue { background: hsl(211 95% 95%); }
   .ios-pastel-green { background: hsl(152 60% 92%); }
@@ -387,6 +400,10 @@ html, body {
   /* Additional safety for mobile */
   html, body, #root {
     touch-action: pan-x pan-y;
+  }
+
+  .ios-nav-padding {
+    padding-bottom: var(--nav-height) !important;
   }
 }
 

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
 interface PageTransitionProps {
@@ -31,14 +31,16 @@ const pageVariants = {
 
 export const PageTransition = ({ children }: PageTransitionProps) => {
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
 
   return (
     <motion.div
       key={location.pathname}
       variants={pageVariants}
-      initial="initial"
+      initial={reduceMotion ? false : "initial"}
       animate="enter"
-      exit="exit"
+      exit={reduceMotion ? undefined : "exit"}
+      transition={reduceMotion ? { duration: 0 } : undefined}
       className="w-full h-full"
     >
       {children}

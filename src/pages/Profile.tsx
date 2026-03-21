@@ -31,6 +31,7 @@ import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
+import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 interface Profile {
   username: string;
   display_name: string | null;
@@ -631,14 +632,14 @@ const Profile = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           
           {/* Top bar buttons */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 z-10">
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-ios-4 pt-ios-3 z-10">
             {isViewingOtherUser ? (
-              <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white drop-shadow-lg">
+              <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
                 <ChevronLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <span className="text-ios-headline">Retour</span>
               </button>
             ) : <div className="w-16" />}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-ios-2">
               {!isViewingOtherUser && (
                 <>
                   <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
@@ -702,11 +703,11 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="max-w-md mx-auto pb-4 space-y-4">
+      <div className="max-w-md mx-auto pb-ios-4 space-y-ios-4">
         {/* Name, username, bio */}
-        <div className="flex flex-col items-center pt-3 pb-2 px-4">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <h2 className="text-[22px] font-bold text-foreground">
+        <div className="flex flex-col items-center pt-ios-3 pb-ios-2 px-ios-4">
+          <div className="flex items-center gap-ios-2 mb-ios-1">
+            <h2 className="text-ios-title2 font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
             {profile?.is_premium && (
@@ -714,20 +715,20 @@ const Profile = () => {
             )}
           </div>
           
-          <p className="text-[14px] text-muted-foreground mb-2">
+          <p className="text-ios-subheadline text-muted-foreground mb-ios-2">
             @{profile?.username}
           </p>
 
           {/* Action Buttons */}
           {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-2 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-ios-2 gap-ios-2 h-8 text-ios-footnote">
               <Crown className="h-3.5 w-3.5" />
               Devenir Premium
             </Button>
           )}
           
           {isViewingOtherUser && (
-            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 h-8 text-[13px]">
+            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-ios-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-ios-2 h-8 text-ios-footnote">
               <Flag className="h-3.5 w-3.5" />
               Signaler
             </Button>
@@ -735,7 +736,7 @@ const Profile = () => {
         </div>
 
         {/* Sports Badges */}
-        <div className="px-4">
+        <div className="px-ios-4">
           <SportsBadges
             runningRecords={profile?.running_records}
             cyclingRecords={profile?.cycling_records}
@@ -746,7 +747,7 @@ const Profile = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="px-4">
+        <div className="px-ios-4">
           <ProfileQuickStats
             userId={viewingUserId || user?.id || ''}
             followerCount={followerCount}
@@ -757,8 +758,8 @@ const Profile = () => {
         </div>
 
         {/* Recent Activities */}
-        <div className="px-4">
-          <p className="text-[13px] text-muted-foreground uppercase tracking-wide pb-2">
+        <div className="px-ios-4">
+          <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide pb-ios-2">
             Activités récentes
           </p>
           <RecentActivities userId={viewingUserId || user?.id || ''} />
@@ -768,44 +769,39 @@ const Profile = () => {
         {!isViewingOtherUser && <PersonalGoals />}
 
         {/* Séances & Parcours links */}
-        <div className="px-4">
-          <div className="bg-card rounded-[10px] overflow-hidden">
-            <div onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-primary/80 flex items-center justify-center">
-                <Route className="h-[18px] w-[18px] text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                <p className="text-[17px] text-foreground">{!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}</p>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-            </div>
+        <div className="px-ios-4">
+          <IOSListGroup flush={false} className="mb-0">
+            <IOSListItem
+              icon={Route}
+              iconBgColor="bg-primary/80"
+              iconColor="text-primary-foreground"
+              title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
+              onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
+              showSeparator={!isViewingOtherUser}
+            />
             {!isViewingOtherUser && (
-              <>
-                <div className="h-px bg-border ml-[54px]" />
-                <div onClick={() => navigate('/route-creation')} className="flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors cursor-pointer">
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-accent/80 flex items-center justify-center">
-                    <MapPin className="h-[18px] w-[18px] text-accent-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[17px] text-foreground">Créer un parcours</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
-                </div>
-              </>
+              <IOSListItem
+                icon={MapPin}
+                iconBgColor="bg-accent/80"
+                iconColor="text-accent-foreground"
+                title="Créer un parcours"
+                onClick={() => navigate('/route-creation')}
+                showSeparator={false}
+              />
             )}
-          </div>
+          </IOSListGroup>
         </div>
 
         {/* Collapsible Achievements Section */}
-        <div className="px-4">
+        <div className="px-ios-4">
           <Collapsible>
-            <CollapsibleTrigger className="w-full flex items-center justify-between py-2 group">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide">
+            <CollapsibleTrigger className="w-full flex items-center justify-between py-ios-2 group">
+              <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide">
                 Succès & Records
               </p>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3">
+            <CollapsibleContent className="space-y-ios-3">
               {/* Personal Goals - Own profile only */}
               {!isViewingOtherUser && <PersonalGoals />}
 
@@ -817,7 +813,7 @@ const Profile = () => {
               )}
 
               {/* Personal Records */}
-              <div className="bg-card rounded-[10px] overflow-hidden">
+              <div className="ios-card overflow-hidden">
                 <PersonalRecords records={{
                   running_records: profile?.running_records,
                   cycling_records: profile?.cycling_records,
@@ -831,49 +827,49 @@ const Profile = () => {
         </div>
 
         {/* Informations Section - Own Profile (editing form) */}
-        {!isViewingOtherUser && isEditing && <div className="bg-card overflow-hidden">
-            <div className="px-4 py-4 space-y-4">
+        {!isViewingOtherUser && isEditing && <div className="ios-card overflow-hidden">
+            <div className="px-ios-4 py-ios-4 space-y-ios-4">
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Pseudo</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
                   <Input value={formData.username || ''} onChange={e => setFormData({
               ...formData,
               username: e.target.value
-            })} className="h-11 rounded-[8px]" />
+            })} className="h-11 rounded-ios-sm" />
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Nom d'affichage</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Nom d'affichage</label>
                   <Input value={formData.display_name || ''} onChange={e => setFormData({
               ...formData,
               display_name: e.target.value
-            })} className="h-11 rounded-[8px]" />
+            })} className="h-11 rounded-ios-sm" />
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Âge</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Âge</label>
                   <Input type="number" value={formData.age || ''} onChange={e => setFormData({
               ...formData,
               age: parseInt(e.target.value) || null
-            })} className="h-11 rounded-[8px]" />
+            })} className="h-11 rounded-ios-sm" />
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Téléphone</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Téléphone</label>
                   <Input value={formData.phone || ''} onChange={e => setFormData({
               ...formData,
               phone: e.target.value
-            })} placeholder="06 12 34 56 78" className="h-11 rounded-[8px]" />
+            })} placeholder="06 12 34 56 78" className="h-11 rounded-ios-sm" />
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Bio</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Bio</label>
                   <Input value={formData.bio || ''} onChange={e => setFormData({
               ...formData,
               bio: e.target.value
-            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-[8px]" />
+            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-ios-sm" />
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Sport favori</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Sport favori</label>
                   <select
                     value={formData.favorite_sport || ''}
                     onChange={e => setFormData({ ...formData, favorite_sport: e.target.value || null })}
-                    className="w-full h-11 rounded-[8px] bg-background border border-input px-3 text-[15px]"
+                    className="w-full h-11 rounded-ios-sm bg-background border border-input px-ios-3 text-ios-subheadline"
                   >
                     <option value="">Non spécifié</option>
                     <option value="running">🏃 Course à pied</option>
@@ -885,11 +881,11 @@ const Profile = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[13px] text-muted-foreground mb-1 block">Pays</label>
+                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pays</label>
                   <select
                     value={formData.country || ''}
                     onChange={e => setFormData({ ...formData, country: e.target.value || null })}
-                    className="w-full h-11 rounded-[8px] bg-background border border-input px-3 text-[15px]"
+                    className="w-full h-11 rounded-ios-sm bg-background border border-input px-ios-3 text-ios-subheadline"
                   >
                     <option value="">Non spécifié</option>
                     <option value="FR">🇫🇷 France</option>
@@ -910,9 +906,9 @@ const Profile = () => {
                     <option value="US">🇺🇸 États-Unis</option>
                   </select>
                 </div>
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-[8px]">
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <div className="flex gap-ios-2 pt-ios-2">
+                  <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-ios-sm">
+                    {loading && <Loader2 className="mr-ios-2 h-4 w-4 animate-spin" />}
                     Sauvegarder
                   </Button>
                   <Button variant="outline" onClick={() => {
@@ -920,7 +916,7 @@ const Profile = () => {
               setAvatarFile(null);
               setAvatarPreview("");
               setFormData(profile || {});
-            }} className="flex-1 h-11 rounded-[8px]">
+            }} className="flex-1 h-11 rounded-ios-sm">
                     Annuler
                   </Button>
                 </div>
@@ -929,17 +925,17 @@ const Profile = () => {
 
         {/* Admin Premium Manager - Creator only */}
         {!isViewingOtherUser && user?.email === 'ferdinand.froidefont@gmail.com' && (
-          <div className="bg-card rounded-[10px] overflow-hidden">
+          <div className="ios-card overflow-hidden">
             <button
               onClick={() => setShowAdminPremium(true)}
-              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+              className="w-full flex items-center gap-ios-3 px-ios-4 py-ios-3 active:bg-secondary transition-colors"
             >
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
+              <div className="h-[30px] w-[30px] rounded-ios-sm bg-yellow-500 flex items-center justify-center">
                 <Crown className="h-[18px] w-[18px] text-white" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-[17px] text-foreground">Gestion Premium</p>
-                <p className="text-[13px] text-muted-foreground">Offrir ou retirer des abonnements</p>
+                <p className="text-ios-headline text-foreground">Gestion Premium</p>
+                <p className="text-ios-footnote text-muted-foreground">Offrir ou retirer des abonnements</p>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
             </button>

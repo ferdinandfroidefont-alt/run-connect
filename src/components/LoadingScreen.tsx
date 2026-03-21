@@ -45,7 +45,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       {!exiting ? (
         <motion.div
           key="splash"
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
           style={{
             background: BRAND_BLUE,
             paddingTop: 'env(safe-area-inset-top)',
@@ -54,31 +54,66 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
         >
-          {/* Blue fill behind safe areas */}
-          <div
-            className="fixed inset-0 z-[-1]"
-            style={{ background: BRAND_BLUE }}
-          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_55%)]" />
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 flex flex-col items-center px-ios-6"
           >
-            <img
-              src={splashImage}
-              alt="RunConnect"
-              style={{
-                width: '100vw',
-                height: '100vh',
-                objectFit: 'contain',
-                position: 'fixed',
-                top: 0,
-                left: 0,
-              }}
-              draggable={false}
-            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0.7 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="h-28 w-28 rounded-[28px] bg-white/12 backdrop-blur-md border border-white/20 shadow-2xl flex items-center justify-center"
+            >
+              <img
+                src={splashImage}
+                alt="RunConnect"
+                className="h-16 w-16 object-contain select-none"
+                draggable={false}
+              />
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.08 }}
+              className="mt-ios-4 text-white text-ios-title2 font-semibold tracking-tight"
+            >
+              RunConnect
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.92 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="mt-ios-1 text-white/90 text-ios-footnote"
+            >
+              Chargement de votre espace
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.22 }}
+              className="mt-ios-6 flex items-center gap-ios-2"
+            >
+              {[0, 1, 2].map((dot) => (
+                <motion.span
+                  key={dot}
+                  className="h-2 w-2 rounded-full bg-white/90"
+                  animate={{ opacity: [0.35, 1, 0.35], y: [0, -2, 0] }}
+                  transition={{
+                    duration: 1.05,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: dot * 0.16,
+                  }}
+                />
+              ))}
+            </motion.div>
           </motion.div>
         </motion.div>
       ) : (
