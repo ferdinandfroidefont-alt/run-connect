@@ -17,6 +17,18 @@ html, body {
 
 @layer base {
   :root {
+    /* Global spacing scale (4/8/12/16/24) */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+
+    /* Global radius scale */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+
     /* iOS System Colors - Pure Light Mode */
     --background: 0 0% 100%;              /* #F5F5F5 - iOS light */
     --foreground: 221 39% 11%;             /* #000000 - Pure black */
@@ -27,20 +39,20 @@ html, body {
     --popover: 0 0% 100%;
     --popover-foreground: 221 39% 11%;
 
-    /* RunConnect Emerald Green */
-    --primary: 221 83% 53%;           /* #10B981 */
+    /* RunConnect primary blue */
+    --primary: 212 100% 50%;           /* #007AFF */
     --primary-foreground: 0 0% 100%;
 
-    /* iOS System Gray 6 */
-    --secondary: 210 40% 98%;           /* #F2F2F7 */
+    /* Secondary neutral */
+    --secondary: 240 14% 96%;           /* #F2F2F7 */
     --secondary-foreground: 222 47% 11%;
 
     /* iOS Muted Grays */
     --muted: 218 11% 65%;               /* #F2F2F7 */
     --muted-foreground: 220 9% 46%;    /* #8E8E93 */
 
-    /* Accent */
-    --accent: 217 91% 60%;
+    /* Accent complementary */
+    --accent: 142 70% 45%;              /* green accent */
     --accent-foreground: 266 4% 20.8%;
 
     /* iOS System Red */
@@ -59,8 +71,8 @@ html, body {
     --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.04);
     --shadow-sm: 0px 6px 8px 0px hsla(0, 0%, 0%, 0.078);
 
-    /* iOS Radius */
-    --radius: 0.75rem;                /* 10px */
+    /* Default component radius */
+    --radius: var(--radius-md);
 
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
@@ -188,7 +200,7 @@ html, body {
 
   /* iOS List styles */
   .ios-list-item {
-    @apply flex items-center justify-between py-[11px] px-4 bg-card;
+    @apply flex items-center justify-between py-ios-3 px-ios-4 bg-card;
   }
 
   .ios-list-separator {
@@ -201,7 +213,7 @@ html, body {
 
   /* iOS Card */
   .ios-card {
-    @apply bg-card rounded-[10px];
+    @apply bg-card rounded-ios-md;
     box-shadow: 0 1px 3px hsl(0 0% 0% / 0.04);
   }
 
@@ -228,7 +240,7 @@ html, body {
 
   /* iOS Section Header */
   .ios-section-header {
-    @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-4 py-2;
+    @apply text-[13px] font-normal text-muted-foreground uppercase tracking-wide px-ios-4 py-ios-2;
   }
 
   /* Glass Card */

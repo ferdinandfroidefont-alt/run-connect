@@ -33,7 +33,7 @@ export const IOSListItem = ({
       <div
         onClick={onClick}
         className={cn(
-          "flex items-center gap-3 px-4 py-3 bg-card",
+          "flex items-center gap-ios-3 px-ios-4 py-ios-3 bg-card",
           onClick && "cursor-pointer active:bg-secondary/80 transition-colors duration-75"
         )}
         style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
@@ -41,7 +41,7 @@ export const IOSListItem = ({
         {/* Icon in colored rounded square */}
         {Icon && (
           <div className={cn(
-            "h-[30px] w-[30px] rounded-[7px] flex items-center justify-center flex-shrink-0",
+            "h-[30px] w-[30px] rounded-ios-sm flex items-center justify-center flex-shrink-0",
             iconBgColor
           )}>
             <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
@@ -57,7 +57,7 @@ export const IOSListItem = ({
         </div>
         
         {/* Right side */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-ios-2 flex-shrink-0">
           {value && (
             <span className="text-[17px] text-muted-foreground">{value}</span>
           )}
@@ -88,15 +88,15 @@ export const IOSListGroup = ({ children, header, footer, className, flush }: IOS
   return (
     <div className={cn("mb-6", className)}>
       {header && (
-        <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 pb-2">
+        <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-ios-4 pb-ios-2">
           {header}
         </p>
       )}
-      <div className={cn("bg-card overflow-hidden", flush ? "rounded-none" : "rounded-[10px]")}>
+      <div className={cn("bg-card overflow-hidden", flush ? "rounded-none" : "rounded-ios-md")}>
         {children}
       </div>
       {footer && (
-        <p className="text-[13px] text-muted-foreground px-4 pt-2">
+        <p className="text-[13px] text-muted-foreground px-ios-4 pt-ios-2">
           {footer}
         </p>
       )}

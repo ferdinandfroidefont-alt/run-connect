@@ -18,6 +18,13 @@ export default {
     		}
     	},
     	extend: {
+    		spacing: {
+    			'ios-1': 'var(--space-1)',
+    			'ios-2': 'var(--space-2)',
+    			'ios-3': 'var(--space-3)',
+    			'ios-4': 'var(--space-4)',
+    			'ios-6': 'var(--space-6)'
+    		},
     		fontFamily: {
     			sans: [
     				'Inter',
@@ -108,6 +115,9 @@ export default {
     			}
     		},
     		borderRadius: {
+    			'ios-sm': 'var(--radius-sm)',
+    			'ios-md': 'var(--radius-md)',
+    			'ios-lg': 'var(--radius-lg)',
     			lg: 'var(--radius)',
     			md: 'calc(var(--radius) - 2px)',
     			sm: 'calc(var(--radius) - 4px)'
