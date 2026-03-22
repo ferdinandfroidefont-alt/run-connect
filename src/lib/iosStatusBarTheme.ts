@@ -1,7 +1,15 @@
 /**
- * Barre d’état iOS (Capacitor) alignée sur le thème clair/sombre.
- * Une seule source de vérité pour éviter conflits avec le splash / main.tsx / ThemeContext.
+ * Barre d’état (Capacitor iOS + Android) — une seule barre **système** native.
+ * Pas de barre HTML « factice » : le Web utilise seulement env(safe-area-inset-*) pour le contenu.
+ *
+ * Hors splash :
+ * - Mode clair : fond barre blanc #FFFFFF + icônes / texte sombres (Style.Dark)
+ * - Mode sombre : fond barre noir #000000 + icônes / texte clairs (Style.Light)
+ *
+ * Splash (voir ruconnectSplashChrome) : overlay true + fond bleu + Style.Light (icônes blanches).
  */
+import { Capacitor } from '@capacitor/core';
+
 const THEME_STORAGE_KEY = 'runconnect-ui-theme';
 
 export function getPreferredDarkFromStorage(): boolean {
@@ -15,26 +23,37 @@ export function getPreferredDarkFromStorage(): boolean {
   }
 }
 
-export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> {
-  try {
-    const cap = (window as unknown as { Capacitor?: { getPlatform?: () => string } }).Capacitor;
-    if (!cap || cap.getPlatform?.() !== 'ios') return;
+/** Couleur native de la barre d’état (hors contenu Web) */
+const STATUS_BAR_LIGHT = '#FFFFFF';
+const STATUS_BAR_DARK = '#000000';
 
+/**
+ * Applique la barre d’état native pour le thème courant (iOS et Android).
+ * overlay: false → le WebView commence **sous** la barre : pas de double bandeau (barre système + padding safe-area redondant côté natif).
+ */
+export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  const platform = Capacitor.getPlatform();
+  if (platform !== 'ios' && platform !== 'android') return;
+
+  try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
+
     await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.show();
 
     if (isDark) {
       await StatusBar.setStyle({ style: Style.Light });
       try {
-        await StatusBar.setBackgroundColor({ color: '#000000' });
+        await StatusBar.setBackgroundColor({ color: STATUS_BAR_DARK });
       } catch {
         /* iOS peut ignorer setBackgroundColor */
       }
     } else {
       await StatusBar.setStyle({ style: Style.Dark });
       try {
-        await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+        await StatusBar.setBackgroundColor({ color: STATUS_BAR_LIGHT });
       } catch {
         /* idem */
       }
@@ -44,16 +63,22 @@ export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> 
   }
 }
 
+/**
+ * Métadonnées + fond document (zone **contenu** sous la barre système).
+ * theme-color = teinte des barres Chrome / PWA (alignée sur la barre d’état native clair/sombre).
+ */
 export function applyWebChromeForTheme(isDark: boolean): void {
-  const bg = isDark ? '#000000' : '#F2F2F7';
+  const contentBg = isDark ? STATUS_BAR_DARK : '#F2F2F7';
+  const chromeBarColor = isDark ? STATUS_BAR_DARK : STATUS_BAR_LIGHT;
+
   const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', bg);
+  if (metaTheme) metaTheme.setAttribute('content', chromeBarColor);
 
   const apple = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
   if (apple) {
     apple.setAttribute('content', isDark ? 'black' : 'default');
   }
 
-  document.documentElement.style.backgroundColor = bg;
-  document.body.style.backgroundColor = bg;
+  document.documentElement.style.backgroundColor = contentBg;
+  document.body.style.backgroundColor = contentBg;
 }

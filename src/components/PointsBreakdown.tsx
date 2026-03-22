@@ -14,7 +14,7 @@ export const PointsBreakdown = ({ organizerPoints, participantCount }: PointsBre
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card p-4"
+      className="ios-card p-ios-4"
     >
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="h-5 w-5 text-yellow-500" />

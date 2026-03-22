@@ -4,7 +4,6 @@ import './index.css'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { AuthProvider } from "@/hooks/useAuth";
-import { applyIosStatusBarForTheme, getPreferredDarkFromStorage } from '@/lib/iosStatusBarTheme';
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
@@ -136,14 +135,7 @@ const initializeCapacitorPlugins = async () => {
   
   const detectedPlatform = (window as any).detectedPlatform || 'android';
 
-  if (detectedPlatform === 'ios') {
-    try {
-      await applyIosStatusBarForTheme(getPreferredDarkFromStorage());
-      console.log('✅ iOS StatusBar alignée sur le thème (overlay false)');
-    } catch (sbError) {
-      console.error('❌ Erreur StatusBar iOS:', sbError);
-    }
-  }
+  /* Barre d’état iOS : gérée par ThemeContext + splash (évite conflit / flash avec LoadingScreen) */
 
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
     detail: { platform: detectedPlatform, native: true }

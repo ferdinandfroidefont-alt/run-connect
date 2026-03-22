@@ -119,7 +119,7 @@ export const FeedCard = ({
 
   return (
     <div 
-      className="mb-px overflow-hidden bg-card border-b border-border animate-fade-in"
+      className="ios-card overflow-hidden animate-fade-in"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
     >
       {/* Header */}

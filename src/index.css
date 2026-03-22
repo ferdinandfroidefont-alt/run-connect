@@ -8,6 +8,8 @@
 html, body {
   overflow-x: hidden;
   max-width: 100vw;
+  /* Réduit zoom / pinch involontaires sur iOS (sans ajouter de fausses barres) */
+  touch-action: manipulation;
 }
 
 /* iOS Native Design System - Ultra Clean
@@ -316,6 +318,17 @@ html, body {
   .ios-card {
     @apply bg-card rounded-ios-md;
     box-shadow: var(--shadow-card);
+  }
+
+  /* Rangée de liste type « Mes séances » (carte + padding + feedback tactile) */
+  .ios-list-row {
+    @apply bg-card rounded-ios-md p-ios-3 cursor-pointer transition-colors active:bg-secondary;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Conteneur pour empiler des rangées avec séparateurs */
+  .ios-list-stack {
+    @apply divide-y divide-border;
   }
 
   .ios-surface {

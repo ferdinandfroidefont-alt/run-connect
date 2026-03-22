@@ -1121,7 +1121,7 @@ export default function MySessions() {
                   )}
                 </div>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="ios-list-stack">
                   {/* Flèche haut */}
                   {sessionPage > 0 && (
                     <button
@@ -1143,7 +1143,7 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="ios-card p-ios-3 cursor-pointer active:bg-secondary transition-colors"
+                          className="ios-list-row"
                         >
                           <div className="flex items-start gap-ios-2">
                             <ActivityIcon activityType={session.activity_type} size="md" />
@@ -1226,9 +1226,9 @@ export default function MySessions() {
             <>
               {/* Created Routes */}
               {routesLoading ? (
-                <div className="space-y-px">
+                <div className="ios-list-stack">
                   {[1, 2].map((i) => (
-                    <div key={i} className="bg-card p-4 animate-pulse">
+                    <div key={i} className="ios-card p-ios-4 animate-pulse">
                       <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
                       <div className="h-3 bg-secondary rounded w-1/2" />
                     </div>
@@ -1247,7 +1247,7 @@ export default function MySessions() {
                   </Button>
                 </div>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="ios-list-stack">
                   {routes.map((route) => (
                     <RouteCard
                       key={route.id}

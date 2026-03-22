@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, CheckCircle, ArrowLeft } from 'lucide-react';
 
@@ -16,19 +15,20 @@ const DonationSuccess = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background px-4">
-      <Card className="max-w-md w-full text-center">
-        <CardHeader>
+      <div className="ios-card max-w-md w-full overflow-hidden text-center">
+        <div className="space-y-ios-6 p-ios-6">
+          <div>
           <div className="flex justify-center mb-4">
             <div className="relative">
               <Heart className="h-16 w-16 text-red-500 fill-current" />
               <CheckCircle className="h-6 w-6 text-green-500 absolute -top-1 -right-1 bg-white rounded-full" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-green-600">
+          <h2 className="text-2xl font-semibold text-green-600">
             Merci pour votre don !
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </h2>
+          </div>
+          <div className="space-y-ios-6">
           <div className="space-y-2">
             <p className="text-lg font-medium">
               Votre don a été traité avec succès
@@ -75,8 +75,9 @@ const DonationSuccess = () => {
           <p className="text-xs text-muted-foreground">
             Votre reçu de don sera envoyé par email par Stripe.
           </p>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  RUCONNECT_SPLASH_BLUE,
+  RUCONNECT_SPLASH_ICON_URL,
+} from '@/lib/ruconnectSplashChrome';
+import { useRuconnectSplashScreenChrome } from '@/hooks/useRuconnectSplashScreenChrome';
 
 type AppBootFallbackProps = {
   /** Phase affichée dans les logs / accessibilité */
@@ -10,10 +15,12 @@ type AppBootFallbackProps = {
 };
 
 /**
- * Écran de chargement au démarrage / session : jamais un écran vide.
+ * Écran d’attente auth / profil : même identité visuelle que le splash (bleu icône, barres iOS teintées).
  */
 export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: AppBootFallbackProps) {
   const [slow, setSlow] = useState(false);
+
+  useRuconnectSplashScreenChrome(true);
 
   useEffect(() => {
     const t = setTimeout(() => setSlow(true), showSlowHintAfterMs);
@@ -33,31 +40,59 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-center ios-app-canvas px-5 safe-inset-top-once safe-inset-bottom-once"
+      className="flex min-h-[100dvh] w-full min-w-0 flex-col items-center justify-center px-5"
+      style={{
+        backgroundColor: RUCONNECT_SPLASH_BLUE,
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       role="status"
       aria-live="polite"
       aria-busy="true"
       data-boot-phase={phase}
     >
-      <div
-        className="glass-card w-full max-w-[min(100%,20rem)] rounded-[1.35rem] border border-border/60 px-7 py-9 text-center shadow-sm"
-        style={{ boxShadow: 'var(--shadow-card)' }}
-      >
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
-          <Loader2 className="h-7 w-7 animate-spin" aria-hidden />
+      <div className="flex max-w-[min(100%,20rem)] flex-col items-center text-center">
+        <img
+          src={RUCONNECT_SPLASH_ICON_URL}
+          alt=""
+          draggable={false}
+          className="mb-ios-4 select-none object-contain"
+          style={{
+            width: 'min(38vw, 176px)',
+            height: 'min(38vw, 176px)',
+            minWidth: '104px',
+            minHeight: '104px',
+          }}
+        />
+        <p
+          className="mb-ios-5 font-semibold tracking-tight text-white"
+          style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.6rem)' }}
+        >
+          Ruconnect
+        </p>
+
+        <div className="flex flex-col items-center gap-ios-2">
+          <Loader2 className="h-8 w-8 animate-spin text-white/90" aria-hidden />
+          <p className="text-ios-subheadline text-white/90">
+            {phase === 'profile' ? 'Chargement de votre profil…' : 'Connexion…'}
+          </p>
+          <p className="max-w-[18rem] text-ios-footnote leading-relaxed text-white/70">
+            Un instant, nous vérifions votre session.
+          </p>
         </div>
-        <p className="text-ios-headline text-foreground">
-          {phase === 'profile' ? 'Chargement de votre profil…' : 'Connexion…'}
-        </p>
-        <p className="text-ios-footnote text-muted-foreground mt-2 max-w-[18rem] mx-auto leading-relaxed">
-          Un instant, nous vérifions votre session.
-        </p>
+
         {slow && (
-          <div className="mt-8 flex flex-col items-center gap-3 border-t border-border/50 pt-7">
-            <p className="text-ios-footnote text-muted-foreground max-w-[17rem] leading-relaxed">
+          <div className="mt-ios-8 flex flex-col items-center gap-ios-3 border-t border-white/20 pt-ios-7">
+            <p className="max-w-[17rem] text-ios-footnote leading-relaxed text-white/75">
               Connexion lente ou instable. Vous pouvez réessayer ou continuer d’attendre.
             </p>
-            <Button type="button" variant="outline" size="sm" className="gap-2 rounded-ios-lg" onClick={handleRetry}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="gap-2 rounded-ios-lg bg-white/95 text-foreground hover:bg-white"
+              onClick={handleRetry}
+            >
               <RefreshCw className="h-4 w-4" />
               Réessayer
             </Button>

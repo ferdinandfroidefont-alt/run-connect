@@ -3,11 +3,17 @@ import appIcon from '@/assets/app-icon.png';
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
+import {
+  getLegalEntityName,
+  getSupportEmail,
+  getSupportMailtoHref,
+  LEGAL_LAST_UPDATED_LABEL,
+} from "@/lib/legalMeta";
 
 export default function About() {
   const navigate = useNavigate();
   const appVersion = "1.0.0";
-  const lastUpdate = "15 janvier 2025";
+  const lastUpdate = LEGAL_LAST_UPDATED_LABEL;
 
   return (
     <div className="fixed inset-0 bg-secondary flex flex-col overflow-x-hidden">
@@ -75,7 +81,7 @@ export default function About() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">Éditeur</p>
-                  <p className="text-xs text-muted-foreground">RunConnect SAS</p>
+                  <p className="text-xs text-muted-foreground">{getLegalEntityName()}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4">
@@ -85,10 +91,10 @@ export default function About() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground">Contact</p>
                   <a 
-                    href="mailto:ferdinand.froidefont@gmail.com"
+                    href={getSupportMailtoHref()}
                     className="text-xs text-primary"
                   >
-                    ferdinand.froidefont@gmail.com
+                    {getSupportEmail()}
                   </a>
                 </div>
               </div>
@@ -152,6 +158,13 @@ export default function About() {
             </div>
             <div className="divide-y divide-border/30">
               <button 
+                onClick={() => navigate('/legal')}
+                className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+              >
+                <span className="text-sm font-medium text-foreground">Mentions légales</span>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button 
                 onClick={() => navigate('/terms')}
                 className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
               >
@@ -171,7 +184,7 @@ export default function About() {
           {/* Copyright */}
           <div className="text-center py-4">
             <p className="text-xs text-muted-foreground">
-              © 2025 RunConnect. Tous droits réservés.
+              © {new Date().getFullYear()} RunConnect. Tous droits réservés.
             </p>
           </div>
         </div>

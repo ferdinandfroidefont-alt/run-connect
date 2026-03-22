@@ -2,13 +2,18 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, FileText, Info, ChevronRight, ArrowLeft } from "lucide-react";
+import { Shield, FileText, Info, ChevronRight, ArrowLeft, Scale, BarChart3 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
+import {
+  getAnalyticsConsent,
+  isAnalyticsFeatureEnabledInBuild,
+  setAnalyticsConsent,
+} from "@/lib/analyticsConsent";
 
 interface Profile {
   rgpd_accepted?: boolean;
@@ -25,13 +30,24 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [analyticsOptIn, setAnalyticsOptIn] = useState(() => getAnalyticsConsent() === "granted");
+
+  const syncAnalyticsToggle = () => {
+    setAnalyticsOptIn(getAnalyticsConsent() === "granted");
+  };
 
   useEffect(() => {
     if (user) {
       fetchProfile();
     }
   }, [user]);
+
+  useEffect(() => {
+    syncAnalyticsToggle();
+    const onChange = () => syncAnalyticsToggle();
+    window.addEventListener("runconnect-analytics-consent-changed", onChange);
+    return () => window.removeEventListener("runconnect-analytics-consent-changed", onChange);
+  }, []);
 
   const fetchProfile = async () => {
     try {
@@ -45,8 +61,6 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -196,12 +210,67 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
             </div>
           </div>
 
+          {/* Analytics (opt-in) */}
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              Mesure d&apos;audience
+            </h3>
+            <div className="bg-card overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#AF52DE] flex items-center justify-center">
+                  <BarChart3 className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium">Analytics</p>
+                  <p className="text-[13px] text-muted-foreground">
+                    {isAnalyticsFeatureEnabledInBuild()
+                      ? "Pages vues et événements agrégés (ex. Google Analytics) si vous acceptez."
+                      : "Non activé sur cette version. Votre choix sera appliqué si l’éditeur active l’outil."}
+                  </p>
+                </div>
+                <Switch
+                  checked={analyticsOptIn}
+                  onCheckedChange={(checked) => {
+                    setAnalyticsConsent(checked);
+                    setAnalyticsOptIn(checked);
+                    toast({
+                      title: checked ? "Mesure d’audience acceptée" : "Mesure d’audience refusée",
+                      description: checked
+                        ? "Les statistiques anonymisées nous aident à améliorer l’app."
+                        : "Aucun envoi vers l’outil d’analyse.",
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Legal Links */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Documents légaux
             </h3>
             <div className="bg-card overflow-hidden">
+              {/* Mentions légales */}
+              <button
+                onClick={() => {
+                  navigate("/legal");
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  <Scale className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Mentions légales</p>
+                  <p className="text-[13px] text-muted-foreground">Éditeur, hébergement, contact</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
+
+              <div className="h-px bg-border ml-[54px]" />
+
               {/* Privacy Policy */}
               <button 
                 onClick={() => {

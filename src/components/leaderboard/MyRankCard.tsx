@@ -34,7 +34,7 @@ export const MyRankCard = ({
   const rankConfig = getRankConfig(userRank);
 
   return (
-    <div className="mx-4 rounded-xl bg-card shadow-sm border border-border/50 overflow-hidden">
+    <div className="mx-4 ios-card overflow-hidden">
       {/* Top row: rank + points + level */}
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Rank */}

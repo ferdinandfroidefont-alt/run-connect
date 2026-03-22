@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -235,26 +234,24 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   if (loading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-ios-3 space-y-ios-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+          <div key={i} className="ios-card p-ios-4">
+              <div className="flex items-center gap-ios-3">
                 <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-24" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-ios-3 space-y-ios-3">
       {/* Search and filters */}
       <div className="space-y-3">
         <div className="relative">
@@ -263,7 +260,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
             placeholder="Code exact du club ou laissez vide..."
             value={localSearchQuery}
             onChange={(e) => setLocalSearchQuery(e.target.value.toUpperCase())}
-            className="pl-10 font-mono glass-card"
+            className="pl-10 font-mono ios-surface rounded-ios-md border-0"
             maxLength={8}
           />
         </div>
@@ -278,13 +275,13 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                   variant="outline"
                   role="combobox"
                   aria-expanded={departmentSearchOpen}
-                  className="w-full justify-between glass-card"
+                  className="w-full justify-between ios-surface rounded-ios-md"
                 >
                   {selectedDepartment || "Sélectionner un département..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[calc(100vw-2rem)] p-0 glass-card z-[70]" align="start">
+              <PopoverContent className="w-[calc(100vw-2rem)] p-0 ios-card z-[70]" align="start">
                 <Command>
                   <CommandList>
                     <ScrollArea className="h-[300px]">
@@ -327,7 +324,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       </div>
 
       {!localSearchQuery && clubs.length > 0 && (
-        <div className="glass-card p-3">
+        <div className="ios-card p-ios-3">
           <p className="text-sm text-muted-foreground">
             💡 Clubs publics suggérés{selectedDepartment && ` - ${selectedDepartment}`}
           </p>
@@ -335,19 +332,17 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       )}
 
       {loading && (
-        <div className="space-y-3">
+        <div className="space-y-ios-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="glass-card">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+            <div key={i} className="ios-card p-ios-4">
+                <div className="flex items-center gap-ios-3">
                   <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-3 w-24" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+            </div>
           ))}
         </div>
       )}
@@ -370,9 +365,8 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       )}
       
       {!loading && clubs.map((club) => (
-        <Card key={club.id} className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
+        <div key={club.id} className="ios-card p-ios-4">
+            <div className="flex items-start gap-ios-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={club.group_avatar_url || undefined} />
                 <AvatarFallback>
@@ -424,8 +418,7 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                 <Badge variant="default" className="shrink-0">Membre</Badge>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </div>
       ))}
     </div>
   );

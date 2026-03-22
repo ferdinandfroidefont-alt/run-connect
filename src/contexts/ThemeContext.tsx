@@ -4,7 +4,7 @@ import { applyIosStatusBarForTheme, applyWebChromeForTheme } from '@/lib/iosStat
 
 const STORAGE_KEY = 'runconnect-ui-theme';
 
-/** Synchronise theme-color, fond root, meta Apple et StatusBar Capacitor iOS avec le thème. */
+/** Synchronise theme-color, fond root, meta Apple et barre d’état native (iOS/Android) avec le thème. */
 function ThemeMetaSync() {
   const { resolvedTheme } = useTheme();
 

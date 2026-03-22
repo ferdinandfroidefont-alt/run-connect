@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, Smartphone, AlertCircle, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -393,26 +392,25 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   // Native but no permission yet
   if (!hasPermission && !loading) {
     return (
-      <div className="p-4 space-y-4">
-        <Card className="glass-card border-primary/20">
-          <CardContent className="p-6 text-center space-y-4">
+      <div className="p-ios-4 space-y-ios-4">
+        <div className="ios-card border-l-4 border-l-primary p-ios-6 text-center space-y-ios-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-2">
               <Phone className="h-8 w-8 text-primary" />
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Trouvez vos amis</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-ios-title3 font-semibold">Trouvez vos amis</h3>
+              <p className="text-ios-subheadline text-muted-foreground">
                 Synchronisez vos contacts téléphoniques pour découvrir qui utilise déjà RunConnect
               </p>
             </div>
 
-            <div className="glass-card p-4 space-y-2 text-left">
-              <div className="flex items-start gap-3">
+            <div className="ios-card p-ios-4 space-y-2 text-left bg-secondary/30">
+              <div className="flex items-start gap-ios-3">
                 <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Vos données sont protégées</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-ios-subheadline font-medium">Vos données sont protégées</p>
+                  <p className="text-ios-footnote text-muted-foreground">
                     Vos contacts restent privés et ne sont jamais partagés avec d'autres utilisateurs
                   </p>
                 </div>
@@ -437,8 +435,7 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -446,11 +443,10 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
   // Loading state
   if (loading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-ios-3 space-y-ios-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+          <div key={i} className="ios-card p-ios-4">
+              <div className="flex items-center gap-ios-3">
                 <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-32" />
@@ -458,8 +454,7 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
                 </div>
                 <Skeleton className="h-9 w-24" />
               </div>
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </div>
     );
@@ -467,10 +462,10 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   // Has permission - show results
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-ios-3 space-y-ios-3">
       {/* Toggle "Masquer mes amis" */}
       {contactSuggestions.length > 0 && (
-        <div className="glass-card p-3 flex items-center justify-between">
+        <div className="ios-card flex items-center justify-between p-ios-3">
           <div>
             <p className="text-sm font-medium">
               {filteredContacts.length} contact{filteredContacts.length > 1 ? 's' : ''} trouvé{filteredContacts.length > 1 ? 's' : ''}
@@ -509,9 +504,12 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
         </div>
       ) : (
         filteredContacts.map((contact) => (
-          <Card key={contact.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors" onClick={() => navigate(`/profile/${contact.user_id}`)}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+          <div
+            key={contact.user_id}
+            className="ios-card cursor-pointer p-ios-4 transition-colors active:bg-secondary"
+            onClick={() => navigate(`/profile/${contact.user_id}`)}
+          >
+              <div className="flex items-center gap-ios-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={contact.avatar_url || undefined} />
                   <AvatarFallback>
@@ -544,8 +542,7 @@ export const ContactsTab = ({ searchQuery }: { searchQuery: string }) => {
                   {friendsMap.has(contact.user_id) ? "Ami" : "Suivre"}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         ))
       )}
     </div>

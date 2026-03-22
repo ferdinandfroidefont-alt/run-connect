@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, Users } from 'lucide-react';
 import { format } from 'date-fns';
@@ -26,7 +25,7 @@ export const SessionSelector = ({ sessions, userId, onSessionSelect }: SessionSe
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-8 text-center"
+        className="ios-card p-ios-8 text-center"
       >
         <div className="text-4xl mb-4">🔍</div>
         <h3 className="text-heading-lg mb-2">Aucune séance à confirmer</h3>
@@ -57,8 +56,8 @@ export const SessionSelector = ({ sessions, userId, onSessionSelect }: SessionSe
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card
-              className="glass-card p-4 hover:scale-[1.02] transition-transform cursor-pointer"
+            <div
+              className="ios-card cursor-pointer p-ios-4 transition-colors active:bg-secondary"
               onClick={() => onSessionSelect(session, isCreator ? 'creator' : 'participant')}
             >
               <div className="flex items-start justify-between mb-3">
@@ -85,7 +84,7 @@ export const SessionSelector = ({ sessions, userId, onSessionSelect }: SessionSe
                   <span>{session.location_name}</span>
                 </div>
               </div>
-            </Card>
+            </div>
           </motion.div>
         );
       })}

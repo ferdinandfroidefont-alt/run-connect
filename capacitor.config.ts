@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     Camera: {},
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#FFFFFF'
+      backgroundColor: '#2455EB'
     },
   },
   android: {
@@ -36,7 +36,8 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
     /** Aligné sur le thème clair par défaut ; le web met à jour via StatusBar + CSS */
-    backgroundColor: '#F2F2F7',
+    /* Aligné sur RUCONNECT_SPLASH_BLUE (src/lib/ruconnectSplashChrome.ts) — évite flash autour du splash */
+    backgroundColor: '#2455EB',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

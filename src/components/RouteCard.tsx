@@ -123,7 +123,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
 
   return (
     <>
-      <div className="bg-card overflow-hidden">
+      <div className="ios-card overflow-hidden">
         {/* Map preview */}
         {hasCoordinates ? (
           <div className="relative mx-4 mt-4 rounded-2xl overflow-hidden">

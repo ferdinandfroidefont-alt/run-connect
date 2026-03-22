@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,7 +43,7 @@ export const LeaderboardCard = ({
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 bg-card cursor-pointer active:bg-secondary transition-colors relative",
+        "ios-list-row relative flex items-center gap-3",
         highlight && "bg-primary/5"
       )}
     >

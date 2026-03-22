@@ -397,7 +397,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-md sm:h-auto sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary overflow-hidden overflow-x-hidden border-0 sm:border">
+      <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden rounded-none border-0 bg-secondary p-0 sm:h-auto sm:max-h-[85vh] sm:max-w-md sm:rounded-lg sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -410,7 +410,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             >
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
+              <div className="sticky top-0 z-40 shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
                 <div className="flex items-center justify-between px-4 py-3">
                   <button
                     onClick={() => onOpenChange(false)}
@@ -437,10 +437,11 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-                <div className="py-6 space-y-6 min-w-0 w-full max-w-full overflow-x-hidden">
-                  {/* iOS grouped list style */}
-                  <div className="bg-background overflow-hidden">
+              <ScrollArea className="min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+                <div className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden py-6">
+                  {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
+                  <div className="box-border min-w-0 w-full max-w-full px-4">
+                    <div className="ios-card w-full min-w-0 overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
                         <button
@@ -462,6 +463,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         )}
                       </div>
                     ))}
+                    </div>
                   </div>
 
                   {filteredCategories.length === 0 && (
@@ -472,7 +474,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Profile Share Section */}
                   {profile && (
-                    <div className="bg-background overflow-hidden overflow-x-hidden px-4 py-4 space-y-4 min-w-0 w-full max-w-full box-border">
+                    <div className="box-border min-w-0 w-full max-w-full px-4">
+                    <div className="ios-card box-border min-w-0 w-full max-w-full space-y-ios-4 overflow-hidden overflow-x-hidden p-ios-4">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
@@ -498,24 +501,25 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         </p>
                       </div>
                       
-                      {/* QR Code */}
-                      <div className="flex justify-center overflow-hidden">
-                        <div className="relative max-w-[200px]">
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
-                          <div className="relative bg-gradient-to-br from-card to-card/80 p-3 rounded-2xl border border-primary/20 shadow-lg">
+                      {/* QR Code — taille limitée sur iOS (texte agrandi / viewport étroit) */}
+                      <div className="flex w-full min-w-0 justify-center overflow-hidden px-0.5">
+                        <div className="relative w-full max-w-[min(200px,calc(100vw-4rem))]">
+                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-cyan-400/30 opacity-50 blur-xl" />
+                          <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 sm:p-3 shadow-lg">
                             {qrLoading ? (
-                              <div className="w-[140px] h-[140px] flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
+                              <div className="mx-auto flex aspect-square w-[min(140px,calc(100vw-5rem))] max-w-full items-center justify-center">
+                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                               </div>
                             ) : qrImageUrl ? (
-                              <img 
-                                src={qrImageUrl} 
+                              <img
+                                src={qrImageUrl}
                                 alt="QR Code du profil"
-                                className="rounded-lg"
-                                style={{ width: 140, height: 140 }}
+                                className="mx-auto block max-h-[min(140px,calc(100vw-5rem))] max-w-[min(140px,calc(100vw-5rem))] rounded-lg object-contain"
+                                width={140}
+                                height={140}
                               />
                             ) : (
-                              <div className="w-[140px] h-[140px] flex items-center justify-center text-muted-foreground text-xs">
+                              <div className="mx-auto flex aspect-square w-[min(140px,calc(100vw-5rem))] max-w-full items-center justify-center text-xs text-muted-foreground">
                                 Erreur de génération
                               </div>
                             )}
@@ -525,7 +529,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                       {/* Referral code */}
                       {profile.referral_code && (
-                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20 mx-2 min-w-0 overflow-hidden">
+                        <div className="ios-card min-w-0 w-full overflow-hidden bg-primary/[0.06] p-ios-3 ring-1 ring-primary/15">
                           <div className="flex items-center justify-between min-w-0 gap-2">
                             <span className="text-xs text-muted-foreground shrink-0">Code parrainage</span>
                             <span className="font-mono font-bold text-primary text-sm tracking-wider truncate min-w-0">{profile.referral_code}</span>
@@ -539,7 +543,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       </p>
                       
                       {/* Action buttons */}
-                      <div className="space-y-2 mx-2 min-w-0">
+                      <div className="min-w-0 w-full space-y-2">
                         <Button
                           variant="default"
                           size="default"
@@ -550,14 +554,14 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           Copier le lien
                         </Button>
                         
-                        <div className="grid grid-cols-2 gap-2 min-w-0">
+                        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
                           <Button
                               variant="outline"
                               size="default"
                               onClick={handleShare}
                               className="w-full min-w-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
                             >
-                              <Share2 className="h-4 w-4 mr-2 shrink-0" />
+                              <Share2 className="mr-2 h-4 w-4 shrink-0" />
                               <span className="truncate">Partager</span>
                             </Button>
                           
@@ -568,12 +572,13 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                               disabled={!qrImageUrl}
                               className="w-full min-w-0 border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
                             >
-                              <Instagram className="h-4 w-4 mr-2 shrink-0 text-pink-500" />
+                              <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
                               <span className="truncate">Story</span>
                             </Button>
                         </div>
                       </div>
                     </div>
+                  </div>
                   )}
                 </div>
               </ScrollArea>

@@ -131,7 +131,7 @@ const Subscription = () => {
         className="flex h-full min-h-0 flex-col"
       >
         {/* iOS Header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-xl">
           <div className="flex items-center justify-between px-ios-4 h-[56px]">
             <Button
               variant="ghost"
@@ -173,7 +173,7 @@ const Subscription = () => {
               <h3 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wider px-ios-4">
                 Mon Abonnement
               </h3>
-              <div className="bg-card overflow-hidden">
+              <div className="ios-card mx-ios-4 overflow-hidden">
                 {status === 'loading' ? (
                   <div className="p-ios-4 space-y-ios-3">
                     <Skeleton className="h-6 w-32" />
@@ -277,7 +277,7 @@ const Subscription = () => {
               <h3 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wider px-ios-4">
                 Plans Disponibles
               </h3>
-              <div className="bg-card overflow-hidden">
+              <div className="ios-card mx-ios-4 overflow-hidden">
                 {/* Monthly Plan */}
                 <button 
                   onClick={() => handleSubscribe('monthly')}
@@ -344,7 +344,7 @@ const Subscription = () => {
               <h3 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wider px-ios-4">
                 Avantages Premium
               </h3>
-              <div className="bg-card overflow-hidden">
+              <div className="ios-card mx-ios-4 overflow-hidden">
                 {features.map((feature, index) => (
                   <div key={feature}>
                     <div className="flex items-center gap-ios-3 px-ios-4 py-ios-3">
@@ -364,7 +364,7 @@ const Subscription = () => {
               <h3 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wider px-ios-4">
                 Soutenir RunConnect
               </h3>
-              <div className="bg-card overflow-hidden">
+              <div className="ios-card mx-ios-4 overflow-hidden">
                 <DonationDialog
                   trigger={
                     <button className="w-full flex items-center gap-ios-3 px-ios-4 py-ios-4 active:bg-secondary/50 transition-colors">

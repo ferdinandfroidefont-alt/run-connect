@@ -654,7 +654,9 @@ const Auth = () => {
           En continuant, vous acceptez nos{' '}
           <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
           {' '}et notre{' '}
-          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>.
+          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>
+          .{' '}
+          <Link to="/legal" className="underline underline-offset-2 text-muted-foreground">Mentions légales</Link>.
         </p>
       </div>
     </div>
@@ -750,7 +752,9 @@ const Auth = () => {
           En continuant, vous acceptez nos{' '}
           <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
           {' '}et notre{' '}
-          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>.
+          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>
+          .{' '}
+          <Link to="/legal" className="underline underline-offset-2 text-muted-foreground">Mentions légales</Link>.
         </p>
       </div>
     </div>

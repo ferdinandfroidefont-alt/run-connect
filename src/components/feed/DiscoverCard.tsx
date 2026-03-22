@@ -33,30 +33,34 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
     }
   };
 
-  const getActivityPastel = (activityType: string) => {
+  /** Bordure gauche type accent (carte unifiée comme Mes séances) */
+  const getActivityAccentBorder = (activityType: string) => {
     switch (activityType) {
-      case 'running': return 'ios-pastel-orange';
-      case 'trail': return 'ios-pastel-green';
-      case 'cycling': return 'ios-pastel-blue';
-      case 'mtb': return 'ios-pastel-indigo';
-      case 'walking': return 'ios-pastel-yellow';
-      case 'football': return 'ios-pastel-green';
-      case 'basketball': return 'ios-pastel-orange';
-      case 'swimming': return 'ios-pastel-cyan';
-      case 'tennis': return 'ios-pastel-purple';
-      case 'petanque': return 'ios-pastel-pink';
-      default: return 'ios-pastel-blue';
+      case 'running': return 'border-l-orange-400';
+      case 'trail': return 'border-l-emerald-500';
+      case 'cycling': return 'border-l-sky-500';
+      case 'mtb': return 'border-l-indigo-500';
+      case 'walking': return 'border-l-amber-500';
+      case 'football': return 'border-l-green-600';
+      case 'basketball': return 'border-l-orange-500';
+      case 'swimming': return 'border-l-cyan-500';
+      case 'tennis': return 'border-l-violet-500';
+      case 'petanque': return 'border-l-pink-500';
+      default: return 'border-l-primary';
     }
   };
 
   return (
     <>
       <div 
-        className={cn("overflow-hidden border-0 animate-fade-in cursor-pointer", getActivityPastel(session.activity_type))}
+        className={cn(
+          "ios-card overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary transition-colors",
+          getActivityAccentBorder(session.activity_type)
+        )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
         onClick={() => onCardClick?.(session)}
       >
-        <div className="p-4 space-y-3">
+        <div className="p-ios-4 space-y-ios-3">
           {/* Header */}
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
@@ -70,9 +74,9 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-semibold text-[17px]">{session.title}</h3>
+                <h3 className="text-ios-headline font-semibold">{session.title}</h3>
                 <p 
-                  className="text-[13px] text-muted-foreground cursor-pointer"
+                  className="text-ios-footnote text-muted-foreground cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); setSelectedProfile(session.organizer_id); }}
                 >
                   par {session.organizer.username || session.organizer.display_name}

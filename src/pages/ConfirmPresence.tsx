@@ -192,7 +192,7 @@ export default function ConfirmPresence() {
   return (
     <div className="fixed-fill-with-bottom-nav bg-secondary flex flex-col overflow-x-hidden z-0">
       {/* iOS Header */}
-      <div className="bg-card border-b border-border shrink-0">
+      <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
         <div className="relative flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBack}
@@ -226,7 +226,7 @@ export default function ConfirmPresence() {
               {/* Creator Card */}
               <button
                 onClick={() => handleRoleChoice('creator')}
-                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
+                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
               >
                 <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
                   <UserCheck className="h-7 w-7 text-primary" />
@@ -245,7 +245,7 @@ export default function ConfirmPresence() {
               {/* Participant Card */}
               <button
                 onClick={() => handleRoleChoice('participant')}
-                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
+                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
               >
                 <div className="h-14 w-14 rounded-[10px] bg-blue-500/10 flex items-center justify-center">
                   <Users className="h-7 w-7 text-blue-500" />
@@ -264,7 +264,7 @@ export default function ConfirmPresence() {
               {/* Track Participants Card */}
               <button
                 onClick={() => handleRoleChoice('tracking')}
-                className="w-full bg-card border border-border rounded-[10px] p-5 flex items-center gap-4 active:bg-secondary transition-colors"
+                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
               >
                 <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
                   <MapPin className="h-7 w-7 text-primary" />
@@ -285,7 +285,7 @@ export default function ConfirmPresence() {
           // Session selection screen - iOS Style
           <div className="space-y-4">
             {sessions.length === 0 ? (
-              <div className="bg-card border border-border rounded-[10px] p-8 text-center">
+              <div className="ios-card p-8 text-center">
                 <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
                   <Users className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -299,7 +299,7 @@ export default function ConfirmPresence() {
                 </p>
               </div>
             ) : (
-              <div className="bg-card border border-border rounded-[10px] overflow-hidden">
+              <div className="ios-card overflow-hidden">
                 <div className="px-4 py-3 border-b border-border">
                   <h2 className="text-[17px] font-semibold text-foreground">
                     {t('confirmPresence.selectSession')}
@@ -326,7 +326,7 @@ export default function ConfirmPresence() {
             {/* Track participants button */}
             <button
               onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
-              className="w-full bg-card border border-border rounded-[10px] p-4 flex items-center gap-3 active:bg-secondary transition-colors"
+              className="ios-card flex w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
             >
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <MapPin className="h-5 w-5 text-primary" />

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -140,19 +139,17 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
 
   if (loading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-ios-3 space-y-ios-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+          <div key={i} className="ios-card p-ios-4">
+              <div className="flex items-center gap-ios-3">
                 <Skeleton className="h-12 w-12 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-32" />
                   <Skeleton className="h-3 w-24" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </div>
     );
@@ -197,11 +194,14 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
     : friends;
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-ios-3 space-y-ios-3">
       {filteredFriends.map((friend) => (
-        <Card key={friend.user_id} className="glass-card cursor-pointer hover:bg-card/50 transition-colors" onClick={() => navigate(`/profile/${friend.user_id}`)}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+        <div
+          key={friend.user_id}
+          className="ios-card cursor-pointer p-ios-4 transition-colors active:bg-secondary"
+          onClick={() => navigate(`/profile/${friend.user_id}`)}
+        >
+            <div className="flex items-center gap-ios-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={friend.avatar_url || undefined} />
                 <AvatarFallback>{friend.username[0]?.toUpperCase()}</AvatarFallback>
@@ -229,8 +229,7 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
                 <MessageCircle className="h-5 w-5" />
               </Button>
             </div>
-          </CardContent>
-        </Card>
+        </div>
       ))}
     </div>
   );

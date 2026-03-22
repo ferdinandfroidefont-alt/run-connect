@@ -2,10 +2,11 @@ import { ArrowLeft, FileText, CheckCircle, UserCheck, Shield, AlertTriangle, Sca
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
+import { getSupportEmail, getSupportMailtoHref, LEGAL_LAST_UPDATED_LABEL } from "@/lib/legalMeta";
 
 export default function Terms() {
   const navigate = useNavigate();
-  const lastUpdate = "15 janvier 2025";
+  const lastUpdate = LEGAL_LAST_UPDATED_LABEL;
 
   const sections = [
     {
@@ -188,10 +189,10 @@ En cas de conflit entre ces conditions et les lois locales, les lois locales pr√
             <p className="text-sm text-muted-foreground leading-relaxed">
               Pour toute question concernant ces conditions, contactez-nous √†{' '}
               <a 
-                href="mailto:ferdinand.froidefont@gmail.com" 
+                href={getSupportMailtoHref()} 
                 className="text-primary font-medium"
               >
-                ferdinand.froidefont@gmail.com
+                {getSupportEmail()}
               </a>
             </p>
           </div>

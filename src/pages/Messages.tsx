@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 import { ClubInfoDialog } from "@/components/ClubInfoDialog";
 import { ClubProfileDialog } from "@/components/ClubProfileDialog";
@@ -2636,7 +2637,7 @@ const Messages = () => {
           </div>
 
           {/* Conversations List */}
-          <div className="ios-card overflow-hidden">
+          <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
             {conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-ios-6 py-[5rem] text-center">
                 <div className="mb-ios-6 p-ios-6 bg-secondary rounded-full">
@@ -2672,9 +2673,10 @@ const Messages = () => {
                     onSwipeRight={() => togglePinConversation(conversation.id)}
                   >
                     <div
-                      className={`flex items-center gap-ios-3 px-ios-4 py-ios-3 active:bg-secondary transition-colors relative ${
-                        selectedConversations.has(conversation.id) ? 'bg-primary/5' : ''
-                      }`}
+                      className={cn(
+                        "ios-list-row flex items-center gap-ios-3 relative",
+                        selectedConversations.has(conversation.id) && "bg-primary/5"
+                      )}
                       onTouchStart={() => !isSelectionMode && handleLongPressStart(conversation)}
                       onTouchEnd={handleLongPressEnd}
                       onTouchCancel={handleLongPressEnd}

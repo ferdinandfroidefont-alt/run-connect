@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap } from "lucide-react";
+import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap, Scale } from "lucide-react";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { useUserProfile } from "@/contexts/UserProfileContext";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
@@ -122,6 +123,24 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
               <div className="h-px bg-border ml-[54px]" />
 
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate("/legal");
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+              >
+                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  <Scale className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[15px] font-medium">Mentions légales</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
+
+              <div className="h-px bg-border ml-[54px]" />
+
               <button 
                 onClick={() => { onClose(); navigate('/terms'); }}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
@@ -175,7 +194,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
               {/* Contact */}
               <a 
-                href="mailto:ferdinand.froidefont@gmail.com"
+                href={getSupportMailtoHref()}
                 className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
               >
                 <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
@@ -183,7 +202,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">Contacter le support</p>
-                  <p className="text-[13px] text-muted-foreground">ferdinand.froidefont@gmail.com</p>
+                  <p className="text-[13px] text-muted-foreground">{getSupportEmail()}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </a>

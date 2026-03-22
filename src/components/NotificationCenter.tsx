@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -622,7 +621,7 @@ export const NotificationCenter = ({
         side="top"
         closeButtonClassName={isIosPhone ? "right-5 top-6" : undefined}
         className={cn(
-          "w-full h-full min-h-screen border-0 max-w-none",
+          "box-border w-full max-w-full min-w-0 h-full min-h-screen border-0 overflow-x-hidden",
           isIosPhone
             ? "mx-auto max-w-lg py-6 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]"
             : "p-6"
@@ -636,8 +635,8 @@ export const NotificationCenter = ({
             {unreadCount > 0 ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}` : 'Aucune nouvelle notification'}
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-8rem)] mt-6">
-          <div className={cn("space-y-4", isIosPhone ? "px-0.5 pr-3" : "pr-4")}>
+        <ScrollArea className="mt-6 h-[calc(100vh-8rem)] w-full min-w-0 max-w-full overflow-x-hidden">
+          <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
                 Aucune notification
               </p> : deduplicatedNotifications.map(notification => {
@@ -649,26 +648,24 @@ export const NotificationCenter = ({
               const isFollowAccepted = followerStatus === 'accepted';
               const isFollowGone = followerStatus === 'none';
               
-              return <Card key={notification.id} className={`${!notification.read ? 'border-primary bg-primary/5' : ''} cursor-pointer hover:shadow-md transition-shadow`} onClick={() => {
+              return <div key={notification.id} className={cn(
+                "ios-card min-w-0 max-w-full overflow-hidden p-ios-4 cursor-pointer transition-colors active:bg-secondary",
+                !notification.read && "ring-1 ring-primary/30 bg-primary/5"
+              )} onClick={() => {
             if (!notification.read) {
               markAsRead(notification.id);
             }
-          }}>
-                <CardContent className="p-4" onClick={(e) => {
-              // Navigate to relevant page based on notification type
               const handleNotificationNav = () => {
                 const data = notification.data;
                 if (notification.type === 'follow_accepted' && data?.acceptor_id) {
                   setIsOpen(false);
                   navigate(`/profile/${data.acceptor_id}`);
                 } else if (notification.type === 'follow_request' && data?.follower_id) {
-                  // Don't navigate for follow requests - they have action buttons
                   return;
                 } else if (notification.type === 'session_accepted' && data?.session_id) {
                   setIsOpen(false);
                   navigate('/my-sessions');
                 } else if (notification.type === 'session_request' && data?.session_id) {
-                  // Don't navigate for session requests - they have action buttons
                   return;
                 } else if (notification.type === 'club_invitation') {
                   return;
@@ -678,8 +675,8 @@ export const NotificationCenter = ({
                 }
               };
               handleNotificationNav();
-            }}>
-                   <div className="flex items-start gap-3">
+          }}>
+                   <div className="flex min-w-0 max-w-full items-start gap-3">
                     {/* Avatar for session_request, follow_request, follow_accepted, and club_invitation with user data */}
                       {(notification.type === 'session_request' || notification.type === 'follow_request' || notification.type === 'follow_accepted' || notification.type === 'club_invitation') && notification.data && (notification.data.follower_avatar || notification.data.requester_avatar || notification.data.inviter_avatar || notification.data.acceptor_avatar) ? <div className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => handleOpenProfilePreview(notification.data.follower_id || notification.data.request_user_id || notification.data.inviter_id || notification.data.acceptor_id)}>
                           <Avatar className="w-10 h-10">
@@ -697,20 +694,22 @@ export const NotificationCenter = ({
                           {notification.type === 'follow_request' ? <UserPlus className="h-5 w-5 text-primary" /> : notification.type === 'follow_accepted' ? <UserCheck className="h-5 w-5 text-green-600" /> : notification.type === 'club_invitation' ? <UserPlus className="h-5 w-5 text-blue-600" /> : <User className="h-5 w-5 text-primary" />}
                         </div>}
                      
-                     <div className="flex-1 min-w-0 pr-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-medium truncate">{notification.title}</h4>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            {!notification.read && <Badge variant="secondary" className="text-xs">Nouveau</Badge>}
+                     <div className="min-w-0 flex-1 max-w-full overflow-hidden pr-0 sm:pr-2">
+                        <div className="mb-1 flex min-w-0 max-w-full items-start justify-between gap-2">
+                          <h4 className="min-w-0 flex-1 text-sm font-medium leading-snug [overflow-wrap:anywhere] break-words line-clamp-2 sm:line-clamp-none">
+                            {notification.title}
+                          </h4>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {!notification.read && <Badge variant="secondary" className="whitespace-nowrap text-xs">Nouveau</Badge>}
                             <Button variant="ghost" size="sm" onClick={e => {
                         e.stopPropagation();
                         deleteNotification(notification.id);
-                      }} className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground" title="Supprimer la notification">
+                      }} className="h-7 w-7 shrink-0 p-0 hover:bg-destructive hover:text-destructive-foreground" title="Supprimer la notification">
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
-                       <p className="text-sm text-muted-foreground mb-2 break-words pr-8">
+                       <p className="mb-2 max-w-full text-sm text-muted-foreground [overflow-wrap:anywhere] break-words">
                          {notification.message}
                        </p>
                        <p className="text-xs text-muted-foreground">
@@ -780,8 +779,7 @@ export const NotificationCenter = ({
                          </>}
                      </div>
                    </div>
-                </CardContent>
-              </Card>})}
+              </div>})}
           </div>
         </ScrollArea>
         

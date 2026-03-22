@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
@@ -12,29 +12,39 @@ import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { PageTransition } from "@/components/PageTransition";
+import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
+import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
+import { RouteAnalytics } from "@/components/RouteAnalytics";
+import { RoutePageFallback } from "@/components/RoutePageFallback";
 import { supabase } from "@/integrations/supabase/client";
 
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Feed from "./pages/Feed";
-import MySessions from "./pages/MySessions";
-import Messages from "./pages/Messages";
-import Leaderboard from "./pages/Leaderboard";
-import Profile from "./pages/Profile";
-import PublicProfile from "./pages/PublicProfile";
-import Subscription from "./pages/Subscription";
-import DonationSuccess from "./pages/DonationSuccess";
-import DonationCanceled from "./pages/DonationCanceled";
-import NotFound from "./pages/NotFound";
-import Search from "./pages/Search";
-import RouteCreation from "./pages/RouteCreation";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import About from "./pages/About";
-import ConfirmPresence from "./pages/ConfirmPresence";
-import TrainingMode from "./pages/TrainingMode";
-import SessionTracking from "./pages/SessionTracking";
-import AuthCallback from "./pages/AuthCallback";
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Feed = lazy(() => import("./pages/Feed"));
+const MySessions = lazy(() => import("./pages/MySessions"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const PublicProfile = lazy(() => import("./pages/PublicProfile"));
+const Subscription = lazy(() => import("./pages/Subscription"));
+const DonationSuccess = lazy(() => import("./pages/DonationSuccess"));
+const DonationCanceled = lazy(() => import("./pages/DonationCanceled"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Search = lazy(() => import("./pages/Search"));
+const RouteCreation = lazy(() => import("./pages/RouteCreation"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const About = lazy(() => import("./pages/About"));
+const ConfirmPresence = lazy(() => import("./pages/ConfirmPresence"));
+const TrainingMode = lazy(() => import("./pages/TrainingMode"));
+const SessionTracking = lazy(() => import("./pages/SessionTracking"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+
+/** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
+function PageSuspense({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RoutePageFallback />}>{children}</Suspense>;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -123,12 +133,9 @@ const App = () => {
     };
   }, []);
 
+  /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */
   if (!isAppLoaded) {
-    return (
-      <ThemeProvider>
-        <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
-      </ThemeProvider>
-    );
+    return <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />;
   }
 
   return (
@@ -141,36 +148,44 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <RouteAnalytics />
+                <AnalyticsConsentBanner />
+                <div className="pointer-events-none fixed left-0 right-0 top-0 z-[78] pt-[env(safe-area-inset-top,0px)]">
+                  <div className="pointer-events-auto">
+                    <NetworkStatusBanner />
+                  </div>
+                </div>
                 <AnimatePresence mode="wait">
                   <Routes>
-                  <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/" element={<Layout><PageTransition><Index /></PageTransition></Layout>} />
-                  <Route path="/feed" element={<Layout><PageTransition><Feed /></PageTransition></Layout>} />
-                  <Route path="/my-sessions" element={<Layout><PageTransition><MySessions /></PageTransition></Layout>} />
-                  <Route path="/messages" element={<Layout><PageTransition><Messages /></PageTransition></Layout>} />
-                  <Route path="/leaderboard" element={<Layout><PageTransition><Leaderboard /></PageTransition></Layout>} />
-                  <Route path="/profile" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
-                  <Route path="/profile/:userId" element={<Layout><PageTransition><Profile /></PageTransition></Layout>} />
-                  <Route path="/subscription" element={<Layout><PageTransition><Subscription /></PageTransition></Layout>} />
-                  <Route path="/search" element={<PageTransition><Search /></PageTransition>} />
-                  <Route path="/route-create" element={<Layout><PageTransition><RouteCreation /></PageTransition></Layout>} />
-                  <Route path="/route-creation" element={<Layout><PageTransition><RouteCreation /></PageTransition></Layout>} />
-                  <Route path="/privacy" element={<PageTransition><Privacy /></PageTransition>} />
-                  <Route path="/terms" element={<PageTransition><Terms /></PageTransition>} />
-                  <Route path="/about" element={<PageTransition><About /></PageTransition>} />
-                  <Route path="/confirm-presence" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
-                  <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><ConfirmPresence /></PageTransition></Layout>} />
+                  <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
+                  <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
+                  <Route path="/" element={<Layout><PageTransition><PageSuspense><Index /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/my-sessions" element={<Layout><PageTransition><PageSuspense><MySessions /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
+                  <Route path="/route-create" element={<Layout><PageTransition><PageSuspense><RouteCreation /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/route-creation" element={<Layout><PageTransition><PageSuspense><RouteCreation /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/privacy" element={<PageTransition><PageSuspense><Privacy /></PageSuspense></PageTransition>} />
+                  <Route path="/legal" element={<PageTransition><PageSuspense><LegalNotice /></PageSuspense></PageTransition>} />
+                  <Route path="/terms" element={<PageTransition><PageSuspense><Terms /></PageSuspense></PageTransition>} />
+                  <Route path="/about" element={<PageTransition><PageSuspense><About /></PageSuspense></PageTransition>} />
+                  <Route path="/confirm-presence" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   {/* /security route removed for production security */}
-                  <Route path="/training/route/:routeId" element={<PageTransition><TrainingMode /></PageTransition>} />
-                  <Route path="/training/:sessionId" element={<PageTransition><TrainingMode /></PageTransition>} />
-                  <Route path="/session-tracking/:sessionId" element={<PageTransition><SessionTracking /></PageTransition>} />
+                  <Route path="/training/route/:routeId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
+                  <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
+                  <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   
-                  <Route path="/donation-success" element={<PageTransition><DonationSuccess /></PageTransition>} />
-                  <Route path="/donation-canceled" element={<PageTransition><DonationCanceled /></PageTransition>} />
+                  <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />
+                  <Route path="/donation-canceled" element={<PageTransition><PageSuspense><DonationCanceled /></PageSuspense></PageTransition>} />
                   {/* Route profil public (AVANT *) */}
-                  <Route path="/p/:username" element={<PageTransition><PublicProfile /></PageTransition>} />
-                  <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                  <Route path="/p/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
+                  <Route path="*" element={<PageTransition><PageSuspense><NotFound /></PageSuspense></PageTransition>} />
                   </Routes>
                 </AnimatePresence>
               </BrowserRouter>

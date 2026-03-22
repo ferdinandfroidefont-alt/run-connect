@@ -1,0 +1,33 @@
+---
+description: RunConnect — légal, sécurité, UI iOS et conventions code
+alwaysApply: true
+---
+
+# RunConnect — règles projet
+
+## Légal & contenu utilisateur
+
+- Les textes **CGU** (`src/pages/Terms.tsx`), **confidentialité** (`src/pages/Privacy.tsx`) et **mentions légales** (`src/pages/LegalNotice.tsx`, route `/legal`) restent **alignés** : date via `LEGAL_LAST_UPDATED_LABEL`, email via `getSupportEmail()` / `VITE_PUBLIC_SUPPORT_EMAIL`, société & siège via `VITE_PUBLIC_LEGAL_*`.
+- **Analytics** : pas d’envoi vendor sans `VITE_ANALYTICS_ENABLED=true` **et** consentement utilisateur (`src/lib/analyticsConsent.ts`). Ne pas court-circuiter ce garde-fou.
+- Toute collecte nouvelle de données (tracking, SDK, carte) : mettre à jour la **politique de confidentialité** et, si besoin, le flux de **consentement** (`profiles`, écrans paramètres).
+
+## Sécurité
+
+- Ne jamais committer de **secrets** (clés service Supabase, tokens). Variables publiques uniquement avec préfixe `VITE_` et `.env.example` à jour.
+- Côté Supabase : privilégier **RLS** ; ne pas exposer d’API sensibles sans contrôle serveur (Edge Function).
+- Éviter `console.log` de données personnelles ou tokens en **production** ; préférer des logs anonymisés ou Sentry filtré.
+
+## UI / design
+
+- Style cohérent avec **« Mes séances »** : cartes / listes type `ios-card`, `ios-list-row`, `ios-list-stack` ; éviter d’introduire `glass-card` sur les nouveaux écrans sauf exception documentée.
+- Prévoir **safe-area** (`env(safe-area-inset-*)`) pour les éléments fixes (header, bottom nav, bandeaux).
+- Sur layouts flex/grid horizontaux : utiliser **`min-w-0`** sur les enfants qui doivent tronquer (titres, dialogs) pour éviter le débordement iOS.
+
+## React / perf
+
+- Nouvelles **pages** : export default pour `React.lazy`, envelopper le lazy dans un **`PageSuspense`** local à la route (voir `src/App.tsx`), pas un Suspense global sur tout le routeur.
+- Préférer **React Query** pour le serveur ; éviter les fetch dupliqués sans cache.
+
+## Nommage produit
+
+- Marque affichée : **RunConnect** (cohérent avec les stores et les pages légales). Le splash peut utiliser la variante graphique « Ruconnect » si c’est la charte, mais les textes juridiques et support restent explicites.

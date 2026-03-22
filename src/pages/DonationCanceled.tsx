@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, XCircle, ArrowLeft, RotateCcw } from 'lucide-react';
 import { DonationDialog } from '@/components/DonationDialog';
@@ -11,19 +10,20 @@ const DonationCanceled = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background px-4">
-      <Card className="max-w-md w-full text-center">
-        <CardHeader>
+      <div className="ios-card max-w-md w-full overflow-hidden text-center">
+        <div className="space-y-ios-6 p-ios-6">
+          <div>
           <div className="flex justify-center mb-4">
             <div className="relative">
               <Heart className="h-16 w-16 text-muted-foreground" />
               <XCircle className="h-6 w-6 text-orange-500 absolute -top-1 -right-1 bg-white rounded-full" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-orange-600">
+          <h2 className="text-2xl font-semibold text-orange-600">
             Don annulé
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </h2>
+          </div>
+          <div className="space-y-ios-6">
           <div className="space-y-2">
             <p className="text-lg font-medium">
               Votre don n'a pas été traité
@@ -73,8 +73,9 @@ const DonationCanceled = () => {
           <p className="text-xs text-muted-foreground">
             Votre soutien, même petit, nous aide énormément !
           </p>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
 
       <DonationDialog
         open={showDonationDialog}

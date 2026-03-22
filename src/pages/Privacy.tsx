@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowLeft, Shield, Lock, Eye, Database, Bell, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getSupportEmail, getSupportMailtoHref, LEGAL_LAST_UPDATED_LABEL } from "@/lib/legalMeta";
 
 export default function Privacy() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function Privacy() {
           {/* Date de mise à jour */}
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Shield className="h-4 w-4" />
-            <span>Dernière mise à jour : octobre 2025</span>
+            <span>Dernière mise à jour : {LEGAL_LAST_UPDATED_LABEL}</span>
           </div>
 
           {/* Introduction */}
@@ -81,7 +82,11 @@ export default function Privacy() {
                 <li>personnaliser votre expérience RunConnect ;</li>
                 <li>afficher vos activités sur la carte ;</li>
                 <li>permettre la synchronisation avec Strava, Instagram ou vos contacts ;</li>
-                <li>améliorer la qualité et la sécurité du service.</li>
+                <li>améliorer la qualité et la sécurité du service ;</li>
+                <li>
+                  réaliser des statistiques d&apos;audience de l&apos;application lorsque vous y consentez (réglable dans
+                  les paramètres, section confidentialité).
+                </li>
               </ul>
             </div>
           </div>
@@ -159,11 +164,11 @@ export default function Privacy() {
                 Pour toute question ou demande concernant vos données :
               </p>
               <a 
-                href="mailto:ferdinand.froidefont@gmail.com"
+                href={getSupportMailtoHref()}
                 className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
               >
                 <Mail className="h-4 w-4" />
-                <span className="font-medium">ferdinand.froidefont@gmail.com</span>
+                <span className="font-medium">{getSupportEmail()}</span>
               </a>
             </div>
           </div>
