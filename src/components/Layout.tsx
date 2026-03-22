@@ -17,13 +17,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
 
-  // Couleurs dynamiques iOS Status Bar + Home Indicator selon la page
-  useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#FFFFFF');
-    document.documentElement.style.backgroundColor = '#FFFFFF';
-    document.body.style.backgroundColor = '#FFFFFF';
-  }, []);
-
   // Réserve l’espace sous les pages en position:fixed (Classement, etc.) quand la barre du bas est visible
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -89,11 +82,13 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe ios-app-canvas flex flex-col overflow-x-hidden overflow-y-hidden">
-      <main
-        className={`flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden scroll-momentum ${hideBottomNav ? "" : "ios-nav-padding"}`}
-      >
-        <div className="animate-fade-in h-full w-full relative motion-reduce:animate-none">
+    <div className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden">
+      {/*
+        La tab bar est dans le flux (plus en fixed) : le <main> a une hauteur réelle = viewport − barre.
+        Le scroll ne s’étend plus derrière les onglets (plus besoin de ios-nav-padding sur le scroll).
+      */}
+      <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-momentum">
+        <div className="animate-fade-in relative min-h-0 w-full flex-1 motion-reduce:animate-none">
           {children}
         </div>
       </main>

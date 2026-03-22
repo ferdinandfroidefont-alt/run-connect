@@ -21,6 +21,7 @@ interface SettingsSupportProps {
 
 export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   const { user, session, signOut } = useAuth();
+  const { userProfile } = useUserProfile();
   const { toast } = useToast();
   const { t } = useLanguage();
   const { restartTutorial } = useTutorial();

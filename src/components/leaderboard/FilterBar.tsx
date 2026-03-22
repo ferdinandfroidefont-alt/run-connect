@@ -9,7 +9,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 
 export type ActivityType = 'running' | 'cycling' | 'walking' | 'course' | 'trail' | 'velo' | 'vtt' | 'bmx' | 'gravel' | 'marche' | 'natation' | 'swimming' | 'football' | 'basket' | 'basketball' | 'volley' | 'badminton' | 'pingpong' | 'tennis' | 'escalade' | 'petanque' | 'rugby' | 'handball' | 'fitness' | 'yoga' | 'musculation' | 'crossfit' | 'boxe' | 'arts_martiaux' | 'golf' | 'ski' | 'snowboard' | 'randonnee' | 'kayak' | 'surf';
 export type ScopeType = 'global' | 'local' | 'friends' | 'clubs';
@@ -230,24 +230,55 @@ export const FilterBar = ({
         </DialogContent>
       </Dialog>
 
-      {/* Sports dialog */}
+      {/* Sports : plein écran (feuille iOS), pas petite modale centrée */}
       <Dialog open={showSportsDialog} onOpenChange={setShowSportsDialog}>
-        <DialogContent className="sm:max-w-md flex flex-col items-center">
-          <DialogHeader className="w-full">
-            <DialogTitle className="text-center">Autres sports</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 py-4 max-h-[60vh] overflow-y-auto scrollbar-hide w-full px-2">
-            {additionalSports.map((sport) => (
-              <Button
-                key={sport.value}
-                variant={activeFilter === sport.value ? "default" : "outline"}
-                className="h-20 flex-col gap-2"
-                onClick={() => { onFilterChange(sport.value); setShowSportsDialog(false); }}
-              >
-                <span className="text-2xl">{sport.emoji}</span>
-                <span className="text-sm">{sport.label}</span>
-              </Button>
-            ))}
+        <DialogContent
+          fullScreen
+          hideCloseButton
+          className="bg-secondary p-0 gap-0 border-0"
+        >
+          <div className="flex h-full min-h-0 flex-col">
+            <header className="shrink-0 border-b border-border/60 bg-card px-4 pb-4 pt-[max(0.75rem,var(--safe-area-top))] shadow-sm">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSportsDialog(false)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground transition-colors active:scale-[0.97] hover:bg-secondary/80"
+                  aria-label="Fermer"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <div className="min-w-0 flex-1 text-left">
+                  <DialogTitle className="text-left text-[22px] font-bold tracking-tight text-foreground">
+                    Autres sports
+                  </DialogTitle>
+                  <p className="mt-0.5 text-[15px] text-muted-foreground">
+                    Choisissez une discipline pour le classement
+                  </p>
+                </div>
+              </div>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 pb-[max(1.5rem,var(--safe-area-bottom))]">
+              <div className="mx-auto grid w-full max-w-lg grid-cols-2 gap-4 sm:max-w-2xl sm:grid-cols-3">
+                {additionalSports.map((sport) => (
+                  <Button
+                    key={sport.value}
+                    variant={activeFilter === sport.value ? "default" : "outline"}
+                    className="h-auto min-h-[96px] flex-col justify-center gap-2 rounded-2xl border-2 px-3 py-4 text-center shadow-sm transition-transform active:scale-[0.98]"
+                    onClick={() => {
+                      onFilterChange(sport.value);
+                      setShowSportsDialog(false);
+                    }}
+                  >
+                    <span className="text-4xl leading-none" aria-hidden>
+                      {sport.emoji}
+                    </span>
+                    <span className="text-[15px] font-semibold leading-snug">{sport.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

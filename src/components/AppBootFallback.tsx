@@ -33,7 +33,7 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
 
   return (
     <div
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-center ios-app-canvas px-5 safe-area-top safe-area-bottom"
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center ios-app-canvas px-5 safe-inset-top-once safe-inset-bottom-once"
       role="status"
       aria-live="polite"
       aria-busy="true"

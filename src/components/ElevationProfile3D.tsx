@@ -48,12 +48,19 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   const traveledGlowRef = useRef<google.maps.Polyline | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const animationRef = useRef<number | null>(null);
+  /** Centre caméra lissé (décalé vers l’avant du trajet — effet flyover / Strava) */
+  const cameraCenterLatRef = useRef<number | null>(null);
+  const cameraCenterLngRef = useRef<number | null>(null);
+  /** Vitesse instantanée (lissée) pour HUD */
+  const speedKmhSmoothRef = useRef(0);
+  const lastSpeedSampleRef = useRef<{ pos: { lat: number; lng: number }; time: number } | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [progress, setProgress] = useState(0);
   const [mapReady, setMapReady] = useState(false);
   const [currentElevation, setCurrentElevation] = useState(0);
   const [currentSlope, setCurrentSlope] = useState(0);
+  const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
   const [speed, setSpeed] = useState<1 | 2 | 3>(1);
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownNum, setCountdownNum] = useState(3);
@@ -145,13 +152,13 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         coordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
         map.fitBounds(b, 40);
 
-        // Remaining path (semi-transparent, full route)
+        // Tronçon restant (mis à jour en flyover : seulement devant la position → sensation de révélation)
         const remainingPoly = new google.maps.Polyline({
           path: coordinates.map(c => ({ lat: c.lat, lng: c.lng })),
           geodesic: true,
-          strokeColor: '#5B7CFF',
-          strokeOpacity: 0.3,
-          strokeWeight: 6,
+          strokeColor: '#7C9DFF',
+          strokeOpacity: 0.22,
+          strokeWeight: 5,
           map,
         });
         remainingPolyRef.current = remainingPoly;

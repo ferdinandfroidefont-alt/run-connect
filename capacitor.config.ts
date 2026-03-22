@@ -29,13 +29,14 @@ const config: CapacitorConfig = {
     appendUserAgent: 'RunConnect/1.3'
   },
   ios: {
-    contentInset: 'always',
+    contentInset: 'automatic',
     allowsLinkPreview: false,
     scrollEnabled: true,
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
-    backgroundColor: '#FFFFFF',
+    /** Aligné sur le thème clair par défaut ; le web met à jour via StatusBar + CSS */
+    backgroundColor: '#F2F2F7',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

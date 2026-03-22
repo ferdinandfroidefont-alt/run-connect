@@ -735,9 +735,9 @@ export const RouteCreation = () => {
   addWaypointRef.current = addWaypoint;
 
   return (
-    <div className="h-full relative bg-background overflow-x-hidden">
+    <div className="relative h-full min-h-0 overflow-x-hidden bg-background">
       {/* Barre de navigation iOS compacte */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 safe-area-top">
+      <div className="absolute top-0 left-0 right-0 z-10 bg-background/95 backdrop-blur-md border-b border-border/30 pt-[var(--safe-area-top)]">
         <div className="flex items-center justify-between h-11 px-ios-2">
           <button
             onClick={handleCancel}
@@ -869,7 +869,8 @@ export const RouteCreation = () => {
       </div>
 
       {/* Distance / D+ / D- + profil d'élévation : bas d'écran pour ne pas masquer Guidé / Manuel */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pointer-events-none pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* Pas d’env(safe-area-inset-bottom) ici : le Layout réserve déjà tab bar + home indicator */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pointer-events-none pb-4">
         <div className="pointer-events-auto px-ios-4 w-full flex flex-col gap-ios-2">
           {totalDistance > 0 && (
             <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-ios-lg px-ios-4 py-ios-2.5 shadow-lg">

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { CalendarDays, BookOpen, BarChart3, Users, FileText, Sparkles } from "lucide-react";
@@ -326,8 +327,8 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
                 className="flex flex-col items-center justify-center gap-2 bg-card rounded-[12px] p-4 active:scale-[0.97] transition-transform"
                 style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.06)' }}
               >
-                <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${tool.color}`}>
-                  <tool.icon className="h-5 w-5 text-white" />
+                <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${tool.iconWrap}`}>
+                  <tool.icon className="h-5 w-5" />
                 </div>
                 <span className="text-[13px] font-medium text-foreground">{tool.label}</span>
               </button>

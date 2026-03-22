@@ -599,7 +599,7 @@ const Profile = () => {
   // When viewing another user's profile, show ProfilePreviewDialog instead of full profile
   if (isViewingOtherUser && viewingUserId) {
     return (
-      <div className="h-full bg-secondary">
+      <div className="h-full min-h-0 bg-secondary">
         <ProfilePreviewDialog
           userId={viewingUserId}
           onClose={() => navigate(-1)}
@@ -609,11 +609,11 @@ const Profile = () => {
   }
 
   if (loading) {
-    return <div className="h-full bg-secondary flex items-center justify-center">
+    return <div className="flex h-full min-h-0 items-center justify-center bg-secondary">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="h-full bg-secondary overflow-y-auto">
+  return <div className="h-full min-h-0 bg-secondary overflow-y-auto">
       {/* Cover Image - Facebook Style */}
       <div className="relative">
         {/* Cover Photo */}
@@ -631,7 +631,7 @@ const Profile = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           
           {/* Top bar buttons */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-ios-4 pt-ios-3 z-10">
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-ios-4 z-10 pt-[max(0.75rem,var(--safe-area-top))]">
             {isViewingOtherUser ? (
               <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
                 <ChevronLeft className="h-5 w-5" />

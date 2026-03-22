@@ -152,7 +152,7 @@ const LeaderboardRow = ({ u, isMe, onClick }: { u: LeaderboardUser; isMe: boolea
     <div
       onClick={onClick}
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-[14px] px-3 py-3.5 transition-colors active:scale-[0.99] active:bg-secondary/70",
+        "flex cursor-pointer items-center gap-3 rounded-[14px] px-3 py-2.5 transition-colors active:scale-[0.99] active:bg-secondary/70",
         podium ? podiumRowClass(u.rank) : "border border-transparent hover:bg-secondary/40",
         isMe && !podium && "bg-primary/[0.07] ring-1 ring-primary/15"
       )}
@@ -438,9 +438,9 @@ const Leaderboard = () => {
         </div>
       </div>
 
-      {/* Zone haute fixe (pas de scroll page) */}
-      <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
-        <div className="shrink-0 space-y-2 px-3 pt-2">
+      {/* Zone haute : hauteur max pour laisser ~8–10 lignes visibles dans le bloc classement */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="max-h-[min(300px,38svh)] shrink-0 space-y-1.5 overflow-y-auto overscroll-y-contain px-3 pt-1.5 [-webkit-overflow-scrolling:touch]">
           {userRank && (
             <MyRankCard
               currentRank={userRank}
@@ -468,11 +468,11 @@ const Leaderboard = () => {
             userClubs={userClubs}
           />
 
-          <div className="py-0.5">
+          <div className="py-0">
             <SeasonRewardBanner />
           </div>
 
-          <div className="flex items-center gap-2 pb-1">
+          <div className="flex items-center gap-2 pb-0.5">
             <p className="shrink-0 text-[11px] text-muted-foreground">
               {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
             </p>
@@ -488,8 +488,8 @@ const Leaderboard = () => {
           </div>
         </div>
 
-        {/* Carte classement : hauteur ~ reste d’écran, max ~70vh, scroll interne uniquement */}
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-1">
+        {/* Carte classement : flex-1 + basis-0 pour occuper tout l’espace sous la zone haute (≈8–10 lignes), scroll interne conservé */}
+        <div className="flex min-h-0 flex-1 basis-0 flex-col px-3 pb-3 pt-2">
           <div
             className={cn(
               'flex min-h-0 flex-1 flex-col overflow-hidden',
@@ -497,9 +497,9 @@ const Leaderboard = () => {
               'backdrop-blur-md dark:border-border/60 dark:bg-card/90 dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
             )}
           >
-            <div className="shrink-0 border-b border-border/40 bg-secondary/25 px-4 pb-3 pt-4 dark:bg-secondary/20">
+            <div className="shrink-0 border-b border-border/40 bg-secondary/25 px-4 pb-2.5 pt-3 dark:bg-secondary/20">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Classement général</p>
-              <p className="mt-1 text-[15px] font-semibold text-foreground">Saison en cours</p>
+              <p className="mt-0.5 text-[15px] font-semibold text-foreground">Saison en cours</p>
               <p className="mt-0.5 text-[12px] text-muted-foreground">Points saisonniers · mise à jour en direct</p>
             </div>
 

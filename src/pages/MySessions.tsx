@@ -616,10 +616,10 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="min-h-full bg-secondary">
+        <div className="flex h-full min-h-0 flex-col bg-secondary">
           {/* iOS Header */}
-          <div className="sticky top-0 z-50 bg-card">
-            <div className="flex items-center justify-between px-4 py-3">
+          <div className="sticky top-0 z-50 bg-card pt-[var(--safe-area-top)]">
+            <div className="flex items-center justify-between px-4 py-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -915,10 +915,10 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="min-h-full bg-secondary pb-ios-6">
+      <div className="flex h-full min-h-0 flex-col bg-secondary pb-ios-6">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-ios-4 pt-ios-4 pb-ios-4 relative flex items-center justify-center">
+        <div className="sticky top-0 z-50 bg-card border-b border-border pt-[var(--safe-area-top)]">
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
             <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           

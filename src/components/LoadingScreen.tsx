@@ -2,6 +2,11 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import splashImage from '@/assets/runconnect-splash-logo.png';
+import {
+  applyIosStatusBarForTheme,
+  applyWebChromeForTheme,
+  getPreferredDarkFromStorage,
+} from '@/lib/iosStatusBarTheme';
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -25,13 +30,11 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       metaTheme.name = 'theme-color';
       document.head.appendChild(metaTheme);
     }
-    const previousThemeColor = metaTheme.content;
     metaTheme.content = BRAND_BLUE;
 
     let metaApple = document.querySelector(
       'meta[name="apple-mobile-web-app-status-bar-style"]'
     ) as HTMLMetaElement | null;
-    const previousApple = metaApple?.content ?? '';
     if (!metaApple) {
       metaApple = document.createElement('meta');
       metaApple.name = 'apple-mobile-web-app-status-bar-style';
@@ -39,7 +42,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     }
     metaApple.setAttribute('content', 'black-translucent');
 
-    let statusBarRestored = false;
+    let afterSplashApplied = false;
     const applyNativeStatusBarForSplash = async () => {
       if (!Capacitor.isNativePlatform()) return;
       try {
@@ -56,20 +59,17 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       }
     };
 
-    const restoreNativeStatusBar = async () => {
-      if (!Capacitor.isNativePlatform() || statusBarRestored) return;
-      statusBarRestored = true;
+    const restoreAfterSplash = async () => {
+      if (afterSplashApplied) return;
+      afterSplashApplied = true;
+      const isDark = getPreferredDarkFromStorage();
+      applyWebChromeForTheme(isDark);
       try {
-        const { StatusBar, Style } = await import('@capacitor/status-bar');
-        await StatusBar.setOverlaysWebView({ overlay: false });
-        await StatusBar.setStyle({ style: Style.Light });
-        try {
-          await StatusBar.setBackgroundColor({ color: '#FFFFFF' });
-        } catch {
-          /* ignore */
+        if (Capacitor.isNativePlatform()) {
+          await applyIosStatusBarForTheme(isDark);
         }
       } catch (e) {
-        console.warn('[LoadingScreen] StatusBar restore:', e);
+        console.warn('[LoadingScreen] post-splash chrome:', e);
       }
     };
 
@@ -83,13 +83,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       clearTimeout(completeTimer);
       root.style.removeProperty('background-color');
       body.style.removeProperty('background-color');
-      metaTheme.content = previousThemeColor || '#FFFFFF';
-      if (previousApple) {
-        metaApple!.setAttribute('content', previousApple);
-      } else {
-        metaApple!.setAttribute('content', 'default');
-      }
-      void restoreNativeStatusBar();
+      void restoreAfterSplash();
     };
   }, [onLoadingComplete]);
 

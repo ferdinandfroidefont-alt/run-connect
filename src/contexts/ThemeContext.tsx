@@ -1,17 +1,17 @@
 import { useEffect, type ReactNode } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
+import { applyIosStatusBarForTheme, applyWebChromeForTheme } from '@/lib/iosStatusBarTheme';
 
 const STORAGE_KEY = 'runconnect-ui-theme';
 
-/** Synchronise la barre d’état / theme-color avec le thème résolu (web). */
+/** Synchronise theme-color, fond root, meta Apple et StatusBar Capacitor iOS avec le thème. */
 function ThemeMetaSync() {
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const isDark = resolvedTheme === 'dark';
-    const themeColor = isDark ? '#1C1C1E' : '#F2F2F7';
-    const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-    if (meta) meta.setAttribute('content', themeColor);
+    applyWebChromeForTheme(isDark);
+    void applyIosStatusBarForTheme(isDark);
   }, [resolvedTheme]);
 
   return null;

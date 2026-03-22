@@ -26,7 +26,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background px-6 safe-area-top safe-area-bottom">
+        <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background px-6 safe-inset-top-once safe-inset-bottom-once">
           <AlertTriangle className="h-12 w-12 text-destructive mb-4" aria-hidden />
           <h1 className="text-lg font-semibold text-foreground text-center">Un problème est survenu</h1>
           <p className="text-sm text-muted-foreground text-center mt-2 max-w-md">

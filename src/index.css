@@ -30,8 +30,11 @@ html, body {
     --radius-md: 0.875rem;
     --radius-lg: 1.125rem;
     --nav-height: 4.5rem;
-    /* Hauteur totale barre du bas (rangée + encoche home iPhone) — espace réservé au contenu */
-    --bottom-nav-offset: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+    /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    /* Réserve scroll : hauteur des onglets + même inset bas que la nav (pas de double padding sur les pages) */
+    --bottom-nav-offset: calc(var(--nav-height) + var(--safe-area-bottom));
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     --ios-motion-duration-fast: 140ms;
@@ -524,8 +527,17 @@ html, body {
   }
 }
 
-/* Espace réservé sous la navigation fixe : scroll principal + fin de liste visible */
+/* Tab bar dans le flux du Layout : plus besoin de ios-nav-padding sur <main> (hauteur réelle = viewport − barre). */
 @layer utilities {
+  /* Pages plein écran sans Layout : une seule couche d’insets (pas de barre d’onglets) */
+  .safe-inset-top-once {
+    padding-top: var(--safe-area-top);
+  }
+  .safe-inset-bottom-once {
+    padding-bottom: var(--safe-area-bottom);
+  }
+
+  /** @deprecated Ancien mode tab bar `position:fixed` — conservé pour cas isolés hors Layout */
   .ios-nav-padding {
     padding-bottom: var(--bottom-nav-offset) !important;
     scroll-padding-bottom: var(--bottom-nav-offset);

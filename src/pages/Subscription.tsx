@@ -109,7 +109,7 @@ const Subscription = () => {
 
   if (!user) {
     return (
-      <div className="h-full bg-secondary flex items-center justify-center p-ios-4">
+      <div className="flex h-full min-h-0 items-center justify-center bg-secondary p-ios-4">
         <div className="ios-card p-ios-6 text-center max-w-sm">
           <Crown className="h-12 w-12 text-[#FFCC00] mx-auto mb-4" />
           <h2 className="text-ios-headline font-semibold mb-ios-2">Connectez-vous</h2>
@@ -124,11 +124,11 @@ const Subscription = () => {
   const features = ['Messages illimités', 'Accès au classement', 'Sessions illimitées', 'Clubs privés'];
 
   return (
-    <div className="h-full bg-secondary overflow-y-auto">
+    <div className="h-full min-h-0 overflow-y-auto bg-secondary">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex flex-col h-full"
+        className="flex h-full min-h-0 flex-col"
       >
         {/* iOS Header */}
         <div className="sticky top-0 z-10 bg-card border-b border-border">

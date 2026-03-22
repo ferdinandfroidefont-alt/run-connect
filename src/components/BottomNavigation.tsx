@@ -67,8 +67,13 @@ export const BottomNavigation = () => {
   if (hideBottomNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 ios-nav-shell pb-[env(safe-area-inset-bottom,0px)]">
-      <div className="grid grid-cols-5 items-end h-[var(--nav-height)] pb-1">
+    <nav
+      className="z-50 w-full shrink-0 ios-nav-shell"
+      style={{ paddingBottom: 'var(--safe-area-bottom)' }}
+      role="navigation"
+      aria-label="Navigation principale"
+    >
+      <div className="grid grid-cols-5 items-end h-[var(--nav-height)]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
@@ -92,7 +97,7 @@ export const BottomNavigation = () => {
           );
         })}
 
-        <div className="flex items-center justify-center pb-1">
+        <div className="flex items-center justify-center">
           <button
             onClick={() => {
               location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100));

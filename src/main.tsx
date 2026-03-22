@@ -4,6 +4,7 @@ import './index.css'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { AuthProvider } from "@/hooks/useAuth";
+import { applyIosStatusBarForTheme, getPreferredDarkFromStorage } from '@/lib/iosStatusBarTheme';
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
@@ -134,20 +135,16 @@ const initializeCapacitorPlugins = async () => {
   }
   
   const detectedPlatform = (window as any).detectedPlatform || 'android';
-  
-  // ✅ iOS Status Bar : visible dès le premier rendu avec fond #1d283a
+
   if (detectedPlatform === 'ios') {
     try {
-      const { StatusBar, Style } = await import('@capacitor/status-bar');
-      await StatusBar.setStyle({ style: Style.Light });
-      await StatusBar.setOverlaysWebView({ overlay: false });
-      await StatusBar.show();
-      console.log('✅ iOS StatusBar configurée : visible, style Light, overlay false');
+      await applyIosStatusBarForTheme(getPreferredDarkFromStorage());
+      console.log('✅ iOS StatusBar alignée sur le thème (overlay false)');
     } catch (sbError) {
       console.error('❌ Erreur StatusBar iOS:', sbError);
     }
   }
-  
+
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
     detail: { platform: detectedPlatform, native: true }
   }));

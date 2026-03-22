@@ -1693,10 +1693,10 @@ const Messages = () => {
     
     return (
       <>
-        <div className="h-full bg-secondary">
-        <div className="max-w-md mx-auto w-full flex flex-col keyboard-aware-container" style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          {/* iMessage Style Header */}
-          <div className="shrink-0 bg-card border-b border-border/50 z-50">
+        <div className="h-full min-h-0 flex flex-col bg-secondary">
+        <div className="max-w-md mx-auto w-full flex flex-col flex-1 min-h-0 keyboard-aware-container">
+          {/* iMessage Style Header — seul bandeau top safe (évite double avec la status bar native) */}
+          <div className="shrink-0 bg-card border-b border-border/50 z-50 pt-[var(--safe-area-top)]">
             <div className="flex items-center px-ios-2 py-ios-2">
               {/* Back button - Left */}
               <Button
@@ -2523,10 +2523,10 @@ const Messages = () => {
 
   return (
     <>
-      <div className="h-full bg-secondary flex flex-col">
+      <div className="flex h-full min-h-0 flex-col bg-secondary">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border">
-          <div className="px-ios-4 pt-ios-4 pb-ios-4 relative flex items-center justify-center min-h-[60px]">
+        <div className="sticky top-0 z-50 bg-card border-b border-border pt-[var(--safe-area-top)]">
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
             {isSelectionMode ? (
               <>
                 <Button
