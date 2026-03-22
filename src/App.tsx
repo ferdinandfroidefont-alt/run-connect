@@ -35,6 +35,7 @@ const RouteCreation = lazy(() => import("./pages/RouteCreation"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 const About = lazy(() => import("./pages/About"));
+const LegalNotice = lazy(() => import("./pages/LegalNotice"));
 const ConfirmPresence = lazy(() => import("./pages/ConfirmPresence"));
 const TrainingMode = lazy(() => import("./pages/TrainingMode"));
 const SessionTracking = lazy(() => import("./pages/SessionTracking"));

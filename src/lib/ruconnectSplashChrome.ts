@@ -11,7 +11,8 @@ import {
  */
 export const RUCONNECT_SPLASH_BLUE = '#2455EB';
 
-export const RUCONNECT_SPLASH_ICON_URL = '/brand/ruconnect-splash-icon.png';
+/** Icône splash RunConnect (fichier dans `public/brand/`). */
+export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 
 /** Chrome web (Safari / in-app) pendant le splash */
 export function applyRuconnectSplashWebChrome(): void {

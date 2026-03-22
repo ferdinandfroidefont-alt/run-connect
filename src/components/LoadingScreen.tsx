@@ -78,12 +78,12 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 draggable={false}
                 className="relative select-none object-contain"
                 style={{
-                  width: 'min(42vw, 200px)',
-                  height: 'min(42vw, 200px)',
-                  maxWidth: 'min(88vw, 240px)',
-                  maxHeight: 'min(88vw, 240px)',
-                  minWidth: '120px',
-                  minHeight: '120px',
+                  width: 'min(54vw, 280px)',
+                  height: 'min(54vw, 280px)',
+                  maxWidth: 'min(92vw, 320px)',
+                  maxHeight: 'min(92vw, 320px)',
+                  minWidth: '160px',
+                  minHeight: '160px',
                 }}
               />
               <motion.p
@@ -100,7 +100,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   fontSize: 'clamp(1.35rem, 5vw, 1.75rem)',
                 }}
               >
-                Ruconnect
+                RunConnect
               </motion.p>
             </motion.div>
           </div>

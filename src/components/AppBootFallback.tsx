@@ -58,17 +58,17 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
           draggable={false}
           className="mb-ios-4 select-none object-contain"
           style={{
-            width: 'min(38vw, 176px)',
-            height: 'min(38vw, 176px)',
-            minWidth: '104px',
-            minHeight: '104px',
+            width: 'min(48vw, 220px)',
+            height: 'min(48vw, 220px)',
+            minWidth: '140px',
+            minHeight: '140px',
           }}
         />
         <p
           className="mb-ios-5 font-semibold tracking-tight text-white"
           style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.6rem)' }}
         >
-          Ruconnect
+          RunConnect
         </p>
 
         <div className="flex flex-col items-center gap-ios-2">
