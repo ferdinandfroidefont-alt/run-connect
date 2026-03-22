@@ -68,22 +68,40 @@ export const BottomNavigation = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 ios-nav-shell pb-[env(safe-area-inset-bottom,0px)]">
-      <div className="grid grid-cols-5 items-center h-[var(--nav-height)]">
+      <div className="grid grid-cols-5 items-end h-[var(--nav-height)] pb-1">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-ios-1 active:scale-95 transition-transform duration-150 touch-manipulation" data-tutorial={tutorialId}>
-              <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className={`text-[10px] mt-ios-1 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
-              {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-ios-1" />}
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className="flex flex-col items-center justify-center gap-0.5 min-h-[48px] rounded-xl mx-0.5 active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+              data-tutorial={tutorialId}
+            >
+              <Icon
+                className={`h-[26px] w-[26px] transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                strokeWidth={isActive ? 2.4 : 1.65}
+              />
+              <span
+                className={`text-[11px] leading-none tracking-tight max-w-[4.5rem] truncate ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground font-medium'}`}
+              >
+                {label}
+              </span>
             </button>
           );
         })}
 
-        <div className="flex items-center justify-center">
-          <button onClick={() => { location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100)); }} className="h-[52px] w-[52px] rounded-ios-lg bg-primary flex items-center justify-center active:scale-95 transition-all duration-200 shadow-md shadow-primary/15 ring-1 ring-primary/20 touch-manipulation" data-tutorial="create-session">
-            <Plus className="h-6 w-6 text-primary-foreground" strokeWidth={2.5} />
+        <div className="flex items-center justify-center pb-1">
+          <button
+            onClick={() => {
+              location.pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100));
+            }}
+            className="h-[54px] w-[54px] rounded-[1.15rem] bg-primary flex items-center justify-center text-primary-foreground active:scale-[0.94] transition-all duration-200 ease-out shadow-lg shadow-primary/28 ring-[3px] ring-background dark:ring-background touch-manipulation"
+            data-tutorial="create-session"
+            aria-label={t('navigation.createSession')}
+          >
+            <Plus className="h-7 w-7" strokeWidth={2.25} />
           </button>
         </div>
 
@@ -92,13 +110,28 @@ export const BottomNavigation = () => {
           const showBadge = path === '/messages' && totalUnreadCount > 0;
           const tutorialId = path === '/messages' ? 'nav-messages' : path === '/feed' ? 'nav-feed' : undefined;
           return (
-            <button key={path} onClick={() => navigate(path)} className="flex flex-col items-center justify-center h-full pt-ios-1 relative active:scale-95 transition-transform duration-150 touch-manipulation" data-tutorial={tutorialId}>
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className="flex flex-col items-center justify-center gap-0.5 min-h-[48px] rounded-xl mx-0.5 relative active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+              data-tutorial={tutorialId}
+            >
               <div className="relative">
-                <Icon className={`h-7 w-7 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.5} />
-                {showBadge && <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[11px] font-semibold rounded-full px-1">{totalUnreadCount > 99 ? '99+' : totalUnreadCount}</span>}
+                <Icon
+                  className={`h-[26px] w-[26px] transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+                  strokeWidth={isActive ? 2.4 : 1.65}
+                />
+                {showBadge && (
+                  <span className="absolute -top-1 -right-2 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full px-1 shadow-sm border border-background">
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </span>
+                )}
               </div>
-              <span className={`text-[10px] mt-ios-1 ${isActive ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{label}</span>
-              {isActive && <div className="w-1 h-1 rounded-full bg-primary mt-ios-1" />}
+              <span
+                className={`text-[11px] leading-none tracking-tight max-w-[4.5rem] truncate ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground font-medium'}`}
+              >
+                {label}
+              </span>
             </button>
           );
         })}

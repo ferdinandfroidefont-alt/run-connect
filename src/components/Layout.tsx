@@ -89,11 +89,11 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe bg-background flex flex-col overflow-x-hidden overflow-y-hidden">
+    <div className="h-screen-safe ios-app-canvas flex flex-col overflow-x-hidden overflow-y-hidden">
       <main
         className={`flex-1 min-h-0 h-0 overflow-y-auto overflow-x-hidden scroll-momentum ${hideBottomNav ? "" : "ios-nav-padding"}`}
       >
-        <div className="animate-fade-in h-full w-full relative">
+        <div className="animate-fade-in h-full w-full relative motion-reduce:animate-none">
           {children}
         </div>
       </main>

@@ -26,10 +26,18 @@ export default {
     			'ios-6': 'var(--space-6)'
     		},
     		fontFamily: {
+    			/* iOS / Apple first — Inter en repli web & Android */
     			sans: [
+    				'-apple-system',
+    				'BlinkMacSystemFont',
+    				'"SF Pro Text"',
+    				'"SF Pro Display"',
     				'Inter',
     				'ui-sans-serif',
     				'system-ui',
+    				'Segoe UI',
+    				'Roboto',
+    				'Helvetica Neue',
     				'sans-serif',
     				'Apple Color Emoji',
     				'Segoe UI Emoji',
@@ -37,6 +45,9 @@ export default {
     				'Noto Color Emoji'
     			],
     			display: [
+    				'-apple-system',
+    				'BlinkMacSystemFont',
+    				'"SF Pro Display"',
     				'Sora',
     				'Inter',
     				'sans-serif'

@@ -6,25 +6,28 @@ interface PageTransitionProps {
   children: ReactNode;
 }
 
+/** Courbe proche des transitions système iOS */
+const iosEase = [0.32, 0.72, 0, 1] as [number, number, number, number];
+
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 8,
+    y: 10,
   },
   enter: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.25,
-      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
+      duration: 0.32,
+      ease: iosEase,
     },
   },
   exit: {
     opacity: 0,
-    y: -4,
+    y: -6,
     transition: {
-      duration: 0.15,
-      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
+      duration: 0.2,
+      ease: iosEase,
     },
   },
 };

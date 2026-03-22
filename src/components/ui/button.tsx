@@ -5,23 +5,26 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-[17px] font-semibold transition-colors duration-150 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-[17px] font-semibold tracking-tight transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground rounded-ios-md active:opacity-70 shadow-sm shadow-primary/20",
-        destructive: "bg-destructive text-destructive-foreground rounded-ios-md active:opacity-70",
-        outline: "border border-border bg-background text-foreground rounded-ios-md active:bg-secondary",
-        secondary: "bg-secondary text-foreground rounded-ios-md active:opacity-70",
-        ghost: "text-primary rounded-ios-md active:bg-secondary",
-        link: "text-primary underline-offset-4 hover:underline",
-        tinted: "bg-primary/10 text-primary font-semibold rounded-full active:bg-primary/20",
+        default:
+          "bg-primary text-primary-foreground rounded-ios-lg shadow-md shadow-primary/18 ring-1 ring-black/[0.04] dark:ring-white/[0.08] active:opacity-90",
+        destructive:
+          "bg-destructive text-destructive-foreground rounded-ios-lg shadow-sm active:opacity-90",
+        outline:
+          "border border-border/80 bg-background/80 text-foreground rounded-ios-lg backdrop-blur-sm active:bg-secondary/90",
+        secondary: "bg-secondary text-secondary-foreground rounded-ios-lg active:opacity-90",
+        ghost: "text-primary rounded-ios-lg active:bg-secondary/80",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100 rounded-md",
+        tinted: "bg-primary/[0.12] text-primary font-semibold rounded-full active:bg-primary/20",
       },
       size: {
-        default: "h-[50px] px-ios-4",
-        sm: "h-[36px] px-ios-3 text-[15px]",
-        lg: "h-[56px] px-ios-6",
-        icon: "h-[44px] w-[44px]",
+        default: "h-[50px] px-ios-4 min-w-[44px]",
+        sm: "h-[36px] px-ios-3 text-[15px] rounded-ios-md active:scale-[0.99]",
+        lg: "h-[56px] px-ios-6 text-[17px]",
+        icon: "h-[44px] w-[44px] rounded-ios-lg",
       },
     },
     defaultVariants: {

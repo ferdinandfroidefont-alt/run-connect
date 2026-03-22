@@ -104,13 +104,22 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           key="splash"
           className="fixed inset-0 z-[100] flex flex-col overflow-hidden"
           style={splashLayerStyle}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
+          exit={{ opacity: 0, scale: 1.02 }}
+          transition={{ duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
         >
-          {/* Fond 100 % uni sur toute la surface (y compris sous status bar en mode overlay) */}
+          {/* Base + halo type iOS (lisible sous status bar overlay) */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{ backgroundColor: BRAND_BLUE }}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-0 pointer-events-none opacity-100"
+            style={{
+              background: `radial-gradient(ellipse 85% 55% at 50% 38%, rgba(255,255,255,0.22) 0%, transparent 52%),
+                radial-gradient(ellipse 120% 80% at 50% 100%, rgba(0,0,0,0.12) 0%, transparent 45%),
+                linear-gradient(165deg, #3b82f6 0%, ${BRAND_BLUE} 42%, #1e40af 100%)`,
+            }}
             aria-hidden
           />
 
@@ -122,34 +131,58 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
             }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, scale: 0.92, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              transition={{
+                type: 'spring',
+                stiffness: 260,
+                damping: 26,
+                mass: 0.85,
+              }}
               className="flex flex-col items-center"
             >
-              <img
-                src={splashImage}
-                alt=""
-                draggable={false}
-                className="select-none object-contain"
-                style={{
-                  width: '30vh',
-                  height: '30vh',
-                  maxWidth: 'min(92vw, 280px)',
-                  maxHeight: 'min(92vw, 280px)',
-                  minWidth: '120px',
-                  minHeight: '120px',
+              <div className="relative">
+                <div
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] blur-3xl opacity-70 pointer-events-none"
+                  style={{
+                    width: 'min(72vw, 320px)',
+                    height: 'min(72vw, 320px)',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.45) 0%, transparent 68%)',
+                  }}
+                  aria-hidden
+                />
+                <img
+                  src={splashImage}
+                  alt=""
+                  draggable={false}
+                  className="relative select-none object-contain drop-shadow-[0_12px_40px_rgba(0,0,0,0.25)]"
+                  style={{
+                    width: '30vh',
+                    height: '30vh',
+                    maxWidth: 'min(92vw, 280px)',
+                    maxHeight: 'min(92vw, 280px)',
+                    minWidth: '120px',
+                    minHeight: '120px',
+                  }}
+                />
+              </div>
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.12,
+                  type: 'spring',
+                  stiffness: 320,
+                  damping: 28,
                 }}
-              />
-              <p
-                className="mt-ios-3 text-center font-bold uppercase tracking-[0.2em] text-white"
+                className="mt-ios-3 text-center font-semibold uppercase text-white/95 ios-tracking-tight"
                 style={{
-                  fontSize: 'clamp(0.7rem, 2.8vw, 0.85rem)',
-                  letterSpacing: '0.22em',
+                  fontSize: 'clamp(0.72rem, 2.9vw, 0.88rem)',
+                  letterSpacing: '0.24em',
                 }}
               >
                 RUNCONNECT
-              </p>
+              </motion.p>
             </motion.div>
           </div>
         </motion.div>
@@ -160,7 +193,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           style={{ backgroundColor: BRAND_BLUE }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
+          transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
         />
       )}
     </AnimatePresence>
