@@ -82,7 +82,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -100,8 +100,8 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="py-6 space-y-6">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Legal */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -110,9 +110,9 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={() => { onClose(); navigate('/about'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#007AFF]">
                   <Info className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -121,16 +121,16 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               <button
                 onClick={() => {
                   onClose();
                   navigate("/legal");
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   <Scale className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -139,13 +139,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               <button 
                 onClick={() => { onClose(); navigate('/terms'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#5856D6]">
                   <FileText className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -154,13 +154,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               <button 
                 onClick={() => { onClose(); navigate('/privacy'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#34C759]">
                   <Shield className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -179,9 +179,9 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleRestartTutorial}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   <GraduationCap className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -190,14 +190,14 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Contact */}
               <a 
                 href={getSupportMailtoHref()}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#007AFF]">
                   <Mail className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -217,9 +217,9 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   <LogOut className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -231,12 +231,12 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               {/* Creator Mode */}
               {hasCreatorSupportAccess(user?.email, userProfile?.username) && (
                 <>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
                   <button 
                     onClick={() => setShowAdminPremium(true)}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-primary/5 active:bg-primary/10 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-primary/5 active:bg-primary/10 transition-colors"
                   >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                    <div className="ios-list-row-icon bg-[#5856D6]">
                       <Settings className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 text-left">
@@ -259,8 +259,8 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
             <div className="bg-card overflow-hidden">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 active:bg-destructive/5 transition-colors">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                  <button className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-destructive/5 transition-colors">
+                    <div className="ios-list-row-icon bg-[#FF3B30]">
                       <Trash2 className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 text-left">

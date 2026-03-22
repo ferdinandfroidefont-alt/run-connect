@@ -15,7 +15,13 @@ import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { rccToSessionBlocks, type RCCResult } from "@/lib/rccParser";
+import {
+  rccToSessionBlocks,
+  mergeParsedBlocksByIndex,
+  type RCCResult,
+  type ParsedBlock,
+} from "@/lib/rccParser";
+import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -77,21 +83,33 @@ export const CreateCoachingSessionDialog = ({
   const loadMembers = async () => {
     setLoadingMembers(true);
     try {
-      const { data: memberIds } = await supabase
+      const { data: memberIds, error: gmError } = await supabase
         .from("group_members")
         .select("user_id")
         .eq("conversation_id", clubId)
         .neq("user_id", user?.id || "");
 
-      if (memberIds && memberIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, username, display_name, avatar_url")
-          .in("user_id", memberIds.map(m => m.user_id));
-        setMembers(profiles || []);
+      if (gmError) throw gmError;
+
+      if (!memberIds?.length) {
+        setMembers([]);
+        return;
       }
-    } catch (e) {
+
+      const { data: profiles, error: profError } = await supabase
+        .from("profiles")
+        .select("user_id, username, display_name, avatar_url")
+        .in("user_id", memberIds.map(m => m.user_id));
+      if (profError) throw profError;
+      setMembers(profiles || []);
+    } catch (e: any) {
       console.error(e);
+      setMembers([]);
+      toast({
+        title: "Membres du club",
+        description: e?.message || "Impossible de charger la liste des membres.",
+        variant: "destructive",
+      });
     } finally {
       setLoadingMembers(false);
     }
@@ -109,13 +127,14 @@ export const CreateCoachingSessionDialog = ({
     if (!templateName.trim() || !rccCode.trim() || !user) return;
     setSavingTemplate(true);
     try {
-      await supabase.from("coaching_templates").insert({
+      const { error } = await supabase.from("coaching_templates").insert({
         coach_id: user.id,
         name: templateName.trim(),
         rcc_code: rccCode.trim(),
         activity_type: activityType,
         objective: objective.trim() || null,
       } as any);
+      if (error) throw error;
       toast({ title: "Template sauvegardé !" });
       setTemplateName("");
     } catch (e: any) {
@@ -127,6 +146,14 @@ export const CreateCoachingSessionDialog = ({
 
   const handleSubmit = async () => {
     if (!objective.trim() || !rccCode.trim() || !user) return;
+    if (sendMode === "club" && members.length === 0) {
+      toast({
+        title: "Aucun destinataire",
+        description: "Ce club n’a pas d’autres membres à notifier. Invitez des athlètes ou choisissez le mode individuel.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -166,13 +193,14 @@ export const CreateCoachingSessionDialog = ({
         : members.map(m => m.user_id);
 
       if (recipientIds.length > 0) {
-        await supabase.from("coaching_participations").insert(
+        const { error: partError } = await supabase.from("coaching_participations").insert(
           recipientIds.map(userId => ({
             coaching_session_id: session.id,
             user_id: userId,
             status: "sent",
           }))
         );
+        if (partError) throw partError;
       }
 
       // Notify in-app + push
@@ -236,8 +264,11 @@ export const CreateCoachingSessionDialog = ({
     });
   };
 
-  const canSubmit = objective.trim().length > 0 && rccCode.trim().length > 0 && parsedResult.errors.length === 0 &&
-    (sendMode === "club" || selectedAthletes.size > 0);
+  const canSubmit =
+    objective.trim().length > 0 &&
+    rccCode.trim().length > 0 &&
+    parsedResult.errors.length === 0 &&
+    (sendMode === "club" ? members.length > 0 : selectedAthletes.size > 0);
 
   const dateLabel = preselectedDate
     ? format(preselectedDate, "EEE d MMM", { locale: fr })

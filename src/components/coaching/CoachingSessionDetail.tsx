@@ -96,9 +96,11 @@ export const CoachingSessionDetail = ({
 
   useEffect(() => {
     if (isOpen && session) {
+      setFeedbackMap({});
+      setBatchFeedback("");
       loadParticipations();
     }
-  }, [isOpen, session]);
+  }, [isOpen, session?.id]);
 
   const loadParticipations = async () => {
     if (!session) return;
@@ -113,10 +115,11 @@ export const CoachingSessionDetail = ({
 
       if (data && data.length > 0) {
         const userIds = data.map((p) => p.user_id);
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profError } = await supabase
           .from("profiles")
           .select("user_id, username, display_name, avatar_url")
           .in("user_id", userIds);
+        if (profError) throw profError;
 
         const enriched = data.map((p) => ({
           ...p,
@@ -126,13 +129,22 @@ export const CoachingSessionDetail = ({
 
         const mine = enriched.find((p) => p.user_id === user?.id);
         setMyParticipation(mine || null);
-        if (mine?.athlete_note) setAthleteNote(mine.athlete_note);
+        setAthleteNote(mine?.athlete_note?.trim() ? mine.athlete_note : "");
       } else {
         setParticipations([]);
         setMyParticipation(null);
+        setAthleteNote("");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading participations:", error);
+      toast({
+        title: "Chargement impossible",
+        description: error?.message || "Réessayez dans un instant.",
+        variant: "destructive",
+      });
+      setParticipations([]);
+      setMyParticipation(null);
+      setAthleteNote("");
     } finally {
       setLoading(false);
     }
@@ -204,7 +216,7 @@ export const CoachingSessionDetail = ({
     if (!batchFeedback.trim() || withoutFeedback.length === 0 || !session) return;
     setSendingBatch(true);
     try {
-      await Promise.all(
+      const updates = await Promise.all(
         withoutFeedback.map(p =>
           supabase
             .from("coaching_participations")
@@ -212,6 +224,8 @@ export const CoachingSessionDetail = ({
             .eq("id", p.id)
         )
       );
+      const failed = updates.find((r) => r.error);
+      if (failed?.error) throw failed.error;
       await Promise.all(
         withoutFeedback.map(p =>
           sendPushNotification(

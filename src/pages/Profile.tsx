@@ -702,10 +702,10 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="max-w-md mx-auto pb-ios-4 space-y-ios-4">
+      <div className="mx-auto max-w-md space-y-ios-3 pb-ios-4">
         {/* Name, username, bio */}
-        <div className="flex flex-col items-center pt-ios-3 pb-ios-2 px-ios-4">
-          <div className="flex items-center gap-ios-2 mb-ios-1">
+        <div className="flex flex-col items-center px-ios-4 pb-ios-1 pt-ios-2">
+          <div className="mb-0.5 flex items-center gap-ios-2">
             <h2 className="text-ios-title2 font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
@@ -714,7 +714,7 @@ const Profile = () => {
             )}
           </div>
           
-          <p className="text-ios-subheadline text-muted-foreground mb-ios-2">
+          <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">
             @{profile?.username}
           </p>
 
@@ -758,7 +758,7 @@ const Profile = () => {
 
         {/* Recent Activities */}
         <div className="px-ios-4">
-          <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide pb-ios-2">
+          <p className="pb-ios-1 text-ios-footnote uppercase tracking-wide text-muted-foreground">
             Activités récentes
           </p>
           <RecentActivities userId={viewingUserId || user?.id || ''} />
@@ -794,13 +794,13 @@ const Profile = () => {
         {/* Collapsible Achievements Section */}
         <div className="px-ios-4">
           <Collapsible>
-            <CollapsibleTrigger className="w-full flex items-center justify-between py-ios-2 group">
+            <CollapsibleTrigger className="group flex w-full items-center justify-between py-ios-1">
               <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide">
                 Succès & Records
               </p>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-ios-3">
+            <CollapsibleContent className="space-y-ios-2">
               {/* Personal Goals - Own profile only */}
               {!isViewingOtherUser && <PersonalGoals />}
 
@@ -827,7 +827,7 @@ const Profile = () => {
 
         {/* Informations Section - Own Profile (editing form) */}
         {!isViewingOtherUser && isEditing && <div className="ios-card overflow-hidden">
-            <div className="px-ios-4 py-ios-4 space-y-ios-4">
+            <div className="space-y-ios-3 px-ios-4 py-ios-3">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
                   <Input value={formData.username || ''} onChange={e => setFormData({
@@ -923,7 +923,9 @@ const Profile = () => {
           </div>}
 
         {/* Strava Connect Section */}
-        <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+        <div className="px-ios-4">
+          <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+        </div>
 
         {/* Follow Dialog */}
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />

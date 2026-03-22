@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +27,19 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
     return () => clearTimeout(t);
   }, [showSlowHintAfterMs]);
 
+  const logoBoxStyle: CSSProperties = {
+    width: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
+    height: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
+    maxWidth: 'min(88vw, 17.75rem)',
+    maxHeight: 'min(88vw, 17.75rem)',
+  };
+
+  const titleStyle: CSSProperties = {
+    fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
+    marginTop: 'clamp(0.5rem, min(1.85dvh, 1.125rem), 1rem)',
+    letterSpacing: '-0.02em',
+  };
+
   const handleRetry = () => {
     try {
       void import('@/integrations/supabase/client').then(({ supabase }) => {
@@ -51,25 +64,24 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
       aria-busy="true"
       data-boot-phase={phase}
     >
-      <div className="flex max-w-[min(100%,20rem)] flex-col items-center text-center">
-        <img
-          src={RUCONNECT_SPLASH_ICON_URL}
-          alt=""
-          draggable={false}
-          className="mb-ios-4 select-none object-contain"
+      <div className="flex w-full max-w-[min(100%,22rem)] flex-col items-center text-center">
+        <div
+          className="mb-ios-6 flex flex-col items-center"
           style={{
-            width: 'min(48vw, 220px)',
-            height: 'min(48vw, 220px)',
-            minWidth: '140px',
-            minHeight: '140px',
+            transform: 'translateY(calc(-1 * min(3dvh, 1.25rem)))',
           }}
-        />
-        <p
-          className="mb-ios-5 font-semibold tracking-tight text-white"
-          style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.6rem)' }}
         >
-          RunConnect
-        </p>
+          <img
+            src={RUCONNECT_SPLASH_ICON_URL}
+            alt=""
+            draggable={false}
+            className="block shrink-0 select-none object-contain"
+            style={logoBoxStyle}
+          />
+          <p className="font-semibold text-white" style={titleStyle}>
+            RunConnect
+          </p>
+        </div>
 
         <div className="flex flex-col items-center gap-ios-2">
           <Loader2 className="h-8 w-8 animate-spin text-white/90" aria-hidden />

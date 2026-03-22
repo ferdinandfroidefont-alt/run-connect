@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
+import { cn } from "@/lib/utils";
 
 interface Profile {
   notifications_enabled?: boolean;
@@ -114,12 +115,12 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
 
 
   return (
-    <motion.div
+    <motion.div 
       initial={{ x: 100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
       {/* Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -132,16 +133,16 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="py-6 space-y-6">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
           {/* Main Toggle */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Notifications Push
             </h3>
             <div className="bg-card overflow-hidden">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="ios-list-row-icon bg-[#FF3B30]">
                   <Smartphone className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
@@ -159,7 +160,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               {profile?.notifications_enabled === false && (
                 <>
                   <div className="h-px bg-border" />
-                  <div className="px-4 py-3 bg-orange-500/10">
+                  <div className="px-4 py-2.5 bg-orange-500/10">
                     <p className="text-[13px] text-orange-500">⚠️ Les préférences ci-dessous sont inactives</p>
                   </div>
                 </>
@@ -170,9 +171,9 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                   <div className="h-px bg-border" />
                   <button
                     onClick={handleNotificationToggle}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-primary/10 active:bg-primary/20 transition-colors"
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
                   >
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center">
+                    <div className="ios-list-row-icon bg-primary">
                       <Bell className="h-[18px] w-[18px] text-primary-foreground" />
                     </div>
                     <div className="flex-1 text-left">
@@ -213,8 +214,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             <div className="bg-card overflow-hidden">
               {notificationItems.map((item, index) => (
                 <div key={item.key}>
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className={`h-[30px] w-[30px] rounded-[7px] ${item.color} flex items-center justify-center`}>
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className={cn("ios-list-row-icon", item.color)}>
                       <item.icon className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1">
@@ -224,7 +225,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                           <span className="text-[11px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-medium">PREMIUM</span>
                         )}
                       </div>
-                      <p className="text-[13px] text-muted-foreground">{item.desc}</p>
+                      <p className="mt-px text-[13px] leading-snug text-muted-foreground">{item.desc}</p>
                     </div>
                     <Switch
                       checked={(profile as any)?.[item.key] === true}
@@ -232,7 +233,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                       disabled={profile?.notifications_enabled !== true || (item.premium && !profile?.is_premium)}
                     />
                   </div>
-                  {index < notificationItems.length - 1 && <div className="h-px bg-border ml-[54px]" />}
+                  {index < notificationItems.length - 1 && <div className="ios-list-row-inset-sep" />}
                 </div>
               ))}
             </div>

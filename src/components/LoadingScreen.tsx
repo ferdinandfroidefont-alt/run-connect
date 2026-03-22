@@ -42,66 +42,80 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     backgroundColor: RUCONNECT_SPLASH_BLUE,
   };
 
+  /** Logo carré : borné par la hauteur d’écran (iPhone petits / grands) + largeur — présence premium stable */
+  const logoBoxStyle: CSSProperties = {
+    width: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
+    height: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
+    maxWidth: 'min(88vw, 17.75rem)',
+    maxHeight: 'min(88vw, 17.75rem)',
+  };
+
+  /** Texte proportionné au bloc logo (même logique vmin / dvh) */
+  const titleStyle: CSSProperties = {
+    fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
+    marginTop: 'clamp(0.5rem, min(1.85dvh, 1.125rem), 1rem)',
+    letterSpacing: '-0.02em',
+  };
+
   return (
     <AnimatePresence>
       {!exiting ? (
         <motion.div
           key="splash"
-          className="fixed inset-0 z-[100] flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
           style={splashLayerStyle}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
         >
+          {/* Un seul fond bleu (pas de 2e calque coloré = pas de zone « carte » perceptible) */}
           <div
-            className="relative flex min-h-[100dvh] w-full min-w-0 flex-col items-center justify-center px-ios-4"
+            className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-5"
             style={{
               paddingTop: 'env(safe-area-inset-top, 0px)',
               paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-              // Même bleu jusqu’aux bords (pas de dégradé = pas d’écart de teinte)
-              backgroundColor: RUCONNECT_SPLASH_BLUE,
             }}
           >
+            {/* Remontée optique : le centre géométrique paraît bas à cause du safe-area / indicateur d’accueil */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
                 type: 'spring',
-                stiffness: 280,
-                damping: 28,
-                mass: 0.9,
+                stiffness: 300,
+                damping: 30,
+                mass: 0.85,
               }}
               className="flex flex-col items-center"
             >
-              <img
-                src={RUCONNECT_SPLASH_ICON_URL}
-                alt=""
-                draggable={false}
-                className="relative select-none object-contain"
+              {/* Calque statique : centrage optique (FM contrôle seul le transform du parent) */}
+              <div
+                className="flex flex-col items-center"
                 style={{
-                  width: 'min(54vw, 280px)',
-                  height: 'min(54vw, 280px)',
-                  maxWidth: 'min(92vw, 320px)',
-                  maxHeight: 'min(92vw, 320px)',
-                  minWidth: '160px',
-                  minHeight: '160px',
-                }}
-              />
-              <motion.p
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.08,
-                  type: 'spring',
-                  stiffness: 320,
-                  damping: 30,
-                }}
-                className="mt-ios-4 text-center font-semibold tracking-tight text-white"
-                style={{
-                  fontSize: 'clamp(1.35rem, 5vw, 1.75rem)',
+                  transform: 'translateY(calc(-1 * min(4.5dvh, 1.75rem)))',
                 }}
               >
-                RunConnect
-              </motion.p>
+                <img
+                  src={RUCONNECT_SPLASH_ICON_URL}
+                  alt=""
+                  draggable={false}
+                  className="block shrink-0 select-none object-contain"
+                  style={logoBoxStyle}
+                />
+                <motion.p
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.06,
+                    type: 'spring',
+                    stiffness: 340,
+                    damping: 32,
+                  }}
+                  className="text-center font-semibold text-white"
+                  style={titleStyle}
+                >
+                  RunConnect
+                </motion.p>
+              </div>
             </motion.div>
           </div>
         </motion.div>

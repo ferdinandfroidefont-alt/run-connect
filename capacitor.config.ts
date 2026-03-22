@@ -11,9 +11,10 @@ const config: CapacitorConfig = {
     },
     Geolocation: {},
     Camera: {},
+    /* Fond par défaut = coque app claire : évite la bande bleue (#2455EB) sous le WebView quand iOS laisse voir la couche native (safe area, dvh, etc.). Le splash reste géré par LoadingScreen / Splash natif. */
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#2455EB'
+      backgroundColor: '#FFFFFF',
     },
   },
   android: {
@@ -35,9 +36,11 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
-    /** Aligné sur le thème clair par défaut ; le web met à jour via StatusBar + CSS */
-    /* Aligné sur RUCONNECT_SPLASH_BLUE (src/lib/ruconnectSplashChrome.ts) — évite flash autour du splash */
-    backgroundColor: '#2455EB',
+    /**
+     * Doit matcher le fond réel des écrans (clair / sombre via contenu Web), pas le bleu splash :
+     * sinon une bande bleue intermittente apparaît sous la tab bar (couche native visible dans la safe area).
+     */
+    backgroundColor: '#FFFFFF',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

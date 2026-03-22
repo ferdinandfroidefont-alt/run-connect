@@ -68,12 +68,12 @@ export const BottomNavigation = () => {
 
   return (
     <nav
-      className="z-50 w-full shrink-0 ios-nav-shell"
-      style={{ paddingBottom: 'var(--safe-area-bottom)' }}
+      className="z-50 flex w-full shrink-0 flex-col"
       role="navigation"
       aria-label="Navigation principale"
     >
-      <div className="grid grid-cols-5 items-end h-[var(--nav-height)]">
+      {/* Barre tactile : effet verre ; la safe area est un bloc opaque en dessous pour masquer la couche native iOS */}
+      <div className="ios-nav-shell grid w-full grid-cols-5 items-end h-[var(--nav-height)]">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
@@ -141,6 +141,11 @@ export const BottomNavigation = () => {
           );
         })}
       </div>
+      <div
+        className="w-full shrink-0 bg-background"
+        style={{ height: 'var(--safe-area-bottom)' }}
+        aria-hidden
+      />
     </nav>
   );
 };

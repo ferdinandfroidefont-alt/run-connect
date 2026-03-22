@@ -321,35 +321,54 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const saveDraft = async () => {
     if (!user || sessions.length === 0) return;
     setDraftSaveStatus("saving");
-    const weekStartStr = format(weekStart, "yyyy-MM-dd");
-    const stripped = sessions.map(({ parsedBlocks, ...rest }) => rest);
-    await supabase.from("coaching_drafts" as any).upsert({
-      coach_id: user.id,
-      club_id: clubId,
-      week_start: weekStartStr,
-      group_id: activeGroupId,
-      sessions: stripped,
-      target_athletes: targetAthletes,
-    } as any, { onConflict: "coach_id,club_id,week_start,group_id" } as any);
-    setDraftSaveStatus("saved");
+    try {
+      const weekStartStr = format(weekStart, "yyyy-MM-dd");
+      const stripped = sessions.map(({ parsedBlocks, ...rest }) => rest);
+      const { error } = await supabase.from("coaching_drafts" as any).upsert(
+        {
+          coach_id: user.id,
+          club_id: clubId,
+          week_start: weekStartStr,
+          group_id: activeGroupId,
+          sessions: stripped,
+          target_athletes: targetAthletes,
+        } as any,
+        { onConflict: "coach_id,club_id,week_start,group_id" } as any
+      );
+      if (error) throw error;
+      setDraftSaveStatus("saved");
+    } catch (e) {
+      console.error("saveDraft coaching:", e);
+      setDraftSaveStatus("idle");
+      toast({
+        title: "Brouillon non enregistré",
+        description: "Vérifiez la connexion ou réessayez.",
+        variant: "destructive",
+      });
+    }
   };
 
   const loadMembers = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("group_members")
       .select("user_id")
       .eq("conversation_id", clubId);
-    if (data && data.length > 0) {
-      const userIds = data.map(d => d.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, display_name")
-        .in("user_id", userIds);
-      setMembers(
-        (profiles || [])
-          .map(p => ({ user_id: p.user_id!, display_name: p.display_name || "Athlète" }))
-      );
+    if (error || !data?.length) {
+      setMembers([]);
+      return;
     }
+    const userIds = data.map(d => d.user_id);
+    const { data: profiles, error: profError } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", userIds);
+    if (profError) {
+      setMembers([]);
+      return;
+    }
+    setMembers(
+      (profiles || []).map(p => ({ user_id: p.user_id!, display_name: p.display_name || "Athlète" }))
+    );
   };
 
   const loadGroups = async () => {

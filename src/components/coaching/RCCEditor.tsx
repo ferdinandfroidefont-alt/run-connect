@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,9 @@ const QUICK_CHIPS = [
 ];
 
 export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) => {
+  const uid = useId();
+  const inputId = `${uid}-rcc`;
+  const errorsId = `${uid}-rcc-errors`;
   const [result, setResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -68,14 +71,22 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground uppercase">Code séance (RCC)</label>
+        <label htmlFor={inputId} className="text-xs font-medium text-muted-foreground uppercase">
+          Code séance (RCC)
+        </label>
         <Textarea
+          id={inputId}
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="20'>5'15, 3x1000>3'00 r1'15>trot, 5'>6'00"
           className="font-mono text-sm min-h-[60px] resize-none"
           rows={2}
+          aria-invalid={result.errors.length > 0}
+          aria-describedby={result.errors.length > 0 ? errorsId : undefined}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
         />
       </div>
 
@@ -90,6 +101,7 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
             className="h-7 text-xs px-2.5 font-mono"
             onClick={() => insertText(chip.insert)}
             title={chip.title}
+            aria-label={`Insérer : ${chip.title}`}
           >
             {chip.label}
           </Button>
@@ -108,7 +120,7 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
 
       {/* Errors */}
       {result.errors.length > 0 && (
-        <div className="space-y-1">
+        <div id={errorsId} className="space-y-1" role="alert">
           {result.errors.map((err, i) => (
             <div key={i} className="flex items-start gap-1.5 text-xs text-destructive">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />

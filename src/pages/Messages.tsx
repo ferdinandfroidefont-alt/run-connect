@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { applyWebChromeForTheme } from "@/lib/iosStatusBarTheme";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -228,22 +229,29 @@ const Messages = () => {
 
   // Show/hide bottom navigation based on conversation state
   useEffect(() => {
-    // Couleur secondary mode clair : hsl(210 40% 98%) ≈ #F5F7FA
-    const secondaryColor = '#F5F7FA';
-    const defaultColor = '#F5F5F5';
-    
+    const root = document.documentElement;
+    const hslVar = (name: string) => {
+      const t = getComputedStyle(root).getPropertyValue(name).trim();
+      return t ? `hsl(${t})` : '';
+    };
+
     if (selectedConversation) {
       setHideBottomNav(true);
-      document.documentElement.style.backgroundColor = secondaryColor;
-      document.body.style.backgroundColor = secondaryColor;
+      const sec = hslVar('--secondary');
+      if (sec) {
+        root.style.backgroundColor = sec;
+        document.body.style.backgroundColor = sec;
+      }
     } else {
       setHideBottomNav(false);
-      document.documentElement.style.backgroundColor = defaultColor;
-      document.body.style.backgroundColor = defaultColor;
+      const bg = hslVar('--background');
+      if (bg) {
+        root.style.backgroundColor = bg;
+        document.body.style.backgroundColor = bg;
+      }
     }
     return () => {
-      document.documentElement.style.backgroundColor = defaultColor;
-      document.body.style.backgroundColor = defaultColor;
+      applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setHideBottomNav]);
 

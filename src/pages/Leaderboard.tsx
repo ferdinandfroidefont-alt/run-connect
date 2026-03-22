@@ -229,23 +229,8 @@ const Leaderboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showRules, setShowRules] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  /** Racine du scroll pour la liste (carte classement) — requis pour l’infinite scroll */
-  const [listScrollRoot, setListScrollRoot] = useState<HTMLDivElement | null>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
-
-  // Infinite scroll (root = zone scroll interne à la card)
-  useEffect(() => {
-    if (!listScrollRoot || !sentinelRef.current || !hasMoreUsers || loading || loadingMore) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage((p) => p + 1);
-      },
-      { root: listScrollRoot, threshold: 0.1, rootMargin: "80px" }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [listScrollRoot, hasMoreUsers, loading, loadingMore]);
 
   const getEffectiveFilter = useCallback((): FilterType => {
     if (activeScope === 'friends') return 'friends';
@@ -416,136 +401,152 @@ const Leaderboard = () => {
       )
     : leaderboard;
 
+  // Infinite scroll : racine = viewport (un seul scroll page, pas de zone imbriquée)
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMoreUsers || loading || loadingMore || searchQuery.trim()) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage((p) => p + 1);
+      },
+      { root: null, threshold: 0.1, rootMargin: '120px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMoreUsers, loading, loadingMore, searchQuery, filteredLeaderboard.length]);
+
   const nextRankInfo = getNextRankInfo(userRankLabel);
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary z-0">
-      {/* ── FIXED HEADER ── */}
-      <div className="z-50 shrink-0 border-b border-border/40 bg-card">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
+      {/* En-tête fixe : hors du scroll, pas de z-index élevé (évite chevauchements visuels avec le contenu) */}
+      <header className="shrink-0 border-b border-border/40 bg-card">
         <div className="flex items-center justify-between px-4 py-3">
-          <button onClick={() => navigate('/')} className="flex items-center text-primary">
+          <button type="button" onClick={() => navigate('/')} className="flex items-center text-primary">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-[17px] font-semibold">Classement</h1>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowRules(true)} className="text-primary transition-opacity active:opacity-60">
+            <button type="button" onClick={() => setShowRules(true)} className="text-primary transition-opacity active:opacity-60">
               <BookOpen className="h-5 w-5" />
             </button>
-            <button className="text-primary transition-opacity active:opacity-60">
+            <button type="button" className="text-primary transition-opacity active:opacity-60">
               <Target className="h-5 w-5" />
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Zone haute : hauteur max pour laisser ~8–10 lignes visibles dans le bloc classement */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="max-h-[min(300px,38svh)] shrink-0 space-y-1.5 overflow-y-auto overscroll-y-contain px-3 pt-1.5 [-webkit-overflow-scrolling:touch]">
-          {userRank && (
-            <MyRankCard
-              currentRank={userRank}
-              currentPoints={userPoints}
-              nextRankName={nextRankInfo.name}
-              nextRankPoints={nextRankInfo.points}
-              userRank={userRankLabel}
-              rankChange={userRankChange}
-            />
+      {/* Un seul flux vertical + scroll naturel (plus de max-height / double scroll) */}
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pb-6 pt-3">
+        <div className="mx-auto flex w-full max-w-lg flex-col">
+          {userRank != null && (
+            <section className="mb-4" aria-label="Mon classement">
+              <MyRankCard
+                currentRank={userRank}
+                currentPoints={userPoints}
+                nextRankName={nextRankInfo.name}
+                nextRankPoints={nextRankInfo.points}
+                userRank={userRankLabel}
+                rankChange={userRankChange}
+              />
+            </section>
           )}
 
-          <FilterBar
-            activeScope={activeScope}
-            onScopeChange={(s) => {
-              setActiveScope(s);
-              setSearchQuery('');
-            }}
-            activeFilter={activeFilter}
-            onFilterChange={(f) => {
-              setActiveFilter(f);
-              setSearchQuery('');
-            }}
-            selectedClubs={selectedClubs}
-            onClubsChange={setSelectedClubs}
-            userClubs={userClubs}
-          />
+          <section className="mb-4" aria-label="Filtres">
+            <FilterBar
+              activeScope={activeScope}
+              onScopeChange={(s) => {
+                setActiveScope(s);
+                setSearchQuery('');
+              }}
+              activeFilter={activeFilter}
+              onFilterChange={(f) => {
+                setActiveFilter(f);
+                setSearchQuery('');
+              }}
+              selectedClubs={selectedClubs}
+              onClubsChange={setSelectedClubs}
+              userClubs={userClubs}
+            />
+          </section>
 
-          <div className="py-0">
+          <section className="mb-4" aria-label="Récompense saison">
             <SeasonRewardBanner />
-          </div>
+          </section>
 
-          <div className="flex items-center gap-2 pb-0.5">
+          <section className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <p className="shrink-0 text-[11px] text-muted-foreground">
               {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
             </p>
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
               <Input
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 rounded-[10px] border-0 bg-card pl-8 text-[13px] shadow-sm"
+                className="h-9 w-full rounded-[10px] border-0 bg-card pl-8 text-[13px] shadow-sm"
               />
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Carte classement : flex-1 + basis-0 pour occuper tout l’espace sous la zone haute (≈8–10 lignes), scroll interne conservé */}
-        <div className="flex min-h-0 flex-1 basis-0 flex-col px-3 pb-3 pt-2">
-          <div
-            className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-hidden',
-              'rounded-[20px] border border-border/50 bg-card/95 shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]',
-              'backdrop-blur-md dark:border-border/60 dark:bg-card/90 dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
-            )}
-          >
-            <div className="shrink-0 border-b border-border/40 bg-secondary/25 px-4 pb-2.5 pt-3 dark:bg-secondary/20">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Classement général</p>
-              <p className="mt-0.5 text-[15px] font-semibold text-foreground">Saison en cours</p>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">Points saisonniers · mise à jour en direct</p>
-            </div>
-
+          <section className="flex flex-col" aria-label="Classement général">
             <div
-              ref={setListScrollRoot}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
-            >
-              {loading && leaderboard.length === 0 ? (
-                <div className="p-4">
-                  <LeaderboardSkeleton />
-                </div>
-              ) : filteredLeaderboard.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-6 py-16">
-                  <span className="mb-3 text-4xl">🏅</span>
-                  <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
-                  <p className="text-center text-[14px] text-muted-foreground">
-                    {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5 px-2 py-3">
-                  {filteredLeaderboard.map((u) => {
-                    const isMe = u.user_id === user?.id;
-                    return (
-                      <LeaderboardRow
-                        key={u.user_id}
-                        u={u}
-                        isMe={isMe}
-                        onClick={() => navigateToProfile(u.user_id)}
-                      />
-                    );
-                  })}
-
-                  {hasMoreUsers && !searchQuery && (
-                    <div ref={sentinelRef} className="flex justify-center py-5">
-                      {loadingMore && (
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      )}
-                    </div>
-                  )}
-                </div>
+              className={cn(
+                'flex flex-col overflow-hidden rounded-[20px] border border-border/50 bg-card shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]',
+                'dark:border-border/60 dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
               )}
+            >
+              <div className="border-b border-border/40 bg-secondary/25 px-4 pb-2.5 pt-3 dark:bg-secondary/20">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Classement général</p>
+                <p className="mt-0.5 text-[15px] font-semibold text-foreground">Saison en cours</p>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">Points saisonniers · mise à jour en direct</p>
+              </div>
+
+              <div className="flex flex-col">
+                {loading && leaderboard.length === 0 ? (
+                  <div className="p-4">
+                    <LeaderboardSkeleton />
+                  </div>
+                ) : filteredLeaderboard.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center px-6 py-16">
+                    <span className="mb-3 text-4xl">🏅</span>
+                    <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
+                    <p className="text-center text-[14px] text-muted-foreground">
+                      {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5 px-2 py-3">
+                    {filteredLeaderboard.map((u) => {
+                      const isMe = u.user_id === user?.id;
+                      return (
+                        <LeaderboardRow
+                          key={u.user_id}
+                          u={u}
+                          isMe={isMe}
+                          onClick={() => navigateToProfile(u.user_id)}
+                        />
+                      );
+                    })}
+
+                    {hasMoreUsers && !searchQuery.trim() && (
+                      <div ref={sentinelRef} className="flex justify-center py-5">
+                        {loadingMore && (
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </section>
         </div>
-      </div>
+      </main>
 
       {/* ── Rules Sheet ── */}
       <RulesSheet open={showRules} onOpenChange={setShowRules} />

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RotateCcw, Mountain, MapPin, TrendingUp } from 'lucide-react';
+import { Play, Pause, RotateCcw, Mountain, MapPin, TrendingUp, Gauge } from 'lucide-react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
 import { getKeyBody } from '@/lib/googleMapsKey';
@@ -31,6 +31,55 @@ function haversine(a: { lat: number; lng: number }, b: { lat: number; lng: numbe
   const sinLng = Math.sin(dLng / 2);
   const h = sinLat * sinLat + Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * sinLng * sinLng;
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+/** Position interpolée le long du polyline (distance cumulée en mètres). */
+function positionAlongRouteAtDistance(
+  coordinates: { lat: number; lng: number }[],
+  cumulativeDistances: number[],
+  distanceM: number
+): { pos: { lat: number; lng: number }; segIndex: number; segT: number } {
+  const n = coordinates.length;
+  if (n < 2) {
+    return { pos: { lat: coordinates[0].lat, lng: coordinates[0].lng }, segIndex: 0, segT: 0 };
+  }
+  const totalD = cumulativeDistances[n - 1] || 0;
+  const d = Math.max(0, Math.min(distanceM, totalD));
+  if (d <= 0) {
+    return { pos: { lat: coordinates[0].lat, lng: coordinates[0].lng }, segIndex: 0, segT: 0 };
+  }
+  if (d >= totalD) {
+    return {
+      pos: { lat: coordinates[n - 1].lat, lng: coordinates[n - 1].lng },
+      segIndex: n - 2,
+      segT: 1,
+    };
+  }
+  let j = 0;
+  while (j < n - 1 && cumulativeDistances[j + 1] < d) j++;
+  const d0 = cumulativeDistances[j];
+  const d1 = cumulativeDistances[j + 1];
+  const segT = d1 > d0 ? (d - d0) / (d1 - d0) : 0;
+  return {
+    pos: {
+      lat: coordinates[j].lat + (coordinates[j + 1].lat - coordinates[j].lat) * segT,
+      lng: coordinates[j].lng + (coordinates[j + 1].lng - coordinates[j].lng) * segT,
+    },
+    segIndex: j,
+    segT,
+  };
+}
+
+/** Distance caméra derrière le coureur (m) — un peu plus sur les longs parcours. */
+function chaseCameraBackMeters(polylineLengthM: number): number {
+  if (polylineLengthM <= 0) return 130;
+  return Math.min(240, Math.max(95, polylineLengthM * 0.035));
+}
+
+/** Distance de visée vers l’avant pour stabiliser le cap. */
+function lookAheadMeters(polylineLengthM: number): number {
+  if (polylineLengthM <= 0) return 180;
+  return Math.min(320, Math.max(140, polylineLengthM * 0.045));
 }
 
 export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
@@ -132,7 +181,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           center: { lat: centerLat, lng: centerLng },
           zoom: 15,
           mapTypeId: 'satellite',
-          tilt: 60,
+          tilt: 67,
           heading: 0,
           disableDefaultUI: true,
           zoomControl: false,
@@ -156,9 +205,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         const remainingPoly = new google.maps.Polyline({
           path: coordinates.map(c => ({ lat: c.lat, lng: c.lng })),
           geodesic: true,
-          strokeColor: '#7C9DFF',
-          strokeOpacity: 0.22,
-          strokeWeight: 5,
+          strokeColor: '#FF5A1F',
+          strokeOpacity: 0.38,
+          strokeWeight: 6,
           map,
         });
         remainingPolyRef.current = remainingPoly;
@@ -167,9 +216,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         const traveledGlow = new google.maps.Polyline({
           path: [],
           geodesic: true,
-          strokeColor: '#22c55e',
-          strokeOpacity: 0.2,
-          strokeWeight: 12,
+          strokeColor: '#34d399',
+          strokeOpacity: 0.35,
+          strokeWeight: 14,
           map,
         });
         traveledGlowRef.current = traveledGlow;
@@ -178,7 +227,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         const traveledPoly = new google.maps.Polyline({
           path: [],
           geodesic: true,
-          strokeColor: '#22c55e',
+          strokeColor: '#ffffff',
           strokeOpacity: 1,
           strokeWeight: 5,
           map,
@@ -221,8 +270,8 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           map,
           icon: {
             path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 6,
-            fillColor: '#5B7CFF',
+            scale: 6.5,
+            fillColor: '#2563eb',
             fillOpacity: 1,
             strokeColor: '#ffffff',
             strokeWeight: 2.5,
@@ -258,14 +307,18 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }, []);
 
-  // Animation loop
+  // Animation loop — survol cinématique (caméra « chase », cap vers l’avant, tracé révélé)
   useEffect(() => {
     if (!mapReady || !mapRef.current || coordinates.length < 2) return;
 
     let lastTime = 0;
     let headingSmooth = 0;
-    let tiltSmooth = 65;
-    let zoomSmooth = 17.5;
+    let tiltSmooth = 69;
+    let zoomSmooth = 17.4;
+    const totalIdx = coordinates.length - 1;
+    const polylineLengthM = cumulativeDistances[totalIdx] || 0;
+    const backM = chaseCameraBackMeters(polylineLengthM);
+    const aheadM = lookAheadMeters(polylineLengthM);
 
     const animate = (timestamp: number) => {
       if (!isPlayingRef.current) {
@@ -275,7 +328,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       }
 
       if (!lastTime) lastTime = timestamp;
-      const delta = (timestamp - lastTime) / 1000;
+      const delta = Math.min(0.05, (timestamp - lastTime) / 1000);
       lastTime = timestamp;
 
       const speedMultiplier = speedRef.current;
@@ -283,33 +336,46 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       if (newProgress >= 1) {
         newProgress = 0;
         setIsPlaying(false);
+        cameraCenterLatRef.current = null;
+        cameraCenterLngRef.current = null;
+        lastSpeedSampleRef.current = null;
       }
 
       setProgress(newProgress);
       progressRef.current = newProgress;
 
-      const totalIdx = coordinates.length - 1;
-      const exactIdx = newProgress * totalIdx;
-      const idx = Math.min(Math.floor(exactIdx), totalIdx - 1);
-      const frac = exactIdx - idx;
+      const distNow = newProgress * polylineLengthM;
+      const { pos: currentPos, segIndex: idx, segT: frac } = positionAlongRouteAtDistance(
+        coordinates,
+        cumulativeDistances,
+        distNow
+      );
 
-      const currentPos = {
-        lat: coordinates[idx].lat + (coordinates[idx + 1].lat - coordinates[idx].lat) * frac,
-        lng: coordinates[idx].lng + (coordinates[idx + 1].lng - coordinates[idx].lng) * frac,
-      };
+      // Vitesse instantanée (HUD)
+      const sample = lastSpeedSampleRef.current;
+      if (sample && delta > 1e-4) {
+        const movedM = haversine(sample.pos, currentPos);
+        const kmh = (movedM / delta) * 3.6;
+        speedKmhSmoothRef.current = speedKmhSmoothRef.current * 0.82 + kmh * 0.18;
+        setCurrentSpeedKmh(Math.round(speedKmhSmoothRef.current));
+      }
+      lastSpeedSampleRef.current = { pos: { ...currentPos }, time: timestamp };
 
-      // Update marker position and rotation
       if (markerRef.current) {
         markerRef.current.setPosition(currentPos);
       }
 
-      // Update traveled polylines
       const trailPath = coordinates.slice(0, idx + 1).map(c => ({ lat: c.lat, lng: c.lng }));
       trailPath.push(currentPos);
       traveledPolyRef.current?.setPath(trailPath);
       traveledGlowRef.current?.setPath(trailPath);
 
-      // Elevation & slope
+      const remainingPath: google.maps.LatLngLiteral[] = [{ ...currentPos }];
+      for (let k = idx + 1; k <= totalIdx; k++) {
+        remainingPath.push({ lat: coordinates[k].lat, lng: coordinates[k].lng });
+      }
+      remainingPolyRef.current?.setPath(remainingPath);
+
       if (elevations.length > idx + 1) {
         const elev = elevations[idx] + (elevations[idx + 1] - elevations[idx]) * frac;
         setCurrentElevation(Math.round(elev));
@@ -319,16 +385,16 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       const smoothSlope = slopeVal + ((slopes[Math.min(idx + 1, totalIdx)] || 0) - slopeVal) * frac;
       setCurrentSlope(Math.round(smoothSlope * 10) / 10);
 
-      // Smooth heading with increased look-ahead
-      const lookAheadIdx = Math.min(idx + 15, totalIdx);
-      const targetHeading = computeHeading(currentPos, coordinates[lookAheadIdx]);
+      const lookDist = Math.min(distNow + aheadM, polylineLengthM);
+      const { pos: lookPos } = positionAlongRouteAtDistance(coordinates, cumulativeDistances, lookDist);
+      const targetHeading = computeHeading(currentPos, lookPos);
 
       let diff = targetHeading - headingSmooth;
       if (diff > 180) diff -= 360;
       if (diff < -180) diff += 360;
-      headingSmooth += diff * 0.06;
+      const headingLerp = polylineLengthM > 5000 ? 0.055 : 0.075;
+      headingSmooth += diff * headingLerp;
 
-      // Update marker rotation
       if (markerRef.current) {
         const icon = markerRef.current.getIcon() as google.maps.Symbol;
         if (icon) {
@@ -336,17 +402,40 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         }
       }
 
-      // Dynamic tilt based on slope (uphill = less tilt, downhill = more tilt)
-      const targetTilt = 65 + Math.max(-10, Math.min(5, smoothSlope * 0.5));
-      tiltSmooth += (targetTilt - tiltSmooth) * 0.04;
+      const turnIntensity = Math.abs(diff);
+      const targetTilt =
+        69 +
+        Math.max(-8, Math.min(6, smoothSlope * 0.45)) -
+        Math.min(7, turnIntensity * 0.12);
+      tiltSmooth += (targetTilt - tiltSmooth) * 0.045;
 
-      // Dynamic zoom based on heading change rate
-      const headingChangeRate = Math.abs(diff);
-      const targetZoom = headingChangeRate > 15 ? 16.5 : 17;
-      zoomSmooth += (targetZoom - zoomSmooth) * 0.03;
+      const targetZoom = turnIntensity > 18 ? 16.4 : turnIntensity > 10 ? 16.9 : 17.35;
+      zoomSmooth += (targetZoom - zoomSmooth) * 0.035;
 
       const map = mapRef.current;
-      if (map) {
+      if (map && window.google?.maps?.geometry?.spherical) {
+        const behind = google.maps.geometry.spherical.computeOffset(
+          new google.maps.LatLng(currentPos.lat, currentPos.lng),
+          backM,
+          headingSmooth + 180
+        );
+        const targetCam = { lat: behind.lat(), lng: behind.lng() };
+        const camLerp = 0.15;
+        if (cameraCenterLatRef.current === null || cameraCenterLngRef.current === null) {
+          cameraCenterLatRef.current = targetCam.lat;
+          cameraCenterLngRef.current = targetCam.lng;
+        } else {
+          cameraCenterLatRef.current += (targetCam.lat - cameraCenterLatRef.current) * camLerp;
+          cameraCenterLngRef.current += (targetCam.lng - cameraCenterLngRef.current) * camLerp;
+        }
+
+        map.moveCamera({
+          center: { lat: cameraCenterLatRef.current, lng: cameraCenterLngRef.current },
+          heading: headingSmooth,
+          tilt: tiltSmooth,
+          zoom: zoomSmooth,
+        });
+      } else if (map) {
         map.moveCamera({
           center: currentPos,
           heading: headingSmooth,
@@ -360,7 +449,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
     animationRef.current = requestAnimationFrame(animate);
     return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
-  }, [mapReady, coordinates, elevations, slopes, computeHeading]);
+  }, [mapReady, coordinates, elevations, slopes, computeHeading, cumulativeDistances]);
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying && progress === 0) {
@@ -386,10 +475,18 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     setIsPlaying(false);
     setProgress(0);
     progressRef.current = 0;
+    cameraCenterLatRef.current = null;
+    cameraCenterLngRef.current = null;
+    lastSpeedSampleRef.current = null;
+    speedKmhSmoothRef.current = 0;
+    setCurrentSpeedKmh(0);
     if (!mapRef.current || coordinates.length < 2) return;
     traveledPolyRef.current?.setPath([]);
     traveledGlowRef.current?.setPath([]);
+    remainingPolyRef.current?.setPath(coordinates.map(c => ({ lat: c.lat, lng: c.lng })));
     markerRef.current?.setPosition(coordinates[0]);
+    const icon = markerRef.current?.getIcon() as google.maps.Symbol | undefined;
+    if (icon) markerRef.current?.setIcon({ ...icon, rotation: 0 });
     const b = new google.maps.LatLngBounds();
     coordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
     mapRef.current.moveCamera({ tilt: 45, heading: 0 });
@@ -457,47 +554,57 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       {/* Top gradient */}
       <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-black/60 to-transparent z-10 pointer-events-none" />
 
-      {/* HUD Stats Bar — full width */}
-      <div className="absolute top-0 left-0 right-0 z-20 pt-[env(safe-area-inset-top)]">
-        <div className="mx-3 mt-2 bg-black/50 backdrop-blur-xl rounded-2xl border border-white/10 px-4 py-3">
-          {/* Route name subtitle */}
-          {routeName && (
-            <p className="text-[11px] text-white/50 text-center mb-2 truncate">{routeName}</p>
+      {/* HUD Stats Bar — discret en lecture pour laisser la place au survol */}
+      <div className="absolute top-0 left-0 right-0 z-20 pt-[env(safe-area-inset-top)] pointer-events-none">
+        <div
+          className={cn(
+            'mx-3 mt-2 rounded-2xl border px-2 py-2.5 sm:px-4 sm:py-3 transition-all duration-500',
+            isPlaying
+              ? 'bg-black/35 backdrop-blur-md border-white/8'
+              : 'bg-black/50 backdrop-blur-xl border-white/10'
           )}
-          <div className="flex items-center justify-around">
-            {/* Distance */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <MapPin className="h-3 w-3 text-primary" />
-                <p className="text-[24px] font-bold text-white leading-tight tabular-nums">{currentKm}</p>
-              </div>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider font-medium">km</p>
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-8 bg-white/15" />
-
-            {/* Slope */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <TrendingUp className="h-3 w-3 text-emerald-400" />
-                <p className="text-[24px] font-bold text-white leading-tight tabular-nums">
-                  {currentSlope > 0 ? '+' : ''}{currentSlope.toFixed(1)}
+        >
+          {routeName && (
+            <p className="text-[10px] sm:text-[11px] text-white/45 text-center mb-1.5 truncate">{routeName}</p>
+          )}
+          <div className="grid grid-cols-4 gap-1 sm:gap-2 items-stretch">
+            <div className="text-center min-w-0">
+              <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 text-primary" />
+                <p className="text-[18px] sm:text-[22px] font-bold text-white leading-tight tabular-nums truncate">
+                  {currentKm}
                 </p>
               </div>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider font-medium">pente %</p>
+              <p className="text-[9px] sm:text-[10px] text-white/45 uppercase tracking-wider font-medium">km</p>
             </div>
 
-            {/* Divider */}
-            <div className="w-px h-8 bg-white/15" />
-
-            {/* Altitude */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Mountain className="h-3 w-3 text-amber-400" />
-                <p className="text-[24px] font-bold text-white leading-tight tabular-nums">{currentElevation}</p>
+            <div className="text-center min-w-0 border-l border-white/10">
+              <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                <Gauge className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 text-sky-400" />
+                <p className="text-[18px] sm:text-[22px] font-bold text-white leading-tight tabular-nums">
+                  {!isPlaying && progress === 0 ? '—' : currentSpeedKmh}
+                </p>
               </div>
-              <p className="text-[10px] text-white/50 uppercase tracking-wider font-medium">altitude m</p>
+              <p className="text-[9px] sm:text-[10px] text-white/45 uppercase tracking-wider font-medium">km/h</p>
+            </div>
+
+            <div className="text-center min-w-0 border-l border-white/10">
+              <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 text-emerald-400" />
+                <p className="text-[18px] sm:text-[22px] font-bold text-white leading-tight tabular-nums">
+                  {currentSlope > 0 ? '+' : ''}
+                  {currentSlope.toFixed(1)}
+                </p>
+              </div>
+              <p className="text-[9px] sm:text-[10px] text-white/45 uppercase tracking-wider font-medium">pente %</p>
+            </div>
+
+            <div className="text-center min-w-0 border-l border-white/10">
+              <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                <Mountain className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 text-amber-400" />
+                <p className="text-[18px] sm:text-[22px] font-bold text-white leading-tight tabular-nums">{currentElevation}</p>
+              </div>
+              <p className="text-[9px] sm:text-[10px] text-white/45 uppercase tracking-wider font-medium">m</p>
             </div>
           </div>
         </div>

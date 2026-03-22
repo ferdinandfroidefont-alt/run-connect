@@ -87,7 +87,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -105,8 +105,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="py-6 space-y-6">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* External Connections */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -125,8 +125,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Friend Suggestions */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="ios-list-row-icon bg-[#007AFF]">
                   <Users className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">
@@ -139,10 +139,11 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 />
               </div>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Share Profile */}
               <button 
+                type="button"
                 onClick={async () => {
                   if (profile) {
                     const { data: profileData } = await supabase
@@ -160,33 +161,33 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                     });
                   }
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary/50"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF3B30]">
                   <Share2 className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Partager mon profil</p>
-                  <p className="text-[13px] text-muted-foreground">QR code, Story Instagram...</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Partager mon profil</p>
+                  <p className="truncate text-[13px] text-muted-foreground">QR code, Story Instagram...</p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Contacts */}
-              <div className="px-4 py-3">
+              <div className="px-4 py-2.5">
                 <ContactsPermissionButton />
               </div>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Referral */}
               <button 
                 onClick={() => setShowReferralDialog(true)}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   <Gift className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -196,14 +197,14 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Premium */}
               <button 
                 onClick={onNavigateToSubscription}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FFCC00] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FFCC00]">
                   <Gift className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">

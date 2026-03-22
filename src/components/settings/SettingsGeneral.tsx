@@ -78,7 +78,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -96,8 +96,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="py-6 space-y-6">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Language & Theme */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -105,8 +105,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Language Selector */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center">
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="ios-list-row-icon bg-primary">
                   <Languages className="h-[18px] w-[18px] text-primary-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -161,12 +161,12 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                 </Popover>
               </div>
 
-              <div className="h-px bg-border ml-4" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Thème : clair / sombre / système */}
-              <div className="px-4 py-3 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-primary flex items-center justify-center shrink-0">
+              <div className="space-y-2.5 px-4 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="ios-list-row-icon bg-primary">
                     <Moon className="h-[18px] w-[18px] text-primary-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -227,9 +227,9 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
               <button 
                 onClick={handlePasswordReset}
                 disabled={isChangingPassword}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   {isChangingPassword ? (
                     <Loader2 className="h-[18px] w-[18px] text-white animate-spin" />
                   ) : (
@@ -252,8 +252,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Long Press to Create Session */}
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="ios-list-row-icon bg-[#34C759]">
                   <MapPin className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1">

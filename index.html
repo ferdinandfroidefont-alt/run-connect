@@ -42,6 +42,16 @@
           if (dark) document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
+      /* Avant React : même fond que --background en sombre (évite frange bleu #2455EB / noir #000). */
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          if (document.documentElement.classList.contains('dark') && document.body) {
+            var d = 'hsl(240 5% 11%)';
+            document.documentElement.style.backgroundColor = d;
+            document.body.style.backgroundColor = d;
+          }
+        } catch (e) {}
+      });
     </script>
   </head>
 

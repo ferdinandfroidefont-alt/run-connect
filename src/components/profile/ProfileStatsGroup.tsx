@@ -186,8 +186,8 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
     return (
       <div className="bg-card rounded-[10px] overflow-hidden">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
-            <div className="h-[30px] w-[30px] rounded-[7px] bg-secondary animate-pulse" />
+          <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
+            <div className="ios-list-row-icon bg-secondary animate-pulse" />
             <div className="flex-1 h-5 bg-secondary rounded animate-pulse" />
           </div>
         ))}
@@ -200,15 +200,16 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
       <div className="bg-card rounded-[10px] overflow-hidden">
         {/* Classement Row */}
         <button
+          type="button"
           onClick={() => setShowRankDialog(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
         >
-          <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", rankBadge.color)}>
+          <div className={cn("ios-list-row-icon", rankBadge.color)}>
             <Trophy className="h-[18px] w-[18px] text-white" />
           </div>
           <div className="flex-1 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-[17px] text-foreground">Classement</span>
+            <div className="flex items-center gap-2.5">
+              <span className="text-[17px] leading-snug text-foreground">Classement</span>
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary">
                 <span className="text-lg">{rankBadge.emoji}</span>
                 <span className="text-[13px] font-medium text-foreground">{rankBadge.name}</span>
@@ -221,11 +222,11 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
           </div>
         </button>
 
-        <div className="h-px bg-border ml-[54px]" />
+        <div className="ios-list-row-inset-sep" />
 
         {/* Points Row */}
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="h-[30px] w-[30px] rounded-[7px] bg-green-500 flex items-center justify-center">
+        <div className="flex items-center gap-2.5 px-4 py-2.5">
+          <div className="ios-list-row-icon bg-green-500">
             <span className="text-white text-sm font-bold">XP</span>
           </div>
           <div className="flex-1 flex items-center justify-between">
@@ -234,14 +235,15 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
           </div>
         </div>
 
-        <div className="h-px bg-border ml-[54px]" />
+        <div className="ios-list-row-inset-sep" />
 
         {/* Badges Row */}
         <button
+          type="button"
           onClick={() => setShowBadgesDialog(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
         >
-          <div className="h-[30px] w-[30px] rounded-[7px] bg-yellow-500 flex items-center justify-center">
+          <div className="ios-list-row-icon bg-yellow-500">
             <Medal className="h-[18px] w-[18px] text-white" />
           </div>
           <div className="flex-1 flex items-center justify-between">
@@ -272,14 +274,15 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
           </div>
         </button>
 
-        <div className="h-px bg-border ml-[54px]" />
+        <div className="ios-list-row-inset-sep" />
 
         {/* Activités Row */}
         <button
+          type="button"
           onClick={() => setShowActivityDialog(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
         >
-          <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+          <div className="ios-list-row-icon bg-blue-500">
             <BarChart3 className="h-[18px] w-[18px] text-white" />
           </div>
           <div className="flex-1 flex items-center justify-between">
@@ -294,12 +297,13 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
         {/* Paramètres Row */}
         {onSettingsClick && (
           <>
-            <div className="h-px bg-border ml-[54px]" />
+            <div className="ios-list-row-inset-sep" />
             <button
+              type="button"
               onClick={onSettingsClick}
-              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
             >
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-gray-500 flex items-center justify-center">
+              <div className="ios-list-row-icon bg-gray-500">
                 <Settings className="h-[18px] w-[18px] text-white" />
               </div>
               <div className="flex-1 flex items-center justify-between">
@@ -313,12 +317,13 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
         {/* Informations personnelles Row */}
         {onInfoClick && (
           <>
-            <div className="h-px bg-border ml-[54px]" />
+            <div className="ios-list-row-inset-sep" />
             <button
+              type="button"
               onClick={onInfoClick}
-              className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary transition-colors"
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
             >
-              <div className="h-[30px] w-[30px] rounded-[7px] bg-blue-500 flex items-center justify-center">
+              <div className="ios-list-row-icon bg-blue-500">
                 <User className="h-[18px] w-[18px] text-white" />
               </div>
               <div className="flex-1 flex items-center justify-between">

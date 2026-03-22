@@ -138,9 +138,9 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="w-full rounded-ios-md">
+      <CardHeader className="space-y-0 px-4 py-2.5">
+        <CardTitle className="flex items-center gap-2 text-[17px]">
           <span className="text-orange-600">🏃</span>
           Connexion Strava
         </CardTitle>
@@ -171,7 +171,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
             </Button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <p className="text-sm text-muted-foreground">
               Connectez votre compte Strava pour être vérifié et gagner en crédibilité 
               auprès des autres sportifs.

@@ -397,7 +397,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden rounded-none border-0 bg-secondary p-0 sm:h-auto sm:max-h-[85vh] sm:max-w-md sm:rounded-lg sm:border">
+      <DialogContent className="box-border flex h-[100dvh] max-h-[100dvh] w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:h-auto sm:max-h-[85vh] sm:max-w-md sm:overflow-y-auto sm:rounded-lg sm:border">
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -406,60 +406,68 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -20, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="flex flex-col h-full"
+              className="flex h-full min-w-0 max-w-full flex-col overflow-x-hidden"
             >
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <button
-                    onClick={() => onOpenChange(false)}
-                    className="flex items-center gap-1 text-primary"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                    <span className="text-[17px]">Retour</span>
-                  </button>
-                  <h1 className="text-[17px] font-semibold text-foreground">Paramètres</h1>
-                  <div className="w-16" />
+              <div className="sticky top-0 z-40 min-w-0 max-w-full shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
+                  <div className="flex min-w-0 justify-start">
+                    <button
+                      type="button"
+                      onClick={() => onOpenChange(false)}
+                      className="flex min-w-0 max-w-full items-center gap-1 text-primary"
+                    >
+                      <ArrowLeft className="h-5 w-5 shrink-0" />
+                      <span className="truncate text-[17px]">Retour</span>
+                    </button>
+                  </div>
+                  <h1 className="max-w-[200px] truncate text-center text-[17px] font-semibold text-foreground">
+                    Paramètres
+                  </h1>
+                  <div className="flex min-w-0 justify-end" aria-hidden>
+                    <div className="h-9 w-16 shrink-0" />
+                  </div>
                 </div>
                 
                 {/* iOS-style search bar */}
-                <div className="px-4 pb-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="min-w-0 px-4 pb-2.5">
+                  <div className="relative min-w-0 max-w-full">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="Rechercher"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-background"
+                      className="w-full min-w-0 max-w-full pl-10 bg-background"
                     />
                   </div>
                 </div>
               </div>
 
-              <ScrollArea className="min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-                <div className="min-w-0 w-full max-w-full space-y-6 overflow-x-hidden py-6">
+              <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+                <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
                   {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
                   <div className="box-border min-w-0 w-full max-w-full px-4">
                     <div className="ios-card w-full min-w-0 overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
                         <button
+                          type="button"
                           onClick={() => setCurrentPage(category.id)}
-                          className="w-full flex items-center gap-3 py-3 px-4 active:bg-secondary transition-colors"
+                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
                         >
                           {/* iOS colored icon square */}
-                          <div className={`h-[29px] w-[29px] rounded-[6px] ${category.color} flex items-center justify-center`}>
+                          <div className={`ios-list-row-icon ${category.color}`}>
                             <category.icon className="h-4 w-4 text-white" />
                           </div>
-                          <div className="flex-1 text-left">
-                            <span className="text-[17px]">{category.title}</span>
+                          <div className="min-w-0 flex-1 text-left">
+                            <span className="truncate text-[17px]">{category.title}</span>
                           </div>
                           <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </button>
                         {/* Separator - iOS style (inset) */}
                         {index < filteredCategories.length - 1 && (
-                          <div className="h-px bg-border ml-[52px]" />
+                          <div className="ios-list-row-inset-sep" />
                         )}
                       </div>
                     ))}
@@ -475,15 +483,15 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                   {/* Profile Share Section */}
                   {profile && (
                     <div className="box-border min-w-0 w-full max-w-full px-4">
-                    <div className="ios-card box-border min-w-0 w-full max-w-full space-y-ios-4 overflow-hidden overflow-x-hidden p-ios-4">
+                    <div className="ios-card box-border min-w-0 w-full max-w-full space-y-ios-3 overflow-hidden overflow-x-hidden p-ios-3">
                       <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
                         Partager mon profil
                       </h3>
                       
-                      {/* Avatar + Username */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary to-cyan-400 rounded-full blur-lg opacity-40 scale-110" />
+                      {/* Avatar + Username — overflow-hidden évite que le blur / scale déborde sur iOS */}
+                      <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
+                        <div className="relative isolate max-w-full">
+                          <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-gradient-to-br from-primary to-cyan-400 opacity-40 blur-lg" />
                           <div className="relative rounded-full p-[3px] bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
                             <Avatar className="h-16 w-16 border-2 border-background shadow-xl">
                               <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
@@ -493,7 +501,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                             </Avatar>
                           </div>
                         </div>
-                        <h4 className="font-semibold text-sm mt-2">
+                        <h4 className="mt-2 max-w-full truncate px-1 text-center text-sm font-semibold">
                           {profile.display_name || profile.username}
                         </h4>
                         <p className="text-xs text-muted-foreground">
@@ -501,25 +509,23 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         </p>
                       </div>
                       
-                      {/* QR Code — taille limitée sur iOS (texte agrandi / viewport étroit) */}
-                      <div className="flex w-full min-w-0 justify-center overflow-hidden px-0.5">
-                        <div className="relative w-full max-w-[min(200px,calc(100vw-4rem))]">
-                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-cyan-400/30 opacity-50 blur-xl" />
+                      {/* QR Code — 100% du parent (jamais 100vw : évite le débordement horizontal iOS) */}
+                      <div className="flex w-full min-w-0 justify-center overflow-x-hidden">
+                        <div className="relative w-full max-w-[200px] shrink-0">
+                          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-cyan-400/30 opacity-50 blur-xl" />
                           <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 sm:p-3 shadow-lg">
                             {qrLoading ? (
-                              <div className="mx-auto flex aspect-square w-[min(140px,calc(100vw-5rem))] max-w-full items-center justify-center">
+                              <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center">
                                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                               </div>
                             ) : qrImageUrl ? (
                               <img
                                 src={qrImageUrl}
                                 alt="QR Code du profil"
-                                className="mx-auto block max-h-[min(140px,calc(100vw-5rem))] max-w-[min(140px,calc(100vw-5rem))] rounded-lg object-contain"
-                                width={140}
-                                height={140}
+                                className="mx-auto block h-auto w-full max-w-full rounded-lg object-contain aspect-square"
                               />
                             ) : (
-                              <div className="mx-auto flex aspect-square w-[min(140px,calc(100vw-5rem))] max-w-full items-center justify-center text-xs text-muted-foreground">
+                              <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center text-xs text-muted-foreground">
                                 Erreur de génération
                               </div>
                             )}
@@ -542,24 +548,24 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         {getProfileUrl()}
                       </p>
                       
-                      {/* Action buttons */}
-                      <div className="min-w-0 w-full space-y-2">
+                      {/* Action buttons — min-w-0 + truncate : évite le nowrap des Button sur colonnes étroites */}
+                      <div className="min-w-0 w-full max-w-full space-y-2">
                         <Button
                           variant="default"
                           size="default"
                           onClick={copyUrl}
-                          className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
+                          className="w-full min-w-0 max-w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
                         >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copier le lien
+                          <Copy className="h-4 w-4 mr-2 shrink-0" />
+                          <span className="truncate">Copier le lien</span>
                         </Button>
                         
-                        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="grid min-w-0 max-w-full grid-cols-1 gap-2 sm:grid-cols-2">
                           <Button
                               variant="outline"
                               size="default"
                               onClick={handleShare}
-                              className="w-full min-w-0 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                              className="w-full min-w-0 max-w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
                             >
                               <Share2 className="mr-2 h-4 w-4 shrink-0" />
                               <span className="truncate">Partager</span>
@@ -570,7 +576,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                               size="default"
                               onClick={generateInstagramStoryImage}
                               disabled={!qrImageUrl}
-                              className="w-full min-w-0 border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
+                              className="w-full min-w-0 max-w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
                             >
                               <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
                               <span className="truncate">Story</span>
@@ -586,7 +592,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           ) : (
             <motion.div
               key={currentPage}
-              className="flex-1 h-full bg-background"
+              className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-background"
             >
               {renderPage()}
             </motion.div>

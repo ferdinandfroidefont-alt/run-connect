@@ -100,7 +100,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 100, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col h-full bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
@@ -118,8 +118,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="py-6 space-y-6">
+      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Consents */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -128,8 +128,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
             <div className="bg-card overflow-hidden">
               {/* RGPD */}
               <AlertDialog>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                <div className="flex items-center gap-2.5 px-4 py-2.5">
+                  <div className="ios-list-row-icon bg-[#34C759]">
                     <FileText className="h-[18px] w-[18px] text-white" />
                   </div>
                   <div className="flex-1">
@@ -166,12 +166,12 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                 </AlertDialogContent>
               </AlertDialog>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Security Rules */}
               <AlertDialog>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                <div className="flex items-center gap-2.5 px-4 py-2.5">
+                  <div className="ios-list-row-icon bg-[#007AFF]">
                     <Shield className="h-[18px] w-[18px] text-white" />
                   </div>
                   <div className="flex-1">
@@ -216,8 +216,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               Mesure d&apos;audience
             </h3>
             <div className="bg-card overflow-hidden">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#AF52DE] flex items-center justify-center">
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="ios-list-row-icon bg-[#AF52DE]">
                   <BarChart3 className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -257,9 +257,9 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                   navigate("/legal");
                   onClose();
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#FF9500]">
                   <Scale className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -269,7 +269,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
 
-              <div className="h-px bg-border ml-[54px]" />
+              <div className="ios-list-row-inset-sep" />
 
               {/* Privacy Policy */}
               <button 
@@ -277,9 +277,9 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                   navigate('/privacy');
                   onClose();
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="h-[30px] w-[30px] rounded-[7px] bg-[#8E8E93] flex items-center justify-center">
+                <div className="ios-list-row-icon bg-[#8E8E93]">
                   <Info className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -300,8 +300,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               <div className="bg-card overflow-hidden">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <button className="w-full flex items-center gap-3 px-4 py-3 active:bg-destructive/5 transition-colors">
-                      <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                    <button className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-destructive/5 transition-colors">
+                      <div className="ios-list-row-icon bg-[#FF3B30]">
                         <Shield className="h-[18px] w-[18px] text-white" />
                       </div>
                       <div className="flex-1 text-left">

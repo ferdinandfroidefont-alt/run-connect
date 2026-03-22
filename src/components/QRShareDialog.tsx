@@ -233,17 +233,16 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
       <DialogContent
         closeButtonClassName={isIosPhone ? "right-5 top-5" : undefined}
         className={cn(
-          "h-full max-h-full rounded-none sm:rounded-lg p-0 overflow-hidden overflow-x-hidden border-0 sm:border bg-gradient-to-br from-background via-background to-primary/5 flex flex-col",
-          isIosPhone
-            ? "!w-[min(calc(100vw-32px),22rem)] !max-w-[min(calc(100vw-32px),22rem)] sm:!max-w-sm"
-            : "w-[100%] max-w-[100vw] sm:max-w-sm sm:max-h-[90vh]"
+          "box-border flex h-full max-h-full min-w-0 flex-col overflow-x-hidden overflow-y-auto rounded-none border-0 bg-gradient-to-br from-background via-background to-primary/5 p-0 sm:max-h-[90vh] sm:rounded-lg sm:border",
+          /* 100% / calc sans vw : évite le débordement horizontal sur iOS Safari */
+          "w-full max-w-[min(22rem,calc(100%-2rem))] sm:max-w-sm"
         )}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
-          className="relative"
+          className="relative min-w-0 max-w-full overflow-x-hidden"
         >
           {/* Header avec gradient */}
           <div
@@ -261,7 +260,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           
           <div
             className={cn(
-              "pb-6 space-y-5 overflow-hidden",
+              "min-w-0 max-w-full space-y-5 overflow-x-hidden pb-6",
               isIosPhone ? "px-5" : "px-4 sm:px-6"
             )}
           >
@@ -296,30 +295,29 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="flex justify-center"
+              className="flex w-full min-w-0 justify-center overflow-x-hidden"
             >
-              <div className="flex justify-center overflow-hidden">
-                <div className={cn("relative w-max max-w-full mx-auto", isIosPhone ? "max-w-[248px]" : "max-w-[280px]")}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-cyan-400/30 rounded-2xl blur-xl opacity-50" />
+              <div className="flex w-full min-w-0 max-w-[min(240px,100%)] justify-center">
+                <div className="relative w-full max-w-[240px] shrink-0">
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-cyan-400/30 opacity-50 blur-xl" />
                   <div
                     className={cn(
-                      "relative bg-gradient-to-br from-card to-card/80 rounded-2xl border border-primary/20 shadow-lg",
+                      "relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 shadow-lg",
                       isIosPhone ? "p-3.5" : "p-4"
                     )}
                   >
                     {isLoading ? (
-                      <div className="w-[240px] h-[240px] flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                      <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
                     ) : qrImageUrl ? (
                       <img 
                         src={qrImageUrl} 
                         alt="QR Code du profil"
-                        className="rounded-lg"
-                        style={{ width: 240, height: 240 }}
+                        className="mx-auto block aspect-square h-auto w-full max-w-full rounded-lg object-contain"
                       />
                     ) : (
-                      <div className="w-[240px] h-[240px] flex items-center justify-center text-muted-foreground text-sm">
+                      <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center text-sm text-muted-foreground">
                         Erreur de génération
                       </div>
                     )}
@@ -336,9 +334,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 transition={{ delay: 0.3 }}
                 className="bg-gradient-to-r from-primary/10 via-primary/5 to-cyan-400/10 p-3 rounded-xl border border-primary/20"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Code parrainage</span>
-                  <span className="font-mono font-bold text-primary text-sm tracking-wider">{referralCode}</span>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="shrink-0 text-xs text-muted-foreground">Code parrainage</span>
+                  <span className="min-w-0 truncate font-mono text-sm font-bold tracking-wider text-primary">{referralCode}</span>
                 </div>
               </motion.div>
             )}
@@ -349,42 +347,42 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             </p>
             
             {/* Boutons d'action redesignés */}
-            <div className="space-y-2">
+            <div className="min-w-0 max-w-full space-y-2">
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   variant="default"
                   size="default"
                   onClick={copyUrl}
-                  className="w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
+                  className="w-full min-w-0 max-w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
                 >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copier le lien
+                  <Copy className="mr-2 h-4 w-4 shrink-0" />
+                  <span className="truncate">Copier le lien</span>
                 </Button>
               </motion.div>
               
-              <div className="grid grid-cols-2 gap-2">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <div className="grid min-w-0 max-w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="min-w-0">
                   <Button
                     variant="outline"
                     size="default"
                     onClick={handleShare}
-                    className="w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                    className="w-full min-w-0 max-w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
                   >
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Partager
+                    <Share2 className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="truncate">Partager</span>
                   </Button>
                 </motion.div>
                 
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="min-w-0">
                   <Button
                     variant="outline"
                     size="default"
                     onClick={generateInstagramStoryImage}
                     disabled={!qrImageUrl}
-                    className="w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
+                    className="w-full min-w-0 max-w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
                   >
-                    <Instagram className="h-4 w-4 mr-2 text-pink-500" />
-                    Story
+                    <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
+                    <span className="truncate">Story</span>
                   </Button>
                 </motion.div>
               </div>

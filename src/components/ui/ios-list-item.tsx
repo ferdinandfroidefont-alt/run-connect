@@ -33,26 +33,23 @@ export const IOSListItem = ({
       <div
         onClick={onClick}
         className={cn(
-          "flex items-center gap-ios-3 px-ios-4 py-ios-3 bg-card",
+          "flex items-center gap-2.5 px-ios-4 py-2.5 bg-card",
           onClick && "cursor-pointer active:bg-secondary/80 transition-colors duration-75"
         )}
         style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
       >
         {/* Icon in colored rounded square */}
         {Icon && (
-          <div className={cn(
-            "h-[30px] w-[30px] rounded-ios-sm flex items-center justify-center flex-shrink-0",
-            iconBgColor
-          )}>
+          <div className={cn("ios-list-row-icon flex-shrink-0", iconBgColor)}>
             <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
           </div>
         )}
         
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[17px] text-foreground leading-tight">{title}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[17px] leading-snug text-foreground">{title}</p>
           {subtitle && (
-            <p className="text-[13px] text-muted-foreground leading-tight mt-0.5">{subtitle}</p>
+            <p className="mt-px text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
           )}
         </div>
         
@@ -70,7 +67,7 @@ export const IOSListItem = ({
       
       {/* iOS-style inset separator */}
       {showSeparator && (
-        <div className="absolute bottom-0 left-[52px] right-0 h-px bg-border" />
+        <div className="absolute bottom-0 left-[38px] right-0 h-px bg-border" />
       )}
     </div>
   );
@@ -86,9 +83,9 @@ interface IOSListGroupProps {
 
 export const IOSListGroup = ({ children, header, footer, className, flush }: IOSListGroupProps) => {
   return (
-    <div className={cn("mb-6", className)}>
+    <div className={cn("mb-3", className)}>
       {header && (
-        <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-ios-4 pb-ios-2">
+        <p className="px-ios-4 pb-1.5 text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
           {header}
         </p>
       )}
@@ -96,7 +93,7 @@ export const IOSListGroup = ({ children, header, footer, className, flush }: IOS
         {children}
       </div>
       {footer && (
-        <p className="text-[13px] text-muted-foreground px-ios-4 pt-ios-2">
+        <p className="px-ios-4 pt-1.5 text-[13px] text-muted-foreground">
           {footer}
         </p>
       )}

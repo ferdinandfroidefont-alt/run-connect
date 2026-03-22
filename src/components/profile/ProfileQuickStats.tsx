@@ -71,14 +71,14 @@ export const ProfileQuickStats = ({
           <Wrapper
             key={stat.label}
             onClick={stat.onClick}
-            className={`py-3.5 text-center active:bg-secondary/60 transition-colors ${
+            className={`py-2.5 text-center transition-colors active:bg-secondary/60 ${
               i < 3 ? 'border-r border-border/50' : ''
             }`}
           >
             <p className="text-[18px] font-bold text-foreground leading-none">
               {loading ? '–' : stat.value}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1 font-medium uppercase tracking-wide">
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {stat.label}
             </p>
           </Wrapper>

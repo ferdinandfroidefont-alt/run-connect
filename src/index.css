@@ -246,6 +246,8 @@ html, body {
     position: relative;
     max-width: 100vw;
     overflow-x: hidden;
+    /* Jamais transparent : si le layout laisse un trou subpixel, on ne voit pas le bleu natif Capacitor */
+    background-color: hsl(var(--background));
   }
 }
 
@@ -254,6 +256,18 @@ html, body {
   .h-screen-safe {
     height: 100vh;
     height: 100dvh;
+  }
+
+  /**
+   * Rangées liste (profil, paramètres) : même densité que Classement / Points.
+   * Icône 28×28, pictogrammes 18px ; séparateur aligné après icône + gap 10px.
+   */
+  .ios-list-row-icon {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px];
+  }
+
+  .ios-list-row-inset-sep {
+    @apply ml-[38px] h-px bg-border;
   }
 
   /* iOS Typography System */
@@ -349,8 +363,10 @@ html, body {
     @apply bg-gradient-to-b from-background from-0% via-background via-40% to-secondary/50 to-100%;
   }
 
+  /* Mode sombre : fond plat = même teinte partout (html/body/#root/--background).
+     Un dégradé vers --secondary créait une bande plus claire au-dessus de la zone home indicator. */
   .dark .ios-app-canvas {
-    @apply bg-gradient-to-b from-background from-0% via-background via-50% to-secondary/80 to-100%;
+    @apply bg-background;
   }
 
   /* iOS Pastel Card Backgrounds */
