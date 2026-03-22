@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, Building2, Mail, Scale, Server, UserCircle } from "lucide-react";
+import { ArrowLeft, Building2, ChevronRight, FileText, Mail, Scale, Server, Shield, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,33 @@ function Placeholder({ children }: { children: ReactNode }) {
   return <span className="text-muted-foreground italic">{children}</span>;
 }
 
+function SectionCard({
+  icon: Icon,
+  iconClass,
+  title,
+  children,
+}: {
+  icon: typeof Building2;
+  iconClass: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm space-y-3">
+      <div className="flex items-center gap-3">
+        <div
+          className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}
+          aria-hidden
+        >
+          <Icon className="h-5 w-5" />
+        </div>
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      </div>
+      <div className="pl-0 sm:pl-[52px] space-y-2 text-sm text-muted-foreground leading-relaxed">{children}</div>
+    </section>
+  );
+}
+
 export default function LegalNotice() {
   const navigate = useNavigate();
   const entity = getLegalEntityName();
@@ -29,139 +56,147 @@ export default function LegalNotice() {
   const hosting = getLegalHostingNotice();
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden min-w-0">
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50 pt-[env(safe-area-inset-top,0px)]">
-        <div className="flex items-center gap-3 p-4">
+    <div className="fixed inset-0 bg-secondary flex flex-col overflow-x-hidden min-w-0">
+      <header className="sticky top-0 z-10 bg-card border-b border-border/50 pt-[env(safe-area-inset-top,0px)]">
+        <div className="flex items-center gap-3 px-4 h-14">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0 rounded-full hover:bg-muted/50"
+            className="h-9 w-9 shrink-0 rounded-full"
             onClick={() => navigate(-1)}
+            aria-label="Retour"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-lg font-semibold truncate">Mentions légales</h1>
             <p className="text-xs text-muted-foreground truncate">{entity}</p>
           </div>
         </div>
-      </div>
+      </header>
 
       <ScrollArea className="flex-1 min-h-0 min-w-0">
-        <div className="max-w-3xl mx-auto p-6 space-y-8 pb-24">
-          <p className="text-sm text-muted-foreground text-center">
-            Dernière mise à jour : {LEGAL_LAST_UPDATED_LABEL}
+        <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-4 pb-28">
+          <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-2">
+            <Scale className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+            <span>Dernière mise à jour : {LEGAL_LAST_UPDATED_LABEL}</span>
           </p>
 
-          <section className="space-y-3 p-6 bg-primary/5 rounded-xl border border-primary/20">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 className="h-5 w-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold">Éditeur</h2>
-            </div>
+          <SectionCard icon={Building2} iconClass="bg-primary/10 text-primary" title="Éditeur">
             <p className="text-foreground font-medium">{entity}</p>
-            <div className="text-sm text-muted-foreground space-y-1">
+            <div className="space-y-1">
               {addressLines.length > 0 ? (
                 addressLines.map((line, i) => <p key={i}>{line}</p>)
               ) : (
                 <Placeholder>
-                  Adresse du siège : renseigner <code className="text-xs">VITE_PUBLIC_LEGAL_ADDRESS</code> (lignes
-                  séparées par <code className="text-xs">|</code>).
+                  Adresse du siège : renseigner <code className="text-xs not-italic">VITE_PUBLIC_LEGAL_ADDRESS</code>{" "}
+                  (lignes séparées par <code className="text-xs not-italic">|</code>).
                 </Placeholder>
               )}
             </div>
-          </section>
+          </SectionCard>
 
-          <section className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Scale className="h-5 w-5 text-foreground" />
-              </div>
-              <h2 className="text-xl font-semibold">Immatriculation</h2>
-            </div>
-            <ul className="text-sm text-muted-foreground space-y-2 pl-1">
+          <SectionCard icon={Scale} iconClass="bg-muted text-foreground" title="Immatriculation">
+            <ul className="space-y-2 list-none pl-0">
               <li>
                 <span className="text-foreground font-medium">SIREN / SIRET : </span>
                 {siret ?? (
-                  <Placeholder>À renseigner (<code className="text-xs">VITE_PUBLIC_LEGAL_SIRET</code>)</Placeholder>
+                  <Placeholder>
+                    À renseigner (<code className="text-xs not-italic">VITE_PUBLIC_LEGAL_SIRET</code>)
+                  </Placeholder>
                 )}
               </li>
               <li>
                 <span className="text-foreground font-medium">RCS / RM : </span>
                 {rcs ?? (
-                  <Placeholder>À renseigner (<code className="text-xs">VITE_PUBLIC_LEGAL_RCS</code>)</Placeholder>
+                  <Placeholder>
+                    À renseigner (<code className="text-xs not-italic">VITE_PUBLIC_LEGAL_RCS</code>)
+                  </Placeholder>
                 )}
               </li>
             </ul>
-          </section>
+          </SectionCard>
 
-          <section className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <UserCircle className="h-5 w-5 text-foreground" />
-              </div>
-              <h2 className="text-xl font-semibold">Directeur de la publication</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {director ?? (
-                <Placeholder>À renseigner (<code className="text-xs">VITE_PUBLIC_LEGAL_DIRECTOR</code>)</Placeholder>
-              )}
-            </p>
-          </section>
+          <SectionCard icon={UserCircle} iconClass="bg-muted text-foreground" title="Directeur de la publication">
+            {director ?? (
+              <Placeholder>
+                À renseigner (<code className="text-xs not-italic">VITE_PUBLIC_LEGAL_DIRECTOR</code>)
+              </Placeholder>
+            )}
+          </SectionCard>
 
-          <section className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Mail className="h-5 w-5 text-foreground" />
-              </div>
-              <h2 className="text-xl font-semibold">Contact</h2>
-            </div>
+          <SectionCard icon={Mail} iconClass="bg-muted text-foreground" title="Contact">
             <a
               href={getSupportMailtoHref()}
-              className="text-sm text-primary font-medium hover:underline break-all"
+              className="inline-flex text-primary font-medium hover:underline break-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-sm"
             >
               {getSupportEmail()}
             </a>
-            <p className="text-xs text-muted-foreground">
-              Pour toute réclamation relative aux données personnelles, voir aussi la{" "}
-              <button type="button" className="text-primary underline" onClick={() => navigate("/privacy")}>
+            <p className="text-xs pt-2 border-t border-border/50">
+              Pour les données personnelles :{" "}
+              <button
+                type="button"
+                className="text-primary underline underline-offset-2 font-medium"
+                onClick={() => navigate("/privacy")}
+              >
                 politique de confidentialité
               </button>
               .
             </p>
-          </section>
+          </SectionCard>
 
-          <section className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Server className="h-5 w-5 text-foreground" />
-              </div>
-              <h2 className="text-xl font-semibold">Hébergement</h2>
-            </div>
-            <div className="text-sm text-muted-foreground whitespace-pre-line">
+          <SectionCard icon={Server} iconClass="bg-muted text-foreground" title="Hébergement">
+            <div className="whitespace-pre-line">
               {hosting ?? (
                 <Placeholder>
-                  Décrire l’hébergeur (nom, adresse, site) via <code className="text-xs">VITE_PUBLIC_LEGAL_HOSTING</code>
-                  .
+                  Décrire l’hébergeur (nom, adresse, site) via{" "}
+                  <code className="text-xs not-italic">VITE_PUBLIC_LEGAL_HOSTING</code>.
                 </Placeholder>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Les données applicatives peuvent être traitées via des prestataires listés dans la politique de
-              confidentialité (ex. base de données, authentification).
+            <p className="text-xs pt-2 border-t border-border/50">
+              Les données applicatives peuvent être traitées par des prestataires (base de données, auth, notifications)
+              détaillés dans la politique de confidentialité.
             </p>
-          </section>
+          </SectionCard>
 
-          <section className="space-y-2 text-sm text-muted-foreground border-t border-border pt-6">
-            <p className="font-medium text-foreground">Propriété intellectuelle</p>
+          <section className="bg-card rounded-2xl border border-border/60 p-5 shadow-sm space-y-2 text-sm text-muted-foreground leading-relaxed">
+            <p className="font-semibold text-foreground">Propriété intellectuelle</p>
             <p>
-              L’application RunConnect, son interface, ses textes, logos et marques sont protégés. Toute reproduction
-              non autorisée est interdite.
+              L’application RunConnect, son interface, ses textes, logos et marques sont protégés. Toute reproduction ou
+              exploitation non autorisée est interdite.
             </p>
           </section>
 
-          <Button onClick={() => navigate(-1)} size="lg" className="w-full max-w-md mx-auto block">
+          <div className="bg-card rounded-2xl border border-border/60 overflow-hidden shadow-sm">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 pt-4 pb-2">
+              Autres documents
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/terms")}
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors border-t border-border/50"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <FileText className="h-5 w-5 text-primary shrink-0" aria-hidden />
+                <span className="text-sm font-medium text-foreground truncate">Conditions d&apos;utilisation</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/privacy")}
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors border-t border-border/50"
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <Shield className="h-5 w-5 text-green-600 shrink-0" aria-hidden />
+                <span className="text-sm font-medium text-foreground truncate">Politique de confidentialité</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground/50 shrink-0" aria-hidden />
+            </button>
+          </div>
+
+          <Button type="button" onClick={() => navigate(-1)} size="lg" className="w-full" variant="secondary">
             Retour
           </Button>
         </div>

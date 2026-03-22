@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Camera, Upload, X } from 'lucide-react';
+import { Camera, Images, X } from 'lucide-react';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
 
 interface RoutePhotoUploaderProps {
@@ -17,7 +17,8 @@ interface RoutePhotoUploaderProps {
 
 export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploaded }: RoutePhotoUploaderProps) => {
   const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
@@ -26,6 +27,7 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     setSelectedFile(file);
     setPreview(URL.createObjectURL(file));
@@ -125,17 +127,41 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
               </Button>
             </div>
           ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-48 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors"
-            >
-              <Upload className="h-8 w-8" />
-              <span className="text-[14px]">Choisir une photo</span>
-            </button>
+            <>
+              <p className="text-[12px] text-muted-foreground text-center">
+                <strong>Appareil photo</strong> ou <strong>galerie</strong> — le GPS EXIF sera utilisé s&apos;il est présent.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="h-28 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <Camera className="h-6 w-6" />
+                  <span className="text-[12px] font-medium text-foreground">Prendre une photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="h-28 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <Images className="h-6 w-6" />
+                  <span className="text-[12px] font-medium text-foreground">Galerie</span>
+                </button>
+              </div>
+            </>
           )}
 
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept="image/*"
             className="hidden"

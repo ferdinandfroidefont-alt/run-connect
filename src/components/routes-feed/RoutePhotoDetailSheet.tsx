@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Route, Mountain, Loader2, Bookmark, BookmarkCheck } from 'lucide-react';
-import { GalleryPhoto, findRoutesNearPhoto } from '@/hooks/useRoutePhotosGallery';
+import { Route, Mountain, Loader2, Bookmark, BookmarkCheck, Map as MapViewIcon } from 'lucide-react';
+import { GalleryPhoto, findRoutesNearPhoto, type GalleryMapRoutePreview } from '@/hooks/useRoutePhotosGallery';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,6 +13,8 @@ interface RoutePhotoDetailSheetProps {
   photo: GalleryPhoto | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Affiche l’itinéraire sur la carte galerie (tracé + photo + position). */
+  onViewRouteOnMap?: (route: GalleryMapRoutePreview, contextPhoto: GalleryPhoto) => void;
 }
 
 const formatDistance = (meters: number | null) => {
@@ -21,7 +23,12 @@ const formatDistance = (meters: number | null) => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
-export const RoutePhotoDetailSheet = ({ photo, open, onOpenChange }: RoutePhotoDetailSheetProps) => {
+export const RoutePhotoDetailSheet = ({
+  photo,
+  open,
+  onOpenChange,
+  onViewRouteOnMap,
+}: RoutePhotoDetailSheetProps) => {
   const { user } = useAuth();
   const [nearbyRoutes, setNearbyRoutes] = useState<any[]>([]);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
@@ -42,7 +49,7 @@ export const RoutePhotoDetailSheet = ({ photo, open, onOpenChange }: RoutePhotoD
     };
     load();
     return () => { cancelled = true; };
-  }, [photo?.id]);
+  }, [photo?.id, photo?.lat, photo?.lng]);
 
   // Load saved status for nearby routes
   useEffect(() => {
@@ -174,44 +181,70 @@ export const RoutePhotoDetailSheet = ({ photo, open, onOpenChange }: RoutePhotoD
                     return (
                       <div
                         key={route.id}
-                        className="px-ios-3 py-ios-3 flex items-center gap-ios-3 active:bg-secondary/50 transition-colors"
+                        className="flex items-stretch gap-0 min-w-0"
                       >
-                        <div className="h-10 w-10 rounded-ios-md bg-primary/10 flex items-center justify-center shrink-0">
-                          <ActivityIcon activityType={route.activity_type || 'course'} size="sm" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-ios-headline font-medium truncate">{route.name}</p>
-                          <div className="flex flex-wrap items-center gap-x-ios-3 gap-y-0.5 mt-0.5">
-                            <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
-                              <Route className="h-3 w-3 shrink-0" />
-                              {formatDistance(route.total_distance)}
-                            </span>
-                            {route.total_elevation_gain ? (
-                              <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
-                                <Mountain className="h-3 w-3 shrink-0" />
-                                {Math.round(route.total_elevation_gain)} m
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="shrink-0 h-10 w-10 rounded-full"
-                          disabled={isSaving}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSaveRoute(route.id);
+                        <button
+                          type="button"
+                          className="flex-1 min-w-0 flex items-center gap-ios-3 px-ios-3 py-ios-3 text-left active:bg-secondary/50 transition-colors"
+                          onClick={() => {
+                            if (!photo || !onViewRouteOnMap) return;
+                            onViewRouteOnMap(
+                              {
+                                id: route.id,
+                                name: route.name,
+                                coordinates: route.coordinates,
+                              },
+                              photo
+                            );
+                            onOpenChange(false);
                           }}
                         >
-                          {isSaving ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isSaved ? (
-                            <BookmarkCheck className="h-5 w-5 text-primary fill-primary" />
-                          ) : (
-                            <Bookmark className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </Button>
+                          <div className="h-10 w-10 rounded-ios-md bg-primary/10 flex items-center justify-center shrink-0">
+                            <ActivityIcon activityType={route.activity_type || 'course'} size="sm" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-ios-headline font-medium truncate">{route.name}</p>
+                            <div className="flex flex-wrap items-center gap-x-ios-3 gap-y-0.5 mt-0.5">
+                              <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
+                                <Route className="h-3 w-3 shrink-0" />
+                                {formatDistance(route.total_distance)}
+                              </span>
+                              {route.total_elevation_gain ? (
+                                <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
+                                  <Mountain className="h-3 w-3 shrink-0" />
+                                  {Math.round(route.total_elevation_gain)} m
+                                </span>
+                              ) : null}
+                              {onViewRouteOnMap && (
+                                <span className="flex items-center gap-ios-1 text-ios-caption1 text-primary font-medium">
+                                  <MapViewIcon className="h-3 w-3 shrink-0" />
+                                  Voir sur la carte
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                        <div className="flex items-center pr-ios-2 border-l border-border/60">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 h-10 w-10 rounded-full"
+                            disabled={isSaving}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSaveRoute(route.id);
+                            }}
+                            aria-label={isSaved ? 'Retirer des enregistrés' : 'Enregistrer l’itinéraire'}
+                          >
+                            {isSaving ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isSaved ? (
+                              <BookmarkCheck className="h-5 w-5 text-primary fill-primary" />
+                            ) : (
+                              <Bookmark className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}

@@ -14,8 +14,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, Upload, MapPin, Loader2,
+  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, MapPin, Loader2, Images,
 } from 'lucide-react';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
 import { clientXYToLatLng } from '@/lib/mapLatLngFromPixel';
 import { cn } from '@/lib/utils';
@@ -57,6 +59,7 @@ const formatDistance = (meters: number | null) => {
 
 export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: RouteDetailDialogProps) => {
   const { user } = useAuth();
+  const { position: userGeoPosition } = useGeolocation();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -77,9 +80,11 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   const [readingGps, setReadingGps] = useState(false);
   /** Origine du point sur la carte (EXIF auto ou appui long manuel). */
   const [photoPlacementSource, setPhotoPlacementSource] = useState<'exif' | 'manual' | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const longPressCleanupRef = useRef<(() => void) | null>(null);
   const pinMarkerRef = useRef<google.maps.Marker | null>(null);
+  const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
   const photoFileRef = useRef<File | null>(null);
 
   useEffect(() => {
@@ -226,7 +231,20 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
         }
       });
 
-      mapRef.current.fitBounds(bounds, 40);
+      if (userGeoPosition) {
+        bounds.extend({ lat: userGeoPosition.lat, lng: userGeoPosition.lng });
+        mapRef.current.fitBounds(bounds, 50);
+        userLocationMarkerRef.current?.setMap(null);
+        userLocationMarkerRef.current = new google.maps.Marker({
+          map: mapRef.current,
+          position: { lat: userGeoPosition.lat, lng: userGeoPosition.lng },
+          icon: getUserLocationMarkerIcon(),
+          zIndex: 900,
+          title: 'Votre position',
+        });
+      } else {
+        mapRef.current.fitBounds(bounds, 40);
+      }
     }, 300);
 
     };
@@ -239,9 +257,11 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
         pinMarkerRef.current.setMap(null);
         pinMarkerRef.current = null;
       }
+      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current = null;
       mapRef.current = null;
     };
-  }, [open, route, photos]);
+  }, [open, route, photos, userGeoPosition]);
 
   // Marqueur de placement : draggable pour corriger avant publication (EXIF ou manuel)
   useEffect(() => {
@@ -534,8 +554,9 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                 <div className="text-[13px] text-primary font-medium leading-snug space-y-1">
                   {!photoFile && (
                     <p>
-                      Choisissez d&apos;abord une photo. Si elle contient des coordonnées GPS, le point sera proposé
-                      automatiquement — vous pourrez le déplacer avant publication.
+                      Choisissez une photo via <strong>l’appareil photo</strong> ou la <strong>galerie</strong>. Si elle
+                      contient des coordonnées GPS, le point sera proposé automatiquement — vous pourrez le déplacer avant
+                      publication.
                     </p>
                   )}
                   {photoFile && readingGps && (
@@ -571,18 +592,28 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
               <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border space-y-3 animate-in slide-in-from-top-2">
                 {!photoPreview ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full h-36 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors"
-                    >
-                      <Upload className="h-8 w-8" />
-                      <span className="text-[14px] font-medium text-foreground">Choisir une photo</span>
-                      <span className="text-[11px] text-center px-4 max-w-sm">
-                        GPS embarqué → placement automatique suggéré ; sinon appui long sur la carte
-                      </span>
-                    </button>
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                    <p className="text-[12px] text-muted-foreground text-center px-1">
+                      Deux options : <strong>appareil photo</strong> ou <strong>galerie</strong>. Si la photo contient un GPS,
+                      le point est proposé automatiquement ; sinon, <strong>appui long</strong> sur la carte.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <Camera className="h-7 w-7" />
+                        <span className="text-[13px] font-medium text-foreground text-center px-2">Prendre une photo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => galleryInputRef.current?.click()}
+                        className="h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <Images className="h-7 w-7" />
+                        <span className="text-[13px] font-medium text-foreground text-center px-2">Galerie</span>
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -607,7 +638,43 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1.5"
+                        onClick={() => cameraInputRef.current?.click()}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Reprendre
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-1.5"
+                        onClick={() => galleryInputRef.current?.click()}
+                      >
+                        <Images className="h-4 w-4" />
+                        Galerie
+                      </Button>
+                    </div>
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                    <input
+                      ref={galleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
 
                     {pinLocation && (
                       <>
@@ -650,6 +717,22 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                     )}
                   </>
                 )}
+                {/* Une seule paire d’inputs fichier (caméra + galerie) pour les deux étapes */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
               </div>
             )}
 

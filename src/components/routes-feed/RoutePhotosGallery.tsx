@@ -1,13 +1,28 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { supabase } from '@/integrations/supabase/client';
 import { getKeyBody } from '@/lib/googleMapsKey';
-import { Camera, Loader2, MapPinOff, RefreshCw } from 'lucide-react';
-import { useRoutePhotosGallery, GalleryPhoto } from '@/hooks/useRoutePhotosGallery';
+import { Camera, Loader2, MapPinOff, RefreshCw, Route, X } from 'lucide-react';
+import { useRoutePhotosGallery, GalleryPhoto, type GalleryMapRoutePreview } from '@/hooks/useRoutePhotosGallery';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { RoutePhotoDetailSheet } from './RoutePhotoDetailSheet';
+import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
+function coordinatesToPath(coordinates: unknown): google.maps.LatLngLiteral[] {
+  if (!Array.isArray(coordinates)) return [];
+  const out: google.maps.LatLngLiteral[] = [];
+  for (const coord of coordinates) {
+    const c = coord as Record<string, unknown>;
+    if (c?.lat !== undefined && c?.lng !== undefined) {
+      out.push({ lat: Number(c.lat), lng: Number(c.lng) });
+    } else if (Array.isArray(coord) && coord.length >= 2) {
+      out.push({ lat: Number(coord[0]), lng: Number(coord[1]) });
+    }
+  }
+  return out.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+}
 
 export const RoutePhotosGallery = () => {
   const { photos, loading, refresh } = useRoutePhotosGallery();
@@ -19,14 +34,25 @@ export const RoutePhotosGallery = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const routePolylineRef = useRef<google.maps.Polyline | null>(null);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null);
+  const [mapRoutePreview, setMapRoutePreview] = useState<{
+    route: GalleryMapRoutePreview;
+    contextPhoto: GalleryPhoto | null;
+  } | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
-  /** Incrémenter pour forcer une réinit de la carte (ex. après erreur réseau). */
   const [mapInitNonce, setMapInitNonce] = useState(0);
 
-  // Init Google Maps (classic Map + Marker — no mapId; Advanced Markers require a valid Cloud map ID)
+  const clearRoutePreview = useCallback(() => setMapRoutePreview(null), []);
+
+  // Fermer l’aperçu tracé quand on ouvre une autre photo
+  useEffect(() => {
+    if (selectedPhoto) setMapRoutePreview(null);
+  }, [selectedPhoto?.id]);
+
+  // Init Google Maps
   useEffect(() => {
     if (loading || !mapContainer.current) return;
     let cancelled = false;
@@ -55,9 +81,7 @@ export const RoutePhotosGallery = () => {
       if (cancelled || !mapContainer.current) return;
 
       const pos = positionRef.current;
-      const center = pos
-        ? { lat: pos.lat, lng: pos.lng }
-        : { lat: 46.6, lng: 2.3 };
+      const center = pos ? { lat: pos.lat, lng: pos.lng } : { lat: 46.6, lng: 2.3 };
 
       mapRef.current = new google.maps.Map(mapContainer.current, {
         center,
@@ -71,13 +95,9 @@ export const RoutePhotosGallery = () => {
       setMapReady(true);
 
       const triggerResize = () => {
-        if (mapRef.current) {
-          google.maps.event.trigger(mapRef.current, 'resize');
-        }
+        if (mapRef.current) google.maps.event.trigger(mapRef.current, 'resize');
       };
-      requestAnimationFrame(() => {
-        requestAnimationFrame(triggerResize);
-      });
+      requestAnimationFrame(() => requestAnimationFrame(triggerResize));
     };
 
     initMap();
@@ -86,6 +106,8 @@ export const RoutePhotosGallery = () => {
       cancelled = true;
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current = [];
+      routePolylineRef.current?.setMap(null);
+      routePolylineRef.current = null;
       userMarkerRef.current?.setMap(null);
       userMarkerRef.current = null;
       mapRef.current = null;
@@ -93,7 +115,6 @@ export const RoutePhotosGallery = () => {
     };
   }, [loading, mapInitNonce]);
 
-  // Resize when the map pane layout changes (tab switch, keyboard, etc.)
   useEffect(() => {
     if (!mapReady || !mapContainer.current || !mapRef.current) return;
     const ro = new ResizeObserver(() => {
@@ -103,74 +124,110 @@ export const RoutePhotosGallery = () => {
     return () => ro.disconnect();
   }, [mapReady]);
 
-  // User position
+  // Position utilisateur — même style que la page principale (InteractiveMap)
   useEffect(() => {
     if (!mapRef.current || !position || !mapReady) return;
 
     userMarkerRef.current?.setMap(null);
-
     userMarkerRef.current = new google.maps.Marker({
       map: mapRef.current,
       position: { lat: position.lat, lng: position.lng },
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#2563EB',
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 3,
-      },
+      icon: getUserLocationMarkerIcon(),
       zIndex: 1000,
+      title: 'Votre position',
     });
   }, [position, mapReady]);
 
-  // Photo markers
+  // Marqueurs photos + polyline d’itinéraire (aperçu « à proximité »)
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
+    routePolylineRef.current?.setMap(null);
+    routePolylineRef.current = null;
 
     const geoPhotos = photos.filter((p) => p.lat && p.lng);
-    if (geoPhotos.length === 0) return;
-
-    const bounds = new google.maps.LatLngBounds();
-    if (position) bounds.extend({ lat: position.lat, lng: position.lng });
+    const routePath = mapRoutePreview?.route?.coordinates
+      ? coordinatesToPath(mapRoutePreview.route.coordinates)
+      : [];
 
     geoPhotos.forEach((photo) => {
       const pos = { lat: photo.lat!, lng: photo.lng! };
-      bounds.extend(pos);
-
+      const isFocus = mapRoutePreview?.contextPhoto?.id === photo.id;
       const marker = new google.maps.Marker({
-        map: mapRef.current!,
+        map,
         position: pos,
         icon: {
           url: photo.photo_url,
-          scaledSize: new google.maps.Size(48, 48),
-          anchor: new google.maps.Point(24, 24),
+          scaledSize: new google.maps.Size(isFocus ? 56 : 48, isFocus ? 56 : 48),
+          anchor: new google.maps.Point(isFocus ? 28 : 24, isFocus ? 28 : 24),
         },
         optimized: false,
-        zIndex: 10,
+        zIndex: isFocus ? 80 : 10,
       });
-
-      marker.addListener('click', () => {
-        setSelectedPhoto(photo);
-      });
-
+      marker.addListener('click', () => setSelectedPhoto(photo));
       markersRef.current.push(marker);
     });
 
-    const listener = google.maps.event.addListener(mapRef.current, 'idle', () => {
-      if (!mapRef.current) return;
-      if (mapRef.current.getZoom()! > 16) mapRef.current.setZoom(16);
-    });
+    if (routePath.length >= 2) {
+      routePolylineRef.current = new google.maps.Polyline({
+        path: routePath,
+        geodesic: true,
+        strokeColor: '#5B7CFF',
+        strokeOpacity: 0.95,
+        strokeWeight: 5,
+        map,
+        zIndex: 5,
+      });
+    }
 
-    mapRef.current.fitBounds(bounds, 60);
+    const bounds = new google.maps.LatLngBounds();
+    let hasPoint = false;
+    const extend = (pt: google.maps.LatLngLiteral) => {
+      bounds.extend(pt);
+      hasPoint = true;
+    };
+
+    if (routePath.length >= 2) {
+      routePath.forEach(extend);
+    }
+    const anchor = mapRoutePreview?.contextPhoto;
+    if (anchor?.lat != null && anchor?.lng != null) {
+      extend({ lat: anchor.lat, lng: anchor.lng });
+    }
+    if (position) extend({ lat: position.lat, lng: position.lng });
+
+    if (!hasPoint && geoPhotos.length > 0) {
+      geoPhotos.forEach((p) => extend({ lat: p.lat!, lng: p.lng! }));
+      if (position) extend({ lat: position.lat, lng: position.lng });
+    }
+
+    let idleListener: google.maps.MapsEventListener | null = null;
+    if (hasPoint) {
+      map.fitBounds(bounds, 70);
+      idleListener = google.maps.event.addListener(map, 'idle', () => {
+        if (!mapRef.current) return;
+        const z = mapRef.current.getZoom();
+        const maxZ = routePath.length >= 2 ? 17 : 16;
+        if (z != null && z > maxZ) mapRef.current.setZoom(maxZ);
+        if (idleListener) {
+          google.maps.event.removeListener(idleListener);
+          idleListener = null;
+        }
+      });
+    }
 
     return () => {
-      google.maps.event.removeListener(listener);
+      if (idleListener) google.maps.event.removeListener(idleListener);
     };
-  }, [photos, mapReady, position]);
+  }, [photos, mapReady, position, mapRoutePreview]);
+
+  const handleViewRouteOnMap = useCallback((route: GalleryMapRoutePreview, contextPhoto: GalleryPhoto) => {
+    setSelectedPhoto(null);
+    setMapRoutePreview({ route, contextPhoto });
+  }, []);
 
   if (loading) {
     return (
@@ -218,7 +275,6 @@ export const RoutePhotosGallery = () => {
   return (
     <>
       <div className="flex flex-col min-h-[min(72dvh,640px)] gap-ios-3 mx-ios-4 pb-ios-2">
-        {/* Carte */}
         <div
           className="relative w-full flex-1 min-h-[min(52dvh,420px)] rounded-ios-lg overflow-hidden border border-border bg-secondary shadow-inner ring-1 ring-black/5 dark:ring-white/10"
         >
@@ -246,9 +302,34 @@ export const RoutePhotosGallery = () => {
             </div>
           )}
 
-          {/* Badge compteur */}
+          {!mapError && mapRoutePreview && (
+            <div className="absolute top-ios-3 right-ios-3 z-10 flex flex-col items-end gap-ios-2 max-w-[min(100%,280px)]">
+              <div className="bg-card/95 backdrop-blur-md rounded-ios-lg px-ios-3 py-ios-2 shadow-sm border border-border flex items-start gap-ios-2">
+                <Route className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <p className="text-ios-caption1 font-medium text-foreground leading-snug line-clamp-2">
+                  {mapRoutePreview.route.name || 'Itinéraire'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="rounded-full shadow-sm gap-ios-1.5"
+                onClick={clearRoutePreview}
+              >
+                <X className="h-4 w-4" />
+                Fermer le tracé
+              </Button>
+            </div>
+          )}
+
           {!mapError && (
-            <div className="absolute top-ios-3 left-ios-3 z-10 pointer-events-none">
+            <div
+              className={cn(
+                'absolute top-ios-3 z-10 pointer-events-none',
+                mapRoutePreview ? 'left-ios-3 max-w-[calc(100%-8rem)]' : 'left-ios-3'
+              )}
+            >
               <div className="bg-card/95 backdrop-blur-md rounded-full pl-ios-2 pr-ios-3 py-ios-1 flex items-center gap-ios-1.5 shadow-sm border border-border">
                 <Camera className="h-3 w-3 text-primary shrink-0" />
                 <span className="text-ios-caption1 font-medium text-foreground tabular-nums">
@@ -260,7 +341,6 @@ export const RoutePhotosGallery = () => {
           )}
         </div>
 
-        {/* Galerie — bloc unique type iOS grouped */}
         <div className="ios-card rounded-ios-lg border border-border shadow-sm p-ios-3">
           <div className="flex items-center justify-between mb-ios-2">
             <p className="text-ios-footnote font-semibold text-foreground uppercase tracking-wide">
@@ -313,6 +393,7 @@ export const RoutePhotosGallery = () => {
         onOpenChange={(open) => {
           if (!open) setSelectedPhoto(null);
         }}
+        onViewRouteOnMap={handleViewRouteOnMap}
       />
     </>
   );

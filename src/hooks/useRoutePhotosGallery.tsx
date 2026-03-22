@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
+/** Itinéraire public (ex. pour afficher le tracé sur la carte galerie). */
+export type GalleryMapRoutePreview = {
+  id: string;
+  name?: string | null;
+  coordinates: unknown;
+};
+
 export interface GalleryPhoto {
   id: string;
   photo_url: string;

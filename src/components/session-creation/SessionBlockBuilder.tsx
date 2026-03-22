@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useId, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Flame, Zap, Activity, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,12 @@ interface SessionBlockBuilderProps {
   onBlocksChange: (blocks: SessionBlock[]) => void;
 }
 
-const generateBlockId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateBlockId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `block-${crypto.randomUUID()}`;
+  }
+  return `block-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+};
 
 const BLOCK_ICONS: Record<BlockType, React.ElementType> = {
   warmup: Flame,
@@ -34,12 +39,38 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
   onBlocksChange,
 }) => {
   const [showAddMenu, setShowAddMenu] = React.useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const addMenuId = useId();
+
+  const closeMenu = useCallback(() => setShowAddMenu(false), []);
+
+  useEffect(() => {
+    if (!showAddMenu) return;
+
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const el = rootRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      closeMenu();
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown, { passive: true });
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [showAddMenu, closeMenu]);
 
   const addBlock = (type: BlockType) => {
     const newBlock: SessionBlock = {
       id: generateBlockId(),
       type,
-      // Default values based on type
       ...(type === 'warmup' && { duration: '15', intensity: 'z2', rpe: 3 }),
       ...(type === 'cooldown' && { duration: '10', intensity: 'z1', rpe: 2 }),
       ...(type === 'interval' && {
@@ -67,7 +98,6 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
     onBlocksChange(blocks.filter(block => block.id !== id));
   };
 
-  // Quick add buttons based on existing blocks
   const getQuickAddSuggestions = (): BlockType[] => {
     if (blocks.length === 0) return ['warmup'];
     const hasWarmup = blocks.some(b => b.type === 'warmup');
@@ -82,13 +112,13 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* Label */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-foreground">Structure de la séance</span>
-        <span className="text-xs text-muted-foreground">{blocks.length} bloc{blocks.length !== 1 ? 's' : ''}</span>
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span className="text-sm font-medium text-foreground truncate">Structure de la séance</span>
+        <span className="text-xs text-muted-foreground shrink-0 tabular-nums" aria-live="polite">
+          {blocks.length} bloc{blocks.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      {/* Blocks List */}
       <AnimatePresence mode="popLayout">
         {blocks.map((block, index) => (
           <SessionBlockComponent
@@ -102,7 +132,6 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
         ))}
       </AnimatePresence>
 
-      {/* Empty State */}
       {blocks.length === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -116,25 +145,27 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
             <button
               type="button"
               onClick={() => addBlock('warmup')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-600 text-sm font-medium hover:bg-green-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-600 text-sm font-medium hover:bg-green-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <Flame className="w-4 h-4" />
+              <Flame className="w-4 h-4 shrink-0" aria-hidden />
               Échauffement
             </button>
           </div>
         </motion.div>
       )}
 
-      {/* Add Block Button */}
       {blocks.length > 0 && (
-        <div className="relative">
+        <div ref={rootRef} className="relative">
           <AnimatePresence>
             {showAddMenu && (
               <motion.div
+                id={addMenuId}
+                role="menu"
+                aria-label="Types de blocs"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-card rounded-xl border border-border shadow-lg z-10"
+                className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-card rounded-xl border border-border shadow-lg z-20"
               >
                 <div className="grid grid-cols-2 gap-2">
                   {BLOCK_TYPES.map((blockType) => {
@@ -143,13 +174,14 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
                       <button
                         key={blockType.value}
                         type="button"
+                        role="menuitem"
                         onClick={() => addBlock(blockType.value as BlockType)}
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                          "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                           BLOCK_COLORS[blockType.value as BlockType]
                         )}
                       >
-                        <IconComponent className="w-4 h-4" />
+                        <IconComponent className="w-4 h-4 shrink-0" aria-hidden />
                         {blockType.label}
                       </button>
                     );
@@ -163,17 +195,19 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
             type="button"
             variant="outline"
             onClick={() => setShowAddMenu(!showAddMenu)}
+            aria-expanded={showAddMenu}
+            aria-controls={addMenuId}
+            aria-haspopup="menu"
             className="w-full h-12 border-dashed"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2 shrink-0" aria-hidden />
             Ajouter un bloc
           </Button>
         </div>
       )}
 
-      {/* Quick suggestions */}
       {blocks.length > 0 && blocks.length < 5 && !showAddMenu && (
-        <div className="flex gap-2 justify-center flex-wrap">
+        <div className="flex gap-2 justify-center flex-wrap" role="group" aria-label="Ajouts rapides">
           {quickSuggestions.map((type) => {
             const IconComponent = BLOCK_ICONS[type];
             const blockInfo = BLOCK_TYPES.find(b => b.value === type);
@@ -183,11 +217,11 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
                 type="button"
                 onClick={() => addBlock(type)}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   BLOCK_COLORS[type]
                 )}
               >
-                <IconComponent className="w-3.5 h-3.5" />
+                <IconComponent className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 + {blockInfo?.label}
               </button>
             );
