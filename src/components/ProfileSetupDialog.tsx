@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,8 +66,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { t, language, languageManuallySet, suggestLanguageFromCountry } = useLanguage();
 
   // Refs pour persister les données (crucial pour Android WebView)
   const avatarPreviewRef = useRef<string>("");
@@ -377,7 +380,15 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
-    
+    if (!acceptedPolicies) {
+      toast({
+        title: t('common.error'),
+        description: t('profileSetup.toastLegalRequired'),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -421,6 +432,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       if (country) profileData.country = country;
       profileData.preferred_language = language;
       profileData.language_manually_set = languageManuallySet;
+      /* Aligné sur l’écran « Avant de commencer » : évite un second bloc consentement si déjà coché ici */
+      if (acceptedPolicies) {
+        profileData.rgpd_accepted = true;
+        profileData.security_rules_accepted = true;
+      }
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
@@ -585,12 +601,18 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent fullScreen className="p-0 gap-0 bg-secondary">
-        <div className="flex flex-col h-full">
+    <Dialog open={open} onOpenChange={onOpenChange} modal>
+      <DialogContent
+        fullScreen
+        hideCloseButton
+        className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-secondary p-0 shadow-none"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <div className="flex h-full min-h-0 flex-col">
           {/* iOS Header */}
-          <div className="bg-card border-b border-border">
-            <div className="flex items-center justify-between px-4 h-[56px]">
+          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex h-14 items-center justify-between px-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -604,8 +626,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </div>
           </div>
 
-          <ScrollArea className="flex-1 bg-pattern">
-            <form onSubmit={handleSubmit} className="px-4 py-6 space-y-6">
+          <ScrollArea className="min-h-0 flex-1">
+            <form onSubmit={handleSubmit} className="space-y-6 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
                 <div className="relative">
@@ -632,7 +654,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     )}
                   </button>
                 </div>
-                <p className="text-[13px] text-muted-foreground mt-2">{t('profileSetup.photoLabel')}</p>
+                <p className="mt-2 text-center text-[13px] text-muted-foreground">{t('profileSetup.photoLabel')}</p>
+                <p className="mt-1 max-w-xs text-center text-[12px] leading-snug text-muted-foreground/80">
+                  {t('profileSetup.heroSubtitle')}
+                </p>
                 
                 {/* Input React UNIQUE - C'est lui qui reçoit le fichier de manière fiable sur Android WebView */}
                 <input
@@ -646,13 +671,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
               {/* Form Fields */}
               <div className="space-y-2">
-                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-                  Informations
+                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('profileSetup.sectionInfo')}
                 </h3>
                 <div className="bg-card rounded-[10px] overflow-hidden">
                   {/* Username */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#007AFF] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#007AFF]">
                       <User className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Input
@@ -663,11 +688,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       required
                     />
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Display Name */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#34C759] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#34C759]">
                       <User className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Input
@@ -678,11 +703,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       required
                     />
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Password */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF9500] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#FF9500]">
                       <Lock className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 flex items-center gap-2">
@@ -704,11 +729,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       </button>
                     </div>
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Date de naissance */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#5856D6]">
                       <Calendar className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 flex items-center gap-2">
@@ -727,11 +752,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       )}
                     </div>
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Phone */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF3B30] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#FF3B30]">
                       <Phone className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Input
@@ -743,11 +768,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       required
                     />
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Favorite Sport */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#FF6B00] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#FF6B00]">
                       <Dumbbell className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Select value={favoriteSport} onValueChange={setFavoriteSport}>
@@ -763,11 +788,11 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="h-px bg-border ml-[54px]" />
+                  <div className="ios-list-row-inset-sep" />
 
                   {/* Country */}
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#30B0C7] flex items-center justify-center">
+                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon bg-[#30B0C7]">
                       <Globe className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Select
@@ -794,12 +819,12 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
               {/* Bio */}
               <div className="space-y-2">
-                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
-                  Présentation / Bio
+                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('profileSetup.sectionBio')}
                 </h3>
                 <div className="bg-card rounded-[10px] overflow-hidden">
-                  <div className="flex items-start gap-3 px-4 py-3">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#8E8E93] flex items-center justify-center mt-1">
+                  <div className="flex items-start gap-2.5 px-4 py-2.5">
+                    <div className="ios-list-row-icon mt-1 bg-[#8E8E93]">
                       <FileText className="h-[18px] w-[18px] text-white" />
                     </div>
                     <Textarea
@@ -815,25 +840,69 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
               {/* Referral Code */}
               <div className="space-y-2">
-                <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('profileSetup.sectionReferral')}
                 </h3>
-                <div className="bg-card rounded-[10px] p-4">
+                <div className="rounded-[10px] bg-card p-4">
                   <ReferralCodeInput />
+                </div>
+              </div>
+
+              {/* Engagements légaux (première inscription) */}
+              <div className="space-y-2">
+                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('profileSetup.sectionLegal')}
+                </h3>
+                <div className="ios-card overflow-hidden">
+                  <label
+                    htmlFor="profile-setup-legal"
+                    className="flex cursor-pointer items-start gap-3 px-4 py-3.5 active:bg-secondary/50"
+                  >
+                    <Checkbox
+                      id="profile-setup-legal"
+                      checked={acceptedPolicies}
+                      onCheckedChange={(c) => setAcceptedPolicies(c === true)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="text-left text-[13px] leading-relaxed text-muted-foreground">
+                      {t('profileSetup.legalIntro')}
+                      <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
+                        {t('profileSetup.legalTermsLink')}
+                      </Link>
+                      {t('profileSetup.legalMid')}
+                      <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
+                        {t('profileSetup.legalPrivacyLink')}
+                      </Link>
+                      {t('profileSetup.legalOutro')}
+                    </span>
+                  </label>
                 </div>
               </div>
 
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-12 rounded-[10px]"
-                disabled={isLoading || !avatarFile || !username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6}
+                className="h-12 w-full rounded-ios-md text-[17px] font-semibold shadow-md shadow-primary/15"
+                disabled={
+                  isLoading ||
+                  !avatarFile ||
+                  !username.trim() ||
+                  !displayName.trim() ||
+                  !birthDate ||
+                  calculatedAge < 13 ||
+                  !phone.trim() ||
+                  !bio.trim() ||
+                  !password ||
+                  password.length < 6 ||
+                  !country ||
+                  !acceptedPolicies
+                }
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('profileSetup.submit')}
               </Button>
 
-              <p className="text-[13px] text-muted-foreground text-center">{t('profileSetup.requiredFootnote')}</p>
+              <p className="text-center text-[12px] leading-snug text-muted-foreground">{t('profileSetup.requiredFootnote')}</p>
             </form>
           </ScrollArea>
         </div>

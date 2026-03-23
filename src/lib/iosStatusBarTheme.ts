@@ -3,9 +3,10 @@
  * Pas de barre HTML « factice » : le Web utilise seulement env(safe-area-inset-*) pour le contenu.
  *
  * Hors splash :
- * - Mode clair : fond barre blanc #FFFFFF + icônes / texte sombres (Style.Dark)
- * - Mode sombre : fond barre = même teinte que `--background` (index.css .dark), pas du noir #000
- *   → évite la frange visible entre la zone système et le WebView sur iOS.
+ * - Mode clair : fond barre blanc #FFFFFF + texte/icônes sombres → Style.Light (Capacitor : « dark text »).
+ * - Mode sombre : fond barre = **`--card`** (pas `--background`) : la plupart des en-têtes sous la safe-area
+ *   utilisent `bg-card` ; si la barre native reprend `--background` (plus sombre), iOS montre une frange nette.
+ *   Couleur native dérivée du rendu calculé du navigateur pour coller au pixel près au Web.
  *
  * Splash (voir ruconnectSplashChrome) : overlay true + fond bleu + Style.Light (icônes blanches).
  */
@@ -65,6 +66,43 @@ function shadcnHslTripletToHex(triplet: string): string | null {
     .join('')}`;
 }
 
+/** `rgb(r, g, b)` / `rgba(...)` du navigateur → #RRGGBB (sRGB). */
+function rgbStringToHex(rgb: string): string | null {
+  const m = rgb.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (!m) return null;
+  const r = Math.min(255, Math.max(0, Math.round(Number(m[1]))));
+  const g = min255(Number(m[2]));
+  const b = min255(Number(m[3]));
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function min255(n: number) {
+  return Math.min(255, Math.max(0, Math.round(n)));
+}
+
+/**
+ * Teinte native identique au rendu Web pour une variable Shadcn `H S% L%`
+ * (évite un décalage d’arrondi entre notre conversion HSL→hex et le moteur CSS).
+ */
+function nativeHexFromShadcnTripletVar(varName: string, fallbackHex: string): string {
+  const triplet = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  if (!triplet) return fallbackHex;
+  const probe = document.createElement('div');
+  probe.setAttribute(
+    'style',
+    'position:fixed;left:-100px;top:0;width:2px;height:2px;pointer-events:none;visibility:hidden;background-color:hsl(' +
+      triplet +
+      ');',
+  );
+  document.body.appendChild(probe);
+  try {
+    const rgb = getComputedStyle(probe).backgroundColor;
+    return rgbStringToHex(rgb) ?? shadcnHslTripletToHex(triplet) ?? fallbackHex;
+  } finally {
+    document.body.removeChild(probe);
+  }
+}
+
 /** `hsl(H S% L%)` (CSS Color 4) pour html/body — aligné sur `--background`. */
 function hslFromShadcnBackgroundVar(): string | null {
   const raw = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
@@ -89,16 +127,16 @@ export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> 
     await StatusBar.show();
 
     if (isDark) {
-      await StatusBar.setStyle({ style: Style.Light });
+      /* Capacitor Style.Dark = texte / icônes clairs sur fond sombre */
+      await StatusBar.setStyle({ style: Style.Dark });
       try {
-        const triplet = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
-        const hex = shadcnHslTripletToHex(triplet) ?? '#1c1c1c';
+        const hex = nativeHexFromShadcnTripletVar('--card', '#2c2c2e');
         await StatusBar.setBackgroundColor({ color: hex });
       } catch {
         /* iOS peut ignorer setBackgroundColor */
       }
     } else {
-      await StatusBar.setStyle({ style: Style.Dark });
+      await StatusBar.setStyle({ style: Style.Light });
       try {
         await StatusBar.setBackgroundColor({ color: STATUS_BAR_LIGHT });
       } catch {
@@ -119,8 +157,10 @@ export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> 
 export function applyWebChromeForTheme(isDark: boolean): void {
   const fromCss = hslFromShadcnBackgroundVar();
   const contentBg = fromCss ?? (isDark ? 'hsl(240 5% 11%)' : 'hsl(0 0% 100%)');
-  const triplet = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
-  const chromeBarColor = shadcnHslTripletToHex(triplet) ?? (isDark ? '#1c1c1c' : STATUS_BAR_LIGHT);
+  const chromeBarColor = nativeHexFromShadcnTripletVar(
+    '--background',
+    isDark ? '#1c1c1c' : STATUS_BAR_LIGHT,
+  );
 
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) metaTheme.setAttribute('content', chromeBarColor);

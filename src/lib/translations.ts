@@ -200,6 +200,16 @@ const _translationBundles: Record<string, any> = {
       sectionInfo: 'Informations',
       sectionBio: 'Présentation / Bio',
       sectionReferral: 'Code de parrainage (optionnel)',
+      sectionLegal: 'Engagements légaux',
+      heroSubtitle:
+        'Quelques infos pour rejoindre la communauté : photo, identifiants et sécurisation du compte.',
+      legalIntro: 'J’ai lu et j’accepte les ',
+      legalMid: ' ainsi que la ',
+      legalTermsLink: 'Conditions d’utilisation',
+      legalPrivacyLink: 'Politique de confidentialité',
+      legalOutro:
+        '. Je déclare avoir au moins 13 ans et que les informations fournies sont exactes.',
+      toastLegalRequired: 'Coche la case des engagements légaux pour créer ton profil.',
       usernamePh: 'Nom d\'utilisateur *',
       displayNamePh: 'Pseudo *',
       passwordPh: 'Mot de passe (min. 6 car.) *',
@@ -434,6 +444,16 @@ const _translationBundles: Record<string, any> = {
       sectionInfo: 'Information',
       sectionBio: 'Bio',
       sectionReferral: 'Referral code (optional)',
+      sectionLegal: 'Legal acknowledgements',
+      heroSubtitle:
+        'A few details to join the community: photo, identity, and a password to secure your account.',
+      legalIntro: 'I have read and accept the ',
+      legalMid: ' and the ',
+      legalTermsLink: 'Terms of use',
+      legalPrivacyLink: 'Privacy policy',
+      legalOutro:
+        '. I confirm I am at least 13 years old and that the information I provide is accurate.',
+      toastLegalRequired: 'Please accept the legal acknowledgements to finish creating your profile.',
       usernamePh: 'Username *',
       displayNamePh: 'Display name *',
       passwordPh: 'Password (min. 6 characters) *',

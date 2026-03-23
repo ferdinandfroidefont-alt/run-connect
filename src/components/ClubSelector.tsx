@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Users, ChevronDown, Check, Crown } from 'lucide-react';
+import { Users, Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
 
 interface Club {
   id: string;
@@ -25,8 +24,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   selectedClubId,
   onClubSelect
 }) => {
-  const { user, subscriptionInfo } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [clubs, setClubs] = useState<Club[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -94,12 +92,26 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     setIsOpen(false);
   };
 
+  /** Même taille / style que le bouton « amis uniquement » sur la carte */
+  const mapClubTriggerClass = (active: boolean) =>
+    cn(
+      'flex size-10 shrink-0 items-center justify-center rounded-[10px] border shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      active
+        ? 'border-primary bg-primary text-primary-foreground'
+        : 'border-border bg-card text-foreground hover:bg-secondary/50'
+    );
+
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-2 bg-card rounded-lg border">
-        <Users className="h-4 w-4" />
-        <span className="text-sm">Chargement des clubs...</span>
-      </div>
+      <button
+        type="button"
+        disabled
+        aria-busy
+        aria-label="Chargement des clubs"
+        className={cn(mapClubTriggerClass(false), 'cursor-wait opacity-90')}
+      >
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+      </button>
     );
   }
 
@@ -107,12 +119,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
-            className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50"
-          >
-            <Users className="h-4 w-4" />
-          </Button>
+          <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
+            <Users className="h-4 w-4" aria-hidden />
+          </button>
         </PopoverTrigger>
         
         <PopoverContent className="w-80 p-2" align="start">
@@ -130,12 +139,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button 
-          variant="outline" 
-          className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center hover:bg-secondary/50"
-        >
-          <Users className="h-4 w-4" />
-        </Button>
+        <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
+          <Users className="h-4 w-4" aria-hidden />
+        </button>
       </PopoverTrigger>
       
       <PopoverContent className="w-80 p-2" align="start">

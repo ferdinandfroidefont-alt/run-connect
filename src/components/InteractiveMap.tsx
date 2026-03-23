@@ -91,9 +91,9 @@ const TIME_SLOTS = [
   { id: 'evening' as const, icon: Moon, label: '18h-23h', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 
-/** Boutons flottants droite (classement / présence) — verre léger, même famille que LevelSlider */
+/** Boutons flottants droite — même surface que les contrôles carte (bg-card, pas de verre) */
 const MAP_RIGHT_FAB_BUTTON_CLASS =
-  'h-10 w-10 shrink-0 rounded-[12px] border border-white/55 bg-white/86 p-0 shadow-[0_2px_12px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-md transition-[transform,box-shadow,background-color] hover:bg-white/93 hover:shadow-[0_3px_14px_rgba(0,0,0,0.1)] active:scale-[0.97] dark:border-border/65 dark:bg-background/72 dark:hover:bg-background/82 flex items-center justify-center';
+  'h-10 w-10 min-h-10 min-w-10 shrink-0 rounded-[10px] border border-border bg-card p-0 text-foreground shadow-sm backdrop-blur-none flex items-center justify-center transition-all hover:bg-secondary/50 active:scale-[0.97] [&_svg]:size-[18px]';
 
 interface InteractiveMapProps {
   initialLat?: number;
@@ -1510,13 +1510,11 @@ export const InteractiveMap = ({
                 </div>
               </button>
               
-              {/* Club Selector */}
-              <div className="w-10">
-                <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
+              {/* Club Selector — même taille 40×40 que « amis uniquement » */}
+              <ClubSelector selectedClubId={filters.selected_club_id} onClubSelect={clubId => setFilters(prev => ({
                 ...prev,
                 selected_club_id: clubId
               }))} />
-              </div>
             </div>
           </div>
         </div>
@@ -1559,13 +1557,13 @@ export const InteractiveMap = ({
             onLevelChange={(level) => setFilters(prev => ({ ...prev, level }))}
           />
 
-          {/* Leaderboard + présence : même langage que LevelSlider (verre léger, ombre douce) */}
+          {/* Leaderboard + présence : même fond que amis / club (carte, clair / sombre) */}
           <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/leaderboard')} title="Classement">
-            <Crown className="h-[18px] w-[18px] text-amber-500/95" strokeWidth={1.65} aria-hidden />
+            <Crown className="text-amber-500/95" strokeWidth={1.65} aria-hidden />
           </Button>
 
           <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
-            <CheckCircle className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-500" strokeWidth={1.65} aria-hidden />
+            <CheckCircle className="text-emerald-600 dark:text-emerald-500" strokeWidth={1.65} aria-hidden />
           </Button>
         </div>}
 

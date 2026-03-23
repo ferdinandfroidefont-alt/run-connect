@@ -14,6 +14,8 @@ import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import appIcon from '@/assets/app-icon.png';
+import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
@@ -33,6 +35,7 @@ const Auth = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [acceptSignupTerms, setAcceptSignupTerms] = useState(false);
   const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
 
@@ -312,6 +315,14 @@ const Auth = () => {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (view === 'email-signup' && !acceptSignupTerms) {
+      toast({
+        title: "Acceptation requise",
+        description: "Cochez la case pour confirmer vos engagements légaux avant de créer un compte.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       if (view === 'email-signup') {
@@ -906,7 +917,16 @@ const Auth = () => {
     <div className="px-4 py-6 space-y-5 pb-16">
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
-        <button type="button" onClick={() => { setView('landing'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+        <button
+          type="button"
+          onClick={() => {
+            setView('landing');
+            setCaptchaToken(null);
+            setAcceptSignupTerms(false);
+            captchaRef.current?.resetCaptcha();
+          }}
+          className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+        >
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
@@ -950,10 +970,34 @@ const Auth = () => {
             />
           )}
           {captchaToken && (
-            <div className="text-center text-[13px] text-green-600 font-medium">✅ Vérification réussie</div>
+            <div className="text-center text-[13px] font-medium text-green-600 dark:text-green-500">✅ Vérification réussie</div>
           )}
 
-          <Button type="submit" className="w-full h-12 rounded-[12px]" disabled={isLoading || !captchaToken}>
+          <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border border-border/60 bg-secondary/40 px-3 py-3">
+            <Checkbox
+              checked={acceptSignupTerms}
+              onCheckedChange={(c) => setAcceptSignupTerms(c === true)}
+              className="mt-0.5 shrink-0"
+              id="auth-signup-terms"
+            />
+            <span className="text-left text-[13px] leading-snug text-muted-foreground">
+              J’ai lu et j’accepte les{' '}
+              <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
+                Conditions d’utilisation
+              </Link>{' '}
+              et la{' '}
+              <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
+                Politique de confidentialité
+              </Link>
+              . Je confirme avoir au moins 13 ans.
+            </span>
+          </label>
+
+          <Button
+            type="submit"
+            className="h-12 w-full rounded-[12px]"
+            disabled={isLoading || !captchaToken || !acceptSignupTerms}
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Créer mon compte
           </Button>
@@ -1081,11 +1125,14 @@ const Auth = () => {
   // ██  MAIN RENDER  ██
   // ══════════════════════════════════════════════
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ overflow: 'hidden', backgroundColor: 'hsl(220 14% 97%)' }}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
       {/* Scrollable content — no header bar on landing for cleaner look */}
       {view !== 'landing' && view !== 'email-signin' && (
-        <div className="bg-card border-b border-border" style={{ flexShrink: 0, zIndex: 10, paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="h-[12px]" />
+        <div
+          className="shrink-0 border-b border-border bg-background"
+          style={{ zIndex: 10, paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <div className="h-2" />
         </div>
       )}
 

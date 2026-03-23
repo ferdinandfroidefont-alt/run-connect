@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Shield, FileText, Loader2 } from "lucide-react";
+import { Shield, FileText, Sparkles, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,43 +26,37 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
 
     setIsSubmitting(true);
     try {
-      console.log('📝 [Consent] Enregistrement du consentement pour user:', userId);
-      
-      // 1. Stocker en localStorage IMMÉDIATEMENT pour éviter la boucle
-      localStorage.setItem(`consent_${userId}`, 'true');
-      console.log('✅ [Consent] Consentement sauvegardé en localStorage');
-      
-      // 2. Mettre à jour le profil en base
+      localStorage.setItem(`consent_${userId}`, "true");
+
       const { data: updatedProfile, error } = await supabase
-        .from('profiles')
-        .update({ 
-          rgpd_accepted: true, 
-          security_rules_accepted: true 
+        .from("profiles")
+        .update({
+          rgpd_accepted: true,
+          security_rules_accepted: true,
         })
-        .eq('user_id', userId)
-        .select('rgpd_accepted, security_rules_accepted')
+        .eq("user_id", userId)
+        .select("rgpd_accepted, security_rules_accepted")
         .single();
 
       if (error) throw error;
 
-      console.log('✅ [Consent] Mise à jour Supabase réussie:', updatedProfile);
+      if (!updatedProfile?.rgpd_accepted || !updatedProfile?.security_rules_accepted) {
+        throw new Error("Consentement non enregistré correctement.");
+      }
 
       toast({
-        title: "Consentement enregistré",
-        description: "Bienvenue sur RunConnect !",
+        title: "Bienvenue sur RunConnect",
+        description: "Vos choix sont enregistrés. Bonne découverte !",
       });
 
-      // 3. Notifier le parent - la fermeture est garantie par localStorage + état local
       onComplete();
-      
-      console.log('✅ [Consent] onComplete appelé, le dialog se ferme');
-    } catch (error: any) {
-      console.error('❌ [Consent] Erreur sauvegarde consentement:', error);
-      // En cas d'erreur, retirer le localStorage pour permettre une nouvelle tentative
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erreur inconnue";
+      console.error("[Consent] Erreur sauvegarde:", error);
       localStorage.removeItem(`consent_${userId}`);
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'enregistrer votre consentement. Réessayez.",
+        description: message || "Impossible d'enregistrer. Réessayez.",
         variant: "destructive",
       });
     } finally {
@@ -70,129 +65,176 @@ export const ConsentDialog = ({ userId, onComplete }: ConsentDialogProps) => {
   };
 
   return (
-    <Dialog open={true} modal>
-      <DialogContent className="w-[100vw] max-w-[100vw] h-[100dvh] max-h-[100dvh] sm:w-auto sm:max-w-2xl sm:h-auto sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 [&>button]:hidden flex flex-col overflow-hidden">
-        <DialogHeader className="p-6 pb-4 border-b shrink-0">
-          <DialogTitle className="text-2xl">Consentement obligatoire</DialogTitle>
-          <DialogDescription>
-            Avant d'utiliser RunConnect, vous devez accepter les conditions suivantes
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 min-h-0 px-6">
-          <div className="space-y-8 py-4">
-            {/* RGPD Section */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
-                <FileText className="h-6 w-6 text-primary shrink-0 mt-1" />
-                <div className="flex-1 space-y-3">
-                  <h3 className="font-semibold text-lg">Règlement RGPD</h3>
-                  
-                  <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-                    <p>
-                      En utilisant RunConnect, vous consentez au traitement de vos données personnelles 
-                      dans le cadre de l'utilisation de l'application (création de profil, suivi de séances, 
-                      géolocalisation).
-                    </p>
-                    
-                    <p>
-                      <strong className="text-foreground">Vos données ne sont ni revendues ni partagées à des tiers.</strong> 
-                      {" "}Vous pouvez à tout moment consulter, modifier ou supprimer vos informations depuis votre compte.
-                    </p>
-                    
-                    <p>
-                      Le stockage est effectué de manière sécurisée sur nos serveurs Supabase, 
-                      situés dans l'Union Européenne.
-                    </p>
-                    
-                    <p className="pt-2 border-t">
-                      📧 <strong>Contact RGPD :</strong>{" "}
-                      <a href="mailto:ferdinand.froidefont@gmail.com" className="text-primary hover:underline">
-                        ferdinand.froidefont@gmail.com
-                      </a>
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t">
-                    <label htmlFor="rgpd-switch" className="text-sm font-medium cursor-pointer">
-                      J'accepte le traitement de mes données personnelles
-                    </label>
-                    <Switch
-                      id="rgpd-switch"
-                      checked={rgpdAccepted}
-                      onCheckedChange={setRgpdAccepted}
-                    />
-                  </div>
-                </div>
-              </div>
+    <Dialog open modal>
+      <DialogContent
+        fullScreen
+        hideCloseButton
+        className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-secondary p-0 shadow-none"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* En-tête iOS — même langage visuel que le reste de l’app */}
+          <div className="shrink-0 border-b border-border bg-gradient-to-b from-card via-card to-secondary/40 pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex h-14 items-center justify-center px-4">
+              <h1 className="text-center text-[17px] font-semibold tracking-tight text-foreground">
+                Avant de commencer
+              </h1>
             </div>
-
-            {/* Security Rules Section */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-accent/5 rounded-lg border border-accent/20">
-                <Shield className="h-6 w-6 text-accent shrink-0 mt-1" />
-                <div className="flex-1 space-y-3">
-                  <h3 className="font-semibold text-lg">Règles de sécurité et d'utilisation</h3>
-                  
-                  <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-                    <p>
-                      RunConnect s'engage à garantir la sécurité de vos données et le bon usage de l'application.
-                    </p>
-                    
-                    <div>
-                      <p className="font-medium text-foreground mb-2">L'utilisateur s'engage à :</p>
-                      <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>Utiliser RunConnect uniquement pour ses activités sportives</li>
-                        <li>Ne pas publier de contenu inapproprié</li>
-                        <li>Ne pas partager de données d'autrui sans consentement</li>
-                      </ul>
-                    </div>
-                    
-                    <p className="pt-2 border-t">
-                      <strong className="text-destructive">⚠️ Toute utilisation abusive entraînera la suspension du compte.</strong>
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t">
-                    <label htmlFor="security-switch" className="text-sm font-medium cursor-pointer">
-                      J'accepte les règles de sécurité et d'utilisation
-                    </label>
-                    <Switch
-                      id="security-switch"
-                      checked={securityAccepted}
-                      onCheckedChange={setSecurityAccepted}
-                    />
+            <div className="px-4 pb-5">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative mb-4 flex h-[72px] w-[72px] items-center justify-center">
+                  <div
+                    className="absolute inset-0 rounded-[20px] bg-primary/15 blur-xl"
+                    aria-hidden
+                  />
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/75 shadow-lg shadow-primary/30 ring-1 ring-primary/20">
+                    <Sparkles className="h-8 w-8 text-primary-foreground" aria-hidden />
                   </div>
                 </div>
+                <p className="max-w-[280px] text-ios-subheadline text-muted-foreground">
+                  Dernière étape obligatoire : transparence sur vos données et règles de la communauté RunConnect.
+                </p>
               </div>
             </div>
           </div>
-        </ScrollArea>
 
-        <div className="p-6 pt-4 border-t bg-muted/30 shrink-0">
-          <div className="flex justify-center w-full">
-            <Button 
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="space-y-5 px-4 py-4 pb-8">
+              {/* RGPD */}
+              <div className="space-y-2">
+                <h2 className="px-1 text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Données personnelles (RGPD)
+                </h2>
+                <div className="ios-card overflow-hidden">
+                  <div className="border-b border-border px-4 py-3">
+                    <div className="flex gap-3">
+                      <div className="ios-list-row-icon shrink-0 bg-[#5856D6]">
+                        <FileText className="h-[18px] w-[18px] text-white" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-2 text-[13px] leading-relaxed text-muted-foreground">
+                        <p>
+                          En utilisant RunConnect, vous acceptez le{" "}
+                          <strong className="text-foreground">traitement</strong> de vos données pour le fonctionnement
+                          du service (profil, séances, messages, géolocalisation lorsque vous l’activez).
+                        </p>
+                        <p>
+                          <strong className="text-foreground">Pas de revente à des tiers.</strong> Vous pouvez accéder,
+                          rectifier ou supprimer vos données depuis l’app.
+                        </p>
+                        <p>
+                          Hébergement sécurisé (infrastructure conforme, traitement encadré). Pour toute question :{" "}
+                          <a
+                            href="mailto:ferdinand.froidefont@gmail.com"
+                            className="font-medium text-primary underline-offset-2 hover:underline"
+                          >
+                            ferdinand.froidefont@gmail.com
+                          </a>
+                          .
+                        </p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                          <Link
+                            to="/privacy"
+                            className="inline-flex items-center gap-1 text-[12px] font-medium text-primary"
+                          >
+                            Politique de confidentialité <ExternalLink className="h-3 w-3 opacity-70" />
+                          </Link>
+                          <Link to="/legal" className="inline-flex items-center gap-1 text-[12px] font-medium text-primary">
+                            Mentions légales <ExternalLink className="h-3 w-3 opacity-70" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <label
+                    htmlFor="consent-rgpd"
+                    className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3.5 active:bg-secondary/60"
+                  >
+                    <span className="text-[15px] font-medium leading-snug text-foreground">
+                      J’accepte le traitement de mes données personnelles
+                    </span>
+                    <Checkbox
+                      id="consent-rgpd"
+                      checked={rgpdAccepted}
+                      onCheckedChange={(c) => setRgpdAccepted(c === true)}
+                      className="shrink-0"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Sécurité */}
+              <div className="space-y-2">
+                <h2 className="px-1 text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Règles de la communauté
+                </h2>
+                <div className="ios-card overflow-hidden">
+                  <div className="border-b border-border px-4 py-3">
+                    <div className="flex gap-3">
+                      <div className="ios-list-row-icon shrink-0 bg-[#34C759]">
+                        <Shield className="h-[18px] w-[18px] text-white" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-2 text-[13px] leading-relaxed text-muted-foreground">
+                        <p>RunConnect est un espace sportif : respect, authenticité et sécurité des membres.</p>
+                        <ul className="list-inside list-disc space-y-1 pl-0.5">
+                          <li>Usage lié au sport et aux sorties encadrées par l’app</li>
+                          <li>Pas de contenu illégal, harcelant ou dangereux</li>
+                          <li>Pas de diffusion de données personnelles d’autres personnes sans accord</li>
+                        </ul>
+                        <p className="text-destructive font-medium">
+                          Tout comportement abusif peut entraîner la suspension du compte.
+                        </p>
+                        <Link
+                          to="/terms"
+                          className="inline-flex items-center gap-1 text-[12px] font-medium text-primary"
+                        >
+                          Conditions d’utilisation <ExternalLink className="h-3 w-3 opacity-70" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                  <label
+                    htmlFor="consent-security"
+                    className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3.5 active:bg-secondary/60"
+                  >
+                    <span className="text-[15px] font-medium leading-snug text-foreground">
+                      J’accepte les règles de sécurité et d’utilisation
+                    </span>
+                    <Checkbox
+                      id="consent-security"
+                      checked={securityAccepted}
+                      onCheckedChange={(c) => setSecurityAccepted(c === true)}
+                      className="shrink-0"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="shrink-0 border-t border-border bg-card px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <Button
+              type="button"
               onClick={handleAccept}
               disabled={!canContinue || isSubmitting}
-              className="w-full h-12 text-base"
+              className="h-12 w-full rounded-ios-md text-[17px] font-semibold shadow-md shadow-primary/20"
               size="lg"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Enregistrement...
+                  Enregistrement…
                 </>
+              ) : canContinue ? (
+                "Continuer vers RunConnect"
               ) : (
-                <>
-                  {canContinue ? "✓ Continuer vers RunConnect" : "⚠️ Veuillez accepter les deux conditions"}
-                </>
+                "Cochez les deux cases pour continuer"
               )}
             </Button>
+            <p className="mt-3 text-center text-[11px] leading-snug text-muted-foreground">
+              Sans ces acceptations, l’application ne peut pas être utilisée conformément à la loi.
+            </p>
           </div>
-          
-          <p className="text-xs text-center text-muted-foreground mt-3">
-            En continuant, vous acceptez nos conditions d'utilisation
-          </p>
         </div>
       </DialogContent>
     </Dialog>
