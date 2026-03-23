@@ -95,7 +95,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   /** Même taille / style que le bouton « amis uniquement » sur la carte */
   const mapClubTriggerClass = (active: boolean) =>
     cn(
-      'flex size-10 shrink-0 items-center justify-center rounded-[10px] border shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      'flex w-10 h-10 min-w-10 min-h-10 max-w-10 max-h-10 shrink-0 items-center justify-center rounded-[10px] border shadow-sm p-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       active
         ? 'border-primary bg-primary text-primary-foreground'
         : 'border-border bg-card text-foreground hover:bg-secondary/50'
