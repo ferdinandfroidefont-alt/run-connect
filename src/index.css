@@ -350,14 +350,9 @@ html, body {
   }
 
   .ios-nav-shell {
-    background-color: hsl(var(--background) / 0.72);
-    @apply backdrop-blur-2xl backdrop-saturate-150 border-t border-black/[0.06] dark:border-white/[0.08] shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.35)];
-  }
-
-  /* Opaque = même teinte que la bande safe-area sous la home indicator (bg-background) :
-     fini la frange entre couche native, blur de la tab bar et le noir du Web. */
-  .dark .ios-nav-shell {
+    /* Fond plein (pas de verre) pour coller à la zone système iOS en bas */
     background-color: hsl(var(--background));
+    @apply border-t border-black/[0.06] dark:border-white/[0.08] shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.35)];
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
