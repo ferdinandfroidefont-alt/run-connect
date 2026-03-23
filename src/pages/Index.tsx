@@ -1,8 +1,5 @@
+import { lazy, Suspense } from "react";
 import { InteractiveMap } from "@/components/InteractiveMap";
-import { OnboardingDialog } from "@/components/OnboardingDialog";
-import { ProfileSetupDialog } from "@/components/ProfileSetupDialog";
-
-import { InteractiveTutorial } from "@/components/InteractiveTutorial";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +9,16 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
+
+const OnboardingDialog = lazy(() =>
+  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))
+);
+const ProfileSetupDialog = lazy(() =>
+  import("@/components/ProfileSetupDialog").then((m) => ({ default: m.ProfileSetupDialog }))
+);
+const InteractiveTutorial = lazy(() =>
+  import("@/components/InteractiveTutorial").then((m) => ({ default: m.InteractiveTutorial }))
+);
 
 const Index = () => {
   const { user } = useAuth();
@@ -86,34 +93,40 @@ const Index = () => {
       />
       
       {/* Onboarding pour les nouveaux utilisateurs */}
-      <OnboardingDialog 
-        isOpen={needsOnboarding} 
-        onComplete={completeOnboarding} 
-      />
+      <Suspense fallback={null}>
+        <OnboardingDialog 
+          isOpen={needsOnboarding} 
+          onComplete={completeOnboarding} 
+        />
+      </Suspense>
       
       {/* Setup de profil pour les utilisateurs existants avec profil incomplet */}
       {needsProfileSetup && user && !localStorage.getItem('profileCreatedSuccessfully') && (
-        <ProfileSetupDialog
-          open={needsProfileSetup}
-          onOpenChange={() => {}} // Empêche la fermeture manuelle
-          userId={user.id}
-          email={user.email || ''}
-          onComplete={() => {
-            completeProfileSetup();
-            recheckOnboarding();
-          }}
-        />
+        <Suspense fallback={null}>
+          <ProfileSetupDialog
+            open={needsProfileSetup}
+            onOpenChange={() => {}} // Empêche la fermeture manuelle
+            userId={user.id}
+            email={user.email || ''}
+            onComplete={() => {
+              completeProfileSetup();
+              recheckOnboarding();
+            }}
+          />
+        </Suspense>
       )}
       
       
 
       {/* Tutoriel interactif pour nouveaux utilisateurs */}
       {shouldShowTutorial && !needsOnboarding && !needsProfileSetup && (
-        <InteractiveTutorial 
-          steps={tutorialSteps}
-          onComplete={completeTutorial}
-          onSkip={skipTutorial}
-        />
+        <Suspense fallback={null}>
+          <InteractiveTutorial 
+            steps={tutorialSteps}
+            onComplete={completeTutorial}
+            onSkip={skipTutorial}
+          />
+        </Suspense>
       )}
     </>
   );

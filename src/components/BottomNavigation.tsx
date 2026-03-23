@@ -71,12 +71,9 @@ export const BottomNavigation = () => {
       className="ios-nav-shell z-50 w-full shrink-0"
       role="navigation"
       aria-label="Navigation principale"
-      style={{
-        height: 'calc(var(--nav-height) + var(--safe-area-bottom))',
-        paddingBottom: 'var(--safe-area-bottom)',
-      }}
+      style={{ height: 'var(--nav-height)' }}
     >
-      {/* Une seule barre visible : la tab bar réelle (sans bloc HTML séparé pour la safe area). */}
+      {/* Une seule barre visible en bas (sans extension safe-area HTML). */}
       <div className="grid h-[var(--nav-height)] w-full grid-cols-5 items-end">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;

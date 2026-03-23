@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import QRCode from "qrcode";
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 
 // Sub-pages
-import { SettingsGeneral } from "./settings/SettingsGeneral";
-import { SettingsNotifications } from "./settings/SettingsNotifications";
-import { SettingsConnections } from "./settings/SettingsConnections";
-import { SettingsPrivacy } from "./settings/SettingsPrivacy";
-import { SettingsSupport } from "./settings/SettingsSupport";
+const SettingsGeneral = lazy(() =>
+  import("./settings/SettingsGeneral").then((m) => ({ default: m.SettingsGeneral }))
+);
+const SettingsNotifications = lazy(() =>
+  import("./settings/SettingsNotifications").then((m) => ({ default: m.SettingsNotifications }))
+);
+const SettingsConnections = lazy(() =>
+  import("./settings/SettingsConnections").then((m) => ({ default: m.SettingsConnections }))
+);
+const SettingsPrivacy = lazy(() =>
+  import("./settings/SettingsPrivacy").then((m) => ({ default: m.SettingsPrivacy }))
+);
+const SettingsSupport = lazy(() =>
+  import("./settings/SettingsSupport").then((m) => ({ default: m.SettingsSupport }))
+);
 
 type SettingsPage = 'hub' | 'general' | 'notifications' | 'connections' | 'privacy' | 'support';
 
@@ -132,6 +141,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
           ? `https://run-connect.lovable.app/p/${profile.username}?r=${profile.referral_code}`
           : `https://run-connect.lovable.app/p/${profile.username}`;
         
+        const { default: QRCode } = await import("qrcode");
         const qrDataURL = await QRCode.toDataURL(profileUrl, {
           width: 240,
           margin: 2,
@@ -354,29 +364,43 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   const renderPage = () => {
     switch (currentPage) {
       case 'general':
-        return <SettingsGeneral onBack={() => setCurrentPage('hub')} />;
+      return (
+        <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+          <SettingsGeneral onBack={() => setCurrentPage('hub')} />
+        </Suspense>
+      );
       case 'notifications':
-        return <SettingsNotifications onBack={() => setCurrentPage('hub')} />;
+        return (
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsNotifications onBack={() => setCurrentPage('hub')} />
+          </Suspense>
+        );
       case 'connections':
         return (
-          <SettingsConnections 
-            onBack={() => setCurrentPage('hub')} 
-            onNavigateToSubscription={handleNavigateToSubscription}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsConnections 
+              onBack={() => setCurrentPage('hub')} 
+              onNavigateToSubscription={handleNavigateToSubscription}
+            />
+          </Suspense>
         );
       case 'privacy':
         return (
-          <SettingsPrivacy 
-            onBack={() => setCurrentPage('hub')} 
-            onClose={() => onOpenChange(false)}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsPrivacy 
+              onBack={() => setCurrentPage('hub')} 
+              onClose={() => onOpenChange(false)}
+            />
+          </Suspense>
         );
       case 'support':
         return (
-          <SettingsSupport 
-            onBack={() => setCurrentPage('hub')} 
-            onClose={() => onOpenChange(false)}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsSupport 
+              onBack={() => setCurrentPage('hub')} 
+              onClose={() => onOpenChange(false)}
+            />
+          </Suspense>
         );
       default:
         return null;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
@@ -43,6 +42,9 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
 }
+const SettingsDialog = lazy(() =>
+  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
+);
 
 const SPORT_LABELS: Record<string, string> = {
   running: '🏃 Course à pied',
@@ -738,7 +740,9 @@ export const ProfileDialog = ({
       <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
       {/* Settings Dialog */}
-      <SettingsDialog open={showSettingsDialog} onOpenChange={open => setShowSettingsDialog(open)} />
+      <Suspense fallback={null}>
+        <SettingsDialog open={showSettingsDialog} onOpenChange={open => setShowSettingsDialog(open)} />
+      </Suspense>
 
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} userName={profile?.display_name || profile?.username || ''} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />

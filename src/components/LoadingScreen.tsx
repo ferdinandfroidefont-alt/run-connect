@@ -44,16 +44,18 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   /** Logo carré : borné par la hauteur d’écran (iPhone petits / grands) + largeur — présence premium stable */
   const logoBoxStyle: CSSProperties = {
-    width: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
-    height: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
-    maxWidth: 'min(88vw, 17.75rem)',
-    maxHeight: 'min(88vw, 17.75rem)',
+    // Objectif: ~35-45% de la hauteur écran (sans déformation), avec bornes pour iPhone
+    width: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
+    height: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
+    maxWidth: 'min(84vw, 19rem)',
+    maxHeight: 'min(84vw, 19rem)',
   };
 
   /** Texte proportionné au bloc logo (même logique vmin / dvh) */
   const titleStyle: CSSProperties = {
     fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
-    marginTop: 'clamp(0.5rem, min(1.85dvh, 1.125rem), 1rem)',
+    // Rapprocher optiquement le titre du logo
+    marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
     letterSpacing: '-0.02em',
   };
 
@@ -91,7 +93,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
               <div
                 className="flex flex-col items-center"
                 style={{
-                  transform: 'translateY(calc(-1 * min(4.5dvh, 1.75rem)))',
+                  // Ajustement "centrage optique" (pas seulement centré techniquement)
+                  transform: 'translateY(calc(-1 * min(3.1dvh, 1.25rem)))',
                 }}
               >
                 <img

@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import {
   RUCONNECT_SPLASH_BLUE,
   RUCONNECT_SPLASH_ICON_URL,
@@ -28,23 +29,22 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
   }, [showSlowHintAfterMs]);
 
   const logoBoxStyle: CSSProperties = {
-    width: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
-    height: 'clamp(9.25rem, min(68vw, 29dvh), 17.75rem)',
-    maxWidth: 'min(88vw, 17.75rem)',
-    maxHeight: 'min(88vw, 17.75rem)',
+    // Objectif ~35-45% de la hauteur écran, bornes iPhone
+    width: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
+    height: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
+    maxWidth: 'min(84vw, 19rem)',
+    maxHeight: 'min(84vw, 19rem)',
   };
 
   const titleStyle: CSSProperties = {
     fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
-    marginTop: 'clamp(0.5rem, min(1.85dvh, 1.125rem), 1rem)',
+    marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
     letterSpacing: '-0.02em',
   };
 
   const handleRetry = () => {
     try {
-      void import('@/integrations/supabase/client').then(({ supabase }) => {
-        void supabase.auth.refreshSession();
-      });
+      void supabase.auth.refreshSession();
     } catch {
       /* ignore */
     }
@@ -68,7 +68,8 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
         <div
           className="mb-ios-6 flex flex-col items-center"
           style={{
-            transform: 'translateY(calc(-1 * min(3dvh, 1.25rem)))',
+              // Ajustement "centrage optique" (logo + texte)
+              transform: 'translateY(calc(-1 * min(2.4dvh, 1.1rem)))',
           }}
         >
           <img

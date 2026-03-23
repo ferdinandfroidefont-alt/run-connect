@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Search as SearchIcon } from 'lucide-react';
 import { SearchTabs } from '@/components/SearchTabs';
@@ -6,10 +6,12 @@ import { ProfilesTab } from '@/components/search/ProfilesTab';
 import { ClubsTab } from '@/components/search/ClubsTab';
 import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
-import { SettingsDialog } from '@/components/SettingsDialog';
 import { Input } from '@/components/ui/input';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
+const SettingsDialog = lazy(() =>
+  import('@/components/SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
+);
 
 export default function Search() {
   const navigate = useNavigate();
@@ -132,11 +134,13 @@ export default function Search() {
       </div>
 
       {/* Settings Dialog */}
-      <SettingsDialog
-        open={showSettingsDialog}
-        onOpenChange={setShowSettingsDialog}
-        initialSearch={settingsFocus}
-      />
+      <Suspense fallback={null}>
+        <SettingsDialog
+          open={showSettingsDialog}
+          onOpenChange={setShowSettingsDialog}
+          initialSearch={settingsFocus}
+        />
+      </Suspense>
     </>
   );
 }

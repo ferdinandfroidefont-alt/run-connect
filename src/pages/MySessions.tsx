@@ -2,18 +2,14 @@ import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
 import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
 import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
-import { RouteDetailDialog } from '@/components/routes-feed/RouteDetailDialog';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
-import { RouteEditDialog } from '@/components/RouteEditDialog';
-import { CreateSessionWizard } from '@/components/session-creation/CreateSessionWizard';
-import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Camera } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -31,7 +27,21 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import { StreakBadge } from '@/components/StreakBadge';
-import { RoutePhotosGallery } from '@/components/routes-feed/RoutePhotosGallery';
+const RouteDetailDialog = lazy(() =>
+  import('@/components/routes-feed/RouteDetailDialog').then((m) => ({ default: m.RouteDetailDialog }))
+);
+const RouteEditDialog = lazy(() =>
+  import('@/components/RouteEditDialog').then((m) => ({ default: m.RouteEditDialog }))
+);
+const CreateSessionWizard = lazy(() =>
+  import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
+);
+const ProfilePreviewDialog = lazy(() =>
+  import('@/components/ProfilePreviewDialog').then((m) => ({ default: m.ProfilePreviewDialog }))
+);
+const RoutePhotosGallery = lazy(() =>
+  import('@/components/routes-feed/RoutePhotosGallery').then((m) => ({ default: m.RoutePhotosGallery }))
+);
 
 interface UserSession {
   id: string;
@@ -841,19 +851,23 @@ export default function MySessions() {
           </div>
         </div>
 
-        <CreateSessionWizard
-          isOpen={isEditSessionDialogOpen}
-          onClose={() => setIsEditSessionDialogOpen(false)}
-          onSessionCreated={handleSessionUpdated}
-          map={null}
-          editSession={selectedSession}
-          isEditMode={true}
-        />
+        <Suspense fallback={null}>
+          <CreateSessionWizard
+            isOpen={isEditSessionDialogOpen}
+            onClose={() => setIsEditSessionDialogOpen(false)}
+            onSessionCreated={handleSessionUpdated}
+            map={null}
+            editSession={selectedSession}
+            isEditMode={true}
+          />
+        </Suspense>
 
-        <ProfilePreviewDialog
-          userId={selectedUserId}
-          onClose={closeProfilePreview}
-        />
+        <Suspense fallback={null}>
+          <ProfilePreviewDialog
+            userId={selectedUserId}
+            onClose={closeProfilePreview}
+          />
+        </Suspense>
 
         {/* Leave Session Confirmation Dialog */}
         <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
@@ -1317,32 +1331,40 @@ export default function MySessions() {
                 </div>
               )}
 
-              <RouteDetailDialog
-                route={selectedFeedRoute}
-                open={showRouteDetail}
-                onOpenChange={setShowRouteDetail}
-                onRefresh={routesFeed.refresh}
-              />
+              <Suspense fallback={null}>
+                <RouteDetailDialog
+                  route={selectedFeedRoute}
+                  open={showRouteDetail}
+                  onOpenChange={setShowRouteDetail}
+                  onRefresh={routesFeed.refresh}
+                />
+              </Suspense>
             </div>
           ) : (
             <div className="pb-ios-2">
-              <RoutePhotosGallery />
+              <Suspense fallback={null}>
+                <RoutePhotosGallery />
+              </Suspense>
             </div>
           )}
         </div>
       </div>
 
-      <RouteEditDialog
-        isOpen={isRouteEditDialogOpen}
-        onClose={() => setIsRouteEditDialogOpen(false)}
-        route={editingRoute}
-        onRouteUpdated={loadUserRoutes}
-      />
+      <Suspense fallback={null}>
+        <RouteEditDialog
+          isOpen={isRouteEditDialogOpen}
+          onClose={() => setIsRouteEditDialogOpen(false)}
+          route={editingRoute}
+          onRouteUpdated={loadUserRoutes}
+        />
+      </Suspense>
 
-      <ProfilePreviewDialog
-        userId={selectedUserId}
-        onClose={closeProfilePreview}
-      />
+      <Suspense fallback={null}>
+        <ProfilePreviewDialog
+          userId={selectedUserId}
+          onClose={closeProfilePreview}
+        />
+      </Suspense>
 
       {/* Delete Session Confirmation Dialog - iOS Style */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>

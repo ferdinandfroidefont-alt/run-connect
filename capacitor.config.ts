@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     },
     Geolocation: {},
     Camera: {},
-    /* Fond par défaut = coque app claire : évite la bande bleue (#2455EB) sous le WebView quand iOS laisse voir la couche native (safe area, dvh, etc.). Le splash reste géré par LoadingScreen / Splash natif. */
+    /* Fond par défaut = coque app claire : évite une bande colorée sous le WebView quand iOS laisse voir la couche native (safe area, dvh, etc.). Le splash reste géré par LoadingScreen / Splash natif. */
     StatusBar: {
       style: 'LIGHT',
       backgroundColor: '#FFFFFF',

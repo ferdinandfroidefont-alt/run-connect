@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useTransition } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useTransition } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
@@ -19,15 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-import { ClubInfoDialog } from "@/components/ClubInfoDialog";
-import { ClubProfileDialog } from "@/components/ClubProfileDialog";
-import { ConversationInfoSheet } from "@/components/ConversationInfoSheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
-import { NewConversationView } from "@/components/NewConversationView";
-import { EditClubDialog } from "@/components/EditClubDialog";
-import { ContactsDialog } from "@/components/ContactsDialog";
-import { AvatarViewer } from "@/components/AvatarViewer";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { useCamera } from "@/hooks/useCamera";
@@ -69,14 +61,42 @@ import { MessageSectionHeader, shouldShowSectionHeader } from "../components/Mes
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { MessageReactions, useMessageReactionPicker } from "@/components/MessageReactions";
 import { ReplyPreview, ReplyBubble } from "@/components/MessageReply";
-import { CreatePollDialog } from "@/components/CreatePollDialog";
 import { PollCard } from "@/components/PollCard";
 import { MessageLongPressMenu } from "@/components/MessageLongPressMenu";
-import { CoachAccessDialog } from "@/components/coaching/CoachAccessDialog";
-import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 import { CoachingMessageCard } from "@/components/coaching/CoachingMessageCard";
 import { VoiceMessagePlayer } from "@/components/VoiceMessagePlayer";
 import { SignedImage } from "@/components/SignedImage";
+
+const NewConversationView = lazy(() =>
+  import("@/components/NewConversationView").then((m) => ({ default: m.NewConversationView }))
+);
+const CreatePollDialog = lazy(() =>
+  import("@/components/CreatePollDialog").then((m) => ({ default: m.CreatePollDialog }))
+);
+const ConversationInfoSheet = lazy(() =>
+  import("@/components/ConversationInfoSheet").then((m) => ({ default: m.ConversationInfoSheet }))
+);
+const CreateClubDialogPremium = lazy(() =>
+  import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubDialogPremium }))
+);
+const ClubInfoDialog = lazy(() =>
+  import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
+);
+const ClubProfileDialog = lazy(() =>
+  import("@/components/ClubProfileDialog").then((m) => ({ default: m.ClubProfileDialog }))
+);
+const EditClubDialog = lazy(() =>
+  import("@/components/EditClubDialog").then((m) => ({ default: m.EditClubDialog }))
+);
+const ContactsDialog = lazy(() =>
+  import("@/components/ContactsDialog").then((m) => ({ default: m.ContactsDialog }))
+);
+const AvatarViewer = lazy(() =>
+  import("@/components/AvatarViewer").then((m) => ({ default: m.AvatarViewer }))
+);
+const CoachAccessDialog = lazy(() =>
+  import("@/components/coaching/CoachAccessDialog").then((m) => ({ default: m.CoachAccessDialog }))
+);
 
 interface Profile {
   user_id: string;
@@ -1685,15 +1705,17 @@ const Messages = () => {
 
   if (showNewConversation) {
     return (
-      <NewConversationView
-        onBack={() => setShowNewConversation(false)}
-        onStartConversation={startConversation}
-        onCreateClub={() => {
-          setShowNewConversation(false);
-          setShowCreateGroup(true);
-        }}
-        onAvatarClick={handleAvatarClick}
-      />
+      <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
+        <NewConversationView
+          onBack={() => setShowNewConversation(false)}
+          onStartConversation={startConversation}
+          onCreateClub={() => {
+            setShowNewConversation(false);
+            setShowCreateGroup(true);
+          }}
+          onAvatarClick={handleAvatarClick}
+        />
+      </Suspense>
     );
   }
 
@@ -2470,62 +2492,66 @@ const Messages = () => {
         }}
       />
       {user && (
-        <CreatePollDialog
-          open={showCreatePoll}
-          onOpenChange={setShowCreatePoll}
-          conversationId={selectedConversation.id}
-          userId={user.id}
-          onPollCreated={async (pollId: string) => {
-            try {
-              const { error: msgError } = await supabase.from('messages').insert({
-                conversation_id: selectedConversation.id,
-                sender_id: user.id,
-                content: pollId,
-                message_type: 'poll',
-              });
+        <Suspense fallback={null}>
+          <CreatePollDialog
+            open={showCreatePoll}
+            onOpenChange={setShowCreatePoll}
+            conversationId={selectedConversation.id}
+            userId={user.id}
+            onPollCreated={async (pollId: string) => {
+              try {
+                const { error: msgError } = await supabase.from('messages').insert({
+                  conversation_id: selectedConversation.id,
+                  sender_id: user.id,
+                  content: pollId,
+                  message_type: 'poll',
+                });
 
-              if (msgError) {
-                console.error('❌ Error inserting poll message:', msgError);
-                toast({ title: 'Erreur', description: 'Impossible d\'envoyer le sondage', variant: 'destructive' });
-                return;
+                if (msgError) {
+                  console.error('❌ Error inserting poll message:', msgError);
+                  toast({ title: 'Erreur', description: 'Impossible d\'envoyer le sondage', variant: 'destructive' });
+                  return;
+                }
+
+                await supabase
+                  .from('conversations')
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq('id', selectedConversation.id);
+                loadMessages(selectedConversation.id);
+              } catch (err) {
+                console.error('Error sending poll message:', err);
               }
-
-              await supabase
-                .from('conversations')
-                .update({ updated_at: new Date().toISOString() })
-                .eq('id', selectedConversation.id);
-              loadMessages(selectedConversation.id);
-            } catch (err) {
-              console.error('Error sending poll message:', err);
-            }
-          }}
-        />
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Conversation Info Sheet */}
-      <ConversationInfoSheet
-        isOpen={showConversationInfo}
-        onClose={() => setShowConversationInfo(false)}
-        conversation={selectedConversation}
-        isMuted={isMuted}
-        onToggleMute={() => {
-          const newMuted = !isMuted;
-          setIsMuted(newMuted);
-          if (user) {
-            supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
-          }
-        }}
-        isPinned={selectedConversation ? pinnedConversations.has(selectedConversation.id) : false}
-        onTogglePin={() => selectedConversation && togglePinConversation(selectedConversation.id)}
-        onDelete={() => confirmDeleteConversation()}
-        notificationsEnabled={userNotifSettings.notifications_enabled}
-        onGoToNotifSettings={() => {
-          navigate('/profile');
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('open-notification-settings'));
-          }, 500);
-        }}
-      />
+      <Suspense fallback={null}>
+        <ConversationInfoSheet
+          isOpen={showConversationInfo}
+          onClose={() => setShowConversationInfo(false)}
+          conversation={selectedConversation}
+          isMuted={isMuted}
+          onToggleMute={() => {
+            const newMuted = !isMuted;
+            setIsMuted(newMuted);
+            if (user) {
+              supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+            }
+          }}
+          isPinned={selectedConversation ? pinnedConversations.has(selectedConversation.id) : false}
+          onTogglePin={() => selectedConversation && togglePinConversation(selectedConversation.id)}
+          onDelete={() => confirmDeleteConversation()}
+          notificationsEnabled={userNotifSettings.notifications_enabled}
+          onGoToNotifSettings={() => {
+            navigate('/profile');
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('open-notification-settings'));
+            }, 500);
+          }}
+        />
+      </Suspense>
       </>
     );
   }
@@ -2847,124 +2873,138 @@ const Messages = () => {
         </div>
 
         {/* Create Club Dialog */}
-        <CreateClubDialogPremium
-          isOpen={showCreateGroup}
-          onClose={() => setShowCreateGroup(false)}
-          onGroupCreated={(groupId) => {
-            loadConversations();
-            setShowCreateGroup(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <CreateClubDialogPremium
+            isOpen={showCreateGroup}
+            onClose={() => setShowCreateGroup(false)}
+            onGroupCreated={(groupId) => {
+              loadConversations();
+              setShowCreateGroup(false);
+            }}
+          />
+        </Suspense>
 
         {/* Club Info Dialog */}
-        <ClubInfoDialog
-          isOpen={showGroupInfo}
-          onClose={() => {
-            console.log('🔍 ClubInfoDialog onClose called');
-            setShowGroupInfo(false);
-            setGroupInfoData(null);
-          }}
-          conversationId={groupInfoData?.id || ''}
-          groupName={groupInfoData?.group_name || ""}
-          groupDescription={groupInfoData?.group_description || null}
-          groupAvatarUrl={groupInfoData?.group_avatar_url || null}
-          clubCode={groupInfoData?.club_code || ""}
-          createdBy={groupInfoData?.created_by || ""}
-          isAdmin={groupInfoData?.created_by === user?.id}
-          onEditGroup={() => {
-            console.log('🔍 onEditGroup called from ClubInfoDialog');
-            setShowGroupInfo(false);
-            setTimeout(() => {
-              setShowEditGroup(true);
-            }, 100);
-          }}
-        />
+        <Suspense fallback={null}>
+          <ClubInfoDialog
+            isOpen={showGroupInfo}
+            onClose={() => {
+              console.log('🔍 ClubInfoDialog onClose called');
+              setShowGroupInfo(false);
+              setGroupInfoData(null);
+            }}
+            conversationId={groupInfoData?.id || ''}
+            groupName={groupInfoData?.group_name || ""}
+            groupDescription={groupInfoData?.group_description || null}
+            groupAvatarUrl={groupInfoData?.group_avatar_url || null}
+            clubCode={groupInfoData?.club_code || ""}
+            createdBy={groupInfoData?.created_by || ""}
+            isAdmin={groupInfoData?.created_by === user?.id}
+            onEditGroup={() => {
+              console.log('🔍 onEditGroup called from ClubInfoDialog');
+              setShowGroupInfo(false);
+              setTimeout(() => {
+                setShowEditGroup(true);
+              }, 100);
+            }}
+          />
+        </Suspense>
 
         {/* Club Profile Dialog - for all members */}
-        <ClubProfileDialog
-          isOpen={showClubProfile}
-          onClose={() => {
-            setShowClubProfile(false);
-            setGroupInfoData(null);
-          }}
-          conversationId={groupInfoData?.id || ''}
-          groupName={groupInfoData?.group_name || ""}
-          groupDescription={groupInfoData?.group_description || null}
-          groupAvatarUrl={groupInfoData?.group_avatar_url || null}
-          clubCode={groupInfoData?.club_code || ""}
-          createdBy={groupInfoData?.created_by || ""}
-          createdAt={groupInfoData?.created_at || ""}
-          isAdmin={groupInfoData?.created_by === user?.id}
-          onEditGroup={() => {
-            setShowClubProfile(false);
-            setTimeout(() => {
-              setShowEditGroup(true);
-            }, 100);
-          }}
-          onOpenCoachView={() => {
-            setShowClubProfile(false);
-            setTimeout(() => {
-              setShowGroupInfo(true);
-            }, 100);
-          }}
-        />
+        <Suspense fallback={null}>
+          <ClubProfileDialog
+            isOpen={showClubProfile}
+            onClose={() => {
+              setShowClubProfile(false);
+              setGroupInfoData(null);
+            }}
+            conversationId={groupInfoData?.id || ''}
+            groupName={groupInfoData?.group_name || ""}
+            groupDescription={groupInfoData?.group_description || null}
+            groupAvatarUrl={groupInfoData?.group_avatar_url || null}
+            clubCode={groupInfoData?.club_code || ""}
+            createdBy={groupInfoData?.created_by || ""}
+            createdAt={groupInfoData?.created_at || ""}
+            isAdmin={groupInfoData?.created_by === user?.id}
+            onEditGroup={() => {
+              setShowClubProfile(false);
+              setTimeout(() => {
+                setShowEditGroup(true);
+              }, 100);
+            }}
+            onOpenCoachView={() => {
+              setShowClubProfile(false);
+              setTimeout(() => {
+                setShowGroupInfo(true);
+              }, 100);
+            }}
+          />
+        </Suspense>
         
         {/* Debug info removed - functionality should work now */}
 
         {/* Edit Club Dialog - available globally */}
-        <EditClubDialog
-          isOpen={showEditGroup}
-          onClose={() => setShowEditGroup(false)}
-          conversationId={groupInfoData?.id || selectedConversation?.id || ""}
-          groupName={groupInfoData?.group_name || selectedConversation?.group_name || ""}
-          groupDescription={groupInfoData?.group_description || selectedConversation?.group_description}
-          groupAvatarUrl={groupInfoData?.group_avatar_url || selectedConversation?.group_avatar_url}
-          clubCode={groupInfoData?.club_code || selectedConversation?.club_code || ""}
-          createdBy={groupInfoData?.created_by || selectedConversation?.created_by || ""}
-          isAdmin={(groupInfoData?.created_by || selectedConversation?.created_by) === user?.id}
-          onGroupUpdated={() => {
-            loadConversations();
-            setShowEditGroup(false);
-            if (selectedConversation) {
-              // Reload the conversation to get updated info
-              const updatedConv = conversations.find(c => c.id === selectedConversation.id);
-              if (updatedConv) {
-                setSelectedConversation(updatedConv);
+        <Suspense fallback={null}>
+          <EditClubDialog
+            isOpen={showEditGroup}
+            onClose={() => setShowEditGroup(false)}
+            conversationId={groupInfoData?.id || selectedConversation?.id || ""}
+            groupName={groupInfoData?.group_name || selectedConversation?.group_name || ""}
+            groupDescription={groupInfoData?.group_description || selectedConversation?.group_description}
+            groupAvatarUrl={groupInfoData?.group_avatar_url || selectedConversation?.group_avatar_url}
+            clubCode={groupInfoData?.club_code || selectedConversation?.club_code || ""}
+            createdBy={groupInfoData?.created_by || selectedConversation?.created_by || ""}
+            isAdmin={(groupInfoData?.created_by || selectedConversation?.created_by) === user?.id}
+            onGroupUpdated={() => {
+              loadConversations();
+              setShowEditGroup(false);
+              if (selectedConversation) {
+                // Reload the conversation to get updated info
+                const updatedConv = conversations.find(c => c.id === selectedConversation.id);
+                if (updatedConv) {
+                  setSelectedConversation(updatedConv);
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+        </Suspense>
 
         {/* Contacts Dialog */}
-        <ContactsDialog
-          open={showContactsDialog}
-          onClose={() => setShowContactsDialog(false)}
-        />
+        <Suspense fallback={null}>
+          <ContactsDialog
+            open={showContactsDialog}
+            onClose={() => setShowContactsDialog(false)}
+          />
+        </Suspense>
 
         {/* Avatar Viewer */}
-        <AvatarViewer
-          open={showAvatarViewer}
-          onClose={() => setShowAvatarViewer(false)}
-          avatarUrl={selectedAvatarData?.url || null}
-          username={selectedAvatarData?.username || "Utilisateur"}
-        />
+        <Suspense fallback={null}>
+          <AvatarViewer
+            open={showAvatarViewer}
+            onClose={() => setShowAvatarViewer(false)}
+            avatarUrl={selectedAvatarData?.url || null}
+            username={selectedAvatarData?.username || "Utilisateur"}
+          />
+        </Suspense>
         {/* Coach Access Dialog */}
-        <CoachAccessDialog
-          isOpen={showCoachAccess}
-          onClose={() => setShowCoachAccess(false)}
-          onSelectClub={async (clubId) => {
-            const { data: clubData } = await supabase
-              .from("conversations")
-              .select("*")
-              .eq("id", clubId)
-              .single();
-            if (clubData) {
-              setGroupInfoData(clubData);
-              setShowGroupInfo(true);
-            }
-          }}
-          onCreateClub={() => setShowCreateGroup(true)}
-        />
+        <Suspense fallback={null}>
+          <CoachAccessDialog
+            isOpen={showCoachAccess}
+            onClose={() => setShowCoachAccess(false)}
+            onSelectClub={async (clubId) => {
+              const { data: clubData } = await supabase
+                .from("conversations")
+                .select("*")
+                .eq("id", clubId)
+                .single();
+              if (clubData) {
+                setGroupInfoData(clubData);
+                setShowGroupInfo(true);
+              }
+            }}
+            onCreateClub={() => setShowCreateGroup(true)}
+          />
+        </Suspense>
 
 
       </div>

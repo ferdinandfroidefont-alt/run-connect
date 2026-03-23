@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
@@ -20,7 +20,6 @@ import { ContactsPermissionButton } from "@/components/ContactsPermissionButton"
 import { PushNotificationButton } from "@/components/PushNotificationButton";
 
 import { StravaConnect } from "@/components/StravaConnect";
-import { SettingsDialog } from "@/components/SettingsDialog";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
 import { PersonalRecords } from "@/components/PersonalRecords";
@@ -32,6 +31,9 @@ import { RecentActivities } from "@/components/profile/RecentActivities";
 import { SportsBadges } from "@/components/profile/SportsBadges";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
+const SettingsDialog = lazy(() =>
+  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
+);
 interface Profile {
   username: string;
   display_name: string | null;
@@ -931,7 +933,9 @@ const Profile = () => {
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
 
         {/* Settings Dialog */}
-        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
+        <Suspense fallback={null}>
+          <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
+        </Suspense>
 
         {/* Report User Dialog */}
         <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />

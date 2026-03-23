@@ -35,8 +35,8 @@ html, body {
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
-    /* Réserve scroll : hauteur des onglets + même inset bas que la nav (pas de double padding sur les pages) */
-    --bottom-nav-offset: calc(var(--nav-height) + var(--safe-area-bottom));
+    /* Réserve scroll : hauteur réelle de la barre d'onglets (une seule barre en bas) */
+    --bottom-nav-offset: var(--nav-height);
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     --ios-motion-duration-fast: 140ms;

@@ -1,5 +1,5 @@
 import { RouteDialog } from './RouteDialog';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { getKeyBody } from '@/lib/googleMapsKey';
 import { MapControls } from './MapControls';
@@ -8,11 +8,7 @@ import { SessionFilters } from './SessionFilters';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
-import { NotificationCenter } from './NotificationCenter';
 import { StreakBadge } from './StreakBadge';
-import { SettingsDialog } from './SettingsDialog';
-import { ProfileDialog } from './ProfileDialog';
-import { UserSessionsDialog } from './UserSessionsDialog';
 import { LevelSliderFilter } from './LevelSliderFilter';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +32,18 @@ import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
+const NotificationCenter = lazy(() =>
+  import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
+);
+const SettingsDialog = lazy(() =>
+  import('./SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
+);
+const ProfileDialog = lazy(() =>
+  import('./ProfileDialog').then((m) => ({ default: m.ProfileDialog }))
+);
+const UserSessionsDialog = lazy(() =>
+  import('./UserSessionsDialog').then((m) => ({ default: m.UserSessionsDialog }))
+);
 
 // Declare global google maps types
 declare global {
@@ -1417,7 +1425,11 @@ export const InteractiveMap = ({
             {/* Bell and Settings - Right aligned */}
             <div className="flex items-center justify-center gap-3">
               <div data-tutorial="notifications" className="flex items-center justify-center">
-                <NotificationCenter onSessionUpdated={loadSessions} />
+                <Suspense fallback={null}>
+                <Suspense fallback={null}>
+                  <NotificationCenter onSessionUpdated={loadSessions} />
+                </Suspense>
+                </Suspense>
               </div>
               <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
                 ⚙️
@@ -1645,12 +1657,24 @@ export const InteractiveMap = ({
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+      <Suspense fallback={null}>
+      <Suspense fallback={null}>
+        <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+      </Suspense>
+      </Suspense>
 
-      <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+      <Suspense fallback={null}>
+      <Suspense fallback={null}>
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+      </Suspense>
+      </Suspense>
 
       {/* User Sessions Dialog */}
-      <UserSessionsDialog isOpen={isUserSessionsOpen} onClose={() => setIsUserSessionsOpen(false)} />
+      <Suspense fallback={null}>
+      <Suspense fallback={null}>
+        <UserSessionsDialog isOpen={isUserSessionsOpen} onClose={() => setIsUserSessionsOpen(false)} />
+      </Suspense>
+      </Suspense>
 
 
       {/* QR Share Dialog */}
