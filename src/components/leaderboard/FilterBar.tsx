@@ -9,7 +9,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 export type ActivityType = 'running' | 'cycling' | 'walking' | 'course' | 'trail' | 'velo' | 'vtt' | 'bmx' | 'gravel' | 'marche' | 'natation' | 'swimming' | 'football' | 'basket' | 'basketball' | 'volley' | 'badminton' | 'pingpong' | 'tennis' | 'escalade' | 'petanque' | 'rugby' | 'handball' | 'fitness' | 'yoga' | 'musculation' | 'crossfit' | 'boxe' | 'arts_martiaux' | 'golf' | 'ski' | 'snowboard' | 'randonnee' | 'kayak' | 'surf';
 export type ScopeType = 'global' | 'local' | 'friends' | 'clubs';
@@ -142,8 +142,8 @@ export const FilterBar = ({
   userClubs,
 }: FilterBarProps) => {
   const [showClubsDialog, setShowClubsDialog] = useState(false);
-  const [showSportsDialog, setShowSportsDialog] = useState(false);
   const [tempSelectedClubs, setTempSelectedClubs] = useState<string[]>(selectedClubs);
+  const sportsScrollRef = useRef<HTMLDivElement>(null);
 
   const isAdditionalSport = (filter: FilterType): boolean =>
     additionalSports.some(sport => sport.value === filter);
@@ -167,10 +167,16 @@ export const FilterBar = ({
     );
   };
 
-  const getActiveSportLabel = () => {
-    const sport = additionalSports.find(s => s.value === activeFilter);
-    if (sport) return `${sport.emoji} ${sport.label}`;
-    return null;
+  const baseSports: SportSegment[] = [
+    ...sportSegments,
+    ...additionalSports.filter((sport) => !sportSegments.some((base) => base.value === sport.value))
+  ];
+
+  const handleSportSelect = (sport: FilterType) => {
+    if (activeScope === 'friends' || activeScope === 'clubs') {
+      onScopeChange('global');
+    }
+    onFilterChange(sport);
   };
 
   return (
@@ -178,33 +184,40 @@ export const FilterBar = ({
       {/* Row 1: Scope */}
       <SegmentedControl segments={scopeSegments} active={activeScope} onChange={handleScopeChange} />
 
-      {/* Row 2: Sport */}
-      <div className="flex items-center gap-1.5 mt-1.5">
-        <div className="flex-1">
-          <SegmentedControl segments={sportSegments} active={activeFilter as string} onChange={(v) => onFilterChange(v as FilterType)} />
-        </div>
-        <button
-          onClick={() => setShowSportsDialog(true)}
-          className={cn(
-            "p-1.5 rounded-lg transition-colors shrink-0",
-            isAdditionalSport(activeFilter) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-          )}
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Active sport tag */}
-      {isAdditionalSport(activeFilter) && (
-        <div className="mt-1.5 flex items-center gap-2 px-1">
-          <span className="text-[12px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-            {getActiveSportLabel()}
-          </span>
-          <button onClick={() => onFilterChange('general')} className="text-[11px] text-muted-foreground underline">
+      {/* Row 2: Sport carousel (style Feed) */}
+      <div className="mt-2">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Sports</span>
+          <button
+            type="button"
+            onClick={() => handleSportSelect('general')}
+            className="text-[12px] font-medium text-primary"
+          >
             Réinitialiser
           </button>
         </div>
-      )}
+
+        <div ref={sportsScrollRef} className="overflow-x-auto scrollbar-hide -mx-1 px-1">
+          <div className="flex gap-2 pb-1">
+            {baseSports.map((sport) => (
+              <button
+                key={sport.value}
+                type="button"
+                onClick={() => handleSportSelect(sport.value)}
+                className={cn(
+                  "whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all",
+                  activeFilter === sport.value && activeScope !== 'friends' && activeScope !== 'clubs'
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                    : "bg-primary/10 text-primary hover:bg-primary/15"
+                )}
+              >
+                <span className="mr-1" aria-hidden>{sport.emoji}</span>
+                {sport.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Clubs dialog */}
       <Dialog open={showClubsDialog} onOpenChange={setShowClubsDialog}>
@@ -230,58 +243,6 @@ export const FilterBar = ({
         </DialogContent>
       </Dialog>
 
-      {/* Sports : plein écran (feuille iOS), pas petite modale centrée */}
-      <Dialog open={showSportsDialog} onOpenChange={setShowSportsDialog}>
-        <DialogContent
-          fullScreen
-          hideCloseButton
-          className="bg-secondary p-0 gap-0 border-0"
-        >
-          <div className="flex h-full min-h-0 flex-col">
-            <header className="shrink-0 border-b border-border/60 bg-card px-4 pb-4 pt-[max(0.75rem,var(--safe-area-top))] shadow-sm">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowSportsDialog(false)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground transition-colors active:scale-[0.97] hover:bg-secondary/80"
-                  aria-label="Fermer"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <div className="min-w-0 flex-1 text-left">
-                  <DialogTitle className="text-left text-[22px] font-bold tracking-tight text-foreground">
-                    Autres sports
-                  </DialogTitle>
-                  <p className="mt-0.5 text-[15px] text-muted-foreground">
-                    Choisissez une discipline pour le classement
-                  </p>
-                </div>
-              </div>
-            </header>
-
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 pb-[max(1.5rem,var(--safe-area-bottom))]">
-              <div className="mx-auto grid w-full max-w-lg grid-cols-2 gap-4 sm:max-w-2xl sm:grid-cols-3">
-                {additionalSports.map((sport) => (
-                  <Button
-                    key={sport.value}
-                    variant={activeFilter === sport.value ? "default" : "outline"}
-                    className="h-auto min-h-[96px] flex-col justify-center gap-2 rounded-2xl border-2 px-3 py-4 text-center shadow-sm transition-transform active:scale-[0.98]"
-                    onClick={() => {
-                      onFilterChange(sport.value);
-                      setShowSportsDialog(false);
-                    }}
-                  >
-                    <span className="text-4xl leading-none" aria-hidden>
-                      {sport.emoji}
-                    </span>
-                    <span className="text-[15px] font-semibold leading-snug">{sport.label}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

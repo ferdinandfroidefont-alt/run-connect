@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, Users, Search, Camera, Lock, Globe, MapPin, Check, Sparkles, Loader2 } from "lucide-react";
+import { ChevronLeft, Users, Search, Camera, Lock, Globe, MapPin, Check, Loader2 } from "lucide-react";
 import { ImageCropEditor } from "./ImageCropEditor";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -296,23 +296,23 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 gap-0 flex flex-col bg-secondary sm:max-w-lg sm:max-h-[90vh] sm:rounded-[10px] sm:border">
+        <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 gap-0 flex flex-col bg-background sm:max-w-lg sm:max-h-[90vh] sm:rounded-[10px] sm:border">
           {/* iOS Header */}
-          <div className="bg-card border-b border-border shrink-0 sm:rounded-t-[10px]">
-            <div className="flex items-center justify-between px-4 py-3 min-h-[56px]">
+          <div className="sticky top-0 z-10 bg-card border-b border-border shrink-0 sm:rounded-t-[10px]">
+            <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,var(--safe-area-top))] min-h-[56px]">
               <button
                 onClick={handleClose}
-                className="flex items-center gap-1 text-primary"
+                className="flex items-center gap-1 text-primary font-medium"
               >
                 <ChevronLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <span className="text-[15px] font-normal">Retour</span>
               </button>
               <h1 className="text-[17px] font-semibold text-foreground">Créer un club</h1>
               <div className="w-16" />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch bg-pattern">
+          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling-touch">
             <div className="space-y-6 pb-8">
 
               {/* Club Avatar - Centered */}
@@ -323,7 +323,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
                 >
                   <Avatar className="h-24 w-24 border-2 border-border">
                     <AvatarImage src={groupAvatarUrl || ""} />
-                    <AvatarFallback className="bg-secondary">
+                    <AvatarFallback className="bg-card">
                       <Users className="h-10 w-10 text-muted-foreground" />
                     </AvatarFallback>
                   </Avatar>
@@ -344,7 +344,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
               {/* Informations du club - Inset Grouped */}
               <div>
                 <p className="ios-section-header">Informations</p>
-                <div className="bg-card border-y border-border divide-y divide-border">
+                <div className="mx-4 bg-card rounded-[10px] border border-border divide-y divide-border shadow-sm">
                   <div className="ios-list-item">
                     <div className="flex-1">
                       <Input
@@ -407,7 +407,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
               {/* Confidentialité - Inset Grouped */}
               <div>
                 <p className="ios-section-header">Confidentialité</p>
-                <div className="bg-card border-y border-border">
+                <div className="mx-4 bg-card rounded-[10px] border border-border shadow-sm">
                   <div className="ios-list-item">
                     <div className="flex items-center gap-3 flex-1">
                       <div className={cn(
@@ -435,7 +435,7 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
               {/* Ajouter des membres - Barre de recherche uniquement */}
               <div>
                 <p className="ios-section-header">Ajouter des membres</p>
-                <div className="bg-card border-y border-border">
+                <div className="mx-4 bg-card rounded-[10px] border border-border shadow-sm">
                   <div className="ios-list-item">
                     <div className="flex items-center gap-3 flex-1">
                       <Search className="h-5 w-5 text-muted-foreground shrink-0" />

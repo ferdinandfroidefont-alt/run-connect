@@ -12,20 +12,17 @@ import {
   ArrowLeft,
   Copy,
   Share2,
-  Crown,
   GraduationCap,
   UserPlus,
   Search,
   MoreHorizontal,
   Settings,
   Shield,
-  Trash2,
   AlertTriangle,
   UserMinus,
 } from "lucide-react";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
-import { CoachBadge } from "./coaching/CoachBadge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -270,10 +267,10 @@ export const ClubProfileDialog = ({
 
   const getRoleBadge = (member: GroupMember) => {
     if (member.user_id === createdBy || member.is_admin) {
-      return <Badge className="bg-purple-500/15 text-purple-600 border-0 text-[11px] px-1.5 py-0">Admin</Badge>;
+      return <Badge className="bg-primary/12 text-primary border-0 text-[11px] px-1.5 py-0">Admin</Badge>;
     }
     if (member.is_coach) {
-      return <Badge className="bg-blue-500/15 text-blue-600 border-0 text-[11px] px-1.5 py-0">Coach</Badge>;
+      return <Badge className="bg-secondary text-foreground border-0 text-[11px] px-1.5 py-0">Coach</Badge>;
     }
     return <Badge className="bg-muted text-muted-foreground border-0 text-[11px] px-1.5 py-0">Athlète</Badge>;
   };
@@ -283,15 +280,15 @@ export const ClubProfileDialog = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0 bg-secondary">
+        <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0 bg-background">
           {/* iOS Navigation Bar */}
-          <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border px-4 py-3 flex items-center shrink-0">
+          <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,var(--safe-area-top))] flex items-center shrink-0">
             <button
               onClick={onClose}
-              className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
+              className="flex items-center gap-0.5 text-primary text-[16px] min-w-[70px] font-medium"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span className="text-[15px]">Retour</span>
+              <span className="text-[15px] font-normal">Retour</span>
             </button>
             <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
               Profil du club
@@ -300,10 +297,10 @@ export const ClubProfileDialog = ({
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <div className="space-y-4 pb-8">
+            <div className="space-y-5 pb-8">
 
               {/* 1️⃣ Header premium */}
-              <div className="bg-gradient-to-b from-primary/5 to-card px-4 pt-6 pb-5">
+              <div className="bg-card border-b border-border px-4 pt-6 pb-5">
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="h-24 w-24 mb-3 ring-4 ring-primary/10">
                     <AvatarImage src={groupAvatarUrl || ""} />
@@ -316,12 +313,12 @@ export const ClubProfileDialog = ({
                   {/* Role badge */}
                   <div className="mt-1.5">
                     {currentUserIsCoach ? (
-                      <Badge className="bg-purple-500/15 text-purple-600 border-0 text-[12px] px-2 py-0.5">
-                        🟣 Coach principal
+                      <Badge className="bg-primary/12 text-primary border-0 text-[12px] px-2 py-0.5">
+                        Coach principal
                       </Badge>
                     ) : (
-                      <Badge className="bg-blue-500/15 text-blue-600 border-0 text-[12px] px-2 py-0.5">
-                        🔵 Membre
+                      <Badge className="bg-secondary text-foreground border-0 text-[12px] px-2 py-0.5">
+                        Membre
                       </Badge>
                     )}
                   </div>
@@ -340,11 +337,10 @@ export const ClubProfileDialog = ({
               {/* 2️⃣ Code d'invitation */}
               {clubCode && (
                 <div className="mx-4">
-                  <div className="bg-card rounded-[10px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+                  <p className="ios-section-header px-0">Code d'invitation</p>
+                  <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
                     <div className="px-4 py-2.5 border-b border-border/50">
-                      <p className="text-[13px] font-semibold text-foreground flex items-center gap-1.5">
-                        🔐 Code d'invitation
-                      </p>
+                      <p className="text-[13px] font-semibold text-foreground">Code d'invitation</p>
                     </div>
                     <div className="px-4 py-3 flex items-center justify-between">
                       <div className="flex-1">
@@ -379,11 +375,10 @@ export const ClubProfileDialog = ({
 
               {/* 3️⃣ Section Membres */}
               <div className="mx-4">
-                <div className="bg-card rounded-[10px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+                <p className="ios-section-header px-0">Membres</p>
+                <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
                   <div className="px-4 py-2.5 border-b border-border/50">
-                    <p className="text-[13px] font-semibold text-foreground">
-                      👥 Membres ({memberCount})
-                    </p>
+                    <p className="text-[13px] font-semibold text-foreground">Membres ({memberCount})</p>
                   </div>
                   
                   {loading ? (
@@ -464,19 +459,18 @@ export const ClubProfileDialog = ({
               {/* 4️⃣ Section Admin - uniquement si créateur */}
               {isAdmin && (
                 <div className="mx-4">
-                  <div className="bg-card rounded-[10px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+                  <p className="ios-section-header px-0">Gestion</p>
+                  <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
                     <div className="px-4 py-2.5 border-b border-border/50">
-                      <p className="text-[13px] font-semibold text-foreground">
-                        ⚙️ Gestion avancée
-                      </p>
+                      <p className="text-[13px] font-semibold text-foreground">Gestion avancée</p>
                     </div>
 
                     <button
                       onClick={() => setShowInviteDialog(true)}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
                     >
-                      <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <UserPlus className="h-4 w-4 text-green-600" />
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <UserPlus className="h-4 w-4 text-primary" />
                       </div>
                       <span className="text-[15px] text-foreground">Inviter des membres</span>
                     </button>
@@ -488,8 +482,8 @@ export const ClubProfileDialog = ({
                           onClick={() => { onClose(); setTimeout(() => onOpenCoachView?.(), 150); }}
                           className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
                         >
-                          <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                            <GraduationCap className="h-4 w-4 text-purple-600" />
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <GraduationCap className="h-4 w-4 text-primary" />
                           </div>
                           <span className="text-[15px] text-foreground">Gestion coaching</span>
                         </button>
@@ -501,8 +495,8 @@ export const ClubProfileDialog = ({
                       onClick={() => { onClose(); setTimeout(() => onEditGroup(), 150); }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
                     >
-                      <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <Settings className="h-4 w-4 text-blue-600" />
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Settings className="h-4 w-4 text-primary" />
                       </div>
                       <span className="text-[15px] text-foreground">Paramètres du club</span>
                     </button>
@@ -512,8 +506,8 @@ export const ClubProfileDialog = ({
                       onClick={() => {}}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-muted/50"
                     >
-                      <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
-                        <Shield className="h-4 w-4 text-orange-600" />
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <span className="text-[15px] text-foreground">Confidentialité</span>
                     </button>

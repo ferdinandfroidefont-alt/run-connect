@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, ChevronRight, Search, BookOpen, Target } from "lucide-react";
+import { ArrowLeft, ChevronRight, Search, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
@@ -100,22 +100,22 @@ const getMedal = (rank: number) => {
 const RankMovement = ({ change }: { change?: number }) => {
   if (!change || change === 0) return null;
   if (change > 0) return (
-    <span className="text-[11px] font-bold text-green-500">+{change} 🔼</span>
+    <span className="text-[11px] font-bold text-green-600">+{change}</span>
   );
   return (
-    <span className="text-[11px] font-bold text-destructive">{change} 🔽</span>
+    <span className="text-[11px] font-bold text-destructive">{change}</span>
   );
 };
 
 const podiumRowClass = (rank: number) => {
   if (rank === 1) {
-    return "bg-gradient-to-r from-amber-500/[0.14] via-amber-400/[0.08] to-transparent dark:from-amber-400/20 dark:via-amber-500/10 border-l-[3px] border-amber-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
+    return "bg-amber-500/10 border border-amber-500/30";
   }
   if (rank === 2) {
-    return "bg-gradient-to-r from-slate-400/[0.18] via-slate-300/[0.08] to-transparent dark:from-slate-400/22 dark:via-slate-500/12 border-l-[3px] border-slate-400 dark:border-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]";
+    return "bg-slate-500/10 border border-slate-500/30";
   }
   if (rank === 3) {
-    return "bg-gradient-to-r from-orange-800/[0.12] via-amber-800/[0.08] to-transparent dark:from-amber-900/25 dark:via-orange-900/12 border-l-[3px] border-amber-700 dark:border-amber-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+    return "bg-orange-500/10 border border-orange-500/30";
   }
   return "";
 };
@@ -126,13 +126,13 @@ const RankBadge = ({ rank, isMe }: { rank: number; isMe: boolean }) => {
     return (
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] shadow-sm",
-          rank === 1 && "bg-gradient-to-br from-amber-300/90 to-amber-600/90 ring-2 ring-amber-400/40",
-          rank === 2 && "bg-gradient-to-br from-slate-200 to-slate-400 ring-2 ring-slate-300/50 dark:from-slate-400 dark:to-slate-600",
-          rank === 3 && "bg-gradient-to-br from-amber-700 to-orange-900 ring-2 ring-amber-600/40"
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] shadow-sm border",
+          rank === 1 && "bg-amber-500/15 border-amber-500/40",
+          rank === 2 && "bg-slate-500/15 border-slate-500/40",
+          rank === 3 && "bg-orange-500/15 border-orange-500/40"
         )}
       >
-        <span className="drop-shadow-sm">{medal}</span>
+        <span>{medal}</span>
       </div>
     );
   }
@@ -149,12 +149,13 @@ const LeaderboardRow = ({ u, isMe, onClick }: { u: LeaderboardUser; isMe: boolea
   const podium = u.rank <= 3;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "flex cursor-pointer items-center gap-3 rounded-[14px] px-3 py-2.5 transition-colors active:scale-[0.99] active:bg-secondary/70",
-        podium ? podiumRowClass(u.rank) : "border border-transparent hover:bg-secondary/40",
-        isMe && !podium && "bg-primary/[0.07] ring-1 ring-primary/15"
+        "ios-list-item w-full gap-3 text-left transition-colors active:bg-secondary/70",
+        podium && podiumRowClass(u.rank),
+        isMe && !podium && "bg-primary/[0.06]"
       )}
     >
       <RankBadge rank={u.rank} isMe={isMe} />
@@ -203,7 +204,7 @@ const LeaderboardRow = ({ u, isMe, onClick }: { u: LeaderboardUser; isMe: boolea
         <RankMovement change={u.rank_change} />
       </div>
       <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/35" />
-    </div>
+    </button>
   );
 };
 
@@ -229,6 +230,7 @@ const Leaderboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showRules, setShowRules] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const leaderboardScrollRef = useRef<HTMLDivElement>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
@@ -401,15 +403,16 @@ const Leaderboard = () => {
       )
     : leaderboard;
 
-  // Infinite scroll : racine = viewport (un seul scroll page, pas de zone imbriquée)
+  // Infinite scroll dans le bloc leaderboard (scroll interne)
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !hasMoreUsers || loading || loadingMore || searchQuery.trim()) return;
+    const root = leaderboardScrollRef.current;
+    if (!el || !root || !hasMoreUsers || loading || loadingMore || searchQuery.trim()) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage((p) => p + 1);
       },
-      { root: null, threshold: 0.1, rootMargin: '120px' }
+      { root, threshold: 0.1, rootMargin: '120px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -418,30 +421,33 @@ const Leaderboard = () => {
   const nextRankInfo = getNextRankInfo(userRankLabel);
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
-      {/* En-tête fixe : hors du scroll, pas de z-index élevé (évite chevauchements visuels avec le contenu) */}
-      <header className="shrink-0 border-b border-border/40 bg-card">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button type="button" onClick={() => navigate('/')} className="flex items-center text-primary">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-background">
+      <header className="sticky top-0 z-20 border-b border-border bg-card pt-[var(--safe-area-top)]">
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 text-primary text-[16px] font-medium"
+          >
             <ArrowLeft className="h-5 w-5" />
+            <span className="text-[15px] font-normal">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold">Classement</h1>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setShowRules(true)} className="text-primary transition-opacity active:opacity-60">
-              <BookOpen className="h-5 w-5" />
-            </button>
-            <button type="button" className="text-primary transition-opacity active:opacity-60">
-              <Target className="h-5 w-5" />
-            </button>
-          </div>
+          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
+          <button
+            type="button"
+            onClick={() => setShowRules(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-primary transition-all hover:bg-secondary/50"
+            aria-label="Règles du classement"
+          >
+            <BookOpen className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
-      {/* Un seul flux vertical + scroll naturel (plus de max-height / double scroll) */}
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pb-6 pt-3">
-        <div className="mx-auto flex w-full max-w-lg flex-col">
+      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-4 pb-6 pt-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
           {userRank != null && (
-            <section className="mb-4" aria-label="Mon classement">
+            <section aria-label="Mon classement">
               <MyRankCard
                 currentRank={userRank}
                 currentPoints={userPoints}
@@ -453,7 +459,12 @@ const Leaderboard = () => {
             </section>
           )}
 
-          <section className="mb-4" aria-label="Filtres">
+          <section aria-label="Récompense saison">
+            <SeasonRewardBanner />
+          </section>
+
+          <section aria-label="Filtres classement" className="rounded-[12px] border border-border bg-card p-3 shadow-sm">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Filtres</p>
             <FilterBar
               activeScope={activeScope}
               onScopeChange={(s) => {
@@ -471,78 +482,67 @@ const Leaderboard = () => {
             />
           </section>
 
-          <section className="mb-4" aria-label="Récompense saison">
-            <SeasonRewardBanner />
-          </section>
-
-          <section className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <p className="shrink-0 text-[11px] text-muted-foreground">
+          <section className="rounded-[12px] border border-border bg-card p-3 shadow-sm" aria-label="Recherche">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
             </p>
-            <div className="relative min-w-0 flex-1">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Rechercher..."
+                placeholder="Rechercher un membre"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-full rounded-[10px] border-0 bg-card pl-8 text-[13px] shadow-sm"
+                className="h-10 rounded-[10px] border border-border bg-background pl-9 text-[14px]"
               />
             </div>
           </section>
 
-          <section className="flex flex-col" aria-label="Classement général">
-            <div
-              className={cn(
-                'flex flex-col overflow-hidden rounded-[20px] border border-border/50 bg-card shadow-[0_8px_32px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]',
-                'dark:border-border/60 dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]'
-              )}
-            >
-              <div className="border-b border-border/40 bg-secondary/25 px-4 pb-2.5 pt-3 dark:bg-secondary/20">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Classement général</p>
-                <p className="mt-0.5 text-[15px] font-semibold text-foreground">Saison en cours</p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">Points saisonniers · mise à jour en direct</p>
-              </div>
+          <section aria-label="Leaderboard" className="rounded-[12px] border border-border bg-card shadow-sm overflow-hidden">
+            <div className="border-b border-border bg-card px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Leaderboard</p>
+              <p className="text-[15px] font-semibold text-foreground">Top saison</p>
+            </div>
 
-              <div className="flex flex-col">
-                {loading && leaderboard.length === 0 ? (
-                  <div className="p-4">
-                    <LeaderboardSkeleton />
-                  </div>
-                ) : filteredLeaderboard.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center px-6 py-16">
-                    <span className="mb-3 text-4xl">🏅</span>
-                    <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
-                    <p className="text-center text-[14px] text-muted-foreground">
-                      {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1.5 px-2 py-3">
-                    {filteredLeaderboard.map((u) => {
-                      const isMe = u.user_id === user?.id;
-                      return (
+            <div
+              ref={leaderboardScrollRef}
+              className="h-[34rem] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            >
+              {loading && leaderboard.length === 0 ? (
+                <div className="p-4">
+                  <LeaderboardSkeleton />
+                </div>
+              ) : filteredLeaderboard.length === 0 ? (
+                <div className="flex flex-col items-center justify-center px-6 py-16">
+                  <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
+                  <p className="text-center text-[14px] text-muted-foreground">
+                    {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-card">
+                  {filteredLeaderboard.map((u, index) => {
+                    const isMe = u.user_id === user?.id;
+                    return (
+                      <div key={u.user_id}>
                         <LeaderboardRow
-                          key={u.user_id}
                           u={u}
                           isMe={isMe}
                           onClick={() => navigateToProfile(u.user_id)}
                         />
-                      );
-                    })}
-
-                    {hasMoreUsers && !searchQuery.trim() && (
-                      <div ref={sentinelRef} className="flex justify-center py-5">
-                        {loadingMore && (
-                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        )}
+                        {index < filteredLeaderboard.length - 1 && <div className="ios-list-separator" />}
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+
+                  {hasMoreUsers && !searchQuery.trim() && (
+                    <div ref={sentinelRef} className="flex justify-center py-4">
+                      {loadingMore && (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         </div>
