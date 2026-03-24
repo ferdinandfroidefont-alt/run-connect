@@ -86,6 +86,13 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
   const pinMarkerRef = useRef<google.maps.Marker | null>(null);
   const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
   const photoFileRef = useRef<File | null>(null);
+  const addPhotoStep = !photoFile
+    ? 1
+    : !pinLocation || readingGps
+      ? 2
+      : uploading
+        ? 3
+        : 3;
 
   useEffect(() => {
     photoFileRef.current = photoFile;
@@ -552,6 +559,22 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
               <div className="bg-primary/10 border-b border-primary/20 px-4 py-3 flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="text-[13px] text-primary font-medium leading-snug space-y-1">
+                  <div className="rounded-xl border border-primary/25 bg-primary/5 p-2 mb-1.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[11px] uppercase tracking-wide font-semibold text-primary/80">
+                        Étape {addPhotoStep}/3
+                      </p>
+                      <p className="text-[11px] text-primary/80">
+                        {!photoFile ? 'Choisir photo' : !pinLocation || readingGps ? 'Placer le point' : 'Publier'}
+                      </p>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-primary/15 overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${(addPhotoStep / 3) * 100}%` }}
+                      />
+                    </div>
+                  </div>
                   {!photoFile && (
                     <p>
                       Choisissez une photo via <strong>l’appareil photo</strong> ou la <strong>galerie</strong>. Si elle
@@ -582,16 +605,22 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
             )}
 
             {/* Map */}
-            <div ref={mapContainer} className={cn(
-              "w-full bg-secondary transition-all",
-              addPhotoMode ? "h-80" : "h-64"
-            )} />
+            <div
+              ref={mapContainer}
+              className={cn(
+                "w-full bg-secondary transition-all",
+                addPhotoMode ? "h-[min(82dvh,820px)]" : "h-[min(76dvh,760px)]"
+              )}
+            />
 
             {/* Carte d’ajout : photo d’abord, puis position + validation (jamais publiée sans « Publier ») */}
             {addPhotoMode && (
               <div className="mx-4 mt-4 p-4 bg-card rounded-2xl border border-border space-y-3 animate-in slide-in-from-top-2">
                 {!photoPreview ? (
                   <>
+                    <div className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                      1/3 • Choisir la photo
+                    </div>
                     <p className="text-[12px] text-muted-foreground text-center px-1">
                       Deux options : <strong>appareil photo</strong> ou <strong>galerie</strong>. Si la photo contient un GPS,
                       le point est proposé automatiquement ; sinon, <strong>appui long</strong> sur la carte.
@@ -617,6 +646,9 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                   </>
                 ) : (
                   <>
+                    <div className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                      {!pinLocation || readingGps ? '2/3 • Positionner' : '3/3 • Publier'}
+                    </div>
                     <div className="relative">
                       <img src={photoPreview} alt="Aperçu" className="w-full h-40 object-cover rounded-xl" />
                       <Button

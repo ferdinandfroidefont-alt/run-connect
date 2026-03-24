@@ -68,13 +68,13 @@ export const BottomNavigation = () => {
 
   return (
     <nav
-      className="ios-nav-shell z-50 w-full shrink-0"
+      className="z-50 w-full shrink-0"
       role="navigation"
       aria-label="Navigation principale"
-      style={{ height: 'var(--nav-height)' }}
+      style={{ paddingBottom: 'var(--safe-area-bottom)' }}
     >
       {/* Une seule barre visible en bas (sans extension safe-area HTML). */}
-      <div className="grid h-[var(--nav-height)] w-full grid-cols-5 items-end">
+      <div className="ios-nav-shell grid h-[var(--nav-height)] w-full grid-cols-5 items-center pt-0.5">
         {navItems.slice(0, 2).map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const tutorialId = path === '/my-sessions' ? 'nav-sessions' : undefined;
@@ -82,7 +82,7 @@ export const BottomNavigation = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex flex-col items-center justify-center gap-0.5 min-h-[48px] rounded-xl mx-0.5 active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+              className="flex flex-col items-center justify-center gap-0 min-h-[48px] rounded-xl mx-0.5 active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
               data-tutorial={tutorialId}
             >
               <Icon
@@ -119,7 +119,7 @@ export const BottomNavigation = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex flex-col items-center justify-center gap-0.5 min-h-[48px] rounded-xl mx-0.5 relative active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+              className="flex flex-col items-center justify-center gap-0 min-h-[48px] rounded-xl mx-0.5 relative active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
               data-tutorial={tutorialId}
             >
               <div className="relative">

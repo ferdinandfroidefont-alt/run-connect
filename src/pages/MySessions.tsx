@@ -1,15 +1,13 @@
-import { RouteDialog } from '@/components/RouteDialog';
 import { RouteCard } from '@/components/RouteCard';
 import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
 import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
 import { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
-import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Camera } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Camera, Images } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -24,9 +22,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
-import { OrganizerStatsCard } from '@/components/OrganizerStatsCard';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-import { StreakBadge } from '@/components/StreakBadge';
 const RouteDetailDialog = lazy(() =>
   import('@/components/routes-feed/RouteDetailDialog').then((m) => ({ default: m.RouteDetailDialog }))
 );
@@ -41,6 +37,9 @@ const ProfilePreviewDialog = lazy(() =>
 );
 const RoutePhotosGallery = lazy(() =>
   import('@/components/routes-feed/RoutePhotosGallery').then((m) => ({ default: m.RoutePhotosGallery }))
+);
+const OrganizerStatsCard = lazy(() =>
+  import('@/components/OrganizerStatsCard').then((m) => ({ default: m.OrganizerStatsCard }))
 );
 
 interface UserSession {
@@ -1018,7 +1017,7 @@ export default function MySessions() {
                             : 'text-muted-foreground'
                         }`}
                       >
-                        Feed
+                        À proximité
                       </button>
                       <button
                         type="button"
@@ -1232,7 +1231,9 @@ export default function MySessions() {
               {/* Organizer Stats - only for created sessions */}
               {sessionSource === 'created' && (
                 <div className="mt-ios-3 pb-ios-6">
-                  <div className="px-ios-4"><OrganizerStatsCard /></div>
+                  <Suspense fallback={null}>
+                    <div className="px-ios-4"><OrganizerStatsCard /></div>
+                  </Suspense>
                 </div>
               )}
             </>
@@ -1341,7 +1342,33 @@ export default function MySessions() {
               </Suspense>
             </div>
           ) : (
-            <div className="pb-ios-2">
+            <div className="space-y-ios-3 px-ios-4 pb-ios-2">
+              <div className="ios-card rounded-ios-lg border border-border p-ios-3">
+                <p className="text-ios-footnote font-semibold text-foreground uppercase tracking-wide mb-ios-2">
+                  Ajouter une photo
+                </p>
+                <p className="text-ios-caption1 text-muted-foreground mb-ios-3 leading-relaxed">
+                  Pour publier une photo d’itinéraire, choisissez d’abord un itinéraire à proximité puis utilisez
+                  l’une des 2 options : appareil photo ou galerie.
+                </p>
+                <div className="grid grid-cols-2 gap-ios-2 mb-ios-2">
+                  <div className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-2 flex items-center gap-ios-2">
+                    <Camera className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-ios-footnote font-medium">Appareil photo</span>
+                  </div>
+                  <div className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-2 flex items-center gap-ios-2">
+                    <Images className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-ios-footnote font-medium">Galerie</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => setRouteSource('feed')}
+                >
+                  Ouvrir les itinéraires à proximité
+                </Button>
+              </div>
               <Suspense fallback={null}>
                 <RoutePhotosGallery />
               </Suspense>

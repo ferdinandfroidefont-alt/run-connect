@@ -287,7 +287,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   return (
     <>
       <Dialog open={!!userId} onOpenChange={() => onClose()}>
-        <DialogContent className="w-full h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-hidden">
+        <DialogContent className="w-full min-w-0 h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-x-hidden overflow-y-hidden">
 
           {/* ── Header ── */}
           <div className="flex items-center justify-between px-2 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-card border-b border-border/50">
@@ -346,14 +346,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           <OnlineStatus userId={profile.user_id} />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0 pt-1">
+                      <div className="flex-1 min-w-0 max-w-full pt-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-[18px] font-bold text-foreground truncate">
+                          <p className="min-w-0 max-w-full truncate text-[18px] font-bold text-foreground">
                             {profile.display_name || profile.username}
                           </p>
                           {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
                         </div>
-                        <p className="text-[14px] text-muted-foreground">@{profile.username}</p>
+                        <p className="min-w-0 max-w-full truncate text-[14px] text-muted-foreground">@{profile.username}</p>
                       </div>
                     </div>
 

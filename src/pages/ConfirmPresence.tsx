@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ChevronLeft, Loader2, UserCheck, Users, MapPin } from 'lucide-react';
 
 interface Session {
@@ -190,9 +190,9 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="fixed-fill-with-bottom-nav bg-secondary flex flex-col overflow-x-hidden z-0">
+    <div className="fixed-fill-with-bottom-nav bg-secondary flex min-h-0 flex-col overflow-x-hidden z-0">
       {/* iOS Header */}
-      <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
+      <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur-xl pt-[var(--safe-area-top)]">
         <div className="relative flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBack}
@@ -209,75 +209,88 @@ export default function ConfirmPresence() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-ios-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col',
+          !roleChoice && !loading
+            ? 'overflow-hidden px-ios-4 pb-ios-4 pt-ios-2'
+            : 'overflow-y-auto p-4 pb-ios-4',
+        )}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         {loading ? (
-          <div className="bg-card border border-border rounded-[10px] p-12 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-[15px] text-muted-foreground">Chargement...</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-ios-4">
+            <div className="ios-card flex w-full max-w-sm flex-col items-center justify-center gap-3 border border-border p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-[15px] text-muted-foreground">Chargement...</p>
+            </div>
           </div>
         ) : !roleChoice ? (
-          // Role selection screen - iOS Style
-          <div className="space-y-4">
-            <p className="text-center text-muted-foreground text-[15px] px-4 py-4">
+          // Role selection — 3 cartes en flex column, hauteur équitable (écran plein, type choix iOS)
+          <div className="flex min-h-0 flex-1 flex-col gap-ios-3">
+            <p className="shrink-0 px-1 py-ios-2 text-center text-[15px] leading-snug text-muted-foreground">
               {t('confirmPresence.selectRole')}
             </p>
-            
-            <div className="space-y-3">
+
+            <div className="flex min-h-0 flex-1 flex-col gap-ios-3">
               {/* Creator Card */}
               <button
+                type="button"
                 onClick={() => handleRoleChoice('creator')}
-                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
+                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
               >
-                <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
                   <UserCheck className="h-7 w-7 text-primary" />
                 </div>
-                <div className="flex-1 text-left">
-                  <h2 className="text-[17px] font-semibold text-foreground">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
                     {t('confirmPresence.creator')}
                   </h2>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
                     {t('confirmPresence.creatorDescription')}
                   </p>
                 </div>
-                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
               </button>
 
               {/* Participant Card */}
               <button
+                type="button"
                 onClick={() => handleRoleChoice('participant')}
-                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
+                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
               >
-                <div className="h-14 w-14 rounded-[10px] bg-blue-500/10 flex items-center justify-center">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-blue-500/10">
                   <Users className="h-7 w-7 text-blue-500" />
                 </div>
-                <div className="flex-1 text-left">
-                  <h2 className="text-[17px] font-semibold text-foreground">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
                     {t('confirmPresence.participant')}
                   </h2>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
                     {t('confirmPresence.participantDescription')}
                   </p>
                 </div>
-                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
               </button>
 
               {/* Track Participants Card */}
               <button
+                type="button"
                 onClick={() => handleRoleChoice('tracking')}
-                className="ios-card flex w-full items-center gap-4 p-5 transition-colors active:bg-secondary"
+                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
               >
-                <div className="h-14 w-14 rounded-[10px] bg-primary/10 flex items-center justify-center">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
                   <MapPin className="h-7 w-7 text-primary" />
                 </div>
-                <div className="flex-1 text-left">
-                  <h2 className="text-[17px] font-semibold text-foreground">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
                     Suivre les participants
                   </h2>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
                     Voir en temps réel où se trouvent les autres sur la carte
                   </p>
                 </div>
-                <ChevronLeft className="h-5 w-5 text-muted-foreground rotate-180" />
+                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
               </button>
             </div>
           </div>

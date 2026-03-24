@@ -20,8 +20,10 @@ export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
 export function applyRuconnectSplashWebChrome(): void {
   const root = document.documentElement;
   const body = document.body;
+  const appRoot = document.getElementById('root');
   root.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
   body.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
+  if (appRoot) appRoot.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
 
   const metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
   if (metaTheme) metaTheme.setAttribute('content', RUCONNECT_SPLASH_BLUE);
@@ -56,6 +58,8 @@ export async function applyRuconnectSplashNativeChrome(): Promise<void> {
 
 /** Restaure le chrome après splash / écran d’attente bleu */
 export async function restoreChromeAfterRuconnectSplash(): Promise<void> {
+  const appRoot = document.getElementById('root');
+  if (appRoot) appRoot.style.removeProperty('background-color');
   const isDark = getPreferredDarkFromStorage();
   applyWebChromeForTheme(isDark);
   if (Capacitor.isNativePlatform()) {
