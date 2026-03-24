@@ -601,7 +601,7 @@ const Profile = () => {
   // When viewing another user's profile, show ProfilePreviewDialog instead of full profile
   if (isViewingOtherUser && viewingUserId) {
     return (
-      <div className="h-full min-h-0 bg-secondary">
+      <div className="h-full min-h-0 w-full min-w-0 overflow-x-hidden bg-secondary">
         <ProfilePreviewDialog
           userId={viewingUserId}
           onClose={() => navigate(-1)}
@@ -615,7 +615,7 @@ const Profile = () => {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="h-full min-h-0 bg-secondary overflow-y-auto">
+  return <div className="h-full min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-secondary">
       {/* Cover Image - Facebook Style */}
       <div className="relative">
         {/* Cover Photo */}
@@ -704,7 +704,7 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="mx-auto max-w-md space-y-ios-3 pb-ios-4">
+      <div className="mx-auto w-full min-w-0 max-w-md space-y-ios-3 pb-ios-4">
         {/* Name, username, bio */}
         <div className="flex flex-col items-center px-ios-4 pb-ios-1 pt-ios-2">
           <div className="mb-0.5 flex items-center gap-ios-2">
