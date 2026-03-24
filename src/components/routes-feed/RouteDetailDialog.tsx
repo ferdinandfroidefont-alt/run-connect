@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, MapPin, Loader2, Images,
+  ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, MapPin, Loader2, Images, Trash2,
 } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
+import { routePhotoStoragePathFromPublicUrl } from '@/lib/routePhotoStorage';
 
 interface RoutePhoto {
   id: string;
@@ -49,6 +50,11 @@ interface RouteDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRefresh?: () => void;
+  /** Ouvre directement le flux « ajouter une photo » à l’ouverture. */
+  initialAddPhotoMode?: boolean;
+  /** Après ouverture + mode ajout photo, déclenche le sélecteur caméra ou galerie une fois. */
+  pendingFilePick?: 'camera' | 'gallery' | null;
+  onPendingFilePickConsumed?: () => void;
 }
 
 const formatDistance = (meters: number | null) => {
@@ -57,7 +63,15 @@ const formatDistance = (meters: number | null) => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
-export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: RouteDetailDialogProps) => {
+export const RouteDetailDialog = ({
+  route,
+  open,
+  onOpenChange,
+  onRefresh,
+  initialAddPhotoMode = false,
+  pendingFilePick = null,
+  onPendingFilePickConsumed,
+}: RouteDetailDialogProps) => {
   const { user } = useAuth();
   const { position: userGeoPosition } = useGeolocation();
   const navigate = useNavigate();
@@ -161,6 +175,22 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
     if (open && route) loadDetails();
     if (!open) resetPhotoForm();
   }, [open, route, loadDetails]);
+
+  useEffect(() => {
+    if (open && initialAddPhotoMode && route) {
+      setAddPhotoMode(true);
+    }
+  }, [open, initialAddPhotoMode, route?.id]);
+
+  useEffect(() => {
+    if (!open || !addPhotoMode || !pendingFilePick) return;
+    const t = window.setTimeout(() => {
+      if (pendingFilePick === 'camera') cameraInputRef.current?.click();
+      else galleryInputRef.current?.click();
+      onPendingFilePickConsumed?.();
+    }, 350);
+    return () => clearTimeout(t);
+  }, [open, addPhotoMode, pendingFilePick, onPendingFilePickConsumed]);
 
   // Init map
   useEffect(() => {
@@ -505,6 +535,38 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
     }
   };
 
+  const deleteRoutePhoto = async (photo: RoutePhoto) => {
+    if (!user || photo.user_id !== user.id) return;
+    try {
+      const path = routePhotoStoragePathFromPublicUrl(photo.photo_url);
+      if (path) {
+        const { error: storageErr } = await supabase.storage.from('route-photos').remove([path]);
+        if (storageErr) console.warn('Storage delete route photo:', storageErr);
+      }
+      const { error } = await supabase.from('route_photos').delete().eq('id', photo.id);
+      if (error) throw error;
+      if (selectedPhoto?.id === photo.id) setSelectedPhoto(null);
+      toast.success('Photo supprimée');
+      loadDetails();
+      onRefresh?.();
+    } catch (e: any) {
+      toast.error(e.message || 'Impossible de supprimer la photo');
+    }
+  };
+
+  const deleteRouteRating = async (r: RouteRating) => {
+    if (!user || r.user_id !== user.id) return;
+    try {
+      const { error } = await supabase.from('route_ratings').delete().eq('id', r.id);
+      if (error) throw error;
+      toast.success('Avis supprimé');
+      loadDetails();
+      onRefresh?.();
+    } catch (e: any) {
+      toast.error(e.message || 'Impossible de supprimer l’avis');
+    }
+  };
+
   const copyRoute = async () => {
     if (!user || !route) return;
     try {
@@ -692,21 +754,6 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                         Galerie
                       </Button>
                     </div>
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
-                    <input
-                      ref={galleryInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileSelect}
-                    />
 
                     {pinLocation && (
                       <>
@@ -828,6 +875,21 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                           className="h-24 w-24 object-cover rounded-2xl cursor-pointer active:opacity-80 ring-2 ring-border"
                           onClick={() => setSelectedPhoto(photo)}
                         />
+                        {user?.id === photo.user_id && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-1 right-1 h-7 w-7 rounded-full shadow-md"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteRoutePhoto(photo);
+                            }}
+                            aria-label="Supprimer la photo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {photo.caption && (
                           <div className="absolute bottom-0 left-0 right-0 bg-black/50 rounded-b-2xl px-1.5 py-0.5">
                             <p className="text-[10px] text-white truncate">{photo.caption}</p>
@@ -866,17 +928,29 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
                   <h3 className="text-[17px] font-semibold">Avis ({ratings.length})</h3>
                   {ratings.map(r => (
                     <div key={r.id} className="bg-card rounded-xl p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar className="h-7 w-7 shrink-0">
                           <AvatarImage src={r.profile?.avatar_url || undefined} />
                           <AvatarFallback className="text-[10px]">{r.profile?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-[14px] font-medium">{r.profile?.display_name || 'Utilisateur'}</span>
-                        <div className="flex items-center gap-0.5 ml-auto">
+                        <span className="text-[14px] font-medium min-w-0 flex-1 truncate">{r.profile?.display_name || 'Utilisateur'}</span>
+                        <div className="flex items-center gap-0.5 shrink-0">
                           {Array.from({ length: 5 }, (_, i) => (
                             <Star key={i} className={cn("h-3 w-3", i < r.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30")} />
                           ))}
                         </div>
+                        {user?.id === r.user_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => deleteRouteRating(r)}
+                            aria-label="Supprimer mon avis"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                       {r.comment && <p className="text-[14px] text-muted-foreground">{r.comment}</p>}
                       <p className="text-[12px] text-muted-foreground/60">{format(new Date(r.created_at), 'dd MMM yyyy', { locale: fr })}</p>
@@ -903,6 +977,20 @@ export const RouteDetailDialog = ({ route, open, onOpenChange, onRefresh }: Rout
           >
             <X className="h-6 w-6" />
           </Button>
+          {user?.id === selectedPhoto.user_id && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 left-4 text-white z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteRoutePhoto(selectedPhoto);
+              }}
+              aria-label="Supprimer la photo"
+            >
+              <Trash2 className="h-6 w-6" />
+            </Button>
+          )}
           <img src={selectedPhoto.photo_url} alt="Photo" className="max-w-[90vw] max-h-[70vh] object-contain rounded-lg" />
           {(selectedPhoto.caption || selectedPhoto.profile) && (
             <div className="mt-4 text-center px-6" onClick={e => e.stopPropagation()}>

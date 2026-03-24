@@ -11,7 +11,8 @@ import { Capacitor } from "@capacitor/core";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { RecentActivities } from "@/components/profile/RecentActivities";
-import { SportsBadges } from "@/components/profile/SportsBadges";
+import { ProfileSportChips } from "@/components/profile/ProfileSportsCard";
+import { parseProfileSports } from "@/lib/profileSports";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -75,7 +76,7 @@ const PublicProfile = () => {
 
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, created_at, running_records, cycling_records, swimming_records, triathlon_records, walking_records')
+          .select('user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, created_at, favorite_sport, running_records, cycling_records, swimming_records, triathlon_records, walking_records')
           .eq('username', username)
           .eq('is_private', false)
           .single();
@@ -137,6 +138,8 @@ const PublicProfile = () => {
 
   if (!profile) return null;
 
+  const profileSports = parseProfileSports(profile.favorite_sport);
+
   return (
     <div className="fixed inset-0 bg-secondary overflow-y-auto overflow-x-hidden">
       <motion.div
@@ -190,16 +193,11 @@ const PublicProfile = () => {
               </p>
             )}
 
-            {/* Sports Badges */}
-            <div className="mb-3">
-              <SportsBadges
-                runningRecords={profile.running_records}
-                cyclingRecords={profile.cycling_records}
-                swimmingRecords={profile.swimming_records}
-                triathlonRecords={profile.triathlon_records}
-                walkingRecords={profile.walking_records}
-              />
-            </div>
+            {profileSports.length > 0 && (
+              <div className="mb-3 w-full max-w-sm">
+                <ProfileSportChips sportKeys={profileSports} />
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3 w-full max-w-sm pt-1">

@@ -421,7 +421,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed inset-0 left-0 top-0 translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] w-screen min-w-0 max-w-none flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border">
+      <DialogContent
+        hideCloseButton
+        className="fixed inset-0 left-0 right-0 top-0 z-[100] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-50 sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
+      >
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
             <motion.div
@@ -504,111 +507,104 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                     </div>
                   )}
 
-                  {/* Profile Share Section */}
+                  {/* Partager le profil + QR : colonne centrée comme le profil, tout en % du parent (pas de vw) */}
                   {profile && (
-                    <div className="box-border min-w-0 w-full max-w-full px-4">
-                    <div className="ios-card box-border min-w-0 w-full max-w-full space-y-ios-3 overflow-hidden overflow-x-hidden p-ios-3">
-                      <h3 className="text-[13px] font-medium text-muted-foreground uppercase tracking-wide px-1">
-                        Partager mon profil
-                      </h3>
-                      
-                      {/* Avatar + Username — overflow-hidden évite que le blur / scale déborde sur iOS */}
-                      <div className="flex w-full min-w-0 flex-col items-center overflow-x-hidden">
-                        <div className="relative isolate max-w-full">
-                          <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-gradient-to-br from-primary to-cyan-400 opacity-40 blur-lg" />
-                          <div className="relative rounded-full p-[3px] bg-gradient-to-br from-primary via-primary/70 to-cyan-400">
-                            <Avatar className="h-16 w-16 border-2 border-background shadow-xl">
-                              <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
-                              <AvatarFallback className="text-lg font-bold bg-primary/20 text-primary">
-                                {(profile.display_name || profile.username)?.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
-                        </div>
-                        <h4 className="mt-2 max-w-full truncate px-1 text-center text-sm font-semibold">
-                          {profile.display_name || profile.username}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          Scannez pour m'ajouter
-                        </p>
-                      </div>
-                      
-                      {/* QR Code — 100% du parent (jamais 100vw : évite le débordement horizontal iOS) */}
-                      <div className="flex w-full min-w-0 justify-center overflow-x-hidden">
-                        <div className="relative w-full max-w-[200px] shrink-0">
-                          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/30 to-cyan-400/30 opacity-50 blur-xl" />
-                          <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 sm:p-3 shadow-lg">
-                            {qrLoading ? (
-                              <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center">
-                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                              </div>
-                            ) : qrImageUrl ? (
-                              <img
-                                src={qrImageUrl}
-                                alt="QR Code du profil"
-                                className="mx-auto block h-auto w-full max-w-full rounded-lg object-contain aspect-square"
-                              />
-                            ) : (
-                              <div className="mx-auto flex aspect-square w-full max-w-full items-center justify-center text-xs text-muted-foreground">
-                                Erreur de génération
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4">
+                      <div className="w-full min-w-0 max-w-md">
+                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3">
+                          <h3 className="text-center text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                            Partager mon profil
+                          </h3>
 
-                      {/* Referral code */}
-                      {profile.referral_code && (
-                        <div className="ios-card min-w-0 w-full overflow-hidden bg-primary/[0.06] p-ios-3 ring-1 ring-primary/15">
-                          <div className="flex items-center justify-between min-w-0 gap-2">
-                            <span className="text-xs text-muted-foreground shrink-0">Code parrainage</span>
-                            <span className="font-mono font-bold text-primary text-sm tracking-wider truncate min-w-0">{profile.referral_code}</span>
+                          <div className="flex w-full min-w-0 flex-col items-center">
+                            <div className="relative isolate mx-auto max-w-full overflow-hidden rounded-full p-1">
+                              <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-gradient-to-br from-primary to-cyan-400 opacity-40 blur-md" />
+                              <div className="relative rounded-full bg-gradient-to-br from-primary via-primary/70 to-cyan-400 p-[3px]">
+                                <Avatar className="h-16 w-16 border-2 border-background shadow-xl">
+                                  <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
+                                  <AvatarFallback className="text-lg font-bold bg-primary/20 text-primary">
+                                    {(profile.display_name || profile.username)?.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            </div>
+                            <h4 className="mt-2 w-full min-w-0 max-w-full truncate px-2 text-center text-sm font-semibold">
+                              {profile.display_name || profile.username}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">Scannez pour m&apos;ajouter</p>
                           </div>
-                        </div>
-                      )}
-                      
-                      {/* URL */}
-                      <p className="text-[10px] text-center text-muted-foreground/70 truncate max-w-full overflow-hidden px-2">
-                        {getProfileUrl()}
-                      </p>
-                      
-                      {/* Action buttons — min-w-0 + truncate : évite le nowrap des Button sur colonnes étroites */}
-                      <div className="min-w-0 w-full max-w-full space-y-2">
-                        <Button
-                          variant="default"
-                          size="default"
-                          onClick={copyUrl}
-                          className="w-full min-w-0 max-w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
-                        >
-                          <Copy className="h-4 w-4 mr-2 shrink-0" />
-                          <span className="truncate">Copier le lien</span>
-                        </Button>
-                        
-                        <div className="grid min-w-0 max-w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                          <Button
+
+                          <div className="mx-auto w-full min-w-0 max-w-[min(13rem,calc(100%-0.5rem))]">
+                            <div className="relative overflow-hidden rounded-2xl">
+                              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/25 to-cyan-400/25 opacity-60 blur-2xl" />
+                              <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg sm:p-3">
+                                {qrLoading ? (
+                                  <div className="flex aspect-square w-full items-center justify-center">
+                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                  </div>
+                                ) : qrImageUrl ? (
+                                  <img
+                                    src={qrImageUrl}
+                                    alt="QR Code du profil"
+                                    className="mx-auto block aspect-square w-full rounded-lg object-contain"
+                                  />
+                                ) : (
+                                  <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
+                                    Erreur de génération
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {profile.referral_code && (
+                            <div className="ios-card w-full min-w-0 overflow-hidden bg-primary/[0.06] p-ios-3 ring-1 ring-primary/15">
+                              <div className="flex min-w-0 items-center justify-between gap-2">
+                                <span className="shrink-0 text-xs text-muted-foreground">Code parrainage</span>
+                                <span className="min-w-0 truncate font-mono text-sm font-bold tracking-wider text-primary">
+                                  {profile.referral_code}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="w-full min-w-0 max-w-full break-all px-1 text-center text-[10px] leading-snug text-muted-foreground/80">
+                            {getProfileUrl()}
+                          </p>
+
+                          <div className="flex w-full min-w-0 max-w-full flex-col gap-2">
+                            <Button
+                              variant="default"
+                              size="default"
+                              onClick={copyUrl}
+                              className="h-11 w-full min-w-0 justify-center bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-primary"
+                            >
+                              <Copy className="mr-2 h-4 w-4 shrink-0" />
+                              <span className="min-w-0 truncate">Copier le lien</span>
+                            </Button>
+                            <Button
                               variant="outline"
                               size="default"
                               onClick={handleShare}
-                              className="w-full min-w-0 max-w-full border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                              className="h-11 w-full min-w-0 justify-center border-primary/30 hover:border-primary/50 hover:bg-primary/10"
                             >
                               <Share2 className="mr-2 h-4 w-4 shrink-0" />
-                              <span className="truncate">Partager</span>
+                              <span className="min-w-0 truncate">Partager</span>
                             </Button>
-                          
                             <Button
                               variant="outline"
                               size="default"
                               onClick={generateInstagramStoryImage}
                               disabled={!qrImageUrl}
-                              className="w-full min-w-0 max-w-full border-pink-500/30 hover:bg-pink-500/10 hover:border-pink-500/50 disabled:opacity-50"
+                              className="h-11 w-full min-w-0 justify-center border-pink-500/30 hover:border-pink-500/50 hover:bg-pink-500/10 disabled:opacity-50"
                             >
                               <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
-                              <span className="truncate">Story</span>
+                              <span className="min-w-0 truncate">Story Instagram</span>
                             </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   )}
                 </div>
               </ScrollArea>

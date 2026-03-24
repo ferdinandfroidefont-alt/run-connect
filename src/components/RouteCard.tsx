@@ -10,6 +10,8 @@ import { fr } from 'date-fns/locale';
 import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
 import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
 
 interface RouteCardProps {
   route: {
@@ -32,6 +34,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
+  const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const { position } = useGeolocation();
   const [show3DDialog, setShow3DDialog] = useState(false);
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
 
@@ -74,6 +78,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
 
   useEffect(() => {
     if (!mapContainer.current || !window.google || !route.coordinates?.length) return;
+    userLocationMarkerRef.current?.setMap(null);
+    userLocationMarkerRef.current = null;
     const path = route.coordinates.map((coord: any) => {
       if (coord.lat !== undefined && coord.lng !== undefined) {
         return { lat: Number(coord.lat), lng: Number(coord.lng) };
@@ -114,10 +120,29 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     map.current.fitBounds(bounds, 30);
 
     return () => {
+      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current = null;
       if (polyline.current) polyline.current.setMap(null);
       map.current = null;
     };
   }, [route.coordinates]);
+
+  useEffect(() => {
+    if (!map.current) return;
+    if (!position) {
+      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current = null;
+      return;
+    }
+    userLocationMarkerRef.current?.setMap(null);
+    userLocationMarkerRef.current = new google.maps.Marker({
+      map: map.current,
+      position: { lat: position.lat, lng: position.lng },
+      icon: getUserLocationMarkerIcon(),
+      zIndex: 1000,
+      title: 'Votre position',
+    });
+  }, [position, route.coordinates]);
 
   const hasCoordinates = route.coordinates?.length > 0;
 
@@ -172,7 +197,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
             </div>
 
             {/* Stats overlay at bottom */}
-            <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+            <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
               <span className="flex items-center gap-1 text-[12px] font-semibold bg-background/80 backdrop-blur-sm text-foreground px-2.5 py-1.5 rounded-full">
                 <Route className="h-3 w-3" /> {formatDistance(route.total_distance)}
               </span>

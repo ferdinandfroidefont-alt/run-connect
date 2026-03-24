@@ -120,13 +120,13 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                       variant="outline"
                       role="combobox"
                       aria-expanded={languageOpen}
-                      className="h-10 min-w-[140px] max-w-[min(200px,46vw)] shrink-0 justify-between rounded-[10px] border-0 bg-secondary/50 px-3 text-[13px] font-medium"
+                      className="h-10 min-w-[7rem] max-w-[min(200px,42%)] shrink-0 justify-between rounded-[10px] border-0 bg-secondary/50 px-3 text-[13px] font-medium"
                     >
                       <span className="truncate">{LANGUAGE_INFO[language].nativeName}</span>
                       <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[min(320px,calc(100vw-2rem))] p-0 z-[9999]" align="end" sideOffset={8}>
+                  <PopoverContent className="w-[min(20rem,calc(100svw-2rem))] max-w-[calc(100%-1rem)] p-0 z-[9999]" align="end" sideOffset={8}>
                     <Command>
                       <CommandInput placeholder={t('settings.languageSearchPlaceholder')} className="h-11" />
                       <CommandList className="max-h-[min(320px,50vh)]">

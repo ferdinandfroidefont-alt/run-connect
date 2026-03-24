@@ -236,6 +236,7 @@ export const SessionFilters = ({ filters, onFiltersChange, className, onOpenChan
               
               {/* Club Selector */}
               <ClubSelector
+                triggerMode="filterRow"
                 selectedClubId={filters.selected_club_id}
                 onClubSelect={(clubId) => onFiltersChange({ ...filters, selected_club_id: clubId })}
               />

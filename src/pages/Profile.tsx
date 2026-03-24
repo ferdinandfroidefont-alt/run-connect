@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Award, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -24,11 +24,11 @@ import { ReportUserDialog } from "@/components/ReportUserDialog";
 
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
+import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { RecentActivities } from "@/components/profile/RecentActivities";
-import { SportsBadges } from "@/components/profile/SportsBadges";
+import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 const SettingsDialog = lazy(() =>
@@ -738,14 +738,15 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Sports Badges */}
+        {/* Sports choisis (carte dédiée ; pas les records) */}
         <div className="px-ios-4">
-          <SportsBadges
-            runningRecords={profile?.running_records}
-            cyclingRecords={profile?.cycling_records}
-            swimmingRecords={profile?.swimming_records}
-            triathlonRecords={profile?.triathlon_records}
-            walkingRecords={profile?.walking_records}
+          <ProfileSportsCard
+            favoriteSport={profile?.favorite_sport}
+            isOwnProfile={!isViewingOtherUser}
+            onUpdated={(value) => {
+              setProfile((p) => (p ? { ...p, favorite_sport: value } : null));
+              setFormData((fd) => ({ ...fd, favorite_sport: value }));
+            }}
           />
         </div>
 
@@ -760,13 +761,15 @@ const Profile = () => {
           />
         </div>
 
-        {/* Recent Activities */}
-        <div className="px-ios-4">
-          <p className="pb-ios-1 text-ios-footnote uppercase tracking-wide text-muted-foreground">
-            Activités récentes
-          </p>
-          <RecentActivities userId={viewingUserId || user?.id || ''} />
-        </div>
+        {/* Profil tiers : stats / activités (retiré du profil personnel) */}
+        {isViewingOtherUser && (
+          <div className="px-ios-4">
+            <p className="pb-ios-1 text-ios-footnote uppercase tracking-wide text-muted-foreground">
+              Activités récentes
+            </p>
+            <RecentActivities userId={viewingUserId || ''} />
+          </div>
+        )}
 
         {/* Objectifs personnels - Own profile only */}
         {!isViewingOtherUser && <PersonalGoals />}
@@ -805,16 +808,7 @@ const Profile = () => {
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-ios-2">
-              {/* Personal Goals - Own profile only */}
-              {!isViewingOtherUser && <PersonalGoals />}
-
-              {/* Classement, Badges & Activités */}
-              {!isViewingOtherUser ? (
-                <ProfileStatsGroup userId={user?.id || ''} onSettingsClick={() => setShowSettingsDialog(true)} onInfoClick={() => setIsEditing(!isEditing)} />
-              ) : (
-                <ProfileStatsGroup userId={viewingUserId || ''} />
-              )}
-
+              {isViewingOtherUser && <ProfileStatsGroup userId={viewingUserId || ''} />}
               {/* Personal Records */}
               <div className="ios-card overflow-hidden">
                 <PersonalRecords records={{
@@ -866,22 +860,6 @@ const Profile = () => {
               ...formData,
               bio: e.target.value
             })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Sport favori</label>
-                  <select
-                    value={formData.favorite_sport || ''}
-                    onChange={e => setFormData({ ...formData, favorite_sport: e.target.value || null })}
-                    className="w-full h-11 rounded-ios-sm bg-background border border-input px-ios-3 text-ios-subheadline"
-                  >
-                    <option value="">Non spécifié</option>
-                    <option value="running">🏃 Course à pied</option>
-                    <option value="cycling">🚴 Cyclisme</option>
-                    <option value="triathlon">🏅 Triathlon</option>
-                    <option value="swimming">🏊 Natation</option>
-                    <option value="walking">🚶 Marche</option>
-                    <option value="trail">🏔️ Trail</option>
-                  </select>
                 </div>
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pays</label>

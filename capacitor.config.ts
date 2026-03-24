@@ -37,10 +37,11 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
     /**
-     * Doit matcher le fond réel des écrans (clair / sombre via contenu Web), pas le bleu splash :
-     * sinon une bande bleue intermittente apparaît sous la tab bar (couche native visible dans la safe area).
+     * Même bleu que le splash (`RUCONNECT_SPLASH_BLUE` / LoadingScreen) : sinon iOS affiche une bande
+     * blanche native dans la safe area basse pendant le chargement. La tab bar peint le bas avec
+     * `bg-background` sur `<nav>` pour ne pas laisser voir ce bleu une fois l’app chargée.
      */
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2c5dd9',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

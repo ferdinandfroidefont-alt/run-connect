@@ -18,11 +18,17 @@ interface Club {
 interface ClubSelectorProps {
   selectedClubId: string | null;
   onClubSelect: (clubId: string | null) => void;
+  /**
+   * compact = pastille 40×40 (carte, formulaires).
+   * filterRow = même hauteur / largeur que le bouton « Amis uniquement » dans SessionFilters.
+   */
+  triggerMode?: 'compact' | 'filterRow';
 }
 
 export const ClubSelector: React.FC<ClubSelectorProps> = ({
   selectedClubId,
-  onClubSelect
+  onClubSelect,
+  triggerMode = 'compact',
 }) => {
   const { user } = useAuth();
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -92,7 +98,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     setIsOpen(false);
   };
 
-  /** Même taille / style que le bouton « amis uniquement » sur la carte */
+  /** Pastille carte — alignée sur le bouton « amis » 40×40 de InteractiveMap */
   const mapClubTriggerClass = (active: boolean) =>
     cn(
       'flex w-10 h-10 min-w-10 min-h-10 max-w-10 max-h-10 shrink-0 items-center justify-center rounded-[10px] border shadow-sm p-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -101,7 +107,27 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
         : 'border-border bg-card text-foreground hover:bg-secondary/50'
     );
 
+  /** Identique au bouton « 👥 Amis uniquement » : Button size="sm" + h-8 w-full */
+  const filterRowButtonClass = 'justify-start text-xs h-8 w-full gap-2';
+
+  const filterRowLabel =
+    triggerMode === 'filterRow'
+      ? selectedClub
+        ? selectedClub.group_name
+        : clubs.length === 0
+          ? 'Aucun club'
+          : 'Filtrer par club'
+      : '';
+
   if (loading) {
+    if (triggerMode === 'filterRow') {
+      return (
+        <Button type="button" variant="outline" size="sm" disabled className={cn(filterRowButtonClass, 'cursor-wait opacity-90')}>
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+          <span className="min-w-0 truncate text-left">Chargement…</span>
+        </Button>
+      );
+    }
     return (
       <button
         type="button"
@@ -119,9 +145,22 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
-            <Users className="h-4 w-4" aria-hidden />
-          </button>
+          {triggerMode === 'filterRow' ? (
+            <Button
+              type="button"
+              variant={selectedClubId ? 'default' : 'outline'}
+              size="sm"
+              className={filterRowButtonClass}
+              aria-label={filterRowLabel}
+            >
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="min-w-0 truncate text-left">🏢 {filterRowLabel}</span>
+            </Button>
+          ) : (
+            <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
+              <Users className="h-4 w-4" aria-hidden />
+            </button>
+          )}
         </PopoverTrigger>
         
         <PopoverContent className="w-80 p-2" align="start">
@@ -139,9 +178,24 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
-          <Users className="h-4 w-4" aria-hidden />
-        </button>
+        {triggerMode === 'filterRow' ? (
+          <Button
+            type="button"
+            variant={selectedClubId ? 'default' : 'outline'}
+            size="sm"
+            className={filterRowButtonClass}
+            aria-label={selectedClub?.group_name || 'Filtrer par club'}
+          >
+            <Users className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="min-w-0 truncate text-left">
+              {selectedClub ? `🏢 ${selectedClub.group_name}` : '🏢 Filtrer par club'}
+            </span>
+          </Button>
+        ) : (
+          <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
+            <Users className="h-4 w-4" aria-hidden />
+          </button>
+        )}
       </PopoverTrigger>
       
       <PopoverContent className="w-80 p-2" align="start">

@@ -4,12 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { getKeyBody } from '@/lib/googleMapsKey';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
-import { Route, Mountain, TrendingUp, Star, Camera, MapPin } from 'lucide-react';
+import { Route, Mountain, Star, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
 
 interface RoutesFeedCardProps {
   route: FeedRoute;
@@ -31,9 +32,18 @@ const formatElevation = (meters: number | null) => {
 export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+  const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const [miniMapReady, setMiniMapReady] = useState(false);
+  const { position } = useGeolocation();
 
   useEffect(() => {
     if (!mapContainer.current || !route.coordinates?.length) return;
+
+    let cancelled = false;
+    setMiniMapReady(false);
+    userLocationMarkerRef.current?.setMap(null);
+    userLocationMarkerRef.current = null;
+    mapRef.current = null;
 
     const initMap = async () => {
       if (!window.google?.maps) {
@@ -50,7 +60,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
           return;
         }
       }
-      if (!mapContainer.current) return;
+      if (!mapContainer.current || cancelled) return;
     const path = route.coordinates.map((coord: any) => {
       if (coord.lat !== undefined && coord.lng !== undefined) {
         return { lat: Number(coord.lat), lng: Number(coord.lng) };
@@ -65,7 +75,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
     const bounds = new google.maps.LatLngBounds();
     path.forEach((coord: any) => bounds.extend(coord));
 
-    mapRef.current = new google.maps.Map(mapContainer.current, {
+    const mapInstance = new google.maps.Map(mapContainer.current, {
       center: bounds.getCenter(),
       zoom: 10,
       mapTypeId: 'roadmap',
@@ -77,6 +87,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         { featureType: 'all', elementType: 'labels', stylers: [{ visibility: 'off' }] },
       ]
     });
+    mapRef.current = mapInstance;
 
     new google.maps.Polyline({
       path,
@@ -84,18 +95,40 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
       strokeColor: '#5B7CFF',
       strokeOpacity: 0.8,
       strokeWeight: 3,
-      map: mapRef.current,
+      map: mapInstance,
     });
 
-    mapRef.current.fitBounds(bounds, 20);
-
-    return () => { mapRef.current = null; };
+    mapInstance.fitBounds(bounds, 20);
+    if (!cancelled) setMiniMapReady(true);
     };
 
     initMap();
 
-    return () => { mapRef.current = null; };
+    return () => {
+      cancelled = true;
+      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current = null;
+      mapRef.current = null;
+      setMiniMapReady(false);
+    };
   }, [route.coordinates]);
+
+  useEffect(() => {
+    if (!miniMapReady || !mapRef.current) return;
+    if (!position) {
+      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current = null;
+      return;
+    }
+    userLocationMarkerRef.current?.setMap(null);
+    userLocationMarkerRef.current = new google.maps.Marker({
+      map: mapRef.current,
+      position: { lat: position.lat, lng: position.lng },
+      icon: getUserLocationMarkerIcon(),
+      zIndex: 1000,
+      title: 'Votre position',
+    });
+  }, [position, miniMapReady]);
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -130,8 +163,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         </div>
         {route.distance_from_user > 0 && (
           <div className="absolute top-ios-2 right-ios-2 z-[1]">
-            <Badge variant="secondary" className="bg-card/95 backdrop-blur-sm text-ios-caption1 gap-ios-1 rounded-full border border-border/60">
-              <MapPin className="h-3 w-3" />
+            <Badge variant="secondary" className="bg-card/95 backdrop-blur-sm text-ios-caption1 tabular-nums rounded-full border border-border/60">
               {route.distance_from_user.toFixed(1)} km
             </Badge>
           </div>

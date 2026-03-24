@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Route, Mountain, Loader2, Bookmark, BookmarkCheck, Map as MapViewIcon } from 'lucide-react';
+import { Route, Mountain, Loader2, Bookmark, BookmarkCheck, Map as MapViewIcon, Trash2 } from 'lucide-react';
 import { GalleryPhoto, findRoutesNearPhoto, type GalleryMapRoutePreview } from '@/hooks/useRoutePhotosGallery';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { routePhotoStoragePathFromPublicUrl } from '@/lib/routePhotoStorage';
 
 interface RoutePhotoDetailSheetProps {
   photo: GalleryPhoto | null;
@@ -15,6 +16,7 @@ interface RoutePhotoDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   /** Affiche l’itinéraire sur la carte galerie (tracé + photo + position). */
   onViewRouteOnMap?: (route: GalleryMapRoutePreview, contextPhoto: GalleryPhoto) => void;
+  onPhotoDeleted?: () => void;
 }
 
 const formatDistance = (meters: number | null) => {
@@ -28,6 +30,7 @@ export const RoutePhotoDetailSheet = ({
   open,
   onOpenChange,
   onViewRouteOnMap,
+  onPhotoDeleted,
 }: RoutePhotoDetailSheetProps) => {
   const { user } = useAuth();
   const [nearbyRoutes, setNearbyRoutes] = useState<any[]>([]);
@@ -67,6 +70,24 @@ export const RoutePhotoDetailSheet = ({
     };
     loadSaved();
   }, [user, nearbyRoutes]);
+
+  const deleteOwnPhoto = async () => {
+    if (!user || !photo || photo.user_id !== user.id) return;
+    try {
+      const path = routePhotoStoragePathFromPublicUrl(photo.photo_url);
+      if (path) {
+        const { error: storageErr } = await supabase.storage.from('route-photos').remove([path]);
+        if (storageErr) console.warn('Storage delete route photo:', storageErr);
+      }
+      const { error } = await supabase.from('route_photos').delete().eq('id', photo.id);
+      if (error) throw error;
+      toast.success('Photo supprimée');
+      onOpenChange(false);
+      onPhotoDeleted?.();
+    } catch {
+      toast.error('Impossible de supprimer la photo');
+    }
+  };
 
   const toggleSaveRoute = async (routeId: string) => {
     if (!user) return;
@@ -153,6 +174,18 @@ export const RoutePhotoDetailSheet = ({
 
             {photo.caption && (
               <p className="text-ios-subheadline text-foreground leading-relaxed px-ios-1">{photo.caption}</p>
+            )}
+
+            {user?.id === photo.user_id && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-ios-lg border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={deleteOwnPhoto}
+              >
+                <Trash2 className="mr-ios-2 h-4 w-4" />
+                Supprimer ma photo
+              </Button>
             )}
 
             {/* Nearby routes — liste groupée */}

@@ -22,6 +22,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 const RouteDetailDialog = lazy(() =>
   import('@/components/routes-feed/RouteDetailDialog').then((m) => ({ default: m.RouteDetailDialog }))
@@ -103,7 +104,40 @@ export default function MySessions() {
   const [routeSource, setRouteSource] = useState<'created' | 'feed' | 'photos'>('created');
   const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
   const [showRouteDetail, setShowRouteDetail] = useState(false);
+  const [openRouteDetailWithAddPhoto, setOpenRouteDetailWithAddPhoto] = useState(false);
+  const [pendingFilePick, setPendingFilePick] = useState<'camera' | 'gallery' | null>(null);
+  const [photosTabRouteId, setPhotosTabRouteId] = useState('');
+  const [routePhotosSyncKey, setRoutePhotosSyncKey] = useState(0);
   const routesFeed = useRoutesFeed();
+  const clearPendingFilePick = useCallback(() => setPendingFilePick(null), []);
+  const bumpRouteGalleryAfterRouteDetailMutation = useCallback(() => {
+    routesFeed.refresh();
+    setRoutePhotosSyncKey((n) => n + 1);
+  }, [routesFeed.refresh]);
+
+  useEffect(() => {
+    if (currentView === 'routes' && routeSource === 'photos') {
+      routesFeed.refresh();
+    }
+  }, [currentView, routeSource, routesFeed.refresh]);
+
+  const openFeedRouteDetailFromPhotosTab = useCallback(
+    (source: 'camera' | 'gallery') => {
+      const r = routesFeed.routes.find((x) => x.id === photosTabRouteId);
+      if (!r) {
+        toast({
+          title: 'Choisir un itinéraire',
+          description: 'Sélectionnez un itinéraire dans la liste (identique à l’onglet Feed).',
+        });
+        return;
+      }
+      setSelectedFeedRoute(r);
+      setOpenRouteDetailWithAddPhoto(true);
+      setPendingFilePick(source);
+      setShowRouteDetail(true);
+    },
+    [photosTabRouteId, routesFeed.routes, toast]
+  );
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
@@ -1019,7 +1053,7 @@ export default function MySessions() {
                             : 'text-muted-foreground'
                         }`}
                       >
-                        À proximité
+                        Feed
                       </button>
                       <button
                         type="button"
@@ -1326,20 +1360,16 @@ export default function MySessions() {
                       key={route.id}
                       route={route}
                       index={i}
-                      onClick={(r) => { setSelectedFeedRoute(r); setShowRouteDetail(true); }}
+                      onClick={(r) => {
+                        setOpenRouteDetailWithAddPhoto(false);
+                        setPendingFilePick(null);
+                        setSelectedFeedRoute(r);
+                        setShowRouteDetail(true);
+                      }}
                     />
                   ))}
                 </div>
               )}
-
-              <Suspense fallback={null}>
-                <RouteDetailDialog
-                  route={selectedFeedRoute}
-                  open={showRouteDetail}
-                  onOpenChange={setShowRouteDetail}
-                  onRefresh={routesFeed.refresh}
-                />
-              </Suspense>
             </div>
           ) : (
             <div className="space-y-ios-3 px-ios-4 pb-ios-2">
@@ -1348,34 +1378,85 @@ export default function MySessions() {
                   Ajouter une photo
                 </p>
                 <p className="text-ios-caption1 text-muted-foreground mb-ios-3 leading-relaxed">
-                  Pour publier une photo d’itinéraire, choisissez d’abord un itinéraire à proximité puis utilisez
-                  l’une des 2 options : appareil photo ou galerie.
+                  Choisissez un itinéraire public (même liste que le feed), puis ouvrez l’appareil photo ou la galerie pour
+                  publier sur cet itinéraire.
                 </p>
+                <div className="mb-ios-3">
+                  {routesFeed.loading ? (
+                    <p className="text-ios-caption1 text-muted-foreground py-ios-2">Chargement des itinéraires…</p>
+                  ) : routesFeed.routes.length === 0 ? (
+                    <p className="text-ios-caption1 text-muted-foreground py-ios-2 leading-relaxed">
+                      Aucun itinéraire pour l’instant — ouvrez le feed ou activez la localisation.
+                    </p>
+                  ) : (
+                    <Select value={photosTabRouteId || undefined} onValueChange={(v) => setPhotosTabRouteId(v)}>
+                      <SelectTrigger className="w-full rounded-ios-md border-border bg-background text-ios-footnote h-11">
+                        <SelectValue placeholder="Itinéraire du feed…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {routesFeed.routes.map((r) => (
+                          <SelectItem key={r.id} value={r.id} className="text-ios-footnote">
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-ios-2 mb-ios-2">
-                  <div className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-2 flex items-center gap-ios-2">
-                    <Camera className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-ios-footnote font-medium">Appareil photo</span>
-                  </div>
-                  <div className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-2 flex items-center gap-ios-2">
-                    <Images className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-ios-footnote font-medium">Galerie</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openFeedRouteDetailFromPhotosTab('camera')}
+                    className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-3 flex flex-col items-center justify-center gap-ios-1 text-muted-foreground hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[88px]"
+                  >
+                    <Camera className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-ios-footnote font-medium text-foreground text-center">Appareil photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openFeedRouteDetailFromPhotosTab('gallery')}
+                    className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-3 flex flex-col items-center justify-center gap-ios-1 text-muted-foreground hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[88px]"
+                  >
+                    <Images className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-ios-footnote font-medium text-foreground text-center">Galerie</span>
+                  </button>
                 </div>
                 <Button
                   type="button"
+                  variant="outline"
                   className="w-full"
                   onClick={() => setRouteSource('feed')}
                 >
-                  Ouvrir les itinéraires à proximité
+                  Ouvrir le feed
                 </Button>
               </div>
               <Suspense fallback={null}>
-                <RoutePhotosGallery />
+                <RoutePhotosGallery syncKey={routePhotosSyncKey} />
               </Suspense>
             </div>
           )}
         </div>
       </div>
+
+      {currentView === 'routes' && routeSource !== 'created' && (
+        <Suspense fallback={null}>
+          <RouteDetailDialog
+            route={selectedFeedRoute}
+            open={showRouteDetail}
+            onOpenChange={(open) => {
+              setShowRouteDetail(open);
+              if (!open) {
+                setOpenRouteDetailWithAddPhoto(false);
+                setPendingFilePick(null);
+              }
+            }}
+            onRefresh={bumpRouteGalleryAfterRouteDetailMutation}
+            initialAddPhotoMode={openRouteDetailWithAddPhoto}
+            pendingFilePick={pendingFilePick}
+            onPendingFilePickConsumed={clearPendingFilePick}
+          />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <RouteEditDialog

@@ -9,9 +9,7 @@ import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 import { FilterBar, FilterType, ActivityType, ScopeType } from "@/components/leaderboard/FilterBar";
-import { MyRankCard } from "@/components/leaderboard/MyRankCard";
 import { RulesSheet } from "@/components/leaderboard/RulesSheet";
-import { SeasonRewardBanner } from "@/components/leaderboard/SeasonRewardBanner";
 import { cn } from "@/lib/utils";
 
 interface LeaderboardUser {
@@ -44,17 +42,6 @@ const getUserRank = (points: number): string => {
   if (points >= 1000) return 'argent';
   if (points >= 500) return 'bronze';
   return 'novice';
-};
-
-const getNextRankInfo = (rank: string): { name: string; points: number } => {
-  switch (rank) {
-    case 'novice': return { name: 'Bronze', points: 500 };
-    case 'bronze': return { name: 'Argent', points: 1000 };
-    case 'argent': return { name: 'Or', points: 2000 };
-    case 'or': return { name: 'Platine', points: 3000 };
-    case 'platine': return { name: 'Diamant', points: 5000 };
-    default: return { name: 'Max', points: 5000 };
-  }
 };
 
 const getRankRing = (rank: string) => {
@@ -216,10 +203,6 @@ const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [userRank, setUserRank] = useState<number | null>(null);
-  const [userPoints, setUserPoints] = useState<number>(0);
-  const [userRankLabel, setUserRankLabel] = useState<string>('novice');
-  const [userRankChange, setUserRankChange] = useState<number>(0);
   const [activeScope, setActiveScope] = useState<ScopeType>('global');
   const [activeFilter, setActiveFilter] = useState<FilterType>('general');
   const [currentPage, setCurrentPage] = useState(1);
@@ -228,6 +211,7 @@ const Leaderboard = () => {
   const [userClubs, setUserClubs] = useState<Club[]>([]);
   const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const leaderboardScrollRef = useRef<HTMLDivElement>(null);
@@ -272,33 +256,12 @@ const Leaderboard = () => {
 
     try {
       const effectiveFilter = getEffectiveFilter();
-      let currentUserRank: number | null = null;
 
       if (user && page === 1) {
         const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
           limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
         });
-        const rankIndex = allData?.findIndex((u: any) => u.user_id === user.id);
-        currentUserRank = rankIndex !== undefined && rankIndex >= 0 ? rankIndex + 1 : null;
-        setUserRank(currentUserRank);
         setTotalUsers(allData?.length || 0);
-
-        if (rankIndex !== undefined && rankIndex >= 0 && allData) {
-          const myData = allData[rankIndex];
-          setUserPoints(myData.seasonal_points || 0);
-          setUserRankLabel(getUserRank(myData.seasonal_points || 0));
-        }
-
-        try {
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          const { data: historyData } = await supabase
-            .from('score_history').select('rank').eq('user_id', user.id)
-            .lte('recorded_at', weekAgo.toISOString()).order('recorded_at', { ascending: false }).limit(1);
-          if (historyData?.[0]?.rank && currentUserRank) {
-            setUserRankChange(historyData[0].rank - currentUserRank);
-          }
-        } catch { /* ignore */ }
       }
 
       const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
@@ -396,12 +359,14 @@ const Leaderboard = () => {
     }
   };
 
-  const filteredLeaderboard = searchQuery.trim()
-    ? leaderboard.filter(u =>
-        u.profile?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.profile?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : leaderboard;
+  const filteredLeaderboard =
+    fullscreenOpen && searchQuery.trim()
+      ? leaderboard.filter(
+          (u) =>
+            u.profile?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.profile?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : leaderboard;
 
   // Infinite scroll dans le bloc leaderboard (scroll interne)
   useEffect(() => {
@@ -416,9 +381,46 @@ const Leaderboard = () => {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMoreUsers, loading, loadingMore, searchQuery, filteredLeaderboard.length]);
+  }, [hasMoreUsers, loading, loadingMore, searchQuery, filteredLeaderboard.length, fullscreenOpen]);
 
-  const nextRankInfo = getNextRankInfo(userRankLabel);
+  const closeFullscreen = () => {
+    setFullscreenOpen(false);
+    setSearchQuery('');
+  };
+
+  const leaderboardListBody =
+    loading && leaderboard.length === 0 ? (
+      <div className="p-4">
+        <LeaderboardSkeleton />
+      </div>
+    ) : filteredLeaderboard.length === 0 ? (
+      <div className="flex flex-col items-center justify-center px-6 py-16">
+        <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
+        <p className="text-center text-[14px] text-muted-foreground">
+          {fullscreenOpen && searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
+        </p>
+      </div>
+    ) : (
+      <div className="bg-card">
+        {filteredLeaderboard.map((u, index) => {
+          const isMe = u.user_id === user?.id;
+          return (
+            <div key={u.user_id}>
+              <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} />
+              {index < filteredLeaderboard.length - 1 && <div className="ios-list-separator" />}
+            </div>
+          );
+        })}
+
+        {hasMoreUsers && !(fullscreenOpen && searchQuery.trim()) && (
+          <div ref={sentinelRef} className="flex justify-center py-4">
+            {loadingMore && (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            )}
+          </div>
+        )}
+      </div>
+    );
 
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-background">
@@ -446,23 +448,6 @@ const Leaderboard = () => {
 
       <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-4 pb-6 pt-4">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-          {userRank != null && (
-            <section aria-label="Mon classement">
-              <MyRankCard
-                currentRank={userRank}
-                currentPoints={userPoints}
-                nextRankName={nextRankInfo.name}
-                nextRankPoints={nextRankInfo.points}
-                userRank={userRankLabel}
-                rankChange={userRankChange}
-              />
-            </section>
-          )}
-
-          <section aria-label="Récompense saison">
-            <SeasonRewardBanner />
-          </section>
-
           <section aria-label="Filtres classement" className="rounded-[12px] border border-border bg-card p-3 shadow-sm">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Filtres</p>
             <FilterBar
@@ -482,7 +467,55 @@ const Leaderboard = () => {
             />
           </section>
 
-          <section className="rounded-[12px] border border-border bg-card p-3 shadow-sm" aria-label="Recherche">
+          {!fullscreenOpen && (
+            <section aria-label="Leaderboard" className="rounded-[12px] border border-border bg-card shadow-sm overflow-hidden">
+              <div className="flex items-start gap-2 border-b border-border bg-card px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setFullscreenOpen(true)}
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-background text-[18px] leading-none transition-colors hover:bg-secondary/60 active:bg-secondary/80"
+                  aria-label="Agrandir le classement"
+                >
+                  ⛶
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Leaderboard</p>
+                  <p className="text-[15px] font-semibold text-foreground">Top saison</p>
+                </div>
+              </div>
+
+              <div
+                ref={leaderboardScrollRef}
+                className="h-[34rem] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+              >
+                {leaderboardListBody}
+              </div>
+            </section>
+          )}
+        </div>
+      </main>
+
+      {fullscreenOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Classement agrandi"
+        >
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-2.5">
+            <button
+              type="button"
+              onClick={closeFullscreen}
+              className="flex items-center gap-1 text-primary text-[16px] font-medium"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-[15px] font-normal">Réduire</span>
+            </button>
+            <h2 className="text-[17px] font-semibold text-foreground">Classement</h2>
+            <div className="w-[72px]" aria-hidden />
+          </div>
+
+          <div className="shrink-0 border-b border-border bg-card px-4 py-3">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
             </p>
@@ -495,58 +528,16 @@ const Leaderboard = () => {
                 className="h-10 rounded-[10px] border border-border bg-background pl-9 text-[14px]"
               />
             </div>
-          </section>
+          </div>
 
-          <section aria-label="Leaderboard" className="rounded-[12px] border border-border bg-card shadow-sm overflow-hidden">
-            <div className="border-b border-border bg-card px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Leaderboard</p>
-              <p className="text-[15px] font-semibold text-foreground">Top saison</p>
-            </div>
-
-            <div
-              ref={leaderboardScrollRef}
-              className="h-[34rem] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
-            >
-              {loading && leaderboard.length === 0 ? (
-                <div className="p-4">
-                  <LeaderboardSkeleton />
-                </div>
-              ) : filteredLeaderboard.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-6 py-16">
-                  <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
-                  <p className="text-center text-[14px] text-muted-foreground">
-                    {searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-card">
-                  {filteredLeaderboard.map((u, index) => {
-                    const isMe = u.user_id === user?.id;
-                    return (
-                      <div key={u.user_id}>
-                        <LeaderboardRow
-                          u={u}
-                          isMe={isMe}
-                          onClick={() => navigateToProfile(u.user_id)}
-                        />
-                        {index < filteredLeaderboard.length - 1 && <div className="ios-list-separator" />}
-                      </div>
-                    );
-                  })}
-
-                  {hasMoreUsers && !searchQuery.trim() && (
-                    <div ref={sentinelRef} className="flex justify-center py-4">
-                      {loadingMore && (
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
+          <div
+            ref={leaderboardScrollRef}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          >
+            {leaderboardListBody}
+          </div>
         </div>
-      </main>
+      )}
 
       {/* ── Rules Sheet ── */}
       <RulesSheet open={showRules} onOpenChange={setShowRules} />

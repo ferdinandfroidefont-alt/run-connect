@@ -68,7 +68,7 @@ export const BottomNavigation = () => {
 
   return (
     <nav
-      className="z-50 w-full shrink-0"
+      className="z-50 w-full shrink-0 bg-background"
       role="navigation"
       aria-label="Navigation principale"
       style={{ paddingBottom: 'var(--safe-area-bottom)' }}

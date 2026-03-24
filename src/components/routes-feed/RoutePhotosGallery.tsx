@@ -24,7 +24,12 @@ function coordinatesToPath(coordinates: unknown): google.maps.LatLngLiteral[] {
   return out.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
 }
 
-export const RoutePhotosGallery = () => {
+interface RoutePhotosGalleryProps {
+  /** Incrémenter pour recharger la liste (ex. après ajout / suppression depuis la fiche itinéraire). */
+  syncKey?: number;
+}
+
+export const RoutePhotosGallery = ({ syncKey = 0 }: RoutePhotosGalleryProps) => {
   const { photos, loading, refresh } = useRoutePhotosGallery();
   const { position } = useGeolocation();
   const positionRef = useRef(position);
@@ -44,6 +49,21 @@ export const RoutePhotosGallery = () => {
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [mapInitNonce, setMapInitNonce] = useState(0);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!syncKey) return;
+    refresh();
+  }, [syncKey, refresh]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (mapRef.current) google.maps.event.trigger(mapRef.current, 'resize');
+      });
+    });
+  }, [mapFullscreen, mapReady]);
 
   const clearRoutePreview = useCallback(() => setMapRoutePreview(null), []);
 
@@ -274,11 +294,44 @@ export const RoutePhotosGallery = () => {
 
   return (
     <>
-      <div className="flex flex-col min-h-[min(72dvh,640px)] gap-ios-3 mx-ios-4 pb-ios-2">
+      <div
+        className={cn(
+          'flex flex-col gap-ios-3 pb-ios-2',
+          mapFullscreen
+            ? 'fixed inset-0 z-[90] mx-0 min-h-0 bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+            : 'min-h-[min(72dvh,640px)] mx-ios-4'
+        )}
+      >
         <div
-          className="relative w-full flex-1 min-h-[min(52dvh,420px)] rounded-ios-lg overflow-hidden border border-border bg-secondary shadow-inner ring-1 ring-black/5 dark:ring-white/10"
+          className={cn(
+            'relative w-full overflow-hidden border border-border bg-secondary shadow-inner ring-1 ring-black/5 dark:ring-white/10',
+            mapFullscreen
+              ? 'flex flex-1 min-h-0 flex-col rounded-none border-0 ring-0 shadow-none'
+              : 'flex-1 min-h-[min(52dvh,420px)] rounded-ios-lg'
+          )}
         >
-          <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+          {mapFullscreen && (
+            <div className="shrink-0 z-20 flex items-center justify-between gap-ios-2 border-b border-border bg-background px-ios-4 py-ios-2">
+              <span className="text-ios-headline font-semibold text-foreground">Carte</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setMapFullscreen(false)}
+              >
+                Réduire
+              </Button>
+            </div>
+          )}
+
+          <div
+            className={cn(
+              'relative w-full',
+              mapFullscreen ? 'min-h-0 flex-1' : 'min-h-[min(52dvh,420px)]'
+            )}
+          >
+            <div ref={mapContainer} className="absolute inset-0 h-full w-full" />
 
           {mapError && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-card/95 backdrop-blur-sm px-ios-6 text-center">
@@ -339,8 +392,21 @@ export const RoutePhotosGallery = () => {
               </div>
             </div>
           )}
+
+          {!mapError && !mapFullscreen && (
+            <button
+              type="button"
+              className="absolute bottom-[5.5rem] right-ios-3 z-[15] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card/95 text-xl shadow-md backdrop-blur-md transition-transform active:scale-95"
+              onClick={() => setMapFullscreen(true)}
+              aria-label="Plein écran"
+            >
+              ⛶
+            </button>
+          )}
+          </div>
         </div>
 
+        {!mapFullscreen && (
         <div className="ios-card rounded-ios-lg border border-border shadow-sm p-ios-3">
           <div className="flex items-center justify-between mb-ios-2">
             <p className="text-ios-footnote font-semibold text-foreground uppercase tracking-wide">
@@ -385,6 +451,7 @@ export const RoutePhotosGallery = () => {
             </p>
           )}
         </div>
+        )}
       </div>
 
       <RoutePhotoDetailSheet
@@ -394,6 +461,7 @@ export const RoutePhotosGallery = () => {
           if (!open) setSelectedPhoto(null);
         }}
         onViewRouteOnMap={handleViewRouteOnMap}
+        onPhotoDeleted={refresh}
       />
     </>
   );
