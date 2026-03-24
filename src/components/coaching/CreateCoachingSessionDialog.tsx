@@ -14,6 +14,7 @@ import { GraduationCap, Users, UserCheck, ChevronLeft, Send, BookOpen, Save, Map
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
+import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import {
   rccToSessionBlocks,
@@ -331,11 +332,18 @@ export const CreateCoachingSessionDialog = ({
               onParsedChange={handleParsedChange}
             />
             {parsedBlocks.length > 0 && (
-              <RCCBlocksPreview
-                blocks={parsedBlocks}
-                editableRpe
-                onRpeChange={handleBlockRpe}
-              />
+              <div className="space-y-2">
+                <p className="text-[12px] text-muted-foreground leading-snug">
+                  Sous l’aperçu, indiquez le <span className="font-medium text-foreground">RPE cible (1–10)</span> pour
+                  chaque partie (échauffement, séries, retour au calme). Sur les fractionnés, vous pouvez aussi fixer le
+                  RPE de la récup entre répétitions.
+                </p>
+                <RCCBlocksPreview
+                  blocks={parsedBlocks}
+                  editableRpe
+                  onRpeChange={handleBlockRpe}
+                />
+              </div>
             )}
 
             {/* Location */}

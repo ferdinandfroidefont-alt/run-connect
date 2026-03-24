@@ -127,7 +127,9 @@ export const RCCBlocksPreview = ({ blocks, editableRpe, onRpeChange }: RCCBlocks
         </span>
       </div>
 
-      <p className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide">Aperçu</p>
+      <p className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+        {editableRpe ? "Aperçu — RPE par segment" : "Aperçu"}
+      </p>
 
       <div className="rounded-ios-lg border border-border divide-y divide-border overflow-hidden bg-card">
         {blocks.map((block, i) => {
