@@ -1,11 +1,13 @@
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { AppBootFallback } from '@/components/AppBootFallback';
+
+const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -16,6 +18,31 @@ export const Layout = ({ children }: LayoutProps) => {
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { hideBottomNav } = useAppContext();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  const isHome = location.pathname === '/';
+  const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
+
+  useEffect(() => {
+    if (isHome) setHomeMapPrimed(true);
+  }, [isHome]);
+
+  // Précharge le chunk carte après le premier rendu pour lisser le retour sur l’accueil.
+  useEffect(() => {
+    if (!user?.id) return;
+    const t = window.setTimeout(() => {
+      void import('@/components/PersistentHomeMap');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [user?.id]);
+
+  const latStr = searchParams.get('lat');
+  const lngStr = searchParams.get('lng');
+  const zoomStr = searchParams.get('zoom');
+  const sessionIdParam = searchParams.get('sessionId') || undefined;
+  const mapInitialLat = latStr ? parseFloat(latStr) : undefined;
+  const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
+  const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
 
   // Réserve l’espace sous les pages en position:fixed (Classement, etc.) quand la barre du bas est visible
   useEffect(() => {
@@ -91,9 +118,24 @@ export const Layout = ({ children }: LayoutProps) => {
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
         partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
       */}
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
-          {children}
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {homeMapPrimed && (
+          <div className="absolute inset-0 z-0 min-h-0">
+            <Suspense fallback={null}>
+              <PersistentHomeMap
+                visible={isHome}
+                initialLat={mapInitialLat}
+                initialLng={mapInitialLng}
+                initialZoom={mapInitialZoom}
+                highlightSessionId={sessionIdParam}
+              />
+            </Suspense>
+          </div>
+        )}
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+          <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
+            {children}
+          </div>
         </div>
       </main>
       {!hideBottomNav && <BottomNavigation />}

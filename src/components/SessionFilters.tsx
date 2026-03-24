@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Filter, Sunrise, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { ClubSelector } from "./ClubSelector";
+import { cn } from "@/lib/utils";
 
 interface Filter {
   activity_types: string[];
@@ -102,11 +103,17 @@ export const SessionFilters = ({ filters, onFiltersChange, className, onOpenChan
   const activeFilterLabel = getActiveFilterLabel();
 
   return (
-    <Card className={`${isOpen ? 'w-[calc(100vw-2rem)] max-w-80' : 'w-auto'} bg-card/95 backdrop-blur-sm shadow-map-control relative z-50 ${className || ''}`}>
+    <Card
+      className={cn(
+        isOpen ? 'w-[calc(100vw-2rem)] max-w-80' : 'w-auto',
+        'relative z-50 overflow-hidden rounded-ios-md border border-border bg-card shadow-[var(--shadow-card)]',
+        className
+      )}
+    >
       {/* Header cliquable - toujours visible */}
-      <div 
+      <div
         onClick={handleToggleOpen}
-        className="flex items-center justify-between p-2 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-xl"
+        className="flex cursor-pointer items-center justify-between rounded-t-ios-md p-ios-2 transition-colors hover:bg-secondary/50"
       >
         {isOpen ? (
           <>

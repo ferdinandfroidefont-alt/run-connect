@@ -20,7 +20,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, MapPin, Calendar, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Plus, Search, MapPin, CalendarDays, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, Minimize2, ArrowLeft, CheckCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -28,6 +28,12 @@ import { fr } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import {
+  MAP_HOME_FAB_CLASS,
+  MAP_HOME_FAB_ACTIVE_CLASS,
+  cnMapHomeTimeChip,
+  MAP_HOME_SEARCH_INPUT_CLASS,
+} from '@/lib/mapHomeUi';
 import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { useShareProfile } from '@/hooks/useShareProfile';
@@ -99,15 +105,13 @@ const TIME_SLOTS = [
   { id: 'evening' as const, icon: Moon, label: '18h-23h', startHour: 18, endHour: 23, color: 'text-indigo-500' },
 ];
 
-/** Boutons flottants droite — même surface que les contrôles carte (bg-card, pas de verre) */
-const MAP_RIGHT_FAB_BUTTON_CLASS =
-  'h-10 w-10 min-h-10 min-w-10 shrink-0 rounded-[10px] border border-border bg-card p-0 text-foreground shadow-sm backdrop-blur-none flex items-center justify-center transition-all hover:bg-secondary/50 active:scale-[0.97] [&_svg]:size-[18px]';
-
 interface InteractiveMapProps {
   initialLat?: number;
   initialLng?: number;
   initialZoom?: number;
   highlightSessionId?: string;
+  /** Faux quand la carte est masquée (onglet autre page) mais toujours montée — déclenche un resize au retour. */
+  isActive?: boolean;
 }
 
 // Factory function to create HTMLMarker class when Google Maps is loaded
@@ -159,7 +163,8 @@ export const InteractiveMap = ({
   initialLat,
   initialLng,
   initialZoom,
-  highlightSessionId
+  highlightSessionId,
+  isActive = true,
 }: InteractiveMapProps = {}) => {
   const {
     user,
@@ -711,6 +716,17 @@ export const InteractiveMap = ({
       }
     }
   }, [highlightSessionId, sessions]);
+
+  // Retour sur l’accueil après une autre page : la carte était invisible (taille 0) — forcer un resize.
+  useEffect(() => {
+    if (!isMapLoaded || !map.current || !isActive) return;
+    const id = requestAnimationFrame(() => {
+      if (map.current) {
+        google.maps.event.trigger(map.current, "resize");
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [isActive, isMapLoaded]);
 
   // Real-time updates for sessions with improved mobile support
   useEffect(() => {
@@ -1402,17 +1418,17 @@ export const InteractiveMap = ({
 
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10 pt-[var(--safe-area-top)]">
-        <div className="bg-background border-b border-border/50 overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
+        <div className="border-b border-border bg-card/95 backdrop-blur-sm overflow-hidden">
+          <div className="relative flex items-center justify-between px-ios-4 py-ios-3 ios-map-header">
             {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2 ios-title-align">
+            <h1 className="text-ios-headline font-semibold text-foreground leading-none flex items-center ios-title-align">
               Runconnect
             </h1>
             
             {/* User Profile Avatar - Centered - Clickable to access profile */}
             {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
-                <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
-                  <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                <div onClick={() => setShowProfileDialog(true)} className="relative flex cursor-pointer flex-col items-center transition-opacity active:opacity-80">
+                  <Avatar className="h-14 w-14 ring-2 ring-border transition-all duration-200 hover:ring-primary/35">
                     <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
                     <AvatarFallback className="text-lg">
                       {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
@@ -1423,17 +1439,24 @@ export const InteractiveMap = ({
               </div>}
             
             {/* Bell and Settings - Right aligned */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-ios-2">
               <div data-tutorial="notifications" className="flex items-center justify-center">
                 <Suspense fallback={null}>
                 <Suspense fallback={null}>
-                  <NotificationCenter onSessionUpdated={loadSessions} />
+                  <NotificationCenter onSessionUpdated={loadSessions} triggerClassName={MAP_HOME_FAB_CLASS} />
                 </Suspense>
                 </Suspense>
               </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
-                ⚙️
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-ios-md text-foreground hover:bg-secondary"
+                onClick={() => setShowSettingsDialog(true)}
+                aria-label="Paramètres"
+              >
+                <Settings className="h-[20px] w-[20px]" strokeWidth={1.75} />
+              </Button>
             </div>
           </div>
         </div>
@@ -1445,7 +1468,7 @@ export const InteractiveMap = ({
             <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
             ...prev,
             search_query: e.target.value
-          }))} className="pl-10" />
+          }))} className={cn("pl-10", MAP_HOME_SEARCH_INPUT_CLASS)} />
           </div>
           
           {/* Date Filter and Time Slots */}
@@ -1455,26 +1478,22 @@ export const InteractiveMap = ({
               {/* Date Filter - Calendar */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <div className="relative cursor-pointer">
-                    {/* Calendar Icon Style */}
-                    <div className="w-12 h-12 bg-red-500 rounded-t-lg relative shadow-lg">
-                      {/* Top holes */}
-                      <div className="absolute -top-1.5 left-2 w-1.5 h-3 bg-white rounded-full"></div>
-                      <div className="absolute -top-1.5 right-2 w-1.5 h-3 bg-white rounded-full"></div>
-                      {/* Month text */}
-                      <div className="text-white text-xs font-bold text-center pt-1.5">
-                        {format(filters.selected_date, "MMM", {
-                        locale: fr
-                      }).toUpperCase()}
-                      </div>
-                    </div>
-                    {/* Calendar body */}
-                    <div className="w-12 h-9 bg-white border-2 border-t-0 border-gray-200 rounded-b-lg flex items-center justify-center shadow-lg">
-                      <div className="text-black text-lg font-bold">
-                        {format(filters.selected_date, "d")}
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    className={cn(
+                      MAP_HOME_FAB_CLASS,
+                      "h-auto min-h-[52px] w-[52px] min-w-[52px] flex-col gap-0.5 py-2"
+                    )}
+                    aria-label="Choisir la date"
+                  >
+                    <CalendarDays className="h-[17px] w-[17px] text-primary" aria-hidden />
+                    <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {format(filters.selected_date, "MMM", { locale: fr })}
+                    </span>
+                    <span className="text-[17px] font-bold leading-none tabular-nums text-foreground">
+                      {format(filters.selected_date, "d")}
+                    </span>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarComponent mode="single" selected={filters.selected_date} onSelect={date => {
@@ -1492,19 +1511,15 @@ export const InteractiveMap = ({
               {TIME_SLOTS.map(slot => (
                 <button
                   key={slot.id}
+                  type="button"
                   onClick={() => setFilters(prev => ({
                     ...prev,
                     time_slot: prev.time_slot === slot.id ? null : slot.id
                   }))}
-                  className={cn(
-                    "flex flex-col items-center justify-center rounded-lg p-1.5 transition-all shadow-md border min-w-[50px]",
-                    filters.time_slot === slot.id 
-                      ? "bg-primary text-primary-foreground border-primary scale-105" 
-                      : "bg-card text-foreground border-border hover:bg-muted"
-                  )}
+                  className={cnMapHomeTimeChip(filters.time_slot === slot.id)}
                 >
-                  <slot.icon className={cn("h-5 w-5", filters.time_slot === slot.id ? "text-primary-foreground" : slot.color)} />
-                  <span className="text-[10px] font-medium mt-0.5">{slot.label}</span>
+                  <slot.icon className={cn("h-[18px] w-[18px]", filters.time_slot === slot.id ? "text-primary" : slot.color)} />
+                  <span className="text-[10px] font-semibold leading-tight">{slot.label}</span>
                 </button>
               ))}
             </div>
@@ -1512,13 +1527,19 @@ export const InteractiveMap = ({
             {/* Friends Only Filter and Club Selector - stacked below calendar */}
             <div className="flex flex-col gap-2">
               {/* Friends Only Filter */}
-              <button onClick={() => setFilters(prev => ({
-              ...prev,
-              friends_only: !prev.friends_only
-            }))} className={cn("flex items-center justify-center rounded-[10px] transition-all shadow-sm border w-10 h-10", filters.friends_only ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-secondary/50")}>
-                <div className="flex items-center gap-1">
-                  <PersonStanding size={16} />
-                  <Bike size={16} />
+              <button
+                type="button"
+                onClick={() => setFilters(prev => ({
+                  ...prev,
+                  friends_only: !prev.friends_only
+                }))}
+                className={cn(MAP_HOME_FAB_CLASS, filters.friends_only && MAP_HOME_FAB_ACTIVE_CLASS)}
+                title="Amis uniquement"
+                aria-pressed={filters.friends_only}
+              >
+                <div className="flex items-center gap-0.5">
+                  <PersonStanding className="h-4 w-4" strokeWidth={1.75} />
+                  <Bike className="h-4 w-4" strokeWidth={1.75} />
                 </div>
               </button>
               
@@ -1533,16 +1554,16 @@ export const InteractiveMap = ({
       </div>}
 
       {/* Route Creation Mode Banner */}
-      {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
-            <span className="text-sm font-medium">
-              Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
+      {isRouteCreationMode && <div className="absolute top-4 left-1/2 z-20 max-w-[min(100vw-2rem,28rem)] -translate-x-1/2 px-ios-2">
+          <div className="flex flex-col gap-ios-2 rounded-ios-md border border-border bg-card px-ios-3 py-ios-2 shadow-[var(--shadow-card)] sm:flex-row sm:items-center">
+            <span className="text-ios-subheadline font-medium text-foreground">
+              Mode création d&apos;itinéraire — touchez la carte pour placer des points
             </span>
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-medium" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
+            <div className="flex shrink-0 gap-ios-2">
+              <Button size="sm" className="h-9 flex-1 rounded-ios-sm sm:flex-none" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
                 Terminer
               </Button>
-              <Button size="sm" variant="outline" onClick={cancelRouteCreation}>
+              <Button size="sm" variant="outline" className="h-9 flex-1 rounded-ios-sm sm:flex-none" onClick={cancelRouteCreation}>
                 Annuler
               </Button>
             </div>
@@ -1556,8 +1577,8 @@ export const InteractiveMap = ({
 
       {/* Toggle Elevation Profile Button */}
       {isRouteCreationMode && <div className="absolute bottom-4 left-20 z-20">
-          <Button variant="outline" size="sm" onClick={() => setShowElevationProfile(!showElevationProfile)} className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white" title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}>
-            {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
+          <Button variant="outline" size="sm" onClick={() => setShowElevationProfile(!showElevationProfile)} className="h-9 rounded-ios-md border-border bg-card shadow-[var(--shadow-card)] hover:bg-secondary" title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}>
+            {showElevationProfile ? "Masquer profil" : "Profil alt."}
           </Button>
         </div>}
 
@@ -1570,37 +1591,50 @@ export const InteractiveMap = ({
           />
 
           {/* Leaderboard + présence : même fond que amis / club (carte, clair / sombre) */}
-          <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/leaderboard')} title="Classement">
-            <Crown className="text-amber-500/95" strokeWidth={1.65} aria-hidden />
-          </Button>
+          <button type="button" className={MAP_HOME_FAB_CLASS} onClick={() => navigate('/leaderboard')} title="Classement">
+            <Crown className="text-amber-600 dark:text-amber-500/95" strokeWidth={1.65} aria-hidden />
+          </button>
 
-          <Button variant="outline" className={MAP_RIGHT_FAB_BUTTON_CLASS} onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
+          <button type="button" className={MAP_HOME_FAB_CLASS} onClick={() => navigate('/confirm-presence')} title="Confirmer ma présence GPS">
             <CheckCircle className="text-emerald-600 dark:text-emerald-500" strokeWidth={1.65} aria-hidden />
-          </Button>
+          </button>
         </div>}
 
       {/* Filters + Immersive toggle - stacked & attached */}
       {!isImmersiveMode && <div className="absolute right-4 z-30 flex flex-col items-stretch ios-map-filters android-map-filters" style={{ top: '10.5rem' }}>
         <SessionFilters filters={filters} onFiltersChange={setFilters} className="rounded-b-none" onOpenChange={setIsFiltersOpen} />
-        {!isFiltersOpen && <div className="bg-card/95 backdrop-blur-sm shadow-sm rounded-b-xl border border-t-0 border-border cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-center p-1.5" onClick={toggleImmersiveMode}>
-          <Maximize2 className="h-3.5 w-3.5" />
-        </div>}
+        {!isFiltersOpen && (
+          <button
+            type="button"
+            className="flex cursor-pointer items-center justify-center rounded-b-ios-md border border-t-0 border-border bg-card p-2 shadow-[var(--shadow-card)] transition-colors hover:bg-secondary active:scale-[0.98]"
+            onClick={toggleImmersiveMode}
+            aria-label="Mode plein écran carte"
+          >
+            <Maximize2 className="h-4 w-4 text-foreground" strokeWidth={1.75} />
+          </button>
+        )}
       </div>}
       
       {/* All Map Controls - iOS Style */}
       <div className="absolute left-4 bottom-4 flex flex-col gap-2 z-10 ios-map-bottom-buttons">
         {/* Route Creation Button */}
-        {user && <Button onClick={() => {
-        console.log('🖱️ Pencil button clicked - navigating to route creation');
-        navigate('/route-create');
-      }} size="sm" variant="outline" className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center" title="Créer un itinéraire">
-            <PenTool className="h-4 w-4" />
-          </Button>}
-        
-        {/* Locate Me Button */}
-        <Button onClick={handleLocateMe} size="sm" variant="outline" className="w-10 h-10 p-0 rounded-[10px] bg-card border border-border shadow-sm flex items-center justify-center">
-          <MapPin className="h-4 w-4" />
-        </Button>
+        {user && (
+          <button
+            type="button"
+            className={MAP_HOME_FAB_CLASS}
+            title="Créer un itinéraire"
+            onClick={() => {
+              console.log('🖱️ Pencil button clicked - navigating to route creation');
+              navigate('/route-create');
+            }}
+          >
+            <PenTool className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          </button>
+        )}
+
+        <button type="button" className={MAP_HOME_FAB_CLASS} title="Me localiser" onClick={handleLocateMe}>
+          <MapPin className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        </button>
         
         {/* Map Style Selector */}
         <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />

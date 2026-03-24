@@ -1,10 +1,8 @@
 import { lazy, Suspense } from "react";
-import { InteractiveMap } from "@/components/InteractiveMap";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useSearchParams } from "react-router-dom";
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { nativeManager } from '@/lib/nativeInit';
@@ -68,12 +66,6 @@ const Index = () => {
     checkNativeStatus();
   }, []);
 
-  // Extract map parameters from URL
-  const lat = searchParams.get('lat');
-  const lng = searchParams.get('lng');
-  const zoom = searchParams.get('zoom');
-  const sessionId = searchParams.get('sessionId');
-
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-background px-6">
@@ -85,13 +77,9 @@ const Index = () => {
 
   return (
     <>
-      <InteractiveMap 
-        initialLat={lat ? parseFloat(lat) : undefined}
-        initialLng={lng ? parseFloat(lng) : undefined}
-        initialZoom={zoom ? parseInt(zoom) : undefined}
-        highlightSessionId={sessionId || undefined}
-      />
-      
+      {/* La carte est rendue dans Layout (PersistentHomeMap) pour rester montée entre les onglets. */}
+      <div className="h-full min-h-0 w-full pointer-events-none" aria-hidden />
+
       {/* Onboarding pour les nouveaux utilisateurs */}
       <Suspense fallback={null}>
         <OnboardingDialog 

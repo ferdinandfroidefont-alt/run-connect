@@ -10,11 +10,17 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe, Dumbbell } from "lucide-react";
+import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  PROFILE_SPORT_KEYS,
+  type ProfileSportKey,
+  parseProfileSports,
+  serializeProfileSports,
+} from "@/lib/profileSports";
 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
@@ -29,8 +35,6 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
 }
 
-const SPORT_VALUES = ['running', 'cycling', 'swimming', 'triathlon', 'walking', 'trail'] as const;
-
 const COUNTRY_CODES = [
   'FR', 'BE', 'CH', 'CA', 'LU', 'MA', 'TN', 'SN', 'CI', 'ES', 'PT', 'DE', 'IT', 'GB', 'US',
 ] as const;
@@ -42,7 +46,9 @@ interface FormState {
   phone: string;
   bio: string;
   password: string;
-  favoriteSport: string;
+  favoriteSportsCsv: string;
+  /** Ancienne clé session (une seule valeur) */
+  favoriteSport?: string;
   country: string;
   timestamp: number;
 }
@@ -58,7 +64,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
-  const [favoriteSport, setFavoriteSport] = useState("");
+  const [selectedSports, setSelectedSports] = useState<ProfileSportKey[]>([]);
   const [country, setCountry] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
@@ -102,7 +108,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setPhone(formState.phone || '');
             setBio(formState.bio || '');
             setPassword(formState.password || '');
-            setFavoriteSport(formState.favoriteSport || '');
+            setSelectedSports(
+              parseProfileSports(formState.favoriteSportsCsv || formState.favoriteSport || '')
+            );
             setCountry(formState.country || '');
           }
           // NE PAS nettoyer - on garde pour la prochaine tentative
@@ -380,6 +388,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
+    if (selectedSports.length === 0) {
+      toast({ title: t('common.error'), description: t('profileSetup.toastSportsRequired'), variant: "destructive" });
+      return;
+    }
     if (!acceptedPolicies) {
       toast({
         title: t('common.error'),
@@ -428,7 +440,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         bio: bio.trim(),
         avatar_url: uploadedUrl,
       };
-      if (favoriteSport) profileData.favorite_sport = favoriteSport;
+      profileData.favorite_sport = serializeProfileSports(selectedSports);
       if (country) profileData.country = country;
       profileData.preferred_language = language;
       profileData.language_manually_set = languageManuallySet;
@@ -581,7 +593,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       phone,
       bio,
       password,
-      favoriteSport,
+      favoriteSportsCsv: serializeProfileSports(selectedSports) || '',
       country,
       timestamp: Date.now()
     };
@@ -768,29 +780,38 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       required
                     />
                   </div>
-                  <div className="ios-list-row-inset-sep" />
+                </div>
+              </div>
 
-                  {/* Favorite Sport */}
-                  <div className="flex items-center gap-2.5 px-4 py-2.5">
-                    <div className="ios-list-row-icon bg-[#FF6B00]">
-                      <Dumbbell className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <Select value={favoriteSport} onValueChange={setFavoriteSport}>
-                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
-                        <SelectValue placeholder={t('profileSetup.sportPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SPORT_VALUES.map((value) => (
-                          <SelectItem key={value} value={value}>
-                            {t(`profileSetup.sports.${value}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {/* Sports (multi) + pays */}
+              <div className="space-y-2">
+                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('profileSetup.sectionSportsCountry')}
+                </h3>
+                <div className="overflow-hidden rounded-[10px] bg-card">
+                  <p className="border-b border-border px-4 py-2.5 text-[12px] leading-snug text-muted-foreground">
+                    {t('profileSetup.sportsPickHint')}
+                  </p>
+                  <div className="px-2">
+                    {PROFILE_SPORT_KEYS.map((key) => (
+                      <label
+                        key={key}
+                        className="flex cursor-pointer items-center gap-3 border-b border-border/70 px-2 py-2.5 last:border-b-0 active:bg-secondary/40"
+                      >
+                        <Checkbox
+                          checked={selectedSports.includes(key)}
+                          onCheckedChange={() =>
+                            setSelectedSports((prev) =>
+                              prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+                            )
+                          }
+                          className="shrink-0"
+                        />
+                        <span className="text-[15px] text-foreground">{t(`profileSetup.sports.${key}`)}</span>
+                      </label>
+                    ))}
                   </div>
-                  <div className="ios-list-row-inset-sep" />
-
-                  {/* Country */}
+                  <div className="ios-list-row-inset-sep mx-4" />
                   <div className="flex items-center gap-2.5 px-4 py-2.5">
                     <div className="ios-list-row-icon bg-[#30B0C7]">
                       <Globe className="h-[18px] w-[18px] text-white" />
@@ -802,7 +823,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                         void suggestLanguageFromCountry(v);
                       }}
                     >
-                      <SelectTrigger className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none">
+                      <SelectTrigger className="h-10 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0">
                         <SelectValue placeholder={t('profileSetup.countryPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -894,6 +915,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   !bio.trim() ||
                   !password ||
                   password.length < 6 ||
+                  selectedSports.length === 0 ||
                   !country ||
                   !acceptedPolicies
                 }

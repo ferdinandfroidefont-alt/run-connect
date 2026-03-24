@@ -13,7 +13,14 @@ import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
-import appIcon from '@/assets/app-icon.png';
+import {
+  AuthAmbientBackground,
+  AuthBrandMark,
+  AuthFlowProgress,
+  AuthLegalFooter,
+  authCardShadowStyle,
+  authFormScrollClass,
+} from "@/components/auth/AuthChrome";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -31,6 +38,8 @@ const Auth = () => {
   const [otp, setOtp] = useState("");
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [newUserId, setNewUserId] = useState<string>("");
+  /** Écran de retour depuis la vérification OTP (inscription vs connexion par code). */
+  const [otpBackView, setOtpBackView] = useState<AuthView>("email-signin-form");
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -351,7 +360,8 @@ const Auth = () => {
           }
         }
 
-        setView('otp');
+        setOtpBackView("email-signup");
+        setView("otp");
         toast({
           title: "Vérifiez votre email",
           description: "Un code de confirmation vous a été envoyé."
@@ -370,7 +380,8 @@ const Auth = () => {
         
         setCaptchaToken(null);
         captchaRef.current?.resetCaptcha();
-        setView('otp');
+        setOtpBackView("email-signin-form");
+        setView("otp");
         toast({
           title: "Code envoyé !",
           description: "Vérifiez votre email pour le code à 6 chiffres."
@@ -586,29 +597,13 @@ const Auth = () => {
   // ██  LANDING VIEW  ██
   // ══════════════════════════════════════════════
   const renderLanding = () => (
-    <div className="flex flex-col items-center justify-between min-h-full px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
-      {/* Decorative SVG background */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }} viewBox="0 0 400 800" fill="none" preserveAspectRatio="xMidYMid slice">
-        <path d="M-50 600 Q100 400 200 500 T450 300 T200 100" stroke="hsl(var(--primary))" strokeWidth="2" fill="none"/>
-        <path d="M-50 700 Q150 500 250 600 T500 400 T250 200" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="none"/>
-      </svg>
+    <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+      <AuthAmbientBackground />
 
       {/* Top spacer */}
-      <div className="flex-1 min-h-[40px]" />
+      <div className="min-h-[40px] flex-1" />
 
-      {/* Branding */}
-      <div className="flex flex-col items-center mb-10 relative z-10">
-        <img 
-          src={appIcon} 
-          alt="RunConnect" 
-          className="w-[88px] h-[88px] rounded-[22px] mb-5 overflow-hidden object-cover"
-          style={{ boxShadow: '0 8px 24px hsl(var(--primary) / 0.18)' }}
-        />
-        <h1 className="text-[28px] font-bold text-primary tracking-tight">RunConnect</h1>
-        <p className="text-[15px] text-muted-foreground mt-1.5 font-medium">
-          Chaque sortie commence ici.
-        </p>
-      </div>
+      <AuthBrandMark title="RunConnect" subtitle="Chaque sortie commence ici." />
 
       {/* Action buttons */}
       <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
@@ -661,14 +656,7 @@ const Auth = () => {
         >
           Déjà inscrit ? Se connecter
         </button>
-        <p className="text-[12px] text-muted-foreground/70 text-center leading-relaxed px-4">
-          En continuant, vous acceptez nos{' '}
-          <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
-          {' '}et notre{' '}
-          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>
-          .{' '}
-          <Link to="/legal" className="underline underline-offset-2 text-muted-foreground">Mentions légales</Link>.
-        </p>
+        <AuthLegalFooter />
       </div>
     </div>
   );
@@ -677,36 +665,20 @@ const Auth = () => {
   // ██  EMAIL SIGNIN VIEW (3 buttons)  ██
   // ══════════════════════════════════════════════
   const renderEmailSignin = () => (
-    <div className="flex flex-col items-center justify-between min-h-full px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
-      {/* Decorative SVG background */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.04 }} viewBox="0 0 400 800" fill="none" preserveAspectRatio="xMidYMid slice">
-        <path d="M-50 600 Q100 400 200 500 T450 300 T200 100" stroke="hsl(var(--primary))" strokeWidth="2" fill="none"/>
-        <path d="M-50 700 Q150 500 250 600 T500 400 T250 200" stroke="hsl(var(--primary))" strokeWidth="1.5" fill="none"/>
-      </svg>
+    <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
+      <AuthAmbientBackground />
 
       {/* Header with back arrow */}
-      <div className="w-full max-w-[340px] relative z-10">
-        <button type="button" onClick={() => setView('landing')} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+      <div className="relative z-10 w-full max-w-[340px]">
+        <button type="button" onClick={() => setView('landing')} className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
       </div>
 
       {/* Top spacer */}
-      <div className="flex-1 min-h-[40px]" />
+      <div className="min-h-[40px] flex-1" />
 
-      {/* Branding */}
-      <div className="flex flex-col items-center mb-10 relative z-10">
-        <img 
-          src={appIcon} 
-          alt="RunConnect" 
-          className="w-[88px] h-[88px] rounded-[22px] mb-5"
-          style={{ boxShadow: '0 8px 24px hsl(var(--primary) / 0.18)' }}
-        />
-        <h1 className="text-[28px] font-bold text-primary tracking-tight">Connexion</h1>
-        <p className="text-[15px] text-muted-foreground mt-1.5 font-medium">
-          Content de vous revoir !
-        </p>
-      </div>
+      <AuthBrandMark title="Connexion" subtitle="Content de vous revoir !" />
 
       {/* Action buttons */}
       <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
@@ -759,14 +731,7 @@ const Auth = () => {
         >
           Vous n'avez pas de compte ? S'inscrire
         </button>
-        <p className="text-[12px] text-muted-foreground/70 text-center leading-relaxed px-4">
-          En continuant, vous acceptez nos{' '}
-          <Link to="/terms" className="underline underline-offset-2 text-muted-foreground">Conditions d'utilisation</Link>
-          {' '}et notre{' '}
-          <Link to="/privacy" className="underline underline-offset-2 text-muted-foreground">Politique de confidentialité</Link>
-          .{' '}
-          <Link to="/legal" className="underline underline-offset-2 text-muted-foreground">Mentions légales</Link>.
-        </p>
+        <AuthLegalFooter />
       </div>
     </div>
   );
@@ -775,7 +740,7 @@ const Auth = () => {
   // ██  EMAIL SIGNIN FORM VIEW  ██
   // ══════════════════════════════════════════════
   const renderEmailSigninForm = () => (
-    <div className="px-4 py-6 space-y-5 pb-16">
+    <div className={authFormScrollClass}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
         <button type="button" onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
@@ -785,7 +750,7 @@ const Auth = () => {
       </div>
 
       {/* Password signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border">
           <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Avec mot de passe</p>
         </div>
@@ -836,7 +801,7 @@ const Auth = () => {
       </div>
 
       {/* Forgot password */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <button
           type="button"
           onClick={handleForgotPassword}
@@ -856,7 +821,7 @@ const Auth = () => {
       </div>
 
       {/* OTP signin */}
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border">
           <p className="text-[13px] text-muted-foreground font-medium uppercase tracking-wider">Connexion par code</p>
         </div>
@@ -914,9 +879,10 @@ const Auth = () => {
   // ██  EMAIL SIGNUP VIEW  ██
   // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
-    <div className="px-4 py-6 space-y-5 pb-16">
+    <div className={authFormScrollClass}>
+      <AuthFlowProgress current={1} total={2} />
       {/* Header */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="mb-2 flex items-center gap-3">
         <button
           type="button"
           onClick={() => {
@@ -932,7 +898,7 @@ const Auth = () => {
         <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
       </div>
 
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -1021,15 +987,23 @@ const Auth = () => {
   // ██  OTP VIEW  ██
   // ══════════════════════════════════════════════
   const renderOtp = () => (
-    <div className="px-4 py-6 space-y-5 pb-16">
-      <div className="flex items-center gap-3 mb-2">
-        <button type="button" onClick={() => { setView('email-signin'); setOtp(''); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
+    <div className={authFormScrollClass}>
+      {otpBackView === "email-signup" && <AuthFlowProgress current={2} total={2} />}
+      <div className="mb-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setView(otpBackView);
+            setOtp("");
+          }}
+          className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+        >
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <h2 className="text-[20px] font-bold text-foreground">Vérification</h2>
       </div>
 
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border text-center">
           <p className="text-[13px] text-muted-foreground mt-1">
             Code envoyé à : <span className="font-medium text-foreground">{email}</span>
@@ -1056,7 +1030,7 @@ const Auth = () => {
         </form>
       </div>
 
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <button type="button" onClick={resendOtp} className="w-full flex items-center justify-between px-4 py-3.5 active:bg-secondary/50 transition-colors">
           <span className="text-[15px] text-primary font-medium">Renvoyer le code</span>
           <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
@@ -1069,7 +1043,7 @@ const Auth = () => {
   // ██  RESET VIEW  ██
   // ══════════════════════════════════════════════
   const renderReset = () => (
-    <div className="px-4 py-6 space-y-5 pb-16">
+    <div className={authFormScrollClass}>
       <div className="flex items-center gap-3 mb-2">
         <button type="button" onClick={() => { setView('landing'); window.history.replaceState({}, '', '/auth'); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
           <ArrowLeft className="h-5 w-5 text-foreground" />
@@ -1077,7 +1051,7 @@ const Auth = () => {
         <h2 className="text-[20px] font-bold text-foreground">Réinitialiser</h2>
       </div>
 
-      <div className="bg-card rounded-[14px] overflow-hidden" style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.04)' }}>
+      <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border">
           <p className="text-[13px] text-muted-foreground font-medium">Nouveau mot de passe</p>
         </div>

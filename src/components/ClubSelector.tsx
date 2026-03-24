@@ -6,6 +6,7 @@ import { Users, Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { MAP_HOME_FAB_ACTIVE_CLASS, MAP_HOME_FAB_CLASS } from '@/lib/mapHomeUi';
 
 interface Club {
   id: string;
@@ -98,14 +99,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     setIsOpen(false);
   };
 
-  /** Pastille carte — alignée sur le bouton « amis » 40×40 de InteractiveMap */
+  /** Pastille carte — même jeton que les FAB accueil (Mes séances / ios-card) */
   const mapClubTriggerClass = (active: boolean) =>
-    cn(
-      'flex w-10 h-10 min-w-10 min-h-10 max-w-10 max-h-10 shrink-0 items-center justify-center rounded-[10px] border shadow-sm p-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-      active
-        ? 'border-primary bg-primary text-primary-foreground'
-        : 'border-border bg-card text-foreground hover:bg-secondary/50'
-    );
+    cn(MAP_HOME_FAB_CLASS, active && MAP_HOME_FAB_ACTIVE_CLASS);
 
   /** Identique au bouton « 👥 Amis uniquement » : Button size="sm" + h-8 w-full */
   const filterRowButtonClass = 'justify-start text-xs h-8 w-full gap-2';

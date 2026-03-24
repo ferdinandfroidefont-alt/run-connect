@@ -106,12 +106,9 @@ export const LevelSliderFilter = ({
       {/* Main container - iOS style translucent */}
       <div
         className={cn(
-          'relative rounded-[14px] p-2 flex flex-col items-center',
-          'bg-card/80 backdrop-blur-xl shadow-lg',
-          'border border-border',
-          isDragging && 'shadow-xl'
+          'relative flex w-10 flex-col items-center rounded-ios-md border border-border bg-card p-2 shadow-[var(--shadow-card)]',
+          isDragging && 'ring-2 ring-primary/20'
         )}
-        style={{ width: 40 }}
       >
         {/* Vertical slider track */}
         <div 
@@ -193,12 +190,10 @@ export const LevelSliderFilter = ({
         <motion.div
           initial={{ opacity: 0, x: 10, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          className={cn(
-            'absolute right-full mr-2 top-1/2 -translate-y-1/2',
-            'bg-card/90 backdrop-blur-md rounded-lg px-2 py-1',
-            'shadow-md border border-border',
-            'whitespace-nowrap'
-          )}
+            className={cn(
+              'absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap',
+              'rounded-ios-md border border-border bg-card px-2 py-1 shadow-[var(--shadow-card)]'
+            )}
         >
           <p className="text-[10px] text-muted-foreground">Niveau</p>
           <p 
