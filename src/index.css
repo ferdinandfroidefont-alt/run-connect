@@ -475,6 +475,19 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+/**
+ * Zone de scroll interne (header fixe dans le flux flex, pas dans le scroll).
+ * À utiliser sous un en-tête shrink-0 quand le parent est flex flex-col min-h-0.
+ */
+.ios-scroll-region {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
 /* Mobile keyboard handling */
 @supports (-webkit-touch-callout: none) {
   input, textarea, select {

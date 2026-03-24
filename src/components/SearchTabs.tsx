@@ -25,7 +25,7 @@ export const SearchTabs = ({ activeTab, onTabChange }: SearchTabsProps) => {
   ];
 
   return (
-    <div className="bg-card border-b border-border px-4 py-3">
+    <div className="shrink-0 border-b border-border bg-card px-4 py-3">
       <div className="bg-secondary rounded-[9px] p-[2px] flex">
         {tabs.map((tab) => (
           <button

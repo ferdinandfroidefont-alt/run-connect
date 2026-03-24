@@ -1880,7 +1880,7 @@ const Messages = () => {
           </div>
 
           {/* Messages - iMessage style scrollable area */}
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
             <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -2558,9 +2558,9 @@ const Messages = () => {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col bg-secondary">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border pt-[var(--safe-area-top)]">
+        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
             {isSelectionMode ? (
               <>
@@ -2603,7 +2603,8 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="space-y-ios-3">
+        <div className="ios-scroll-region">
+        <div className="space-y-ios-3 pb-ios-2">
           {/* Quick Search Buttons */}
           <div className="ios-card p-ios-3">
             <div className="grid grid-cols-5 gap-ios-2">
@@ -2870,6 +2871,7 @@ const Messages = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
 
         {/* Create Club Dialog */}

@@ -422,7 +422,7 @@ const Leaderboard = () => {
 
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-card pt-[var(--safe-area-top)]">
+      <header className="z-20 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
         <div className="flex items-center justify-between px-4 py-2.5">
           <button
             type="button"

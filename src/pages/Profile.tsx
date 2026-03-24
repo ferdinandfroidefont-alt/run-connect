@@ -615,7 +615,9 @@ const Profile = () => {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>;
   }
-  return <div className="h-full min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-secondary">
+  return (
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-secondary">
+      <div className="ios-scroll-region">
       {/* Cover Image - Facebook Style */}
       <div className="relative">
         {/* Cover Photo */}
@@ -944,6 +946,8 @@ const Profile = () => {
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
       </div>
-    </div>;
+      </div>
+    </div>
+  );
 };
 export default Profile;

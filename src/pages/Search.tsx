@@ -77,10 +77,10 @@ export default function Search() {
   return (
     <>
       <div 
-        className={`fixed inset-0 z-[60] bg-secondary flex flex-col ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-secondary ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
         {/* Header iOS style with safe area */}
-        <header className="bg-card border-b border-border px-ios-4 pt-ios-4 pb-ios-3">
+        <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
           <div className="relative flex items-center justify-center min-h-[44px]">
             {/* Bouton retour */}
             <button
@@ -112,7 +112,7 @@ export default function Search() {
         <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Zone scrollable des résultats */}
-        <div className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-secondary" style={{ minHeight: '100%' }}>
+        <div className="ios-scroll-region flex flex-col bg-secondary">
           {activeTab === 'profiles' && (
             <div className="flex-1 flex flex-col min-h-0"><ProfilesTab searchQuery={searchQuery} /></div>
           )}

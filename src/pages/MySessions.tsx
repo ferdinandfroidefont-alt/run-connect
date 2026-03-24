@@ -625,9 +625,9 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col bg-secondary">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
           {/* iOS Header */}
-          <div className="sticky top-0 z-50 bg-card pt-[var(--safe-area-top)]">
+          <div className="z-50 shrink-0 bg-card pt-[var(--safe-area-top)]">
             <div className="flex items-center justify-between px-4 py-2">
               <Button
                 variant="ghost"
@@ -667,7 +667,8 @@ export default function MySessions() {
             <div className="h-px bg-border" />
           </div>
 
-          <div className="p-4 space-y-6 pb-ios-4">
+          <div className="ios-scroll-region">
+          <div className="space-y-6 p-4 pb-ios-4">
             {/* Session Header Card */}
             <IOSListGroup>
               <div className="p-4">
@@ -848,6 +849,7 @@ export default function MySessions() {
               </div>
             )}
           </div>
+          </div>
         </div>
 
         <Suspense fallback={null}>
@@ -928,9 +930,9 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col bg-secondary pb-ios-6">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
         {/* iOS Header */}
-        <div className="sticky top-0 z-50 bg-card border-b border-border pt-[var(--safe-area-top)]">
+        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
             <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
@@ -1040,9 +1042,7 @@ export default function MySessions() {
           <div className="h-px bg-border" />
         </div>
 
-
-        {/* Content — pt compact sous le header (Créées/Rejointes → filtres) */}
-        <div className="pt-ios-2 pb-ios-4">
+        <div className="ios-scroll-region pt-ios-2 pb-ios-6">
           {currentView === 'sessions' ? (
             <>
               {/* List/Calendar toggle */}

@@ -105,6 +105,11 @@ export const WeeklyPlanCard = ({
     return { detail: fallback, estimatedDuration: 0, estimatedDistance: session.distance_km || 0 };
   }, [session.rcc_code, session.distance_km, session.pace_target, session.objective]);
 
+  const displayRpe =
+    typeof session.rpe === "number" && session.rpe >= 1 && session.rpe <= 10
+      ? Math.round(session.rpe)
+      : aggregateRpeFromSessionBlocks(session.session_blocks);
+
   return (
     <div
       className={`bg-card rounded-xl mx-4 mb-2 overflow-hidden transition-all border ${

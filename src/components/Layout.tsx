@@ -87,8 +87,12 @@ export const Layout = ({ children }: LayoutProps) => {
         La tab bar est dans le flux (plus en fixed) : le <main> a une hauteur réelle = viewport − barre.
         Le scroll ne s’étend plus derrière les onglets (plus besoin de ios-nav-padding sur le scroll).
       */}
-      <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto scroll-momentum">
-        <div className="animate-fade-in relative min-h-0 w-full flex-1 motion-reduce:animate-none">
+      {/*
+        Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
+        partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
+      */}
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
           {children}
         </div>
       </main>

@@ -23,7 +23,7 @@ export const DiscoverFilters = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="bg-card border-b border-border">
+    <div className="shrink-0 bg-card border-b border-border">
       {/* Activity Filter Pills */}
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between mb-3">

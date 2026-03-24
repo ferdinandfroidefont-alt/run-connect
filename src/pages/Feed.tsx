@@ -117,22 +117,14 @@ export default function Feed() {
   const loading = mode === 'friends' ? friendsLoading : discoverLoading;
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="h-full min-h-0 bg-secondary overflow-y-auto"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Header with Mode Selector */}
-      <FeedHeader 
-        onSearch={() => navigate('/search')} 
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
+      <FeedHeader
+        onSearch={() => navigate('/search')}
         onProfileClick={() => setShowProfileDialog(true)}
         mode={mode}
         onModeChange={setMode}
       />
 
-      {/* Discover Filters (only in discover mode) */}
       {mode === 'discover' && (
         <DiscoverFilters
           maxDistance={maxDistance}
@@ -143,21 +135,25 @@ export default function Feed() {
         />
       )}
 
-      {/* Separator (only for friends mode) */}
-      {mode === 'friends' && <div className="h-px bg-border" />}
+      {mode === 'friends' && <div className="h-px shrink-0 bg-border" />}
 
-      {/* Pull to Refresh - iOS Spinner */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div className="flex justify-center overflow-hidden transition-all" style={{ height: isRefreshing ? 40 : pullDistance * 0.5 }}>
-          <RefreshCw
-            className={`h-5 w-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
-            style={{ opacity: isRefreshing ? 1 : Math.min(pullDistance / 50, 1), transform: `rotate(${pullDistance * 3}deg)` }}
-          />
-        </div>
-      )}
+      <div
+        ref={scrollContainerRef}
+        className="ios-scroll-region"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {(pullDistance > 0 || isRefreshing) && (
+          <div className="flex justify-center overflow-hidden transition-all" style={{ height: isRefreshing ? 40 : pullDistance * 0.5 }}>
+            <RefreshCw
+              className={`h-5 w-5 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`}
+              style={{ opacity: isRefreshing ? 1 : Math.min(pullDistance / 50, 1), transform: `rotate(${pullDistance * 3}deg)` }}
+            />
+          </div>
+        )}
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto">
+        <div className="mx-auto max-w-2xl">
         {mode === 'friends' ? (
           // Friends Feed
           <>
@@ -258,15 +254,11 @@ export default function Feed() {
             )}
           </>
         )}
+        </div>
       </div>
 
-      {/* Profile Dialog */}
-      <ProfileDialog 
-        open={showProfileDialog} 
-        onOpenChange={setShowProfileDialog} 
-      />
+      <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 
-      {/* Session Details Dialog */}
       <SessionDetailsDialog
         session={selectedDiscoverSession}
         onClose={() => setSelectedDiscoverSession(null)}

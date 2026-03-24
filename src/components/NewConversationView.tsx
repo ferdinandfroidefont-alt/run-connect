@@ -325,7 +325,7 @@ export const NewConversationView = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-secondary">
-      <div className="h-full flex flex-col">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
         {/* iOS Header */}
         <div className="flex-shrink-0 bg-card border-b border-border min-h-[60px] flex items-center justify-center relative px-4">
           <button
@@ -338,7 +338,7 @@ export const NewConversationView = ({
           <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto scroll-momentum">
+        <div className="min-h-0 flex-1 overflow-y-auto scroll-momentum overscroll-y-contain">
           <div className="p-4 space-y-6">
             {/* Quick Suggestions - Recent Friends Carousel */}
             {recentFriends.length > 0 && !searchQuery.trim() && (

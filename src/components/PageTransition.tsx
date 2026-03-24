@@ -9,24 +9,22 @@ interface PageTransitionProps {
 /** Courbe proche des transitions système iOS */
 const iosEase = [0.32, 0.72, 0, 1] as [number, number, number, number];
 
+/* Pas de translateY : un transform sur l’ancêtre casse sticky/fixed et le comportement iOS clavier. */
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 10,
   },
   enter: {
     opacity: 1,
-    y: 0,
     transition: {
-      duration: 0.32,
+      duration: 0.28,
       ease: iosEase,
     },
   },
   exit: {
     opacity: 0,
-    y: -6,
     transition: {
-      duration: 0.2,
+      duration: 0.18,
       ease: iosEase,
     },
   },

@@ -124,14 +124,14 @@ const Subscription = () => {
   const features = ['Messages illimités', 'Accès au classement', 'Sessions illimitées', 'Clubs privés'];
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto bg-secondary">
-      <motion.div 
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex h-full min-h-0 flex-col"
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
       >
         {/* iOS Header */}
-        <div className="sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-xl">
+        <div className="z-10 shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
           <div className="flex items-center justify-between px-ios-4 h-[56px]">
             <Button
               variant="ghost"
@@ -146,7 +146,7 @@ const Subscription = () => {
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="py-ios-6 space-y-ios-6">
             {/* Expiring Soon Warning */}
             {isExpiringSoon && (

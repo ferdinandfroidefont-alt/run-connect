@@ -38,7 +38,7 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-20 bg-card border-b border-border pt-[var(--safe-area-top)]">
+    <header className="shrink-0 z-20 bg-card border-b border-border pt-[var(--safe-area-top)]">
       <div className="px-4 pt-2 pb-3 relative flex items-center justify-center min-h-[52px]">
         {/* Avatar - Left */}
         <button 
