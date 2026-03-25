@@ -42,7 +42,7 @@ export const PageTransition = ({ children }: PageTransitionProps) => {
       animate="enter"
       exit={reduceMotion ? undefined : "exit"}
       transition={reduceMotion ? { duration: 0 } : undefined}
-      className="h-full min-h-0 w-full"
+      className="h-full min-h-0 w-full pointer-events-none"
     >
       {children}
     </motion.div>

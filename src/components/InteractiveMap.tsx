@@ -21,7 +21,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, ArrowLeft, CheckCircle, Calendar as CalendarLucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1461,16 +1461,13 @@ export const InteractiveMap = ({
                 <PopoverTrigger asChild>
                   <MapIosColoredFab
                     tone="red"
-                    title={`Date : ${format(filters.selected_date, "d MMM yyyy", { locale: fr })}`}
+                    className="h-10 min-w-10 w-auto px-1.5"
+                    title={`Choisir la date : ${format(filters.selected_date, "d MMMM yyyy", { locale: fr })}`}
                   >
-                    <span className="flex min-w-0 flex-col items-center justify-center gap-px leading-none">
-                      <span className="max-w-full truncate text-center text-[8px] font-bold uppercase tracking-tight text-white">
-                        {format(filters.selected_date, "MMM", { locale: fr })
-                          .replace(/\.$/, "")
-                          .toUpperCase()}
-                      </span>
-                      <span className="text-[15px] font-bold tabular-nums text-white">
-                        {format(filters.selected_date, "d")}
+                    <span className="flex min-w-0 flex-col items-center justify-center gap-0.5 leading-none">
+                      <CalendarLucideIcon className="h-[15px] w-[15px] shrink-0" strokeWidth={2.25} aria-hidden />
+                      <span className="whitespace-nowrap text-center text-[8px] font-bold text-white">
+                        {format(filters.selected_date, "d MMM", { locale: fr }).replace(/\.$/, "")}
                       </span>
                     </span>
                   </MapIosColoredFab>
