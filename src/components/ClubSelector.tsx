@@ -143,7 +143,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
               <span className="min-w-0 truncate text-left">🏢 {filterRowLabel}</span>
             </Button>
           ) : (
-            <MapIosColoredFab type="button" tone={selectedClubId ? "red" : "gray"} active={!!selectedClubId} title="Clubs">
+            <MapIosColoredFab type="button" tone="red" active={!!selectedClubId} title="Clubs">
               <Users className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
             </MapIosColoredFab>
           )}
@@ -178,7 +178,7 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
             </span>
           </Button>
         ) : (
-          <MapIosColoredFab type="button" tone={selectedClubId ? "red" : "gray"} active={!!selectedClubId} title="Clubs">
+          <MapIosColoredFab type="button" tone="red" active={!!selectedClubId} title="Clubs">
             <Users className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
           </MapIosColoredFab>
         )}

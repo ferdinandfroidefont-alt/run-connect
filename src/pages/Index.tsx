@@ -79,7 +79,7 @@ const Index = () => {
   return (
     <>
       {/* La carte est rendue dans Layout (PersistentHomeMap) pour rester montée entre les onglets. */}
-      <div className="h-full min-h-0 w-full pointer-events-none" aria-hidden />
+      <div className="h-full min-h-0 w-full" aria-hidden />
 
       {/* Onboarding pour les nouveaux utilisateurs */}
       <Suspense fallback={null}>

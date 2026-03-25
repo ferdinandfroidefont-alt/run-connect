@@ -8,8 +8,9 @@ export function resetBodyInteractionLocks(): void {
 
   const { body, documentElement: html } = document;
 
-  body.style.removeProperty('pointer-events');
-  html.style.removeProperty('pointer-events');
+  // Forcer "auto" en inline écrase les verrous laissés par des overlays.
+  body.style.pointerEvents = 'auto';
+  html.style.pointerEvents = 'auto';
 
   // Certaines libs ajoutent des data-attributes ; on ne les supprime que s’ils sont connus vides
   body.removeAttribute('data-scroll-locked');
