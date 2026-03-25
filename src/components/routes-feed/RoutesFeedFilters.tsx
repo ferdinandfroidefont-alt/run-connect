@@ -5,6 +5,12 @@ import { Slider } from '@/components/ui/slider';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import { cn } from '@/lib/utils';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import {
+  distanceUnitSuffix,
+  filterKmToDisplayValue,
+  parseFilterDisplayToKm,
+} from '@/lib/distanceUnits';
 
 interface RoutesFeedFiltersProps {
   maxProximity: number;
@@ -29,6 +35,7 @@ export const RoutesFeedFilters = ({
   toggleActivity,
   toggleAllActivities
 }: RoutesFeedFiltersProps) => {
+  const { unit, formatKm } = useDistanceUnits();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -40,12 +47,12 @@ export const RoutesFeedFilters = ({
   ].filter(Boolean).length;
 
   const summaryParts: string[] = [];
-  summaryParts.push(`≤ ${maxProximity} km`);
+  summaryParts.push(`≤ ${formatKm(maxProximity)}`);
   if (selectedActivities.length < ACTIVITY_TYPES.length) {
     summaryParts.push(`${selectedActivities.length}/${ACTIVITY_TYPES.length} sports`);
   }
   if (maxRouteDistance !== null) {
-    summaryParts.push(`parcours ≤ ${maxRouteDistance} km`);
+    summaryParts.push(`parcours ≤ ${formatKm(maxRouteDistance)}`);
   }
   if (minRating > 0) {
     summaryParts.push(`note ${minRating}+`);
@@ -78,7 +85,7 @@ export const RoutesFeedFilters = ({
         <div className="px-ios-4 pb-ios-3 -mt-ios-1">
           <p className="text-ios-footnote text-muted-foreground leading-snug line-clamp-2">
             {activeCount === 0
-              ? `Rayon ${maxProximity} km · tous les sports · parcours sans limite`
+              ? `Rayon ${formatKm(maxProximity)} · tous les sports · parcours sans limite`
               : `${activeCount} réglage${activeCount > 1 ? 's' : ''} actif${activeCount > 1 ? 's' : ''} — ${collapsedSummary}`}
           </p>
         </div>
@@ -138,13 +145,18 @@ export const RoutesFeedFilters = ({
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
-                  value={maxProximity}
-                  onChange={(e) => setMaxProximity(parseInt(e.target.value) || 10)}
+                  inputMode="decimal"
+                  value={filterKmToDisplayValue(maxProximity, unit)}
+                  onChange={(e) => {
+                    const km = parseFilterDisplayToKm(e.target.value, unit);
+                    const n = Math.max(1, Math.min(200, Math.round(km)));
+                    setMaxProximity(n || 10);
+                  }}
                   className="w-16 h-9 text-[15px] text-right bg-secondary border-border rounded-[8px]"
                   min="1"
                   max="200"
                 />
-                <span className="text-ios-footnote text-muted-foreground">km</span>
+                <span className="text-ios-footnote text-muted-foreground">{distanceUnitSuffix(unit)}</span>
               </div>
             </div>
             <p className="text-ios-caption1 text-muted-foreground mt-ios-1">
@@ -164,16 +176,18 @@ export const RoutesFeedFilters = ({
                   <>
                     <Input
                       type="number"
-                      value={maxRouteDistance}
+                      inputMode="decimal"
+                      value={filterKmToDisplayValue(maxRouteDistance, unit)}
                       onChange={(e) => {
-                        const v = parseInt(e.target.value);
-                        setMaxRouteDistance(v > 0 ? v : null);
+                        const km = parseFilterDisplayToKm(e.target.value, unit);
+                        const n = Math.round(km);
+                        setMaxRouteDistance(n > 0 ? Math.min(500, n) : null);
                       }}
                       className="w-16 h-9 text-[15px] text-right bg-secondary border-border rounded-[8px]"
                       min="1"
                       max="500"
                     />
-                    <span className="text-ios-footnote text-muted-foreground">km</span>
+                    <span className="text-ios-footnote text-muted-foreground">{distanceUnitSuffix(unit)}</span>
                     <button
                       type="button"
                       onClick={() => setMaxRouteDistance(null)}

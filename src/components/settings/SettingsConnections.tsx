@@ -108,7 +108,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
       <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* External Connections */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-connections-external">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Connexions externes
             </h3>
@@ -119,7 +119,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
           </div>
 
           {/* Social & Sharing */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-connections-social">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Social & Partage
             </h3>

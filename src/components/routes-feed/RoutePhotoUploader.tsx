@@ -25,6 +25,13 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
   const [uploading, setUploading] = useState(false);
   const [detectedGps, setDetectedGps] = useState<{ lat: number; lng: number } | null>(null);
 
+  const triggerFileInput = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    // Certains navigateurs n'ouvrent pas le sélecteur si l'input est en display:none.
+    input.focus();
+    input.click();
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -134,7 +141,7 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={() => triggerFileInput(cameraInputRef.current)}
                   className="h-28 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <Camera className="h-6 w-6" />
@@ -142,7 +149,7 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
                 </button>
                 <button
                   type="button"
-                  onClick={() => galleryInputRef.current?.click()}
+                  onClick={() => triggerFileInput(galleryInputRef.current)}
                   className="h-28 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <Images className="h-6 w-6" />
@@ -157,14 +164,14 @@ export const RoutePhotoUploader = ({ routeId, open, onOpenChange, onPhotoUploade
             type="file"
             accept="image/*"
             capture="environment"
-            className="hidden"
+            className="sr-only"
             onChange={handleFileSelect}
           />
           <input
             ref={galleryInputRef}
             type="file"
             accept="image/*"
-            className="hidden"
+            className="sr-only"
             onChange={handleFileSelect}
           />
 

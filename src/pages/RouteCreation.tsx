@@ -10,6 +10,7 @@ import { getKeyBody } from '@/lib/googleMapsKey';
 
 import { ElevationProfile } from '@/components/ElevationProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 
 declare global {
   interface Window {
@@ -108,6 +109,7 @@ export const RouteCreation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { formatKm } = useDistanceUnits();
   
   const { getCurrentPosition } = useGeolocation();
   
@@ -877,7 +879,7 @@ export const RouteCreation = () => {
               <div className="flex flex-wrap items-center justify-center gap-x-ios-4 gap-y-ios-1 text-ios-subheadline">
                 <div className="flex items-center gap-ios-1">
                   <span className="text-muted-foreground">📏</span>
-                  <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
+                  <span className="font-semibold text-foreground">{formatKm(totalDistance)}</span>
                 </div>
                 <div className="hidden sm:block w-px h-4 bg-border" />
                 <div className="flex items-center gap-ios-1">

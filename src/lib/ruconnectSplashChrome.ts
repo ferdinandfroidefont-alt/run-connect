@@ -9,9 +9,9 @@ import {
  * Écran splash Ruconnect : une seule teinte de bleu partout (fond icône = fond écran = WKWebView).
  * À garder aligné avec capacitor.config.ts (ios.backgroundColor) et index.html (body initial).
  */
-// Couleur bleue splash matchée sur le fond du PNG `public/brand/runconnect-splash-icon.png`
-// pour éviter toute "zone carré" visible autour du logo.
-export const RUCONNECT_SPLASH_BLUE = '#2c5dd9';
+// Couleur bleue splash alignée sur le fond du PNG `public/brand/runconnect-splash-icon.png`
+// pour éviter toute « zone carré » visible autour du logo.
+export const RUCONNECT_SPLASH_BLUE = '#2E68FF';
 
 /** Icône splash RunConnect (fichier dans `public/brand/`). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';

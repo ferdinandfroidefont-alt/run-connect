@@ -918,6 +918,7 @@ export type Database = {
           created_at: string
           cycling_records: Json | null
           display_name: string | null
+          distance_unit: string
           favorite_sport: string | null
           id: string
           instagram_access_token: string | null
@@ -977,6 +978,7 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
+          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
@@ -1036,6 +1038,7 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
+          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null

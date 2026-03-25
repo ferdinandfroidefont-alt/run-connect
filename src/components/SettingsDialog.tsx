@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { SettingsSubpageTutorial } from "@/components/settings/SettingsSubpageTutorial";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -42,7 +43,7 @@ const settingsCategories = [
   {
     id: 'general' as const,
     title: 'Général',
-    description: 'Langue, thème, mot de passe',
+    description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
     color: 'bg-[#8E8E93]',
   },
@@ -80,8 +81,16 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
+  const [subpageTutorialPage, setSubpageTutorialPage] = useState<
+    Exclude<SettingsPage, "hub"> | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
+
+  const goToSettingsHub = () => {
+    setSubpageTutorialPage(null);
+    setCurrentPage("hub");
+  };
   
   // Profile share state
   const [profile, setProfile] = useState<{
@@ -102,7 +111,10 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   // Reset to hub when dialog closes
   useEffect(() => {
     if (!open) {
-      setTimeout(() => setCurrentPage('hub'), 300);
+      setTimeout(() => {
+        setCurrentPage("hub");
+        setSubpageTutorialPage(null);
+      }, 300);
     }
   }, [open]);
 
@@ -366,20 +378,20 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
       case 'general':
       return (
         <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
-          <SettingsGeneral onBack={() => setCurrentPage('hub')} />
+          <SettingsGeneral onBack={goToSettingsHub} />
         </Suspense>
       );
       case 'notifications':
         return (
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
-            <SettingsNotifications onBack={() => setCurrentPage('hub')} />
+            <SettingsNotifications onBack={goToSettingsHub} />
           </Suspense>
         );
       case 'connections':
         return (
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
             <SettingsConnections 
-              onBack={() => setCurrentPage('hub')} 
+              onBack={goToSettingsHub} 
               onNavigateToSubscription={handleNavigateToSubscription}
             />
           </Suspense>
@@ -388,7 +400,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
         return (
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
             <SettingsPrivacy 
-              onBack={() => setCurrentPage('hub')} 
+              onBack={goToSettingsHub} 
               onClose={() => onOpenChange(false)}
             />
           </Suspense>
@@ -397,7 +409,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
         return (
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
             <SettingsSupport 
-              onBack={() => setCurrentPage('hub')} 
+              onBack={goToSettingsHub} 
               onClose={() => onOpenChange(false)}
             />
           </Suspense>
@@ -480,7 +492,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                       <div key={category.id}>
                         <button
                           type="button"
-                          onClick={() => setCurrentPage(category.id)}
+                          onClick={() => {
+                            setCurrentPage(category.id);
+                            setSubpageTutorialPage(category.id);
+                          }}
                           className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
                         >
                           {/* iOS colored icon square */}
@@ -612,8 +627,15 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           ) : (
             <motion.div
               key={currentPage}
-              className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-background"
+              className="relative flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-background"
             >
+              {subpageTutorialPage === currentPage && currentPage !== "hub" ? (
+                <SettingsSubpageTutorial
+                  page={currentPage}
+                  active
+                  onDismiss={() => setSubpageTutorialPage(null)}
+                />
+              ) : null}
               {renderPage()}
             </motion.div>
           )}

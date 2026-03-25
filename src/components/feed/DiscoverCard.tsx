@@ -12,6 +12,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { DiscoverSession, ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 
 interface DiscoverCardProps {
   session: DiscoverSession;
@@ -21,6 +22,7 @@ interface DiscoverCardProps {
 }
 
 export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: DiscoverCardProps) => {
+  const { formatKm } = useDistanceUnits();
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
 
@@ -84,7 +86,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
               </div>
             </div>
             <span className="text-[13px] font-medium text-primary">
-              {session.distance_km.toFixed(1)} km
+              {formatKm(session.distance_km)}
             </span>
           </div>
 

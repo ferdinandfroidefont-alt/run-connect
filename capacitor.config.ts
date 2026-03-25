@@ -41,7 +41,7 @@ const config: CapacitorConfig = {
      * blanche native dans la safe area basse pendant le chargement. La tab bar peint le bas avec
      * `bg-background` sur `<nav>` pour ne pas laisser voir ce bleu une fois l’app chargée.
      */
-    backgroundColor: '#2c5dd9',
+    backgroundColor: '#2E68FF',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

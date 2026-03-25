@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -85,7 +85,6 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
         </div>
 
         <div className="flex flex-col items-center gap-ios-2">
-          <Loader2 className="h-8 w-8 animate-spin text-white/90" aria-hidden />
           <p className="text-ios-subheadline text-white/90">
             {phase === 'profile' ? 'Chargement de votre profil…' : 'Connexion…'}
           </p>

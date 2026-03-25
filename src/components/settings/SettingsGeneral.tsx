@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -13,6 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import type { DistanceUnit } from "@/lib/distanceUnits";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -32,6 +34,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const [themeMounted, setThemeMounted] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const { unit, setUnit } = useDistanceUnits();
 
   useEffect(() => {
     setThemeMounted(true);
@@ -104,6 +107,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
               {t('settings.appearance')}
             </h3>
             <div className="bg-card overflow-hidden">
+              <div data-tutorial="settings-general-appearance">
               {/* Language Selector */}
               <div className="flex items-center gap-2.5 px-4 py-2.5">
                 <div className="ios-list-row-icon bg-primary">
@@ -214,6 +218,49 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   </div>
                 )}
               </div>
+              </div>
+
+              <div className="ios-list-row-inset-sep" />
+
+              <div className="space-y-2.5 px-4 py-2.5" data-tutorial="settings-general-units">
+                <div className="flex items-center gap-2.5">
+                  <div className="ios-list-row-icon bg-[#5E5CE6]">
+                    <Ruler className="h-[18px] w-[18px] text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium">{t("settings.distanceUnit")}</p>
+                    <p className="text-[13px] text-muted-foreground leading-snug">
+                      {t("settings.distanceUnitDescription")}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  className="flex gap-0.5 rounded-[12px] border border-border/50 bg-secondary/80 p-1 dark:bg-secondary"
+                  role="tablist"
+                  aria-label={t("settings.distanceUnit")}
+                >
+                  {(["km", "mi"] as const).map((u: DistanceUnit) => {
+                    const active = unit === u;
+                    return (
+                      <button
+                        key={u}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => void setUnit(u)}
+                        className={cn(
+                          "min-h-[44px] flex-1 rounded-[10px] px-2 text-[12px] font-semibold transition-all",
+                          active
+                            ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                            : "text-muted-foreground active:opacity-70 hover:text-foreground"
+                        )}
+                      >
+                        {u === "km" ? t("settings.distanceUnitKm") : t("settings.distanceUnitMi")}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -246,7 +293,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
           </div>
 
           {/* Map Settings */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-general-map">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               {t('settings.map')}
             </h3>

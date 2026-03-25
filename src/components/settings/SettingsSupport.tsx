@@ -102,6 +102,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
       <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
+          <div className="space-y-4" data-tutorial="settings-support-help">
           {/* Legal */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -208,7 +209,9 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               </a>
             </div>
           </div>
+          </div>
 
+          <div className="space-y-4" data-tutorial="settings-support-account">
           {/* Actions */}
           <div className="space-y-2">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
@@ -290,6 +293,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+          </div>
           </div>
         </div>
       </ScrollArea>

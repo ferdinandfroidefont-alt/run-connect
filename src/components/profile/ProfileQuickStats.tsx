@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 
 interface ProfileQuickStatsProps {
   userId: string;
@@ -58,7 +59,7 @@ export const ProfileQuickStats = ({
 
   const stats = [
     { value: totalActivities, label: "Activités", onClick: undefined },
-    { value: `${totalDistance} km`, label: "Distance", onClick: undefined },
+    { value: formatKm(totalDistance), label: "Distance", onClick: undefined },
     { value: followerCount, label: "Abonnés", onClick: onFollowersClick },
     { value: followingCount, label: "Abonnements", onClick: onFollowingClick },
   ];

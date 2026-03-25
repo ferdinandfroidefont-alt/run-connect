@@ -33,6 +33,8 @@ export interface UserProfile {
   avatar_model_id: string | null;
   created_at: string;
   updated_at: string;
+  /** km | mi — affichage des distances (données toujours en km côté API) */
+  distance_unit?: string | null;
 }
 
 interface UserProfileContextType {

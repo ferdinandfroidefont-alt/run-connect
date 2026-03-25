@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getActivityConfig } from "@/lib/activityIcons";
 import { SessionLevelBadge } from "./SessionLevelBadge";
 import type { SessionLevel } from "@/lib/sessionLevelCalculator";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 
 interface Session {
   id: string;
@@ -74,6 +75,7 @@ export const SessionPreviewPopup = ({
   onViewDetails,
   isImminent = false
 }: SessionPreviewPopupProps) => {
+  const { formatMeters } = useDistanceUnits();
   if (!session) return null;
 
   const sessionDate = new Date(session.scheduled_at);
@@ -194,7 +196,7 @@ export const SessionPreviewPopup = ({
                   </Badge>
                   {session.routes && (
                     <Badge variant="outline" className="text-xs">
-                      📍 {session.routes.total_distance} km
+                      📍 {formatMeters(session.routes.total_distance)}
                     </Badge>
                   )}
                 </div>

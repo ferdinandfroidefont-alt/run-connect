@@ -136,7 +136,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
           {/* Main Toggle */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-notifications-push">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Notifications Push
             </h3>
@@ -207,7 +207,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
           </div>
 
           {/* Individual Toggles */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-notifications-types">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Types de notifications
             </h3>

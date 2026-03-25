@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
 import { routePhotoStoragePathFromPublicUrl } from '@/lib/routePhotoStorage';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 
 interface RoutePhoto {
   id: string;
@@ -57,12 +58,6 @@ interface RouteDetailDialogProps {
   onPendingFilePickConsumed?: () => void;
 }
 
-const formatDistance = (meters: number | null) => {
-  if (!meters) return "N/A";
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-};
-
 export const RouteDetailDialog = ({
   route,
   open,
@@ -73,6 +68,7 @@ export const RouteDetailDialog = ({
   onPendingFilePickConsumed,
 }: RouteDetailDialogProps) => {
   const { user } = useAuth();
+  const { formatMeters } = useDistanceUnits();
   const { position: userGeoPosition } = useGeolocation();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -100,6 +96,14 @@ export const RouteDetailDialog = ({
   const pinMarkerRef = useRef<google.maps.Marker | null>(null);
   const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
   const photoFileRef = useRef<File | null>(null);
+
+  const triggerFileInput = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    // Certains navigateurs n'ouvrent pas le sélecteur si l'input est en display:none.
+    input.focus();
+    input.click();
+  };
+
   const addPhotoStep = !photoFile
     ? 1
     : !pinLocation || readingGps
@@ -690,7 +694,7 @@ export const RouteDetailDialog = ({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => cameraInputRef.current?.click()}
+                        onClick={() => triggerFileInput(cameraInputRef.current)}
                         className="h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         <Camera className="h-7 w-7" />
@@ -698,7 +702,7 @@ export const RouteDetailDialog = ({
                       </button>
                       <button
                         type="button"
-                        onClick={() => galleryInputRef.current?.click()}
+                        onClick={() => triggerFileInput(galleryInputRef.current)}
                         className="h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                       >
                         <Images className="h-7 w-7" />
@@ -738,7 +742,7 @@ export const RouteDetailDialog = ({
                         variant="outline"
                         size="sm"
                         className="flex-1 gap-1.5"
-                        onClick={() => cameraInputRef.current?.click()}
+                        onClick={() => triggerFileInput(cameraInputRef.current)}
                       >
                         <Camera className="h-4 w-4" />
                         Reprendre
@@ -748,7 +752,7 @@ export const RouteDetailDialog = ({
                         variant="outline"
                         size="sm"
                         className="flex-1 gap-1.5"
-                        onClick={() => galleryInputRef.current?.click()}
+                        onClick={() => triggerFileInput(galleryInputRef.current)}
                       >
                         <Images className="h-4 w-4" />
                         Galerie
@@ -802,14 +806,14 @@ export const RouteDetailDialog = ({
                   type="file"
                   accept="image/*"
                   capture="environment"
-                  className="hidden"
+                  className="sr-only"
                   onChange={handleFileSelect}
                 />
                 <input
                   ref={galleryInputRef}
                   type="file"
                   accept="image/*"
-                  className="hidden"
+                  className="sr-only"
                   onChange={handleFileSelect}
                 />
               </div>
@@ -838,7 +842,7 @@ export const RouteDetailDialog = ({
               <div className="flex gap-4">
                 <div className="flex items-center gap-1.5 text-[15px]">
                   <Route className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">{formatDistance(route.total_distance)}</span>
+                  <span className="font-semibold">{formatMeters(route.total_distance)}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[15px]">
                   <Mountain className="h-4 w-4 text-muted-foreground" />

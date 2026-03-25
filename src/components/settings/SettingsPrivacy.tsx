@@ -121,7 +121,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
       <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Consents */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-privacy-consents">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Consentements
             </h3>
@@ -211,7 +211,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
           </div>
 
           {/* Analytics (opt-in) */}
-          <div className="space-y-2">
+          <div className="space-y-2" data-tutorial="settings-privacy-analytics">
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
               Mesure d&apos;audience
             </h3>

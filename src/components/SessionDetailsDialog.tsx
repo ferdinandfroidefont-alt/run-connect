@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
 import { RateSessionDialog } from './RateSessionDialog';
 import { OrganizerRatingBadge } from './OrganizerRatingBadge';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 interface SessionBlock {
   id: string;
   type: 'warmup' | 'interval' | 'cooldown' | 'steady';
@@ -127,6 +128,7 @@ const SettingsSeparator = () => (
 );
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
+  const { unit, formatKm, formatMeters, formatSpeed } = useDistanceUnits();
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
@@ -513,7 +515,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       icon={Route}
                       iconBg="bg-[#34C759]"
                       label="Distance"
-                      value={`${session.distance_km} km`}
+                      value={formatKm(session.distance_km)}
                     />
                   </>
                 )}
@@ -526,12 +528,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       label="Allure"
                       value={
                         session.activity_type === 'course' 
-                          ? `${session.pace_general}/km`
+                          ? `${session.pace_general}/${unit === 'mi' ? 'mi' : 'km'}`
                           : session.activity_type === 'natation'
                             ? `${session.pace_general}/100m`
                             : session.activity_type === 'velo' && session.pace_unit === 'power'
                               ? `${session.pace_general} W`
-                              : `${session.pace_general} km/h`
+                              : formatSpeed(parseFloat(String(session.pace_general).replace(',', '.')) || 0)
                       }
                     />
                   </>
@@ -549,7 +551,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       icon={Repeat}
                       iconBg="bg-[#FF9500]"
                       label="Séries"
-                      value={`${session.interval_count} × ${session.interval_distance < 1 ? `${Math.round(session.interval_distance * 1000)}m` : `${session.interval_distance} km`}`}
+                      value={`${session.interval_count} × ${session.interval_distance < 1 ? `${Math.round(session.interval_distance * 1000)}m` : formatKm(session.interval_distance)}`}
                     />
                   )}
                   {session.interval_pace && (
@@ -561,12 +563,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                         label="Allure"
                         value={
                           session.activity_type === 'course'
-                            ? `${session.interval_pace}/km`
+                            ? `${session.interval_pace}/${unit === 'mi' ? 'mi' : 'km'}`
                             : session.activity_type === 'natation'
                               ? `${session.interval_pace}/100m`
                               : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
                                 ? `${session.interval_pace} W`
-                                : `${session.interval_pace} km/h`
+                                : formatSpeed(parseFloat(String(session.interval_pace).replace(',', '.')) || 0)
                         }
                       />
                     </>
@@ -729,7 +731,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       />
                     </div>
                     <div className="flex gap-4 mt-3 text-[13px] text-muted-foreground">
-                      <span>{(session.routes.total_distance / 1000).toFixed(1)} km</span>
+                      <span>{formatMeters(session.routes.total_distance)}</span>
                       <span>D+ {Math.round(session.routes.total_elevation_gain)}m</span>
                     </div>
                   </div>

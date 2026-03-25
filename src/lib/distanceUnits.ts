@@ -67,3 +67,15 @@ export function parseFilterDisplayToKm(raw: string, unit: DistanceUnit): number 
   const km = unit === 'mi' ? milesToKm(v) : v;
   return Math.round(km * 1000) / 1000;
 }
+
+/** Vitesse affichée : km/h ou mph selon l’unité de distance. */
+export function formatSpeedKmh(kmh: number | null | undefined, unit: DistanceUnit): string {
+  if (kmh == null || !Number.isFinite(kmh)) return '—';
+  if (unit === 'mi') {
+    const mph = kmh / KM_PER_MILE;
+    const decimals = mph < 10 ? 1 : 0;
+    return `${mph.toFixed(decimals)}\u00a0mph`;
+  }
+  const decimals = kmh < 10 ? 1 : 0;
+  return `${kmh.toFixed(decimals)}\u00a0km/h`;
+}

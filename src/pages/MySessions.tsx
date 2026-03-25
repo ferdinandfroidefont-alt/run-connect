@@ -532,12 +532,6 @@ export default function MySessions() {
     setIsRouteEditDialogOpen(true);
   };
 
-  const formatDistance = (meters: number | null) => {
-    if (!meters) return "N/A";
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${Math.round(meters / 1000 * 10) / 10} km`;
-  };
-
   const formatElevation = (meters: number | null) => {
     if (!meters) return "N/A";
     return `${Math.round(meters)} m`;

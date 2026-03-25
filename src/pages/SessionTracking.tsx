@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getKeyBody } from '@/lib/googleMapsKey';
 import { imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { haversineMeters, formatDistanceLabel } from '@/lib/geo';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -19,6 +20,7 @@ export default function SessionTracking() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { unit } = useDistanceUnits();
   const {
     session,
     routeCoordinates,
@@ -505,7 +507,7 @@ export default function SessionTracking() {
                     <p className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Navigation className="h-3 w-3 shrink-0" />
                       <span>
-                        À <span className="font-semibold text-foreground tabular-nums">{formatDistanceLabel(row.dist)}</span>
+                        À <span className="font-semibold text-foreground tabular-nums">{formatDistanceLabel(row.dist, unit)}</span>
                       </span>
                     </p>
                   </div>

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
+import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 
 interface RoutesFeedCardProps {
   route: FeedRoute;
@@ -18,18 +19,13 @@ interface RoutesFeedCardProps {
   index?: number;
 }
 
-const formatDistance = (meters: number | null) => {
-  if (!meters) return "N/A";
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-};
-
 const formatElevation = (meters: number | null) => {
   if (!meters) return "N/A";
   return `${Math.round(meters)} m`;
 };
 
 export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProps) => {
+  const { formatMeters, formatKm } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
@@ -164,7 +160,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         {route.distance_from_user > 0 && (
           <div className="absolute top-ios-2 right-ios-2 z-[1]">
             <Badge variant="secondary" className="bg-card/95 backdrop-blur-sm text-ios-caption1 tabular-nums rounded-full border border-border/60">
-              {route.distance_from_user.toFixed(1)} km
+              {formatKm(route.distance_from_user)}
             </Badge>
           </div>
         )}
@@ -193,7 +189,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProp
         <div className="flex flex-wrap items-center gap-x-ios-4 gap-y-ios-1">
           <div className="flex items-center gap-ios-1 text-ios-footnote">
             <Route className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="font-medium text-foreground">{formatDistance(route.total_distance)}</span>
+            <span className="font-medium text-foreground">{formatMeters(route.total_distance)}</span>
           </div>
           <div className="flex items-center gap-ios-1 text-ios-footnote">
             <Mountain className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

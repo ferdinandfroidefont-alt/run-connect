@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 import { ClubSelector } from "./ClubSelector";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 
   // Add type declaration for global polyline reference
   declare global {
@@ -36,6 +37,7 @@ import { ClubSelector } from "./ClubSelector";
 }
 
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation, onCreateRoute }: CreateSessionDialogProps) => {
+  const { formatMeters } = useDistanceUnits();
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
@@ -178,12 +180,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       path.forEach(point => bounds.extend(point));
       map.fitBounds(bounds);
     }
-  };
-
-  const formatDistance = (meters: number | null) => {
-    if (!meters) return "N/A";
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${Math.round(meters / 1000 * 10) / 10} km`;
   };
 
   const formatElevation = (meters: number | null) => {
@@ -1120,7 +1116,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-sm truncate">{route.name}</div>
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                    <span>{formatDistance(route.total_distance)}</span>
+                                    <span>{formatMeters(route.total_distance)}</span>
                                     {route.total_elevation_gain && (
                                       <>
                                         <span>•</span>
