@@ -33,6 +33,7 @@ const pageVariants = {
 export const PageTransition = ({ children }: PageTransitionProps) => {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
+  const isHome = location.pathname === '/';
 
   return (
     <motion.div
@@ -42,7 +43,11 @@ export const PageTransition = ({ children }: PageTransitionProps) => {
       animate="enter"
       exit={reduceMotion ? undefined : "exit"}
       transition={reduceMotion ? { duration: 0 } : undefined}
-      className="h-full min-h-0 w-full pointer-events-none"
+      className={
+        isHome
+          ? 'h-full min-h-0 w-full pointer-events-none'
+          : 'h-full min-h-0 w-full pointer-events-auto'
+      }
     >
       {children}
     </motion.div>

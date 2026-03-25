@@ -7,6 +7,7 @@ import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
+import { cn } from '@/lib/utils';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -156,13 +157,22 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         )}
         {/*
-          Accueil : la carte est en z-20 au-dessus de cette couche (z-10) pour que les FAB / header
-          reçoivent les clics (sur WebView iOS, pointer-events:none sur la couche route ne « traverse » pas toujours).
-          Autres onglets : carte z-0, cette couche z-10 — le contenu des pages reste au premier plan.
-          pointer-events-none ici : Index n’intercepte pas ; les pages avec UI ont pointer-events:auto sur leur racine.
+          Accueil : pointer-events-none sur cette colonne pour que les clics atteignent la carte (z-20).
+          Autres onglets : pointer-events-auto — sans cela, toute la chaîne (Layout + PageTransition) reste
+          en « none » et WebKit peut laisser les touches « tomber » sur la carte persistée (z-0) ou les absorber.
         */}
-        <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
-          <div className="animate-fade-in pointer-events-none relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
+        <div
+          className={cn(
+            'relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent',
+            isHome ? 'pointer-events-none' : 'pointer-events-auto'
+          )}
+        >
+          <div
+            className={cn(
+              'animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none',
+              isHome ? 'pointer-events-none' : 'pointer-events-auto'
+            )}
+          >
             {children}
           </div>
         </div>
