@@ -130,7 +130,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xl">{activity?.icon}</span>
                 <span className="text-xs text-muted-foreground">
-                  {activity?.label.replace(/^[^\s]+\s/, '')}
+                  {activity?.label?.replace(/^[^\s]+\s/, '') || ''}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-foreground">{formData.title}</h3>

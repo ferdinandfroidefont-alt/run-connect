@@ -53,7 +53,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   /** Texte proportionné au bloc logo (même logique vmin / dvh) */
   const titleStyle: CSSProperties = {
-    fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
+    // Légère montée en taille pour mieux remplir l'écran
+    fontSize: 'clamp(1.25rem, min(5.1vw, 3.9dvh), 1.95rem)',
     // Rapprocher optiquement le titre du logo
     marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
     letterSpacing: '-0.02em',
@@ -94,7 +95,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                 className="flex flex-col items-center"
                 style={{
                   // Ajustement "centrage optique" (pas seulement centré techniquement)
-                  transform: 'translateY(calc(-1 * min(3.1dvh, 1.25rem)))',
+                  transform: 'translateY(calc(-1 * min(2.85dvh, 1.2rem)))',
                 }}
               >
                 <img

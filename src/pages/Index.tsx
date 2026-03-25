@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
+import { useSearchParams } from 'react-router-dom';
 
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))

@@ -37,7 +37,8 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: 'clamp(1.1875rem, min(4.75vw, 3.65dvh), 1.8125rem)',
+    // Légère montée en taille pour mieux remplir l'écran
+    fontSize: 'clamp(1.25rem, min(5.1vw, 3.9dvh), 1.95rem)',
     marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
     letterSpacing: '-0.02em',
   };

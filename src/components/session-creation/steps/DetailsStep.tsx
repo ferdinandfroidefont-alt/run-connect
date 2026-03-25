@@ -66,7 +66,8 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     if (!formData.title && formData.activity_type && selectedLocation) {
       const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
       const locationShort = selectedLocation.name.split(',')[0];
-      const suggestion = `${activity?.label.replace(/^[^\s]+\s/, '') || 'Séance'} à ${locationShort}`;
+      const activityLabel = activity?.label?.replace(/^[^\s]+\s/, '');
+      const suggestion = `${activityLabel || 'Séance'} à ${locationShort}`;
       onFormDataChange({ title: suggestion });
     }
   }, [formData.activity_type, selectedLocation]);
