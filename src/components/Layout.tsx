@@ -6,6 +6,7 @@ import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { AppBootFallback } from '@/components/AppBootFallback';
+import { cn } from '@/lib/utils';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -132,8 +133,23 @@ export const Layout = ({ children }: LayoutProps) => {
             </Suspense>
           </div>
         )}
-        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent">
-          <div className="animate-fade-in relative flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
+        {/*
+          Accueil : la page ne monte qu’un placeholder ; la carte est en z-0 derrière.
+          Sans pointer-events-none sur cette colonne, le conteneur flex z-10 capte tous les clics
+          et la carte / les FAB ne réagissent pas. Les dialogs tutoriel / onboarding sont en portal.
+        */}
+        <div
+          className={cn(
+            'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-transparent',
+            isHome && 'pointer-events-none'
+          )}
+        >
+          <div
+            className={cn(
+              'animate-fade-in relative flex min-h-0 min-w-0 w-full max-w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none',
+              isHome && 'pointer-events-none'
+            )}
+          >
             {children}
           </div>
         </div>
