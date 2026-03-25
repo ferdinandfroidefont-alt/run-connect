@@ -607,15 +607,32 @@ export const NotificationCenter = ({
   })();
 
   const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
+  const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
   const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <div className="relative cursor-pointer">
-          <Bell className="h-5 w-5 text-muted-foreground hover:text-foreground mr-1" />
-          {unreadCount > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-              {unreadCount}
-            </Badge>}
-        </div>
+        <button
+          type="button"
+          className={cn(
+            "touch-manipulation relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
+            "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          )}
+          aria-label="Notifications"
+        >
+          <Bell className="h-[22px] w-[22px] text-[#1A1A1A]" strokeWidth={1.85} />
+          {unreadCount > 0 && (
+            <span
+              className={cn(
+                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1.5",
+                "text-center text-[10px] font-semibold leading-[18px] tracking-tight text-white shadow-sm",
+                badgeLabel.length > 1 ? "min-w-[26px]" : "min-w-[18px]"
+              )}
+            >
+              {badgeLabel}
+            </span>
+          )}
+        </button>
       </SheetTrigger>
       <SheetContent
         side="top"

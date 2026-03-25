@@ -21,7 +21,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, ArrowLeft, CheckCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -32,6 +32,8 @@ import { ElevationProfile } from './ElevationProfile';
 import { ClubSelector } from './ClubSelector';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
+import { cn } from '@/lib/utils';
+
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
 );
@@ -99,10 +101,11 @@ const TIME_SLOTS = [
   { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
 ];
 
-const TIME_SLOT_TONE: Record<'morning' | 'afternoon' | 'evening', 'orange' | 'yellow' | 'indigo'> = {
-  morning: 'orange',
-  afternoon: 'yellow',
-  evening: 'indigo',
+/** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
+const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening', string> = {
+  morning: 'text-[#FF9500]',
+  afternoon: 'text-[#D4A800]',
+  evening: 'text-[#5E5CE6]',
 };
 
 interface InteractiveMapProps {
@@ -229,6 +232,7 @@ export const InteractiveMap = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
@@ -1428,17 +1432,24 @@ export const InteractiveMap = ({
               </div>}
             
             {/* Bell and Settings - Right aligned */}
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center gap-4">
               <div data-tutorial="notifications" className="flex items-center justify-center">
-                <Suspense fallback={null}>
                 <Suspense fallback={null}>
                   <NotificationCenter onSessionUpdated={loadSessions} />
                 </Suspense>
-                </Suspense>
               </div>
-              <div className="text-lg cursor-pointer hover:opacity-70 transition-all duration-200 hover-scale p-2 rounded-full hover:bg-white/10 flex items-center justify-center" onClick={() => setShowSettingsDialog(true)}>
-                ⚙️
-              </div>
+              <button
+                type="button"
+                className={cn(
+                  "touch-manipulation flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] outline-none",
+                  "text-[#1A1A1A] transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
+                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                )}
+                aria-label="Paramètres"
+                onClick={() => setShowSettingsDialog(true)}
+              >
+                <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+              </button>
             </div>
           </div>
         </div>
@@ -1456,24 +1467,41 @@ export const InteractiveMap = ({
           {/* Date Filter and Time Slots */}
           <div className="mt-3 flex flex-col gap-3">
             {/* Calendar and Time Slots Row */}
-            <div className="flex flex-wrap items-start gap-2">
-              <Popover>
+            <div className="flex flex-wrap items-end gap-2">
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
-                  <MapIosColoredFab
-                    tone="red"
-                    title={`Date : ${format(filters.selected_date, "d MMM yyyy", { locale: fr })}`}
+                  <button
+                    type="button"
+                    title={`Date : ${format(filters.selected_date, "d MMMM yyyy", { locale: fr })}`}
+                    className={cn(
+                      "touch-manipulation flex h-[58px] w-[46px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-black/10 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      datePickerOpen && "ring-2 ring-[#007AFF] ring-offset-2 ring-offset-background"
+                    )}
                   >
-                    <span className="flex min-w-0 flex-col items-center justify-center gap-px leading-none">
-                      <span className="max-w-full truncate text-center text-[8px] font-bold uppercase tracking-tight text-white">
+                    <div
+                      className={cn(
+                        "flex shrink-0 flex-col items-center justify-end px-0.5 pb-1 pt-1.5",
+                        datePickerOpen ? "bg-[#007AFF]" : "bg-[#FF3B30]"
+                      )}
+                      style={{ flex: "0 0 47%" }}
+                    >
+                      <div className="mb-0.5 flex justify-center gap-[3px]" aria-hidden>
+                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
+                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
+                      </div>
+                      <span className="max-w-full truncate text-center text-[9px] font-bold uppercase leading-none tracking-tight text-white">
                         {format(filters.selected_date, "MMM", { locale: fr })
                           .replace(/\.$/, "")
                           .toUpperCase()}
                       </span>
-                      <span className="text-[15px] font-bold tabular-nums text-white">
+                    </div>
+                    <div className="flex min-h-0 flex-1 items-center justify-center bg-white">
+                      <span className="text-[17px] font-bold tabular-nums leading-none text-black">
                         {format(filters.selected_date, "d")}
                       </span>
-                    </span>
-                  </MapIosColoredFab>
+                    </div>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <CalendarComponent
@@ -1490,27 +1518,44 @@ export const InteractiveMap = ({
                 </PopoverContent>
               </Popover>
 
-              {TIME_SLOTS.map((slot) => (
-                <MapIosColoredFab
-                  key={slot.id}
-                  tone={TIME_SLOT_TONE[slot.id]}
-                  active={filters.time_slot === slot.id}
-                  title={slot.label}
-                  onClick={() =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      time_slot: prev.time_slot === slot.id ? null : slot.id,
-                    }))
-                  }
-                >
-                  <span className="flex min-w-0 flex-col items-center justify-center gap-px leading-none">
-                    <slot.icon className="h-[12px] w-[12px] shrink-0" strokeWidth={2.25} aria-hidden />
-                    <span className="max-w-[40px] truncate text-center text-[7px] font-bold leading-tight text-white">
+              {TIME_SLOTS.map((slot) => {
+                const active = filters.time_slot === slot.id;
+                const Icon = slot.icon;
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    title={slot.label}
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        time_slot: prev.time_slot === slot.id ? null : slot.id,
+                      }))
+                    }
+                    className={cn(
+                      "touch-manipulation flex h-[52px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border px-1 py-1.5 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      active
+                        ? "border-[#007AFF] bg-[#007AFF] text-white [&_svg]:stroke-white [&_svg]:text-white"
+                        : "border-black/10 bg-white text-foreground [&_svg]:stroke-current"
+                    )}
+                  >
+                    <Icon
+                      className={cn("h-[18px] w-[18px] shrink-0", !active && TIME_SLOT_ICON_CLASS[slot.id])}
+                      strokeWidth={2.25}
+                      aria-hidden
+                    />
+                    <span
+                      className={cn(
+                        "max-w-full truncate px-0.5 text-center text-[8px] font-semibold leading-tight",
+                        active ? "text-white" : "text-foreground"
+                      )}
+                    >
                       {slot.label}
                     </span>
-                  </span>
-                </MapIosColoredFab>
-              ))}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex flex-col gap-2">
