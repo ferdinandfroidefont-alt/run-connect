@@ -616,12 +616,12 @@ const Profile = () => {
       </div>;
   }
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-secondary">
+    <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary box-border">
       <div className="ios-scroll-region">
       {/* Cover Image - Facebook Style */}
-      <div className="relative">
+      <div className="relative min-w-0 max-w-full">
         {/* Cover Photo */}
-        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
+        <div className="relative h-48 w-full min-w-0 max-w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
           {(coverPreview || profile?.cover_image_url) ? (
             <img 
               src={coverPreview || profile?.cover_image_url || ''} 
@@ -635,14 +635,14 @@ const Profile = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           
           {/* Top bar buttons */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-ios-4 z-10 pt-[max(0.75rem,var(--safe-area-top))]">
+          <div className="absolute top-0 left-0 right-0 z-10 flex min-w-0 max-w-full items-center justify-between gap-ios-2 px-ios-4 pt-[max(0.75rem,var(--safe-area-top))]">
             {isViewingOtherUser ? (
               <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
                 <ChevronLeft className="h-5 w-5" />
                 <span className="text-ios-headline">Retour</span>
               </button>
-            ) : <div className="w-16" />}
-            <div className="flex items-center gap-ios-2">
+            ) : <div className="w-16 shrink-0" aria-hidden />}
+            <div className="flex min-w-0 shrink-0 items-center gap-ios-2">
               {!isViewingOtherUser && (
                 <>
                   <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
@@ -665,7 +665,7 @@ const Profile = () => {
         </div>
 
         {/* Avatar overlapping cover */}
-        <div className="relative flex justify-center" style={{ marginTop: '-50px' }}>
+        <div className="relative flex min-w-0 max-w-full justify-center" style={{ marginTop: '-50px' }}>
           <div className="relative">
             <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
               <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
@@ -706,19 +706,21 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="mx-auto w-full min-w-0 max-w-md space-y-ios-3 pb-ios-4">
+      {/* Colonne centrée + min-w-0 : même logique que Paramètres (évite le débordement iOS à droite). */}
+      <div className="box-border flex w-full min-w-0 max-w-full justify-center">
+        <div className="w-full min-w-0 max-w-md space-y-ios-3 pb-ios-4">
         {/* Name, username, bio */}
-        <div className="flex flex-col items-center px-ios-4 pb-ios-1 pt-ios-2">
-          <div className="mb-0.5 flex items-center gap-ios-2">
-            <h2 className="text-ios-title2 font-bold text-foreground">
+        <div className="flex min-w-0 max-w-full flex-col items-center px-ios-4 pb-ios-1 pt-ios-2">
+          <div className="mb-0.5 flex min-w-0 max-w-full items-center justify-center gap-ios-2">
+            <h2 className="min-w-0 max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
               {profile?.display_name || profile?.username}
             </h2>
             {profile?.is_premium && (
-              <Crown className="h-4 w-4 text-yellow-500" />
+              <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
             )}
           </div>
           
-          <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">
+          <p className="mb-ios-1 min-w-0 max-w-full truncate text-center text-ios-subheadline text-muted-foreground">
             @{profile?.username}
           </p>
 
@@ -801,7 +803,7 @@ const Profile = () => {
         {/* Collapsible Achievements Section */}
         <div className="px-ios-4">
           <Collapsible>
-            <CollapsibleTrigger className="group flex w-full items-center justify-between py-ios-1">
+            <CollapsibleTrigger className="group flex w-full min-w-0 max-w-full items-center justify-between gap-ios-2 py-ios-1">
               <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide">
                 Succès & Records
               </p>
@@ -923,6 +925,7 @@ const Profile = () => {
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
+        </div>
       </div>
       </div>
     </div>

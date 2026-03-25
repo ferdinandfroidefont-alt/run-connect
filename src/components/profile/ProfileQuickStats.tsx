@@ -64,18 +64,18 @@ export const ProfileQuickStats = ({
   ];
 
   return (
-    <div className="grid grid-cols-4 bg-card rounded-[10px] overflow-hidden">
+    <div className="grid min-w-0 max-w-full grid-cols-4 overflow-hidden rounded-[10px] bg-card">
       {stats.map((stat, i) => {
         const Wrapper = stat.onClick ? 'button' : 'div';
         return (
           <Wrapper
             key={stat.label}
             onClick={stat.onClick}
-            className={`py-2.5 text-center transition-colors active:bg-secondary/60 ${
+            className={`min-w-0 py-2.5 text-center transition-colors active:bg-secondary/60 ${
               i < 3 ? 'border-r border-border/50' : ''
             }`}
           >
-            <p className="text-[18px] font-bold text-foreground leading-none">
+            <p className="truncate text-[18px] font-bold leading-none text-foreground">
               {loading ? '–' : stat.value}
             </p>
             <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
