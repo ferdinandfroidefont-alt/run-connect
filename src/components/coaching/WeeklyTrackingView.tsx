@@ -11,8 +11,6 @@ import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, 
 import { fr } from "date-fns/locale";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { toast } from "sonner";
-import { formatDistanceKm } from "@/lib/distanceUnits";
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -94,7 +92,6 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
 };
 
 export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const { user } = useAuth();
   const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -597,11 +594,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                         <div className="flex items-center gap-3 mt-1">
                           {dayData.session.distance_km && (
                             <span className="text-[12px] font-medium text-primary">
-                              📏{' '}
-                              {formatDistanceKm(
-                                Math.round(Number(dayData.session.distance_km) * 10) / 10,
-                                distanceUnit
-                              )}
+                              📏 {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
                             </span>
                           )}
                           {dayData.session.pace_target && (

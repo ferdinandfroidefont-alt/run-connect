@@ -20,6 +20,7 @@ import {
   isCyclingActivity,
   isSwimmingActivity,
   getPacePlaceholder,
+  getDistanceUnit
 } from '../types';
 import { ClubSelector } from '@/components/ClubSelector';
 import {
@@ -35,12 +36,6 @@ import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
-import {
-  distanceUnitSuffix,
-  kmToMiles,
-  milesToKm,
-} from '@/lib/distanceUnits';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -65,7 +60,6 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onNext,
   onBack,
 }) => {
-  const { distanceUnit: profileDistanceUnit } = useDistanceUnit();
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
   // Auto-generate title suggestion
   useEffect(() => {
@@ -80,10 +74,8 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
   const showTerrainField = isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
   const showElevationField = showTerrainField;
+  const distanceUnit = getDistanceUnit(formData.activity_type);
   const pacePlaceholder = getPacePlaceholder(formData.activity_type);
-  const distanceFieldSuffix = isSwimmingActivity(formData.activity_type)
-    ? 'm'
-    : distanceUnitSuffix(profileDistanceUnit);
 
   const handleModeChange = (mode: SessionMode) => {
     onFormDataChange({ session_mode: mode });
@@ -209,62 +201,15 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               <div>
                 <Label htmlFor="distance_km" className="text-sm font-medium flex items-center gap-1.5">
                   <Ruler className="w-4 h-4 text-primary" />
-                  Distance ({distanceFieldSuffix})
+                  Distance ({distanceUnit})
                 </Label>
                 <Input
                   id="distance_km"
                   type="number"
-                  step={
-                    isSwimmingActivity(formData.activity_type)
-                      ? "1"
-                      : profileDistanceUnit === "mi"
-                        ? "0.01"
-                        : "0.1"
-                  }
-                  value={
-                    isSwimmingActivity(formData.activity_type)
-                      ? formData.distance_km
-                      : formData.distance_km === ""
-                        ? ""
-                        : (() => {
-                            const km = parseFloat(formData.distance_km);
-                            if (!Number.isFinite(km)) return formData.distance_km;
-                            if (profileDistanceUnit === "mi")
-                              return String(Math.round(kmToMiles(km) * 1000) / 1000);
-                            return formData.distance_km;
-                          })()
-                  }
-                  onChange={(e) => {
-                    if (isSwimmingActivity(formData.activity_type)) {
-                      onFormDataChange({ distance_km: e.target.value });
-                      return;
-                    }
-                    const v = e.target.value;
-                    if (v === "") {
-                      onFormDataChange({ distance_km: "" });
-                      return;
-                    }
-                    const num = parseFloat(v);
-                    if (!Number.isFinite(num)) {
-                      onFormDataChange({ distance_km: v });
-                      return;
-                    }
-                    if (profileDistanceUnit === "mi") {
-                      const km = milesToKm(num);
-                      onFormDataChange({
-                        distance_km: String(Math.round(km * 1000) / 1000),
-                      });
-                    } else {
-                      onFormDataChange({ distance_km: v });
-                    }
-                  }}
-                  placeholder={
-                    isSwimmingActivity(formData.activity_type)
-                      ? "1500"
-                      : profileDistanceUnit === "mi"
-                        ? "6.2"
-                        : "10"
-                  }
+                  step="0.1"
+                  value={formData.distance_km}
+                  onChange={(e) => onFormDataChange({ distance_km: e.target.value })}
+                  placeholder={isSwimmingActivity(formData.activity_type) ? "1500" : "10"}
                   className="h-11 mt-1.5"
                 />
               </div>

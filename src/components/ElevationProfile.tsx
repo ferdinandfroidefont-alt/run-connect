@@ -1,6 +1,4 @@
 import React, { useState, lazy, Suspense } from 'react';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
-import { formatDistanceMeters } from '@/lib/distanceUnits';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, Mountain, MapPin, Box } from 'lucide-react';
@@ -161,7 +159,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              <span>{formatDistanceMeters(routeStats.totalDistance, distanceUnit)}</span>
+              <span>{(routeStats.totalDistance / 1000).toFixed(1)} km</span>
             </div>
             <div className="flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-green-500" />

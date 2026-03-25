@@ -7,7 +7,6 @@ import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { DistanceUnitProvider } from "@/contexts/DistanceUnitContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
 import { AdMobInitializer } from "@/components/AdMobInitializer";
@@ -144,7 +143,6 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <AppErrorBoundary>
         <ThemeProvider>
-          <DistanceUnitProvider>
           <AppProvider>
             <TooltipProvider>
               <AdMobInitializer />
@@ -194,7 +192,6 @@ const App = () => {
               </BrowserRouter>
             </TooltipProvider>
           </AppProvider>
-          </DistanceUnitProvider>
         </ThemeProvider>
       </AppErrorBoundary>
     </QueryClientProvider>

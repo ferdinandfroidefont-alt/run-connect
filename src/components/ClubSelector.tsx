@@ -6,7 +6,7 @@ import { Users, Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { MAP_HOME_FAB_ACTIVE_CLASS, MAP_HOME_FAB_CLASS } from '@/lib/mapHomeUi';
+import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
 interface Club {
   id: string;
@@ -99,10 +99,6 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
     setIsOpen(false);
   };
 
-  /** Pastille carte — même jeton que les FAB accueil (Mes séances / ios-card) */
-  const mapClubTriggerClass = (active: boolean) =>
-    cn(MAP_HOME_FAB_CLASS, active && MAP_HOME_FAB_ACTIVE_CLASS);
-
   /** Identique au bouton « 👥 Amis uniquement » : Button size="sm" + h-8 w-full */
   const filterRowButtonClass = 'justify-start text-xs h-8 w-full gap-2';
 
@@ -125,15 +121,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
       );
     }
     return (
-      <button
-        type="button"
-        disabled
-        aria-busy
-        aria-label="Chargement des clubs"
-        className={cn(mapClubTriggerClass(false), 'cursor-wait opacity-90')}
-      >
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
-      </button>
+      <MapIosColoredFab tone="gray" disabled aria-busy aria-label="Chargement des clubs" className="cursor-wait opacity-90">
+        <Loader2 className="h-[18px] w-[18px] animate-spin" strokeWidth={2.25} aria-hidden />
+      </MapIosColoredFab>
     );
   }
 
@@ -153,9 +143,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
               <span className="min-w-0 truncate text-left">🏢 {filterRowLabel}</span>
             </Button>
           ) : (
-            <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
-              <Users className="h-4 w-4" aria-hidden />
-            </button>
+            <MapIosColoredFab type="button" tone={selectedClubId ? "blue" : "gray"} active={!!selectedClubId} title="Clubs">
+              <Users className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+            </MapIosColoredFab>
           )}
         </PopoverTrigger>
         
@@ -188,9 +178,9 @@ export const ClubSelector: React.FC<ClubSelectorProps> = ({
             </span>
           </Button>
         ) : (
-          <button type="button" className={mapClubTriggerClass(!!selectedClubId)} title="Club">
-            <Users className="h-4 w-4" aria-hidden />
-          </button>
+          <MapIosColoredFab type="button" tone={selectedClubId ? "blue" : "gray"} active={!!selectedClubId} title="Clubs">
+            <Users className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+          </MapIosColoredFab>
         )}
       </PopoverTrigger>
       

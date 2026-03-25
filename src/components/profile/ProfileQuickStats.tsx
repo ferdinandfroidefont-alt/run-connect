@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceKm } from "@/lib/distanceUnits";
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 interface ProfileQuickStatsProps {
   userId: string;
@@ -18,7 +16,6 @@ export const ProfileQuickStats = ({
   onFollowersClick,
   onFollowingClick,
 }: ProfileQuickStatsProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const [totalActivities, setTotalActivities] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -61,28 +58,24 @@ export const ProfileQuickStats = ({
 
   const stats = [
     { value: totalActivities, label: "Activités", onClick: undefined },
-    {
-      value: formatDistanceKm(totalDistance, distanceUnit),
-      label: "Distance",
-      onClick: undefined,
-    },
+    { value: `${totalDistance} km`, label: "Distance", onClick: undefined },
     { value: followerCount, label: "Abonnés", onClick: onFollowersClick },
     { value: followingCount, label: "Abonnements", onClick: onFollowingClick },
   ];
 
   return (
-    <div className="grid min-w-0 max-w-full grid-cols-4 overflow-hidden rounded-[10px] bg-card">
+    <div className="grid grid-cols-4 bg-card rounded-[10px] overflow-hidden">
       {stats.map((stat, i) => {
         const Wrapper = stat.onClick ? 'button' : 'div';
         return (
           <Wrapper
             key={stat.label}
             onClick={stat.onClick}
-            className={`min-w-0 py-2.5 text-center transition-colors active:bg-secondary/60 ${
+            className={`py-2.5 text-center transition-colors active:bg-secondary/60 ${
               i < 3 ? 'border-r border-border/50' : ''
             }`}
           >
-            <p className="truncate text-[18px] font-bold leading-none text-foreground">
+            <p className="text-[18px] font-bold text-foreground leading-none">
               {loading ? '–' : stat.value}
             </p>
             <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

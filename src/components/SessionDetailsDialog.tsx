@@ -21,12 +21,6 @@ import { CreateSessionWizard } from "./session-creation/CreateSessionWizard";
 import { useAdMob } from '@/hooks/useAdMob';
 import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
-import {
-  distanceUnitSuffix,
-  formatDistanceKm,
-  formatDistanceMeters,
-} from "@/lib/distanceUnits";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
@@ -133,7 +127,6 @@ const SettingsSeparator = () => (
 );
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
@@ -520,7 +513,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       icon={Route}
                       iconBg="bg-[#34C759]"
                       label="Distance"
-                      value={formatDistanceKm(session.distance_km, distanceUnit)}
+                      value={`${session.distance_km} km`}
                     />
                   </>
                 )}
@@ -533,7 +526,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       label="Allure"
                       value={
                         session.activity_type === 'course' 
-                          ? `${session.pace_general}/${distanceUnitSuffix(distanceUnit)}`
+                          ? `${session.pace_general}/km`
                           : session.activity_type === 'natation'
                             ? `${session.pace_general}/100m`
                             : session.activity_type === 'velo' && session.pace_unit === 'power'
@@ -556,11 +549,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       icon={Repeat}
                       iconBg="bg-[#FF9500]"
                       label="Séries"
-                      value={`${session.interval_count} × ${
-                        session.interval_distance < 1
-                          ? `${Math.round(session.interval_distance * 1000)} m`
-                          : formatDistanceKm(session.interval_distance, distanceUnit)
-                      }`}
+                      value={`${session.interval_count} × ${session.interval_distance < 1 ? `${Math.round(session.interval_distance * 1000)}m` : `${session.interval_distance} km`}`}
                     />
                   )}
                   {session.interval_pace && (
@@ -572,7 +561,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                         label="Allure"
                         value={
                           session.activity_type === 'course'
-                            ? `${session.interval_pace}/${distanceUnitSuffix(distanceUnit)}`
+                            ? `${session.interval_pace}/km`
                             : session.activity_type === 'natation'
                               ? `${session.interval_pace}/100m`
                               : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
@@ -630,17 +619,13 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                         const reps = block.repetitions || 1;
                         const effort = block.effortDuration || '0';
                         const effortUnit = block.effortType === 'time' ? 's' : 'm';
-                        const pace = block.effortPace
-                          ? ` à ${block.effortPace}/${distanceUnitSuffix(distanceUnit)}`
-                          : '';
+                        const pace = block.effortPace ? ` à ${block.effortPace}/km` : '';
                         const recovery = block.recoveryDuration ? ` r${block.recoveryDuration}s ${block.recoveryType || ''}` : '';
                         return `${reps}×${effort}${effortUnit}${pace}${recovery}${rpeSuffix}`;
                       } else {
                         const duration = block.duration || '0';
                         const unit = block.durationType === 'time' ? 'min' : 'm';
-                        const pace = block.pace
-                          ? ` à ${block.pace}/${distanceUnitSuffix(distanceUnit)}`
-                          : '';
+                        const pace = block.pace ? ` à ${block.pace}/km` : '';
                         return `${duration}${unit}${pace}${rpeSuffix}`;
                       }
                     };
@@ -744,9 +729,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       />
                     </div>
                     <div className="flex gap-4 mt-3 text-[13px] text-muted-foreground">
-                      <span>
-                        {formatDistanceMeters(session.routes.total_distance, distanceUnit)}
-                      </span>
+                      <span>{(session.routes.total_distance / 1000).toFixed(1)} km</span>
                       <span>D+ {Math.round(session.routes.total_elevation_gain)}m</span>
                     </div>
                   </div>

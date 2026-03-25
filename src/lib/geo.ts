@@ -1,6 +1,3 @@
-import type { DistanceUnit } from '@/lib/distanceUnits';
-import { formatDistanceMeters } from '@/lib/distanceUnits';
-
 /** Distance à vol d'oiseau entre deux points (mètres) */
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -13,9 +10,10 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-/** @param unit défaut km si appel depuis code sans contexte (ex. scripts). */
-export function formatDistanceLabel(meters: number, unit: DistanceUnit = 'km'): string {
-  return formatDistanceMeters(meters, unit);
+export function formatDistanceLabel(meters: number): string {
+  if (!Number.isFinite(meters) || meters < 0) return '—';
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(meters < 10000 ? 1 : 0)} km`;
 }
 
 /** Fenêtre : du début prévu de la séance jusqu'à fin (scheduled + maxDuration minutes) */

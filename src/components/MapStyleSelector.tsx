@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Map, Satellite, Mountain, Palette } from 'lucide-react';
-import { MAP_HOME_FAB_CLASS, MAP_HOME_PANEL_CLASS } from '@/lib/mapHomeUi';
-import { cn } from '@/lib/utils';
+import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
 interface MapStyleSelectorProps {
   currentStyle: string;
@@ -44,24 +43,24 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
   return (
     <div className="relative">
       {/* Toggle Button */}
-      <button
+      <MapIosColoredFab
         type="button"
+        tone="pink"
+        title="Styles de carte"
+        active={isOpen}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className={MAP_HOME_FAB_CLASS}
-        title="Styles de carte"
-        aria-expanded={isOpen}
       >
-        <Palette className="text-foreground" strokeWidth={1.75} />
-      </button>
+        <Palette className="h-[18px] w-[18px]" strokeWidth={2.25} />
+      </MapIosColoredFab>
 
       {/* Style Options */}
       {isOpen && (
-        <div className={cn('absolute bottom-12 left-0 z-20 min-w-[200px]', MAP_HOME_PANEL_CLASS)}>
-          <h3 className="mb-3 text-ios-subheadline font-semibold text-foreground">Style de carte</h3>
+        <div className="absolute bottom-12 left-0 min-w-[200px] rounded-ios-md border border-border bg-card/95 p-3 shadow-lg backdrop-blur-sm ios-surface">
+          <h3 className="text-sm font-medium text-foreground mb-3">Style de carte</h3>
           <div className="grid grid-cols-2 gap-2">
             {mapStyles.map((style) => {
               const Icon = style.icon;
@@ -70,22 +69,22 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
               return (
                 <button
                   key={style.id}
-                  type="button"
                   onClick={() => {
                     onStyleChange(style.id);
                     setIsOpen(false);
                   }}
-                  className={cn(
-                    'flex flex-col items-center gap-2 rounded-ios-md border p-3 transition-colors',
-                    isActive
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-card hover:bg-secondary/60'
-                  )}
+                  className={`
+                    flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
+                    ${isActive 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-transparent hover:border-border hover:bg-muted/50'
+                    }
+                  `}
                 >
-                  <div className={`flex h-6 w-8 items-center justify-center rounded-ios-sm ${style.preview}`}>
+                  <div className={`w-8 h-6 rounded ${style.preview} flex items-center justify-center`}>
                     <Icon size={12} className="text-white drop-shadow" />
                   </div>
-                  <span className="text-ios-caption1 font-medium text-foreground">
+                  <span className="text-xs font-medium text-foreground">
                     {style.name}
                   </span>
                 </button>

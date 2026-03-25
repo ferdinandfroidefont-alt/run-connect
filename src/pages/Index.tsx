@@ -35,7 +35,8 @@ const Index = () => {
     completeTutorial,
     skipTutorial,
   } = useTutorial();
-
+  const [searchParams] = useSearchParams();
+  
   const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
 
   // Activer les notifications de dépassement au classement

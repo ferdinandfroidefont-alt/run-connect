@@ -10,8 +10,6 @@ import { getKeyBody } from '@/lib/googleMapsKey';
 
 import { ElevationProfile } from '@/components/ElevationProfile';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
-import { formatDistanceKm } from '@/lib/distanceUnits';
 
 declare global {
   interface Window {
@@ -107,7 +105,6 @@ function resamplePathEvenly(
 const ELEV_NOISE_THRESHOLD_M = 2;
 
 export const RouteCreation = () => {
-  const { distanceUnit } = useDistanceUnit();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
@@ -880,9 +877,7 @@ export const RouteCreation = () => {
               <div className="flex flex-wrap items-center justify-center gap-x-ios-4 gap-y-ios-1 text-ios-subheadline">
                 <div className="flex items-center gap-ios-1">
                   <span className="text-muted-foreground">📏</span>
-                  <span className="font-semibold text-foreground">
-                    {formatDistanceKm(totalDistance, distanceUnit)}
-                  </span>
+                  <span className="font-semibold text-foreground">{totalDistance.toFixed(2)} km</span>
                 </div>
                 <div className="hidden sm:block w-px h-4 bg-border" />
                 <div className="flex items-center gap-ios-1">

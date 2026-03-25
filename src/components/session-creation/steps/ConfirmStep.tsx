@@ -7,8 +7,6 @@ import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, Recu
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
-import { formatDistanceKm } from '@/lib/distanceUnits';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -60,7 +58,6 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   isCoachingMode = false,
 }) => {
   const navigate = useNavigate();
-  const { distanceUnit } = useDistanceUnit();
   const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
 
   const handleVisibilityChange = (type: VisibilityType) => {
@@ -185,9 +182,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
               {formData.distance_km && (
                 <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                   <Ruler className="w-3.5 h-3.5 shrink-0" />
-                  <span>
-                    {formatDistanceKm(parseFloat(formData.distance_km), distanceUnit)}
-                  </span>
+                  <span>{formData.distance_km} km</span>
                 </div>
               )}
             </div>

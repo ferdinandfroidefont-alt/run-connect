@@ -28,12 +28,9 @@ interface Notification {
 }
 interface NotificationCenterProps {
   onSessionUpdated?: () => void;
-  /** Ex. bouton FAB carte d’accueil (MAP_HOME_FAB_CLASS) — sinon déclencheur texte discret. */
-  triggerClassName?: string;
 }
 export const NotificationCenter = ({
-  onSessionUpdated,
-  triggerClassName,
+  onSessionUpdated
 }: NotificationCenterProps) => {
   const {
     user
@@ -613,25 +610,12 @@ export const NotificationCenter = ({
   const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        {triggerClassName ? (
-          <button type="button" className={cn(triggerClassName, 'relative')} aria-label="Notifications">
-            <Bell className="h-[18px] w-[18px] text-foreground" strokeWidth={1.75} />
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full p-0 px-0.5 text-[10px]">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
-            )}
-          </button>
-        ) : (
-          <div className="relative cursor-pointer">
-            <Bell className="mr-1 h-5 w-5 text-muted-foreground hover:text-foreground" />
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center p-0 text-xs">
-                {unreadCount}
-              </Badge>
-            )}
-          </div>
-        )}
+        <div className="relative cursor-pointer">
+          <Bell className="h-5 w-5 text-muted-foreground hover:text-foreground mr-1" />
+          {unreadCount > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
+              {unreadCount}
+            </Badge>}
+        </div>
       </SheetTrigger>
       <SheetContent
         side="top"

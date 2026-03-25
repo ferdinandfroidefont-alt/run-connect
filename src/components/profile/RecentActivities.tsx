@@ -4,8 +4,6 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Activity } from "lucide-react";
 import { getActivityConfig } from "@/lib/activityIcons";
-import { formatDistanceKm } from "@/lib/distanceUnits";
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 interface ActivityItem {
   id: string;
@@ -22,7 +20,6 @@ interface RecentActivitiesProps {
 }
 
 export const RecentActivities = ({ userId, limit = 5 }: RecentActivitiesProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -127,9 +124,9 @@ export const RecentActivities = ({ userId, limit = 5 }: RecentActivitiesProps) =
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-medium text-foreground truncate">{activity.title}</p>
                 <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                  {activity.distance_km != null && activity.distance_km > 0 && (
+                  {activity.distance_km && (
                     <>
-                      <span>{formatDistanceKm(activity.distance_km, distanceUnit)}</span>
+                      <span>{activity.distance_km} km</span>
                       <span>·</span>
                     </>
                   )}

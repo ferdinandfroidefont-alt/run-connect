@@ -103,12 +103,13 @@ export const LevelSliderFilter = ({
       )}
       onClick={handleDoubleTap}
     >
-      {/* Main container - iOS style translucent */}
+      {/* Conteneur façon « tuile » iOS colorée (comme les icônes Réglages), version verticale niveau */}
       <div
         className={cn(
-          'relative flex w-10 flex-col items-center rounded-ios-md border border-border bg-card p-2 shadow-[var(--shadow-card)]',
-          isDragging && 'ring-2 ring-primary/20'
+          "relative flex flex-col items-center rounded-[14px] border border-white/25 bg-[#5856D6] p-2 shadow-lg",
+          isDragging && "shadow-xl"
         )}
+        style={{ width: 44 }}
       >
         {/* Vertical slider track */}
         <div 
@@ -119,13 +120,11 @@ export const LevelSliderFilter = ({
           onTouchStart={handleTouchStart}
         >
           {/* Track background - iOS gray */}
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 w-[4px] h-full rounded-full bg-border"
-          />
-          
-          {/* Active track portion - iOS blue */}
+          <div className="absolute left-1/2 h-full w-[4px] -translate-x-1/2 rounded-full bg-white/25" />
+
+          {/* Portion active */}
           <motion.div
-            className="absolute left-1/2 -translate-x-1/2 w-[4px] rounded-full bg-primary"
+            className="absolute left-1/2 w-[4px] -translate-x-1/2 rounded-full bg-white"
             style={{ 
               bottom: 0,
             }}
@@ -147,10 +146,10 @@ export const LevelSliderFilter = ({
                 style={{ top: y - 3 }}
               >
                 {/* Small tick */}
-                <div 
+                <div
                   className={cn(
-                    'w-[6px] h-[6px] rounded-full transition-all duration-200',
-                    isActive ? 'bg-primary opacity-100' : 'bg-muted-foreground opacity-30'
+                    "h-[6px] w-[6px] rounded-full transition-all duration-200",
+                    isActive ? "bg-white opacity-100" : "bg-white/35 opacity-80"
                   )}
                 />
               </div>
@@ -160,11 +159,8 @@ export const LevelSliderFilter = ({
           {/* Draggable thumb - iOS style */}
           <motion.div
             className={cn(
-              'absolute left-1/2 -translate-x-1/2 cursor-grab active:cursor-grabbing',
-              'rounded-full bg-card',
-              'shadow-[0_2px_8px_rgba(0,0,0,0.15),0_1px_3px_rgba(0,0,0,0.1)]',
-              'border border-border',
-              isDragging && 'scale-110'
+              "absolute left-1/2 -translate-x-1/2 cursor-grab rounded-full border border-white/40 bg-white shadow-md active:cursor-grabbing",
+              isDragging && "scale-110"
             )}
             style={{ 
               width: THUMB_SIZE,
@@ -179,9 +175,7 @@ export const LevelSliderFilter = ({
         
         {/* Level indicator at bottom */}
         <div className="mt-2 flex flex-col items-center">
-          <span className="text-[11px] font-semibold text-primary">
-            {currentLevel}
-          </span>
+          <span className="text-[11px] font-bold text-white tabular-nums">{currentLevel}</span>
         </div>
       </div>
       
@@ -190,10 +184,9 @@ export const LevelSliderFilter = ({
         <motion.div
           initial={{ opacity: 0, x: 10, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-            className={cn(
-              'absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap',
-              'rounded-ios-md border border-border bg-card px-2 py-1 shadow-[var(--shadow-card)]'
-            )}
+          className={cn(
+            "absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded-lg border border-border bg-card/95 px-2 py-1 shadow-md backdrop-blur-sm"
+          )}
         >
           <p className="text-[10px] text-muted-foreground">Niveau</p>
           <p 

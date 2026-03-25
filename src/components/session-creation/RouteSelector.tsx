@@ -4,8 +4,6 @@ import { MapPin, Route, ChevronRight, Check, X, Mountain, Ruler, Sparkles } from
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { formatDistanceMeters } from '@/lib/distanceUnits';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 
 interface RouteData {
   id: string;
@@ -130,7 +128,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                 {selectedRoute.total_distance && (
                   <span className="flex items-center gap-1">
                     <Ruler className="w-3 h-3" />
-                    {formatDistanceMeters(selectedRoute.total_distance, distanceUnit)}
+                    {(selectedRoute.total_distance / 1000).toFixed(1)} km
                   </span>
                 )}
                 {selectedRoute.total_elevation_gain && (
@@ -205,9 +203,7 @@ export const RouteSelector: React.FC<RouteSelectorProps> = ({
                     <p className="text-sm font-medium truncate">{route.name}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       {route.total_distance && (
-                        <span>
-                          {formatDistanceMeters(route.total_distance, distanceUnit)}
-                        </span>
+                        <span>{(route.total_distance / 1000).toFixed(1)} km</span>
                       )}
                       {route.total_elevation_gain && (
                         <span>D+ {route.total_elevation_gain}m</span>

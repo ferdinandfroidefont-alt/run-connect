@@ -4,12 +4,6 @@ import { Input } from '@/components/ui/input';
 import { ActivityIcon } from '@/lib/activityIcons';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import { cn } from '@/lib/utils';
-import {
-  distanceUnitSuffix,
-  filterKmToDisplayValue,
-  parseFilterDisplayToKm,
-} from '@/lib/distanceUnits';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 
 interface DiscoverFiltersProps {
   maxDistance: number;
@@ -26,9 +20,7 @@ export const DiscoverFilters = ({
   toggleActivity,
   toggleAllActivities
 }: DiscoverFiltersProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const maxInput = distanceUnit === 'mi' ? 62 : 100;
 
   return (
     <div className="shrink-0 bg-card border-b border-border">
@@ -82,16 +74,13 @@ export const DiscoverFilters = ({
           <div className="flex items-center gap-2">
             <Input
               type="number"
-              value={filterKmToDisplayValue(maxDistance, distanceUnit)}
-              onChange={(e) => {
-                const km = parseFilterDisplayToKm(e.target.value, distanceUnit);
-                setMaxDistance(km > 0 ? Math.min(100, Math.max(1, Math.round(km))) : 10);
-              }}
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(parseInt(e.target.value) || 10)}
               className="w-16 h-9 text-[15px] text-right bg-secondary border-border rounded-[8px]"
               min="1"
-              max={maxInput}
+              max="100"
             />
-            <span className="text-[15px] text-muted-foreground">{distanceUnitSuffix(distanceUnit)}</span>
+            <span className="text-[15px] text-muted-foreground">km</span>
           </div>
         </div>
       </div>

@@ -12,8 +12,6 @@ import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
-import { formatDistanceMeters } from '@/lib/distanceUnits';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 
 interface RouteCardProps {
   route: {
@@ -32,7 +30,6 @@ interface RouteCardProps {
 }
 
 export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
@@ -41,6 +38,12 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
   const { position } = useGeolocation();
   const [show3DDialog, setShow3DDialog] = useState(false);
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
+
+  const formatDistance = (meters: number | null) => {
+    if (!meters) return "—";
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
 
   const formatElevation = (meters: number | null) => {
     if (!meters) return "—";
@@ -196,8 +199,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
             {/* Stats overlay at bottom */}
             <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
               <span className="flex items-center gap-1 text-[12px] font-semibold bg-background/80 backdrop-blur-sm text-foreground px-2.5 py-1.5 rounded-full">
-                <Route className="h-3 w-3" />{' '}
-                {formatDistanceMeters(route.total_distance, distanceUnit)}
+                <Route className="h-3 w-3" /> {formatDistance(route.total_distance)}
               </span>
               <span className="flex items-center gap-1 text-[12px] font-semibold bg-background/80 backdrop-blur-sm text-foreground px-2.5 py-1.5 rounded-full">
                 <Mountain className="h-3 w-3" /> {formatElevation(route.total_elevation_gain)}

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -12,9 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 import { cn } from "@/lib/utils";
-import type { DistanceUnit } from "@/lib/distanceUnits";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -26,17 +24,11 @@ const THEME_MODES = [
   { id: "system" as const, labelKey: "themeModeSystem" as const, Icon: Monitor },
 ];
 
-const DISTANCE_MODES: { id: DistanceUnit; labelKey: "distanceUnitKm" | "distanceUnitMi" }[] = [
-  { id: "km", labelKey: "distanceUnitKm" },
-  { id: "mi", labelKey: "distanceUnitMi" },
-];
-
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const { distanceUnit, setDistanceUnit } = useDistanceUnit();
   const [themeMounted, setThemeMounted] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -221,56 +213,6 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                     })}
                   </div>
                 )}
-              </div>
-
-              <div className="ios-list-row-inset-sep" />
-
-              {/* Unités de distance */}
-              <div className="space-y-2.5 px-4 py-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="ios-list-row-icon bg-primary">
-                    <Ruler className="h-[18px] w-[18px] text-primary-foreground" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium">{t("settings.distanceUnit")}</p>
-                    <p className="text-[13px] text-muted-foreground leading-snug">
-                      {t("settings.distanceUnitDescription")}
-                    </p>
-                  </div>
-                </div>
-                <div
-                  className="flex rounded-[12px] bg-secondary/80 dark:bg-secondary p-1 gap-0.5 border border-border/50"
-                  role="tablist"
-                  aria-label={t("settings.distanceUnit")}
-                >
-                  {DISTANCE_MODES.map(({ id, labelKey }) => {
-                    const label = t(`settings.${labelKey}`);
-                    const active = distanceUnit === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => {
-                          setDistanceUnit(id);
-                          toast({
-                            title: t("settings.updated"),
-                            description: label,
-                          });
-                        }}
-                        className={cn(
-                          "flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1.5 rounded-[10px] text-[11px] sm:text-[12px] font-semibold transition-all min-h-[44px]",
-                          active
-                            ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
-                            : "text-muted-foreground active:opacity-70 hover:text-foreground"
-                        )}
-                      >
-                        <span className="leading-tight text-center">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
           </div>

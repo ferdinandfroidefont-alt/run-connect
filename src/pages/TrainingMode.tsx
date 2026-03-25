@@ -9,12 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getKeyBody } from '@/lib/googleMapsKey';
-import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
-import {
-  distanceUnitSuffix,
-  formatDistanceMeters,
-  kmToMiles,
-} from '@/lib/distanceUnits';
 
 const PRIMARY_BLUE = 'hsl(221, 83%, 53%)';
 const TRAVELED_TEAL = '#14b8a6';
@@ -46,6 +40,16 @@ function getTurnLabel(direction: TurnInstruction['direction']) {
   }
 }
 
+function formatTurnDistance(meters: number) {
+  if (meters >= 1000) return `${(meters / 1000).toFixed(1)} km`;
+  return `${Math.round(meters)} m`;
+}
+
+function formatDistance(meters: number) {
+  if (meters >= 1000) return (meters / 1000).toFixed(2);
+  return (meters / 1000).toFixed(2);
+}
+
 function formatTime(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -65,7 +69,6 @@ export default function TrainingMode() {
   const { sessionId, routeId } = useParams<{ sessionId?: string; routeId?: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { distanceUnit } = useDistanceUnit();
   const {
     routeCoordinates,
     userPosition,
@@ -472,7 +475,7 @@ export default function TrainingMode() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[28px] font-bold text-white leading-none">
-                    {formatDistanceMeters(nextTurn.distanceMeters, distanceUnit)}
+                    {formatTurnDistance(nextTurn.distanceMeters)}
                   </p>
                   <p className="text-[15px] text-white/80 mt-1">
                     {getTurnLabel(nextTurn.direction)}
@@ -565,9 +568,7 @@ export default function TrainingMode() {
                   )}
                 </div>
                 <span className="text-[12px] text-white font-medium truncate max-w-[80px]">{p.name.split(' ')[0]}</span>
-                <span className="text-[11px] text-white/60">
-                  {formatDistanceMeters(p.distance, distanceUnit)}
-                </span>
+                <span className="text-[11px] text-white/60">{p.distance > 999 ? `${(p.distance/1000).toFixed(1)}km` : `${p.distance}m`}</span>
               </div>
             ))}
           </motion.div>
@@ -591,14 +592,9 @@ export default function TrainingMode() {
               {/* Distance */}
               <div className="flex flex-col items-center justify-center py-4 px-2">
                 <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
-                  {(distanceUnit === 'mi'
-                    ? kmToMiles(distanceTraveled / 1000)
-                    : distanceTraveled / 1000
-                  ).toFixed(2)}
+                  {formatDistance(distanceTraveled)}
                 </span>
-                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">
-                  {distanceUnitSuffix(distanceUnit)}
-                </span>
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">km</span>
               </div>
 
               {/* Time */}

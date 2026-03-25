@@ -345,6 +345,21 @@ html, body {
     @apply divide-y divide-border;
   }
 
+  /**
+   * Boutons flottants carte : même esprit que ios-list-row-icon (carré coloré + picto blanc),
+   * taille tactile 40×40, ombre type FAB iOS.
+   */
+  .map-ios-colored-fab {
+    @apply flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-white/20 text-white shadow-lg outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    box-shadow:
+      0 4px 14px -3px rgb(0 0 0 / 0.32),
+      0 2px 8px -4px rgb(0 0 0 / 0.18);
+  }
+
+  .map-ios-colored-fab:active:not(:disabled) {
+    @apply scale-[0.96];
+  }
+
   .ios-surface {
     @apply bg-card border border-border/60;
   }
@@ -482,9 +497,6 @@ html, body {
 .ios-scroll-region {
   flex: 1 1 0%;
   min-height: 0;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

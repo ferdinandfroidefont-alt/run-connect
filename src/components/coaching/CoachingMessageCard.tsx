@@ -7,8 +7,6 @@ import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
 import { CreateSessionWizard } from "@/components/session-creation/CreateSessionWizard";
 import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { GraduationCap, Calendar } from "lucide-react";
-import { formatDistanceKm } from "@/lib/distanceUnits";
-import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 interface CoachingMessageCardProps {
   coachingSessionId: string;
@@ -16,7 +14,6 @@ interface CoachingMessageCardProps {
 }
 
 export const CoachingMessageCard = ({ coachingSessionId, currentUserId }: CoachingMessageCardProps) => {
-  const { distanceUnit } = useDistanceUnit();
   const [session, setSession] = useState<any>(null);
   const [participation, setParticipation] = useState<any>(null);
   const [showSchedule, setShowSchedule] = useState(false);
@@ -68,11 +65,7 @@ export const CoachingMessageCard = ({ coachingSessionId, currentUserId }: Coachi
         <div className="flex items-center flex-wrap gap-x-ios-2 gap-y-0.5 text-ios-caption1 text-muted-foreground">
           <ActivityIcon activityType={session.activity_type} size="sm" />
           <span>{getActivityLabel(session.activity_type)}</span>
-          {session.distance_km ? (
-            <span className="tabular-nums">
-              · {formatDistanceKm(session.distance_km, distanceUnit)}
-            </span>
-          ) : null}
+          {session.distance_km ? <span className="tabular-nums">· {session.distance_km} km</span> : null}
         </div>
 
         {session.session_blocks && Array.isArray(session.session_blocks) && session.session_blocks.length > 0 && (
