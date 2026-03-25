@@ -139,8 +139,12 @@ export const Layout = ({ children }: LayoutProps) => {
             </Suspense>
           </div>
         )}
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
-          <div className="animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
+        {/*
+          pointer-events-none : la route accueil (Index) ne doit pas intercepter les clics — ils passent à la carte.
+          Chaque page avec contenu (Feed, etc.) réactive les clics sur son conteneur racine (pointer-events: auto par défaut).
+        */}
+        <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
+          <div className="animate-fade-in pointer-events-none relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
             {children}
           </div>
         </div>

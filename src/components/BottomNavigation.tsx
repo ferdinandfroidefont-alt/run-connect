@@ -68,7 +68,7 @@ export const BottomNavigation = () => {
 
   return (
     <nav
-      className="z-50 w-full shrink-0 bg-background"
+      className="relative z-[100] w-full shrink-0 bg-background pointer-events-auto"
       role="navigation"
       aria-label="Navigation principale"
       style={{ paddingBottom: 'var(--safe-area-bottom)' }}

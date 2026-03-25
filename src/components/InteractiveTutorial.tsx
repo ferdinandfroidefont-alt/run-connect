@@ -160,6 +160,8 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
       stepIndex={stepIndex}
       callback={handleJoyrideCallback}
       tooltipComponent={CustomTooltip}
+      /* Overlay plein écran = bloque carte + tab bar ; sans overlay, l’utilisateur garde l’app utilisable. */
+      disableOverlay
       disableOverlayClose
       disableScrolling
       spotlightPadding={8}

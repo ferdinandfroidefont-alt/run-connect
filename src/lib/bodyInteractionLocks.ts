@@ -7,10 +7,12 @@ export function resetBodyInteractionLocks(): void {
   if (typeof document === 'undefined') return;
 
   const { body, documentElement: html } = document;
+  const root = document.getElementById('root');
 
   // Forcer "auto" en inline écrase les verrous laissés par des overlays.
   body.style.pointerEvents = 'auto';
   html.style.pointerEvents = 'auto';
+  if (root) root.style.pointerEvents = 'auto';
 
   // Certaines libs ajoutent des data-attributes ; on ne les supprime que s’ils sont connus vides
   body.removeAttribute('data-scroll-locked');
