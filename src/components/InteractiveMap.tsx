@@ -102,10 +102,11 @@ const TIME_SLOTS = [
 ];
 
 /** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
+/** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
 const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening', string> = {
   morning: 'text-[#FF9500]',
-  afternoon: 'text-[#D4A800]',
-  evening: 'text-[#5E5CE6]',
+  afternoon: 'text-[#C9A018]',
+  evening: 'text-[#5856D6]',
 };
 
 interface InteractiveMapProps {
@@ -1473,9 +1474,9 @@ export const InteractiveMap = ({
           </div>
           
           {/* Date Filter and Time Slots */}
-          <div className="mt-3 flex flex-col gap-3">
-            {/* Calendar and Time Slots Row */}
-            <div className="flex flex-wrap items-end gap-2">
+          <div className="mt-2 flex flex-col gap-3">
+            {/* Calendrier + créneaux : haut aligné (items-start), pastilles plus étroites */}
+            <div className="flex flex-wrap items-start gap-2">
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <button
@@ -1489,22 +1490,21 @@ export const InteractiveMap = ({
                   >
                     <div
                       className={cn(
-                        "flex shrink-0 flex-col items-center justify-end px-0.5 pb-1 pt-1.5",
+                        "flex min-h-[26px] shrink-0 flex-col items-center justify-center gap-0.5 px-0.5 pb-0.5 pt-1",
                         datePickerOpen ? "bg-[#007AFF]" : "bg-[#FF3B30]"
                       )}
-                      style={{ flex: "0 0 47%" }}
                     >
-                      <div className="mb-0.5 flex justify-center gap-[3px]" aria-hidden>
-                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
-                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
+                      <div className="flex shrink-0 justify-center gap-[3px]" aria-hidden>
+                        <span className="h-1 w-[2.5px] rounded-full bg-white shadow-sm" />
+                        <span className="h-1 w-[2.5px] rounded-full bg-white shadow-sm" />
                       </div>
-                      <span className="max-w-full truncate text-center text-[9px] font-bold uppercase leading-none tracking-tight text-white">
+                      <span className="max-w-full truncate px-0.5 text-center text-[8px] font-bold uppercase leading-none tracking-tight text-white">
                         {format(filters.selected_date, "MMM", { locale: fr })
                           .replace(/\.$/, "")
                           .toUpperCase()}
                       </span>
                     </div>
-                    <div className="flex min-h-0 flex-1 items-center justify-center bg-white">
+                    <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-white px-0.5">
                       <span className="text-[17px] font-bold tabular-nums leading-none text-black">
                         {format(filters.selected_date, "d")}
                       </span>
@@ -1541,7 +1541,7 @@ export const InteractiveMap = ({
                       }))
                     }
                     className={cn(
-                      "touch-manipulation flex h-[52px] w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-[14px] border px-1 py-1.5 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
+                      "touch-manipulation flex h-[58px] w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[14px] border px-0.5 py-1 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       active
                         ? "border-[#007AFF] bg-[#007AFF] text-white [&_svg]:stroke-white [&_svg]:text-white"
@@ -1549,13 +1549,13 @@ export const InteractiveMap = ({
                     )}
                   >
                     <Icon
-                      className={cn("h-[18px] w-[18px] shrink-0", !active && TIME_SLOT_ICON_CLASS[slot.id])}
+                      className={cn("h-[16px] w-[16px] shrink-0", !active && TIME_SLOT_ICON_CLASS[slot.id])}
                       strokeWidth={2.25}
                       aria-hidden
                     />
                     <span
                       className={cn(
-                        "max-w-full truncate px-0.5 text-center text-[8px] font-semibold leading-tight",
+                        "max-w-full truncate px-0.5 text-center text-[7px] font-semibold leading-[1.1]",
                         active ? "text-white" : "text-foreground"
                       )}
                     >
@@ -1619,7 +1619,7 @@ export const InteractiveMap = ({
 
       {/* Niveau + classement + présence (fabs iOS) */}
       {user && !isImmersiveMode && (
-        <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
+        <div className="absolute right-4 bottom-4 z-10 flex flex-col items-end gap-2 ios-map-bottom-buttons">
           <MapIosColoredFab
             tone="blue"
             title="Créer un itinéraire"

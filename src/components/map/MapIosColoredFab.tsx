@@ -13,6 +13,7 @@ export type MapIosFabTone =
   | "pink"
   | "indigo";
 
+/** Même teintes que les carrés `ios-list-row-icon` du hub Paramètres (`SettingsDialog` / sous-pages). */
 const TONE_CLASS: Record<MapIosFabTone, string> = {
   blue: "bg-[#007AFF]",
   green: "bg-[#34C759]",
@@ -20,7 +21,8 @@ const TONE_CLASS: Record<MapIosFabTone, string> = {
   purple: "bg-[#5856D6]",
   red: "bg-[#FF3B30]",
   teal: "bg-[#30B0C7]",
-  yellow: "bg-[#FFCC00]",
+  /** Classement : comme « Aide & Support » (#FF9500), pas le jaune vif #FFCC00 */
+  yellow: "bg-[#FF9500]",
   gray: "bg-[#8E8E93]",
   pink: "bg-[#AF52DE]",
   indigo: "bg-[#5E5CE6]",

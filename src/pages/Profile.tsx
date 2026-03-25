@@ -706,7 +706,7 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden px-4 pb-ios-4">
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden px-4 pb-[calc(2rem+var(--safe-area-bottom))]">
         {/* Name, username, bio */}
         <div className="flex flex-col items-center pb-ios-1 pt-ios-2">
           <div className="mb-0.5 flex items-center gap-ios-2">

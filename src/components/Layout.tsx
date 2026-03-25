@@ -22,6 +22,8 @@ export const Layout = ({ children }: LayoutProps) => {
   const [searchParams] = useSearchParams();
 
   const isHome = location.pathname === '/';
+  const isProfileRoute =
+    location.pathname === '/profile' || location.pathname.startsWith('/profile/');
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
 
   useEffect(() => {
@@ -50,13 +52,13 @@ export const Layout = ({ children }: LayoutProps) => {
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
 
-  // Réserve l’espace sous les pages en position:fixed (Classement, etc.) quand la barre du bas est visible
+  // Réserve l’espace sous le contenu quand la tab bar est visible (profil = plein écran sans barre).
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--layout-bottom-inset',
-      hideBottomNav ? '0px' : 'var(--bottom-nav-offset)'
+      hideBottomNav || isProfileRoute ? '0px' : 'var(--bottom-nav-offset)'
     );
-  }, [hideBottomNav]);
+  }, [hideBottomNav, isProfileRoute]);
   
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);

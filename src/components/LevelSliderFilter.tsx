@@ -109,7 +109,7 @@ export const LevelSliderFilter = ({
           "relative flex flex-col items-center rounded-[14px] border border-white/25 bg-primary p-2 shadow-lg",
           isDragging && "shadow-xl"
         )}
-        style={{ width: 44 }}
+        style={{ width: 40 }}
       >
         {/* Vertical slider track */}
         <div 

@@ -64,7 +64,11 @@ export const BottomNavigation = () => {
     };
   }, [user]);
 
-  if (hideBottomNav) return null;
+  // Profil plein écran : pas de tab bar (comme les sous-pages Paramètres)
+  const isProfileStandalone =
+    location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+
+  if (hideBottomNav || isProfileStandalone) return null;
 
   return (
     <nav
