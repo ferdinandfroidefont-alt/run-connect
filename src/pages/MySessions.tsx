@@ -1118,10 +1118,12 @@ export default function MySessions() {
 
               {/* Sessions Display */}
               {sessionsDisplayMode === 'calendar' ? (
-                <SessionCalendarView
-                  sessions={filteredSessions}
-                  onSessionClick={handleSessionClick}
-                />
+                <div className="box-border min-w-0 w-full max-w-full px-4">
+                  <SessionCalendarView
+                    sessions={filteredSessions}
+                    onSessionClick={handleSessionClick}
+                  />
+                </div>
               ) : loading ? (
                 <div className="space-y-px">
                   {[1, 2, 3].map((i) => (

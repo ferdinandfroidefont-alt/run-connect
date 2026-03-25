@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 export const BottomNavigation = () => {
   const location = useLocation();
@@ -21,54 +21,62 @@ export const BottomNavigation = () => {
     { path: '/feed', icon: Newspaper, label: 'Feed' }
   ];
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
+
+      const convIds = (conversations || []).map(c => c.id);
+      if (convIds.length === 0) {
+        setTotalUnreadCount(0);
+        return;
+      }
+
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .in('conversation_id', convIds)
+        .neq('sender_id', user.id)
+        .is('read_at', null);
+
+      setTotalUnreadCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
-    const fetchUnreadCount = async () => {
-      try {
-        const { data: conversations } = await supabase
-          .from('conversations')
-          .select('id')
-          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
-
-        const convIds = (conversations || []).map(c => c.id);
-        if (convIds.length === 0) {
-          setTotalUnreadCount(0);
-          return;
-        }
-
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .in('conversation_id', convIds)
-          .neq('sender_id', user.id)
-          .is('read_at', null);
-
-        setTotalUnreadCount(count || 0);
-      } catch (error) {
-        console.error('Error fetching unread count:', error);
-      }
+    const scheduleFetch = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        void fetchUnreadCount();
+      }, 450);
     };
 
-    fetchUnreadCount();
-    window.addEventListener('messages-read', fetchUnreadCount);
+    void fetchUnreadCount();
+    window.addEventListener('messages-read', scheduleFetch);
 
     const channel = supabase
-      .channel('unread-messages-count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, fetchUnreadCount)
+      .channel(`unread-messages-count-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, scheduleFetch)
       .subscribe();
 
     return () => {
-      window.removeEventListener('messages-read', fetchUnreadCount);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      window.removeEventListener('messages-read', scheduleFetch);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchUnreadCount]);
 
-  // Profil plein écran : pas de tab bar (comme les sous-pages Paramètres)
-  const isProfileStandalone =
-    location.pathname === '/profile' || location.pathname.startsWith('/profile/');
-
-  if (hideBottomNav || isProfileStandalone) return null;
+  if (hideBottomNav) return null;
 
   return (
     <nav

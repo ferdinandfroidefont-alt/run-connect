@@ -546,15 +546,29 @@ html, body {
 
   /* On conserve les tailles iOS (17pt corps) pour un rendu premium */
 
-  /* iOS: descendre le titre pour aligner avec cloche/paramètres */
+  /* iOS: titre + cloche/paramètres centrés sur la même ligne verticale */
   .ios-title-align {
     margin-top: 0.75rem !important;
   }
 
-  /* iOS: remonter les boutons du header carte */
   .ios-map-header {
-    align-items: flex-start !important;
+    align-items: center !important;
     padding-top: 0.5rem !important;
+  }
+
+  /**
+   * Mini calendrier carte : empêche WebKit de tasser la zone « mois » (texte coupé en haut).
+   * Les hauteurs arbitraires h-[xxpx] sont sinon parfois réduites par d’autres règles compactes.
+   */
+  .map-calendar-flip {
+    height: 4.125rem !important;
+    min-height: 4.125rem !important;
+    max-height: none !important;
+  }
+
+  .map-time-slot {
+    height: 4.125rem !important;
+    min-height: 4.125rem !important;
   }
 
   /* iOS: remonter la barre de recherche et les boutons bas de la carte */
@@ -573,6 +587,18 @@ html, body {
     transform: translateZ(0);
   }
 
+}
+
+/**
+ * Calendrier mini carte + créneaux : hauteur stable hors WebKit (Android, etc.).
+ */
+.map-calendar-flip {
+  height: 4.125rem;
+  min-height: 4.125rem;
+}
+.map-time-slot {
+  height: 4.125rem;
+  min-height: 4.125rem;
 }
 
 /* Mobile viewport handling replaced by global base styles */

@@ -706,116 +706,134 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden px-4 pb-[calc(2rem+var(--safe-area-bottom))]">
-        {/* Name, username, bio */}
-        <div className="flex flex-col items-center pb-ios-1 pt-ios-2">
-          <div className="mb-0.5 flex items-center gap-ios-2">
-            <h2 className="text-ios-title2 font-bold text-foreground">
-              {profile?.display_name || profile?.username}
-            </h2>
-            {profile?.is_premium && (
-              <Crown className="h-4 w-4 text-yellow-500" />
+      {/* Même rythme que le hub Paramètres : py-5, groupes px-4 + ios-card (inset) */}
+      <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+        <div className="box-border px-4">
+          <div className="flex flex-col items-center pb-ios-1 pt-ios-2">
+            <div className="mb-0.5 flex items-center gap-ios-2">
+              <h2 className="text-ios-title2 font-bold text-foreground">
+                {profile?.display_name || profile?.username}
+              </h2>
+              {profile?.is_premium && (
+                <Crown className="h-4 w-4 text-yellow-500" />
+              )}
+            </div>
+
+            <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">
+              @{profile?.username}
+            </p>
+
+            {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
+              <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-ios-2 gap-ios-2 h-8 text-ios-footnote">
+                <Crown className="h-3.5 w-3.5" />
+                Devenir Premium
+              </Button>
+            )}
+
+            {isViewingOtherUser && (
+              <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-ios-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-ios-2 h-8 text-ios-footnote">
+                <Flag className="h-3.5 w-3.5" />
+                Signaler
+              </Button>
             )}
           </div>
-          
-          <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">
-            @{profile?.username}
-          </p>
-
-          {/* Action Buttons */}
-          {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
-            <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-ios-2 gap-ios-2 h-8 text-ios-footnote">
-              <Crown className="h-3.5 w-3.5" />
-              Devenir Premium
-            </Button>
-          )}
-          
-          {isViewingOtherUser && (
-            <Button onClick={() => setShowReportDialog(true)} variant="ghost" size="sm" className="mt-ios-2 text-destructive hover:text-destructive hover:bg-destructive/10 gap-ios-2 h-8 text-ios-footnote">
-              <Flag className="h-3.5 w-3.5" />
-              Signaler
-            </Button>
-          )}
         </div>
 
-        {/* Sports choisis (carte dédiée ; pas les records) */}
-        <ProfileSportsCard
-          favoriteSport={profile?.favorite_sport}
-          isOwnProfile={!isViewingOtherUser}
-          onUpdated={(value) => {
-            setProfile((p) => (p ? { ...p, favorite_sport: value } : null));
-            setFormData((fd) => ({ ...fd, favorite_sport: value }));
-          }}
-        />
+        <div className="box-border min-w-0 w-full max-w-full px-4">
+          <div className="ios-card w-full min-w-0 overflow-hidden">
+            <ProfileQuickStats
+              userId={viewingUserId || user?.id || ''}
+              followerCount={followerCount}
+              followingCount={followingCount}
+              onFollowersClick={() => {
+                setFollowDialogType('followers');
+                setShowFollowDialog(true);
+              }}
+              onFollowingClick={() => {
+                setFollowDialogType('following');
+                setShowFollowDialog(true);
+              }}
+            />
+          </div>
+        </div>
 
-        {/* Quick Stats */}
-        <ProfileQuickStats
-          userId={viewingUserId || user?.id || ''}
-          followerCount={followerCount}
-          followingCount={followingCount}
-          onFollowersClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-          onFollowingClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-        />
+        <div className="box-border min-w-0 w-full max-w-full px-4">
+          <ProfileSportsCard
+            favoriteSport={profile?.favorite_sport}
+            isOwnProfile={!isViewingOtherUser}
+            onUpdated={(value) => {
+              setProfile((p) => (p ? { ...p, favorite_sport: value } : null));
+              setFormData((fd) => ({ ...fd, favorite_sport: value }));
+            }}
+          />
+        </div>
 
-        {/* Profil tiers : stats / activités (retiré du profil personnel) */}
         {isViewingOtherUser && (
-          <>
-            <p className="pb-ios-1 text-ios-footnote uppercase tracking-wide text-muted-foreground">
+          <div className="box-border min-w-0 w-full max-w-full px-4">
+            <p className="pb-ios-2 text-ios-footnote uppercase tracking-wide text-muted-foreground">
               Activités récentes
             </p>
             <RecentActivities userId={viewingUserId || ''} />
-          </>
+          </div>
         )}
 
-        {/* Objectifs personnels - Own profile only */}
-        {!isViewingOtherUser && <PersonalGoals />}
+        {!isViewingOtherUser && (
+          <div className="box-border min-w-0 w-full max-w-full px-4">
+            <PersonalGoals />
+          </div>
+        )}
 
-        {/* Séances & Parcours links */}
-        <IOSListGroup flush={false} className="mb-0">
-          <IOSListItem
-            icon={Route}
-            iconBgColor="bg-primary/80"
-            iconColor="text-primary-foreground"
-            title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
-            onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-            showSeparator={!isViewingOtherUser}
-          />
-          {!isViewingOtherUser && (
+        <div className="box-border min-w-0 w-full max-w-full px-4">
+          <IOSListGroup flush={false} className="mb-0">
             <IOSListItem
-              icon={MapPin}
-              iconBgColor="bg-accent/80"
-              iconColor="text-accent-foreground"
-              title="Créer un parcours"
-              onClick={() => navigate('/route-creation')}
-              showSeparator={false}
+              icon={Route}
+              iconBgColor="bg-primary/80"
+              iconColor="text-primary-foreground"
+              title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
+              onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
+              showSeparator={!isViewingOtherUser}
             />
-          )}
-        </IOSListGroup>
+            {!isViewingOtherUser && (
+              <IOSListItem
+                icon={MapPin}
+                iconBgColor="bg-accent/80"
+                iconColor="text-accent-foreground"
+                title="Créer un parcours"
+                onClick={() => navigate('/route-creation')}
+                showSeparator={false}
+              />
+            )}
+          </IOSListGroup>
+        </div>
 
-        {/* Collapsible Achievements Section */}
-        <Collapsible>
-          <CollapsibleTrigger className="group flex w-full items-center justify-between py-ios-1">
-            <p className="text-ios-footnote text-muted-foreground uppercase tracking-wide">
-              Succès & Records
-            </p>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-ios-2">
-            {isViewingOtherUser && <ProfileStatsGroup userId={viewingUserId || ''} />}
+        <div className="box-border min-w-0 w-full max-w-full px-4">
+          <Collapsible>
+            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between py-ios-2">
+              <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
+                Succès & Records
+              </p>
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-ios-3 pt-ios-1">
+              {isViewingOtherUser && <ProfileStatsGroup userId={viewingUserId || ''} />}
+              <div className="ios-card overflow-hidden">
+                <PersonalRecords
+                  records={{
+                    running_records: profile?.running_records,
+                    cycling_records: profile?.cycling_records,
+                    swimming_records: profile?.swimming_records,
+                    triathlon_records: profile?.triathlon_records,
+                    walking_records: profile?.walking_records,
+                  }}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        {!isViewingOtherUser && isEditing && (
+          <div className="box-border min-w-0 w-full max-w-full px-4">
             <div className="ios-card overflow-hidden">
-              <PersonalRecords records={{
-                running_records: profile?.running_records,
-                cycling_records: profile?.cycling_records,
-                swimming_records: profile?.swimming_records,
-                triathlon_records: profile?.triathlon_records,
-                walking_records: profile?.walking_records
-              }} />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Informations Section - Own Profile (editing form) */}
-        {!isViewingOtherUser && isEditing && <div className="ios-card overflow-hidden">
             <div className="space-y-ios-3 px-4 py-ios-3">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
@@ -893,10 +911,13 @@ const Profile = () => {
                   </Button>
                 </div>
               </div>
-          </div>}
+            </div>
+          </div>
+        )}
 
-        {/* Strava Connect Section */}
-        <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+        <div className="box-border min-w-0 w-full max-w-full px-4">
+          <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
+        </div>
 
         {/* Follow Dialog */}
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />

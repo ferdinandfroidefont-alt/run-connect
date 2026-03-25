@@ -1413,9 +1413,9 @@ export const InteractiveMap = ({
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10 pt-[var(--safe-area-top)]">
         <div className="bg-background border-b border-border/50 overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 py-8 ios-map-header">
-            {/* Runconnect Title - Left aligned iOS style */}
-            <h1 className="text-lg font-semibold text-primary leading-none flex items-center mt-2 ios-title-align">
+          <div className="relative flex items-center justify-between px-4 py-6 sm:py-8 ios-map-header">
+            {/* Runconnect — centré verticalement avec la cloche / paramètres */}
+            <h1 className="flex items-center text-lg font-semibold leading-none text-primary">
               Runconnect
             </h1>
             
@@ -1432,8 +1432,7 @@ export const InteractiveMap = ({
                 </div>
               </div>}
             
-            {/* Bell et paramètres : mt-2 + ios-title-align = même décalage que le titre (ios-title-align n’existe que sous WebKit iOS) */}
-            <div className="mt-2 flex items-center gap-3 ios-title-align">
+            <div className="flex items-center gap-3">
               <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
                 <Suspense
                   fallback={
@@ -1483,28 +1482,28 @@ export const InteractiveMap = ({
                     type="button"
                     title={`Date : ${format(filters.selected_date, "d MMMM yyyy", { locale: fr })}`}
                     className={cn(
-                      "touch-manipulation flex h-[58px] w-[46px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-black/10 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
+                      "map-calendar-flip touch-manipulation grid h-[66px] w-[50px] shrink-0 grid-rows-[auto_1fr] overflow-hidden rounded-[14px] border border-black/10 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       datePickerOpen && "ring-2 ring-[#007AFF] ring-offset-2 ring-offset-background"
                     )}
                   >
                     <div
                       className={cn(
-                        "flex min-h-[26px] shrink-0 flex-col items-center justify-center gap-0.5 px-0.5 pb-0.5 pt-1",
+                        "flex min-h-[30px] flex-col items-center justify-center gap-1 px-0.5 pb-1 pt-1.5",
                         datePickerOpen ? "bg-[#007AFF]" : "bg-[#FF3B30]"
                       )}
                     >
                       <div className="flex shrink-0 justify-center gap-[3px]" aria-hidden>
-                        <span className="h-1 w-[2.5px] rounded-full bg-white shadow-sm" />
-                        <span className="h-1 w-[2.5px] rounded-full bg-white shadow-sm" />
+                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
+                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
                       </div>
-                      <span className="max-w-full truncate px-0.5 text-center text-[8px] font-bold uppercase leading-none tracking-tight text-white">
+                      <span className="max-w-full truncate px-0.5 text-center text-[9px] font-bold uppercase leading-tight tracking-tight text-white">
                         {format(filters.selected_date, "MMM", { locale: fr })
                           .replace(/\.$/, "")
                           .toUpperCase()}
                       </span>
                     </div>
-                    <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-white px-0.5">
+                    <div className="flex min-h-0 min-w-0 items-center justify-center bg-white px-0.5 py-0.5">
                       <span className="text-[17px] font-bold tabular-nums leading-none text-black">
                         {format(filters.selected_date, "d")}
                       </span>
@@ -1541,7 +1540,7 @@ export const InteractiveMap = ({
                       }))
                     }
                     className={cn(
-                      "touch-manipulation flex h-[58px] w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[14px] border px-0.5 py-1 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
+                      "map-time-slot touch-manipulation flex h-[66px] w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[14px] border px-0.5 py-1 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       active
                         ? "border-[#007AFF] bg-[#007AFF] text-white [&_svg]:stroke-white [&_svg]:text-white"

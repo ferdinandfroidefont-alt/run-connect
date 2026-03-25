@@ -22,8 +22,11 @@ export const Layout = ({ children }: LayoutProps) => {
   const [searchParams] = useSearchParams();
 
   const isHome = location.pathname === '/';
+  const normalizedPath =
+    (location.pathname || '/').replace(/\/+$/, '') || '/';
   const isProfileRoute =
-    location.pathname === '/profile' || location.pathname.startsWith('/profile/');
+    normalizedPath === '/profile' || normalizedPath.startsWith('/profile/');
+  const showBottomNav = !hideBottomNav && !isProfileRoute;
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
 
   useEffect(() => {
@@ -83,10 +86,10 @@ export const Layout = ({ children }: LayoutProps) => {
     }
   }, [profileLoading]);
 
-  // Si un dialog / overlay a laissé un verrou `pointer-events:none` sur body/html,
-  // ça rend l'app non cliquable (symptôme: boutons qui "ne font rien").
+  // Déverrouille body/html après navigation (effet groupé pour limiter les reflows si query bouge souvent).
   useEffect(() => {
-    resetBodyInteractionLocks();
+    const t = window.setTimeout(() => resetBodyInteractionLocks(), 0);
+    return () => clearTimeout(t);
   }, [location.pathname, location.search]);
 
   // Callback pour ConsentDialog - fermeture immédiate garantie
@@ -164,7 +167,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </main>
-      {!hideBottomNav && <BottomNavigation />}
+      {showBottomNav && <BottomNavigation />}
     </div>
   );
 };

@@ -17,6 +17,7 @@ export const ProfileQuickStats = ({
   onFollowersClick,
   onFollowingClick,
 }: ProfileQuickStatsProps) => {
+  const { formatKm } = useDistanceUnits();
   const [totalActivities, setTotalActivities] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -65,24 +66,29 @@ export const ProfileQuickStats = ({
   ];
 
   return (
-    <div className="grid grid-cols-4 bg-card rounded-[10px] overflow-hidden">
+    <div className="grid grid-cols-4 overflow-hidden">
       {stats.map((stat, i) => {
-        const Wrapper = stat.onClick ? 'button' : 'div';
-        return (
-          <Wrapper
-            key={stat.label}
-            onClick={stat.onClick}
-            className={`py-2.5 text-center transition-colors active:bg-secondary/60 ${
-              i < 3 ? 'border-r border-border/50' : ''
-            }`}
-          >
+        const cell = (
+          <>
             <p className="text-[18px] font-bold text-foreground leading-none">
               {loading ? '–' : stat.value}
             </p>
             <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {stat.label}
             </p>
-          </Wrapper>
+          </>
+        );
+        const className = `py-2.5 text-center transition-colors active:bg-secondary/60 ${
+          i < 3 ? 'border-r border-border/50' : ''
+        }`;
+        return stat.onClick ? (
+          <button key={stat.label} type="button" onClick={stat.onClick} className={className}>
+            {cell}
+          </button>
+        ) : (
+          <div key={stat.label} className={className}>
+            {cell}
+          </div>
         );
       })}
     </div>

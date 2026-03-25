@@ -53,8 +53,8 @@ export const SessionCalendarView = ({ sessions, onSessionClick }: SessionCalenda
 
   return (
     <div className="space-y-3">
-      {/* Month Navigation */}
-      <div className="bg-card rounded-[10px] overflow-hidden">
+      {/* Month Navigation — même esprit ios-card que Paramètres */}
+      <div className="ios-card overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
