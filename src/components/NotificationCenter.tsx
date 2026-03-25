@@ -614,7 +614,8 @@ export const NotificationCenter = ({
         <button
           type="button"
           className={cn(
-            "touch-manipulation relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
+            /* Pas h-10 w-10 : sur iOS WebKit, index.css force .h-10.w-10 à 2rem et décale le badge */
+            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
             "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           )}

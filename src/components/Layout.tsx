@@ -28,14 +28,19 @@ export const Layout = ({ children }: LayoutProps) => {
     if (isHome) setHomeMapPrimed(true);
   }, [isHome]);
 
-  // Précharge le chunk carte après le premier rendu pour lisser le retour sur l’accueil.
+  // Précharge la carte (+ centre notif en parallèle) : immédiat sur l’accueil, sinon après délai pour ne pas gêner l’onglet courant.
   useEffect(() => {
     if (!user?.id) return;
+    if (isHome) {
+      void import('@/components/PersistentHomeMap');
+      void import('@/components/NotificationCenter');
+      return;
+    }
     const t = window.setTimeout(() => {
       void import('@/components/PersistentHomeMap');
     }, 1200);
     return () => clearTimeout(t);
-  }, [user?.id]);
+  }, [user?.id, isHome]);
 
   const latStr = searchParams.get('lat');
   const lngStr = searchParams.get('lng');

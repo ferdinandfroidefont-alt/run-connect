@@ -1431,17 +1431,25 @@ export const InteractiveMap = ({
                 </div>
               </div>}
             
-            {/* Bell and Settings - Right aligned */}
-            <div className="flex items-center gap-4">
-              <div data-tutorial="notifications" className="flex items-center justify-center">
-                <Suspense fallback={null}>
+            {/* Bell et paramètres : mt-2 + ios-title-align = même décalage que le titre (ios-title-align n’existe que sous WebKit iOS) */}
+            <div className="mt-2 flex items-center gap-3 ios-title-align">
+              <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+                      aria-hidden
+                    />
+                  }
+                >
                   <NotificationCenter onSessionUpdated={loadSessions} />
                 </Suspense>
               </div>
               <button
                 type="button"
                 className={cn(
-                  "touch-manipulation flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] outline-none",
+                  /* h-[40px] évite la règle iOS .h-10.w-10 { 2rem } qui rétrécissait les boutons et décalait le badge */
+                  "touch-manipulation flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] outline-none",
                   "text-[#1A1A1A] transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
                   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 )}
