@@ -21,6 +21,8 @@ import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
 import { clientXYToLatLng } from '@/lib/mapLatLngFromPixel';
 import { cn } from '@/lib/utils';
+import { formatDistanceMeters } from '@/lib/distanceUnits';
+import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
@@ -57,12 +59,6 @@ interface RouteDetailDialogProps {
   onPendingFilePickConsumed?: () => void;
 }
 
-const formatDistance = (meters: number | null) => {
-  if (!meters) return "N/A";
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-};
-
 export const RouteDetailDialog = ({
   route,
   open,
@@ -73,6 +69,7 @@ export const RouteDetailDialog = ({
   onPendingFilePickConsumed,
 }: RouteDetailDialogProps) => {
   const { user } = useAuth();
+  const { distanceUnit } = useDistanceUnit();
   const { position: userGeoPosition } = useGeolocation();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -838,7 +835,11 @@ export const RouteDetailDialog = ({
               <div className="flex gap-4">
                 <div className="flex items-center gap-1.5 text-[15px]">
                   <Route className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">{formatDistance(route.total_distance)}</span>
+                  <span className="font-semibold">
+                    {route.total_distance != null && route.total_distance > 0
+                      ? formatDistanceMeters(route.total_distance, distanceUnit)
+                      : 'N/A'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[15px]">
                   <Mountain className="h-4 w-4 text-muted-foreground" />

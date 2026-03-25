@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { formatDistanceKm } from "@/lib/distanceUnits";
+import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 interface CoachingSession {
   id: string;
@@ -82,6 +84,7 @@ export const CoachingSessionDetail = ({
   session,
   isCoach,
 }: CoachingSessionDetailProps) => {
+  const { distanceUnit } = useDistanceUnit();
   const { user } = useAuth();
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
@@ -286,7 +289,11 @@ export const CoachingSessionDetail = ({
                 <div className="flex items-center gap-ios-2 text-ios-footnote text-muted-foreground flex-wrap">
                   <ActivityIcon activityType={session.activity_type} size="sm" />
                   <span>{getActivityLabel(session.activity_type)}</span>
-                  {session.distance_km ? <span className="tabular-nums">· {session.distance_km} km</span> : null}
+                  {session.distance_km ? (
+                    <span className="tabular-nums">
+                      · {formatDistanceKm(session.distance_km, distanceUnit)}
+                    </span>
+                  ) : null}
                   {session.pace_target ? <span>· {session.pace_target}</span> : null}
                 </div>
               </div>

@@ -5,6 +5,8 @@ import { Pencil, CheckCircle2, Clock } from "lucide-react";
 import { parseRCC, computeRCCSummary, type ParsedBlock } from "@/lib/rccParser";
 import { motion, AnimatePresence } from "framer-motion";
 import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import { formatDistanceKm } from "@/lib/distanceUnits";
+import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
 
 interface SessionData {
   title: string;
@@ -83,6 +85,7 @@ export const WeeklyPlanCard = ({
   showCheckbox = true,
   disabled = false,
 }: WeeklyPlanCardProps) => {
+  const { distanceUnit } = useDistanceUnit();
   const dayLabel = format(new Date(session.scheduled_at), "EEE d", { locale: fr });
   const colorClass = getActivityColor(session.title, session.activity_type);
 
@@ -99,11 +102,11 @@ export const WeeklyPlanCard = ({
       }
     }
     let fallback = "";
-    if (session.distance_km) fallback += `${session.distance_km} km`;
+    if (session.distance_km) fallback += formatDistanceKm(session.distance_km, distanceUnit);
     if (session.pace_target) fallback += (fallback ? " @ " : "") + session.pace_target;
     if (session.objective && !fallback) fallback = session.objective;
     return { detail: fallback, estimatedDuration: 0, estimatedDistance: session.distance_km || 0 };
-  }, [session.rcc_code, session.distance_km, session.pace_target, session.objective]);
+  }, [session.rcc_code, session.distance_km, session.pace_target, session.objective, distanceUnit]);
 
   const displayRpe =
     typeof session.rpe === "number" && session.rpe >= 1 && session.rpe <= 10

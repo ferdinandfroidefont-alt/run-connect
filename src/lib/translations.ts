@@ -93,6 +93,10 @@ const _translationBundles: Record<string, any> = {
       emailSentDescription: 'Vérifiez votre boîte email pour réinitialiser votre mot de passe.',
       languageSearchPlaceholder: 'Rechercher une langue…',
       noLanguageMatch: 'Aucune langue trouvée.',
+      distanceUnit: 'Unités de distance',
+      distanceUnitDescription: 'Kilomètres ou miles pour les distances, filtres et résumés',
+      distanceUnitKm: 'Kilomètres',
+      distanceUnitMi: 'Miles',
     },
     notifications: {
       title: 'Notifications',
@@ -340,6 +344,10 @@ const _translationBundles: Record<string, any> = {
       emailSentDescription: 'Check your email to reset your password.',
       languageSearchPlaceholder: 'Search language…',
       noLanguageMatch: 'No language found.',
+      distanceUnit: 'Distance units',
+      distanceUnitDescription: 'Kilometres or miles for distances, filters and summaries',
+      distanceUnitKm: 'Kilometres',
+      distanceUnitMi: 'Miles',
     },
     notifications: {
       title: 'Notifications',

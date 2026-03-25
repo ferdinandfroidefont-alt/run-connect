@@ -10,6 +10,8 @@ import { MapPin, Calendar, Users, UserPlus, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { formatDistanceKm } from '@/lib/distanceUnits';
+import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 import { DiscoverSession, ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 
@@ -23,6 +25,7 @@ interface DiscoverCardProps {
 export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: DiscoverCardProps) => {
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const { distanceUnit } = useDistanceUnit();
 
   const getIntensityColor = (intensity: string | null) => {
     switch (intensity?.toLowerCase()) {
@@ -84,7 +87,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
               </div>
             </div>
             <span className="text-[13px] font-medium text-primary">
-              {session.distance_km.toFixed(1)} km
+              {formatDistanceKm(session.distance_km, distanceUnit)}
             </span>
           </div>
 

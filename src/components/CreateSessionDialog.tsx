@@ -18,6 +18,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 import { ClubSelector } from "./ClubSelector";
+import { useDistanceUnit } from "@/contexts/DistanceUnitContext";
+import {
+  distanceUnitSuffix,
+  formatDistanceMeters,
+  kmToMiles,
+  milesToKm,
+} from "@/lib/distanceUnits";
 
   // Add type declaration for global polyline reference
   declare global {
@@ -36,6 +43,7 @@ import { ClubSelector } from "./ClubSelector";
 }
 
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation, onCreateRoute }: CreateSessionDialogProps) => {
+  const { distanceUnit } = useDistanceUnit();
   const { user, subscriptionInfo } = useAuth();
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
@@ -178,12 +186,6 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       path.forEach(point => bounds.extend(point));
       map.fitBounds(bounds);
     }
-  };
-
-  const formatDistance = (meters: number | null) => {
-    if (!meters) return "N/A";
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${Math.round(meters / 1000 * 10) / 10} km`;
   };
 
   const formatElevation = (meters: number | null) => {
@@ -799,14 +801,46 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
           </div>
 
           <div>
-            <Label htmlFor="distance_km">Distance prévue (km)</Label>
+            <Label htmlFor="distance_km">
+              Distance prévue ({distanceUnitSuffix(distanceUnit)})
+            </Label>
             <Input
               id="distance_km"
               type="number"
-              step="0.1"
-              value={formData.distance_km}
-              onChange={(e) => setFormData(prev => ({ ...prev, distance_km: e.target.value }))}
-              placeholder="ex: 5.2"
+              step={distanceUnit === "mi" ? "0.01" : "0.1"}
+              value={
+                formData.distance_km === ""
+                  ? ""
+                  : (() => {
+                      const km = parseFloat(formData.distance_km);
+                      if (!Number.isFinite(km)) return formData.distance_km;
+                      if (distanceUnit === "mi")
+                        return String(Math.round(kmToMiles(km) * 1000) / 1000);
+                      return formData.distance_km;
+                    })()
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "") {
+                  setFormData((prev) => ({ ...prev, distance_km: "" }));
+                  return;
+                }
+                const num = parseFloat(v);
+                if (!Number.isFinite(num)) {
+                  setFormData((prev) => ({ ...prev, distance_km: v }));
+                  return;
+                }
+                if (distanceUnit === "mi") {
+                  const km = milesToKm(num);
+                  setFormData((prev) => ({
+                    ...prev,
+                    distance_km: String(Math.round(km * 1000) / 1000),
+                  }));
+                } else {
+                  setFormData((prev) => ({ ...prev, distance_km: v }));
+                }
+              }}
+              placeholder={distanceUnit === "mi" ? "ex: 3.2" : "ex: 5.2"}
               min="0"
             />
           </div>
@@ -915,7 +949,9 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="distance">Distance (km)</SelectItem>
+                    <SelectItem value="distance">
+                      Distance ({distanceUnitSuffix(distanceUnit)})
+                    </SelectItem>
                     <SelectItem value="time">Temps (minutes)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -924,14 +960,58 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="interval_distance">
-                    {formData.interval_unit === "time" ? "Temps par fraction (min)" : "Distance par fraction (km)"}
+                    {formData.interval_unit === "time"
+                      ? "Temps par fraction (min)"
+                      : `Distance par fraction (${distanceUnitSuffix(distanceUnit)})`}
                   </Label>
                   <Input
                     id="interval_distance"
                     type="number"
-                    step={formData.interval_unit === "time" ? "1" : "0.1"}
-                    value={formData.interval_distance}
-                    onChange={(e) => setFormData(prev => ({ ...prev, interval_distance: e.target.value }))}
+                    step={
+                      formData.interval_unit === "time"
+                        ? "1"
+                        : distanceUnit === "mi"
+                          ? "0.01"
+                          : "0.1"
+                    }
+                    value={
+                      formData.interval_unit !== "distance"
+                        ? formData.interval_distance
+                        : formData.interval_distance === ""
+                          ? ""
+                          : (() => {
+                              const km = parseFloat(formData.interval_distance);
+                              if (!Number.isFinite(km)) return formData.interval_distance;
+                              if (distanceUnit === "mi")
+                                return String(Math.round(kmToMiles(km) * 1000) / 1000);
+                              return formData.interval_distance;
+                            })()
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (formData.interval_unit !== "distance") {
+                        setFormData((prev) => ({ ...prev, interval_distance: v }));
+                        return;
+                      }
+                      if (v === "") {
+                        setFormData((prev) => ({ ...prev, interval_distance: "" }));
+                        return;
+                      }
+                      const num = parseFloat(v);
+                      if (!Number.isFinite(num)) {
+                        setFormData((prev) => ({ ...prev, interval_distance: v }));
+                        return;
+                      }
+                      if (distanceUnit === "mi") {
+                        const km = milesToKm(num);
+                        setFormData((prev) => ({
+                          ...prev,
+                          interval_distance: String(Math.round(km * 1000) / 1000),
+                        }));
+                      } else {
+                        setFormData((prev) => ({ ...prev, interval_distance: v }));
+                      }
+                    }}
                     placeholder={formData.interval_unit === "time" ? "ex: 5" : "ex: 1.0"}
                     min="0"
                   />
@@ -1120,7 +1200,11 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-sm truncate">{route.name}</div>
                                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                    <span>{formatDistance(route.total_distance)}</span>
+                                    <span>
+                                      {route.total_distance != null && route.total_distance > 0
+                                        ? formatDistanceMeters(route.total_distance, distanceUnit)
+                                        : "N/A"}
+                                    </span>
                                     {route.total_elevation_gain && (
                                       <>
                                         <span>•</span>

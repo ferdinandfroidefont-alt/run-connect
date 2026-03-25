@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { routePhotoStoragePathFromPublicUrl } from '@/lib/routePhotoStorage';
+import { formatDistanceMeters } from '@/lib/distanceUnits';
+import { useDistanceUnit } from '@/contexts/DistanceUnitContext';
 
 interface RoutePhotoDetailSheetProps {
   photo: GalleryPhoto | null;
@@ -19,12 +21,6 @@ interface RoutePhotoDetailSheetProps {
   onPhotoDeleted?: () => void;
 }
 
-const formatDistance = (meters: number | null) => {
-  if (!meters) return "N/A";
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-};
-
 export const RoutePhotoDetailSheet = ({
   photo,
   open,
@@ -33,6 +29,7 @@ export const RoutePhotoDetailSheet = ({
   onPhotoDeleted,
 }: RoutePhotoDetailSheetProps) => {
   const { user } = useAuth();
+  const { distanceUnit } = useDistanceUnit();
   const [nearbyRoutes, setNearbyRoutes] = useState<any[]>([]);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [savedRouteIds, setSavedRouteIds] = useState<Set<string>>(new Set());
@@ -240,7 +237,9 @@ export const RoutePhotoDetailSheet = ({
                             <div className="flex flex-wrap items-center gap-x-ios-3 gap-y-0.5 mt-0.5">
                               <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
                                 <Route className="h-3 w-3 shrink-0" />
-                                {formatDistance(route.total_distance)}
+                                {route.total_distance != null && route.total_distance > 0
+                                  ? formatDistanceMeters(route.total_distance, distanceUnit)
+                                  : 'N/A'}
                               </span>
                               {route.total_elevation_gain ? (
                                 <span className="flex items-center gap-ios-1 text-ios-caption1 text-muted-foreground">
