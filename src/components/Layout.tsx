@@ -127,7 +127,13 @@ export const Layout = ({ children }: LayoutProps) => {
       */}
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {homeMapPrimed && (
-          <div className="absolute inset-0 z-0 min-h-0">
+          <div
+            className={
+              isHome
+                ? 'absolute inset-0 z-20 min-h-0'
+                : 'absolute inset-0 z-0 min-h-0'
+            }
+          >
             <Suspense fallback={null}>
               <PersistentHomeMap
                 visible={isHome}
@@ -140,8 +146,10 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         )}
         {/*
-          pointer-events-none : la route accueil (Index) ne doit pas intercepter les clics — ils passent à la carte.
-          Chaque page avec contenu (Feed, etc.) réactive les clics sur son conteneur racine (pointer-events: auto par défaut).
+          Accueil : la carte est en z-20 au-dessus de cette couche (z-10) pour que les FAB / header
+          reçoivent les clics (sur WebView iOS, pointer-events:none sur la couche route ne « traverse » pas toujours).
+          Autres onglets : carte z-0, cette couche z-10 — le contenu des pages reste au premier plan.
+          pointer-events-none ici : Index n’intercepte pas ; les pages avec UI ont pointer-events:auto sur leur racine.
         */}
         <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
           <div className="animate-fade-in pointer-events-none relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none">
