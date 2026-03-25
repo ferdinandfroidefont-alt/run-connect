@@ -6,6 +6,7 @@ import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { AppBootFallback } from '@/components/AppBootFallback';
+import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -74,6 +75,12 @@ export const Layout = ({ children }: LayoutProps) => {
       return () => clearTimeout(timer);
     }
   }, [profileLoading]);
+
+  // Si un dialog / overlay a laissé un verrou `pointer-events:none` sur body/html,
+  // ça rend l'app non cliquable (symptôme: boutons qui "ne font rien").
+  useEffect(() => {
+    resetBodyInteractionLocks();
+  }, [location.pathname, location.search]);
 
   // Callback pour ConsentDialog - fermeture immédiate garantie
   const handleConsentComplete = async () => {

@@ -106,7 +106,7 @@ export const LevelSliderFilter = ({
       {/* Conteneur façon « tuile » iOS colorée (comme les icônes Réglages), version verticale niveau */}
       <div
         className={cn(
-          "relative flex flex-col items-center rounded-[14px] border border-white/25 bg-[#5856D6] p-2 shadow-lg",
+          "relative flex flex-col items-center rounded-[14px] border border-white/25 bg-primary p-2 shadow-lg",
           isDragging && "shadow-xl"
         )}
         style={{ width: 44 }}

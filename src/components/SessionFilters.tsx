@@ -91,7 +91,7 @@ export const SessionFilters = ({ filters, onFiltersChange, className, onOpenChan
     <Popover open={isOpen} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <MapIosColoredFab
-          tone="purple"
+          tone="gray"
           title="Filtres des séances"
           active={activeFiltersCount > 0 || advancedActive}
           badgeCount={activeFiltersCount}

@@ -1368,17 +1368,6 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-  const handleToggle3D = () => {
-    if (!map.current) return;
-
-    // Toggle between map and satellite view for "3D" effect
-    const currentType = map.current.getMapTypeId();
-    if (currentType === 'satellite') {
-      map.current.setMapTypeId('roadmap');
-    } else {
-      map.current.setMapTypeId('satellite');
-    }
-  };
   const handleCreateSessionAtLocation = (latLng: google.maps.LatLng | null) => {
     // Don't create session if in route creation mode
     if (isRouteCreationMode) {
@@ -1521,7 +1510,7 @@ export const InteractiveMap = ({
 
             <div className="flex flex-col gap-2">
               <MapIosColoredFab
-                tone={filters.friends_only ? "green" : "gray"}
+                tone="gray"
                 active={filters.friends_only}
                 title="Amis uniquement"
                 onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
@@ -1571,20 +1560,36 @@ export const InteractiveMap = ({
         </div>}
 
       {/* Niveau + classement + présence (fabs iOS) */}
-      {user && !isImmersiveMode && <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
-          <LevelSliderFilter
-            selectedLevel={filters.level}
-            onLevelChange={(level) => setFilters((prev) => ({ ...prev, level }))}
-          />
+      {user && !isImmersiveMode && (
+        <div className="absolute right-4 bottom-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
+          <MapIosColoredFab
+            tone="blue"
+            title="Créer un itinéraire"
+            onClick={() => {
+              navigate("/route-create");
+            }}
+          >
+            <PenTool className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </MapIosColoredFab>
+
+          <MapIosColoredFab
+            tone="green"
+            title="Confirmer ma présence GPS"
+            onClick={() => navigate("/confirm-presence")}
+          >
+            <CheckCircle className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+          </MapIosColoredFab>
 
           <MapIosColoredFab tone="yellow" title="Classement" onClick={() => navigate("/leaderboard")}>
             <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
           </MapIosColoredFab>
 
-          <MapIosColoredFab tone="green" title="Confirmer ma présence GPS" onClick={() => navigate("/confirm-presence")}>
-            <CheckCircle className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
-          </MapIosColoredFab>
-        </div>}
+          <LevelSliderFilter
+            selectedLevel={filters.level}
+            onLevelChange={(level) => setFilters((prev) => ({ ...prev, level }))}
+          />
+        </div>
+      )}
 
       {!isImmersiveMode && (
         <div
@@ -1593,7 +1598,7 @@ export const InteractiveMap = ({
         >
           <SessionFilters filters={filters} onFiltersChange={setFilters} onOpenChange={setIsFiltersOpen} />
           {!isFiltersOpen && (
-            <MapIosColoredFab tone="gray" title="Carte plein écran" onClick={toggleImmersiveMode}>
+            <MapIosColoredFab tone="red" title="Carte plein écran" onClick={toggleImmersiveMode}>
               <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
             </MapIosColoredFab>
           )}
@@ -1602,26 +1607,13 @@ export const InteractiveMap = ({
       
       {/* All Map Controls - iOS Style */}
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
-        {user && (
-          <MapIosColoredFab
-            tone="orange"
-            title="Créer un itinéraire"
-            onClick={() => {
-              console.log("🖱️ Pencil button clicked - navigating to route creation");
-              navigate("/route-create");
-            }}
-          >
-            <PenTool className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </MapIosColoredFab>
-        )}
-
         <MapIosColoredFab tone="blue" title="Me localiser" onClick={handleLocateMe}>
           <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </MapIosColoredFab>
 
         <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
 
-        <MapControls onResetView={handleResetView} onToggle3D={handleToggle3D} />
+        <MapControls onResetView={handleResetView} />
       </div>
       
 

@@ -45,7 +45,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
       {/* Toggle Button */}
       <MapIosColoredFab
         type="button"
-        tone="pink"
+        tone="green"
         title="Styles de carte"
         active={isOpen}
         onClick={(e) => {
