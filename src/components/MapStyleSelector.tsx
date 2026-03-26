@@ -45,9 +45,10 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
       {/* Toggle Button */}
       <MapIosColoredFab
         type="button"
-        tone="green"
+        tone="gray"
         title="Styles de carte"
         active={isOpen}
+        className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();

@@ -4,7 +4,6 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { getKeyBody } from '@/lib/googleMapsKey';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
-import { SessionFilters } from './SessionFilters';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
@@ -21,18 +20,17 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Bike, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { ElevationProfile } from './ElevationProfile';
-import { ClubSelector } from './ClubSelector';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -89,8 +87,8 @@ interface Filter {
   search_query: string;
   selected_date: Date;
   friends_only: boolean;
-  selected_club_id: string | null;
-  time_slot: 'morning' | 'afternoon' | 'evening' | null;
+  selected_club_ids: string[];
+  time_slot: 'morning' | 'afternoon' | 'evening' | 'night' | null;
   level: number | null;
 }
 
@@ -99,15 +97,41 @@ const TIME_SLOTS = [
   { id: "morning" as const, icon: Sunrise, label: "6h-12h", startHour: 6, endHour: 12 },
   { id: "afternoon" as const, icon: Sun, label: "12h-18h", startHour: 12, endHour: 18 },
   { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
+  { id: "night" as const, icon: Moon, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
 
 /** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
 /** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
-const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening', string> = {
+const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
   morning: 'text-[#FF9500]',
   afternoon: 'text-[#C9A018]',
   evening: 'text-[#5856D6]',
+  night: 'text-[#3730A3]',
 };
+
+const ACTIVITY_OPTIONS = [
+  { id: 'all', label: 'Tous sports', values: [] as string[] },
+  { id: 'course', label: 'Course', values: ['course'] },
+  { id: 'velo', label: 'Vélo', values: ['velo'] },
+  { id: 'natation', label: 'Natation', values: ['natation'] },
+  { id: 'marche', label: 'Marche', values: ['marche'] },
+];
+
+const SESSION_TYPE_OPTIONS = [
+  { id: 'all', label: 'Tous types', values: [] as string[] },
+  { id: 'footing', label: 'Footing', values: ['footing'] },
+  { id: 'sortie_longue', label: 'Longue', values: ['sortie_longue'] },
+  { id: 'fractionne', label: 'Fractionné', values: ['fractionne'] },
+  { id: 'competition', label: 'Compétition', values: ['competition'] },
+];
+
+type ExpandedFilter = 'time' | 'club' | 'day' | 'level' | null;
+
+interface ClubFilterOption {
+  id: string;
+  name: string;
+  memberCount: number;
+}
 
 interface InteractiveMapProps {
   initialLat?: number;
@@ -217,7 +241,7 @@ export const InteractiveMap = ({
     search_query: '',
     selected_date: new Date(),
     friends_only: false,
-    selected_club_id: null,
+    selected_club_ids: [],
     time_slot: null,
     level: null
   });
@@ -232,8 +256,8 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
+  const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
@@ -254,6 +278,60 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
+
+  useEffect(() => {
+    const loadClubFilters = async () => {
+      if (!user?.id) {
+        setClubFilters([]);
+        return;
+      }
+      try {
+        const { data: memberships } = await supabase
+          .from('group_members')
+          .select('conversation_id')
+          .eq('user_id', user.id);
+        const ids = (memberships || []).map((m) => m.conversation_id);
+        if (ids.length === 0) {
+          setClubFilters([]);
+          return;
+        }
+        const { data: clubs } = await supabase
+          .from('conversations')
+          .select('id, group_name')
+          .in('id', ids)
+          .eq('is_group', true)
+          .order('group_name');
+        const withCounts = await Promise.all(
+          (clubs || []).map(async (club) => {
+            const { count } = await supabase
+              .from('group_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('conversation_id', club.id);
+            return { id: club.id, name: club.group_name || 'Club', memberCount: count || 0 };
+          })
+        );
+        setClubFilters(withCounts);
+      } catch {
+        setClubFilters([]);
+      }
+    };
+    void loadClubFilters();
+  }, [user?.id]);
+
+  const cycleActivity = () => {
+    const current = ACTIVITY_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types));
+    const next = ACTIVITY_OPTIONS[(current + 1) % ACTIVITY_OPTIONS.length];
+    setFilters((prev) => ({ ...prev, activity_types: next.values }));
+  };
+
+  const cycleSessionType = () => {
+    const current = SESSION_TYPE_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types));
+    const next = SESSION_TYPE_OPTIONS[(current + 1) % SESSION_TYPE_OPTIONS.length];
+    setFilters((prev) => ({ ...prev, session_types: next.values }));
+  };
+
+  const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
+  const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
 
   // Check URL parameters for route creation mode
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(() => {
@@ -380,11 +458,12 @@ export const InteractiveMap = ({
       endOfDay.setHours(23, 59, 59, 999);
       let query = supabase.from('sessions').select('*').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString());
 
-      // If club filter is active, show sessions from that club OR user's own sessions
-      if (filters.selected_club_id && user) {
-        query = query.or(`club_id.eq.${filters.selected_club_id},organizer_id.eq.${user.id}`);
-      } else if (filters.selected_club_id) {
-        query = query.eq('club_id', filters.selected_club_id);
+      // Club filter (multi-select): garder les séances de clubs sélectionnés + les siennes
+      if (filters.selected_club_ids.length > 0 && user) {
+        const clubConditions = filters.selected_club_ids.map((id) => `club_id.eq.${id}`).join(',');
+        query = query.or(`${clubConditions},organizer_id.eq.${user.id}`);
+      } else if (filters.selected_club_ids.length > 0) {
+        query = query.in('club_id', filters.selected_club_ids);
       }
 
       // If friends_only filter is active, show sessions from friends AND user's own sessions
@@ -526,7 +605,11 @@ export const InteractiveMap = ({
         const slot = TIME_SLOTS.find(s => s.id === filters.time_slot);
         if (slot) {
           const sessionHour = new Date(session.scheduled_at).getHours();
-          matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+          if (slot.id === 'night') {
+            matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
+          } else {
+            matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+          }
         }
       }
 
@@ -786,7 +869,7 @@ export const InteractiveMap = ({
       console.log('📡 Unsubscribing from realtime channel');
       supabase.removeChannel(channel);
     };
-  }, [user, filters.selected_date, filters.friends_only, filters.selected_club_id]);
+  }, [user, filters.selected_date, filters.friends_only, filters.selected_club_ids]);
 
   // Initialize search autocomplete separately
   useEffect(() => {
@@ -1472,117 +1555,174 @@ export const InteractiveMap = ({
           }))} className="pl-10" />
           </div>
           
-          {/* Date Filter and Time Slots */}
-          <div className="mt-2 flex flex-col gap-3">
-            {/* Calendrier + créneaux : haut aligné (items-start), pastilles plus étroites */}
-            <div className="flex flex-wrap items-start gap-2">
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    title={`Date : ${format(filters.selected_date, "d MMMM yyyy", { locale: fr })}`}
-                    className={cn(
-                      "map-calendar-flip touch-manipulation grid h-[66px] w-[50px] shrink-0 grid-rows-[auto_1fr] overflow-hidden rounded-[14px] border border-black/10 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      datePickerOpen && "ring-2 ring-[#007AFF] ring-offset-2 ring-offset-background"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex min-h-[30px] flex-col items-center justify-center gap-1 px-0.5 pb-1 pt-1.5",
-                        datePickerOpen ? "bg-[#007AFF]" : "bg-[#FF3B30]"
-                      )}
-                    >
-                      <div className="flex shrink-0 justify-center gap-[3px]" aria-hidden>
-                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
-                        <span className="h-1.5 w-[2.5px] rounded-full bg-white shadow-sm" />
+          <div className="mt-2 space-y-2">
+            <div className="ios-card rounded-[18px] border border-black/10 bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
+              <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
+                <div className="flex min-w-max items-center gap-2">
+                <button
+                  type="button"
+                  onClick={cycleActivity}
+                  className={cn(
+                    "h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium transition-colors",
+                    filters.activity_types.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black"
+                  )}
+                >
+                  <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Sport: {activeActivityLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
+                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.time_slot ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                >
+                  <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> Horaire</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
+                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.friends_only ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                >
+                  <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5" /> Amis uniquement</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
+                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.selected_club_ids.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                >
+                  <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={cycleSessionType}
+                  className={cn(
+                    "h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium transition-colors",
+                    filters.session_types.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black"
+                  )}
+                >
+                  <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5" /> Type: {activeSessionTypeLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
+                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", expandedFilter === 'day' ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                >
+                  <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Jour</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
+                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.level ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                >
+                  <span className="flex items-center gap-1.5"><SlidersHorizontal className="h-3.5 w-3.5" /> Niveau séance</span>
+                </button>
+                </div>
+              </div>
+            </div>
+
+            <AnimatePresence initial={false} mode="wait">
+              {expandedFilter && (
+                <motion.div
+                  key={expandedFilter}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.18 }}
+                  className="ios-card rounded-[16px] border border-black/10 bg-card/98 p-3"
+                >
+                  {expandedFilter === 'time' && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {TIME_SLOTS.map((slot) => {
+                        const active = filters.time_slot === slot.id;
+                        const Icon = slot.icon;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => setFilters((prev) => ({ ...prev, time_slot: prev.time_slot === slot.id ? null : slot.id }))}
+                            className={cn(
+                              "h-12 rounded-xl border text-xs font-medium transition-colors",
+                              active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"
+                            )}
+                          >
+                            <span className="flex items-center justify-center gap-1"><Icon className={cn("h-3.5 w-3.5", !active && TIME_SLOT_ICON_CLASS[slot.id])} />{slot.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {expandedFilter === 'club' && (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setFilters((prev) => ({ ...prev, selected_club_ids: [] }))}
+                        className={cn(
+                          "h-9 w-full rounded-xl border text-left px-3 text-xs",
+                          filters.selected_club_ids.length === 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"
+                        )}
+                      >
+                        Tous les clubs
+                      </button>
+                      <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                        {clubFilters.map((club) => {
+                          const active = filters.selected_club_ids.includes(club.id);
+                          return (
+                            <button
+                              key={club.id}
+                              type="button"
+                              onClick={() =>
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  selected_club_ids: active
+                                    ? prev.selected_club_ids.filter((id) => id !== club.id)
+                                    : [...prev.selected_club_ids, club.id],
+                                }))
+                              }
+                              className={cn(
+                                "h-10 w-full rounded-xl border px-3 text-left text-xs",
+                                active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"
+                              )}
+                            >
+                              <span className="flex items-center justify-between">
+                                <span className="truncate">{club.name}</span>
+                                <span className="text-[10px] text-muted-foreground">{club.memberCount}</span>
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <span className="max-w-full truncate px-0.5 text-center text-[9px] font-bold uppercase leading-tight tracking-tight text-white">
-                        {format(filters.selected_date, "MMM", { locale: fr })
-                          .replace(/\.$/, "")
-                          .toUpperCase()}
-                      </span>
                     </div>
-                    <div className="flex min-h-0 min-w-0 items-center justify-center bg-white px-0.5 py-0.5">
-                      <span className="text-[17px] font-bold tabular-nums leading-none text-black">
-                        {format(filters.selected_date, "d")}
-                      </span>
-                    </div>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    mode="single"
-                    selected={filters.selected_date}
-                    onSelect={(date) => {
-                      if (date) {
-                        setFilters((prev) => ({ ...prev, selected_date: date }));
-                      }
-                    }}
-                    initialFocus
-                    className="pointer-events-auto p-3"
-                  />
-                </PopoverContent>
-              </Popover>
+                  )}
 
-              {TIME_SLOTS.map((slot) => {
-                const active = filters.time_slot === slot.id;
-                const Icon = slot.icon;
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    title={slot.label}
-                    onClick={() =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        time_slot: prev.time_slot === slot.id ? null : slot.id,
-                      }))
-                    }
-                    className={cn(
-                      "map-time-slot touch-manipulation flex h-[66px] w-[56px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-[14px] border px-0.5 py-1 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.32)] outline-none transition-colors active:scale-[0.97]",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      active
-                        ? "border-[#007AFF] bg-[#007AFF] text-white [&_svg]:stroke-white [&_svg]:text-white"
-                        : "border-black/10 bg-white text-foreground [&_svg]:stroke-current"
-                    )}
-                  >
-                    <Icon
-                      className={cn("h-[16px] w-[16px] shrink-0", !active && TIME_SLOT_ICON_CLASS[slot.id])}
-                      strokeWidth={2.25}
-                      aria-hidden
+                  {expandedFilter === 'day' && (
+                    <CalendarComponent
+                      mode="single"
+                      selected={filters.selected_date}
+                      onSelect={(date) => date && setFilters((prev) => ({ ...prev, selected_date: date }))}
+                      initialFocus
+                      className="pointer-events-auto p-0"
                     />
-                    <span
-                      className={cn(
-                        "max-w-full truncate px-0.5 text-center text-[7px] font-semibold leading-[1.1]",
-                        active ? "text-white" : "text-foreground"
-                      )}
-                    >
-                      {slot.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                  )}
 
-            <div className="flex flex-col gap-2">
-              <MapIosColoredFab
-                tone="gray"
-                active={filters.friends_only}
-                title="Amis uniquement"
-                onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
-              >
-                <span className="flex items-center gap-0.5">
-                  <PersonStanding className="h-[15px] w-[15px]" strokeWidth={2.25} />
-                  <Bike className="h-[15px] w-[15px]" strokeWidth={2.25} />
-                </span>
-              </MapIosColoredFab>
-
-              <ClubSelector
-                selectedClubId={filters.selected_club_id}
-                onClubSelect={(clubId) => setFilters((prev) => ({ ...prev, selected_club_id: clubId }))}
-              />
-            </div>
+                  {expandedFilter === 'level' && (
+                    <div className="grid grid-cols-6 gap-2">
+                      {[1, 2, 3, 4, 5, 6].map((lvl) => (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setFilters((prev) => ({ ...prev, level: prev.level === lvl ? null : lvl }))}
+                          className={cn(
+                            "h-10 rounded-xl border text-sm font-semibold",
+                            filters.level === lvl ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"
+                          )}
+                        >
+                          {lvl}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>}
@@ -1626,23 +1766,23 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {!isImmersiveMode && (
-        <div
-          className="absolute right-4 z-30 flex flex-col items-end gap-2 ios-map-filters android-map-filters"
-          style={{ top: "10.5rem" }}
-        >
-          <SessionFilters filters={filters} onFiltersChange={setFilters} onOpenChange={setIsFiltersOpen} />
-          {!isFiltersOpen && (
-            <MapIosColoredFab tone="red" title="Carte plein écran" onClick={toggleImmersiveMode}>
-              <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </MapIosColoredFab>
-          )}
-        </div>
-      )}
-      
       {/* All Map Controls - iOS Style */}
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
-        <MapIosColoredFab tone="blue" title="Me localiser" onClick={handleLocateMe}>
+        <MapIosColoredFab
+          tone="gray"
+          title="Carte plein écran"
+          onClick={toggleImmersiveMode}
+          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+        >
+          <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
+        </MapIosColoredFab>
+
+        <MapIosColoredFab
+          tone="gray"
+          title="Me localiser"
+          onClick={handleLocateMe}
+          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+        >
           <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </MapIosColoredFab>
 
