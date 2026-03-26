@@ -38,7 +38,7 @@ export function AnalyticsConsentBanner() {
     <>
       {/* Voile léger : ne bloque pas le scroll mais indique une action en attente */}
       <div
-        className="pointer-events-none fixed inset-0 z-[84] bg-background/20 backdrop-blur-[1px]"
+        className="pointer-events-none fixed inset-0 z-[84] bg-background/20"
         aria-hidden
       />
       <div
@@ -48,7 +48,7 @@ export function AnalyticsConsentBanner() {
         aria-labelledby={titleId}
         aria-describedby={descId}
       >
-        <div className="pointer-events-auto ios-card max-w-lg w-full rounded-2xl border border-border bg-card/98 backdrop-blur-md p-4 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="pointer-events-auto ios-card max-w-lg w-full rounded-2xl border border-border bg-card/98 p-4 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
           <div className="flex gap-3 mb-3">
             <div
               className="h-10 w-10 shrink-0 rounded-xl bg-[#AF52DE]/15 flex items-center justify-center"

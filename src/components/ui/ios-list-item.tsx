@@ -34,7 +34,7 @@ export const IOSListItem = ({
         onClick={onClick}
         className={cn(
           "flex items-center gap-2.5 px-ios-4 py-2.5 bg-card",
-          onClick && "cursor-pointer active:bg-secondary/80 transition-colors duration-75"
+          onClick && "cursor-pointer active:bg-secondary/80 transition-colors ios-interactive"
         )}
         style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
       >

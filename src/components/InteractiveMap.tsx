@@ -1556,15 +1556,15 @@ export const InteractiveMap = ({
           </div>
           
           <div className="mt-2 space-y-2">
-            <div className="ios-card rounded-[18px] border border-black/10 bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
-              <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
-                <div className="flex min-w-max items-center gap-2">
+            <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
+              <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 [-webkit-overflow-scrolling:touch]">
+                <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
                   type="button"
                   onClick={cycleActivity}
                   className={cn(
-                    "h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium transition-colors",
-                    filters.activity_types.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black"
+                    "ios-chip snap-start",
+                    filters.activity_types.length > 0 && "ios-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Sport: {activeActivityLabel}</span>
@@ -1572,21 +1572,21 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
-                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.time_slot ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                  className={cn("ios-chip snap-start", filters.time_slot && "ios-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> Horaire</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
-                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.friends_only ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                  className={cn("ios-chip snap-start", filters.friends_only && "ios-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5" /> Amis uniquement</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
-                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.selected_club_ids.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                  className={cn("ios-chip snap-start", filters.selected_club_ids.length > 0 && "ios-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
                 </button>
@@ -1594,8 +1594,8 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={cycleSessionType}
                   className={cn(
-                    "h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium transition-colors",
-                    filters.session_types.length > 0 ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black"
+                    "ios-chip snap-start",
+                    filters.session_types.length > 0 && "ios-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5" /> Type: {activeSessionTypeLabel}</span>
@@ -1603,14 +1603,14 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
-                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", expandedFilter === 'day' ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                  className={cn("ios-chip snap-start", expandedFilter === 'day' && "ios-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Jour</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
-                  className={cn("h-9 shrink-0 rounded-[12px] border px-3 text-xs font-medium", filters.level ? "border-primary bg-primary text-primary-foreground" : "border-black/10 bg-white text-black")}
+                  className={cn("ios-chip snap-start", filters.level && "ios-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><SlidersHorizontal className="h-3.5 w-3.5" /> Niveau séance</span>
                 </button>
@@ -1625,7 +1625,7 @@ export const InteractiveMap = ({
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.18 }}
+                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   className="ios-card rounded-[16px] border border-black/10 bg-card/98 p-3"
                 >
                   {expandedFilter === 'time' && (

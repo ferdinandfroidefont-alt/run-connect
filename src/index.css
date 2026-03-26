@@ -334,10 +334,31 @@ html, body {
     box-shadow: var(--shadow-card);
   }
 
+  /* Conteneur inset-grouped (référence Réglages iOS) */
+  .ios-inset-group {
+    @apply rounded-ios-md border border-border/60 bg-card;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Chip compacte style iOS */
+  .ios-chip {
+    @apply h-8 shrink-0 rounded-[11px] border border-black/10 bg-white px-3 text-[11px] font-semibold tracking-tight text-black transition-all duration-200 active:scale-[0.97];
+  }
+
+  .ios-chip-active {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
   /* Rangée de liste type « Mes séances » (carte + padding + feedback tactile) */
   .ios-list-row {
     @apply bg-card rounded-ios-md p-ios-3 cursor-pointer transition-colors active:bg-secondary;
     box-shadow: var(--shadow-card);
+  }
+
+  .ios-interactive {
+    transition-duration: var(--ios-motion-duration-fast);
+    transition-timing-function: var(--ios-motion-ease);
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Conteneur pour empiler des rangées avec séparateurs */

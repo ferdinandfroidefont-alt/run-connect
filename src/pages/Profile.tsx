@@ -26,8 +26,6 @@ import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
-import { RecentActivities } from "@/components/profile/RecentActivities";
 import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
@@ -708,7 +706,7 @@ const Profile = () => {
 
       {/* Même rythme que le hub Paramètres : py-5, groupes px-4 + ios-card (inset) */}
       <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border px-4">
+        <div className="box-border px-ios-4">
           <div className="flex flex-col items-center pb-ios-1 pt-ios-2">
             <div className="mb-0.5 flex items-center gap-ios-2">
               <h2 className="text-ios-title2 font-bold text-foreground">
@@ -739,7 +737,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4">
+        <div className="box-border min-w-0 w-full max-w-full px-ios-4">
           <div className="ios-card w-full min-w-0 overflow-hidden">
             <ProfileQuickStats
               userId={viewingUserId || user?.id || ''}
@@ -757,7 +755,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4">
+        <div className="box-border min-w-0 w-full max-w-full px-ios-4">
           <ProfileSportsCard
             favoriteSport={profile?.favorite_sport}
             isOwnProfile={!isViewingOtherUser}
@@ -768,22 +766,14 @@ const Profile = () => {
           />
         </div>
 
-        {isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4">
-            <p className="pb-ios-2 text-ios-footnote uppercase tracking-wide text-muted-foreground">
-              Activités récentes
-            </p>
-            <RecentActivities userId={viewingUserId || ''} />
-          </div>
-        )}
 
         {!isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4">
+          <div className="box-border min-w-0 w-full max-w-full px-ios-4">
             <PersonalGoals />
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4">
+        <div className="box-border min-w-0 w-full max-w-full px-ios-4">
           <IOSListGroup flush={false} className="mb-0">
             <IOSListItem
               icon={Route}
@@ -806,7 +796,7 @@ const Profile = () => {
           </IOSListGroup>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4">
+        <div className="box-border min-w-0 w-full max-w-full px-ios-4">
           <Collapsible>
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between py-ios-2">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
@@ -815,7 +805,6 @@ const Profile = () => {
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-ios-3 pt-ios-1">
-              {isViewingOtherUser && <ProfileStatsGroup userId={viewingUserId || ''} />}
               <div className="ios-card overflow-hidden">
                 <PersonalRecords
                   records={{
@@ -832,9 +821,9 @@ const Profile = () => {
         </div>
 
         {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full px-4">
+          <div className="box-border min-w-0 w-full max-w-full px-ios-4">
             <div className="ios-card overflow-hidden">
-            <div className="space-y-ios-3 px-4 py-ios-3">
+            <div className="space-y-ios-3 px-ios-4 py-ios-3">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
                   <Input value={formData.username || ''} onChange={e => setFormData({
@@ -915,7 +904,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4">
+        <div className="box-border min-w-0 w-full max-w-full px-ios-4">
           <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
         </div>
 

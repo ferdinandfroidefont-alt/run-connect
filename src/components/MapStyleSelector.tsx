@@ -60,7 +60,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
 
       {/* Style Options */}
       {isOpen && (
-        <div className="absolute bottom-12 left-0 min-w-[200px] rounded-ios-md border border-border bg-card/95 p-3 shadow-lg backdrop-blur-sm ios-surface">
+        <div className="absolute bottom-12 left-0 min-w-[200px] rounded-ios-md border border-border bg-card/95 p-3 shadow-lg ios-surface">
           <h3 className="text-sm font-medium text-foreground mb-3">Style de carte</h3>
           <div className="grid grid-cols-2 gap-2">
             {mapStyles.map((style) => {

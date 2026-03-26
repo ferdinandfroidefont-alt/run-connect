@@ -451,7 +451,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             >
               {/* Status bar area removed for cleaner iOS look */}
               {/* iOS Header */}
-              <div className="sticky top-0 z-40 min-w-0 max-w-full shrink-0 border-b border-border bg-card/95 backdrop-blur-xl">
+              <div className="sticky top-0 z-40 min-w-0 max-w-full shrink-0 border-b border-border bg-card/95">
                 <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
                   <div className="flex min-w-0 justify-start">
                     <button
