@@ -1,23 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  Home,
-  Calendar,
-  MessageCircle,
-  Newspaper,
-  Plus,
-  PenTool,
-  CheckCircle,
-  Crown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Home, Calendar, MessageCircle, Newspaper, Plus, PenTool, CheckCircle, Crown, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
-const COL_SHARE = '20%';
+const SIDE_COL = '25%';
+const iosEase = [0.32, 0.72, 0, 1] as const;
 
 type NavItem = {
   path: string;
@@ -26,19 +17,8 @@ type NavItem = {
   tutorialId?: string;
   badge?: 'messages';
   isActive: (pathname: string) => boolean;
+  showUnreadBadge?: boolean;
 };
-
-function splitNavRows(items: NavItem[]) {
-  const left: NavItem[] = [];
-  const right: NavItem[] = [];
-  let afterSpacer = false;
-  for (const it of items) {
-    if (it.path === '/messages') afterSpacer = true;
-    if (afterSpacer) right.push(it);
-    else left.push(it);
-  }
-  return { left, right };
-}
 
 export const BottomNavigation = () => {
   const location = useLocation();
@@ -47,62 +27,72 @@ export const BottomNavigation = () => {
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const { openCreateSession, hideBottomNav } = useAppContext();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeSet, setActiveSet] = useState<0 | 1>(0);
+  const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
 
   const pathname = location.pathname;
 
-  const navItems: NavItem[] = [
-    {
-      path: '/',
-      icon: Home,
-      label: t('navigation.home'),
-      isActive: (p) => p === '/',
-    },
-    {
-      path: '/my-sessions',
-      icon: Calendar,
-      label: t('navigation.mySessions'),
-      tutorialId: 'nav-sessions',
-      isActive: (p) => p === '/my-sessions' || p.startsWith('/my-sessions/'),
-    },
-    {
-      path: '/messages',
-      icon: MessageCircle,
-      label: t('navigation.messages'),
-      tutorialId: 'nav-messages',
-      badge: 'messages',
-      isActive: (p) => p === '/messages' || p.startsWith('/messages/'),
-    },
-    {
-      path: '/feed',
-      icon: Newspaper,
-      label: t('navigation.feed'),
-      tutorialId: 'nav-feed',
-      isActive: (p) => p === '/feed' || p.startsWith('/feed/'),
-    },
-    {
-      path: '/route-create',
-      icon: PenTool,
-      label: t('navigation.itinerary'),
-      isActive: (p) => p === '/route-create' || p === '/route-creation' || p.startsWith('/route-creation/'),
-    },
-    {
-      path: '/confirm-presence',
-      icon: CheckCircle,
-      label: t('navigation.confirmPresence'),
-      isActive: (p) => p === '/confirm-presence' || p.startsWith('/confirm-presence/'),
-    },
-    {
-      path: '/leaderboard',
-      icon: Crown,
-      label: t('navigation.leaderboard'),
-      isActive: (p) => p === '/leaderboard' || p.startsWith('/leaderboard/'),
-    },
-  ];
-
-  const { left: leftRow, right: rightRow } = splitNavRows(navItems);
+  const navSets = useMemo<[NavItem[], NavItem[]]>(
+    () => [
+      [
+        {
+          path: '/',
+          icon: Home,
+          label: t('navigation.home'),
+          isActive: (p) => p === '/',
+        },
+        {
+          path: '/my-sessions',
+          icon: Calendar,
+          label: t('navigation.mySessions'),
+          tutorialId: 'nav-sessions',
+          isActive: (p) => p === '/my-sessions' || p.startsWith('/my-sessions/'),
+        },
+        {
+          path: '/messages',
+          icon: MessageCircle,
+          label: t('navigation.messages'),
+          tutorialId: 'nav-messages',
+          isActive: (p) => p === '/messages' || p.startsWith('/messages/'),
+          showUnreadBadge: true,
+        },
+        {
+          path: '/feed',
+          icon: Newspaper,
+          label: t('navigation.feed'),
+          tutorialId: 'nav-feed',
+          isActive: (p) => p === '/feed' || p.startsWith('/feed/'),
+        },
+      ],
+      [
+        {
+          path: '/route-create',
+          icon: PenTool,
+          label: t('navigation.itinerary'),
+          isActive: (p) => p === '/route-create' || p === '/route-creation' || p.startsWith('/route-creation/'),
+        },
+        {
+          path: '/messages',
+          icon: GraduationCap,
+          label: t('navigation.coaching'),
+          isActive: (p) => p === '/messages' || p.startsWith('/messages/'),
+        },
+        {
+          path: '/confirm-presence',
+          icon: CheckCircle,
+          label: t('navigation.confirmPresence'),
+          isActive: (p) => p === '/confirm-presence' || p.startsWith('/confirm-presence/'),
+        },
+        {
+          path: '/leaderboard',
+          icon: Crown,
+          label: t('navigation.leaderboard'),
+          isActive: (p) => p === '/leaderboard' || p.startsWith('/leaderboard/'),
+        },
+      ],
+    ],
+    [t]
+  );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -159,42 +149,24 @@ export const BottomNavigation = () => {
     };
   }, [user, fetchUnreadCount]);
 
-  const refreshScrollHints = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 2);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    refreshScrollHints();
-    const ro = new ResizeObserver(() => refreshScrollHints());
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [refreshScrollHints, hideBottomNav]);
-
-  const scrollByOneColumn = (dir: -1 | 1) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const step = el.clientWidth * 0.2;
-    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  const goToSet = (targetSet: 0 | 1, direction: 1 | -1) => {
+    if (activeSet === targetSet) return;
+    setSlideDirection(direction);
+    setActiveSet(targetSet);
   };
 
   const renderNavButton = (item: NavItem) => {
-    const { path, icon: Icon, label, tutorialId, badge } = item;
+    const { path, icon: Icon, label, tutorialId, showUnreadBadge } = item;
     const isActive = item.isActive(pathname);
-    const showBadge = badge === 'messages' && totalUnreadCount > 0;
+    const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
 
     return (
       <button
         key={path}
         type="button"
         onClick={() => navigate(path)}
-        style={{ flex: `0 0 ${COL_SHARE}` }}
-        className="flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0 rounded-xl mx-0.5 active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+        style={{ width: SIDE_COL }}
+        className="mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
         data-tutorial={tutorialId}
       >
         <div className="relative">
@@ -219,7 +191,8 @@ export const BottomNavigation = () => {
 
   if (hideBottomNav) return null;
 
-  const hint = t('navigation.scrollNavHint');
+  const hint = t('navigation.switchNavSet');
+  const currentSetItems = navSets[activeSet];
 
   return (
     <nav
@@ -228,19 +201,25 @@ export const BottomNavigation = () => {
       aria-label="Navigation principale"
       style={{ paddingBottom: 'var(--safe-area-bottom)' }}
     >
-      <div className="ios-nav-shell relative h-[var(--nav-height)] w-full pt-0.5">
-        <div
-          ref={scrollRef}
-          onScroll={refreshScrollHints}
-          className="relative z-0 flex h-full w-full flex-row flex-nowrap items-center overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]"
-        >
-          {leftRow.map(renderNavButton)}
-          <div
-            style={{ flex: `0 0 ${COL_SHARE}` }}
-            className="pointer-events-none mx-0.5 min-w-0 shrink-0"
-            aria-hidden
-          />
-          {rightRow.map(renderNavButton)}
+      <div className="ios-nav-shell relative h-[var(--nav-height)] w-full overflow-hidden pt-0.5">
+        <div className="relative z-0 h-full w-full">
+          <AnimatePresence initial={false} custom={slideDirection} mode="wait">
+            <motion.div
+              key={activeSet}
+              custom={slideDirection}
+              initial={(dir) => ({ x: dir > 0 ? 36 : -36, opacity: 0 })}
+              animate={{ x: 0, opacity: 1 }}
+              exit={(dir) => ({ x: dir > 0 ? -36 : 36, opacity: 0 })}
+              transition={{ duration: 0.24, ease: iosEase }}
+              className="absolute inset-0 flex items-center"
+            >
+              {renderNavButton(currentSetItems[0])}
+              {renderNavButton(currentSetItems[1])}
+              <div className="pointer-events-none mx-0.5 min-w-0 shrink-0" style={{ width: SIDE_COL }} aria-hidden />
+              {renderNavButton(currentSetItems[2])}
+              {renderNavButton(currentSetItems[3])}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div
@@ -248,26 +227,22 @@ export const BottomNavigation = () => {
           aria-hidden
         />
 
-        {canScrollLeft && (
-          <button
-            type="button"
-            className="absolute left-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-start bg-gradient-to-r from-background from-35% to-transparent pl-0.5 touch-manipulation"
-            aria-label={`${hint} — ${t('navigation.home')}`}
-            onClick={() => scrollByOneColumn(-1)}
-          >
-            <ChevronLeft className="h-5 w-5 text-muted-foreground drop-shadow-sm" strokeWidth={2} aria-hidden />
-          </button>
-        )}
-        {canScrollRight && (
-          <button
-            type="button"
-            className="absolute right-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-end bg-gradient-to-l from-background from-35% to-transparent pr-0.5 touch-manipulation"
-            aria-label={`${hint} — ${t('navigation.itinerary')}`}
-            onClick={() => scrollByOneColumn(1)}
-          >
-            <ChevronRight className="h-5 w-5 text-muted-foreground drop-shadow-sm" strokeWidth={2} aria-hidden />
-          </button>
-        )}
+        <button
+          type="button"
+          className="absolute left-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-start bg-gradient-to-r from-background from-35% to-transparent pl-0.5 touch-manipulation"
+          aria-label={`${hint} — ${t('navigation.home')}`}
+          onClick={() => goToSet(0, -1)}
+        >
+          <ChevronLeft className={`h-5 w-5 drop-shadow-sm ${activeSet === 0 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`} strokeWidth={2} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="absolute right-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-end bg-gradient-to-l from-background from-35% to-transparent pr-0.5 touch-manipulation"
+          aria-label={`${hint} — ${t('navigation.itinerary')}`}
+          onClick={() => goToSet(1, 1)}
+        >
+          <ChevronRight className={`h-5 w-5 drop-shadow-sm ${activeSet === 1 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`} strokeWidth={2} aria-hidden />
+        </button>
 
         <div className="pointer-events-none absolute inset-0 z-[28] flex items-center justify-center">
           <button
