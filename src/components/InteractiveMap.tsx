@@ -21,7 +21,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Bike, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Bike, Crown, PenTool, Sunrise, Sun, Moon, Maximize2, ArrowLeft, CheckCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format } from "date-fns";
@@ -1616,9 +1616,31 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* Niveau (itinéraire / présence / classement : barre d’onglets en bas) */}
+      {/* Niveau + classement + présence (fabs iOS) */}
       {user && !isImmersiveMode && (
         <div className="absolute right-4 bottom-4 z-10 flex flex-col items-end gap-2 ios-map-bottom-buttons">
+          <MapIosColoredFab
+            tone="blue"
+            title="Créer un itinéraire"
+            onClick={() => {
+              navigate("/route-create");
+            }}
+          >
+            <PenTool className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </MapIosColoredFab>
+
+          <MapIosColoredFab
+            tone="green"
+            title="Confirmer ma présence GPS"
+            onClick={() => navigate("/confirm-presence")}
+          >
+            <CheckCircle className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+          </MapIosColoredFab>
+
+          <MapIosColoredFab tone="yellow" title="Classement" onClick={() => navigate("/leaderboard")}>
+            <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+          </MapIosColoredFab>
+
           <LevelSliderFilter
             selectedLevel={filters.level}
             onLevelChange={(level) => setFilters((prev) => ({ ...prev, level }))}
