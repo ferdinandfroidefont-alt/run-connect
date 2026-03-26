@@ -72,10 +72,10 @@ export const BottomNavigation = () => {
           isActive: (p) => p === '/route-create' || p === '/route-creation' || p.startsWith('/route-creation/'),
         },
         {
-          path: '/messages',
+          path: '/coaching',
           icon: GraduationCap,
           label: t('navigation.coaching'),
-          isActive: (p) => p === '/messages' || p.startsWith('/messages/'),
+          isActive: (p) => p === '/coaching' || p.startsWith('/coaching/'),
         },
         {
           path: '/confirm-presence',
