@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { SettingsSubpageTutorial } from "@/components/settings/SettingsSubpageTutorial";
+import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -111,6 +112,7 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   // Reset to hub when dialog closes
   useEffect(() => {
     if (!open) {
+      resetBodyInteractionLocks();
       setTimeout(() => {
         setCurrentPage("hub");
         setSubpageTutorialPage(null);
