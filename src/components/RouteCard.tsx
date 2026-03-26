@@ -32,6 +32,7 @@ interface RouteCardProps {
 
 export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
   const navigate = useNavigate();
+  const { formatMeters } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const polyline = useRef<google.maps.Polyline | null>(null);
