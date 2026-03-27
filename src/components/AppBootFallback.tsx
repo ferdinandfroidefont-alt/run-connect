@@ -29,17 +29,17 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
   }, [showSlowHintAfterMs]);
 
   const logoBoxStyle: CSSProperties = {
-    // Objectif ~35-45% de la hauteur écran, bornes iPhone
-    width: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
-    height: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
-    maxWidth: 'min(84vw, 19rem)',
-    maxHeight: 'min(84vw, 19rem)',
+    // Icône volontairement plus grande
+    width: 'clamp(12rem, min(82vw, 46dvh), 23rem)',
+    height: 'clamp(12rem, min(82vw, 46dvh), 23rem)',
+    maxWidth: 'min(92vw, 23rem)',
+    maxHeight: 'min(92vw, 23rem)',
   };
 
   const titleStyle: CSSProperties = {
-    // Légère montée en taille pour mieux remplir l'écran
+    // Texte un peu plus proche de l'icône
     fontSize: 'clamp(1.25rem, min(5.1vw, 3.9dvh), 1.95rem)',
-    marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
+    marginTop: 'clamp(-0.2rem, min(0.35dvh, 0.15rem), 0.15rem)',
     letterSpacing: '-0.02em',
   };
 
@@ -67,7 +67,7 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
     >
       <div className="flex w-full max-w-[min(100%,22rem)] flex-col items-center text-center">
         <div
-          className="mb-ios-6 flex flex-col items-center"
+          className="mb-ios-4 flex flex-col items-center"
           style={{
               // Ajustement "centrage optique" (logo + texte)
               transform: 'translateY(calc(-1 * min(2.4dvh, 1.1rem)))',
