@@ -592,13 +592,7 @@ html, body {
     min-height: 4.125rem !important;
   }
 
-  /* iOS: remonter la barre de recherche et les boutons bas de la carte */
-  .ios-map-search {
-    top: 4.5rem !important;
-  }
-  .ios-map-filters {
-    top: 7.5rem !important;
-  }
+  /* Barre recherche carte : intégrée dans le header (InteractiveMap) */
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
   }

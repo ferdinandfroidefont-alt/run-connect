@@ -1492,69 +1492,110 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Header - Hidden in immersive mode */}
-      {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10 pt-[var(--safe-area-top)]">
-        <div className="bg-background border-b border-border/50 overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 pt-6 pb-9 sm:pt-8 sm:pb-11 ios-map-header">
-            {/* Runconnect — centré verticalement avec la cloche / paramètres */}
-            <h1 className="flex items-center text-lg font-semibold leading-none text-primary">
-              Runconnect
-            </h1>
-            
-            {/* User Profile Avatar - Centered - Clickable to access profile */}
-            {userProfile && <div className="absolute left-1/2 transform -translate-x-1/2" data-tutorial="profile-avatar">
-                <div onClick={() => setShowProfileDialog(true)} className="relative cursor-pointer hover-scale hover-glow transition-all duration-200 flex flex-col items-center">
-                  <Avatar className="w-14 h-14 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
-                    <AvatarImage src={userProfile.avatar_url || undefined} alt={userProfile.username || userProfile.display_name} />
-                    <AvatarFallback className="text-lg">
-                      {(userProfile.username || userProfile.display_name || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {user && <div className="absolute -bottom-1 -right-1 scale-75"><StreakBadge userId={user.id} variant="compact" /></div>}
+      {/* Header + recherche fusionnés (carrousel filtres en dessous, hors du bloc) — masqué en mode immersif */}
+      {!isImmersiveMode && (
+        <div className="absolute left-0 right-0 top-0 z-10 pt-[var(--safe-area-top)]">
+          {/* Un seul panneau : barre d’outils + champ recherche — pas de « double bloc » empilé */}
+          <div
+            className={cn(
+              "border-b border-border/25 dark:border-white/[0.055]",
+              "bg-background/90 supports-[backdrop-filter]:bg-background/76",
+              "backdrop-blur-[14px] backdrop-saturate-150"
+            )}
+          >
+            <div className="relative flex min-h-[52px] items-center justify-between gap-2 px-4 pb-2 pt-5 sm:min-h-[56px] sm:pt-6 ios-map-header">
+              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
+                Runconnect
+              </h1>
+
+              {userProfile && (
+                <div className="absolute left-1/2 z-[1] -translate-x-1/2" data-tutorial="profile-avatar">
+                  <div
+                    onClick={() => setShowProfileDialog(true)}
+                    className="relative flex cursor-pointer flex-col items-center transition-all duration-200 hover-scale hover-glow"
+                  >
+                    <Avatar className="h-[52px] w-[52px] ring-2 ring-primary/15 transition-all duration-200 hover:ring-primary/35 sm:h-14 sm:w-14">
+                      <AvatarImage
+                        src={userProfile.avatar_url || undefined}
+                        alt={userProfile.username || userProfile.display_name}
+                      />
+                      <AvatarFallback className="text-lg">
+                        {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {user && (
+                      <div className="absolute -bottom-1 -right-1 scale-75">
+                        <StreakBadge userId={user.id} variant="compact" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>}
-            
-            <div className="flex items-center gap-3">
-              <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                <Suspense
-                  fallback={
-                    <div
-                      className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
-                      aria-hidden
-                    />
-                  }
+              )}
+
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
+                  <Suspense
+                    fallback={
+                      <div
+                        className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-border dark:bg-card"
+                        aria-hidden
+                      />
+                    }
+                  >
+                    <NotificationCenter onSessionUpdated={loadSessions} />
+                  </Suspense>
+                </div>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
+                    "text-foreground transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  )}
+                  aria-label="Paramètres"
+                  onClick={() => setShowSettingsDialog(true)}
                 >
-                  <NotificationCenter onSessionUpdated={loadSessions} />
-                </Suspense>
+                  <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+                </button>
               </div>
-              <button
-                type="button"
+            </div>
+
+            {/* Recherche : même panneau, ton légèrement différent — sans bordure nette ni ombre forte */}
+            <div className="px-4 pb-4 pt-0.5">
+              <div
                 className={cn(
-                  /* h-[40px] évite la règle iOS .h-10.w-10 { 2rem } qui rétrécissait les boutons et décalait le badge */
-                  "touch-manipulation flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] outline-none",
-                  "text-[#1A1A1A] transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
-                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  "flex min-h-[46px] items-center gap-2.5 rounded-2xl px-3 py-1",
+                  "bg-black/[0.035] dark:bg-white/[0.07]",
+                  "transition-colors duration-200",
+                  "focus-within:bg-black/[0.048] dark:focus-within:bg-white/[0.1]"
                 )}
-                aria-label="Paramètres"
-                onClick={() => setShowSettingsDialog(true)}
               >
-                <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-              </button>
+                <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground/75" strokeWidth={2.1} aria-hidden />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Rechercher un lieu ou une séance…"
+                  value={filters.search_query}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      search_query: e.target.value,
+                    }))
+                  }
+                  className={cn(
+                    "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight",
+                    "shadow-none placeholder:text-muted-foreground/65",
+                    "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
+                    "focus-visible:ring-0 focus-visible:ring-offset-0"
+                  )}
+                  aria-label="Rechercher un lieu ou une séance"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Search Bar and Date Filter - Floating over map */}
-        <div className="absolute left-0 right-0 z-10 px-4 pb-4 ios-map-search" style={{ top: '6rem' }}>
-          <div className="relative -mx-1 px-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
-            ...prev,
-            search_query: e.target.value
-          }))} className="pl-10 pr-4" />
-          </div>
-          
-          <div className="mt-2 space-y-2">
+
+          {/* Carrousel de filtres : séparé visuellement, sur le fond carte */}
+          <div className="px-4 pb-4 pt-3">
+            <div className="space-y-2">
             <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
@@ -1724,7 +1765,8 @@ export const InteractiveMap = ({
             </AnimatePresence>
           </div>
         </div>
-      </div>}
+      </div>
+      )}
 
       {/* Route Creation Mode Banner */}
       {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
