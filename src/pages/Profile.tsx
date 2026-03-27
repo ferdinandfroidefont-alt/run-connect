@@ -707,7 +707,8 @@ const Profile = () => {
       {/* Même rythme que le hub Paramètres : py-5, groupes px-4 + ios-card (inset) */}
       <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <div className="flex flex-col items-center pb-ios-1 pt-ios-2">
+          <div className="ios-card w-full min-w-0 overflow-hidden px-ios-4 py-ios-3">
+            <div className="flex flex-col items-center pb-ios-1 pt-ios-1">
             <div className="mb-0.5 flex items-center gap-ios-2">
               <h2 className="text-ios-title2 font-bold text-foreground">
                 {profile?.display_name || profile?.username}
@@ -734,6 +735,7 @@ const Profile = () => {
                 Signaler
               </Button>
             )}
+            </div>
           </div>
         </div>
 
@@ -797,25 +799,23 @@ const Profile = () => {
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <Collapsible>
-            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between py-ios-2">
+          <Collapsible className="ios-card w-full min-w-0 overflow-hidden">
+            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
                 Succès & Records
               </p>
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-ios-3 pt-ios-1">
-              <div className="ios-card overflow-hidden">
-                <PersonalRecords
-                  records={{
-                    running_records: profile?.running_records,
-                    cycling_records: profile?.cycling_records,
-                    swimming_records: profile?.swimming_records,
-                    triathlon_records: profile?.triathlon_records,
-                    walking_records: profile?.walking_records,
-                  }}
-                />
-              </div>
+            <CollapsibleContent className="border-t border-border/60">
+              <PersonalRecords
+                records={{
+                  running_records: profile?.running_records,
+                  cycling_records: profile?.cycling_records,
+                  swimming_records: profile?.swimming_records,
+                  triathlon_records: profile?.triathlon_records,
+                  walking_records: profile?.walking_records,
+                }}
+              />
             </CollapsibleContent>
           </Collapsible>
         </div>

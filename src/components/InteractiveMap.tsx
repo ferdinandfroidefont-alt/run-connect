@@ -1495,7 +1495,7 @@ export const InteractiveMap = ({
       {/* Header - Hidden in immersive mode */}
       {!isImmersiveMode && <div className="absolute top-0 left-0 right-0 z-10 pt-[var(--safe-area-top)]">
         <div className="bg-background border-b border-border/50 overflow-hidden">
-          <div className="relative flex items-center justify-between px-4 pt-6 pb-8 sm:pt-8 sm:pb-10 ios-map-header">
+          <div className="relative flex items-center justify-between px-4 pt-6 pb-9 sm:pt-8 sm:pb-11 ios-map-header">
             {/* Runconnect — centré verticalement avec la cloche / paramètres */}
             <h1 className="flex items-center text-lg font-semibold leading-none text-primary">
               Runconnect

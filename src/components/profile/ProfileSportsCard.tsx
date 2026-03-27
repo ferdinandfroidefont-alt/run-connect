@@ -107,7 +107,7 @@ export function ProfileSportsCard({ favoriteSport, isOwnProfile, onUpdated }: Pr
 
   return (
     <>
-      <div className="ios-list-stack overflow-hidden rounded-ios-lg border border-border bg-card shadow-sm">
+      <div className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60">
         <button
           type="button"
           onClick={openSheet}

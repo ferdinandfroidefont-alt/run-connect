@@ -194,7 +194,7 @@ export const PersonalGoals = () => {
 
   if (loading) {
     return (
-      <Card className="bg-card rounded-[10px]">
+      <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card">
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary animate-pulse" />
@@ -206,7 +206,7 @@ export const PersonalGoals = () => {
   }
 
   return (
-    <Card className="bg-card rounded-[10px] overflow-hidden">
+    <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
