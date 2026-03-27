@@ -14,7 +14,6 @@ import { CreateSessionWizard } from "@/components/session-creation/CreateSession
 import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
 import {
-  GraduationCap,
   Calendar,
   Users,
   CheckCircle2,
@@ -258,13 +257,13 @@ export const CoachingSessionDetail = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent fullScreen hideCloseButton>
-          <DialogHeader className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 px-ios-4 py-ios-3">
-            <DialogTitle className="flex items-center gap-ios-2 text-ios-headline font-semibold text-foreground">
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 -ml-ios-2 shrink-0 rounded-full touch-manipulation">
+          <DialogHeader className="sticky top-0 z-10 border-b border-border bg-card pt-[max(0.25rem,var(--safe-area-top))] px-ios-4 py-ios-3">
+            <DialogTitle className="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 text-ios-headline font-semibold text-foreground">
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 -ml-ios-1 shrink-0 rounded-full touch-manipulation" aria-label="Retour">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <GraduationCap className="h-5 w-5 text-primary shrink-0" />
-              <span className="truncate min-w-0">{session.title}</span>
+              <span className="min-w-0 truncate text-center">{session.title}</span>
+              <div className="h-9 w-9 shrink-0" aria-hidden />
             </DialogTitle>
           </DialogHeader>
 

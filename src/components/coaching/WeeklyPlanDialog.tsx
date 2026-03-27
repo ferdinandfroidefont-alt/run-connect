@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
+import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
 import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
@@ -771,26 +772,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        {/* ── iOS Navigation Bar ── */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px]">Retour</span>
-          </button>
-          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
-            Plan de semaine
-          </span>
-          <div className="min-w-[70px]" />
-        </div>
+        <CoachingFullscreenHeader title="Plan de semaine" onBack={onClose} />
 
         {/* ── Scrollable body — NO swipe handlers ── */}
-        <div className="flex-1 overflow-y-auto bg-secondary pb-20">
+        <div className="flex-1 overflow-y-auto bg-secondary pb-24 [-webkit-overflow-scrolling:touch]">
           {/* ── Week navigator — hero card ── */}
-          <div className="mt-4 mb-3">
-            <div className="bg-card rounded-none overflow-hidden">
+          <div className="mt-4 mb-3 px-4">
+            <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
               {/* Week selector */}
               <div className="flex items-center justify-between px-5 py-4">
                 <button
@@ -819,7 +807,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {/* ── Search bar ── */}
           <div className="px-4 mb-3">
             <Input
-              placeholder="🔍 Rechercher un athlète ou groupe..."
+              placeholder="Rechercher un athlète ou un groupe…"
               value={athleteSearch}
               onChange={e => setAthleteSearch(e.target.value)}
               className="h-11 text-[16px] rounded-xl bg-card border-border"
@@ -916,7 +904,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {weekLoadSummary && (
             <div className="mb-3">
               <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Charge de la semaine</p>
-              <div className="bg-card rounded-none p-3">
+              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-3">
                 {/* Compact stats row */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -982,7 +970,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {/* ── CALENDAR GRID (moved AFTER charge) ── */}
           <div className="mb-3">
             <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Calendrier</p>
-            <div className="bg-card rounded-none p-4">
+            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
               <div className="grid grid-cols-7 gap-2">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
@@ -1044,7 +1032,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {selectedSession && selectedIndex !== null ? (
             <div className="mb-3">
               <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Éditer la séance</p>
-              <div className="bg-card rounded-none overflow-hidden">
+              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
                 <WeeklyPlanSessionEditor
                   session={selectedSession}
                   onChange={s => updateSession(selectedIndex, s)}
@@ -1067,7 +1055,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {/* ── ACTIONS section ── */}
           <div className="mb-3">
             <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Outils</p>
-            <div className="bg-card rounded-none overflow-hidden">
+            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
               {/* Resume draft button */}
               {hasDraft && (
                 <IOSListItem
@@ -1164,7 +1152,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {/* Mesocycle panel */}
           {showMesocycle && (
             <div className="mb-3">
-              <div className="bg-card rounded-none p-4">
+              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
                 <MesocycleView clubId={clubId} currentWeek={currentWeek} />
               </div>
             </div>
@@ -1173,7 +1161,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {/* Save template input */}
           {showSaveTemplate && (
             <div className="mb-3">
-              <div className="bg-card rounded-none overflow-hidden">
+              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
                 <div className="px-5 py-4 flex items-center gap-3">
                   <Input
                     value={templateName}
@@ -1199,7 +1187,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           {selectedSession && selectedIndex !== null && sessions.length > 0 && (
             <div className="mb-3">
               <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Personnalisation</p>
-              <div className="bg-card rounded-none overflow-hidden">
+              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
                 <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
                   <CollapsibleTrigger asChild>
                     <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
