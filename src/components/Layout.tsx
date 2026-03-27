@@ -8,6 +8,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
+import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -177,6 +178,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </main>
+      <TutorialReplayHost />
       {showBottomNav && <BottomNavigation />}
     </div>
   );

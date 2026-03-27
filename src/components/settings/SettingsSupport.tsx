@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 import { useTutorial } from "@/hooks/useTutorial";
+import { notifyTutorialReplayQueued } from "@/lib/tutorials/registry";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -30,10 +31,11 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
   const [showAdminPremium, setShowAdminPremium] = useState(false);
   const navigate = useNavigate();
 
-  const handleRestartTutorial = async () => {
-    await restartTutorial();
+  const handleRestartTutorial = () => {
+    restartTutorial();
     onClose();
-    navigate('/');
+    navigate("/");
+    window.setTimeout(() => notifyTutorialReplayQueued(), 60);
   };
 
   const handleSignOut = () => {

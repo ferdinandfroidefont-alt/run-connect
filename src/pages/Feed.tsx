@@ -117,7 +117,7 @@ export default function Feed() {
   const loading = mode === 'friends' ? friendsLoading : discoverLoading;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-feed">
       <FeedHeader
         onSearch={() => navigate('/search')}
         onProfileClick={() => setShowProfileDialog(true)}

@@ -143,7 +143,7 @@ export default function Coaching() {
   return (
     <div className="fixed-fill-with-bottom-nav overflow-y-auto bg-secondary">
       <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
-        <header className="ios-card border border-border/60 px-ios-4 py-ios-4">
+        <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">

@@ -3,7 +3,7 @@ import Joyride, { CallBackProps, STATUS, Step, TooltipRenderProps } from 'react-
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
-import { TutorialStep } from '@/hooks/useTutorial';
+import type { TutorialStep } from '@/lib/tutorials/types';
 
 interface InteractiveTutorialProps {
   steps: TutorialStep[];

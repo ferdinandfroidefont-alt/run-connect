@@ -1,8 +1,24 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import { Button } from "@/components/ui/button";
-import { Settings, Bell, Link2, Shield, HelpCircle, ChevronRight, Loader2, ArrowLeft, Search, Copy, Share2, Instagram } from "lucide-react";
+import {
+  Settings,
+  Bell,
+  Link2,
+  Shield,
+  HelpCircle,
+  ChevronRight,
+  Loader2,
+  ArrowLeft,
+  Search,
+  Copy,
+  Share2,
+  Instagram,
+  GraduationCap,
+} from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -12,9 +28,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
-import { SettingsSubpageTutorial } from "@/components/settings/SettingsSubpageTutorial";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { buildPreferredProfileShareLink } from "@/lib/appLinks";
+import {
+  TUTORIAL_REPLAY_DEFINITIONS,
+  TUTORIAL_REPLAY_MENU_ORDER,
+  requestTutorialReplay,
+  notifyTutorialReplayQueued,
+  type TutorialReplayId,
+} from "@/lib/tutorials/registry";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -82,16 +104,23 @@ const settingsCategories = [
 export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
-  const [subpageTutorialPage, setSubpageTutorialPage] = useState<
-    Exclude<SettingsPage, "hub"> | null
-  >(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
 
   const goToSettingsHub = () => {
-    setSubpageTutorialPage(null);
     setCurrentPage("hub");
+  };
+
+  const startTutorialReplay = (id: TutorialReplayId) => {
+    const def = TUTORIAL_REPLAY_DEFINITIONS[id];
+    if (!def) return;
+    requestTutorialReplay(id);
+    handleOpenChange(false);
+    navigate(def.path);
+    window.setTimeout(() => notifyTutorialReplayQueued(), 60);
   };
   
   // Profile share state
@@ -129,7 +158,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
       window.setTimeout(resetBodyInteractionLocks, 360);
       setTimeout(() => {
         setCurrentPage("hub");
-        setSubpageTutorialPage(null);
       }, 300);
     }
   }, [open]);
@@ -512,7 +540,6 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           type="button"
                           onClick={() => {
                             setCurrentPage(category.id);
-                            setSubpageTutorialPage(category.id);
                           }}
                           className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
                         >
@@ -531,6 +558,37 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         )}
                       </div>
                     ))}
+                    </div>
+                  </div>
+
+                  <div className="box-border min-w-0 w-full max-w-full px-4">
+                    <h3 className="px-1 pb-1 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t("tutorial.replayMenu.sectionTitle")}
+                    </h3>
+                    <p className="px-1 pb-3 text-[13px] leading-snug text-muted-foreground">
+                      {t("tutorial.replayMenu.sectionSubtitle")}
+                    </p>
+                    <div className="ios-card w-full min-w-0 overflow-hidden">
+                      {TUTORIAL_REPLAY_MENU_ORDER.map((id, index) => (
+                        <div key={id}>
+                          <button
+                            type="button"
+                            onClick={() => startTutorialReplay(id)}
+                            className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
+                          >
+                            <div className="ios-list-row-icon bg-[#5856D6]">
+                              <GraduationCap className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1 text-left">
+                              <span className="truncate text-[17px]">{t(`tutorial.replayMenu.items.${id}`)}</span>
+                            </div>
+                            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                          </button>
+                          {index < TUTORIAL_REPLAY_MENU_ORDER.length - 1 ? (
+                            <div className="ios-list-row-inset-sep" />
+                          ) : null}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -647,13 +705,6 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               key={currentPage}
               className="relative flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden bg-background"
             >
-              {subpageTutorialPage === currentPage && currentPage !== "hub" ? (
-                <SettingsSubpageTutorial
-                  page={currentPage}
-                  active
-                  onDismiss={() => setSubpageTutorialPage(null)}
-                />
-              ) : null}
               {renderPage()}
             </motion.div>
           )}

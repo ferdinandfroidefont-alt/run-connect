@@ -448,7 +448,11 @@ const Leaderboard = () => {
 
       <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-4 pb-6 pt-4">
         <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-          <section aria-label="Filtres classement" className="rounded-[12px] border border-border bg-card p-3 shadow-sm">
+          <section
+            aria-label="Filtres classement"
+            className="rounded-[12px] border border-border bg-card p-3 shadow-sm"
+            data-tutorial="tutorial-leaderboard"
+          >
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Filtres</p>
             <FilterBar
               activeScope={activeScope}

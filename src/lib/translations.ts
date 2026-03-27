@@ -236,6 +236,55 @@ const _translationBundles: Record<string, any> = {
       skip: 'Passer',
       finish: 'Terminer',
       restartTutorial: 'Revoir le tutoriel',
+      replayMenu: {
+        sectionTitle: 'Tutoriels',
+        sectionSubtitle: 'Relancez les visites guidées quand vous voulez.',
+        items: {
+          full: 'Tutoriel complet (accueil)',
+          map: 'Carte interactive',
+          create: 'Créer une séance',
+          sessions: 'Mes séances',
+          messages: 'Messages',
+          feed: 'Feed',
+          profile: 'Profil',
+          notifications: 'Notifications',
+          leaderboard: 'Classement',
+          routes: 'Création d’itinéraire',
+          coaching: 'Coaching',
+        },
+      },
+      replayPages: {
+        sessions: {
+          title: 'Mes séances',
+          content:
+            'Consultez vos séances créées ou rejointes, le calendrier et vos itinéraires — tout est regroupé ici.',
+        },
+        messages: {
+          title: 'Messages',
+          content: 'Échangez en direct, accédez aux clubs et retrouvez vos conversations.',
+        },
+        feed: {
+          title: 'Feed',
+          content: 'Suivez la communauté : fil Amis ou Découvrir pour trouver des séances.',
+        },
+        profile: {
+          title: 'Votre profil',
+          content: 'Photo, couverture, sports et réglages : tout se pilote depuis cet écran.',
+        },
+        leaderboard: {
+          title: 'Classement',
+          content: 'Comparez-vous à la communauté, filtrez par scope ou par activité, et ouvrez les règles si besoin.',
+        },
+        routes: {
+          title: 'Tracer un itinéraire',
+          content:
+            'Posez des points sur la carte : le mode guidé suit les routes, le mode manuel libère le tracé. Validez quand le parcours vous convient.',
+        },
+        coaching: {
+          title: 'Coaching',
+          content: 'Plans de semaine, séances et suivi : retrouvez vos clubs et les outils coach ou athlète.',
+        },
+      },
     },
     profileSetup: {
       headerAlreadySignedIn: 'Déjà connecté ?',
@@ -527,6 +576,54 @@ const _translationBundles: Record<string, any> = {
       skip: 'Skip',
       finish: 'Finish',
       restartTutorial: 'Replay Tutorial',
+      replayMenu: {
+        sectionTitle: 'Tutorials',
+        sectionSubtitle: 'Replay guided tours anytime.',
+        items: {
+          full: 'Full walkthrough (home)',
+          map: 'Interactive map',
+          create: 'Create a session',
+          sessions: 'My sessions',
+          messages: 'Messages',
+          feed: 'Feed',
+          profile: 'Profile',
+          notifications: 'Notifications',
+          leaderboard: 'Leaderboard',
+          routes: 'Route creation',
+          coaching: 'Coaching',
+        },
+      },
+      replayPages: {
+        sessions: {
+          title: 'My sessions',
+          content: 'See sessions you host or join, your calendar, and your routes — all in one place.',
+        },
+        messages: {
+          title: 'Messages',
+          content: 'Chat, clubs, and conversations — your inbox lives here.',
+        },
+        feed: {
+          title: 'Feed',
+          content: 'Friends or Discover: follow the community and find sessions.',
+        },
+        profile: {
+          title: 'Your profile',
+          content: 'Photo, cover, sports, and settings — manage your identity here.',
+        },
+        leaderboard: {
+          title: 'Leaderboard',
+          content: 'Compare with the community, filter by scope or activity, and open the rules when needed.',
+        },
+        routes: {
+          title: 'Draw a route',
+          content:
+            'Drop points on the map: guided mode follows roads, manual mode draws freely. Finish when the path looks right.',
+        },
+        coaching: {
+          title: 'Coaching',
+          content: 'Weekly plans, sessions, and tracking — coach and athlete tools for your clubs.',
+        },
+      },
     },
     profileSetup: {
       headerAlreadySignedIn: 'Already signed in?',
