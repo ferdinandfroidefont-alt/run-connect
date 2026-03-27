@@ -184,7 +184,7 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
 
   if (loading) {
     return (
-      <div className="bg-card rounded-[10px] overflow-hidden">
+      <div className="ios-card rounded-ios-md border border-border/60 overflow-hidden shadow-[var(--shadow-card)]">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
             <div className="ios-list-row-icon bg-secondary animate-pulse" />
@@ -197,7 +197,7 @@ export const ProfileStatsGroup = ({ userId, onSettingsClick, onInfoClick, childr
 
   return (
     <>
-      <div className="bg-card rounded-[10px] overflow-hidden">
+      <div className="ios-card rounded-ios-md border border-border/60 overflow-hidden shadow-[var(--shadow-card)]">
         {/* Classement Row */}
         <button
           type="button"

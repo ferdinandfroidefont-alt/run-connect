@@ -501,7 +501,7 @@ export const ProfileDialog = ({
               </div>
 
               {/* Social Stats - iOS Segmented */}
-              <IOSListGroup className="mb-0">
+              <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
                 <div className="flex items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
@@ -541,7 +541,10 @@ export const ProfileDialog = ({
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
-                <IOSListGroup header="MODIFIER MES INFORMATIONS">
+                <IOSListGroup
+                  header="MODIFIER MES INFORMATIONS"
+                  className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
+                >
                   <div className="p-4 space-y-4">
                     <div className="space-y-3">
                       <div>
@@ -644,7 +647,10 @@ export const ProfileDialog = ({
               ) : (
                 <>
                   {/* Personal Info */}
-                  <IOSListGroup header="INFORMATIONS">
+                  <IOSListGroup
+                    header="INFORMATIONS"
+                    className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
+                  >
                     <IOSListItem
                       icon={User}
                       iconBgColor="bg-blue-500"
@@ -697,7 +703,10 @@ export const ProfileDialog = ({
                   </IOSListGroup>
 
                   {/* Actions */}
-                  <IOSListGroup header="RACCOURCIS" className="mb-0">
+                  <IOSListGroup
+                    header="RACCOURCIS"
+                    className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]"
+                  >
                     <IOSListItem
                       icon={Route}
                       iconBgColor="bg-teal-500"
