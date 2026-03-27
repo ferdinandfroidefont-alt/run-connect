@@ -155,7 +155,7 @@ export const BottomNavigation = () => {
     setActiveSet(targetSet);
   };
 
-  const renderNavButton = (item: NavItem) => {
+  const renderNavButton = (item: NavItem, positionClass = '') => {
     const { path, icon: Icon, label, tutorialId, showUnreadBadge } = item;
     const isActive = item.isActive(pathname);
     const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
@@ -166,7 +166,7 @@ export const BottomNavigation = () => {
         type="button"
         onClick={() => navigate(path)}
         style={{ width: SIDE_COL }}
-        className="mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-end gap-0 pb-0.5 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+        className={`mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation ${positionClass}`}
         data-tutorial={tutorialId}
       >
         <div className="relative">
@@ -211,13 +211,13 @@ export const BottomNavigation = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={(dir) => ({ x: dir > 0 ? -36 : 36, opacity: 0 })}
               transition={{ duration: 0.24, ease: iosEase }}
-              className="absolute inset-0 flex items-end pb-1"
+              className="absolute inset-0 flex items-center"
             >
-              {renderNavButton(currentSetItems[0])}
-              {renderNavButton(currentSetItems[1])}
+              {renderNavButton(currentSetItems[0], 'translate-x-2')}
+              {renderNavButton(currentSetItems[1], 'translate-x-1')}
               <div className="pointer-events-none mx-0.5 min-w-0 shrink-0" style={{ width: SIDE_COL }} aria-hidden />
-              {renderNavButton(currentSetItems[2])}
-              {renderNavButton(currentSetItems[3])}
+              {renderNavButton(currentSetItems[2], '-translate-x-1')}
+              {renderNavButton(currentSetItems[3], '-translate-x-2')}
             </motion.div>
           </AnimatePresence>
         </div>
