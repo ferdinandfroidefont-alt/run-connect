@@ -110,9 +110,22 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
   }, [initialSearch]);
 
   // Reset to hub when dialog closes
+  const handleOpenChange = (next: boolean) => {
+    onOpenChange(next);
+    if (!next) {
+      // Immédiat + après l’anim de sortie Radix : évite pointer-events / scroll-lock résiduels.
+      resetBodyInteractionLocks();
+      window.setTimeout(resetBodyInteractionLocks, 0);
+      window.setTimeout(resetBodyInteractionLocks, 120);
+      window.setTimeout(resetBodyInteractionLocks, 360);
+    }
+  };
+
   useEffect(() => {
     if (!open) {
       resetBodyInteractionLocks();
+      window.setTimeout(resetBodyInteractionLocks, 0);
+      window.setTimeout(resetBodyInteractionLocks, 360);
       setTimeout(() => {
         setCurrentPage("hub");
         setSubpageTutorialPage(null);
@@ -371,7 +384,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   );
 
   const handleNavigateToSubscription = () => {
-    onOpenChange(false);
+    handleOpenChange(false);
     window.location.href = '/subscription';
   };
 
@@ -403,7 +416,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
             <SettingsPrivacy 
               onBack={goToSettingsHub} 
-              onClose={() => onOpenChange(false)}
+              onClose={() => handleOpenChange(false)}
             />
           </Suspense>
         );
@@ -412,7 +425,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
           <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
             <SettingsSupport 
               onBack={goToSettingsHub} 
-              onClose={() => onOpenChange(false)}
+              onClose={() => handleOpenChange(false)}
             />
           </Suspense>
         );
@@ -423,7 +436,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
   if (loading && open) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-md max-h-[80vh] p-0">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -434,10 +447,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
-        className="fixed inset-0 left-0 right-0 top-0 z-[108] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
+        className="fixed inset-0 left-0 right-0 top-0 z-[116] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
       >
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
@@ -456,7 +469,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                   <div className="flex min-w-0 justify-start">
                     <button
                       type="button"
-                      onClick={() => onOpenChange(false)}
+                      onClick={() => handleOpenChange(false)}
                       className="flex min-w-0 max-w-full items-center gap-1 text-primary"
                     >
                       <ArrowLeft className="h-5 w-5 shrink-0" />

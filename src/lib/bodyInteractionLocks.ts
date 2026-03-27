@@ -14,6 +14,14 @@ export function resetBodyInteractionLocks(): void {
   html.style.pointerEvents = 'auto';
   if (root) root.style.pointerEvents = 'auto';
 
+  // Radix / react-remove-scroll : overflow + padding compensatoire peuvent rester après fermeture anormale.
+  body.style.removeProperty('overflow');
+  html.style.removeProperty('overflow');
+  body.style.removeProperty('padding-right');
+  html.style.removeProperty('padding-right');
+  body.style.removeProperty('touch-action');
+  html.style.removeProperty('touch-action');
+
   // Certaines libs ajoutent des data-attributes ; on ne les supprime que s’ils sont connus vides
   body.removeAttribute('data-scroll-locked');
 }
