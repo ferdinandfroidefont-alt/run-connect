@@ -24,6 +24,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Feed = lazy(() => import("./pages/Feed"));
 const MySessions = lazy(() => import("./pages/MySessions"));
 const Messages = lazy(() => import("./pages/Messages"));
+const Coaching = lazy(() => import("./pages/Coaching"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
@@ -200,7 +201,7 @@ const App = () => {
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><PageTransition><PageSuspense><MySessions /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Coaching /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
