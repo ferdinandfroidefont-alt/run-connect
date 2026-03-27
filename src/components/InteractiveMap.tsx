@@ -1503,7 +1503,7 @@ export const InteractiveMap = ({
               "backdrop-blur-[14px] backdrop-saturate-150"
             )}
           >
-            <div className="relative flex min-h-[52px] items-center justify-between gap-2 px-4 pb-2 pt-5 sm:min-h-[56px] sm:pt-6 ios-map-header">
+            <div className="relative flex min-h-[52px] items-center justify-between gap-2 px-4 pb-3 pt-5 sm:min-h-[56px] sm:pb-3.5 sm:pt-6 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 Runconnect
               </h1>
@@ -1560,17 +1560,21 @@ export const InteractiveMap = ({
               </div>
             </div>
 
-            {/* Recherche : même panneau, ton légèrement différent — sans bordure nette ni ombre forte */}
-            <div className="px-4 pb-4 pt-0.5">
+            {/* Recherche : fond quasi identique au header — icône + texte seuls ressortent, léger relief au focus */}
+            <div className="px-4 pb-4 pt-2.5 sm:pt-3">
               <div
                 className={cn(
-                  "flex min-h-[46px] items-center gap-2.5 rounded-2xl px-3 py-1",
-                  "bg-black/[0.035] dark:bg-white/[0.07]",
-                  "transition-colors duration-200",
-                  "focus-within:bg-black/[0.048] dark:focus-within:bg-white/[0.1]"
+                  "flex min-h-[44px] items-center gap-3 px-1 py-1.5 sm:min-h-[46px]",
+                  "rounded-xl bg-transparent",
+                  "transition-[background-color] duration-200 ease-out",
+                  "focus-within:bg-foreground/[0.045] dark:focus-within:bg-white/[0.06]"
                 )}
               >
-                <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground/75" strokeWidth={2.1} aria-hidden />
+                <Search
+                  className="h-[17px] w-[17px] shrink-0 text-muted-foreground sm:h-[18px] sm:w-[18px]"
+                  strokeWidth={2.05}
+                  aria-hidden
+                />
                 <Input
                   ref={searchInputRef}
                   placeholder="Rechercher un lieu ou une séance…"
@@ -1582,8 +1586,8 @@ export const InteractiveMap = ({
                     }))
                   }
                   className={cn(
-                    "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight",
-                    "shadow-none placeholder:text-muted-foreground/65",
+                    "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
+                    "shadow-none placeholder:text-muted-foreground/82",
                     "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                     "focus-visible:ring-0 focus-visible:ring-offset-0"
                   )}
