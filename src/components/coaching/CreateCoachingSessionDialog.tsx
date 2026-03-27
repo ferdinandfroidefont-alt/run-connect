@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Users, UserCheck, ChevronLeft, Send, BookOpen, Save, MapPin } from "lucide-react";
+import { Users, UserCheck, Send, BookOpen, Save, MapPin } from "lucide-react";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
+import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import {
   rccToSessionBlocks,
   mergeParsedBlocksByIndex,
@@ -216,11 +217,11 @@ export const CreateCoachingSessionDialog = ({
         await supabase.from("notifications").insert({
           user_id: athleteId,
           type: "coaching_session",
-          title: `🎓 Nouvelle séance de ${coachName}`,
+          title: `Nouvelle séance de ${coachName}`,
           message: title,
           data: { club_id: clubId, coaching_session_id: session.id },
         });
-        sendPushNotification(athleteId, `🎓 Nouvelle séance de ${coachName}`, title, "coaching_session");
+        sendPushNotification(athleteId, `Nouvelle séance de ${coachName}`, title, "coaching_session");
       }
 
       toast({ title: "Séance envoyée !", description: `${recipientIds.length} athlète(s) notifié(s)` });
@@ -278,190 +279,192 @@ export const CreateCoachingSessionDialog = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent fullScreen hideCloseButton>
-          <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <GraduationCap className="h-5 w-5" />
-              <span className="flex-1">Nouvelle séance</span>
-              <span className="text-xs text-muted-foreground font-normal capitalize">{dateLabel}</span>
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 p-0">
+          <CoachingFullscreenHeader
+            title="Nouvelle séance"
+            onBack={onClose}
+            rightSlot={
+              <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
+                {dateLabel}
+              </span>
+            }
+          />
 
-          <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
-            {/* Sport + Objective */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Sport</Label>
-                <Select value={activityType} onValueChange={setActivityType}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ACTIVITY_TYPES.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Objectif *</Label>
-                <Input
-                  placeholder="VMA, Seuil, Footing..."
-                  value={objective}
-                  onChange={e => setObjective(e.target.value)}
-                  className="h-9"
-                />
-              </div>
-            </div>
-
-            {/* Template button */}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowTemplates(true)} className="text-xs">
-                <BookOpen className="h-3.5 w-3.5 mr-1" />
-                Templates
-              </Button>
-            </div>
-
-            {/* RCC Editor */}
-            <RCCEditor
-              value={rccCode}
-              onChange={setRccCode}
-              onParsedChange={handleParsedChange}
-            />
-            {parsedBlocks.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[12px] text-muted-foreground leading-snug">
-                  Sous l’aperçu, indiquez le <span className="font-medium text-foreground">RPE cible (1–10)</span> pour
-                  chaque partie (échauffement, séries, retour au calme). Sur les fractionnés, vous pouvez aussi fixer le
-                  RPE de la récup entre répétitions.
-                </p>
-                <RCCBlocksPreview
-                  blocks={parsedBlocks}
-                  editableRpe
-                  onRpeChange={handleBlockRpe}
-                />
-              </div>
-            )}
-
-            {/* Location */}
-            <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                Lieu (optionnel)
-              </Label>
-              <Input
-                placeholder="Parc, stade, forêt..."
-                value={locationName}
-                onChange={e => setLocationName(e.target.value)}
-                className="h-9"
-              />
-            </div>
-
-            {/* Coach notes */}
-            <div className="space-y-1.5">
-              <Label className="text-xs">Consignes coach (optionnel)</Label>
-              <Textarea
-                placeholder="Hydratation, échauffement spécifique..."
-                value={coachNotes}
-                onChange={e => setCoachNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
-
-            {/* Recipients */}
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase">Destinataires</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={sendMode === "club" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSendMode("club")}
-                  className="flex-1 text-xs"
-                >
-                  <Users className="h-3.5 w-3.5 mr-1" />
-                  Tout le club ({members.length})
-                </Button>
-                <Button
-                  type="button"
-                  variant={sendMode === "individual" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSendMode("individual")}
-                  className="flex-1 text-xs"
-                >
-                  <UserCheck className="h-3.5 w-3.5 mr-1" />
-                  Sélection
-                </Button>
-              </div>
-
-              {sendMode === "individual" && (
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Rechercher un athlète..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {filteredMembers.map(m => {
-                      const isSelected = selectedAthletes.has(m.user_id);
-                      return (
-                        <div
-                          key={m.user_id}
-                          className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-                            isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
-                          }`}
-                          onClick={() => toggleAthlete(m.user_id)}
-                        >
-                          <Checkbox checked={isSelected} />
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={m.avatar_url || ""} />
-                            <AvatarFallback className="text-xs">{(m.username || "?")[0].toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs font-medium truncate">{m.display_name || m.username}</span>
-                        </div>
-                      );
-                    })}
+          <div className="min-h-0 flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+            <div className="space-y-4">
+              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="min-w-0 space-y-1.5">
+                    <Label className="text-xs">Sport</Label>
+                    <Select value={activityType} onValueChange={setActivityType}>
+                      <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ACTIVITY_TYPES.map(t => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Save template */}
-            {rccCode.trim() && (
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-xs">Sauver comme template</Label>
-                  <Input
-                    placeholder="Nom du template..."
-                    value={templateName}
-                    onChange={e => setTemplateName(e.target.value)}
-                    className="h-8 text-xs"
-                  />
+                  <div className="min-w-0 space-y-1.5">
+                    <Label className="text-xs">Objectif *</Label>
+                    <Input
+                      placeholder="VMA, Seuil, Footing..."
+                      value={objective}
+                      onChange={e => setObjective(e.target.value)}
+                      className="h-11 rounded-xl border-border bg-card"
+                    />
+                  </div>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleSaveTemplate}
-                  disabled={!templateName.trim() || savingTemplate}
-                  className="h-8"
+                  onClick={() => setShowTemplates(true)}
+                  className="h-10 w-full rounded-xl border-dashed text-xs"
                 >
-                  <Save className="h-3.5 w-3.5" />
+                  <BookOpen className="mr-1 h-3.5 w-3.5" />
+                  Templates
                 </Button>
               </div>
-            )}
+
+              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <RCCEditor
+                  value={rccCode}
+                  onChange={setRccCode}
+                  onParsedChange={handleParsedChange}
+                />
+                {parsedBlocks.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[12px] leading-snug text-muted-foreground">
+                      Sous l’aperçu, indiquez le <span className="font-medium text-foreground">RPE cible (1–10)</span> pour
+                      chaque partie (échauffement, séries, retour au calme). Sur les fractionnés, vous pouvez aussi fixer le
+                      RPE de la récup entre répétitions.
+                    </p>
+                    <RCCBlocksPreview
+                      blocks={parsedBlocks}
+                      editableRpe
+                      onRpeChange={handleBlockRpe}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <div className="space-y-1.5">
+                  <Label className="flex items-center gap-1 text-xs">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    Lieu (optionnel)
+                  </Label>
+                  <Input
+                    placeholder="Parc, stade, forêt..."
+                    value={locationName}
+                    onChange={e => setLocationName(e.target.value)}
+                    className="h-11 rounded-xl border-border bg-card"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Consignes coach (optionnel)</Label>
+                  <Textarea
+                    placeholder="Hydratation, échauffement spécifique..."
+                    value={coachNotes}
+                    onChange={e => setCoachNotes(e.target.value)}
+                    rows={2}
+                    className="rounded-xl border-border bg-card"
+                  />
+                </div>
+              </div>
+
+              <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Destinataires</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={sendMode === "club" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSendMode("club")}
+                    className="min-w-0 flex-1 text-xs"
+                  >
+                    <Users className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Tout le club ({members.length})</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={sendMode === "individual" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSendMode("individual")}
+                    className="min-w-0 flex-1 text-xs"
+                  >
+                    <UserCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    Sélection
+                  </Button>
+                </div>
+
+                {sendMode === "individual" && (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="Rechercher un athlète..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="h-10 rounded-xl border-border bg-card text-xs"
+                    />
+                    <div className="max-h-40 space-y-1 overflow-y-auto [-webkit-overflow-scrolling:touch]">
+                      {filteredMembers.map(m => {
+                        const isSelected = selectedAthletes.has(m.user_id);
+                        return (
+                          <div
+                            key={m.user_id}
+                            className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-xl p-2 transition-colors ${
+                              isSelected ? "border border-primary/20 bg-primary/10" : "hover:bg-muted/50"
+                            }`}
+                            onClick={() => toggleAthlete(m.user_id)}
+                          >
+                            <Checkbox checked={isSelected} />
+                            <Avatar className="h-6 w-6 shrink-0">
+                              <AvatarImage src={m.avatar_url || ""} />
+                              <AvatarFallback className="text-xs">{(m.username || "?")[0].toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span className="min-w-0 truncate text-xs font-medium">{m.display_name || m.username}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {rccCode.trim() ? (
+                <div className="ios-card flex items-end gap-2 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Label className="text-xs">Sauver comme template</Label>
+                    <Input
+                      placeholder="Nom du template..."
+                      value={templateName}
+                      onChange={e => setTemplateName(e.target.value)}
+                      className="h-10 rounded-xl border-border bg-card text-xs"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveTemplate}
+                    disabled={!templateName.trim() || savingTemplate}
+                    className="h-10 shrink-0 rounded-xl"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {/* Sticky footer */}
-          <div className="sticky bottom-0 bg-background border-t p-4">
-            <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="w-full">
+          <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
+            <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="h-11 w-full rounded-xl">
               {loading ? "Envoi..." : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="mr-2 h-4 w-4" />
                   Envoyer la séance
                 </>
               )}

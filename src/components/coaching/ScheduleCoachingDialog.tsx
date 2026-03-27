@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +14,8 @@ import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { parseRCC, rccToSessionBlocks, mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { LocationPickerMap } from "./LocationPickerMap";
-import { MapPin, Calendar, Check, Clock, ChevronLeft, Send, Map } from "lucide-react";
+import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { MapPin, Calendar, Clock, Send, Map } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -126,7 +127,7 @@ export const ScheduleCoachingDialog = ({
         .from("sessions")
         .insert({
           organizer_id: user.id,
-          title: `📋 ${objective.trim() || session.title}`,
+          title: objective.trim() || session.title,
           description: session.description,
           activity_type: activityType,
           session_type: "footing",
@@ -184,7 +185,7 @@ export const ScheduleCoachingDialog = ({
 
       sendPushNotification(
         session.coach_id,
-        `📍 ${athleteName} a programmé sa séance`,
+        `${athleteName} a programmé sa séance`,
         session.title,
         "coaching_scheduled"
       );
@@ -201,145 +202,136 @@ export const ScheduleCoachingDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton>
-        <DialogHeader className="sticky top-0 bg-background z-10 border-b p-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 -ml-2">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Calendar className="h-5 w-5" />
-            <span className="flex-1">Programmer ma séance</span>
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 p-0">
+        <CoachingFullscreenHeader title="Programmer ma séance" onBack={onClose} />
 
-        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
-          {/* Coach notes */}
-          {session.coach_notes && (
-            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
-              <p className="text-xs font-medium text-primary mb-1">📝 Consignes du coach</p>
-              <p className="text-sm">{session.coach_notes}</p>
-            </div>
-          )}
+        <div className="min-h-0 flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+          <div className="space-y-4">
+            {session.coach_notes ? (
+              <div className="ios-card rounded-xl border border-primary/25 bg-primary/10 p-4 shadow-[var(--shadow-card)]">
+                <p className="mb-1 text-xs font-medium text-primary">Consignes du coach</p>
+                <p className="text-sm text-foreground">{session.coach_notes}</p>
+              </div>
+            ) : null}
 
-          {suggestedDate && (
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-              <p className="text-xs flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span className="font-medium">Le coach suggère :</span>
-                {format(new Date(suggestedDate), "EEE d MMM à HH:mm", { locale: fr })}
-              </p>
-            </div>
-          )}
+            {suggestedDate ? (
+              <div className="ios-card rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs shadow-[var(--shadow-card)]">
+                <p className="flex min-w-0 flex-wrap items-center gap-1">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">Le coach suggère :</span>
+                  <span>{format(new Date(suggestedDate), "EEE d MMM à HH:mm", { locale: fr })}</span>
+                </p>
+              </div>
+            ) : null}
 
-          {/* Sport + Objective */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Sport</Label>
-              <Select value={activityType} onValueChange={setActivityType}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTIVITY_TYPES.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Objectif</Label>
-              <Input
-                value={objective}
-                onChange={e => setObjective(e.target.value)}
-                className="h-9"
+            <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <Label className="text-xs">Sport</Label>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_TYPES.map(t => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label className="text-xs">Objectif</Label>
+                  <Input
+                    value={objective}
+                    onChange={e => setObjective(e.target.value)}
+                    className="h-11 rounded-xl border-border bg-card"
+                  />
+                </div>
+              </div>
+              <RCCEditor
+                value={rccCode}
+                onChange={setRccCode}
+                onParsedChange={handleParsedChange}
               />
+              {parsedBlocks.length > 0 ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Détail de la séance</Label>
+                  <RCCBlocksPreview blocks={parsedBlocks} />
+                </div>
+              ) : null}
+            </div>
+
+            <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs">
+                  <Calendar className="h-3 w-3 shrink-0" />
+                  Date et heure *
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="h-11 rounded-xl border-border bg-card"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1 text-xs">
+                  <MapPin className="h-3 w-3 shrink-0" />
+                  Lieu *
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Parc, stade, forêt..."
+                    value={locationName}
+                    onChange={(e) => setLocationName(e.target.value)}
+                    className="h-11 min-w-0 flex-1 rounded-xl border-border bg-card"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0 rounded-xl"
+                    onClick={() => setShowMapPicker(true)}
+                  >
+                    <Map className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Mon allure personnelle</Label>
+                <Input
+                  placeholder="Ex: 5:30/km"
+                  value={customPace}
+                  onChange={(e) => setCustomPace(e.target.value)}
+                  className="h-11 rounded-xl border-border bg-card"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Notes personnelles</Label>
+                <Textarea
+                  placeholder="Objectifs, sensations attendues..."
+                  value={customNotes}
+                  onChange={(e) => setCustomNotes(e.target.value)}
+                  rows={2}
+                  className="rounded-xl border-border bg-card"
+                />
+              </div>
             </div>
           </div>
-
-          {/* RCC Editor */}
-          <RCCEditor
-            value={rccCode}
-            onChange={setRccCode}
-            onParsedChange={handleParsedChange}
-          />
-
-          {/* Date + Location */}
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Date et heure *
-            </Label>
-            <Input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="h-9"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              Lieu *
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Parc, stade, forêt..."
-                value={locationName}
-                onChange={(e) => setLocationName(e.target.value)}
-                className="h-9 flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                onClick={() => setShowMapPicker(true)}
-              >
-                <Map className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Personal adjustments */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Mon allure personnelle</Label>
-            <Input
-              placeholder="Ex: 5:30/km"
-              value={customPace}
-              onChange={(e) => setCustomPace(e.target.value)}
-              className="h-9"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Notes personnelles</Label>
-            <Textarea
-              placeholder="Objectifs, sensations attendues..."
-              value={customNotes}
-              onChange={(e) => setCustomNotes(e.target.value)}
-              rows={2}
-            />
-          </div>
-
-          {parsedBlocks.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Détail de la séance</Label>
-              <RCCBlocksPreview blocks={parsedBlocks} />
-            </div>
-          )}
         </div>
 
-        {/* Sticky footer */}
-        <div className="sticky bottom-0 bg-background border-t p-4">
+        <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
           <Button
             onClick={handleSchedule}
             disabled={loading || !scheduledAt || !locationName.trim()}
-            className="w-full"
+            className="h-11 w-full rounded-xl"
           >
             {loading ? "Publication..." : (
               <>
-                <Send className="h-4 w-4 mr-2" />
+                <Send className="mr-2 h-4 w-4" />
                 Publier ma séance
               </>
             )}

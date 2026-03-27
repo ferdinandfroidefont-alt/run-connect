@@ -902,8 +902,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── CHARGE DE LA SEMAINE (moved BEFORE calendar) ── */}
           {weekLoadSummary && (
-            <div className="mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Charge de la semaine</p>
+            <div className="mb-3 px-4">
+              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Charge de la semaine</p>
               <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-3">
                 {/* Compact stats row */}
                 <div className="flex items-center justify-between mb-2">
@@ -947,7 +947,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                           const obj = (s.objective || s.activityType || "").toLowerCase();
                           return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma");
                         });
-                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-red-400" : "bg-green-400";
+                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-primary/75" : "bg-primary/35";
                         return (
                           <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
                             <div className="w-full flex items-end justify-center" style={{ height: 36 }}>
@@ -968,8 +968,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           )}
 
           {/* ── CALENDAR GRID (moved AFTER charge) ── */}
-          <div className="mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Calendrier</p>
+          <div className="mb-3 px-4">
+            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Calendrier</p>
             <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
               <div className="grid grid-cols-7 gap-2">
                 {DAY_LABELS.map((label, dayIndex) => {
@@ -989,16 +989,21 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                       {daySessions.map(sIdx => {
                         const s = sessions[sIdx];
                         const obj = (s.objective || s.activityType || "").toLowerCase();
-                        let pillColor = "bg-green-500";
+                        let pillTone =
+                          "border border-border/70 bg-secondary text-foreground";
                         let pillLabel = "EF";
                         if (obj.includes("vma") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma")) {
-                          pillColor = "bg-red-500"; pillLabel = obj.includes("pma") ? "PMA" : "VMA";
+                          pillTone = "border border-destructive/30 bg-destructive/10 text-destructive";
+                          pillLabel = obj.includes("pma") ? "PMA" : "VMA";
                         } else if (obj.includes("seuil")) {
-                          pillColor = "bg-orange-500"; pillLabel = "SEU";
+                          pillTone = "border border-orange-500/35 bg-orange-500/10 text-orange-700 dark:text-orange-300";
+                          pillLabel = "SEU";
                         } else if (obj.includes("récup") || obj.includes("recup")) {
-                          pillColor = "bg-blue-500"; pillLabel = "REC";
+                          pillTone = "border border-primary/25 bg-primary/8 text-primary";
+                          pillLabel = "REC";
                         } else if (obj.includes("spé") || obj.includes("specifique")) {
-                          pillColor = "bg-purple-500"; pillLabel = "SPÉ";
+                          pillTone = "border border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300";
+                          pillLabel = "SPÉ";
                         } else if (s.objective) {
                           pillLabel = s.objective.slice(0, 3).toUpperCase();
                         }
@@ -1007,8 +1012,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                           <button
                             key={sIdx}
                             onClick={() => setSelectedIndex(sIdx)}
-                            className={`w-full py-1.5 rounded-lg text-[10px] font-bold text-white transition-all ${pillColor} ${
-                              isSelected ? "ring-2 ring-primary ring-offset-2 scale-110" : "opacity-90 hover:opacity-100"
+                            className={`w-full rounded-lg py-1.5 text-[10px] font-semibold transition-all ${pillTone} ${
+                              isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : "active:opacity-90"
                             }`}
                           >
                             {pillLabel}
@@ -1030,8 +1035,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── Éditeur de séance ── */}
           {selectedSession && selectedIndex !== null ? (
-            <div className="mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Éditer la séance</p>
+            <div className="mb-3 px-4">
+              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Éditer la séance</p>
               <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
                 <WeeklyPlanSessionEditor
                   session={selectedSession}
@@ -1053,8 +1058,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           )}
 
           {/* ── ACTIONS section ── */}
-          <div className="mb-3">
-            <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Outils</p>
+          <div className="mb-3 px-4">
+            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Outils</p>
             <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
               {/* Resume draft button */}
               {hasDraft && (
@@ -1151,8 +1156,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* Mesocycle panel */}
           {showMesocycle && (
-            <div className="mb-3">
-              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
+            <div className="mb-3 px-4">
+              <div className="ios-card border border-border/60 p-4 shadow-[var(--shadow-card)]">
                 <MesocycleView clubId={clubId} currentWeek={currentWeek} />
               </div>
             </div>
@@ -1160,8 +1165,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* Save template input */}
           {showSaveTemplate && (
-            <div className="mb-3">
-              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
+            <div className="mb-3 px-4">
+              <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
                 <div className="px-5 py-4 flex items-center gap-3">
                   <Input
                     value={templateName}
@@ -1185,15 +1190,15 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
           {/* ── AJUSTEMENTS ATHLÈTES section ── */}
           {selectedSession && selectedIndex !== null && sessions.length > 0 && (
-            <div className="mb-3">
-              <p className="text-[12px] uppercase tracking-wider text-muted-foreground font-medium px-4 mb-2">Personnalisation</p>
+            <div className="mb-3 px-4">
+              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Personnalisation</p>
               <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] overflow-hidden">
                 <Collapsible open={showAthleteOverrides} onOpenChange={setShowAthleteOverrides}>
                   <CollapsibleTrigger asChild>
                     <div className="px-5 py-4 flex items-center justify-between cursor-pointer active:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-purple-500 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-white" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-700 dark:text-violet-300">
+                          <Users className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="text-[16px] font-semibold text-foreground">
@@ -1234,19 +1239,19 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               const dayIndex = todayDow === 0 ? 6 : todayDow - 1;
               addSession(dayIndex);
             }}
-            className="fixed bottom-28 right-6 z-20 h-14 w-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-            style={{ boxShadow: '0 6px 20px hsl(var(--primary) / 0.35)' }}
+            className="fixed right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 bottom-[max(7rem,calc(6.5rem+var(--safe-area-bottom)))]"
+            style={{ boxShadow: "0 6px 20px hsl(var(--primary) / 0.35)" }}
           >
             <Plus className="h-7 w-7" />
           </button>
         </div>
 
         {/* ── Fixed footer ── */}
-        <div className="shrink-0 border-t border-border px-5 py-4 space-y-3 bg-card">
+        <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 pb-[max(1rem,var(--safe-area-bottom))]">
           {/* Draft save status */}
           {draftSaveStatus !== "idle" && (
             <p className="text-[12px] text-muted-foreground text-center">
-              {draftSaveStatus === "saving" ? "Sauvegarde..." : "✓ Brouillon sauvegardé"}
+              {draftSaveStatus === "saving" ? "Sauvegarde…" : "Brouillon sauvegardé"}
             </p>
           )}
           {totalSessionsCount > 0 && (

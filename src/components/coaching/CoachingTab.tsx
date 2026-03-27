@@ -252,7 +252,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
       {isCoach && (
         <>
           {/* Hero Card */}
-          <Card className="mb-5 overflow-hidden rounded-none border-x-0">
+          <Card className="ios-card mb-5 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5">
               {stats.totalSessions === 0 ? (
                 /* Engaging empty state */
@@ -307,10 +307,19 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
                   {segmentProportions.intensity > 0 && <div className="bg-orange-500 rounded-full transition-all" style={{ width: `${segmentProportions.intensity}%` }} />}
                   {segmentProportions.recovery > 0 && <div className="bg-blue-500 rounded-full transition-all" style={{ width: `${segmentProportions.recovery}%` }} />}
                 </div>
-                <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
-                  <span>🟢 Volume</span>
-                  <span>🟡 Intensité</span>
-                  <span>🔵 Récup</span>
+                <div className="flex justify-between px-0.5 text-[10px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+                    Volume
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                    Intensité
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                    Récup
+                  </span>
                 </div>
               </div>
                 </>
@@ -319,13 +328,12 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </Card>
 
           {/* Tools Grid 2x2 */}
-          <div className="grid grid-cols-2 gap-3 mb-5 px-4">
+          <div className="mb-5 grid grid-cols-2 gap-3 px-4">
             {tools.map((tool) => (
               <button
                 key={tool.label}
                 onClick={tool.onClick}
-                className="flex flex-col items-center justify-center gap-2 bg-card rounded-[12px] p-4 active:scale-[0.97] transition-transform"
-                style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.06)' }}
+                className="ios-card flex flex-col items-center justify-center gap-2 rounded-[14px] border border-border/60 p-4 shadow-[var(--shadow-card)] transition-transform active:scale-[0.97]"
               >
                 <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${tool.iconWrap}`}>
                   <tool.icon className="h-5 w-5" />
@@ -336,7 +344,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </div>
 
           {/* Templates shortcut */}
-          <IOSListGroup flush>
+          <IOSListGroup className="ios-card mb-0 border border-border/60 shadow-[var(--shadow-card)]">
             <IOSListItem
               icon={BookOpen}
               iconBgColor="bg-purple-500"

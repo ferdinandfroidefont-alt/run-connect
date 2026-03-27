@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { parseRCC } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
-import { ArrowLeft, Trash2, BookOpen } from "lucide-react";
+import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { Trash2, BookOpen } from "lucide-react";
 
 interface Template {
   id: string;
@@ -58,66 +59,69 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        {/* iOS header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
-          <button onClick={onClose} className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px]">Retour</span>
-          </button>
-          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
-            Modèles de séances
-          </span>
-          <div className="min-w-[70px]" />
-        </div>
+      <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 p-0">
+        <CoachingFullscreenHeader title="Modèles" onBack={onClose} />
 
-        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-0 space-y-0">
-          <div className="px-4 mb-3">
-            <Input
-              placeholder="Rechercher un template..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+          <Input
+            placeholder="Rechercher un modèle…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="mb-4 h-11 rounded-xl border-border bg-card"
+          />
 
           {loading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map(i => <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />)}
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="ios-card h-24 animate-pulse border border-border/60" />
+              ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Aucun template sauvegardé</p>
-              <p className="text-xs mt-1">Créez une séance et cliquez "Sauver template"</p>
+            <div className="ios-card border border-border/60 px-4 py-10 text-center text-muted-foreground shadow-[var(--shadow-card)]">
+              <BookOpen className="mx-auto mb-2 h-9 w-9 opacity-45" />
+              <p className="text-[15px] font-medium text-foreground">Aucun modèle enregistré</p>
+              <p className="mt-1 text-[13px]">Sauvegardez une séance comme modèle pour la réutiliser ici.</p>
             </div>
           ) : (
-            filtered.map(t => {
-              const { blocks } = parseRCC(t.rcc_code);
-              return (
-                <button
-                  key={t.id}
-                  className="w-full text-left p-3 rounded-none border-b border-border/30 bg-card transition-colors space-y-2"
-                  onClick={() => { onSelect(t.rcc_code, t.objective || undefined); onClose(); }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{t.name}</p>
-                      {t.objective && <p className="text-xs text-muted-foreground">{t.objective}</p>}
+            <div className="space-y-3">
+              {filtered.map((t) => {
+                const { blocks } = parseRCC(t.rcc_code);
+                return (
+                  <div
+                    key={t.id}
+                    className="ios-card space-y-3 border border-border/60 p-4 text-left shadow-[var(--shadow-card)]"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 touch-manipulation text-left active:opacity-90"
+                        onClick={() => {
+                          onSelect(t.rcc_code, t.objective || undefined);
+                          onClose();
+                        }}
+                      >
+                        <p className="text-[15px] font-semibold text-foreground">{t.name}</p>
+                        {t.objective ? <p className="mt-0.5 text-[13px] text-muted-foreground">{t.objective}</p> : null}
+                        <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{t.rcc_code}</p>
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDelete(t.id);
+                        }}
+                        aria-label="Supprimer le modèle"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {blocks.length > 0 ? <RCCBlocksPreview blocks={blocks} /> : null}
                   </div>
-                  <p className="text-xs font-mono text-muted-foreground truncate">{t.rcc_code}</p>
-                  {blocks.length > 0 && <RCCBlocksPreview blocks={blocks} />}
-                </button>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
       </DialogContent>

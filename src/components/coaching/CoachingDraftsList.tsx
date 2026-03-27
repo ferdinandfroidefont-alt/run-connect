@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
+import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatDistanceToNow } from "date-fns";
@@ -75,26 +76,20 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center shrink-0">
-          <button onClick={onClose} className="flex items-center gap-0.5 text-primary text-[17px] min-w-[70px]">
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px]">Retour</span>
-          </button>
-          <span className="flex-1 text-center text-[17px] font-semibold text-foreground">Brouillons</span>
-          <div className="min-w-[70px]" />
-        </div>
+        <CoachingFullscreenHeader title="Brouillons" onBack={onClose} />
 
-        <div className="flex-1 overflow-y-auto bg-secondary py-4 px-0 space-y-0">
+        <div className="flex-1 space-y-3 overflow-y-auto bg-secondary px-4 py-4 [-webkit-overflow-scrolling:touch]">
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="h-16 bg-card rounded-none animate-pulse" />)}
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="ios-card h-16 animate-pulse border border-border/60" />
+              ))}
             </div>
           ) : drafts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <div className="ios-card border border-border/60 px-4 py-12 text-center text-muted-foreground shadow-[var(--shadow-card)]">
+              <FileText className="mx-auto mb-3 h-10 w-10 opacity-40" />
               <p className="text-[15px]">Aucun brouillon</p>
-              <p className="text-[13px] mt-1">Créez un plan hebdo pour commencer</p>
+              <p className="mt-1 text-[13px]">Créez un plan hebdo pour commencer</p>
             </div>
           ) : (
             drafts.map(draft => {
@@ -106,7 +101,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
               return (
                 <div
                   key={draft.id}
-                  className="bg-card rounded-none px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform border-b border-border/30"
+                  className="ios-card flex items-center gap-3 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)] transition-transform active:scale-[0.99]"
                 >
                   <button
                     onClick={() => handleOpenDraft(draft)}
@@ -117,8 +112,8 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
                         Sem. {weekLabel}
                       </span>
                       {draft.sent_at && (
-                        <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
-                          Envoyé ✓
+                        <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          Envoyé
                         </span>
                       )}
                     </div>
@@ -145,7 +140,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
               onOpenDraft(new Date(), "club");
               onClose();
             }}
-            className="w-full bg-card rounded-none px-4 py-3 flex items-center justify-center gap-2 text-primary text-[15px] font-medium active:scale-[0.98] transition-transform border-b border-border/30"
+            className="ios-card flex w-full items-center justify-center gap-2 border border-dashed border-primary/35 px-4 py-3 text-[15px] font-medium text-primary transition-transform active:scale-[0.99]"
           >
             <Plus className="h-4 w-4" />
             Nouveau plan hebdo

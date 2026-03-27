@@ -17,9 +17,9 @@ const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi",
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const ACTIVITY_TYPES = [
-  { value: "running", label: "🏃 Course" },
-  { value: "cycling", label: "🚴 Vélo" },
-  { value: "swimming", label: "🏊 Natation" },
+  { value: "running", label: "Course" },
+  { value: "cycling", label: "Vélo" },
+  { value: "swimming", label: "Natation" },
 ];
 
 const QUICK_OBJECTIVES: Record<string, string[]> = {
@@ -186,7 +186,7 @@ export const WeeklyPlanSessionEditor = ({
   const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
 
   return (
-    <div className="bg-card rounded-none overflow-hidden">
+    <div className="overflow-hidden bg-transparent">
       {/* Header with day + actions */}
       <div className="bg-secondary/50 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">

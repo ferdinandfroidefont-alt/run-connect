@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { parseRCC, type RCCResult } from "@/lib/rccParser";
 import { AlertCircle } from "lucide-react";
 
@@ -71,7 +70,10 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <label htmlFor={inputId} className="text-xs font-medium text-muted-foreground uppercase">
+        <label
+          htmlFor={inputId}
+          className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        >
           Code séance (RCC)
         </label>
         <Textarea
@@ -80,7 +82,7 @@ export const RCCEditor = ({ value, onChange, onParsedChange }: RCCEditorProps) =
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="20'>5'15, 3x1000>3'00 r1'15>trot, 5'>6'00"
-          className="font-mono text-sm min-h-[60px] resize-none"
+          className="min-h-[72px] resize-none rounded-xl border border-border/60 bg-background font-mono text-sm"
           rows={2}
           aria-invalid={result.errors.length > 0}
           aria-describedby={result.errors.length > 0 ? errorsId : undefined}

@@ -193,7 +193,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   return (
     <div className="space-y-4">
       {/* Week navigation — hero style */}
-      <div className="bg-card rounded-none px-4 py-5">
+      <div className="ios-card mx-4 overflow-hidden border border-border/60 px-4 py-5 shadow-[var(--shadow-card)]">
         {/* Week switcher */}
         <div className="flex items-center justify-between mb-5">
           <button
@@ -276,7 +276,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
           </div>
           <div>
             <p className="text-[14px] font-semibold text-foreground">
-              {progressPercent === 100 ? "Semaine complète ! 🎉" : `${progressPercent}% réalisé`}
+              {progressPercent === 100 ? "Semaine complète" : `${progressPercent}% réalisé`}
             </p>
             <p className="text-[12px] text-muted-foreground">
               {completedCount} séance{completedCount > 1 ? "s" : ""} sur {totalCount}
@@ -287,7 +287,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Bar chart */}
       {sessions.length > 0 && (
-        <div className="bg-card rounded-none px-4 py-4">
+        <div className="ios-card mx-4 border border-border/60 px-4 py-4 shadow-[var(--shadow-card)]">
           <WeeklyBarChart
             sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km, title: s.title, objective: s.objective }))}
             weekDays={weekDays}
@@ -297,8 +297,10 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Session list */}
       {sessions.length === 0 ? (
-        <div className="bg-card rounded-xl mx-4 p-8 text-center">
-          <div className="text-[40px] mb-3">🏃‍♂️</div>
+        <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12">
+            <CalendarDays className="h-6 w-6 text-primary" />
+          </div>
           <p className="text-[16px] font-semibold text-foreground mb-1">Semaine libre</p>
           <p className="text-[13px] text-muted-foreground">Aucune séance programmée cette semaine. Profitez-en pour récupérer !</p>
         </div>

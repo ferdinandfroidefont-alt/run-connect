@@ -344,11 +344,13 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         </div>
 
         {loading ? (
-          <div className="space-y-1">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-card animate-pulse" />)}
+          <div className="space-y-2 px-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="ios-card h-16 animate-pulse border border-border/60" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-card p-8 text-center">
+          <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
             <p className="text-[16px] font-semibold text-foreground mb-1">
               {search ? "Aucun athlète trouvé" : "Aucun athlète"}
             </p>
@@ -357,7 +359,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
             </p>
           </div>
         ) : (
-          <div className="bg-card overflow-hidden">
+          <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             {filtered.map((athlete, idx) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
@@ -554,11 +556,11 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
         <TabsContent value="sessions" className="mt-3">
           {selectedAthlete.totalCount === 0 ? (
-            <div className="bg-card p-6 text-center">
+            <div className="ios-card mx-4 border border-border/60 p-6 text-center shadow-[var(--shadow-card)]">
               <p className="text-[14px] text-muted-foreground">Aucune séance cette semaine</p>
             </div>
           ) : (
-            <div className="bg-card overflow-hidden">
+            <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
               {weekDays.map((day, idx) => {
                 const dayKey = format(day, "yyyy-MM-dd");
                 const dayData = selectedAthlete.days[dayKey];
@@ -593,13 +595,13 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                         </div>
                         <div className="flex items-center gap-3 mt-1">
                           {dayData.session.distance_km && (
-                            <span className="text-[12px] font-medium text-primary">
-                              📏 {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
+                            <span className="text-[12px] font-medium text-primary tabular-nums">
+                              {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
                             </span>
                           )}
                           {dayData.session.pace_target && (
                             <span className="text-[12px] text-muted-foreground">
-                              ⏱ {dayData.session.pace_target}
+                              Allure {dayData.session.pace_target}
                             </span>
                           )}
                         </div>
@@ -625,15 +627,15 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
             if (notes.length === 0) {
               return (
-                <div className="bg-card p-6 text-center">
-                  <MessageSquare className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+                <div className="ios-card mx-4 border border-border/60 p-6 text-center shadow-[var(--shadow-card)]">
+                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                   <p className="text-[14px] text-muted-foreground">Aucun commentaire cette semaine</p>
                 </div>
               );
             }
 
             return (
-              <div className="bg-card overflow-hidden">
+              <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
                 {notes.map(([dayKey, dayData], idx) => (
                   <div key={dayKey}>
                     {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
