@@ -1546,17 +1546,17 @@ export const InteractiveMap = ({
         
         {/* Search Bar and Date Filter - Floating over map */}
         <div className="absolute left-0 right-0 z-10 px-4 pb-4 ios-map-search" style={{ top: '6rem' }}>
-          <div className="relative">
+          <div className="relative -mx-1 px-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input ref={searchInputRef} placeholder="Rechercher un lieu ou une séance..." value={filters.search_query} onChange={e => setFilters(prev => ({
             ...prev,
             search_query: e.target.value
-          }))} className="pl-10" />
+          }))} className="pl-10 pr-4" />
           </div>
           
           <div className="mt-2 space-y-2">
             <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
-              <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 [-webkit-overflow-scrolling:touch]">
+              <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
                   type="button"
