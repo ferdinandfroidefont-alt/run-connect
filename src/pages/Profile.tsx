@@ -707,7 +707,7 @@ const Profile = () => {
       {/* Même rythme que le hub Paramètres : py-5, groupes px-4 + ios-card (inset) */}
       <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <div className="ios-card w-full min-w-0 overflow-hidden px-ios-4 py-ios-3">
+          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60 px-ios-4 py-ios-3">
             <div className="flex flex-col items-center pb-ios-1 pt-ios-1">
             <div className="mb-0.5 flex items-center gap-ios-2">
               <h2 className="text-ios-title2 font-bold text-foreground">
@@ -740,7 +740,7 @@ const Profile = () => {
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <div className="ios-card w-full min-w-0 overflow-hidden">
+          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
             <ProfileQuickStats
               userId={viewingUserId || user?.id || ''}
               followerCount={followerCount}
@@ -776,30 +776,32 @@ const Profile = () => {
         )}
 
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <IOSListGroup flush={false} className="mb-0">
-            <IOSListItem
-              icon={Route}
-              iconBgColor="bg-primary/80"
-              iconColor="text-primary-foreground"
-              title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
-              onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-              showSeparator={!isViewingOtherUser}
-            />
-            {!isViewingOtherUser && (
+          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+            <IOSListGroup flush className="mb-0">
               <IOSListItem
-                icon={MapPin}
-                iconBgColor="bg-accent/80"
-                iconColor="text-accent-foreground"
-                title="Créer un parcours"
-                onClick={() => navigate('/route-creation')}
-                showSeparator={false}
+                icon={Route}
+                iconBgColor="bg-primary/80"
+                iconColor="text-primary-foreground"
+                title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
+                onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
+                showSeparator={!isViewingOtherUser}
               />
-            )}
-          </IOSListGroup>
+              {!isViewingOtherUser && (
+                <IOSListItem
+                  icon={MapPin}
+                  iconBgColor="bg-accent/80"
+                  iconColor="text-accent-foreground"
+                  title="Créer un parcours"
+                  onClick={() => navigate('/route-creation')}
+                  showSeparator={false}
+                />
+              )}
+            </IOSListGroup>
+          </div>
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4">
-          <Collapsible className="ios-card w-full min-w-0 overflow-hidden">
+          <Collapsible className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
                 Succès & Records
@@ -822,7 +824,7 @@ const Profile = () => {
 
         {!isViewingOtherUser && isEditing && (
           <div className="box-border min-w-0 w-full max-w-full px-4">
-            <div className="ios-card overflow-hidden">
+            <div className="ios-card overflow-hidden border border-border/60">
             <div className="space-y-ios-3 px-ios-4 py-ios-3">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
