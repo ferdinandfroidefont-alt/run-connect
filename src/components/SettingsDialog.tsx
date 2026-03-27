@@ -14,6 +14,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { SettingsSubpageTutorial } from "@/components/settings/SettingsSubpageTutorial";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
+import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -164,9 +165,10 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
       
       setQrLoading(true);
       try {
-        const profileUrl = profile.referral_code 
-          ? `https://run-connect.lovable.app/p/${profile.username}?r=${profile.referral_code}`
-          : `https://run-connect.lovable.app/p/${profile.username}`;
+        const profileUrl = buildPreferredProfileShareLink({
+          username: profile.username,
+          referralCode: profile.referral_code,
+        });
         
         const { default: QRCode } = await import("qrcode");
         const qrDataURL = await QRCode.toDataURL(profileUrl, {
@@ -194,9 +196,10 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
 
   const getProfileUrl = () => {
     if (!profile?.username) return '';
-    return profile.referral_code 
-      ? `https://run-connect.lovable.app/p/${profile.username}?r=${profile.referral_code}`
-      : `https://run-connect.lovable.app/p/${profile.username}`;
+    return buildPreferredProfileShareLink({
+      username: profile.username,
+      referralCode: profile.referral_code,
+    });
   };
 
   const getShareMessage = () => {

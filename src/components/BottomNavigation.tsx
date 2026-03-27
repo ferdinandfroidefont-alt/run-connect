@@ -166,7 +166,7 @@ export const BottomNavigation = () => {
         type="button"
         onClick={() => navigate(path)}
         style={{ width: SIDE_COL }}
-        className="mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
+        className="mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-end gap-0 pb-0.5 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
         data-tutorial={tutorialId}
       >
         <div className="relative">
@@ -211,7 +211,7 @@ export const BottomNavigation = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={(dir) => ({ x: dir > 0 ? -36 : 36, opacity: 0 })}
               transition={{ duration: 0.24, ease: iosEase }}
-              className="absolute inset-0 flex items-center"
+              className="absolute inset-0 flex items-end pb-1"
             >
               {renderNavButton(currentSetItems[0])}
               {renderNavButton(currentSetItems[1])}

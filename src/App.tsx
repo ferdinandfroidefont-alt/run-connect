@@ -17,6 +17,7 @@ import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
 import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { RoutePageFallback } from "@/components/RoutePageFallback";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveIncomingAppUrl } from "@/lib/appLinks";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -81,7 +82,18 @@ const App = () => {
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
           console.log('🍎 [GLOBAL] appUrlOpen:', url);
 
-          if (!url.startsWith('runconnect://auth/callback')) return;
+          const isAuthCallback =
+            url.startsWith('runconnect://auth/callback') ||
+            url.startsWith('app.runconnect://auth/callback');
+
+          if (!isAuthCallback) {
+            const targetRoute = resolveIncomingAppUrl(url);
+            if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
+              console.log('🍎 [GLOBAL] Navigating from deep/universal link to:', targetRoute);
+              window.location.href = targetRoute;
+            }
+            return;
+          }
 
           try {
             const params = new URLSearchParams(url.split('?')[1] || '');
@@ -132,6 +144,30 @@ const App = () => {
     return () => {
       cleanupPromise.then(cleanup => cleanup?.());
     };
+  }, []);
+
+  // Handle cold start links (app opened directly from deep/universal link).
+  useEffect(() => {
+    const isNative = !!(window as any).CapacitorForceNative || !!(window as any).Capacitor;
+    if (!isNative) return;
+
+    const handleLaunchUrl = async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        const launchData = await CapApp.getLaunchUrl();
+        const incomingUrl = launchData?.url;
+        if (!incomingUrl) return;
+        const targetRoute = resolveIncomingAppUrl(incomingUrl);
+        if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
+          console.log('🍎 [GLOBAL] Cold start deep/universal link ->', targetRoute);
+          window.location.href = targetRoute;
+        }
+      } catch (e) {
+        console.warn('🍎 [GLOBAL] Could not resolve launch URL:', e);
+      }
+    };
+
+    void handleLaunchUrl();
   }, []);
 
   /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */

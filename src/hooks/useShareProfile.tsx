@@ -2,6 +2,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { buildPreferredProfileShareLink } from '@/lib/appLinks';
 
 interface ShareProfileOptions {
   username: string;
@@ -23,13 +24,10 @@ export const useShareProfile = () => {
   } | null>(null);
 
   const shareProfile = async (options: ShareProfileOptions) => {
-    // Create a profile URL with correct Lovable domain
-    const baseUrl = `https://run-connect.lovable.app/p/${options.username}`;
-    
-    // Add referral code if available
-    const profileUrl = options.referralCode 
-      ? `${baseUrl}?r=${options.referralCode}`
-      : baseUrl;
+    const profileUrl = buildPreferredProfileShareLink({
+      username: options.username,
+      referralCode: options.referralCode,
+    });
     
     // Set QR data and show dialog as primary sharing method
     setQrData({

@@ -15,6 +15,7 @@ import { ProfileSportChips } from "@/components/profile/ProfileSportsCard";
 import { parseProfileSports } from "@/lib/profileSports";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
 
 interface PublicProfileData {
   user_id: string;
@@ -122,9 +123,10 @@ const PublicProfile = () => {
   };
 
   const handleOpenInApp = () => {
-    window.location.href = `app.runconnect://profile/${username}`;
+    if (!username) return;
+    window.location.href = buildProfileDeepLink({ username });
     setTimeout(() => {
-      window.location.href = 'https://play.google.com/store/apps/details?id=app.runconnect';
+      window.location.href = getStoreFallbackUrl();
     }, 2000);
   };
 

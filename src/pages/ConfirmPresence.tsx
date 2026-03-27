@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -34,12 +34,107 @@ export default function ConfirmPresence() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<'creator' | 'participant' | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const [focusedCardIndex, setFocusedCardIndex] = useState<number>(0);
+
+  const roleCards = useMemo(
+    () => [
+      {
+        role: 'creator' as const,
+        title: t('confirmPresence.creator'),
+        description: t('confirmPresence.creatorDescription'),
+        icon: UserCheck,
+        iconTone: 'bg-primary/10 text-primary',
+      },
+      {
+        role: 'participant' as const,
+        title: t('confirmPresence.participant'),
+        description: t('confirmPresence.participantDescription'),
+        icon: Users,
+        iconTone: 'bg-blue-500/10 text-blue-500',
+      },
+      {
+        role: 'tracking' as const,
+        title: 'Suivre les participants',
+        description: 'Voir en temps réel où se trouvent les autres sur la carte',
+        icon: MapPin,
+        iconTone: 'bg-primary/10 text-primary',
+      },
+    ],
+    [t]
+  );
+
+  const CAROUSEL_COPIES = 7;
+  const repeatedRoleCards = useMemo(
+    () =>
+      Array.from({ length: CAROUSEL_COPIES }, (_, copyIndex) =>
+        roleCards.map((card, cardIndex) => ({
+          ...card,
+          key: `${copyIndex}-${card.role}`,
+          cardIndex,
+        }))
+      ).flat(),
+    [roleCards]
+  );
+
+  const recenterInfiniteCarousel = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const cycleHeight = el.scrollHeight / CAROUSEL_COPIES;
+    const min = cycleHeight * 1.2;
+    const max = cycleHeight * (CAROUSEL_COPIES - 1.2);
+    if (el.scrollTop < min) el.scrollTop += cycleHeight * 2;
+    if (el.scrollTop > max) el.scrollTop -= cycleHeight * 2;
+  }, []);
+
+  const updateFocusedCard = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const containerCenter = el.getBoundingClientRect().top + el.clientHeight / 2;
+    const cards = Array.from(el.querySelectorAll<HTMLButtonElement>('[data-role-card="true"]'));
+    let nearest = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    cards.forEach((card, idx) => {
+      const rect = card.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const distance = Math.abs(center - containerCenter);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = idx;
+      }
+    });
+    setFocusedCardIndex(nearest);
+  }, []);
+
+  const handleCarouselScroll = useCallback(() => {
+    recenterInfiniteCarousel();
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(updateFocusedCard);
+  }, [recenterInfiniteCarousel, updateFocusedCard]);
 
   useEffect(() => {
     if (sessionId && user) {
       loadSpecificSession();
     }
   }, [user, sessionId]);
+
+  useEffect(() => {
+    if (roleChoice || loading) return;
+    const el = carouselRef.current;
+    if (!el) return;
+    const id = window.setTimeout(() => {
+      el.scrollTop = el.scrollHeight / 2 - el.clientHeight / 2;
+      updateFocusedCard();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [roleChoice, loading, updateFocusedCard]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const loadSpecificSession = async () => {
     if (!user || !sessionId) return;
@@ -192,19 +287,20 @@ export default function ConfirmPresence() {
   return (
     <div className="fixed-fill-with-bottom-nav bg-secondary flex min-h-0 flex-col overflow-x-hidden z-0">
       {/* iOS Header */}
-      <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur-xl pt-[var(--safe-area-top)]">
-        <div className="relative flex items-center justify-between px-4 py-3">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-1 text-primary"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-[17px]">Retour</span>
-          </button>
-          <h1 className="text-[17px] font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
-            {t('confirmPresence.title')}
+      <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
+          <div className="flex min-w-0 justify-start">
+            <button onClick={handleBack} className="flex min-w-0 max-w-full items-center gap-1 text-primary">
+              <ChevronLeft className="h-5 w-5 shrink-0" />
+              <span className="truncate text-[17px]">Retour</span>
+            </button>
+          </div>
+          <h1 className="max-w-[200px] truncate text-center text-[17px] font-semibold text-foreground">
+            Présence
           </h1>
-          <div className="w-16" />
+          <div className="flex min-w-0 justify-end" aria-hidden>
+            <div className="h-9 w-16 shrink-0" />
+          </div>
         </div>
       </div>
 
@@ -226,72 +322,44 @@ export default function ConfirmPresence() {
             </div>
           </div>
         ) : !roleChoice ? (
-          // Role selection — 3 cartes en flex column, hauteur équitable (écran plein, type choix iOS)
-          <div className="flex min-h-0 flex-1 flex-col gap-ios-3">
-            <p className="shrink-0 px-1 py-ios-2 text-center text-[15px] leading-snug text-muted-foreground">
-              {t('confirmPresence.selectRole')}
-            </p>
-
-            <div className="flex min-h-0 flex-1 flex-col gap-ios-3">
-              {/* Creator Card */}
-              <button
-                type="button"
-                onClick={() => handleRoleChoice('creator')}
-                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
+            <div className="w-full max-w-md">
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="h-[min(68vh,560px)] snap-y snap-mandatory overflow-y-auto px-0 py-[22vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
-                  <UserCheck className="h-7 w-7 text-primary" />
+                <div className="space-y-3">
+                  {repeatedRoleCards.map((card, idx) => {
+                    const Icon = card.icon;
+                    const isFocused = focusedCardIndex === idx;
+                    return (
+                      <button
+                        key={card.key}
+                        data-role-card="true"
+                        type="button"
+                        onClick={() => handleRoleChoice(card.role)}
+                        className={cn(
+                          'ios-card snap-center flex min-h-[148px] w-full items-center gap-ios-3 border border-border/60 px-ios-4 py-ios-3 text-left transition-all duration-200',
+                          isFocused
+                            ? 'scale-[1.01] bg-card shadow-[0_12px_34px_-18px_rgba(0,0,0,0.45)]'
+                            : 'scale-[0.97] bg-card/88 opacity-75'
+                        )}
+                      >
+                        <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px]', card.iconTone)}>
+                          <Icon className="h-7 w-7" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-[17px] font-semibold leading-tight text-foreground">{card.title}</h2>
+                          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{card.description}</p>
+                        </div>
+                        <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
-                    {t('confirmPresence.creator')}
-                  </h2>
-                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
-                    {t('confirmPresence.creatorDescription')}
-                  </p>
-                </div>
-                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
-              </button>
-
-              {/* Participant Card */}
-              <button
-                type="button"
-                onClick={() => handleRoleChoice('participant')}
-                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-blue-500/10">
-                  <Users className="h-7 w-7 text-blue-500" />
-                </div>
-                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
-                    {t('confirmPresence.participant')}
-                  </h2>
-                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
-                    {t('confirmPresence.participantDescription')}
-                  </p>
-                </div>
-                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
-              </button>
-
-              {/* Track Participants Card */}
-              <button
-                type="button"
-                onClick={() => handleRoleChoice('tracking')}
-                className="ios-card flex min-h-0 flex-1 basis-0 flex-row items-center gap-ios-3 px-ios-4 py-ios-3 text-left shadow-sm transition-colors active:bg-secondary"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
-                  <MapPin className="h-7 w-7 text-primary" />
-                </div>
-                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-                  <h2 className="text-[17px] font-semibold leading-tight text-foreground">
-                    Suivre les participants
-                  </h2>
-                  <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
-                    Voir en temps réel où se trouvent les autres sur la carte
-                  </p>
-                </div>
-                <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
-              </button>
+              </div>
             </div>
           </div>
         ) : !selectedSession ? (
