@@ -8,7 +8,6 @@ import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { StreakBadge } from './StreakBadge';
-import { LevelSliderFilter } from './LevelSliderFilter';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -1755,16 +1754,6 @@ export const InteractiveMap = ({
             {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
           </Button>
         </div>}
-
-      {/* Niveau utilisateur (les actions itinéraire/présence/classement sont désormais dans la barre du bas) */}
-      {user && !isImmersiveMode && (
-        <div className="absolute right-4 bottom-4 z-10 flex flex-col items-end gap-2 ios-map-bottom-buttons">
-          <LevelSliderFilter
-            selectedLevel={filters.level}
-            onLevelChange={(level) => setFilters((prev) => ({ ...prev, level }))}
-          />
-        </div>
-      )}
 
       {/* All Map Controls - iOS Style */}
       <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
