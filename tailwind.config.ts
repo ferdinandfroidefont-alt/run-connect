@@ -152,6 +152,10 @@ export default {
     		transitionProperty: {
     			map: 'var(--transition-map)'
     		},
+    		transitionTimingFunction: {
+    			/** Alignée sur --ios-motion-ease (transitions type iOS / PageTransition) */
+    			ios: 'cubic-bezier(0.32, 0.72, 0, 1)'
+    		},
     		keyframes: {
     			'accordion-down': {
     				from: {

@@ -271,7 +271,7 @@ html, body {
    * Items de la barre nav horizontale : mêmes coins / logique que Paramètres, taille légèrement inférieure à ios-list-row-icon.
    */
   .ios-nav-rail-icon {
-    @apply flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] transition-[transform,box-shadow,filter] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)];
+    @apply flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] transition-[transform,box-shadow,filter] duration-200 ease-ios;
   }
 
   .ios-list-row-inset-sep {

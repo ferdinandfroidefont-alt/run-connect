@@ -203,7 +203,7 @@ export const BottomNavigation = () => {
                 data-tutorial={tutorialId}
                 className={cn(
                   "flex min-w-[4.5rem] max-w-[5.25rem] shrink-0 snap-start flex-col items-center gap-1 pb-1 pt-0.5",
-                  "touch-manipulation transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                  "touch-manipulation transition-transform duration-200 ease-ios",
                   "active:scale-[0.94]"
                 )}
               >
