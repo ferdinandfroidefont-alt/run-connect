@@ -629,13 +629,31 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     navigate('/auth', { replace: true });
   };
 
+  const allowOverlayInteraction = (target: EventTarget | null) => {
+    const el = target instanceof Element ? target : null;
+    if (!el) return false;
+    /* Select (portail Radix) : sinon pointerdown « outside » annule l’ouverture / le choix (dialog plein écran). */
+    return Boolean(
+      el.closest("[data-radix-select-viewport]") ||
+        el.closest('[data-radix-popper-content-wrapper]') ||
+        el.getAttribute("role") === "listbox"
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal>
       <DialogContent
         fullScreen
         hideCloseButton
         className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-secondary p-0 shadow-none"
-        onPointerDownOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          if (allowOverlayInteraction(e.target)) return;
+          e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (allowOverlayInteraction(e.target)) return;
+          e.preventDefault();
+        }}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <div className="flex h-full min-h-0 flex-col">
@@ -844,7 +862,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       <SelectTrigger className="h-10 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0">
                         <SelectValue placeholder={t('profileSetup.countryPlaceholder')} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[min(24rem,70dvh)]" sideOffset={6}>
                         {COUNTRY_CODES.map((code) => (
                           <SelectItem key={code} value={code}>
                             {t(`profileSetup.countries.${code}`)}
