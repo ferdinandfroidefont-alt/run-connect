@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, endOfWeek, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarDays, ChartColumnBig, ClipboardCheck, Dumbbell, FolderKanban, Users } from "lucide-react";
+import { CalendarDays, ChartColumnBig, ClipboardCheck, Dumbbell, FolderKanban, Loader2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 import { cn } from "@/lib/utils";
 import { CoachingSessionDetail } from "@/components/coaching/CoachingSessionDetail";
 import { WeeklyPlanDialog } from "@/components/coaching/WeeklyPlanDialog";
@@ -37,12 +39,15 @@ type CoachingSession = {
 
 export default function Coaching() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const [clubs, setClubs] = useState<ClubOption[]>([]);
   const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<CoachingSession[]>([]);
   const [memberCount, setMemberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<CoachingSession | null>(null);
+  const [showCreateClub, setShowCreateClub] = useState(false);
 
   const [showWeeklyPlan, setShowWeeklyPlan] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
@@ -62,7 +67,12 @@ export default function Coaching() {
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} - ${format(weekEnd, "d MMM", { locale: fr })}`;
 
   const loadClubs = async () => {
-    if (!user) return;
+    if (!user) {
+      setClubs([]);
+      setSelectedClubId(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { data: memberships } = await supabase
@@ -141,55 +151,93 @@ export default function Coaching() {
   const upcomingSessions = sessions.filter((s) => new Date(s.scheduled_at) >= new Date()).slice(0, 6);
 
   return (
-    <div className="fixed-fill-with-bottom-nav overflow-y-auto bg-secondary">
-      <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
-        <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
-                <Dumbbell className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
-                <p className="text-sm text-muted-foreground">Experience premium, ordre clair, actions rapides</p>
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
+      {loading ? (
+        <div
+          className="flex flex-1 flex-col items-center justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]"
+          role="status"
+          aria-live="polite"
+        >
+          <Loader2 className="h-9 w-9 animate-spin text-muted-foreground" aria-hidden />
+          <span className="sr-only">Chargement du coaching</span>
+        </div>
+      ) : clubs.length === 0 ? (
+        <>
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
+            <div className="ios-card overflow-hidden border border-border/60">
+              <div className={emptyStateSx.shell}>
+                <div className={emptyStateSx.iconCircle}>
+                  <Dumbbell className="h-12 w-12 text-muted-foreground" aria-hidden />
+                </div>
+                <div className={emptyStateSx.textBlock}>
+                  <h3 className="text-ios-title3 font-semibold text-foreground">Aucun espace coaching trouvé</h3>
+                  <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed mx-auto">
+                    Rejoins un club ou demande un accès coach pour voir tes plans et outils.
+                  </p>
+                </div>
+                <div className="flex w-full max-w-xs flex-col gap-ios-2">
+                  <Button className="w-full" type="button" onClick={() => navigate("/search?tab=clubs")}>
+                    Rejoindre un club
+                  </Button>
+                  <Button className="w-full" type="button" variant="outline" onClick={() => setShowCreateClub(true)}>
+                    Créer un club
+                  </Button>
+                </div>
               </div>
             </div>
-            {selectedClub && (
-              <div className={cn("rounded-full px-3 py-1 text-[11px] font-semibold", isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground")}>
-                {isCoach ? "Mode coach" : "Mode athlete"}
-              </div>
-            )}
           </div>
-        </header>
-
-        <section className="ios-card border border-border/60 p-2">
-          <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-            {clubs.map((club) => (
-              <button
-                key={club.id}
-                type="button"
-                onClick={() => setSelectedClubId(club.id)}
-                className={cn(
-                  "shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors",
-                  selectedClubId === club.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+          <Suspense fallback={null}>
+            <CreateClubDialogPremium
+              isOpen={showCreateClub}
+              onClose={() => setShowCreateClub(false)}
+              onGroupCreated={() => {
+                void loadClubs();
+                setShowCreateClub(false);
+              }}
+            />
+          </Suspense>
+        </>
+      ) : (
+        <>
+          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
+            <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
+                    <Dumbbell className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
+                    <p className="text-sm text-muted-foreground">Experience premium, ordre clair, actions rapides</p>
+                  </div>
+                </div>
+                {selectedClub && (
+                  <div className={cn("rounded-full px-3 py-1 text-[11px] font-semibold", isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground")}>
+                    {isCoach ? "Mode coach" : "Mode athlete"}
+                  </div>
                 )}
-              >
-                {club.name}
-              </button>
-            ))}
-          </div>
-        </section>
+              </div>
+            </header>
 
-        {!loading && clubs.length === 0 ? (
-          <section className="ios-card border border-border/60 px-ios-4 py-ios-5 text-center">
-            <p className="text-[17px] font-semibold text-foreground">Aucun espace coaching trouve</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Rejoins un club ou demande un acces coach pour voir tes plans et outils.
-            </p>
-          </section>
-        ) : null}
+            <section className="ios-card border border-border/60 p-2">
+              <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                {clubs.map((club) => (
+                  <button
+                    key={club.id}
+                    type="button"
+                    onClick={() => setSelectedClubId(club.id)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors",
+                      selectedClubId === club.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                    )}
+                  >
+                    {club.name}
+                  </button>
+                ))}
+              </div>
+            </section>
 
-        {selectedClub && (
+            {selectedClub && (
           <>
             <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
               <p className="text-[12px] uppercase tracking-wide text-muted-foreground">Semaine active</p>
@@ -280,41 +328,43 @@ export default function Coaching() {
             )}
           </>
         )}
-      </div>
+          </div>
 
-      {selectedClub && (
-        <>
-          <WeeklyPlanDialog
-            isOpen={showWeeklyPlan}
-            onClose={() => {
-              setShowWeeklyPlan(false);
-              setDraftInitialGroup(undefined);
-              setDraftInitialWeek(undefined);
-            }}
-            clubId={selectedClub.id}
-            onSent={refreshCurrentClub}
-            initialGroupId={draftInitialGroup}
-            initialWeek={draftInitialWeek}
-          />
-          <WeeklyTrackingDialog isOpen={showTracking} onClose={() => setShowTracking(false)} clubId={selectedClub.id} />
-          <ClubGroupsManagerDialog isOpen={showGroups} onClose={() => setShowGroups(false)} clubId={selectedClub.id} />
-          <CoachingDraftsList
-            isOpen={showDrafts}
-            onClose={() => setShowDrafts(false)}
-            clubId={selectedClub.id}
-            onOpenDraft={(weekStartDate, groupId) => {
-              setShowDrafts(false);
-              setDraftInitialWeek(weekStartDate);
-              setDraftInitialGroup(groupId);
-              setShowWeeklyPlan(true);
-            }}
-          />
-          <CoachingSessionDetail
-            isOpen={!!selectedSession}
-            onClose={() => setSelectedSession(null)}
-            session={selectedSession}
-            isCoach={isCoach}
-          />
+          {selectedClub && (
+            <>
+              <WeeklyPlanDialog
+                isOpen={showWeeklyPlan}
+                onClose={() => {
+                  setShowWeeklyPlan(false);
+                  setDraftInitialGroup(undefined);
+                  setDraftInitialWeek(undefined);
+                }}
+                clubId={selectedClub.id}
+                onSent={refreshCurrentClub}
+                initialGroupId={draftInitialGroup}
+                initialWeek={draftInitialWeek}
+              />
+              <WeeklyTrackingDialog isOpen={showTracking} onClose={() => setShowTracking(false)} clubId={selectedClub.id} />
+              <ClubGroupsManagerDialog isOpen={showGroups} onClose={() => setShowGroups(false)} clubId={selectedClub.id} />
+              <CoachingDraftsList
+                isOpen={showDrafts}
+                onClose={() => setShowDrafts(false)}
+                clubId={selectedClub.id}
+                onOpenDraft={(weekStartDate, groupId) => {
+                  setShowDrafts(false);
+                  setDraftInitialWeek(weekStartDate);
+                  setDraftInitialGroup(groupId);
+                  setShowWeeklyPlan(true);
+                }}
+              />
+              <CoachingSessionDetail
+                isOpen={!!selectedSession}
+                onClose={() => setSelectedSession(null)}
+                session={selectedSession}
+                isCoach={isCoach}
+              />
+            </>
+          )}
         </>
       )}
     </div>
