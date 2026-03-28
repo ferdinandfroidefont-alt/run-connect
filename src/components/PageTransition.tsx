@@ -45,8 +45,8 @@ export const PageTransition = ({ children }: PageTransitionProps) => {
       transition={reduceMotion ? { duration: 0 } : undefined}
       className={
         isHome
-          ? 'h-full min-h-0 w-full pointer-events-none'
-          : 'h-full min-h-0 w-full pointer-events-auto'
+          ? 'flex min-h-0 w-full flex-1 flex-col pointer-events-none'
+          : 'flex min-h-0 w-full flex-1 flex-col pointer-events-auto'
       }
     >
       {children}

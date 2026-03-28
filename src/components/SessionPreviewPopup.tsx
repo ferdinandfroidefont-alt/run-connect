@@ -103,7 +103,7 @@ export const SessionPreviewPopup = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[114]"
             onClick={onClose}
           />
           
@@ -113,7 +113,12 @@ export const SessionPreviewPopup = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-20 left-4 right-4 z-50"
+            className="fixed left-4 z-[115]"
+            style={{
+              bottom:
+                "max(5rem, calc(var(--layout-bottom-inset) + env(safe-area-inset-bottom, 0px) + 0.75rem))",
+              right: "max(1rem, calc(env(safe-area-inset-right, 0px) + 4.25rem))",
+            }}
           >
             <div 
               className={`bg-card rounded-2xl shadow-2xl border border-border overflow-hidden ${

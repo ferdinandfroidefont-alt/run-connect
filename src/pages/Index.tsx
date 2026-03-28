@@ -72,7 +72,7 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 bg-background px-6">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-background px-6">
         <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground text-center">{t('common.loading')}</p>
       </div>
@@ -80,9 +80,9 @@ const Index = () => {
   }
 
   return (
-    <>
-      {/* Calque de hauteur : doit laisser passer les clics vers la carte (PersistentHomeMap en dessous). */}
-      <div className="pointer-events-none h-full min-h-0 w-full select-none" aria-hidden />
+    <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col">
+      {/* Calque plein espace : un seul enfant flux pour un cadrage flex correct ; clics vers la carte. */}
+      <div className="min-h-0 flex-1 select-none" aria-hidden />
 
       {/* Onboarding pour les nouveaux utilisateurs */}
       <Suspense fallback={null}>
@@ -133,7 +133,7 @@ const Index = () => {
           />
         </Suspense>
       )}
-    </>
+    </div>
   );
 };
 
