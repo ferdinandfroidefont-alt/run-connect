@@ -670,14 +670,24 @@ const Auth = () => {
     <div className="relative flex min-h-full flex-col items-center justify-between px-6 py-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 2rem)', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 2rem)' }}>
       <AuthAmbientBackground />
 
-      {/* Header with back arrow */}
-      <div className="relative z-10 w-full max-w-[340px]">
-        <button type="button" onClick={() => setView('landing')} className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
+      {/* Retour hors flux : même empilement vertical que l’écran landing (pas de décalage du bloc central) */}
+      <div
+        className="pointer-events-none absolute inset-x-0 z-20 flex justify-center"
+        style={{ top: "max(env(safe-area-inset-top, 0px), 2rem)" }}
+      >
+        <div className="relative h-10 w-full max-w-[340px] shrink-0">
+          <button
+            type="button"
+            onClick={() => setView("landing")}
+            className="pointer-events-auto absolute left-0 top-1/2 -translate-y-1/2 -ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+            aria-label="Retour"
+          >
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
       </div>
 
-      {/* Top spacer */}
+      {/* Top spacer — identique au landing */}
       <div className="min-h-[40px] flex-1" />
 
       <AuthBrandMark title="Connexion" subtitle="Content de vous revoir !" />
