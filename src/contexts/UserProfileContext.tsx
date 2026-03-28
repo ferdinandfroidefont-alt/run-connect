@@ -172,7 +172,20 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         (payload) => {
           console.log('🔄 [UserProfile] Profile updated via real-time:', payload);
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-            setUserProfile(payload.new as UserProfile);
+            const incoming = payload.new as UserProfile;
+            setUserProfile((prev) => {
+              if (payload.eventType === 'UPDATE' && prev) {
+                const merged: UserProfile = { ...prev, ...incoming };
+                if (
+                  (incoming.distance_unit == null || incoming.distance_unit === '') &&
+                  (prev.distance_unit === 'km' || prev.distance_unit === 'mi')
+                ) {
+                  merged.distance_unit = prev.distance_unit;
+                }
+                return merged;
+              }
+              return incoming;
+            });
           } else if (payload.eventType === 'DELETE') {
             setUserProfile(null);
           }

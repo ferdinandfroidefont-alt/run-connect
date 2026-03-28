@@ -97,6 +97,7 @@ const _translationBundles: Record<string, any> = {
       distanceUnitDescription: 'Affichage des distances dans l’app (données inchangées)',
       distanceUnitKm: 'km',
       distanceUnitMi: 'mi',
+      distanceUnitSaveError: 'Impossible d’enregistrer l’unité sur le serveur. Vérifiez la connexion ou contactez le support.',
       pageTutorial: {
         general: {
           s1Title: 'Langue & thème',
@@ -437,6 +438,7 @@ const _translationBundles: Record<string, any> = {
       distanceUnitDescription: 'How distances are shown in the app (data stays consistent)',
       distanceUnitKm: 'km',
       distanceUnitMi: 'mi',
+      distanceUnitSaveError: 'Could not save your unit preference on the server. Check your connection or contact support.',
       pageTutorial: {
         general: {
           s1Title: 'Language & theme',

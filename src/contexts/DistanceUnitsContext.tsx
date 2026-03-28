@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,7 +22,8 @@ import {
 
 type DistanceUnitsContextValue = {
   unit: DistanceUnit;
-  setUnit: (u: DistanceUnit) => void;
+  /** @returns false si l’enregistrement profil a échoué (compte connecté uniquement) */
+  setUnit: (u: DistanceUnit) => Promise<boolean>;
   formatMeters: (meters: number | null | undefined) => string;
   formatKm: (km: number | null | undefined) => string;
   formatSpeed: (kmh: number | null | undefined) => string;
@@ -33,37 +35,59 @@ export function DistanceUnitsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { userProfile, refreshProfile } = useUserProfile();
   const [unit, setUnitState] = useState<DistanceUnit>(() => readDistanceUnitFromStorage());
+  /** Tant que le serveur n’a pas la même valeur, on n’écrase pas l’UI avec un ancien profil. */
+  const optimisticDistanceUnitRef = useRef<DistanceUnit | null>(null);
 
   useEffect(() => {
     if (!user) {
+      optimisticDistanceUnitRef.current = null;
       setUnitState(readDistanceUnitFromStorage());
       return;
     }
     const fromProfile = (userProfile as { distance_unit?: string } | null)?.distance_unit;
-    if (fromProfile === "mi" || fromProfile === "km") {
-      setUnitState(fromProfile);
-      try {
-        localStorage.setItem(DISTANCE_UNIT_STORAGE_KEY, fromProfile);
-      } catch {
-        /* ignore */
+    if (fromProfile !== "mi" && fromProfile !== "km") {
+      return;
+    }
+    const pending = optimisticDistanceUnitRef.current;
+    if (pending !== null) {
+      if (fromProfile === pending) {
+        optimisticDistanceUnitRef.current = null;
+      } else {
+        return;
       }
+    }
+    setUnitState(fromProfile);
+    try {
+      localStorage.setItem(DISTANCE_UNIT_STORAGE_KEY, fromProfile);
+    } catch {
+      /* ignore */
     }
   }, [user, userProfile]);
 
   const setUnit = useCallback(
     async (u: DistanceUnit) => {
+      optimisticDistanceUnitRef.current = u;
       setUnitState(u);
       try {
         localStorage.setItem(DISTANCE_UNIT_STORAGE_KEY, u);
       } catch {
         /* ignore */
       }
-      if (!user?.id) return;
+      if (!user?.id) {
+        optimisticDistanceUnitRef.current = null;
+        return true;
+      }
       try {
         const { error } = await supabase.from("profiles").update({ distance_unit: u }).eq("user_id", user.id);
-        if (!error) void refreshProfile();
-      } catch {
-        /* colonne absente tant que la migration n’est pas appliquée : le localStorage suffit */
+        if (error) {
+          console.error("[DistanceUnits] distance_unit update failed:", error.message);
+          return false;
+        }
+        await refreshProfile();
+        return true;
+      } catch (e) {
+        console.error("[DistanceUnits] distance_unit update error:", e);
+        return false;
       }
     },
     [user?.id, refreshProfile]

@@ -247,7 +247,16 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                         type="button"
                         role="tab"
                         aria-selected={active}
-                        onClick={() => void setUnit(u)}
+                        onClick={async () => {
+                          const ok = await setUnit(u);
+                          if (!ok && user) {
+                            toast({
+                              title: t('common.error'),
+                              description: t('settings.distanceUnitSaveError'),
+                              variant: 'destructive',
+                            });
+                          }
+                        }}
                         className={cn(
                           "min-h-[44px] flex-1 rounded-[10px] px-2 text-[12px] font-semibold transition-all",
                           active
