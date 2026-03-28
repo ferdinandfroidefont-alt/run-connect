@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
+import { FloatingCreateSessionButton } from './FloatingCreateSessionButton';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
@@ -179,6 +180,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </main>
       <TutorialReplayHost />
+      {showBottomNav && <FloatingCreateSessionButton />}
       {showBottomNav && <BottomNavigation />}
     </div>
   );

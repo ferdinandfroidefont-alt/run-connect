@@ -31,7 +31,8 @@ html, body {
     --radius-sm: 0.625rem;
     --radius-md: 0.875rem;
     --radius-lg: 1.125rem;
-    --nav-height: 4.5rem;
+    /* Barre de navigation basse (carrousel compact) + réserve scroll (--bottom-nav-offset) */
+    --nav-height: 3.35rem;
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
@@ -264,6 +265,13 @@ html, body {
    */
   .ios-list-row-icon {
     @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px];
+  }
+
+  /**
+   * Items de la barre nav horizontale : mêmes coins / logique que Paramètres, taille légèrement inférieure à ios-list-row-icon.
+   */
+  .ios-nav-rail-icon {
+    @apply flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] transition-[transform,box-shadow,filter] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)];
   }
 
   .ios-list-row-inset-sep {
