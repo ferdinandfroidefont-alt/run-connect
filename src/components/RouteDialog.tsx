@@ -68,7 +68,12 @@ export const RouteDialog = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
       <DialogContent fullScreen={isMobile} hideCloseButton={isMobile} className={isMobile ? "[&>button]:hidden" : "sm:max-w-md"}>
         {/* iOS-style header */}
         <div className="flex items-center gap-3 p-4 sticky top-0 bg-background z-10 border-b border-border">

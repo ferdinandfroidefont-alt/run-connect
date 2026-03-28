@@ -70,16 +70,68 @@ function positionAlongRouteAtDistance(
   };
 }
 
-/** Distance caméra derrière le coureur (m) — un peu plus sur les longs parcours. */
-function chaseCameraBackMeters(polylineLengthM: number): number {
-  if (polylineLengthM <= 0) return 130;
-  return Math.min(240, Math.max(95, polylineLengthM * 0.035));
-}
-
 /** Distance de visée vers l’avant pour stabiliser le cap. */
 function lookAheadMeters(polylineLengthM: number): number {
   if (polylineLengthM <= 0) return 180;
   return Math.min(320, Math.max(140, polylineLengthM * 0.045));
+}
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/** Pitch de base (45–60°) selon le palier perf — vue vraiment inclinée, pas top-down. */
+function baseTiltForTier(tier: 'high' | 'balanced' | 'battery'): number {
+  if (tier === 'battery') return 48;
+  if (tier === 'balanced') return 52;
+  return 56;
+}
+
+type ChaseFrame = {
+  center: { lat: number; lng: number };
+  heading: number;
+  tilt: number;
+  zoom: number;
+  currentPos: { lat: number; lng: number };
+};
+
+/** Pose caméra « survol » : centre décalé vers l’avant sur la polyline, cap = direction du mouvement. */
+function computeChaseFrame(
+  flyoverCoordinates: { lat: number; lng: number }[],
+  cumulativeDistances: number[],
+  distM: number,
+  polylineLengthM: number,
+  computeHeading: (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => number,
+  performanceTier: 'high' | 'balanced' | 'battery',
+  speedKmh: number
+): ChaseFrame {
+  const totalLen = polylineLengthM || cumulativeDistances[cumulativeDistances.length - 1] || 0;
+  const d = Math.max(0, Math.min(distM, totalLen));
+  const aheadM = lookAheadMeters(totalLen);
+  const { pos: currentPos } = positionAlongRouteAtDistance(flyoverCoordinates, cumulativeDistances, d);
+  const lookFarD = Math.min(d + aheadM, totalLen);
+  const lookNearD = Math.min(d + aheadM * 0.35, totalLen);
+  const { pos: lookFar } = positionAlongRouteAtDistance(flyoverCoordinates, cumulativeDistances, lookFarD);
+  const { pos: lookNear } = positionAlongRouteAtDistance(flyoverCoordinates, cumulativeDistances, lookNearD);
+  const heading = computeHeading(lookNear, lookFar);
+
+  // Centre caméra : entre le point courant et une cible vers l’avant (effet « on survole le tracé »).
+  const centerAheadD = Math.min(d + aheadM * 0.52, totalLen);
+  const { pos: centerAhead } = positionAlongRouteAtDistance(flyoverCoordinates, cumulativeDistances, centerAheadD);
+  const center = {
+    lat: currentPos.lat * 0.38 + centerAhead.lat * 0.62,
+    lng: currentPos.lng * 0.38 + centerAhead.lng * 0.62,
+  };
+
+  const tiltBase = baseTiltForTier(performanceTier);
+  const tilt = clamp(tiltBase + Math.min(4, speedKmh / 55) * 2, 45, 60);
+
+  const zoomBase =
+    totalLen > 22000 ? 15.5 : totalLen > 12000 ? 16.25 : totalLen > 5000 ? 16.85 : 17.15;
+  const zoomBoost = clamp(speedKmh / 42, 0, 1) * 0.35;
+  const zoom = clamp(zoomBase + zoomBoost, 14.25, 18.4);
+
+  return { center, heading, tilt, zoom, currentPos };
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -207,12 +259,13 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   const traveledGlowRef = useRef<google.maps.Polyline | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
   const animationRef = useRef<number | null>(null);
-  const introAnimationRef = useRef<number | null>(null);
-  const introDoneRef = useRef(false);
-  const introRunningRef = useRef(false);
-  /** Centre caméra lissé (décalé vers l’avant du trajet — effet flyover / Strava) */
+  /** Centre caméra lissé le long du trajet */
   const cameraCenterLatRef = useRef<number | null>(null);
   const cameraCenterLngRef = useRef<number | null>(null);
+  /** État lissé cap / tilt / zoom — persiste entre play / pause */
+  const headingSmoothRef = useRef<number | null>(null);
+  const tiltSmoothRef = useRef<number | null>(null);
+  const zoomSmoothRef = useRef<number | null>(null);
   /** Vitesse instantanée (lissée) pour HUD */
   const speedKmhSmoothRef = useRef(0);
   const lastSpeedSampleRef = useRef<{ pos: { lat: number; lng: number }; time: number } | null>(null);
@@ -223,7 +276,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   const [currentElevation, setCurrentElevation] = useState(0);
   const [currentSlope, setCurrentSlope] = useState(0);
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState(0);
-  const [speed, setSpeed] = useState<1 | 2 | 3>(1);
+  const [speed, setSpeed] = useState<1 | 2>(1);
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownNum, setCountdownNum] = useState(3);
 
@@ -233,8 +286,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   isPlayingRef.current = isPlaying;
   const speedRef = useRef(speed);
   speedRef.current = speed;
-  const currentSlopeRef = useRef(currentSlope);
-  currentSlopeRef.current = currentSlope;
+  const countdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Pre-compute cumulative distances
   const cumulativeDistances = useMemo(() => {
@@ -294,9 +346,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
         const map = new google.maps.Map(mapContainerRef.current, {
           center: { lat: centerLat, lng: centerLng },
-          zoom: 15,
+          zoom: 16,
           mapTypeId: 'satellite',
-          tilt: 67,
+          tilt: 52,
           heading: 0,
           disableDefaultUI: true,
           zoomControl: false,
@@ -304,6 +356,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
+          isFractionalZoomEnabled: true,
           styles: [
             { featureType: 'poi', stylers: [{ visibility: 'off' }] },
             { featureType: 'transit', stylers: [{ visibility: 'off' }] },
@@ -312,9 +365,33 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
         mapRef.current = map;
 
-        const b = new google.maps.LatLngBounds();
-        flyoverCoordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
-        map.fitBounds(b, 40);
+        const totalIdxInit = flyoverCoordinates.length - 1;
+        const polyLenInit = cumulativeDistances[totalIdxInit] || 0;
+        const computeH = (from: { lat: number; lng: number }, to: { lat: number; lng: number }) =>
+          google.maps.geometry.spherical.computeHeading(
+            new google.maps.LatLng(from.lat, from.lng),
+            new google.maps.LatLng(to.lat, to.lng)
+          );
+        const frame0 = computeChaseFrame(
+          flyoverCoordinates,
+          cumulativeDistances,
+          0,
+          polyLenInit,
+          computeH,
+          performanceTier,
+          0
+        );
+        map.moveCamera({
+          center: frame0.center,
+          heading: frame0.heading,
+          tilt: frame0.tilt,
+          zoom: frame0.zoom,
+        });
+        headingSmoothRef.current = frame0.heading;
+        tiltSmoothRef.current = frame0.tilt;
+        zoomSmoothRef.current = frame0.zoom;
+        cameraCenterLatRef.current = frame0.center.lat;
+        cameraCenterLngRef.current = frame0.center.lng;
 
         // Tronçon restant (mis à jour en flyover : seulement devant la position → sensation de révélation)
         const remainingPoly = new google.maps.Polyline({
@@ -379,18 +456,17 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
           zIndex: 5,
         });
 
-        // Drone marker — directional arrow
+        // Marqueur de progression — petit point précis sur le tracé
         const marker = new google.maps.Marker({
           position: flyoverCoordinates[0],
           map,
           icon: {
-            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 6.5,
-            fillColor: '#2563eb',
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 4,
+            fillColor: '#ffffff',
             fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 2.5,
-            rotation: 0,
+            strokeColor: '#2563eb',
+            strokeWeight: 2,
           },
           zIndex: 10,
         });
@@ -404,7 +480,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
 
     initMap();
     return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
-  }, [flyoverCoordinates]);
+  }, [flyoverCoordinates, cumulativeDistances, performanceTier]);
 
   // Heading computation
   const computeHeading = useCallback((from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
@@ -422,112 +498,20 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }, []);
 
-  const runCinematicIntro = useCallback(() => {
-    const map = mapRef.current;
-    if (!map || flyoverCoordinates.length < 2) {
-      setIsPlaying(true);
-      return;
-    }
-    if (introRunningRef.current) return;
-
-    if (introAnimationRef.current) cancelAnimationFrame(introAnimationRef.current);
-    introRunningRef.current = true;
-    setIsPlaying(false);
-
-    const totalIdx = flyoverCoordinates.length - 1;
-    const polylineLengthM = cumulativeDistances[totalIdx] || 0;
-    const backM = chaseCameraBackMeters(polylineLengthM);
-    const aheadM = lookAheadMeters(polylineLengthM);
-    const startPos = flyoverCoordinates[0];
-    const lookPos = flyoverCoordinates[Math.min(totalIdx, 6)];
-    const heading = computeHeading(startPos, lookPos);
-
-    let endCenter = { lat: startPos.lat, lng: startPos.lng };
-    if (window.google?.maps?.geometry?.spherical) {
-      const behind = google.maps.geometry.spherical.computeOffset(
-        new google.maps.LatLng(startPos.lat, startPos.lng),
-        backM,
-        heading + 180
-      );
-      const ahead = google.maps.geometry.spherical.computeOffset(
-        new google.maps.LatLng(startPos.lat, startPos.lng),
-        aheadM,
-        heading
-      );
-      endCenter = {
-        lat: behind.lat() * 0.88 + ahead.lat() * 0.12,
-        lng: behind.lng() * 0.88 + ahead.lng() * 0.12,
-      };
-    }
-
-    const startBounds = new google.maps.LatLngBounds();
-    flyoverCoordinates.forEach((c) => startBounds.extend(c));
-    const startCenter = {
-      lat: startBounds.getCenter().lat(),
-      lng: startBounds.getCenter().lng(),
-    };
-    const startZoom = polylineLengthM > 20000 ? 12.6 : polylineLengthM > 9000 ? 13.2 : 13.8;
-    const endZoom = 17.25;
-    const startTilt = 28;
-    const endTilt = 70;
-    const durationMs = 1850;
-    let t0 = 0;
-    const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-
-    const step = (ts: number) => {
-      if (!t0) t0 = ts;
-      const raw = clamp((ts - t0) / durationMs, 0, 1);
-      const e = easeInOutCubic(raw);
-      const center = {
-        lat: startCenter.lat + (endCenter.lat - startCenter.lat) * e,
-        lng: startCenter.lng + (endCenter.lng - startCenter.lng) * e,
-      };
-      map.moveCamera({
-        center,
-        zoom: startZoom + (endZoom - startZoom) * e,
-        tilt: startTilt + (endTilt - startTilt) * e,
-        heading: heading * e,
-      });
-
-      if (raw < 1) {
-        introAnimationRef.current = requestAnimationFrame(step);
-        return;
-      }
-
-      introAnimationRef.current = null;
-      introRunningRef.current = false;
-      introDoneRef.current = true;
-      cameraCenterLatRef.current = endCenter.lat;
-      cameraCenterLngRef.current = endCenter.lng;
-      setProgress(0.002);
-      progressRef.current = 0.002;
-      setIsPlaying(true);
-    };
-
-    introAnimationRef.current = requestAnimationFrame(step);
-  }, [flyoverCoordinates, cumulativeDistances, computeHeading]);
-
-  // Animation loop — survol cinématique (caméra « chase », cap vers l’avant, tracé révélé)
+  // Boucle d’animation : requestAnimationFrame uniquement pendant la lecture — caméra déplacée le long du GPS
   useEffect(() => {
-    if (!mapReady || !mapRef.current || flyoverCoordinates.length < 2) return;
+    if (!mapReady || !mapRef.current || flyoverCoordinates.length < 2 || !isPlaying) {
+      return undefined;
+    }
 
     let lastTime = 0;
-    let headingSmooth = 0;
-    let tiltSmooth = performanceTier === 'battery' ? 63 : performanceTier === 'balanced' ? 67 : 69;
-    let zoomSmooth = performanceTier === 'battery' ? 17.05 : performanceTier === 'balanced' ? 17.25 : 17.4;
     const totalIdx = flyoverCoordinates.length - 1;
     const polylineLengthM = cumulativeDistances[totalIdx] || 0;
-    const backM = chaseCameraBackMeters(polylineLengthM);
-    const aheadM = lookAheadMeters(polylineLengthM);
     const targetDurationS = clamp(polylineLengthM / 78, 36, 170);
     const baseMps = polylineLengthM > 0 ? polylineLengthM / targetDurationS : 0;
 
     const animate = (timestamp: number) => {
-      if (!isPlayingRef.current) {
-        lastTime = 0;
-        animationRef.current = requestAnimationFrame(animate);
-        return;
-      }
+      if (!isPlayingRef.current) return;
 
       if (!lastTime) lastTime = timestamp;
       const rawDelta = (timestamp - lastTime) / 1000;
@@ -545,17 +529,12 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       }
 
       const speedMultiplier = speedRef.current;
-      let dynamicMps = baseMps * speedMultiplier;
-      const slopeForPace = currentSlopeRef.current;
-      if (slopeForPace > 0) dynamicMps *= clamp(1 - slopeForPace / 48, 0.72, 1);
-      if (slopeForPace < 0) dynamicMps *= clamp(1 + Math.abs(slopeForPace) / 80, 1, 1.22);
+      const dynamicMps = baseMps * speedMultiplier;
       let newProgress = progressRef.current + (polylineLengthM > 0 ? (delta * dynamicMps) / polylineLengthM : 0);
+
       if (newProgress >= 1) {
-        newProgress = 0;
+        newProgress = 1;
         setIsPlaying(false);
-        cameraCenterLatRef.current = null;
-        cameraCenterLngRef.current = null;
-        lastSpeedSampleRef.current = null;
       }
 
       setProgress(newProgress);
@@ -568,7 +547,6 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         distNow
       );
 
-      // Vitesse instantanée (HUD)
       const sample = lastSpeedSampleRef.current;
       if (sample && delta > 1e-4) {
         const movedM = haversine(sample.pos, currentPos);
@@ -578,11 +556,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       }
       lastSpeedSampleRef.current = { pos: { ...currentPos }, time: timestamp };
 
-      if (markerRef.current) {
-        markerRef.current.setPosition(currentPos);
-      }
+      markerRef.current?.setPosition(currentPos);
 
-      const trailPath = flyoverCoordinates.slice(0, idx + 1).map(c => ({ lat: c.lat, lng: c.lng }));
+      const trailPath = flyoverCoordinates.slice(0, idx + 1).map((c) => ({ lat: c.lat, lng: c.lng }));
       trailPath.push(currentPos);
       traveledPolyRef.current?.setPath(trailPath);
       traveledGlowRef.current?.setPath(trailPath);
@@ -602,115 +578,118 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       const smoothSlope = slopeVal + ((slopes[Math.min(idx + 1, totalIdx)] || 0) - slopeVal) * frac;
       setCurrentSlope(Math.round(smoothSlope * 10) / 10);
 
-      const lookDist = Math.min(distNow + aheadM, polylineLengthM);
-      const { pos: lookPos } = positionAlongRouteAtDistance(flyoverCoordinates, cumulativeDistances, lookDist);
-      const targetHeading = computeHeading(currentPos, lookPos);
+      const speedKmh = speedKmhSmoothRef.current;
+      const frameIdeal = computeChaseFrame(
+        flyoverCoordinates,
+        cumulativeDistances,
+        distNow,
+        polylineLengthM,
+        computeHeading,
+        performanceTier,
+        speedKmh
+      );
 
+      const targetHeading = frameIdeal.heading;
+      let headingSmooth = headingSmoothRef.current ?? targetHeading;
       let diff = normalizeAngleDiff(targetHeading - headingSmooth);
-      const headingLerp = polylineLengthM > 5000 ? 0.055 : 0.075;
-      headingSmooth += diff * headingLerp;
-
-      if (markerRef.current) {
-        const icon = markerRef.current.getIcon() as google.maps.Symbol;
-        if (icon) {
-          markerRef.current.setIcon({ ...icon, rotation: headingSmooth });
-        }
-      }
+      const headingLerp = performanceTier === 'battery' ? 0.07 : performanceTier === 'balanced' ? 0.09 : 0.11;
+      const easedTurn = easeInOutCubic(clamp(Math.abs(diff) / 42, 0, 1));
+      headingSmooth += diff * headingLerp * (0.55 + 0.45 * easedTurn);
+      headingSmoothRef.current = headingSmooth;
 
       const turnIntensity = Math.abs(diff);
-      const turnSign = diff >= 0 ? 1 : -1;
-      const dynamicAheadM = aheadM + Math.min(120, turnIntensity * 2.4);
-      const dynamicBackM = backM + Math.min(48, Math.abs(smoothSlope) * 2);
-      const tierTiltBase = performanceTier === 'battery' ? 66.5 : performanceTier === 'balanced' ? 69 : 71;
-      const targetTilt =
-        tierTiltBase +
-        Math.max(-8, Math.min(6, smoothSlope * 0.45)) -
-        Math.min(7, turnIntensity * 0.12);
-      tiltSmooth += (targetTilt - tiltSmooth) * 0.045;
+      let tiltSmooth = tiltSmoothRef.current ?? frameIdeal.tilt;
+      const tiltTarget = clamp(
+        frameIdeal.tilt - Math.min(5, turnIntensity * 0.08) + Math.max(-3, Math.min(3, smoothSlope * 0.12)),
+        45,
+        60
+      );
+      tiltSmooth += (tiltTarget - tiltSmooth) * (performanceTier === 'battery' ? 0.06 : 0.085);
+      tiltSmoothRef.current = tiltSmooth;
 
-      const targetZoom =
-        performanceTier === 'battery'
-          ? turnIntensity > 18 ? 16.5 : turnIntensity > 10 ? 16.9 : 17.1
-          : performanceTier === 'balanced'
-            ? turnIntensity > 18 ? 16.35 : turnIntensity > 10 ? 16.88 : 17.3
-            : turnIntensity > 18 ? 16.25 : turnIntensity > 10 ? 16.85 : 17.45;
-      zoomSmooth += (targetZoom - zoomSmooth) * 0.035;
+      let zoomSmooth = zoomSmoothRef.current ?? frameIdeal.zoom;
+      const zoomTarget = frameIdeal.zoom - Math.min(0.45, turnIntensity * 0.018) + clamp(speedKmh / 120, 0, 0.15);
+      zoomSmooth += (zoomTarget - zoomSmooth) * (performanceTier === 'battery' ? 0.05 : 0.07);
+      zoomSmoothRef.current = zoomSmooth;
 
       const map = mapRef.current;
-      if (map && window.google?.maps?.geometry?.spherical) {
-        const behind = google.maps.geometry.spherical.computeOffset(
-          new google.maps.LatLng(currentPos.lat, currentPos.lng),
-          dynamicBackM,
-          headingSmooth + 180
-        );
-        const maxSide = performanceTier === 'battery' ? 12 : performanceTier === 'balanced' ? 18 : 24;
-        const sideOffsetM = Math.min(maxSide, turnIntensity * 0.8);
-        const sideBearing = headingSmooth + (turnSign > 0 ? -90 : 90);
-        const side = google.maps.geometry.spherical.computeOffset(
-          behind,
-          sideOffsetM,
-          sideBearing
-        );
-        const lookAnchor = google.maps.geometry.spherical.computeOffset(
-          new google.maps.LatLng(currentPos.lat, currentPos.lng),
-          dynamicAheadM,
-          headingSmooth
-        );
-        const targetCam = {
-          lat: side.lat() * 0.88 + lookAnchor.lat() * 0.12,
-          lng: side.lng() * 0.88 + lookAnchor.lng() * 0.12,
-        };
-        const camLerp = performanceTier === 'battery' ? 0.1 : 0.15;
-        if (cameraCenterLatRef.current === null || cameraCenterLngRef.current === null) {
-          cameraCenterLatRef.current = targetCam.lat;
-          cameraCenterLngRef.current = targetCam.lng;
-        } else {
-          cameraCenterLatRef.current += (targetCam.lat - cameraCenterLatRef.current) * camLerp;
-          cameraCenterLngRef.current += (targetCam.lng - cameraCenterLngRef.current) * camLerp;
-        }
-
-        map.moveCamera({
-          center: { lat: cameraCenterLatRef.current, lng: cameraCenterLngRef.current },
-          heading: headingSmooth,
-          tilt: tiltSmooth,
-          zoom: zoomSmooth,
-        });
-      } else if (map) {
-        map.moveCamera({
-          center: currentPos,
-          heading: headingSmooth,
-          tilt: tiltSmooth,
-          zoom: zoomSmooth,
-        });
+      if (!map || !window.google?.maps?.geometry?.spherical) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
       }
+
+      let targetCam = frameIdeal.center;
+      const maxCamShiftM = Math.min(85, 18 + turnIntensity * 1.1);
+      const ortho = headingSmooth + 90;
+      const wA = easeInOutCubic(clamp(turnIntensity / 28, 0, 1));
+      const shift = (diff >= 0 ? 1 : -1) * maxCamShiftM * wA * 0.55;
+      const shifted = google.maps.geometry.spherical.computeOffset(
+        new google.maps.LatLng(targetCam.lat, targetCam.lng),
+        shift,
+        ortho
+      );
+      targetCam = { lat: shifted.lat(), lng: shifted.lng() };
+
+      const camLerp = performanceTier === 'battery' ? 0.14 : performanceTier === 'balanced' ? 0.19 : 0.22;
+      if (cameraCenterLatRef.current === null || cameraCenterLngRef.current === null) {
+        cameraCenterLatRef.current = targetCam.lat;
+        cameraCenterLngRef.current = targetCam.lng;
+      } else {
+        cameraCenterLatRef.current += (targetCam.lat - cameraCenterLatRef.current) * camLerp;
+        cameraCenterLngRef.current += (targetCam.lng - cameraCenterLngRef.current) * camLerp;
+      }
+
+      map.moveCamera({
+        center: { lat: cameraCenterLatRef.current, lng: cameraCenterLngRef.current },
+        heading: headingSmooth,
+        tilt: tiltSmooth,
+        zoom: zoomSmooth,
+      });
 
       animationRef.current = requestAnimationFrame(animate);
     };
 
     animationRef.current = requestAnimationFrame(animate);
-    return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
-  }, [mapReady, flyoverCoordinates, flyoverElevations, slopes, computeHeading, cumulativeDistances, performanceTier]);
+    return () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [
+    isPlaying,
+    mapReady,
+    flyoverCoordinates,
+    flyoverElevations,
+    slopes,
+    computeHeading,
+    cumulativeDistances,
+    performanceTier,
+  ]);
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying && progress === 0) {
+      if (countdownTimeoutRef.current) {
+        clearTimeout(countdownTimeoutRef.current);
+        countdownTimeoutRef.current = null;
+      }
       setCountdownNum(3);
       setShowCountdown(true);
-      let count = 3;
-      const interval = setInterval(() => {
-        count--;
-        if (count > 0) {
-          setCountdownNum(count);
+      const tick = (remaining: number) => {
+        if (remaining > 0) {
+          setCountdownNum(remaining);
+          countdownTimeoutRef.current = window.setTimeout(() => tick(remaining - 1), 600);
         } else {
-          clearInterval(interval);
+          countdownTimeoutRef.current = null;
           setShowCountdown(false);
-          if (!introDoneRef.current) runCinematicIntro();
-          else setIsPlaying(true);
+          setIsPlaying(true);
         }
-      }, 600);
+      };
+      countdownTimeoutRef.current = window.setTimeout(() => tick(2), 600);
     } else {
-      setIsPlaying(p => !p);
+      setIsPlaying((p) => !p);
     }
-  }, [isPlaying, progress, runCinematicIntro]);
+  }, [isPlaying, progress]);
 
   const handleRecenter = useCallback(() => {
     setIsPlaying(false);
@@ -718,36 +697,54 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     progressRef.current = 0;
     cameraCenterLatRef.current = null;
     cameraCenterLngRef.current = null;
+    headingSmoothRef.current = null;
+    tiltSmoothRef.current = null;
+    zoomSmoothRef.current = null;
     lastSpeedSampleRef.current = null;
     speedKmhSmoothRef.current = 0;
     setCurrentSpeedKmh(0);
-    introDoneRef.current = false;
-    introRunningRef.current = false;
-    if (introAnimationRef.current) {
-      cancelAnimationFrame(introAnimationRef.current);
-      introAnimationRef.current = null;
-    }
     if (!mapRef.current || flyoverCoordinates.length < 2) return;
+    const map = mapRef.current;
     traveledPolyRef.current?.setPath([]);
     traveledGlowRef.current?.setPath([]);
-    remainingPolyRef.current?.setPath(flyoverCoordinates.map(c => ({ lat: c.lat, lng: c.lng })));
+    remainingPolyRef.current?.setPath(flyoverCoordinates.map((c) => ({ lat: c.lat, lng: c.lng })));
     markerRef.current?.setPosition(flyoverCoordinates[0]);
-    const icon = markerRef.current?.getIcon() as google.maps.Symbol | undefined;
-    if (icon) markerRef.current?.setIcon({ ...icon, rotation: 0 });
-    const b = new google.maps.LatLngBounds();
-    flyoverCoordinates.forEach(c => b.extend({ lat: c.lat, lng: c.lng }));
-    mapRef.current.moveCamera({ tilt: 45, heading: 0 });
-    mapRef.current.fitBounds(b, 40);
-  }, [flyoverCoordinates]);
+
+    const totalIdx = flyoverCoordinates.length - 1;
+    const polyLen = cumulativeDistances[totalIdx] || 0;
+    const frame0 = computeChaseFrame(
+      flyoverCoordinates,
+      cumulativeDistances,
+      0,
+      polyLen,
+      computeHeading,
+      performanceTier,
+      0
+    );
+    headingSmoothRef.current = frame0.heading;
+    tiltSmoothRef.current = frame0.tilt;
+    zoomSmoothRef.current = frame0.zoom;
+    cameraCenterLatRef.current = frame0.center.lat;
+    cameraCenterLngRef.current = frame0.center.lng;
+    map.moveCamera({
+      center: frame0.center,
+      heading: frame0.heading,
+      tilt: frame0.tilt,
+      zoom: frame0.zoom,
+    });
+  }, [flyoverCoordinates, cumulativeDistances, computeHeading, performanceTier]);
 
   useEffect(() => {
     return () => {
-      if (introAnimationRef.current) cancelAnimationFrame(introAnimationRef.current);
+      if (countdownTimeoutRef.current) {
+        clearTimeout(countdownTimeoutRef.current);
+        countdownTimeoutRef.current = null;
+      }
     };
   }, []);
 
   const cycleSpeed = useCallback(() => {
-    setSpeed(s => s === 1 ? 2 : s === 2 ? 3 : 1);
+    setSpeed((s) => (s === 1 ? 2 : 1));
   }, []);
 
   const currentKm = (progress * totalRouteDistance / 1000).toFixed(2);

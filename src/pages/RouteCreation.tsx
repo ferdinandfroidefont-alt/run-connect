@@ -491,9 +491,15 @@ export const RouteCreation = () => {
   };
 
   // Mise à jour élévation ET stats en une seule fonction pour éviter race condition
-  const updateElevationAndStats = async () => {
+  /** Retourne les valeurs fraîches pour l’export (évite un state React obsolète dans handleFinish). */
+  const updateElevationAndStats = async (): Promise<{
+    distanceKm: number;
+    elevations: number[];
+    elevationGain: number;
+    elevationLoss: number;
+  } | null> => {
     const allCoordinates = getAllCoordinates();
-    if (allCoordinates.length === 0 || !elevationService.current) return;
+    if (allCoordinates.length === 0 || !elevationService.current) return null;
 
     // Distance = somme des segments réellement tracés (sans sur-échantillonnage)
     let distance = 0;
@@ -503,7 +509,8 @@ export const RouteCreation = () => {
         allCoordinates[i + 1]
       );
     }
-    setTotalDistance(distance / 1000);
+    const distanceKm = distance / 1000;
+    setTotalDistance(distanceKm);
 
     // Dénivelé : chemin densifié (indispensable pour le mode manuel = peu de points)
     const pathForElevation = densifyLatLngPath(allCoordinates);
@@ -540,13 +547,30 @@ export const RouteCreation = () => {
         }
       }
 
+      const roundedGain = Math.round(elevationGain);
+      const roundedLoss = Math.round(elevationLoss);
       setRouteElevations(elevations);
-      setTotalElevationGain(Math.round(elevationGain));
-      setTotalElevationLoss(Math.round(elevationLoss));
+      setTotalElevationGain(roundedGain);
+      setTotalElevationLoss(roundedLoss);
       setElevationChartCoords(resamplePathEvenly(pathForElevation, elevations.length));
+      return {
+        distanceKm,
+        elevations,
+        elevationGain: roundedGain,
+        elevationLoss: roundedLoss,
+      };
     } catch (error) {
       console.error('Erreur lors de la récupération des altitudes:', error);
       setElevationChartCoords([]);
+      setRouteElevations([]);
+      setTotalElevationGain(0);
+      setTotalElevationLoss(0);
+      return {
+        distanceKm,
+        elevations: [],
+        elevationGain: 0,
+        elevationLoss: 0,
+      };
     }
   };
 
@@ -667,6 +691,12 @@ export const RouteCreation = () => {
       return;
     }
 
+    const freshStats = await updateElevationAndStats();
+    if (!freshStats) {
+      toast.error('Impossible de finaliser le parcours (élévation / distance)');
+      return;
+    }
+
     const allCoordinates = getAllCoordinates();
     
     // Déterminer si l'itinéraire est hybride ou purement manuel/guidé
@@ -717,14 +747,14 @@ export const RouteCreation = () => {
       }
     }
 
-    // Mode création : sauvegarder dans localStorage pour le dialog
+    // Mode création : sauvegarder dans localStorage pour le dialog (valeurs fraîches, pas le state React)
     const routeData = {
       coordinates,
       waypoints: waypointsData,
-      distance: totalDistance,
-      elevationGain: totalElevationGain,
-      elevationLoss: totalElevationLoss,
-      elevations: routeElevations,
+      distance: freshStats.distanceKm,
+      elevationGain: freshStats.elevationGain,
+      elevationLoss: freshStats.elevationLoss,
+      elevations: freshStats.elevations,
       routeType
     };
 

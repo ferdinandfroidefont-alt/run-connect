@@ -365,6 +365,10 @@ export const InteractiveMap = ({
   const elevationService = useRef<google.maps.ElevationService | null>(null);
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
+  /** Stats D+ / D- issues de RouteCreation (localStorage) quand le profil alti n’est pas rejoué sur la carte */
+  const pendingRouteStatsRef = useRef<{ elevationGain: number; elevationLoss: number } | null>(null);
+  /** Waypoints avec mode (manuel / guidé) — les LatLng sur la carte ne portent pas le mode */
+  const pendingWaypointsForSaveRef = useRef<Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }> | null>(null);
 
   // Handle URL parameter changes for route creation and save
   useEffect(() => {
@@ -390,10 +394,30 @@ export const InteractiveMap = ({
           const routeData = JSON.parse(pendingRouteData);
           routeCoordinates.current = routeData.coordinates.map((coord: any) => new google.maps.LatLng(coord.lat, coord.lng));
           setRouteElevations(routeData.elevations || []);
-          
-          // Stocker les waypoints si disponibles
-          if (routeData.waypoints) {
+
+          if (
+            typeof routeData.elevationGain === 'number' &&
+            typeof routeData.elevationLoss === 'number'
+          ) {
+            pendingRouteStatsRef.current = {
+              elevationGain: routeData.elevationGain,
+              elevationLoss: routeData.elevationLoss,
+            };
+          } else {
+            pendingRouteStatsRef.current = null;
+          }
+
+          // Stocker les waypoints si disponibles (évite un reste de ref entre deux imports)
+          if (Array.isArray(routeData.waypoints) && routeData.waypoints.length > 0) {
             waypoints.current = routeData.waypoints.map((wp: any) => new google.maps.LatLng(wp.lat, wp.lng));
+            pendingWaypointsForSaveRef.current = routeData.waypoints.map((wp: any) => ({
+              lat: wp.lat,
+              lng: wp.lng,
+              mode: wp.mode === 'guided' ? 'guided' : 'manual',
+            }));
+          } else {
+            waypoints.current = [];
+            pendingWaypointsForSaveRef.current = null;
           }
 
           // Ouvrir le dialog de sauvegarde
@@ -403,6 +427,8 @@ export const InteractiveMap = ({
           localStorage.removeItem('pendingRoute');
         } catch (error) {
           console.error('Erreur lors de la récupération du parcours:', error);
+          pendingRouteStatsRef.current = null;
+          pendingWaypointsForSaveRef.current = null;
         }
       }
 
@@ -1286,52 +1312,88 @@ export const InteractiveMap = ({
       console.error('Erreur lors du calcul du dénivelé:', error);
     }
   };
+  /** Statistiques trajet pour insert `routes` — total_distance en mètres (schéma Supabase). */
   const calculateRouteStats = () => {
-    if (routeElevations.length === 0) return null;
-    let totalDistance = 0;
-    let elevationGain = 0;
-    let elevationLoss = 0;
-    const minElevation = Math.min(...routeElevations);
-    const maxElevation = Math.max(...routeElevations);
+    if (routeCoordinates.current.length < 2) return null;
 
-    // Calculate total distance
+    let totalDistanceM = 0;
     for (let i = 1; i < routeCoordinates.current.length; i++) {
-      const distance = google.maps.geometry.spherical.computeDistanceBetween(routeCoordinates.current[i - 1], routeCoordinates.current[i]);
-      totalDistance += distance;
+      totalDistanceM += google.maps.geometry.spherical.computeDistanceBetween(
+        routeCoordinates.current[i - 1],
+        routeCoordinates.current[i]
+      );
     }
 
-    // Calculate elevation gain/loss avec un seuil minimum pour éviter le bruit
-    // On ignore les variations très petites qui peuvent être dues à l'imprécision des données
-    const elevationThreshold = 1; // Minimum 1m de différence pour compter comme un dénivelé
+    if (routeElevations.length > 0) {
+      let elevationGain = 0;
+      let elevationLoss = 0;
+      const minElevation = Math.min(...routeElevations);
+      const maxElevation = Math.max(...routeElevations);
 
-    for (let i = 1; i < routeElevations.length; i++) {
-      const diff = routeElevations[i] - routeElevations[i - 1];
-      // Suppression du seuil pour capturer tous les dénivelés, même petits
-      if (diff > 0) {
-        elevationGain += diff;
-      } else if (diff < 0) {
-        elevationLoss += Math.abs(diff);
+      for (let i = 1; i < routeElevations.length; i++) {
+        const diff = routeElevations[i] - routeElevations[i - 1];
+        if (diff > 0) {
+          elevationGain += diff;
+        } else if (diff < 0) {
+          elevationLoss += Math.abs(diff);
+        }
       }
+      return {
+        totalDistance: Math.round(totalDistanceM),
+        elevationGain: Math.round(elevationGain),
+        elevationLoss: Math.round(elevationLoss),
+        minElevation: Math.round(minElevation),
+        maxElevation: Math.round(maxElevation),
+      };
     }
+
+    const meta = pendingRouteStatsRef.current;
     return {
-      totalDistance: Math.round(totalDistance / 1000),
-      // Convert meters to kilometers
-      elevationGain: Math.round(elevationGain),
-      elevationLoss: Math.round(elevationLoss),
-      minElevation: Math.round(minElevation),
-      maxElevation: Math.round(maxElevation)
+      totalDistance: Math.round(totalDistanceM),
+      elevationGain: meta?.elevationGain ?? 0,
+      elevationLoss: meta?.elevationLoss ?? 0,
+      minElevation: 0,
+      maxElevation: 0,
     };
   };
+
   const saveRoute = async (routeName: string, routeDescription: string) => {
-    if (!user || routeCoordinates.current.length < 2) return false;
+    if (!user) {
+      toast.error('Connectez-vous pour enregistrer un itinéraire');
+      return false;
+    }
+    if (routeCoordinates.current.length < 2) {
+      toast.error('Parcours invalide : pas assez de points');
+      return false;
+    }
     const routeStats = calculateRouteStats();
-    if (!routeStats) return false;
+    if (!routeStats) {
+      toast.error('Impossible de calculer les statistiques du parcours');
+      return false;
+    }
     try {
-      const coordinates = routeCoordinates.current.map((coord, index) => ({
-        lat: coord.lat(),
-        lng: coord.lng(),
-        elevation: routeElevations[index] || 0
-      }));
+      const nCoord = routeCoordinates.current.length;
+      const elev = routeElevations;
+      const coordinates = routeCoordinates.current.map((coord, index) => {
+        let el = 0;
+        if (elev.length > 0) {
+          if (elev.length === nCoord) {
+            el = elev[index] ?? 0;
+          } else {
+            const t = nCoord <= 1 ? 0 : index / (nCoord - 1);
+            const ePos = t * (elev.length - 1);
+            const a = Math.floor(ePos);
+            const b = Math.min(elev.length - 1, a + 1);
+            const f = ePos - a;
+            el = (elev[a] ?? 0) * (1 - f) + (elev[b] ?? 0) * f;
+          }
+        }
+        return {
+          lat: coord.lat(),
+          lng: coord.lng(),
+          elevation: Math.round(el),
+        };
+      });
       
       // Sauvegarder les waypoints s'ils existent
       const waypointsData = waypoints.current.length > 0 
@@ -1357,11 +1419,13 @@ export const InteractiveMap = ({
         created_by: user.id
       });
       if (error) throw error;
-      toast('Itinéraire enregistré avec succès!');
+      pendingRouteStatsRef.current = null;
+      pendingWaypointsForSaveRef.current = null;
+      toast.success('Itinéraire enregistré avec succès !');
       return true;
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement:', error);
-      toast('Erreur lors de l\'enregistrement de l\'itinéraire');
+      toast.error("Erreur lors de l'enregistrement de l'itinéraire");
       return false;
     }
   };
@@ -1377,6 +1441,8 @@ export const InteractiveMap = ({
     const success = await saveRoute(routeName, routeDescription);
     setRouteSaving(false);
     if (success) {
+      pendingRouteStatsRef.current = null;
+      pendingWaypointsForSaveRef.current = null;
       setIsRouteDialogOpen(false);
       setIsRouteCreationMode(false);
 
