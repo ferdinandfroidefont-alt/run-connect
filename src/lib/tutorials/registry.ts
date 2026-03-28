@@ -33,7 +33,12 @@ export function pathMatchesTutorial(pathname: string, def: TutorialReplayDefinit
     return pathname === "/profile" || pathname.startsWith("/profile/");
   }
   if (def.id === "routes") {
-    return pathname === "/route-create" || pathname === "/route-creation";
+    return (
+      pathname === "/route-create" ||
+      pathname === "/route-creation" ||
+      pathname === "/itinerary" ||
+      pathname.startsWith("/itinerary/")
+    );
   }
   return false;
 }
@@ -124,7 +129,7 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
   routes: {
     id: "routes",
-    path: "/route-create",
+    path: "/itinerary",
     startDelayMs: 700,
     getSteps: (t) => [
       pageStep(t, "tutorial.replayPages.routes", "bottom"),

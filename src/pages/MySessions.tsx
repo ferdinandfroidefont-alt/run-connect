@@ -1,13 +1,9 @@
-import { RouteCard } from '@/components/RouteCard';
-import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
-import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Camera, Images } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, CheckCircle, Navigation } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -18,27 +14,17 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-const RouteDetailDialog = lazy(() =>
-  import('@/components/routes-feed/RouteDetailDialog').then((m) => ({ default: m.RouteDetailDialog }))
-);
-const RouteEditDialog = lazy(() =>
-  import('@/components/RouteEditDialog').then((m) => ({ default: m.RouteEditDialog }))
-);
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
 );
 const ProfilePreviewDialog = lazy(() =>
   import('@/components/ProfilePreviewDialog').then((m) => ({ default: m.ProfilePreviewDialog }))
-);
-const RoutePhotosGallery = lazy(() =>
-  import('@/components/routes-feed/RoutePhotosGallery').then((m) => ({ default: m.RoutePhotosGallery }))
 );
 const OrganizerStatsCard = lazy(() =>
   import('@/components/OrganizerStatsCard').then((m) => ({ default: m.OrganizerStatsCard }))
@@ -79,82 +65,24 @@ interface OrganizerProfile {
   avatar_url: string | null;
 }
 
-interface UserRoute {
-  id: string;
-  name: string;
-  description: string | null;
-  total_distance: number | null;
-  total_elevation_gain: number | null;
-  total_elevation_loss: number | null;
-  min_elevation: number | null;
-  max_elevation: number | null;
-  created_at: string;
-  coordinates: any;
-}
-
 export default function MySessions() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { openCreateRoute } = useAppContext();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
-  const [currentView, setCurrentView] = useState<'sessions' | 'routes'>('sessions');
   const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
-  const [routeSource, setRouteSource] = useState<'created' | 'feed' | 'photos'>('created');
-  const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
-  const [showRouteDetail, setShowRouteDetail] = useState(false);
-  const [openRouteDetailWithAddPhoto, setOpenRouteDetailWithAddPhoto] = useState(false);
-  const [pendingFilePick, setPendingFilePick] = useState<'camera' | 'gallery' | null>(null);
-  const [photosTabRouteId, setPhotosTabRouteId] = useState('');
-  const [routePhotosSyncKey, setRoutePhotosSyncKey] = useState(0);
-  const routesFeed = useRoutesFeed();
-  const clearPendingFilePick = useCallback(() => setPendingFilePick(null), []);
-  const bumpRouteGalleryAfterRouteDetailMutation = useCallback(() => {
-    routesFeed.refresh();
-    setRoutePhotosSyncKey((n) => n + 1);
-  }, [routesFeed.refresh]);
-
-  useEffect(() => {
-    if (currentView === 'routes' && routeSource === 'photos') {
-      routesFeed.refresh();
-    }
-  }, [currentView, routeSource, routesFeed.refresh]);
-
-  const openFeedRouteDetailFromPhotosTab = useCallback(
-    (source: 'camera' | 'gallery') => {
-      const r = routesFeed.routes.find((x) => x.id === photosTabRouteId);
-      if (!r) {
-        toast({
-          title: 'Choisir un itinéraire',
-          description: 'Sélectionnez un itinéraire dans la liste (identique à l’onglet Feed).',
-        });
-        return;
-      }
-      setSelectedFeedRoute(r);
-      setOpenRouteDetailWithAddPhoto(true);
-      setPendingFilePick(source);
-      setShowRouteDetail(true);
-    },
-    [photosTabRouteId, routesFeed.routes, toast]
-  );
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
   const [organizerProfiles, setOrganizerProfiles] = useState<Map<string, OrganizerProfile>>(new Map());
-  const [routes, setRoutes] = useState<UserRoute[]>([]);
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
-  const [routesLoading, setRoutesLoading] = useState(false);
-  const [editingRoute, setEditingRoute] = useState<any>(null);
-  const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [showRouteDeleteConfirm, setShowRouteDeleteConfirm] = useState(false);
-  const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const SESSIONS_PER_PAGE = 3;
@@ -407,9 +335,9 @@ export default function MySessions() {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('tab') === 'routes') {
-      setCurrentView('routes');
+      navigate('/itinerary/my-routes', { replace: true });
     }
-  }, [location.search]);
+  }, [location.search, navigate]);
 
 
   // Load sessions and subscribe to real-time updates
@@ -418,9 +346,6 @@ export default function MySessions() {
     
     loadUserSessions();
     loadJoinedSessions();
-    if (currentView === 'routes') {
-      loadUserRoutes();
-    }
 
     // Real-time subscription for immediate updates on Android & Web
     const channelName = `my-sessions-${user.id}-${Date.now()}`;
@@ -453,7 +378,7 @@ export default function MySessions() {
       console.log('📡 MySessions: Unsubscribing from channel');
       supabase.removeChannel(channel);
     };
-  }, [user, currentView]);
+  }, [user]);
 
   // Reload sessions when page becomes visible (Android WebView fix)
   useEffect(() => {
@@ -470,74 +395,6 @@ export default function MySessions() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user]);
-
-  const loadUserRoutes = async () => {
-    if (!user) return;
-
-    setRoutesLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('routes')
-        .select('*')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setRoutes(data || []);
-    } catch (error) {
-      console.error('Error fetching user routes:', error);
-      toast({
-        title: "Erreur",
-        description: "Erreur lors du chargement de vos itinéraires",
-        variant: "destructive",
-      });
-    } finally {
-      setRoutesLoading(false);
-    }
-  };
-
-  const confirmDeleteRoute = (routeId: string) => {
-    setRouteToDelete(routeId);
-    setShowRouteDeleteConfirm(true);
-  };
-
-  const deleteRoute = async () => {
-    if (!routeToDelete) return;
-    try {
-      const { error } = await supabase
-        .from('routes')
-        .delete()
-        .eq('id', routeToDelete)
-        .eq('created_by', user?.id);
-
-      if (error) throw error;
-
-      setRoutes(prev => prev.filter(route => route.id !== routeToDelete));
-      toast({
-        title: "Succès",
-        description: "Itinéraire supprimé avec succès",
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer l'itinéraire",
-        variant: "destructive",
-      });
-    } finally {
-      setShowRouteDeleteConfirm(false);
-      setRouteToDelete(null);
-    }
-  };
-
-  const editRoute = (route: any) => {
-    setEditingRoute(route);
-    setIsRouteEditDialogOpen(true);
-  };
-
-  const formatElevation = (meters: number | null) => {
-    if (!meters) return "N/A";
-    return `${Math.round(meters)} m`;
-  };
 
   const handleSessionClick = async (session: UserSession) => {
     setSelectedSession(session);
@@ -972,19 +829,13 @@ export default function MySessions() {
             <div className="flex gap-ios-1">
               {/* Left column: Séances + sub-filter */}
               <div className="w-1/2">
-                <div className={`bg-secondary ${currentView === 'sessions' ? 'rounded-t-ios-md' : 'rounded-ios-md'} p-ios-1 pb-ios-1`}>
-                  <button
-                    onClick={() => setCurrentView('sessions')}
-                    className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors ${
-                      currentView === 'sessions'
-                        ? 'bg-card text-foreground shadow-sm'
-                        : 'text-muted-foreground'
-                    }`}
+                <div className="bg-secondary rounded-t-ios-md p-ios-1 pb-ios-1">
+                  <div
+                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center"
                   >
                     Séances
-                  </button>
+                  </div>
                 </div>
-                {currentView === 'sessions' && (
                   <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
                     <div className="flex gap-ios-1">
                       <button
@@ -1009,63 +860,21 @@ export default function MySessions() {
                       </button>
                     </div>
                   </div>
-                )}
               </div>
 
-              {/* Right column: Itinéraires + sub-filter */}
+              {/* Right column: accès Présence (page existante) */}
               <div className="w-1/2">
-                <div className={`bg-secondary ${currentView === 'routes' ? 'rounded-t-ios-md' : 'rounded-ios-md'} p-ios-1 pb-ios-1`}>
+                <div className="bg-secondary rounded-ios-md p-ios-1 pb-ios-1">
                   <button
-                    onClick={() => setCurrentView('routes')}
-                    className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors ${
-                      currentView === 'routes'
-                        ? 'bg-card text-foreground shadow-sm'
-                        : 'text-muted-foreground'
-                    }`}
+                    type="button"
+                    onClick={() => navigate('/confirm-presence')}
+                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors bg-card text-foreground shadow-sm flex items-center justify-center gap-ios-1 active:opacity-90"
                   >
-                    Itinéraires
+                    <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
+                    Présence
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   </button>
                 </div>
-                {currentView === 'routes' && (
-                  <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
-                    <div className="flex gap-ios-1 touch-manipulation">
-                      <button
-                        type="button"
-                        onClick={() => setRouteSource('created')}
-                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          routeSource === 'created'
-                            ? 'bg-card text-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Créés
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRouteSource('feed')}
-                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          routeSource === 'feed'
-                            ? 'bg-card text-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Feed
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRouteSource('photos')}
-                        className={`flex-1 min-h-[36px] py-ios-1 px-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors flex items-center justify-center gap-ios-1 ${
-                          routeSource === 'photos'
-                            ? 'bg-card text-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        <Camera className="h-3.5 w-3.5 shrink-0" />
-                        Photos
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1073,7 +882,6 @@ export default function MySessions() {
         </div>
 
         <div className="ios-scroll-region pt-ios-2 pb-ios-6">
-          {currentView === 'sessions' ? (
             <>
               {/* List/Calendar toggle */}
               <div className="flex px-ios-4 mb-ios-1">
@@ -1269,201 +1077,8 @@ export default function MySessions() {
                 </div>
               )}
             </>
-          ) : routeSource === 'created' ? (
-            <>
-              {/* Created Routes */}
-              {routesLoading ? (
-                <div className="ios-list-stack">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="ios-card p-ios-4 animate-pulse">
-                      <div className="h-4 bg-secondary rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-secondary rounded w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              ) : routes.length === 0 ? (
-                <div className="ios-card p-8 text-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-ios-headline font-medium text-foreground mb-ios-1">Aucun itinéraire</p>
-                  <p className="text-ios-subheadline text-muted-foreground mb-ios-4">
-                    Créez votre premier itinéraire
-                  </p>
-                  <Button onClick={openCreateRoute} className="rounded-full">
-                    <Plus className="h-4 w-4 mr-ios-2" />
-                    Créer un itinéraire
-                  </Button>
-                </div>
-              ) : (
-                <div className="ios-list-stack">
-                  {routes.map((route) => (
-                    <RouteCard
-                      key={route.id}
-                      route={route}
-                      onEdit={() => editRoute(route)}
-                      onDelete={() => confirmDeleteRoute(route.id)}
-                      onPublishToggle={async (isPublic) => {
-                        await supabase.from('routes').update({ is_public: isPublic }).eq('id', route.id);
-                        loadUserRoutes();
-                      }}
-                      isPublic={(route as any).is_public || false}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          ) : routeSource === 'feed' ? (
-            <div className="space-y-ios-3 px-ios-4 pb-ios-2">
-              <RoutesFeedFilters
-                maxProximity={routesFeed.maxProximity}
-                setMaxProximity={routesFeed.setMaxProximity}
-                maxRouteDistance={routesFeed.maxRouteDistance}
-                setMaxRouteDistance={routesFeed.setMaxRouteDistance}
-                minRating={routesFeed.minRating}
-                setMinRating={routesFeed.setMinRating}
-                selectedActivities={routesFeed.selectedActivities}
-                toggleActivity={routesFeed.toggleActivity}
-                toggleAllActivities={routesFeed.toggleAllActivities}
-              />
-              {routesFeed.loading ? (
-                <div className="space-y-ios-3">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="ios-card rounded-ios-lg border border-border overflow-hidden animate-pulse"
-                    >
-                      <div className="h-40 bg-secondary" />
-                      <div className="p-ios-4 space-y-ios-2">
-                        <div className="h-4 bg-secondary rounded-ios-sm w-3/4" />
-                        <div className="h-3 bg-secondary rounded-ios-sm w-1/2" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : routesFeed.routes.length === 0 ? (
-                <div className="ios-card rounded-ios-lg p-ios-8 text-center border border-border">
-                  <div className="mb-ios-4 inline-flex p-ios-4 rounded-full bg-secondary">
-                    <MapPin className="h-10 w-10 text-muted-foreground" />
-                  </div>
-                  <p className="text-ios-headline font-semibold text-foreground mb-ios-1">Aucun itinéraire trouvé</p>
-                  <p className="text-ios-subheadline text-muted-foreground leading-relaxed">
-                    {routesFeed.hasLocation
-                      ? 'Aucun itinéraire public ne correspond à vos filtres dans cette zone.'
-                      : 'Activez la localisation pour voir les itinéraires proches de vous.'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-ios-3">
-                  {routesFeed.routes.map((route, i) => (
-                    <RoutesFeedCard
-                      key={route.id}
-                      route={route}
-                      index={i}
-                      onClick={(r) => {
-                        setOpenRouteDetailWithAddPhoto(false);
-                        setPendingFilePick(null);
-                        setSelectedFeedRoute(r);
-                        setShowRouteDetail(true);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-ios-3 px-ios-4 pb-ios-2">
-              <div className="ios-card rounded-ios-lg border border-border p-ios-3">
-                <p className="text-ios-footnote font-semibold text-foreground uppercase tracking-wide mb-ios-2">
-                  Ajouter une photo
-                </p>
-                <p className="text-ios-caption1 text-muted-foreground mb-ios-3 leading-relaxed">
-                  Choisissez un itinéraire public (même liste que le feed), puis ouvrez l’appareil photo ou la galerie pour
-                  publier sur cet itinéraire.
-                </p>
-                <div className="mb-ios-3">
-                  {routesFeed.loading ? (
-                    <p className="text-ios-caption1 text-muted-foreground py-ios-2">Chargement des itinéraires…</p>
-                  ) : routesFeed.routes.length === 0 ? (
-                    <p className="text-ios-caption1 text-muted-foreground py-ios-2 leading-relaxed">
-                      Aucun itinéraire pour l’instant — ouvrez le feed ou activez la localisation.
-                    </p>
-                  ) : (
-                    <Select value={photosTabRouteId || undefined} onValueChange={(v) => setPhotosTabRouteId(v)}>
-                      <SelectTrigger className="w-full rounded-ios-md border-border bg-background text-ios-footnote h-11">
-                        <SelectValue placeholder="Itinéraire du feed…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {routesFeed.routes.map((r) => (
-                          <SelectItem key={r.id} value={r.id} className="text-ios-footnote">
-                            {r.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-ios-2 mb-ios-2">
-                  <button
-                    type="button"
-                    onClick={() => openFeedRouteDetailFromPhotosTab('camera')}
-                    className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-3 flex flex-col items-center justify-center gap-ios-1 text-muted-foreground hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[88px]"
-                  >
-                    <Camera className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-ios-footnote font-medium text-foreground text-center">Appareil photo</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openFeedRouteDetailFromPhotosTab('gallery')}
-                    className="rounded-ios-md border border-border bg-secondary/50 px-ios-2 py-ios-3 flex flex-col items-center justify-center gap-ios-1 text-muted-foreground hover:bg-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[88px]"
-                  >
-                    <Images className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-ios-footnote font-medium text-foreground text-center">Galerie</span>
-                  </button>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setRouteSource('feed')}
-                >
-                  Ouvrir le feed
-                </Button>
-              </div>
-              <Suspense fallback={null}>
-                <RoutePhotosGallery syncKey={routePhotosSyncKey} />
-              </Suspense>
-            </div>
-          )}
         </div>
       </div>
-
-      {currentView === 'routes' && routeSource !== 'created' && (
-        <Suspense fallback={null}>
-          <RouteDetailDialog
-            route={selectedFeedRoute}
-            open={showRouteDetail}
-            onOpenChange={(open) => {
-              setShowRouteDetail(open);
-              if (!open) {
-                setOpenRouteDetailWithAddPhoto(false);
-                setPendingFilePick(null);
-              }
-            }}
-            onRefresh={bumpRouteGalleryAfterRouteDetailMutation}
-            initialAddPhotoMode={openRouteDetailWithAddPhoto}
-            pendingFilePick={pendingFilePick}
-            onPendingFilePickConsumed={clearPendingFilePick}
-          />
-        </Suspense>
-      )}
-
-      <Suspense fallback={null}>
-        <RouteEditDialog
-          isOpen={isRouteEditDialogOpen}
-          onClose={() => setIsRouteEditDialogOpen(false)}
-          route={editingRoute}
-          onRouteUpdated={loadUserRoutes}
-        />
-      </Suspense>
 
       <Suspense fallback={null}>
         <ProfilePreviewDialog
@@ -1491,33 +1106,6 @@ export default function MySessions() {
           <div className="border-t border-border">
             <AlertDialogAction
               onClick={handleDeleteSession}
-              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-ios-headline font-semibold"
-            >
-              Supprimer
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Route Confirmation Dialog - iOS Style */}
-      <AlertDialog open={showRouteDeleteConfirm} onOpenChange={setShowRouteDeleteConfirm}>
-        <AlertDialogContent className="rounded-ios-lg max-w-[280px] p-0 gap-0">
-          <AlertDialogHeader className="p-ios-6 pb-ios-4">
-            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
-              Supprimer l'itinéraire
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
-              Êtes-vous sûr de vouloir supprimer cet itinéraire ? Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="border-t border-border">
-            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-ios-headline font-normal hover:bg-secondary/50">
-              Annuler
-            </AlertDialogCancel>
-          </div>
-          <div className="border-t border-border">
-            <AlertDialogAction
-              onClick={deleteRoute}
               className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-ios-headline font-semibold"
             >
               Supprimer

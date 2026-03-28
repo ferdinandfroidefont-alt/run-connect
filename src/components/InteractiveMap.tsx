@@ -1485,7 +1485,7 @@ export const InteractiveMap = ({
         setRouteElevations([]);
 
         // Rediriger vers la page "Mes itinéraires"
-        navigate('/my-sessions?tab=routes');
+        navigate('/itinerary/my-routes');
       }
     }
   };

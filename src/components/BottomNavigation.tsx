@@ -65,22 +65,21 @@ export const BottomNavigation = () => {
       ],
       [
         {
-          path: '/route-create',
+          path: '/itinerary',
           icon: PenTool,
           label: t('navigation.itinerary'),
-          isActive: (p) => p === '/route-create' || p === '/route-creation' || p.startsWith('/route-creation/'),
+          isActive: (p) =>
+            p === '/itinerary' ||
+            p.startsWith('/itinerary/') ||
+            p === '/route-create' ||
+            p === '/route-creation' ||
+            p.startsWith('/route-creation/'),
         },
         {
           path: '/coaching',
           icon: GraduationCap,
           label: t('navigation.coaching'),
           isActive: (p) => p === '/coaching' || p.startsWith('/coaching/'),
-        },
-        {
-          path: '/confirm-presence',
-          icon: CheckCircle,
-          label: t('navigation.confirmPresence'),
-          isActive: (p) => p === '/confirm-presence' || p.startsWith('/confirm-presence/'),
         },
         {
           path: '/leaderboard',
@@ -245,7 +244,9 @@ export const BottomNavigation = () => {
           </div>
 
           {renderTabCell(currentSetItems[2])}
-          {renderTabCell(currentSetItems[3])}
+          {currentSetItems[3] ? renderTabCell(currentSetItems[3]) : (
+            <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center" aria-hidden />
+          )}
 
           <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center">
             <button
