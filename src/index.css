@@ -574,6 +574,7 @@ html, body {
 
   /* Reduce nav bar height */
   .h-\[72px\] { height: 64px !important; }
+  /* Raccourcir 52px sauf avatars volontairement exclus (ex. header carte : .avatar-fixed + tailles dans index .map-header-profile-avatar) */
   .h-\[52px\]:not(.avatar-fixed) { height: 44px !important; }
 
   /* Reduce icon sizes slightly */
@@ -677,40 +678,93 @@ html, body {
   }
 
   /**
-   * Avatar centré header carte : géométrie carrée stricte → cercle via rounded-full du composant.
-   * Le ring Tailwind reste cohérent tant que width === height (classes sur le Root).
+   * Avatar centré header carte : carré strict (width = height), cercle, image cover — aligné iOS / Android.
+   * Les tailles ici remplacent h-[52px] / sm:h-14 sur le composant pour une seule source de vérité.
    */
   .map-header-profile-avatar {
     flex-shrink: 0;
+    box-sizing: border-box;
     aspect-ratio: 1 / 1;
-  }
-}
-
-/**
- * iOS WKWebView : sous contexte de transformation (ex. -translate-x-1/2 sur l’ancêtre),
- * les border-radius + img peuvent rendre une ellipse. translateZ(0) + masque circulaire stabilisent le clip.
- */
-@supports (-webkit-touch-callout: none) {
-  .map-header-profile-avatar {
-    /* Calque composite dédié : évite l’ovalisation fréquente avec ancêtre en -translate-x-1/2 */
-    transform: translate3d(0, 0, 0);
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    border-radius: 50%;
     overflow: hidden;
+    border-radius: 50%;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    max-width: 52px;
+    max-height: 52px;
+    position: relative;
+    isolation: isolate;
   }
 
+  @media (min-width: 640px) {
+    .map-header-profile-avatar {
+      width: 3.5rem;
+      height: 3.5rem;
+      min-width: 3.5rem;
+      min-height: 3.5rem;
+      max-width: 3.5rem;
+      max-height: 3.5rem;
+    }
+  }
+
+  /* Image : pas d’espace inline, remplissage du cercle (WKWebView inclus) */
   .map-header-profile-avatar img {
+    display: block;
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     max-width: none;
     object-fit: cover;
     object-position: center;
+    vertical-align: top;
+    pointer-events: none;
+  }
+
+  .map-header-profile-fallback {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+  }
+
+  /** Centrage horizontal : un seul transform (évite conflit Tailwind translate + sous-calques iOS). */
+  .map-header-profile-anchor {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/**
+ * iOS WKWebView : ancêtre + flou header — calque GPU + clip circulaire pour stabiliser le rendu.
+ */
+@supports (-webkit-touch-callout: none) {
+  .map-header-profile-anchor {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .map-header-profile-avatar {
     transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    /* Anti-alias des bords circulaires sur WebKit (pattern courant pour avatars) */
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    /* Clip circulaire explicite : plus fiable que seul border-radius sous WKWebView + backdrop */
+    -webkit-clip-path: circle(50% at 50% 50%);
+    clip-path: circle(50% at 50% 50%);
+    /* Lissant les bords (luminance : blanc = visible) — complète clip-path si un bug sub-pixel reste */
+    -webkit-mask-image: radial-gradient(circle at center, #fff 98%, transparent 100%);
+    mask-image: radial-gradient(circle at center, #fff 98%, transparent 100%);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+  }
+
+  .map-header-profile-avatar img {
+    transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 }
 

@@ -1531,7 +1531,7 @@ export const InteractiveMap = ({
 
               {userProfile && (
                 <div
-                  className="absolute left-1/2 z-[1] flex -translate-x-1/2 [isolation:isolate]"
+                  className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
                   data-tutorial="profile-avatar"
                 >
                   <div
@@ -1547,16 +1547,16 @@ export const InteractiveMap = ({
                     className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
                   >
                     {/*
-                      Pas de hover:scale sur ce wrapper : sur iOS (WKWebView) scale + translate parent ovalise souvent les rounded-full.
-                      Cercle renforcé via .map-header-profile-avatar (mask + translateZ).
+                      avatar-fixed : évite la règle iOS « compact » .h-[52px] → 44px (sinon ellipse 52×44).
+                      Tailles fixes via .map-header-profile-avatar (index.css) pour ratio 1:1 WebKit.
                     */}
-                    <Avatar className="map-header-profile-avatar h-[52px] w-[52px] ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35 sm:h-14 sm:w-14">
+                    <Avatar className="map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                       <AvatarImage
                         src={userProfile.avatar_url || undefined}
                         alt={userProfile.username || userProfile.display_name}
-                        className="h-full w-full object-cover object-center"
+                        className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
                       />
-                      <AvatarFallback className="text-lg">
+                      <AvatarFallback className="map-header-profile-fallback text-lg">
                         {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
