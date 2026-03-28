@@ -33,6 +33,8 @@ interface ProfileSetupDialogProps {
   userId: string;
   email: string;
   onComplete?: () => void;
+  /** Retour connexion : déconnexion + navigation / affichage login (obligatoire si onOpenChange est no-op, ex. Index). */
+  onRequestSignIn?: () => void | Promise<void>;
 }
 
 const COUNTRY_CODES = [
@@ -53,7 +55,7 @@ interface FormState {
   timestamp: number;
 }
 
-export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete }: ProfileSetupDialogProps) => {
+export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete, onRequestSignIn }: ProfileSetupDialogProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
@@ -612,6 +614,21 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     fileInputRef.current?.click();
   };
 
+  const handleGoToSignIn = async () => {
+    try {
+      sessionStorage.removeItem(FORM_STATE_KEY);
+      sessionStorage.removeItem('photoSelectionInProgress');
+    } catch {
+      /* ignore */
+    }
+    if (onRequestSignIn) {
+      await onRequestSignIn();
+      return;
+    }
+    onOpenChange(false);
+    navigate('/auth', { replace: true });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal>
       <DialogContent
@@ -626,9 +643,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex h-14 items-center justify-between px-4">
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => { onOpenChange(false); navigate('/auth'); }}
+                onClick={() => void handleGoToSignIn()}
                 className="text-[15px] text-primary"
               >
                 {t('profileSetup.headerAlreadySignedIn')}

@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))
@@ -37,7 +38,8 @@ const Index = () => {
     skipTutorial,
   } = useTutorial();
   const [searchParams] = useSearchParams();
-  
+  const navigate = useNavigate();
+
   const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
 
   // Activer les notifications de dépassement au classement
@@ -97,6 +99,14 @@ const Index = () => {
             onOpenChange={() => {}} // Empêche la fermeture manuelle
             userId={user.id}
             email={user.email || ''}
+            onRequestSignIn={async () => {
+              try {
+                await supabase.auth.signOut({ scope: 'global' });
+              } catch (e) {
+                console.error('[Index] signOut (retour connexion):', e);
+              }
+              navigate('/auth', { replace: true });
+            }}
             onComplete={() => {
               completeProfileSetup();
               recheckOnboarding();

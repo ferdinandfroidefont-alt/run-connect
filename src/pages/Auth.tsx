@@ -1124,6 +1124,16 @@ const Auth = () => {
         onOpenChange={setShowProfileSetup}
         userId={newUserId}
         email={email}
+        onRequestSignIn={async () => {
+          try {
+            await supabase.auth.signOut({ scope: 'global' });
+          } catch (e) {
+            console.error('[Auth] signOut (retour connexion):', e);
+          }
+          setShowProfileSetup(false);
+          setNewUserId('');
+          setView('email-signin-form');
+        }}
         onComplete={() => {
           console.log('✅ Profil créé - navigation SPA vers /');
           setShowProfileSetup(false);

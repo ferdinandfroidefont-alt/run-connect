@@ -615,12 +615,14 @@ const Profile = () => {
   }
   return (
     <div
-      className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-secondary"
+      className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      <div className="ios-scroll-region">
+      <div className="ios-scroll-region min-w-0 w-full max-w-full">
+      {/* Même principe que le fil / Paramètres : colonne bornée + centrée, évite le débordement droit sur iOS */}
+      <div className="mx-auto min-w-0 w-full max-w-2xl box-border">
       {/* Cover Image - Facebook Style */}
-      <div className="relative">
+      <div className="relative min-w-0 max-w-full overflow-x-hidden">
         {/* Cover Photo */}
         <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
           {(coverPreview || profile?.cover_image_url) ? (
@@ -927,6 +929,7 @@ const Profile = () => {
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
+      </div>
       </div>
       </div>
     </div>

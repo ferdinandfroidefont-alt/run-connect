@@ -66,19 +66,19 @@ export const ProfileQuickStats = ({
   ];
 
   return (
-    <div className="grid grid-cols-4 overflow-hidden">
+    <div className="grid w-full min-w-0 grid-cols-4 overflow-hidden">
       {stats.map((stat, i) => {
         const cell = (
           <>
-            <p className="text-[18px] font-bold text-foreground leading-none">
+            <p className="truncate px-0.5 text-[16px] font-bold tabular-nums leading-none text-foreground sm:text-[17px]">
               {loading ? '–' : stat.value}
             </p>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mt-0.5 truncate px-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
               {stat.label}
             </p>
           </>
         );
-        const className = `py-2.5 text-center transition-colors active:bg-secondary/60 ${
+        const className = `min-w-0 py-2.5 text-center transition-colors active:bg-secondary/60 ${
           i < 3 ? 'border-r border-border/50' : ''
         }`;
         return stat.onClick ? (
