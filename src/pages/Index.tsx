@@ -9,6 +9,7 @@ import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { AUTH_PENDING_PROFILE_SETUP_KEY } from '@/lib/authFlags';
 
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))
@@ -100,6 +101,11 @@ const Index = () => {
             userId={user.id}
             email={user.email || ''}
             onRequestSignIn={async () => {
+              try {
+                sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
+              } catch {
+                /* ignore */
+              }
               try {
                 await supabase.auth.signOut({ scope: 'global' });
               } catch (e) {

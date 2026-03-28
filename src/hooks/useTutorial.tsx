@@ -36,10 +36,10 @@ export const useTutorial = () => {
 
       // Show tutorial for any user who hasn't completed it yet
       if (!profile?.tutorial_completed) {
-        // Small delay to ensure UI is ready
+        // Laisser le temps à la barre du bas (bouton +) d’être montée et visible pour react-joyride
         setTimeout(() => {
           setShouldShowTutorial(true);
-        }, 500);
+        }, 1000);
       } else {
         setShouldShowTutorial(false);
       }

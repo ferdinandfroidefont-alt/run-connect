@@ -22,6 +22,7 @@ import {
 } from "@/components/auth/AuthChrome";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
+import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
@@ -145,6 +146,10 @@ const Auth = () => {
             .maybeSingle();
             
           if (profileError || !profile) {
+            if (sessionStorage.getItem(AUTH_PENDING_PROFILE_SETUP_KEY) === session.user.id) {
+              console.log('[Auth] Profil en cours de création — pas de déconnexion automatique');
+              return;
+            }
             await supabase.auth.signOut({ scope: 'global' });
             localStorage.clear();
             sessionStorage.clear();
@@ -231,6 +236,11 @@ const Auth = () => {
               
             if (!existingProfile) {
               setNewUserId(user.id);
+              try {
+                sessionStorage.setItem(AUTH_PENDING_PROFILE_SETUP_KEY, user.id);
+              } catch {
+                /* ignore */
+              }
               setShowProfileSetup(true);
             } else {
               navigate('/', { replace: true });
@@ -429,6 +439,11 @@ const Auth = () => {
             
           if (!existingProfile) {
             setNewUserId(data.user.id);
+            try {
+              sessionStorage.setItem(AUTH_PENDING_PROFILE_SETUP_KEY, data.user.id);
+            } catch {
+              /* ignore */
+            }
             setShowProfileSetup(true);
           } else {
             navigate('/', { replace: true });
@@ -1209,6 +1224,11 @@ const Auth = () => {
         email={email}
         onRequestSignIn={async () => {
           try {
+            sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
+          } catch {
+            /* ignore */
+          }
+          try {
             await supabase.auth.signOut({ scope: 'global' });
           } catch (e) {
             console.error('[Auth] signOut (retour connexion):', e);
@@ -1219,8 +1239,24 @@ const Auth = () => {
         }}
         onComplete={() => {
           console.log('✅ Profil créé - navigation SPA vers /');
+          try {
+            sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
+          } catch {
+            /* ignore */
+          }
           setShowProfileSetup(false);
-          navigate('/', { replace: true });
+          setNewUserId('');
+          // Fermeture Dialog + changement de route : enchaîner après le frame courant évite des blocages
+          // (focus trap Radix / WebView). Repli hard si la SPA reste sur /auth.
+          requestAnimationFrame(() => {
+            navigate('/', { replace: true });
+            window.setTimeout(() => {
+              if (window.location.pathname.startsWith('/auth')) {
+                console.warn('[Auth] Redirection SPA inefficace après inscription — window.location.replace');
+                window.location.replace(`${window.location.origin}/`);
+              }
+            }, 450);
+          });
         }}
       />
     </div>

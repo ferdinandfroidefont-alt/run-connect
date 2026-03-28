@@ -21,6 +21,7 @@ import {
   parseProfileSports,
   serializeProfileSports,
 } from "@/lib/profileSports";
+import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
@@ -84,6 +85,13 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const avatarFileRef = useRef<File | null>(null);
   const originalImageSrcRef = useRef<string>("");
   const isRedirecting = useRef(false);
+
+  /** Nouveau passage sur l’écran d’inscription : déverrouille la redirection (évite un ref coincé après un run précédent). */
+  useEffect(() => {
+    if (open) {
+      isRedirecting.current = false;
+    }
+  }, [open]);
 
   // 🔄 PARTIE 1: Restaurer l'état du formulaire et l'image au montage
   useEffect(() => {
@@ -519,6 +527,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       try {
         await deleteImageFromIndexedDB(PENDING_AVATAR_KEY);
         sessionStorage.removeItem(FORM_STATE_KEY);
+        sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
         console.log('📸 [ProfileSetup] Cleanup IndexedDB/sessionStorage après succès');
       } catch (e) {
         console.warn('📸 [ProfileSetup] Cleanup warning:', e);
@@ -540,14 +549,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         return;
       }
       isRedirecting.current = true;
-      
+
       console.log('✅ [ProfileSetup] Profil créé, délégation redirect à onComplete');
-      onOpenChange(false);
+      // D’abord la navigation / mise à jour parent : sur WebView iOS/Android, fermer le Dialog Radix
+      // avant navigate peut faire perdre la transition de route ; le parent (Auth) ferme aussi via onComplete.
       if (onComplete) {
         onComplete();
       } else {
         navigate('/', { replace: true });
       }
+      onOpenChange(false);
     } catch (error: any) {
       toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     } finally {
@@ -618,6 +629,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     try {
       sessionStorage.removeItem(FORM_STATE_KEY);
       sessionStorage.removeItem('photoSelectionInProgress');
+      sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
     } catch {
       /* ignore */
     }

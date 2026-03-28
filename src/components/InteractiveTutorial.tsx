@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Joyride, { CallBackProps, STATUS, Step, TooltipRenderProps } from 'react-joyride';
+import Joyride, { CallBackProps, EVENTS, STATUS, Step, TooltipRenderProps } from 'react-joyride';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -132,6 +132,23 @@ export const InteractiveTutorial: React.FC<InteractiveTutorialProps> = ({
 
     if (status === STATUS.SKIPPED) {
       onSkip();
+      return;
+    }
+
+    /**
+     * Mode contrôlé (stepIndex) : si la cible n’est pas encore au DOM ou « invisible »
+     * (tab bar en animation, premier rendu après inscription…), Joyride émet
+     * TARGET_NOT_FOUND mais n’incrémente pas l’index — l’utilisateur reste bloqué sur
+     * l’étape (ex. « Créer une séance ») alors que Suivant ne fait rien.
+     */
+    if (type === EVENTS.TARGET_NOT_FOUND) {
+      const nextIndex = index + 1;
+      if (nextIndex >= steps.length) {
+        setRun(false);
+        onComplete();
+      } else {
+        setStepIndex(nextIndex);
+      }
       return;
     }
 
