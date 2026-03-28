@@ -1616,7 +1616,13 @@ export const InteractiveMap = ({
           {/* Carrousel de filtres : séparé visuellement, sur le fond carte */}
           <div className="px-4 pb-4 pt-3">
             <div className="space-y-2">
-            <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
+            <div
+              className={cn(
+                "overflow-hidden rounded-[18px] border border-primary/18 bg-card/[0.96] p-2",
+                "shadow-[0_10px_28px_-14px_rgba(0,0,0,0.22),0_0_0_1px_hsl(var(--primary)_/_0.06)]",
+                "dark:border-primary/24 dark:bg-card/90 dark:shadow-[0_12px_32px_-14px_rgba(0,0,0,0.52),0_0_0_1px_hsl(var(--primary)_/_0.12)]"
+              )}
+            >
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
@@ -1686,7 +1692,7 @@ export const InteractiveMap = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  className="ios-card rounded-[16px] border border-black/10 bg-card/98 p-3"
+                  className="ios-card rounded-[16px] border border-primary/15 bg-card/98 p-3 dark:border-primary/20"
                 >
                   {expandedFilter === 'time' && (
                     <div className="grid grid-cols-4 gap-2">

@@ -340,13 +340,13 @@ html, body {
     box-shadow: var(--shadow-card);
   }
 
-  /* Chip compacte style iOS */
+  /* Chip compacte style iOS (carte : uniquement InteractiveMap — tokens thème + lien discret au primary) */
   .ios-chip {
-    @apply h-8 shrink-0 rounded-[11px] border border-black/10 bg-white px-3 text-[11px] font-semibold tracking-tight text-black transition-all duration-200 active:scale-[0.97];
+    @apply h-8 shrink-0 rounded-[11px] border border-primary/14 bg-background/95 px-3 text-[11px] font-semibold tracking-tight text-foreground shadow-sm transition-all duration-200 active:scale-[0.97] dark:border-primary/20 dark:bg-card/88 dark:shadow-[0_1px_3px_rgba(0,0,0,0.28)];
   }
 
   .ios-chip-active {
-    @apply border-primary bg-primary text-primary-foreground;
+    @apply border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25 dark:shadow-primary/35;
   }
 
   /* Rangée de liste type « Mes séances » (carte + padding + feedback tactile) */
