@@ -7,6 +7,7 @@ import {
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
 } from '@/lib/ruconnectSplashChrome';
+import { primeHomeMapDuringSplash } from '@/lib/homeMapPrefetch';
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -16,6 +17,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
+    primeHomeMapDuringSplash();
     applyRuconnectSplashWebChrome();
     void applyRuconnectSplashNativeChrome();
 

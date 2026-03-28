@@ -29,6 +29,7 @@ import { ElevationProfile } from './ElevationProfile';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
+import { waitForPrefetchedHomeMapPosition } from '@/lib/homeMapPrefetch';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const NotificationCenter = lazy(() =>
@@ -910,39 +911,47 @@ export const InteractiveMap = ({
     if (!mapContainer.current || isMapLoaded) return;
     const initializeMap = async () => {
       try {
-        // Récupérer la clé API Google Maps depuis Supabase
-        const {
-          data: apiKeyData,
-          error: apiKeyError
-        } = await supabase.functions.invoke('google-maps-proxy', {
-          body: getKeyBody()
-        });
+        const mapsAlreadyBootstrapped =
+          typeof window !== 'undefined' && Boolean(window.google?.maps);
 
-        if (apiKeyError) {
-          throw new Error(`google-maps-proxy get-key failed: ${apiKeyError.message}`);
+        if (!mapsAlreadyBootstrapped) {
+          const {
+            data: apiKeyData,
+            error: apiKeyError
+          } = await supabase.functions.invoke('google-maps-proxy', {
+            body: getKeyBody()
+          });
+
+          if (apiKeyError) {
+            throw new Error(`google-maps-proxy get-key failed: ${apiKeyError.message}`);
+          }
+
+          const googleMapsApiKey = apiKeyData?.apiKey;
+          if (!googleMapsApiKey) {
+            throw new Error('Google Maps API key indisponible');
+          }
+
+          const loader = new Loader({
+            apiKey: googleMapsApiKey,
+            version: 'weekly',
+            libraries: ['geometry', 'places']
+          });
+          await loader.load();
         }
 
-        const googleMapsApiKey = apiKeyData?.apiKey;
-        if (!googleMapsApiKey) {
-          throw new Error('Google Maps API key indisponible');
-        }
-
-        const loader = new Loader({
-          apiKey: googleMapsApiKey,
-          version: 'weekly',
-          libraries: ['geometry', 'places']
-        });
-        await loader.load();
         if (!mapContainer.current) return;
+
+        /* Petite fenêtre : la géoloc du splash peut finir quelques ms après le montage de la carte */
+        const prefPos = await waitForPrefetchedHomeMapPosition(mapsAlreadyBootstrapped ? 900 : 1400);
+        const mapCenter = prefPos
+          ? { lat: prefPos.lat, lng: prefPos.lng }
+          : { lat: 48.8566, lng: 2.3522 };
+        const mapZoom = prefPos ? 14 : 12;
 
         // Initialize map
         map.current = new google.maps.Map(mapContainer.current, {
-          zoom: 12,
-          center: {
-            lat: 48.8566,
-            lng: 2.3522
-          },
-          // Paris coordinates
+          zoom: mapZoom,
+          center: mapCenter,
           mapTypeId: currentStyle as google.maps.MapTypeId,
           mapTypeControl: false,
           streetViewControl: false,
@@ -1012,46 +1021,58 @@ export const InteractiveMap = ({
           }
         });
 
-        // Try to get user's location using Capacitor with detailed logging
-        console.log("🗺️ Début tentative géolocalisation");
-        getCurrentPosition().then(position => {
-          console.log("🗺️ Position reçue dans InteractiveMap:", position);
-          if (position) {
-            setUserLocation(position);
-            map.current?.setCenter(position);
-            map.current?.setZoom(14);
-            console.log("✅ Carte centrée sur position utilisateur:", position);
-          } else {
-            console.log("❌ Position null reçue");
-            throw new Error("No position returned");
-          }
-        }).catch(error => {
-          console.error("❌ Erreur géolocalisation dans InteractiveMap:", error);
+        // Position fraîche du splash : évite une 2e requête lente ; sinon flux complet (+ toasts si échec)
+        const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
+        const PREFETCH_MAX_AGE_MS = 45_000;
 
-          // Message d'erreur plus informatif
-          let errorMessage = "Localisation non disponible";
-          let shouldShowSettings = false;
-          if (error.message?.includes('Permission') || error.message?.includes('denied')) {
-            errorMessage = "Autorisations de localisation requises - Cliquez pour ouvrir les paramètres";
-            shouldShowSettings = true;
-          } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
-            errorMessage = "Délai de localisation dépassé - Réessayez";
-          } else if (error.message?.includes('unavailable')) {
-            errorMessage = "Service de localisation indisponible - Vérifiez vos paramètres";
-            shouldShowSettings = true;
-          }
-          if (shouldShowSettings) {
-            toast.error(errorMessage, {
-              action: {
-                label: "Paramètres",
-                onClick: openLocationSettings
+        if (prefPos != null && prefetchAgeMs < PREFETCH_MAX_AGE_MS) {
+          console.log('🗺️ Géoloc préchargée au splash (', Math.round(prefetchAgeMs), 'ms) — pas de relance immédiate');
+          const pos = { lat: prefPos.lat, lng: prefPos.lng };
+          setUserLocation(pos);
+          map.current?.setCenter(pos);
+          map.current?.setZoom(14);
+        } else {
+          console.log('🗺️ Début tentative géolocalisation');
+          getCurrentPosition()
+            .then((position) => {
+              console.log('🗺️ Position reçue dans InteractiveMap:', position);
+              if (position) {
+                setUserLocation(position);
+                map.current?.setCenter(position);
+                map.current?.setZoom(14);
+                console.log('✅ Carte centrée sur position utilisateur:', position);
+              } else {
+                console.log('❌ Position null reçue');
+                throw new Error('No position returned');
               }
-            });
-          }
+            })
+            .catch((error: Error) => {
+              console.error('❌ Erreur géolocalisation dans InteractiveMap:', error);
 
-          // Don't set default location for marker display
-          console.log("🗺️ Pas de position disponible, pas de marqueur");
-        });
+              let errorMessage = 'Localisation non disponible';
+              let shouldShowSettings = false;
+              if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+                errorMessage =
+                  'Autorisations de localisation requises - Cliquez pour ouvrir les paramètres';
+                shouldShowSettings = true;
+              } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
+                errorMessage = 'Délai de localisation dépassé - Réessayez';
+              } else if (error.message?.includes('unavailable')) {
+                errorMessage = 'Service de localisation indisponible - Vérifiez vos paramètres';
+                shouldShowSettings = true;
+              }
+              if (shouldShowSettings) {
+                toast.error(errorMessage, {
+                  action: {
+                    label: 'Paramètres',
+                    onClick: openLocationSettings,
+                  },
+                });
+              }
+
+              console.log('🗺️ Pas de position disponible, pas de marqueur');
+            });
+        }
       } catch (error) {
         console.error('Erreur lors du chargement de Google Maps:', error);
         toast.error("Erreur lors du chargement de la carte");
