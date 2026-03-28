@@ -10,6 +10,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
 import { cn } from "@/lib/utils";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 interface Profile {
   notifications_enabled?: boolean;
@@ -122,18 +123,24 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       transition={{ duration: 0.2 }}
       className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 h-[56px]">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-[17px] font-semibold">Notifications</h1>
-          <div className="w-9" />
-        </div>
-      </div>
-
-      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+      <IosFixedPageHeaderShell
+        className="min-h-0 flex-1"
+        headerWrapperClassName="shrink-0"
+        contentScroll
+        scrollClassName="min-h-0 bg-secondary"
+        header={
+          <div className="border-b border-border bg-card">
+            <div className="flex h-[56px] items-center justify-between px-4">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-[17px] font-semibold">Notifications</h1>
+              <div className="w-9" />
+            </div>
+          </div>
+        }
+      >
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
           {/* Main Toggle */}
           <div className="space-y-2" data-tutorial="settings-notifications-push">
@@ -254,6 +261,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
           )}
         </div>
       </ScrollArea>
+      </IosFixedPageHeaderShell>
     </motion.div>
   );
 };

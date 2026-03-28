@@ -15,6 +15,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 interface SettingsSupportProps {
   onBack: () => void;
@@ -86,23 +87,24 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
       transition={{ duration: 0.2 }}
       className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
     >
-      {/* iOS Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 h-[56px]">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-[17px] font-semibold">Aide & Support</h1>
-          <div className="w-9" />
-        </div>
-      </div>
-
-      <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+      <IosFixedPageHeaderShell
+        className="min-h-0 flex-1"
+        headerWrapperClassName="shrink-0"
+        contentScroll
+        scrollClassName="min-h-0 bg-secondary"
+        header={
+          <div className="border-b border-border bg-card">
+            <div className="flex h-[56px] items-center justify-between px-4">
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-[17px] font-semibold">Aide & Support</h1>
+              <div className="w-9" />
+            </div>
+          </div>
+        }
+      >
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           <div className="space-y-4" data-tutorial="settings-support-help">
           {/* Legal */}
@@ -299,6 +301,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
           </div>
         </div>
       </ScrollArea>
+      </IosFixedPageHeaderShell>
     </motion.div>
   );
 };

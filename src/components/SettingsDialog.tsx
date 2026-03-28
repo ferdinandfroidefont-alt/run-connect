@@ -37,6 +37,7 @@ import {
   notifyTutorialReplayQueued,
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 // Sub-pages
 const SettingsGeneral = lazy(() =>
@@ -491,45 +492,48 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -20, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="flex h-full min-w-0 max-w-full flex-col overflow-x-hidden"
+              className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden"
             >
-              {/* Status bar area removed for cleaner iOS look */}
-              {/* iOS Header */}
-              <div className="sticky top-0 z-40 min-w-0 max-w-full shrink-0 border-b border-border bg-card/95">
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
-                  <div className="flex min-w-0 justify-start">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenChange(false)}
-                      className="flex min-w-0 max-w-full items-center gap-1 text-primary"
-                    >
-                      <ArrowLeft className="h-5 w-5 shrink-0" />
-                      <span className="truncate text-[17px]">Retour</span>
-                    </button>
+              <IosFixedPageHeaderShell
+                className="min-h-0 flex-1"
+                headerWrapperClassName="shrink-0"
+                contentScroll
+                scrollClassName="min-h-0 bg-secondary"
+                header={
+                  <div className="min-w-0 max-w-full border-b border-border bg-card/95">
+                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
+                      <div className="flex min-w-0 justify-start">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenChange(false)}
+                          className="flex min-w-0 max-w-full items-center gap-1 text-primary"
+                        >
+                          <ArrowLeft className="h-5 w-5 shrink-0" />
+                          <span className="truncate text-[17px]">Retour</span>
+                        </button>
+                      </div>
+                      <h1 className="max-w-[200px] truncate text-center text-[17px] font-semibold text-foreground">
+                        Paramètres
+                      </h1>
+                      <div className="flex min-w-0 justify-end" aria-hidden>
+                        <div className="h-9 w-16 shrink-0" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 px-4 pb-2.5">
+                      <div className="relative min-w-0 max-w-full">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full min-w-0 max-w-full bg-background pl-10"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <h1 className="max-w-[200px] truncate text-center text-[17px] font-semibold text-foreground">
-                    Paramètres
-                  </h1>
-                  <div className="flex min-w-0 justify-end" aria-hidden>
-                    <div className="h-9 w-16 shrink-0" />
-                  </div>
-                </div>
-                
-                {/* iOS-style search bar */}
-                <div className="min-w-0 px-4 pb-2.5">
-                  <div className="relative min-w-0 max-w-full">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Rechercher"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full min-w-0 max-w-full pl-10 bg-background"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+                }
+              >
+              <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
                 <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
                   {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
                   <div className="box-border min-w-0 w-full max-w-full px-4">
@@ -699,6 +703,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                   )}
                 </div>
               </ScrollArea>
+              </IosFixedPageHeaderShell>
             </motion.div>
           ) : (
             <motion.div

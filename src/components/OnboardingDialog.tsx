@@ -11,6 +11,7 @@ import { Language } from "@/lib/translations";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 interface OnboardingDialogProps {
   isOpen: boolean;
@@ -106,28 +107,33 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="flex h-full min-h-0 flex-col">
-          {/* iOS Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex h-14 items-center justify-between px-4">
-              {step > 0 ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                  onClick={() => setStep(step - 1)}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              ) : (
+        <IosFixedPageHeaderShell
+          className="h-full min-h-0"
+          headerWrapperClassName="shrink-0"
+          contentScroll
+          scrollClassName="min-h-0 bg-secondary"
+          header={
+            <div className="border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+              <div className="flex h-14 items-center justify-between px-4">
+                {step > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
+                    onClick={() => setStep(step - 1)}
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                ) : (
+                  <div className="w-9" />
+                )}
+                <h1 className="text-[17px] font-semibold">{t("onboarding.title")}</h1>
                 <div className="w-9" />
-              )}
-              <h1 className="text-[17px] font-semibold">{t('onboarding.title')}</h1>
-              <div className="w-9" />
+              </div>
             </div>
-          </div>
-
-          <ScrollArea className="min-h-0 flex-1">
+          }
+        >
+          <ScrollArea className="h-full min-h-0 flex-1">
             <div className="space-y-6 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               {/* Step 0: Language */}
               {step === 0 && (
@@ -355,7 +361,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
               </div>
             </div>
           </ScrollArea>
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

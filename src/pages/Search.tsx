@@ -7,6 +7,7 @@ import { ClubsTab } from '@/components/search/ClubsTab';
 import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
 import { Input } from '@/components/ui/input';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 const SettingsDialog = lazy(() =>
@@ -79,58 +80,61 @@ export default function Search() {
       <div 
         className={`fixed inset-0 z-[60] flex min-h-0 flex-col overflow-hidden bg-secondary ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
       >
-        {/* Header iOS style with safe area */}
-        <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
-          <div className="relative flex items-center justify-center min-h-[44px]">
-            {/* Bouton retour */}
-            <button
-              onClick={handleClose}
-              className="absolute left-0 flex items-center gap-ios-1 text-primary active:opacity-70"
-            >
-              <ChevronLeft className="h-6 w-6" />
-              <span className="text-ios-headline">Retour</span>
-            </button>
-
-            {/* Titre centré */}
-            <h1 className="text-ios-headline font-semibold">Rechercher</h1>
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={
+            <>
+              <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
+                <div className="relative flex min-h-[44px] items-center justify-center">
+                  <button
+                    onClick={handleClose}
+                    className="absolute left-0 flex items-center gap-ios-1 text-primary active:opacity-70"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                    <span className="text-ios-headline">Retour</span>
+                  </button>
+                  <h1 className="text-ios-headline font-semibold">Rechercher</h1>
+                </div>
+                <div className="relative mt-ios-3">
+                  <SearchIcon className="absolute left-ios-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={inputRef}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={getPlaceholder()}
+                    className="h-[44px] rounded-ios-md border-0 bg-secondary pl-ios-6 text-ios-subheadline"
+                  />
+                </div>
+              </header>
+              <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            </>
+          }
+          scrollClassName="flex min-h-0 flex-col bg-secondary"
+        >
+          <div className="flex min-h-0 flex-1 flex-col">
+            {activeTab === 'profiles' && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <ProfilesTab searchQuery={searchQuery} />
+              </div>
+            )}
+            {activeTab === 'clubs' && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <ClubsTab searchQuery={searchQuery} />
+              </div>
+            )}
+            {activeTab === 'strava' && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <StravaTab searchQuery={searchQuery} onOpenSettings={handleOpenSettings} />
+              </div>
+            )}
+            {activeTab === 'contacts' && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <ContactsTab searchQuery={searchQuery} />
+              </div>
+            )}
           </div>
-
-          {/* Champ de recherche */}
-          <div className="mt-ios-3 relative">
-            <SearchIcon className="absolute left-ios-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={inputRef}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={getPlaceholder()}
-              className="pl-ios-6 bg-secondary border-0 h-[44px] rounded-ios-md text-ios-subheadline"
-            />
-          </div>
-        </header>
-
-        {/* Onglets segmentés */}
-        <SearchTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {/* Zone scrollable des résultats */}
-        <div className="ios-scroll-region flex flex-col bg-secondary">
-          {activeTab === 'profiles' && (
-            <div className="flex-1 flex flex-col min-h-0"><ProfilesTab searchQuery={searchQuery} /></div>
-          )}
-          {activeTab === 'clubs' && (
-            <div className="flex-1 flex flex-col"><ClubsTab searchQuery={searchQuery} /></div>
-          )}
-          {activeTab === 'strava' && (
-            <div className="flex-1 flex flex-col">
-              <StravaTab 
-                searchQuery={searchQuery} 
-                onOpenSettings={handleOpenSettings}
-              />
-            </div>
-          )}
-          {activeTab === 'contacts' && (
-            <div className="flex-1 flex flex-col"><ContactsTab searchQuery={searchQuery} /></div>
-          )}
-        </div>
+        </IosFixedPageHeaderShell>
       </div>
 
       {/* Settings Dialog */}
