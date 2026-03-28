@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { parseRCC } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { Trash2, BookOpen } from "lucide-react";
 
 interface Template {
@@ -59,10 +60,13 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col gap-0 p-0">
-        <CoachingFullscreenHeader title="Modèles" onBack={onClose} />
-
-        <div className="flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={<CoachingFullscreenHeader title="Modèles" onBack={onClose} />}
+          scrollClassName="bg-secondary px-4 py-4"
+        >
           <Input
             placeholder="Rechercher un modèle…"
             value={search}
@@ -123,7 +127,7 @@ export const CoachingTemplatesDialog = ({ isOpen, onClose, onSelect }: CoachingT
               })}
             </div>
           )}
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

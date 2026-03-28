@@ -20,7 +20,7 @@ export function CoachingFullscreenHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-10 shrink-0 border-b border-border bg-card",
+        "shrink-0 border-b border-border bg-card",
         "pt-[max(0.25rem,var(--safe-area-top))]",
         className
       )}

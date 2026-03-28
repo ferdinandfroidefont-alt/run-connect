@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 const DAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -771,11 +772,60 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        <CoachingFullscreenHeader title="Plan de semaine" onBack={onClose} />
-
-        {/* ── Scrollable body — NO swipe handlers ── */}
-        <div className="flex-1 overflow-y-auto bg-secondary pb-24 [-webkit-overflow-scrolling:touch]">
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={<CoachingFullscreenHeader title="Plan de semaine" onBack={onClose} />}
+          scrollClassName="bg-secondary pb-24"
+          footer={
+            <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 pb-[max(1rem,var(--safe-area-bottom))]">
+              {draftSaveStatus !== "idle" && (
+                <p className="text-[12px] text-muted-foreground text-center">
+                  {draftSaveStatus === "saving" ? "Sauvegarde…" : "Brouillon sauvegardé"}
+                </p>
+              )}
+              {totalSessionsCount > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <span className="text-[13px] text-muted-foreground">
+                    {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} →{" "}
+                    {targetAthletes.length > 0
+                      ? `${targetAthletes.length} athlète${targetAthletes.length > 1 ? "s" : ""}`
+                      : groupsWithPlans
+                          .map((id) =>
+                            id === "club"
+                              ? `Club (${members.length})`
+                              : `${groups.find((g) => g.id === id)?.name} (${groups.find((g) => g.id === id)?.memberIds.length || 0})`
+                          )
+                          .join(", ")}
+                  </span>
+                </div>
+              )}
+              {activeGroupId === "club" && targetAthletes.length === 0 && totalSessionsCount > 0 && (
+                <p className="text-center text-[12px] text-destructive">
+                  Sélectionnez un groupe ou un athlète pour envoyer
+                </p>
+              )}
+              <Button
+                className="h-12 w-full rounded-xl text-[17px] font-semibold"
+                onClick={handleSendPlan}
+                disabled={
+                  totalSessionsCount === 0 ||
+                  sending ||
+                  (activeGroupId === "club" && targetAthletes.length === 0)
+                }
+              >
+                {sending ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-5 w-5" />
+                )}
+                {sentAt ? "Renvoyer" : "Envoyer"}{" "}
+                {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
+              </Button>
+            </div>
+          }
+        >
           {/* ── Week navigator — hero card ── */}
           <div className="mt-4 mb-3 px-4">
             <div className="ios-card overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
@@ -1244,47 +1294,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           >
             <Plus className="h-7 w-7" />
           </button>
-        </div>
-
-        {/* ── Fixed footer ── */}
-        <div className="shrink-0 space-y-3 border-t border-border bg-card px-5 py-4 pb-[max(1rem,var(--safe-area-bottom))]">
-          {/* Draft save status */}
-          {draftSaveStatus !== "idle" && (
-            <p className="text-[12px] text-muted-foreground text-center">
-              {draftSaveStatus === "saving" ? "Sauvegarde…" : "Brouillon sauvegardé"}
-            </p>
-          )}
-          {totalSessionsCount > 0 && (
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              <span className="text-[13px] text-muted-foreground">
-                {totalSessionsCount} séance{totalSessionsCount > 1 ? "s" : ""} → {
-                  targetAthletes.length > 0
-                    ? `${targetAthletes.length} athlète${targetAthletes.length > 1 ? "s" : ""}`
-                    : groupsWithPlans.map(id =>
-                        id === "club" ? `Club (${members.length})` : `${groups.find(g => g.id === id)?.name} (${groups.find(g => g.id === id)?.memberIds.length || 0})`
-                      ).join(", ")
-                }
-              </span>
-            </div>
-          )}
-          {activeGroupId === "club" && targetAthletes.length === 0 && totalSessionsCount > 0 && (
-            <p className="text-[12px] text-destructive text-center">
-              Sélectionnez un groupe ou un athlète pour envoyer
-            </p>
-          )}
-          <Button
-            className="w-full h-12 text-[17px] font-semibold rounded-xl"
-            onClick={handleSendPlan}
-            disabled={totalSessionsCount === 0 || sending || (activeGroupId === "club" && targetAthletes.length === 0)}
-          >
-            {sending ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5 mr-2" />
-            )}
-            {sentAt ? "Renvoyer" : "Envoyer"} {totalSessionsCount > 0 ? `${totalSessionsCount} séances` : "le plan"}
-          </Button>
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

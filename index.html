@@ -71,16 +71,7 @@
       });
     </script>
     
-    <!-- Anti scroll-jump on iOS input focus -->
-    <script>
-      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-        document.addEventListener('focusin', function(e) {
-          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
-            setTimeout(function() { window.scrollTo(0, 0); }, 50);
-          }
-        });
-      }
-    </script>
+    <!-- Pas de window.scrollTo sur focus : ça combat le scroll interne des pages et fait bouger la barre titre (voir IosFixedPageHeaderShell). -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

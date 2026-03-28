@@ -9,6 +9,7 @@ import { OnlineStatus } from "@/components/OnlineStatus";
 import { ChevronLeft, Search, MessageCircle, Users, ChevronRight, X, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 interface Profile {
   user_id: string;
@@ -326,20 +327,24 @@ export const NewConversationView = ({
   return (
     <div className="fixed inset-0 z-50 bg-secondary">
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* iOS Header */}
-        <div className="flex-shrink-0 bg-card border-b border-border min-h-[60px] flex items-center justify-center relative px-4">
-          <button
-            onClick={onBack}
-            className="absolute left-4 flex items-center gap-1 text-primary active:opacity-70"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-[17px]">Retour</span>
-          </button>
-          <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto scroll-momentum overscroll-y-contain">
-          <div className="p-4 space-y-6">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0 border-b border-border bg-card"
+          header={
+            <div className="relative flex min-h-[60px] items-center justify-center px-4">
+              <button
+                onClick={onBack}
+                className="absolute left-4 flex items-center gap-1 text-primary active:opacity-70"
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+              <h1 className="text-[17px] font-semibold text-foreground">Nouveau message</h1>
+            </div>
+          }
+          scrollClassName="scroll-momentum overscroll-y-contain"
+        >
+          <div className="space-y-6 p-4">
             {/* Quick Suggestions - Recent Friends Carousel */}
             {recentFriends.length > 0 && !searchQuery.trim() && (
               <motion.div
@@ -547,7 +552,7 @@ export const NewConversationView = ({
               </div>
             </motion.div>
           </div>
-        </div>
+        </IosFixedPageHeaderShell>
       </div>
 
       {selectedPreviewUserId && (

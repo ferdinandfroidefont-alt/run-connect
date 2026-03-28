@@ -19,12 +19,14 @@ import {
   AuthFlowProgress,
   AuthLegalFooter,
   authCardShadowStyle,
-  authFormScrollClass,
 } from "@/components/auth/AuthChrome";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
+
+const AUTH_FORM_VIEWS = new Set<AuthView>(['email-signin-form', 'email-signup', 'otp', 'reset']);
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -740,15 +742,34 @@ const Auth = () => {
   // ██  EMAIL SIGNIN FORM VIEW  ██
   // ══════════════════════════════════════════════
   const renderEmailSigninForm = () => (
-    <div className={authFormScrollClass}>
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-2">
-        <button type="button" onClick={() => { setView('email-signin'); setCaptchaToken(null); captchaRef.current?.resetCaptcha(); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <h2 className="text-[20px] font-bold text-foreground">Connexion par e-mail</h2>
-      </div>
-
+    <IosFixedPageHeaderShell
+      className="h-full min-h-0"
+      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      header={
+        <>
+          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div className="h-2" />
+          </div>
+          <div className="px-4 pb-3 pt-6">
+            <div className="mb-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setView("email-signin");
+                  setCaptchaToken(null);
+                  captchaRef.current?.resetCaptcha();
+                }}
+                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+              >
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <h2 className="text-[20px] font-bold text-foreground">Connexion par e-mail</h2>
+            </div>
+          </div>
+        </>
+      }
+    >
+      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
       {/* Password signin */}
       <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border">
@@ -872,32 +893,44 @@ const Auth = () => {
       >
         Problème de connexion ? Nettoyer la session
       </button>
-    </div>
+      </div>
+    </IosFixedPageHeaderShell>
   );
 
   // ══════════════════════════════════════════════
   // ██  EMAIL SIGNUP VIEW  ██
   // ══════════════════════════════════════════════
   const renderEmailSignup = () => (
-    <div className={authFormScrollClass}>
-      <AuthFlowProgress current={1} total={2} />
-      {/* Header */}
-      <div className="mb-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setView('landing');
-            setCaptchaToken(null);
-            setAcceptSignupTerms(false);
-            captchaRef.current?.resetCaptcha();
-          }}
-          className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-        >
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
-      </div>
-
+    <IosFixedPageHeaderShell
+      className="h-full min-h-0"
+      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      header={
+        <>
+          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div className="h-2" />
+          </div>
+          <div className="space-y-5 px-4 pb-3 pt-6">
+            <AuthFlowProgress current={1} total={2} />
+            <div className="mb-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setView("landing");
+                  setCaptchaToken(null);
+                  setAcceptSignupTerms(false);
+                  captchaRef.current?.resetCaptcha();
+                }}
+                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+              >
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <h2 className="text-[20px] font-bold text-foreground">Créer un compte</h2>
+            </div>
+          </div>
+        </>
+      }
+    >
+      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
       <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <form onSubmit={handleEmailSubmit} className="p-4 space-y-3">
           <div className="relative">
@@ -980,29 +1013,42 @@ const Auth = () => {
       >
         Déjà inscrit ? Se connecter
       </button>
-    </div>
+      </div>
+    </IosFixedPageHeaderShell>
   );
 
   // ══════════════════════════════════════════════
   // ██  OTP VIEW  ██
   // ══════════════════════════════════════════════
   const renderOtp = () => (
-    <div className={authFormScrollClass}>
-      {otpBackView === "email-signup" && <AuthFlowProgress current={2} total={2} />}
-      <div className="mb-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            setView(otpBackView);
-            setOtp("");
-          }}
-          className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
-        >
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <h2 className="text-[20px] font-bold text-foreground">Vérification</h2>
-      </div>
-
+    <IosFixedPageHeaderShell
+      className="h-full min-h-0"
+      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      header={
+        <>
+          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div className="h-2" />
+          </div>
+          <div className="space-y-5 px-4 pb-3 pt-6">
+            {otpBackView === "email-signup" && <AuthFlowProgress current={2} total={2} />}
+            <div className="mb-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setView(otpBackView);
+                  setOtp("");
+                }}
+                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+              >
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <h2 className="text-[20px] font-bold text-foreground">Vérification</h2>
+            </div>
+          </div>
+        </>
+      }
+    >
+      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
       <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border text-center">
           <p className="text-[13px] text-muted-foreground mt-1">
@@ -1036,21 +1082,41 @@ const Auth = () => {
           <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
         </button>
       </div>
-    </div>
+      </div>
+    </IosFixedPageHeaderShell>
   );
 
   // ══════════════════════════════════════════════
   // ██  RESET VIEW  ██
   // ══════════════════════════════════════════════
   const renderReset = () => (
-    <div className={authFormScrollClass}>
-      <div className="flex items-center gap-3 mb-2">
-        <button type="button" onClick={() => { setView('landing'); window.history.replaceState({}, '', '/auth'); }} className="p-2 -ml-2 rounded-full active:bg-secondary transition-colors">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <h2 className="text-[20px] font-bold text-foreground">Réinitialiser</h2>
-      </div>
-
+    <IosFixedPageHeaderShell
+      className="h-full min-h-0"
+      headerWrapperClassName="shrink-0 border-b border-border bg-background"
+      header={
+        <>
+          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div className="h-2" />
+          </div>
+          <div className="px-4 pb-3 pt-6">
+            <div className="mb-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setView("landing");
+                  window.history.replaceState({}, "", "/auth");
+                }}
+                className="-ml-2 rounded-full p-2 transition-colors active:bg-secondary"
+              >
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <h2 className="text-[20px] font-bold text-foreground">Réinitialiser</h2>
+            </div>
+          </div>
+        </>
+      }
+    >
+      <div className="space-y-5 px-4 pb-[max(4rem,calc(1.5rem+env(safe-area-inset-bottom)))] pt-2">
       <div className="bg-card rounded-[14px] overflow-hidden" style={authCardShadowStyle}>
         <div className="px-4 py-3 border-b border-border">
           <p className="text-[13px] text-muted-foreground font-medium">Nouveau mot de passe</p>
@@ -1092,7 +1158,8 @@ const Auth = () => {
           </Button>
         </form>
       </div>
-    </div>
+      </div>
+    </IosFixedPageHeaderShell>
   );
 
   // ══════════════════════════════════════════════
@@ -1100,24 +1167,30 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
-      {/* Scrollable content — no header bar on landing for cleaner look */}
-      {view !== 'landing' && view !== 'email-signin' && (
-        <div
-          className="shrink-0 border-b border-border bg-background"
-          style={{ zIndex: 10, paddingTop: 'env(safe-area-inset-top, 0px)' }}
-        >
-          <div className="h-2" />
+      {AUTH_FORM_VIEWS.has(view) ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {view === "email-signin-form" && renderEmailSigninForm()}
+          {view === "email-signup" && renderEmailSignup()}
+          {view === "otp" && renderOtp()}
+          {view === "reset" && renderReset()}
         </div>
-      )}
+      ) : (
+        <>
+          {view !== "landing" && view !== "email-signin" && (
+            <div
+              className="shrink-0 border-b border-border bg-background"
+              style={{ zIndex: 10, paddingTop: "env(safe-area-inset-top, 0px)" }}
+            >
+              <div className="h-2" />
+            </div>
+          )}
 
-      <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {view === 'landing' && renderLanding()}
-        {view === 'email-signin' && renderEmailSignin()}
-        {view === 'email-signin-form' && renderEmailSigninForm()}
-        {view === 'email-signup' && renderEmailSignup()}
-        {view === 'otp' && renderOtp()}
-        {view === 'reset' && renderReset()}
-      </div>
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+            {view === "landing" && renderLanding()}
+            {view === "email-signin" && renderEmailSignin()}
+          </div>
+        </>
+      )}
 
       <ProfileSetupDialog
         open={showProfileSetup}

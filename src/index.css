@@ -526,6 +526,28 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+/**
+ * Barre interne (Retour / titre) : ancrage haut sur iPhone quand le clavier réduit la hauteur —
+ * appliqué via `IosFixedPageHeaderShell` (détection iOS en JS), sans toucher aux barres système.
+ */
+.ios-internal-header-pinned {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 35;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+/* Zone scroll sous header épinglé (évite saut d’ancrage vue clavier). */
+.ios-keyboard-scroll-body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
+}
+
 /* Mobile keyboard handling */
 @supports (-webkit-touch-callout: none) {
   input, textarea, select {

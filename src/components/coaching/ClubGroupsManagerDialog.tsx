@@ -1,5 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { ClubGroupsManager } from "./ClubGroupsManager";
 
 interface ClubGroupsManagerDialogProps {
@@ -11,12 +12,15 @@ interface ClubGroupsManagerDialogProps {
 export const ClubGroupsManagerDialog = ({ isOpen, onClose, clubId }: ClubGroupsManagerDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        <CoachingFullscreenHeader title="Groupes" onBack={onClose} />
-
-        <div className="flex-1 overflow-y-auto bg-secondary py-4 [-webkit-overflow-scrolling:touch]">
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={<CoachingFullscreenHeader title="Groupes" onBack={onClose} />}
+          scrollClassName="bg-secondary py-4"
+        >
           <ClubGroupsManager clubId={clubId} />
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

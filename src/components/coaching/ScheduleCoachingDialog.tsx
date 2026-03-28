@@ -15,6 +15,7 @@ import { parseRCC, rccToSessionBlocks, mergeParsedBlocksByIndex, type RCCResult,
 import { ACTIVITY_TYPES } from "@/components/session-creation/types";
 import { LocationPickerMap } from "./LocationPickerMap";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { MapPin, Calendar, Clock, Send, Map } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -202,10 +203,29 @@ export const ScheduleCoachingDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 p-0">
-        <CoachingFullscreenHeader title="Programmer ma séance" onBack={onClose} />
-
-        <div className="min-h-0 flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={<CoachingFullscreenHeader title="Programmer ma séance" onBack={onClose} />}
+          scrollClassName="bg-secondary px-4 py-4"
+          footer={
+            <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
+              <Button
+                onClick={handleSchedule}
+                disabled={loading || !scheduledAt || !locationName.trim()}
+                className="h-11 w-full rounded-xl"
+              >
+                {loading ? "Publication..." : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Publier ma séance
+                  </>
+                )}
+              </Button>
+            </div>
+          }
+        >
           <div className="space-y-4">
             {session.coach_notes ? (
               <div className="ios-card rounded-xl border border-primary/25 bg-primary/10 p-4 shadow-[var(--shadow-card)]">
@@ -321,22 +341,7 @@ export const ScheduleCoachingDialog = ({
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
-          <Button
-            onClick={handleSchedule}
-            disabled={loading || !scheduledAt || !locationName.trim()}
-            className="h-11 w-full rounded-xl"
-          >
-            {loading ? "Publication..." : (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Publier ma séance
-              </>
-            )}
-          </Button>
-        </div>
+        </IosFixedPageHeaderShell>
 
         <LocationPickerMap
           isOpen={showMapPicker}

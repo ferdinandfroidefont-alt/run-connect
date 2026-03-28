@@ -17,6 +17,7 @@ import { RCCEditor } from "./RCCEditor";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import {
   rccToSessionBlocks,
   mergeParsedBlocksByIndex,
@@ -279,18 +280,35 @@ export const CreateCoachingSessionDialog = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 p-0">
-          <CoachingFullscreenHeader
-            title="Nouvelle séance"
-            onBack={onClose}
-            rightSlot={
-              <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
-                {dateLabel}
-              </span>
+        <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            headerWrapperClassName="shrink-0"
+            header={
+              <CoachingFullscreenHeader
+                title="Nouvelle séance"
+                onBack={onClose}
+                rightSlot={
+                  <span className="max-w-[min(120px,32vw)] truncate text-right text-xs capitalize text-muted-foreground">
+                    {dateLabel}
+                  </span>
+                }
+              />
             }
-          />
-
-          <div className="min-h-0 flex-1 overflow-y-auto bg-secondary [-webkit-overflow-scrolling:touch] px-4 py-4">
+            scrollClassName="bg-secondary px-4 py-4"
+            footer={
+              <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
+                <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="h-11 w-full rounded-xl">
+                  {loading ? "Envoi..." : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Envoyer la séance
+                    </>
+                  )}
+                </Button>
+              </div>
+            }
+          >
             <div className="space-y-4">
               <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
                 <div className="grid grid-cols-2 gap-3">
@@ -458,18 +476,7 @@ export const CreateCoachingSessionDialog = ({
                 </div>
               ) : null}
             </div>
-          </div>
-
-          <div className="shrink-0 border-t border-border bg-card px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))]">
-            <Button onClick={handleSubmit} disabled={loading || !canSubmit} className="h-11 w-full rounded-xl">
-              {loading ? "Envoi..." : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Envoyer la séance
-                </>
-              )}
-            </Button>
-          </div>
+          </IosFixedPageHeaderShell>
         </DialogContent>
       </Dialog>
 

@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
@@ -1725,9 +1726,12 @@ const Messages = () => {
     return (
       <>
         <div className="h-full min-h-0 flex flex-col bg-secondary">
-        <div className="max-w-md mx-auto w-full flex flex-col flex-1 min-h-0 keyboard-aware-container">
-          {/* iMessage Style Header — seul bandeau top safe (évite double avec la status bar native) */}
-          <div className="shrink-0 bg-card border-b border-border/50 z-50 pt-[var(--safe-area-top)]">
+        <div className="max-w-md mx-auto flex min-h-0 w-full flex-1 flex-col">
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            headerWrapperClassName="z-50 bg-card border-b border-border/50"
+            header={
+            <div className="pt-[var(--safe-area-top)]">
             <div className="flex items-center px-ios-2 py-ios-2">
               {/* Back button - Left */}
               <Button
@@ -1877,10 +1881,10 @@ const Messages = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-
-          {/* Messages - iMessage style scrollable area */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+            </div>
+            }
+            scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          >
             <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
               {messages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
@@ -2184,7 +2188,7 @@ const Messages = () => {
               
               <div ref={messagesEndRef} />
             </div>
-          </div>
+          </IosFixedPageHeaderShell>
 
           {/* Delete Confirmation Dialog */}
           <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -2559,8 +2563,11 @@ const Messages = () => {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
-        {/* iOS Header */}
-        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="z-50 border-b border-border bg-card"
+          header={
+          <div className="pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
             {isSelectionMode ? (
               <>
@@ -2601,9 +2608,9 @@ const Messages = () => {
               </>
             )}
           </div>
-        </div>
-
-        <div className="ios-scroll-region">
+          </div>
+          }
+        >
         <div className="space-y-ios-3 pb-ios-2">
           {/* Quick Search Buttons */}
           <div className="ios-card p-ios-3">
@@ -2872,7 +2879,7 @@ const Messages = () => {
             )}
           </div>
         </div>
-        </div>
+        </IosFixedPageHeaderShell>
 
         {/* Create Club Dialog */}
         <Suspense fallback={null}>

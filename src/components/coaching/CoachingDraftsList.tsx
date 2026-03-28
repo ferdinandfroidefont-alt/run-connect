@@ -5,6 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatDistanceToNow } from "date-fns";
@@ -75,10 +76,13 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-        <CoachingFullscreenHeader title="Brouillons" onBack={onClose} />
-
-        <div className="flex-1 space-y-3 overflow-y-auto bg-secondary px-4 py-4 [-webkit-overflow-scrolling:touch]">
+      <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="shrink-0"
+          header={<CoachingFullscreenHeader title="Brouillons" onBack={onClose} />}
+          scrollClassName="space-y-3 bg-secondary px-4 py-4"
+        >
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -145,7 +149,7 @@ export const CoachingDraftsList = ({ isOpen, onClose, clubId, onOpenDraft }: Coa
             <Plus className="h-4 w-4" />
             Nouveau plan hebdo
           </button>
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { WeeklyTrackingView } from "./WeeklyTrackingView";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
 
@@ -42,13 +43,18 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent fullScreen hideCloseButton className="flex flex-col p-0 gap-0">
-          <CoachingFullscreenHeader
-            title={selectedAthleteId ? "Fiche athlète" : "Suivi équipe"}
-            onBack={handleBack}
-          />
-
-          <div className="flex-1 overflow-y-auto bg-secondary px-0 py-4 [-webkit-overflow-scrolling:touch]">
+        <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            headerWrapperClassName="shrink-0"
+            header={
+              <CoachingFullscreenHeader
+                title={selectedAthleteId ? "Fiche athlète" : "Suivi équipe"}
+                onBack={handleBack}
+              />
+            }
+            scrollClassName="bg-secondary px-0 py-4"
+          >
             <WeeklyTrackingView
               clubId={clubId}
               onClose={onClose}
@@ -56,7 +62,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
               onSelectAthlete={setSelectedAthleteId}
               onOpenPlanForAthlete={handleOpenPlanForAthlete}
             />
-          </div>
+          </IosFixedPageHeaderShell>
         </DialogContent>
       </Dialog>
 

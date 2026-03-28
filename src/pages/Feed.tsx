@@ -12,6 +12,7 @@ import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 
 export default function Feed() {
   const navigate = useNavigate();
@@ -118,31 +119,36 @@ export default function Feed() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-feed">
-      <FeedHeader
-        onSearch={() => navigate('/search')}
-        onProfileClick={() => setShowProfileDialog(true)}
-        mode={mode}
-        onModeChange={setMode}
-      />
-
-      {mode === 'discover' && (
-        <DiscoverFilters
-          maxDistance={maxDistance}
-          setMaxDistance={setMaxDistance}
-          selectedActivities={selectedActivities}
-          toggleActivity={toggleActivity}
-          toggleAllActivities={toggleAllActivities}
-        />
-      )}
-
-      {mode === 'friends' && <div className="h-px shrink-0 bg-border" />}
-
-      <div
-        ref={scrollContainerRef}
-        className="ios-scroll-region"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+      <IosFixedPageHeaderShell
+        className="min-h-0 flex-1"
+        headerWrapperClassName="z-20 bg-secondary"
+        header={
+          <>
+            <FeedHeader
+              onSearch={() => navigate('/search')}
+              onProfileClick={() => setShowProfileDialog(true)}
+              mode={mode}
+              onModeChange={setMode}
+            />
+            {mode === 'discover' && (
+              <DiscoverFilters
+                maxDistance={maxDistance}
+                setMaxDistance={setMaxDistance}
+                selectedActivities={selectedActivities}
+                toggleActivity={toggleActivity}
+                toggleAllActivities={toggleAllActivities}
+              />
+            )}
+            {mode === 'friends' && <div className="h-px shrink-0 bg-border" />}
+          </>
+        }
+        scrollRef={scrollContainerRef}
+        scrollClassName="ios-scroll-region"
+        scrollProps={{
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd,
+        }}
       >
         {(pullDistance > 0 || isRefreshing) && (
           <div className="flex justify-center overflow-hidden transition-all" style={{ height: isRefreshing ? 40 : pullDistance * 0.5 }}>
@@ -255,7 +261,7 @@ export default function Feed() {
           </>
         )}
         </div>
-      </div>
+      </IosFixedPageHeaderShell>
 
       <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 

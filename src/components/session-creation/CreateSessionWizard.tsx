@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
@@ -455,33 +456,34 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[90vh] rounded-none sm:rounded-lg p-0 overflow-hidden flex flex-col border-0 sm:border bg-secondary">
-        {/* iOS Header */}
-        <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
-          <div className="flex items-center justify-between px-4 py-3">
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1 text-primary"
-            >
-              <X className="h-5 w-5" />
-              <span className="text-[17px]">Fermer</span>
-            </button>
-            <h1 className="text-[17px] font-semibold text-foreground">
-              {isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'}
-            </h1>
-            <div className="w-16" />
+      <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
+          header={
+            <>
+              <div className="flex items-center justify-between px-4 py-3">
+                <button
+                  onClick={onClose}
+                  className="flex items-center gap-1 text-primary"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="text-[17px]">Fermer</span>
+                </button>
+                <h1 className="text-[17px] font-semibold text-foreground">
+                  {isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'}
+                </h1>
+                <div className="w-16" />
+              </div>
+              <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
+            </>
+          }
+          scrollClassName="bg-secondary"
+        >
+          <div className="overflow-x-hidden px-4 pb-4">
+            <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
           </div>
-        </div>
-        
-        {/* Progress indicator */}
-        <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
-
-        {/* Step content */}
-        <div className="flex-1 overflow-hidden overflow-x-hidden px-4 pb-4">
-          <AnimatePresence mode="wait">
-            {renderStep()}
-          </AnimatePresence>
-        </div>
+        </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>
   );

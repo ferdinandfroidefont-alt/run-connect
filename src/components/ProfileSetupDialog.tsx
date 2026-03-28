@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -656,25 +656,27 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         }}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="flex h-full min-h-0 flex-col">
-          {/* iOS Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex h-14 items-center justify-between px-4">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => void handleGoToSignIn()}
-                className="text-[15px] text-primary"
-              >
-                {t('profileSetup.headerAlreadySignedIn')}
-              </Button>
-              <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
-              <div className="w-20" />
+        <IosFixedPageHeaderShell
+          className="h-full min-h-0"
+          headerWrapperClassName="z-40 border-b border-border bg-card"
+          header={
+            <div className="pt-[env(safe-area-inset-top,0px)]">
+              <div className="flex h-14 items-center justify-between px-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleGoToSignIn()}
+                  className="text-[15px] text-primary"
+                >
+                  {t('profileSetup.headerAlreadySignedIn')}
+                </Button>
+                <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
+                <div className="w-20" />
+              </div>
             </div>
-          </div>
-
-          <ScrollArea className="min-h-0 flex-1">
+          }
+        >
             <form onSubmit={handleSubmit} className="space-y-6 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
@@ -962,8 +964,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
 
               <p className="text-center text-[12px] leading-snug text-muted-foreground">{t('profileSetup.requiredFootnote')}</p>
             </form>
-          </ScrollArea>
-        </div>
+        </IosFixedPageHeaderShell>
 
         <ImageCropEditor
           open={showCropEditor}
