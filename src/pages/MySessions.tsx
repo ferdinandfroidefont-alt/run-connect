@@ -1,7 +1,7 @@
 import { RouteCard } from '@/components/RouteCard';
 import { RoutesFeedFilters } from '@/components/routes-feed/RoutesFeedFilters';
 import { RoutesFeedCard } from '@/components/routes-feed/RoutesFeedCard';
-import { lazy, Suspense, useState, useEffect, useRef, useCallback } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRoutesFeed, FeedRoute } from '@/hooks/useRoutesFeed';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
+import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 const RouteDetailDialog = lazy(() =>
@@ -155,6 +156,7 @@ export default function MySessions() {
   const [showRouteDeleteConfirm, setShowRouteDeleteConfirm] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
+  const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const SESSIONS_PER_PAGE = 3;
 
 
@@ -1139,11 +1141,11 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : filteredSessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center px-ios-6 py-[5rem] text-center">
-                  <div className="mb-ios-6 p-ios-6 bg-secondary rounded-full">
+                <div className={emptyStateSx.shell}>
+                  <div className={emptyStateSx.iconCircle}>
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                   </div>
-                  <div className="space-y-ios-2 mb-ios-6">
+                  <div className={emptyStateSx.textBlock}>
                     <h3 className="text-ios-title3 font-semibold text-foreground">
                       {sessionSource === 'created' ? 'Aucune séance créée' : 'Aucune séance rejointe'}
                     </h3>

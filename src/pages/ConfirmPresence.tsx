@@ -45,21 +45,24 @@ export default function ConfirmPresence() {
         title: t('confirmPresence.creator'),
         description: t('confirmPresence.creatorDescription'),
         icon: UserCheck,
-        iconTone: 'bg-primary/10 text-primary',
+        iconBg: 'bg-primary',
+        iconClass: 'h-[18px] w-[18px] text-primary-foreground',
       },
       {
         role: 'participant' as const,
         title: t('confirmPresence.participant'),
         description: t('confirmPresence.participantDescription'),
         icon: Users,
-        iconTone: 'bg-blue-500/10 text-blue-500',
+        iconBg: 'bg-[#007AFF]',
+        iconClass: 'h-[18px] w-[18px] text-white',
       },
       {
         role: 'tracking' as const,
         title: 'Suivre les participants',
         description: 'Voir en temps réel où se trouvent les autres sur la carte',
         icon: MapPin,
-        iconTone: 'bg-primary/10 text-primary',
+        iconBg: 'bg-[#34C759]',
+        iconClass: 'h-[18px] w-[18px] text-white',
       },
     ],
     [t]
@@ -285,7 +288,7 @@ export default function ConfirmPresence() {
   };
 
   return (
-    <div className="fixed-fill-with-bottom-nav bg-secondary flex min-h-0 flex-col overflow-x-hidden z-0">
+    <div className="fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary">
       {/* iOS Header */}
       <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
@@ -304,33 +307,36 @@ export default function ConfirmPresence() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content : hauteur utile = espace entre header et bas (tab bar déjà hors du fixed-fill) */}
       <div
         className={cn(
-          'flex min-h-0 flex-1 flex-col',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden',
           !roleChoice && !loading
-            ? 'overflow-hidden px-ios-4 pb-ios-4 pt-ios-2'
-            : 'overflow-y-auto p-4 pb-ios-4',
+            ? 'overflow-hidden px-ios-4 pb-0 pt-0'
+            : 'overflow-y-auto px-ios-4 pb-0 pt-0',
         )}
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehaviorX: 'none',
+        }}
       >
         {loading ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-ios-4">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 py-ios-4">
             <div className="ios-card flex w-full max-w-sm flex-col items-center justify-center gap-3 border border-border p-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-[15px] text-muted-foreground">Chargement...</p>
             </div>
           </div>
         ) : !roleChoice ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-            <div className="w-full max-w-md">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-md flex-1 flex-col">
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
-                className="h-[min(68vh,560px)] snap-y snap-mandatory overflow-y-auto px-0 py-[22vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="min-h-0 w-full min-w-0 flex-1 snap-y snap-mandatory overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain touch-pan-y py-[min(22vh,7.5rem)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
-                <div className="space-y-3">
+                <div className="mx-auto w-full min-w-0 max-w-full space-y-3">
                   {repeatedRoleCards.map((card, idx) => {
                     const Icon = card.icon;
                     const isFocused = focusedCardIndex === idx;
@@ -341,14 +347,14 @@ export default function ConfirmPresence() {
                         type="button"
                         onClick={() => handleRoleChoice(card.role)}
                         className={cn(
-                          'ios-card snap-center flex min-h-[148px] w-full items-center gap-ios-3 border border-border/60 px-ios-4 py-ios-3 text-left transition-all duration-200',
+                          'ios-card mx-auto flex min-h-[148px] w-full min-w-0 max-w-full origin-center snap-center items-center gap-ios-3 border border-border/60 px-ios-4 py-ios-3 text-left transition-all duration-200 ease-out will-change-transform',
                           isFocused
                             ? 'scale-[1.01] bg-card shadow-[0_12px_34px_-18px_rgba(0,0,0,0.45)]'
                             : 'scale-[0.97] bg-card/88 opacity-75'
                         )}
                       >
-                        <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px]', card.iconTone)}>
-                          <Icon className="h-7 w-7" />
+                        <div className={cn('ios-list-row-icon shrink-0', card.iconBg)}>
+                          <Icon className={card.iconClass} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <h2 className="text-[17px] font-semibold leading-tight text-foreground">{card.title}</h2>
@@ -364,7 +370,7 @@ export default function ConfirmPresence() {
           </div>
         ) : !selectedSession ? (
           // Session selection screen - iOS Style
-          <div className="space-y-4">
+          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-0">
             {sessions.length === 0 ? (
               <div className="ios-card p-8 text-center">
                 <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
@@ -403,14 +409,14 @@ export default function ConfirmPresence() {
           </div>
         ) : (
           // Validation view
-          <div className="space-y-4">
+          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-0">
             {/* Track participants button */}
             <button
               onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
-              className="ios-card flex w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
+              className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"
             >
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-primary" />
+              <div className="ios-list-row-icon shrink-0 bg-[#FF9500]">
+                <MapPin className="h-[18px] w-[18px] text-white" />
               </div>
               <div className="flex-1 text-left">
                 <p className="text-[15px] font-medium text-foreground">

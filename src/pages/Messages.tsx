@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useTransition } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
@@ -226,7 +227,8 @@ const Messages = () => {
     const saved = localStorage.getItem('pinnedConversations');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
-  
+  const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+
   const isLoading = loading || cameraLoading;
 
   const scrollToBottom = () => {
@@ -2681,11 +2683,11 @@ const Messages = () => {
           {/* Conversations List */}
           <div className={conversations.length === 0 ? "ios-card overflow-hidden" : "ios-list-stack"}>
             {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-ios-6 py-[5rem] text-center">
-                <div className="mb-ios-6 p-ios-6 bg-secondary rounded-full">
+              <div className={emptyStateSx.shell}>
+                <div className={emptyStateSx.iconCircle}>
                   <MessageCircle className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <div className="space-y-ios-2 mb-ios-6">
+                <div className={emptyStateSx.textBlock}>
                   <h3 className="text-ios-title3 font-semibold text-foreground">
                     Aucune conversation
                   </h3>
