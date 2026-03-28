@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { format } from "date-fns";
+import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { ElevationProfile } from './ElevationProfile';
@@ -252,6 +252,7 @@ export const InteractiveMap = ({
     avatar_url: string | null;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const homeMapFiltersRef = useRef<HTMLDivElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -317,6 +318,20 @@ export const InteractiveMap = ({
     };
     void loadClubFilters();
   }, [user?.id]);
+
+  /** Un seul panneau ouvert + fermeture au clic extérieur (hors carrousel / panneau filtres). */
+  useEffect(() => {
+    if (!expandedFilter) return;
+    const close = (e: Event) => {
+      const el = homeMapFiltersRef.current;
+      const t = e.target;
+      if (el && t instanceof Node && !el.contains(t)) {
+        setExpandedFilter(null);
+      }
+    };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, [expandedFilter]);
 
   const cycleActivity = () => {
     const current = ACTIVITY_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types));
@@ -1515,7 +1530,7 @@ export const InteractiveMap = ({
 
       {/* Header + recherche fusionnés (carrousel filtres en dessous, hors du bloc) — masqué en mode immersif */}
       {!isImmersiveMode && (
-        <div className="absolute left-0 right-0 top-0 z-10 pt-[var(--safe-area-top)]">
+        <div className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
           {/* Un seul panneau : barre d’outils + champ recherche — pas de « double bloc » empilé */}
           <div
             className={cn(
@@ -1634,9 +1649,9 @@ export const InteractiveMap = ({
             </div>
           </div>
 
-          {/* Carrousel de filtres : séparé visuellement, sur le fond carte */}
+          {/* Carrousel de filtres : z-[30] sur le bloc header pour passer au-dessus des FAB carte (z-20). */}
           <div className="px-4 pb-4 pt-3">
-            <div className="space-y-2">
+            <div ref={homeMapFiltersRef} className="relative z-10 space-y-2">
             <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
@@ -1653,9 +1668,19 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
-                  className={cn("ios-chip snap-start", filters.time_slot && "ios-chip-active")}
+                  className={cn(
+                    "ios-chip snap-start",
+                    (expandedFilter === 'time' || filters.time_slot) && "ios-chip-active"
+                  )}
                 >
-                  <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" /> Horaire</span>
+                  <span className="flex min-w-0 max-w-[9rem] items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">
+                      {filters.time_slot
+                        ? (TIME_SLOTS.find((s) => s.id === filters.time_slot)?.label ?? "Horaire")
+                        : "Horaire"}
+                    </span>
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1667,7 +1692,10 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
-                  className={cn("ios-chip snap-start", filters.selected_club_ids.length > 0 && "ios-chip-active")}
+                  className={cn(
+                    "ios-chip snap-start",
+                    (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "ios-chip-active"
+                  )}
                 >
                   <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
                 </button>
@@ -1684,16 +1712,34 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
-                  className={cn("ios-chip snap-start", expandedFilter === 'day' && "ios-chip-active")}
+                  className={cn(
+                    "ios-chip snap-start",
+                    (expandedFilter === 'day' ||
+                      !isSameDay(startOfDay(filters.selected_date), startOfDay(new Date()))) &&
+                      "ios-chip-active"
+                  )}
                 >
-                  <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Jour</span>
+                  <span className="flex min-w-0 max-w-[10rem] items-center gap-1.5">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate capitalize">
+                      {format(filters.selected_date, "EEE d MMM", { locale: fr })}
+                    </span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
-                  className={cn("ios-chip snap-start", filters.level && "ios-chip-active")}
+                  className={cn(
+                    "ios-chip snap-start",
+                    (expandedFilter === 'level' || filters.level != null) && "ios-chip-active"
+                  )}
                 >
-                  <span className="flex items-center gap-1.5"><SlidersHorizontal className="h-3.5 w-3.5" /> Niveau séance</span>
+                  <span className="flex min-w-0 max-w-[8.5rem] items-center gap-1.5">
+                    <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">
+                      {filters.level != null ? `Niv. ${filters.level}` : "Niveau séance"}
+                    </span>
+                  </span>
                 </button>
                 </div>
               </div>
@@ -1707,7 +1753,7 @@ export const InteractiveMap = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  className="ios-card rounded-[16px] border border-black/10 bg-card/98 p-3"
+                  className="ios-card relative z-20 rounded-[16px] border border-black/10 bg-card/98 p-3 shadow-lg"
                 >
                   {expandedFilter === 'time' && (
                     <div className="grid grid-cols-4 gap-2">
@@ -1718,7 +1764,13 @@ export const InteractiveMap = ({
                           <button
                             key={slot.id}
                             type="button"
-                            onClick={() => setFilters((prev) => ({ ...prev, time_slot: prev.time_slot === slot.id ? null : slot.id }))}
+                            onClick={() => {
+                              setFilters((prev) => ({
+                                ...prev,
+                                time_slot: prev.time_slot === slot.id ? null : slot.id,
+                              }));
+                              setExpandedFilter(null);
+                            }}
                             className={cn(
                               "h-12 rounded-xl border text-xs font-medium transition-colors",
                               active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"
@@ -1735,7 +1787,10 @@ export const InteractiveMap = ({
                     <div className="space-y-2">
                       <button
                         type="button"
-                        onClick={() => setFilters((prev) => ({ ...prev, selected_club_ids: [] }))}
+                        onClick={() => {
+                          setFilters((prev) => ({ ...prev, selected_club_ids: [] }));
+                          setExpandedFilter(null);
+                        }}
                         className={cn(
                           "h-9 w-full rounded-xl border text-left px-3 text-xs",
                           filters.selected_club_ids.length === 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"
@@ -1778,7 +1833,11 @@ export const InteractiveMap = ({
                     <CalendarComponent
                       mode="single"
                       selected={filters.selected_date}
-                      onSelect={(date) => date && setFilters((prev) => ({ ...prev, selected_date: date }))}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setFilters((prev) => ({ ...prev, selected_date: date }));
+                        setExpandedFilter(null);
+                      }}
                       initialFocus
                       className="pointer-events-auto p-0"
                     />
@@ -1790,7 +1849,13 @@ export const InteractiveMap = ({
                         <button
                           key={lvl}
                           type="button"
-                          onClick={() => setFilters((prev) => ({ ...prev, level: prev.level === lvl ? null : lvl }))}
+                          onClick={() => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              level: prev.level === lvl ? null : lvl,
+                            }));
+                            setExpandedFilter(null);
+                          }}
                           className={cn(
                             "h-10 rounded-xl border text-sm font-semibold",
                             filters.level === lvl ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"
@@ -1839,7 +1904,7 @@ export const InteractiveMap = ({
         </div>}
 
       {/* All Map Controls - iOS Style */}
-      <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-2 ios-map-bottom-buttons">
+      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
         <MapIosColoredFab
           tone="gray"
           title="Carte plein écran"

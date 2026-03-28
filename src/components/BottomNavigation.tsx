@@ -4,11 +4,10 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-
-const SIDE_COL = '25%';
-const iosEase = [0.32, 0.72, 0, 1] as const;
+/** Rythme horizontal homogène : même valeur que le gap entre les 7 colonnes (bords inclus). */
+const TAB_BAR_RHYTHM = 'gap-2 px-2 sm:gap-2.5 sm:px-2.5';
 
 type NavItem = {
   path: string;
@@ -149,27 +148,24 @@ export const BottomNavigation = () => {
     };
   }, [user, fetchUnreadCount]);
 
-  const goToSet = (targetSet: 0 | 1, direction: 1 | -1) => {
+  const goToSet = (targetSet: 0 | 1) => {
     if (activeSet === targetSet) return;
-    setSlideDirection(direction);
     setActiveSet(targetSet);
   };
 
-  const renderNavButton = (item: NavItem, positionClass = '') => {
+  const renderNavButton = (item: NavItem) => {
     const { path, icon: Icon, label, tutorialId, showUnreadBadge } = item;
     const isActive = item.isActive(pathname);
     const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
 
     return (
       <button
-        key={path}
         type="button"
         onClick={() => navigate(path)}
-        style={{ width: SIDE_COL }}
-        className={`mx-0.5 flex min-h-[48px] min-w-0 flex-col items-center justify-center gap-0 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation ${positionClass}`}
+        className="flex min-h-[48px] w-full max-w-[5.75rem] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl active:scale-[0.96] transition-transform duration-200 ease-out touch-manipulation"
         data-tutorial={tutorialId}
       >
-        <div className="relative">
+        <div className="relative shrink-0">
           <Icon
             className={`h-[26px] w-[26px] transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
             strokeWidth={isActive ? 2.4 : 1.65}
@@ -181,13 +177,22 @@ export const BottomNavigation = () => {
           )}
         </div>
         <span
-          className={`text-[11px] leading-none tracking-tight max-w-[4.5rem] truncate ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground font-medium'}`}
+          className={`w-full truncate text-center text-[11px] leading-none tracking-tight ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground font-medium'}`}
         >
           {label}
         </span>
       </button>
     );
   };
+
+  const renderTabCell = (item: NavItem) => (
+    <div
+      key={item.path}
+      className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center"
+    >
+      {renderNavButton(item)}
+    </div>
+  );
 
   if (hideBottomNav) return null;
 
@@ -201,61 +206,61 @@ export const BottomNavigation = () => {
       aria-label="Navigation principale"
       style={{ paddingBottom: 'var(--safe-area-bottom)' }}
     >
-      <div className="ios-nav-shell relative h-[var(--nav-height)] w-full overflow-hidden pt-0.5">
-        <div className="relative z-0 h-full w-full">
-          <AnimatePresence initial={false} custom={slideDirection} mode="wait">
-            <motion.div
-              key={activeSet}
-              custom={slideDirection}
-              initial={(dir) => ({ x: dir > 0 ? 36 : -36, opacity: 0 })}
-              animate={{ x: 0, opacity: 1 }}
-              exit={(dir) => ({ x: dir > 0 ? -36 : 36, opacity: 0 })}
-              transition={{ duration: 0.24, ease: iosEase }}
-              className="absolute inset-0 flex items-center"
+      <div className="ios-nav-shell relative h-[var(--nav-height)] w-full overflow-x-clip overflow-y-visible pt-0.5">
+        {/*
+          Une seule rangée : 7 zones de même largeur (flex-1 basis-0) = flèche | tab | tab | + | tab | tab | flèche
+          Même gap et padding horizontal → espacement visuellement uniforme jusqu’aux bords.
+        */}
+        <div className={cn('flex h-full w-full items-center', TAB_BAR_RHYTHM)}>
+          <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center">
+            <button
+              type="button"
+              className="flex h-[48px] w-full max-w-[3rem] items-center justify-center rounded-xl touch-manipulation active:scale-[0.94] transition-transform duration-200 ease-out"
+              aria-label={`${hint} — ${t('navigation.home')}`}
+              onClick={() => goToSet(0)}
             >
-              {renderNavButton(currentSetItems[0], 'translate-x-2')}
-              {renderNavButton(currentSetItems[1], 'translate-x-1')}
-              <div className="pointer-events-none mx-0.5 min-w-0 shrink-0" style={{ width: SIDE_COL }} aria-hidden />
-              {renderNavButton(currentSetItems[2], '-translate-x-1')}
-              {renderNavButton(currentSetItems[3], '-translate-x-2')}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              <ChevronLeft
+                className={`h-5 w-5 ${activeSet === 0 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}
+                strokeWidth={2}
+                aria-hidden
+              />
+            </button>
+          </div>
 
-        <div
-          className="pointer-events-none absolute left-1/2 top-0 z-[24] h-full w-[20%] max-w-[5.5rem] -translate-x-1/2 bg-background"
-          aria-hidden
-        />
+          {renderTabCell(currentSetItems[0])}
+          {renderTabCell(currentSetItems[1])}
 
-        <button
-          type="button"
-          className="absolute left-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-start bg-gradient-to-r from-background from-35% to-transparent pl-0.5 touch-manipulation"
-          aria-label={`${hint} — ${t('navigation.home')}`}
-          onClick={() => goToSet(0, -1)}
-        >
-          <ChevronLeft className={`h-5 w-5 drop-shadow-sm ${activeSet === 0 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`} strokeWidth={2} aria-hidden />
-        </button>
-        <button
-          type="button"
-          className="absolute right-0 top-0 bottom-0 z-[26] flex w-7 items-center justify-end bg-gradient-to-l from-background from-35% to-transparent pr-0.5 touch-manipulation"
-          aria-label={`${hint} — ${t('navigation.itinerary')}`}
-          onClick={() => goToSet(1, 1)}
-        >
-          <ChevronRight className={`h-5 w-5 drop-shadow-sm ${activeSet === 1 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`} strokeWidth={2} aria-hidden />
-        </button>
+          <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100));
+              }}
+              className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[1.15rem] bg-primary text-primary-foreground shadow-lg shadow-primary/28 ring-[3px] ring-background transition-all duration-200 ease-out active:scale-[0.94] touch-manipulation dark:ring-background"
+              data-tutorial="create-session"
+              aria-label={t('navigation.createSession')}
+            >
+              <Plus className="h-7 w-7" strokeWidth={2.25} />
+            </button>
+          </div>
 
-        <div className="pointer-events-none absolute inset-0 z-[28] flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => {
-              pathname === '/' ? openCreateSession() : (navigate('/'), setTimeout(openCreateSession, 100));
-            }}
-            className="pointer-events-auto h-[54px] w-[54px] rounded-[1.15rem] bg-primary flex items-center justify-center text-primary-foreground active:scale-[0.94] transition-all duration-200 ease-out shadow-lg shadow-primary/28 ring-[3px] ring-background dark:ring-background touch-manipulation"
-            data-tutorial="create-session"
-            aria-label={t('navigation.createSession')}
-          >
-            <Plus className="h-7 w-7" strokeWidth={2.25} />
-          </button>
+          {renderTabCell(currentSetItems[2])}
+          {renderTabCell(currentSetItems[3])}
+
+          <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-center justify-center">
+            <button
+              type="button"
+              className="flex h-[48px] w-full max-w-[3rem] items-center justify-center rounded-xl touch-manipulation active:scale-[0.94] transition-transform duration-200 ease-out"
+              aria-label={`${hint} — ${t('navigation.itinerary')}`}
+              onClick={() => goToSet(1)}
+            >
+              <ChevronRight
+                className={`h-5 w-5 ${activeSet === 1 ? 'text-muted-foreground/40' : 'text-muted-foreground'}`}
+                strokeWidth={2}
+                aria-hidden
+              />
+            </button>
+          </div>
         </div>
       </div>
     </nav>
