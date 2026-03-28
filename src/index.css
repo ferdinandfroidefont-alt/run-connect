@@ -539,6 +539,8 @@ html, body {
   width: 100%;
   max-width: 100vw;
   box-sizing: border-box;
+  /* Statut / encoche : contenu sous la barre système, ancrage stable dans les modales plein écran */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* Zone scroll sous header épinglé (évite saut d’ancrage vue clavier). */
@@ -622,11 +624,7 @@ html, body {
     bottom: 0.5rem !important;
   }
 
-  /* Anti scroll-jump on input focus */
-  input:focus, textarea:focus, select:focus {
-    transform: translateZ(0);
-  }
-
+  /* font-size 16px suffit contre le zoom focus iOS — translateZ() cassait flex/scroll (ex. Créer une séance). */
 }
 
 /**

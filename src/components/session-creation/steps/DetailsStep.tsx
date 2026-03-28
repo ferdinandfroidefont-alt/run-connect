@@ -99,7 +99,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col h-full"
+      className="flex min-h-0 w-full flex-1 flex-col"
     >
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {/* Title - Always first */}

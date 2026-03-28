@@ -772,7 +772,7 @@ const Auth = () => {
       headerWrapperClassName="shrink-0 border-b border-border bg-background"
       header={
         <>
-          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="border-b border-border bg-background">
             <div className="h-2" />
           </div>
           <div className="px-4 pb-3 pt-6">
@@ -931,7 +931,7 @@ const Auth = () => {
       headerWrapperClassName="shrink-0 border-b border-border bg-background"
       header={
         <>
-          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="border-b border-border bg-background">
             <div className="h-2" />
           </div>
           <div className="space-y-5 px-4 pb-3 pt-6">
@@ -1051,7 +1051,7 @@ const Auth = () => {
       headerWrapperClassName="shrink-0 border-b border-border bg-background"
       header={
         <>
-          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="border-b border-border bg-background">
             <div className="h-2" />
           </div>
           <div className="space-y-5 px-4 pb-3 pt-6">
@@ -1120,7 +1120,7 @@ const Auth = () => {
       headerWrapperClassName="shrink-0 border-b border-border bg-background"
       header={
         <>
-          <div className="border-b border-border bg-background" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="border-b border-border bg-background">
             <div className="h-2" />
           </div>
           <div className="px-4 pb-3 pt-6">

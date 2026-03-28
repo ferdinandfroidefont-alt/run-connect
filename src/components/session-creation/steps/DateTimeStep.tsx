@@ -69,7 +69,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col h-full"
+      className="flex min-h-0 w-full flex-1 flex-col"
     >
       {/* Header */}
       <div className="text-center mb-6">

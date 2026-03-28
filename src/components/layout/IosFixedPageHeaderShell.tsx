@@ -89,7 +89,11 @@ export function IosFixedPageHeaderShell({
 
       {contentScroll ? (
         <div
-          className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", scrollClassName, scrollPropClass)}
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            scrollClassName,
+            scrollPropClass
+          )}
           style={{ ...padStyle, ...scrollPropStyle }}
           {...restScroll}
         >
@@ -99,7 +103,7 @@ export function IosFixedPageHeaderShell({
         <div
           ref={localScrollRef}
           className={cn(
-            "ios-keyboard-scroll-body min-h-0 flex-1 overflow-y-auto overflow-x-hidden",
+            "ios-keyboard-scroll-body flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden",
             !pin && "ios-scroll-region",
             scrollClassName,
             scrollPropClass

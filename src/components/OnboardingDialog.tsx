@@ -113,7 +113,7 @@ export const OnboardingDialog = ({ isOpen, onComplete }: OnboardingDialogProps) 
           contentScroll
           scrollClassName="min-h-0 bg-secondary"
           header={
-            <div className="border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="border-b border-border bg-card">
               <div className="flex h-14 items-center justify-between px-4">
                 {step > 0 ? (
                   <Button

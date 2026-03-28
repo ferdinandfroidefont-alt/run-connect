@@ -672,20 +672,18 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           className="h-full min-h-0"
           headerWrapperClassName="z-40 border-b border-border bg-card"
           header={
-            <div className="pt-[env(safe-area-inset-top,0px)]">
-              <div className="flex h-14 items-center justify-between px-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void handleGoToSignIn()}
-                  className="text-[15px] text-primary"
-                >
-                  {t('profileSetup.headerAlreadySignedIn')}
-                </Button>
-                <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
-                <div className="w-20" />
-              </div>
+            <div className="flex h-14 items-center justify-between px-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void handleGoToSignIn()}
+                className="text-[15px] text-primary"
+              >
+                {t('profileSetup.headerAlreadySignedIn')}
+              </Button>
+              <h1 className="text-[17px] font-semibold">{t('profileSetup.headerTitle')}</h1>
+              <div className="w-20" />
             </div>
           }
         >

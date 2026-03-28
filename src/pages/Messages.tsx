@@ -1733,7 +1733,6 @@ const Messages = () => {
             className="min-h-0 flex-1"
             headerWrapperClassName="z-50 bg-card border-b border-border/50"
             header={
-            <div className="pt-[var(--safe-area-top)]">
             <div className="flex items-center px-ios-2 py-ios-2">
               {/* Back button - Left */}
               <Button
@@ -1882,7 +1881,6 @@ const Messages = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
             </div>
             }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
@@ -2569,7 +2567,6 @@ const Messages = () => {
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 border-b border-border bg-card"
           header={
-          <div className="pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
             {isSelectionMode ? (
               <>
@@ -2609,7 +2606,6 @@ const Messages = () => {
                 </div>
               </>
             )}
-          </div>
           </div>
           }
         >
