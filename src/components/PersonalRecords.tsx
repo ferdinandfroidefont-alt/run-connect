@@ -73,9 +73,14 @@ export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
             const formattedTime = formatTime(time);
             if (!formattedTime) return null;
             return (
-              <div key={distance} className="flex justify-between items-center bg-secondary/50 rounded-lg px-3 py-2">
-                <span className="text-sm font-medium">{distance}</span>
-                <span className="text-sm text-primary font-mono">{formattedTime}</span>
+              <div
+                key={distance}
+                className="flex min-w-0 items-center justify-between gap-2 bg-secondary/50 rounded-lg px-3 py-2 ios-shell:px-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{distance}</span>
+                <span className="min-w-0 truncate text-right text-sm font-mono text-primary tabular-nums">
+                  {formattedTime}
+                </span>
               </div>
             );
           })}

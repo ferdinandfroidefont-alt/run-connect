@@ -33,34 +33,36 @@ export const IOSListItem = ({
       <div
         onClick={onClick}
         className={cn(
-          "flex items-center gap-2.5 px-ios-4 py-2.5 bg-card",
+          "flex min-w-0 items-center gap-2.5 bg-card px-ios-4 py-2.5 ios-shell:px-2.5",
           onClick && "cursor-pointer active:bg-secondary/80 transition-colors ios-interactive"
         )}
         style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
       >
         {/* Icon in colored rounded square */}
         {Icon && (
-          <div className={cn("ios-list-row-icon flex-shrink-0", iconBgColor)}>
+          <div className={cn("ios-list-row-icon shrink-0", iconBgColor)}>
             <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
           </div>
         )}
         
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <p className="text-[17px] leading-snug text-foreground">{title}</p>
+          <p className="truncate text-[17px] leading-snug text-foreground">{title}</p>
           {subtitle && (
-            <p className="mt-px text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
+            <p className="mt-px line-clamp-2 text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
           )}
         </div>
         
-        {/* Right side */}
-        <div className="flex items-center gap-ios-2 flex-shrink-0">
+        {/* Right side : valeur tronquée seule (iPhone) */}
+        <div className="flex min-w-0 shrink items-center gap-ios-2">
           {value && (
-            <span className="text-[17px] text-muted-foreground">{value}</span>
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-[17px] text-muted-foreground">
+              {value}
+            </span>
           )}
           {rightElement}
           {showChevron && onClick && (
-            <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
           )}
         </div>
       </div>
@@ -85,7 +87,7 @@ export const IOSListGroup = ({ children, header, footer, className, flush }: IOS
   return (
     <div className={cn("mb-3", className)}>
       {header && (
-        <p className="px-ios-4 pb-1.5 text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="px-ios-4 pb-1.5 text-[13px] font-medium uppercase tracking-wide text-muted-foreground ios-shell:px-2.5">
           {header}
         </p>
       )}
@@ -93,7 +95,7 @@ export const IOSListGroup = ({ children, header, footer, className, flush }: IOS
         {children}
       </div>
       {footer && (
-        <p className="px-ios-4 pt-1.5 text-[13px] text-muted-foreground">
+        <p className="px-ios-4 pt-1.5 text-[13px] text-muted-foreground ios-shell:px-2.5">
           {footer}
         </p>
       )}

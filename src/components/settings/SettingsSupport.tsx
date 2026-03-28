@@ -94,7 +94,7 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4">
+            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -109,19 +109,19 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
           <div className="space-y-4" data-tutorial="settings-support-help">
           {/* Legal */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Mentions légales
             </h3>
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={() => { onClose(); navigate('/about'); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#007AFF]">
                   <Info className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">À propos</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">À propos</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -133,13 +133,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                   onClose();
                   navigate("/legal");
                 }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   <Scale className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Mentions légales</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Mentions légales</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -148,13 +148,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
               <button 
                 onClick={() => { onClose(); navigate('/terms'); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#5856D6]">
                   <FileText className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Conditions d'utilisation</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Conditions d'utilisation</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -163,13 +163,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
               <button 
                 onClick={() => { onClose(); navigate('/privacy'); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#34C759]">
                   <Shield className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Politique de confidentialité</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Politique de confidentialité</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -178,19 +178,19 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
           {/* Support */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Assistance
             </h3>
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleRestartTutorial}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   <GraduationCap className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">{t('tutorial.restartTutorial')}</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">{t('tutorial.restartTutorial')}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -200,13 +200,13 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               {/* Contact */}
               <a 
                 href={getSupportMailtoHref()}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#007AFF]">
                   <Mail className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Contacter le support</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Contacter le support</p>
                   <p className="text-[13px] text-muted-foreground">{getSupportEmail()}</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
@@ -218,19 +218,19 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
           <div className="space-y-4" data-tutorial="settings-support-account">
           {/* Actions */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Compte
             </h3>
             <div className="bg-card overflow-hidden">
               <button 
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   <LogOut className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] font-medium">Se déconnecter</p>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">Se déconnecter</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>
@@ -241,12 +241,12 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
                   <div className="ios-list-row-inset-sep" />
                   <button 
                     onClick={() => setShowAdminPremium(true)}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-primary/5 active:bg-primary/10 transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/5 active:bg-primary/10 transition-colors"
                   >
                     <div className="ios-list-row-icon bg-[#5856D6]">
                       <Settings className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="min-w-0 flex-1 text-left">
                       <p className="text-[15px] font-medium text-primary">Support créateur</p>
                       <p className="text-[12px] text-muted-foreground">Outils internes · RGPD</p>
                     </div>
@@ -260,17 +260,17 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
 
           {/* Danger Zone */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Zone de danger
             </h3>
             <div className="bg-card overflow-hidden">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-destructive/5 transition-colors">
+                  <button className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors">
                     <div className="ios-list-row-icon bg-[#FF3B30]">
                       <Trash2 className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="min-w-0 flex-1 text-left">
                       <p className="text-[15px] font-medium text-destructive">Supprimer mon compte</p>
                       <p className="text-[13px] text-muted-foreground">Action irréversible</p>
                     </div>

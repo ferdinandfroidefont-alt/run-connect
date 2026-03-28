@@ -365,6 +365,10 @@ export default {
     },
 	plugins: [
 		require("tailwindcss-animate"),
+		/** Variante activée quand `document.documentElement` a la classe `ios-app-shell` (UA iPhone/iPad, cf. main.tsx + isIosAppShell). */
+		require("tailwindcss/plugin")(function ({ addVariant }: { addVariant: (name: string, definition: string) => void }) {
+			addVariant("ios-shell", ".ios-app-shell &");
+		}),
 		// Custom utility classes
 		function({ addUtilities }: any) {
 			addUtilities({

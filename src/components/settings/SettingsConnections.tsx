@@ -97,7 +97,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4">
+            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -111,7 +111,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* External Connections */}
           <div className="space-y-2" data-tutorial="settings-connections-external">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Connexions externes
             </h3>
             <div className="bg-card overflow-hidden p-4 space-y-4">
@@ -122,12 +122,12 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
 
           {/* Social & Sharing */}
           <div className="space-y-2" data-tutorial="settings-connections-social">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Social & Partage
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Friend Suggestions */}
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="ios-list-row-icon bg-[#007AFF]">
                   <Users className="h-[18px] w-[18px] text-white" />
                 </div>
@@ -163,7 +163,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                     });
                   }
                 }}
-                className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary/50"
+                className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 transition-colors active:bg-secondary/50"
               >
                 <div className="ios-list-row-icon bg-[#FF3B30]">
                   <Share2 className="h-[18px] w-[18px] text-white" />
@@ -178,7 +178,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
               <div className="ios-list-row-inset-sep" />
 
               {/* Contacts */}
-              <div className="px-4 py-2.5">
+              <div className="px-4 ios-shell:px-2.5 py-2.5">
                 <ContactsPermissionButton />
               </div>
 
@@ -187,7 +187,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
               {/* Referral */}
               <button 
                 onClick={() => setShowReferralDialog(true)}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   <Gift className="h-[18px] w-[18px] text-white" />
@@ -204,7 +204,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
               {/* Premium */}
               <button 
                 onClick={onNavigateToSubscription}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FFCC00]">
                   <Gift className="h-[18px] w-[18px] text-white" />

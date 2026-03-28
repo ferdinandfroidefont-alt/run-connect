@@ -91,7 +91,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4">
+            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -105,13 +105,13 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Language & Theme */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               {t('settings.appearance')}
             </h3>
             <div className="bg-card overflow-hidden">
               <div data-tutorial="settings-general-appearance">
               {/* Language Selector */}
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="ios-list-row-icon bg-primary">
                   <Languages className="h-[18px] w-[18px] text-primary-foreground" />
                 </div>
@@ -170,7 +170,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
               <div className="ios-list-row-inset-sep" />
 
               {/* Thème : clair / sombre / système */}
-              <div className="space-y-2.5 px-4 py-2.5">
+              <div className="space-y-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="flex items-center gap-2.5">
                   <div className="ios-list-row-icon bg-primary">
                     <Moon className="h-[18px] w-[18px] text-primary-foreground" />
@@ -224,7 +224,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
 
               <div className="ios-list-row-inset-sep" />
 
-              <div className="space-y-2.5 px-4 py-2.5" data-tutorial="settings-general-units">
+              <div className="space-y-2.5 px-4 ios-shell:px-2.5 py-2.5" data-tutorial="settings-general-units">
                 <div className="flex items-center gap-2.5">
                   <div className="ios-list-row-icon bg-[#5E5CE6]">
                     <Ruler className="h-[18px] w-[18px] text-white" />
@@ -277,7 +277,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
 
           {/* Account */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               {t('settings.account')}
             </h3>
             <div className="bg-card overflow-hidden">
@@ -285,7 +285,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
               <button 
                 onClick={handlePasswordReset}
                 disabled={isChangingPassword}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   {isChangingPassword ? (
@@ -305,16 +305,16 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
 
           {/* Map Settings */}
           <div className="space-y-2" data-tutorial="settings-general-map">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               {t('settings.map')}
             </h3>
             <div className="bg-card overflow-hidden">
               {/* Long Press to Create Session */}
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="ios-list-row-icon bg-[#34C759]">
                   <MapPin className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium">{t('settings.longPress')}</p>
                   <p className="text-[13px] text-muted-foreground">{t('settings.longPressDescription')}</p>
                 </div>

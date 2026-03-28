@@ -110,7 +110,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4">
+            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -124,13 +124,13 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
           {/* Consents */}
           <div className="space-y-2" data-tutorial="settings-privacy-consents">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Consentements
             </h3>
             <div className="bg-card overflow-hidden">
               {/* RGPD */}
               <AlertDialog>
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                   <div className="ios-list-row-icon bg-[#34C759]">
                     <FileText className="h-[18px] w-[18px] text-white" />
                   </div>
@@ -172,7 +172,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
 
               {/* Security Rules */}
               <AlertDialog>
-                <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                   <div className="ios-list-row-icon bg-[#007AFF]">
                     <Shield className="h-[18px] w-[18px] text-white" />
                   </div>
@@ -214,11 +214,11 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
 
           {/* Analytics (opt-in) */}
           <div className="space-y-2" data-tutorial="settings-privacy-analytics">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Mesure d&apos;audience
             </h3>
             <div className="bg-card overflow-hidden">
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="ios-list-row-icon bg-[#AF52DE]">
                   <BarChart3 className="h-[18px] w-[18px] text-white" />
                 </div>
@@ -249,7 +249,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
 
           {/* Legal Links */}
           <div className="space-y-2">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Documents légaux
             </h3>
             <div className="bg-card overflow-hidden">
@@ -259,7 +259,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                   navigate("/legal");
                   onClose();
                 }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#FF9500]">
                   <Scale className="h-[18px] w-[18px] text-white" />
@@ -279,7 +279,7 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                   navigate('/privacy');
                   onClose();
                 }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
                 <div className="ios-list-row-icon bg-[#8E8E93]">
                   <Info className="h-[18px] w-[18px] text-white" />
@@ -296,13 +296,13 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
           {/* Revoke All */}
           {profile?.rgpd_accepted && profile?.security_rules_accepted && (
             <div className="space-y-2">
-              <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+              <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
                 Zone de danger
               </h3>
               <div className="bg-card overflow-hidden">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <button className="w-full flex items-center gap-2.5 px-4 py-2.5 active:bg-destructive/5 transition-colors">
+                    <button className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors">
                       <div className="ios-list-row-icon bg-[#FF3B30]">
                         <Shield className="h-[18px] w-[18px] text-white" />
                       </div>

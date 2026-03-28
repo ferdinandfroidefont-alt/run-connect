@@ -195,7 +195,7 @@ export const PersonalGoals = () => {
   if (loading) {
     return (
       <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card">
-        <CardContent className="p-4">
+        <CardContent className="p-4 ios-shell:p-3">
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-primary animate-pulse" />
             <span className="text-[13px] text-muted-foreground">Chargement des objectifs...</span>
@@ -207,11 +207,11 @@ export const PersonalGoals = () => {
 
   return (
     <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-primary" />
-            <h3 className="text-[15px] font-semibold">Mes objectifs</h3>
+      <CardContent className="p-4 ios-shell:p-3">
+        <div className="flex min-w-0 items-center justify-between gap-2 mb-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <Target className="h-4 w-4 shrink-0 text-primary" />
+            <h3 className="truncate text-[15px] font-semibold">Mes objectifs</h3>
           </div>
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
@@ -294,11 +294,11 @@ export const PersonalGoals = () => {
                     className="relative"
                   >
                     <div className={`p-3 rounded-lg border ${isCompleted ? 'border-green-200 bg-green-50/50' : 'border-border'}`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{info.icon}</span>
-                          <div>
-                            <p className="text-[13px] font-medium">
+                      <div className="flex min-w-0 items-start justify-between gap-2 mb-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="shrink-0 text-lg">{info.icon}</span>
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-medium">
                               {info.label}
                             </p>
                             <p className="text-[11px] text-muted-foreground">
@@ -306,7 +306,7 @@ export const PersonalGoals = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex shrink-0 items-center gap-1">
                           {isCompleted && (
                             <Badge className="bg-green-100 text-green-700 border-0 text-[10px] px-1.5">
                               <Check className="h-3 w-3 mr-0.5" />

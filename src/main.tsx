@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
@@ -91,6 +92,11 @@ const detectNativeImmediately = () => {
 
 // ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
+
+// 🍎 Marges « Réglages » resserrées : variante Tailwind `ios-shell:` (évite de toucher au navigateur desktop étroit)
+if (typeof document !== 'undefined' && isIosAppShell()) {
+  document.documentElement.classList.add('ios-app-shell');
+}
 
 // ✅ NIVEAU 28: RETRY MECHANISM pour les cas limites
 if (!isNative) {

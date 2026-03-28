@@ -501,7 +501,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 scrollClassName="min-h-0 bg-secondary"
                 header={
                   <div className="min-w-0 max-w-full border-b border-border bg-card/95">
-                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
+                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5 ios-shell:px-2.5">
                       <div className="flex min-w-0 justify-start">
                         <button
                           type="button"
@@ -519,7 +519,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         <div className="h-9 w-16 shrink-0" />
                       </div>
                     </div>
-                    <div className="min-w-0 px-4 pb-2.5">
+                    <div className="min-w-0 px-4 pb-2.5 ios-shell:px-2.5">
                       <div className="relative min-w-0 max-w-full">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -536,7 +536,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
               <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
                 <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
                   {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
-                  <div className="box-border min-w-0 w-full max-w-full px-4">
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
                     <div className="ios-card w-full min-w-0 overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
@@ -545,7 +545,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           onClick={() => {
                             setCurrentPage(category.id);
                           }}
-                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
+                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
                         >
                           {/* iOS colored icon square */}
                           <div className={`ios-list-row-icon ${category.color}`}>
@@ -554,7 +554,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           <div className="min-w-0 flex-1 text-left">
                             <span className="truncate text-[17px]">{category.title}</span>
                           </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                         </button>
                         {/* Separator - iOS style (inset) */}
                         {index < filteredCategories.length - 1 && (
@@ -565,7 +565,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                     </div>
                   </div>
 
-                  <div className="box-border min-w-0 w-full max-w-full px-4">
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
                     <h3 className="px-1 pb-1 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                       {t("tutorial.replayMenu.sectionTitle")}
                     </h3>
@@ -578,7 +578,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           <button
                             type="button"
                             onClick={() => startTutorialReplay(id)}
-                            className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary"
+                            className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
                           >
                             <div className="ios-list-row-icon bg-[#5856D6]">
                               <GraduationCap className="h-4 w-4 text-white" />
@@ -604,9 +604,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
 
                   {/* Partager le profil + QR : colonne centrée comme le profil, tout en % du parent (pas de vw) */}
                   {profile && (
-                    <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4">
+                    <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4 ios-shell:px-2">
                       <div className="w-full min-w-0 max-w-md">
-                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3">
+                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3 ios-shell:p-2.5">
                           <h3 className="text-center text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
                             Partager mon profil
                           </h3>

@@ -130,7 +130,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4">
+            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -144,15 +144,15 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
           {/* Main Toggle */}
           <div className="space-y-2" data-tutorial="settings-notifications-push">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Notifications Push
             </h3>
             <div className="bg-card overflow-hidden">
-              <div className="flex items-center gap-2.5 px-4 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                 <div className="ios-list-row-icon bg-[#FF3B30]">
                   <Smartphone className="h-[18px] w-[18px] text-white" />
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium">Notifications push</p>
                   <p className="text-[13px] text-muted-foreground">
                     {profile?.notifications_enabled ? "Activées" : "Désactivées"}
@@ -167,7 +167,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               {profile?.notifications_enabled === false && (
                 <>
                   <div className="h-px bg-border" />
-                  <div className="px-4 py-2.5 bg-orange-500/10">
+                  <div className="px-4 ios-shell:px-2.5 py-2.5 bg-orange-500/10">
                     <p className="text-[13px] text-orange-500">⚠️ Les préférences ci-dessous sont inactives</p>
                   </div>
                 </>
@@ -178,13 +178,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                   <div className="h-px bg-border" />
                   <button
                     onClick={handleNotificationToggle}
-                    className="flex w-full items-center gap-2.5 px-4 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
+                    className="flex w-full items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
                   >
                     <div className="ios-list-row-icon bg-primary">
                       <Bell className="h-[18px] w-[18px] text-primary-foreground" />
                     </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-[15px] font-medium text-primary">Autoriser les notifications</p>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-[15px] font-medium text-primary">Autoriser les notifications</p>
                       <p className="text-[13px] text-primary/70">Activez les permissions</p>
                     </div>
                     <ChevronRight className="h-5 w-5 text-primary/50" />
@@ -197,7 +197,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                   <div className="h-px bg-border ml-[54px]" />
                   <button
                     onClick={testNotification}
-                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors"
+                    className="flex w-full min-w-0 items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
                   >
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
                       <Bug className="h-[18px] w-[18px] text-white" />
@@ -215,17 +215,17 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
 
           {/* Individual Toggles */}
           <div className="space-y-2" data-tutorial="settings-notifications-types">
-            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Types de notifications
             </h3>
             <div className="bg-card overflow-hidden">
               {notificationItems.map((item, index) => (
                 <div key={item.key}>
-                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
                     <div className={cn("ios-list-row-icon", item.color)}>
                       <item.icon className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-[15px] font-medium">{item.label}</p>
                         {item.premium && profile?.is_premium && (
