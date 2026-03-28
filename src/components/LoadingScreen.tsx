@@ -51,13 +51,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     maxHeight: 'min(84vw, 19rem)',
   };
 
-  /** Texte proportionné au bloc logo (même logique vmin / dvh) */
+  /** Wordmark : même échelle d’écran que le logo pour un poids visuel équilibré (identité forte, type iOS). */
   const titleStyle: CSSProperties = {
-    // Légère montée en taille pour mieux remplir l'écran
-    fontSize: 'clamp(1.25rem, min(5.1vw, 3.9dvh), 1.95rem)',
-    // Rapprocher optiquement le titre du logo
-    marginTop: 'clamp(0.25rem, min(1.2dvh, 0.6rem), 0.6rem)',
-    letterSpacing: '-0.02em',
+    fontSize: 'clamp(2rem, min(11.5vw, 8.2dvh), 3.35rem)',
+    marginTop: 'clamp(0.55rem, min(2dvh, 1rem), 1.15rem)',
   };
 
   return (
@@ -114,7 +111,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                     stiffness: 340,
                     damping: 32,
                   }}
-                  className="text-center font-semibold text-white"
+                  className="text-center font-extrabold leading-none tracking-[0.045em] text-white antialiased [text-rendering:geometricPrecision]"
                   style={titleStyle}
                 >
                   RunConnect
