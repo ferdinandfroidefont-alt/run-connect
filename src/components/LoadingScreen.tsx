@@ -42,19 +42,24 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     backgroundColor: RUCONNECT_SPLASH_BLUE,
   };
 
-  /** Logo carré : borné par la hauteur d’écran (iPhone petits / grands) + largeur — présence premium stable */
+  /** Même largeur/hauteur que l’icône — le titre se calibre dessus pour ne pas dépasser en largeur. */
+  const logoEdge = 'clamp(10rem, min(72vw, 40dvh), 19rem)';
+
   const logoBoxStyle: CSSProperties = {
-    // Objectif: ~35-45% de la hauteur écran (sans déformation), avec bornes pour iPhone
-    width: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
-    height: 'clamp(10rem, min(72vw, 40dvh), 19rem)',
+    width: logoEdge,
+    height: logoEdge,
     maxWidth: 'min(84vw, 19rem)',
     maxHeight: 'min(84vw, 19rem)',
   };
 
-  /** Wordmark : même échelle d’écran que le logo pour un poids visuel équilibré (identité forte, type iOS). */
+  /**
+   * Taille du wordmark : proportionnelle au bord du logo (≈ largeur visuelle proche sans dépasser).
+   * Pile `font-sans` = SF Pro / Inter comme le reste de l’app (tailwind.config).
+   */
   const titleStyle: CSSProperties = {
-    fontSize: 'clamp(2rem, min(11.5vw, 8.2dvh), 3.35rem)',
-    marginTop: 'clamp(0.55rem, min(2dvh, 1rem), 1.15rem)',
+    fontSize: `clamp(1.18rem, min(calc(${logoEdge} / 6.35), 1.88rem), 1.88rem)`,
+    marginTop: 'clamp(0.45rem, min(1.75dvh, 0.95rem), 1.05rem)',
+    maxWidth: logoEdge,
   };
 
   return (
@@ -111,7 +116,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                     stiffness: 340,
                     damping: 32,
                   }}
-                  className="text-center font-extrabold leading-none tracking-[0.045em] text-white antialiased [text-rendering:geometricPrecision]"
+                  className="font-sans text-center font-bold leading-none tracking-[0.03em] text-white antialiased"
                   style={titleStyle}
                 >
                   RunConnect
