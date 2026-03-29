@@ -138,16 +138,22 @@ export const Layout = ({ children }: LayoutProps) => {
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
         partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
       */}
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden">
         {homeMapPrimed && (
           <div
             className={
               isHome
-                ? 'absolute inset-0 z-20 min-h-0'
-                : 'absolute inset-0 z-0 min-h-0'
+                ? /* Accueil : carte dans le flux flex → hauteur réelle > 0 pour Mapbox */
+                  'relative z-20 flex min-h-0 flex-1 flex-col bg-teal-500/[0.12]'
+                : /* Autres onglets : carte persistée en arrière-plan */
+                  'absolute inset-0 z-0 flex min-h-0 flex-col'
             }
           >
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={
+                <div className="min-h-0 flex-1 bg-muted/40" aria-hidden />
+              }
+            >
               <PersistentHomeMap
                 visible={isHome}
                 initialLat={mapInitialLat}
@@ -165,13 +171,15 @@ export const Layout = ({ children }: LayoutProps) => {
         */}
         <div
           className={cn(
-            'relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent',
-            isHome ? 'pointer-events-none' : 'pointer-events-auto'
+            /* Accueil : calque au-dessus de la carte (même hauteur que le main) */
+            isHome
+              ? 'pointer-events-none absolute inset-0 z-10 flex min-h-0 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
+              : 'pointer-events-auto relative z-10 flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-transparent'
           )}
         >
           <div
             className={cn(
-              'animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-hidden motion-reduce:animate-none',
+              'animate-fade-in relative flex min-h-0 w-full flex-1 flex-col overflow-x-hidden overflow-y-hidden motion-reduce:animate-none',
               isHome ? 'pointer-events-none' : 'pointer-events-auto'
             )}
           >

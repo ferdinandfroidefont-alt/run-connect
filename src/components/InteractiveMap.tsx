@@ -1491,9 +1491,14 @@ export const InteractiveMap = ({
   }, [isMapLoaded, isRouteCreationMode, user]);
   const mapboxDebugTokenOk = Boolean(getMapboxAccessToken());
 
-  return <div className="relative w-full h-full bg-background overflow-hidden">
-      {/* Map Container */}
-      <div ref={mapContainer} className="absolute inset-0 bg-secondary" data-tutorial="map-container" />
+  return (
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
+      {/* Mapbox : flux flex — hauteur effective pour le canvas (plus seulement absolute inset-0 + parent h 0) */}
+      <div
+        ref={mapContainer}
+        className="relative min-h-0 w-full flex-1 bg-secondary ring-1 ring-amber-500/40"
+        data-tutorial="map-container"
+      />
 
       {/* Debug overlay Mapbox (lisible sans console) */}
       <div
@@ -2050,5 +2055,6 @@ export const InteractiveMap = ({
 
       {/* Route Dialog */}
       <RouteDialog isOpen={isRouteDialogOpen} onClose={() => setIsRouteDialogOpen(false)} onSave={handleSaveRoute} title="Créer un itinéraire" loading={routeSaving} showCreateSessionOption={true} />
-    </div>;
+    </div>
+  );
 };

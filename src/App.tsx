@@ -183,15 +183,16 @@ const App = () => {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppErrorBoundary>
-        <ThemeProvider>
-          <AppProvider>
-            <TooltipProvider>
-              <AdMobInitializer />
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+      <QueryClientProvider client={queryClient}>
+        <AppErrorBoundary>
+          <ThemeProvider>
+            <AppProvider>
+              <TooltipProvider>
+                <AdMobInitializer />
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
                 <RouteAnalytics />
                 <AnalyticsConsentBanner />
                 <div className="pointer-events-none fixed left-0 right-0 top-0 z-[78] pt-[env(safe-area-inset-top,0px)]">
@@ -199,6 +200,7 @@ const App = () => {
                     <NetworkStatusBanner />
                   </div>
                 </div>
+                <div className="flex min-h-0 flex-1 flex-col">
                 <AnimatePresence mode="wait">
                   <Routes>
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
@@ -239,12 +241,14 @@ const App = () => {
                   <Route path="*" element={<PageTransition><PageSuspense><NotFound /></PageSuspense></PageTransition>} />
                   </Routes>
                 </AnimatePresence>
+                </div>
               </BrowserRouter>
             </TooltipProvider>
           </AppProvider>
         </ThemeProvider>
       </AppErrorBoundary>
     </QueryClientProvider>
+    </div>
   );
 };
 
