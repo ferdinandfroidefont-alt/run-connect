@@ -19,9 +19,10 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, PenTool, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -204,6 +205,7 @@ export const InteractiveMap = ({
     setOpenCreateRoute,
   } = useAppContext();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   // Track newly created sessions for pulse animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
@@ -1988,6 +1990,28 @@ export const InteractiveMap = ({
         >
           <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </MapIosColoredFab>
+
+        {isActive && (
+          <>
+            <MapIosColoredFab
+              tone="gray"
+              title={t("navigation.itinerary")}
+              onClick={() => navigate("/itinerary")}
+              className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+            >
+              <PenTool className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </MapIosColoredFab>
+
+            <MapIosColoredFab
+              tone="gray"
+              title={t("navigation.leaderboard")}
+              onClick={() => navigate("/leaderboard")}
+              className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+            >
+              <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} />
+            </MapIosColoredFab>
+          </>
+        )}
 
         <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
 
