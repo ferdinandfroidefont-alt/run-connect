@@ -11,8 +11,15 @@ import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
 import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
+import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import mapboxgl from 'mapbox-gl';
+import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
+import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import type { MapCoord } from '@/lib/geoUtils';
+
+const ROUTE_CARD_LINE_SRC = 'route-card-preview-line';
+const ROUTE_CARD_LINE_LAYER = 'route-card-preview-line-layer';
 
 interface RouteCardProps {
   route: {
@@ -34,9 +41,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
   const navigate = useNavigate();
   const { formatMeters } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-  const polyline = useRef<google.maps.Polyline | null>(null);
-  const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const { position } = useGeolocation();
   const [show3DDialog, setShow3DDialog] = useState(false);
   const [showPhotoUploader, setShowPhotoUploader] = useState(false);
@@ -73,71 +79,57 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
   };
 
   useEffect(() => {
-    if (!mapContainer.current || !window.google || !route.coordinates?.length) return;
-    userLocationMarkerRef.current?.setMap(null);
+    if (!mapContainer.current || !route.coordinates?.length || !getMapboxAccessToken()) return;
+    userLocationMarkerRef.current?.remove();
     userLocationMarkerRef.current = null;
+    mapInstanceRef.current?.remove();
+    mapInstanceRef.current = null;
+
     const path = route.coordinates.map((coord: any) => {
       if (coord.lat !== undefined && coord.lng !== undefined) {
-        return { lat: Number(coord.lat), lng: Number(coord.lng) };
+        return { lat: Number(coord.lat), lng: Number(coord.lng) } as MapCoord;
       } else if (Array.isArray(coord) && coord.length >= 2) {
-        return { lat: Number(coord[0]), lng: Number(coord[1]) };
+        return { lat: Number(coord[0]), lng: Number(coord[1]) } as MapCoord;
       }
       return null;
-    }).filter(coord => coord !== null);
+    }).filter((coord): coord is MapCoord => coord !== null);
     if (path.length === 0) return;
 
-    const bounds = new google.maps.LatLngBounds();
-    path.forEach(coord => bounds.extend(coord));
-
-    map.current = new google.maps.Map(mapContainer.current, {
-      center: bounds.getCenter(),
+    const m = createEmbeddedMapboxMap(mapContainer.current, {
+      center: path[0],
       zoom: 10,
-      mapTypeId: 'roadmap',
-      disableDefaultUI: true,
-      gestureHandling: 'none',
-      clickableIcons: false,
-      keyboardShortcuts: false,
-      styles: [
-        { featureType: 'all', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-        { featureType: 'road', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-        { featureType: 'landscape', stylers: [{ saturation: -30 }] },
-      ]
+      interactive: false,
     });
+    mapInstanceRef.current = m;
 
-    polyline.current = new google.maps.Polyline({
-      path,
-      geodesic: true,
-      strokeColor: '#5B7CFF',
-      strokeOpacity: 0.9,
-      strokeWeight: 3,
-      map: map.current
-    });
-
-    map.current.fitBounds(bounds, 30);
+    const applyRoute = () => {
+      setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
+        color: '#5B7CFF',
+        width: 3,
+      });
+      fitMapToCoords(m, path, 30);
+    };
+    if (m.isStyleLoaded()) applyRoute();
+    else m.once('load', applyRoute);
 
     return () => {
-      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current?.remove();
       userLocationMarkerRef.current = null;
-      if (polyline.current) polyline.current.setMap(null);
-      map.current = null;
+      m.remove();
+      mapInstanceRef.current = null;
     };
   }, [route.coordinates]);
 
   useEffect(() => {
-    if (!map.current) return;
+    const m = mapInstanceRef.current;
+    if (!m) return;
     if (!position) {
-      userLocationMarkerRef.current?.setMap(null);
+      userLocationMarkerRef.current?.remove();
       userLocationMarkerRef.current = null;
       return;
     }
-    userLocationMarkerRef.current?.setMap(null);
-    userLocationMarkerRef.current = new google.maps.Marker({
-      map: map.current,
-      position: { lat: position.lat, lng: position.lng },
-      icon: getUserLocationMarkerIcon(),
-      zIndex: 1000,
-      title: 'Votre position',
-    });
+    userLocationMarkerRef.current?.remove();
+    userLocationMarkerRef.current = createUserLocationMapboxMarker(position.lng, position.lat).addTo(m);
   }, [position, route.coordinates]);
 
   const hasCoordinates = route.coordinates?.length > 0;

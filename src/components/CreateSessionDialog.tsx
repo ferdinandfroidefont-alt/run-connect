@@ -19,19 +19,19 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 import { ClubSelector } from "./ClubSelector";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import mapboxgl from "mapbox-gl";
+import { geocodeSearchMapbox, reverseGeocodeMapbox } from "@/lib/mapboxGeocode";
+import { setOrUpdateLineLayer, removeLineLayer } from "@/lib/mapboxEmbed";
+import type { MapCoord } from "@/lib/geoUtils";
 
-  // Add type declaration for global polyline reference
-  declare global {
-    interface Window {
-      currentRoutePolyline: google.maps.Polyline | null;
-    }
-  }
+const CREATE_SESSION_ROUTE_SRC = "create-session-route-preview";
+const CREATE_SESSION_ROUTE_LAYER = "create-session-route-preview-layer";
 
-  interface CreateSessionDialogProps {
+interface CreateSessionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSessionCreated: (sessionId?: string) => void;
-  map: google.maps.Map | null;
+  map: mapboxgl.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   onCreateRoute?: () => void;
 }
@@ -150,35 +150,25 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   // Fonction pour afficher l'itinéraire sélectionné sur la carte
   const displaySelectedRoute = (routeId: string) => {
-    const route = userRoutes.find(r => r.id === routeId);
+    const route = userRoutes.find((r) => r.id === routeId);
     if (route && map && route.coordinates) {
-      // Effacer les tracés précédents
-      if (window.currentRoutePolyline) {
-        window.currentRoutePolyline.setMap(null);
-      }
-
-      // Créer le nouveau tracé
-      const path = route.coordinates.map((coord: any) => ({
+      const path: MapCoord[] = route.coordinates.map((coord: { lat: number; lng: number }) => ({
         lat: coord.lat,
-        lng: coord.lng
+        lng: coord.lng,
       }));
+      if (path.length === 0) return;
 
-      const polyline = new google.maps.Polyline({
-        path: path,
-        geodesic: true,
-        strokeColor: '#3b82f6',
-        strokeOpacity: 1.0,
-        strokeWeight: 3,
-        map: map
-      });
-
-      // Stocker la référence pour pouvoir l'effacer plus tard
-      window.currentRoutePolyline = polyline;
-
-      // Ajuster la vue pour inclure tout l'itinéraire
-      const bounds = new google.maps.LatLngBounds();
-      path.forEach(point => bounds.extend(point));
-      map.fitBounds(bounds);
+      const applyLine = () => {
+        setOrUpdateLineLayer(map, CREATE_SESSION_ROUTE_SRC, CREATE_SESSION_ROUTE_LAYER, path, {
+          color: "#3b82f6",
+          width: 3,
+        });
+        const b = new mapboxgl.LngLatBounds([path[0]!.lng, path[0]!.lat], [path[0]!.lng, path[0]!.lat]);
+        for (let i = 1; i < path.length; i++) b.extend([path[i]!.lng, path[i]!.lat]);
+        map.fitBounds(b, { padding: 48, duration: 400, maxZoom: 16 });
+      };
+      if (map.isStyleLoaded()) applyLine();
+      else map.once("load", applyLine);
     }
   };
 
@@ -190,24 +180,10 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-        body: {
-          lat: lat,
-          lng: lng,
-          type: 'reverse'
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.status === 'OK' && data?.results?.[0]) {
-        setSelectedLocation({
-          lat: lat,
-          lng: lng,
-          name: data.results[0].formatted_address
-        });
-        setFormData(prev => ({ ...prev, location_name: data.results[0].formatted_address }));
+      const name = await reverseGeocodeMapbox(lat, lng);
+      if (name) {
+        setSelectedLocation({ lat, lng, name });
+        setFormData((prev) => ({ ...prev, location_name: name }));
         toast({ title: "Lieu sélectionné !" });
       }
     } catch (error) {
@@ -228,64 +204,17 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
     try {
       setIsSearching(true);
-      
-      // Utiliser directement l'API Google Maps côté client
-      if (window.google && window.google.maps && window.google.maps.places) {
-        const service = new google.maps.places.PlacesService(document.createElement('div'));
-        
-        const request = {
-          query: query,
-          fields: ['name', 'geometry', 'formatted_address', 'place_id']
-        };
-
-        service.textSearch(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            console.log('Résultats trouvés:', results.length);
-            // Convertir au format attendu
-            const formattedResults = results.slice(0, 5).map(result => ({
-              formatted_address: result.formatted_address || result.name,
-              geometry: {
-                location: {
-                  lat: result.geometry?.location?.lat() || 0,
-                  lng: result.geometry?.location?.lng() || 0
-                }
-              },
-              place_id: result.place_id
-            }));
-            setSearchResults(formattedResults);
-          } else {
-            console.log('Aucun résultat ou erreur:', status);
-            setSearchResults([]);
-          }
-          setIsSearching(false);
-        });
-      } else {
-        // Fallback au proxy si Google Maps n'est pas chargé
-        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-          body: {
-            address: query,
-            type: 'geocode'
-          }
-        });
-
-        if (error) throw error;
-
-        if (data?.status === 'OK' && data?.results) {
-          console.log('Résultats trouvés via proxy:', data.results.length);
-          setSearchResults(data.results.slice(0, 5));
-        } else {
-          setSearchResults([]);
-        }
-        setIsSearching(false);
-      }
+      const rows = await geocodeSearchMapbox(query, 5);
+      setSearchResults(rows.map((r) => ({ ...r, place_id: "" })));
     } catch (error) {
       console.error('Erreur recherche:', error);
       setSearchResults([]);
-      toast({ 
-        title: "Erreur", 
-        description: "Impossible de rechercher le lieu. Vérifiez votre connexion.", 
-        variant: "destructive" 
+      toast({
+        title: "Erreur",
+        description: "Impossible de rechercher le lieu. Vérifiez votre connexion.",
+        variant: "destructive",
       });
+    } finally {
       setIsSearching(false);
     }
   };
@@ -321,28 +250,17 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
     if (center) {
       try {
         setLoading(true);
-        
-        // Utilise notre proxy Google Maps au lieu du geocodeur direct
-        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-          body: {
-            lat: center.lat(),
-            lng: center.lng(),
-            type: 'reverse'
-          }
-        });
-
-        if (error) throw error;
-
-        if (data?.status === 'OK' && data?.results?.[0]) {
+        const name = await reverseGeocodeMapbox(center.lat, center.lng);
+        if (name) {
           setSelectedLocation({
-            lat: center.lat(),
-            lng: center.lng(),
-            name: data.results[0].formatted_address
+            lat: center.lat,
+            lng: center.lng,
+            name,
           });
-          setFormData(prev => ({ ...prev, location_name: data.results[0].formatted_address }));
+          setFormData((prev) => ({ ...prev, location_name: name }));
           toast({ title: "Lieu sélectionné !" });
         } else {
-          throw new Error('Aucun résultat trouvé');
+          throw new Error("Aucun résultat trouvé");
         }
       } catch (error) {
         console.error('Erreur géocodage:', error);
@@ -550,9 +468,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       // Center map on new session for visual confirmation
       if (map && selectedLocation) {
         setTimeout(() => {
-          console.log('🗺️ Recentrage sur la séance créée');
-          map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
-          map.setZoom(15);
+          map.easeTo({ center: [selectedLocation.lng, selectedLocation.lat], zoom: 15, duration: 500 });
         }, 400);
       }
       
@@ -582,11 +498,7 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
       setLocationSearch("");
       setSearchResults([]);
       setSelectedRoute('');
-      // Effacer l'itinéraire affiché sur la carte
-      if (window.currentRoutePolyline) {
-        window.currentRoutePolyline.setMap(null);
-        window.currentRoutePolyline = null;
-      }
+      if (map) removeLineLayer(map, CREATE_SESSION_ROUTE_SRC, CREATE_SESSION_ROUTE_LAYER);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {

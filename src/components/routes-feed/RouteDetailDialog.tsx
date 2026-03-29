@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
-import { getKeyBody } from '@/lib/googleMapsKey';
+import mapboxgl from 'mapbox-gl';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,15 +16,20 @@ import {
   ArrowLeft, Star, Route, Mountain, Camera, Copy, Navigation, X, Send, MapPin, Loader2, Images, Trash2,
 } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { getUserLocationMarkerIcon } from '@/lib/mapUserLocationIcon';
+import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
-import { clientXYToLatLng } from '@/lib/mapLatLngFromPixel';
 import { cn } from '@/lib/utils';
+import { createEmbeddedMapboxMap, setOrUpdateLineLayer, clientXYToMapCoord } from '@/lib/mapboxEmbed';
+import { MAPBOX_STYLE_BY_UI_ID, getMapboxAccessToken } from '@/lib/mapboxConfig';
+import type { MapCoord } from '@/lib/geoUtils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { FeedRoute } from '@/hooks/useRoutesFeed';
 import { routePhotoStoragePathFromPublicUrl } from '@/lib/routePhotoStorage';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+
+const ROUTE_DETAIL_LINE_SRC = 'route-detail-main-line';
+const ROUTE_DETAIL_LINE_LAYER = 'route-detail-main-line-layer';
 
 interface RoutePhoto {
   id: string;
@@ -72,7 +76,7 @@ export const RouteDetailDialog = ({
   const { position: userGeoPosition } = useGeolocation();
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const [photos, setPhotos] = useState<RoutePhoto[]>([]);
   const [ratings, setRatings] = useState<RouteRating[]>([]);
   const [myRating, setMyRating] = useState(0);
@@ -93,8 +97,8 @@ export const RouteDetailDialog = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const longPressCleanupRef = useRef<(() => void) | null>(null);
-  const pinMarkerRef = useRef<google.maps.Marker | null>(null);
-  const userLocationMarkerRef = useRef<google.maps.Marker | null>(null);
+  const pinMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const photoFileRef = useRef<File | null>(null);
 
   const triggerFileInput = (input: HTMLInputElement | null) => {
@@ -124,10 +128,8 @@ export const RouteDetailDialog = ({
     setPhotoCaption('');
     setReadingGps(false);
     setPhotoPlacementSource(null);
-    if (pinMarkerRef.current) {
-      pinMarkerRef.current.setMap(null);
-      pinMarkerRef.current = null;
-    }
+    pinMarkerRef.current?.remove();
+    pinMarkerRef.current = null;
   };
 
   const loadDetails = useCallback(async () => {
@@ -198,108 +200,88 @@ export const RouteDetailDialog = ({
 
   // Init map
   useEffect(() => {
-    if (!open || !mapContainer.current || !route?.coordinates?.length) return;
+    if (!open || !mapContainer.current || !route?.coordinates?.length || !getMapboxAccessToken()) return;
 
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let map: mapboxgl.Map | null = null;
 
-    const initMap = async () => {
-      if (!window.google?.maps) {
-        try {
-          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: getKeyBody()
-          });
-          const googleMapsApiKey = apiKeyData?.apiKey || '';
-          if (!googleMapsApiKey) return;
-          const loader = new Loader({ apiKey: googleMapsApiKey, version: 'weekly', libraries: ['geometry'] });
-          await loader.importLibrary('maps');
-        } catch (e) {
-          console.error('Failed to load Google Maps', e);
-          return;
-        }
-      }
-
-      timer = setTimeout(() => {
+    timer = window.setTimeout(() => {
       if (!mapContainer.current) return;
-      const path = route.coordinates.map((coord: any) => {
-        if (coord.lat !== undefined && coord.lng !== undefined) return { lat: Number(coord.lat), lng: Number(coord.lng) };
-        if (Array.isArray(coord) && coord.length >= 2) return { lat: Number(coord[0]), lng: Number(coord[1]) };
-        return null;
-      }).filter(Boolean);
+      const path = route.coordinates
+        .map((coord: unknown): MapCoord | null => {
+          const c = coord as Record<string, unknown> | unknown[];
+          if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
+            return { lat: Number(c.lat), lng: Number(c.lng) };
+          }
+          if (Array.isArray(coord) && coord.length >= 2) {
+            return { lat: Number(coord[0]), lng: Number(coord[1]) };
+          }
+          return null;
+        })
+        .filter((p): p is MapCoord => p !== null);
 
       if (path.length === 0) return;
 
-      const bounds = new google.maps.LatLngBounds();
-      path.forEach((c: any) => bounds.extend(c));
-
-      mapRef.current = new google.maps.Map(mapContainer.current, {
-        center: bounds.getCenter(),
+      map = createEmbeddedMapboxMap(mapContainer.current, {
+        style: MAPBOX_STYLE_BY_UI_ID.terrain,
+        center: path[0],
         zoom: 10,
-        mapTypeId: 'terrain',
-        disableDefaultUI: false,
-        gestureHandling: 'greedy',
+        interactive: true,
       });
+      mapRef.current = map;
 
-      new google.maps.Polyline({
-        path, geodesic: true, strokeColor: '#5B7CFF', strokeOpacity: 0.9, strokeWeight: 4, map: mapRef.current,
-      });
-
-      // Add photo markers as circles with photo thumbnails
-      photos.forEach(photo => {
-        if (photo.lat && photo.lng && mapRef.current) {
-          const marker = new google.maps.Marker({
-            position: { lat: Number(photo.lat), lng: Number(photo.lng) },
-            map: mapRef.current,
-            icon: {
-              url: photo.photo_url,
-              scaledSize: new google.maps.Size(40, 40),
-              anchor: new google.maps.Point(20, 20),
-            },
-          });
-
-          // Create a circular border overlay
-          new google.maps.Circle({
-            center: { lat: Number(photo.lat), lng: Number(photo.lng) },
-            radius: 15,
-            map: mapRef.current,
-            fillColor: '#5B7CFF',
-            fillOpacity: 0.15,
-            strokeColor: '#5B7CFF',
-            strokeWeight: 2,
-            clickable: false,
-          });
-
-          marker.addListener('click', () => setSelectedPhoto(photo));
-        }
-      });
-
-      if (userGeoPosition) {
-        bounds.extend({ lat: userGeoPosition.lat, lng: userGeoPosition.lng });
-        mapRef.current.fitBounds(bounds, 50);
-        userLocationMarkerRef.current?.setMap(null);
-        userLocationMarkerRef.current = new google.maps.Marker({
-          map: mapRef.current,
-          position: { lat: userGeoPosition.lat, lng: userGeoPosition.lng },
-          icon: getUserLocationMarkerIcon(),
-          zIndex: 900,
-          title: 'Votre position',
+      const onStyleReady = () => {
+        if (!map) return;
+        setOrUpdateLineLayer(map, ROUTE_DETAIL_LINE_SRC, ROUTE_DETAIL_LINE_LAYER, path, {
+          color: '#5B7CFF',
+          width: 4,
         });
-      } else {
-        mapRef.current.fitBounds(bounds, 40);
-      }
+
+        photos.forEach((photo) => {
+          if (!photo.lat || !photo.lng || !map) return;
+          const wrap = document.createElement('div');
+          wrap.style.width = '40px';
+          wrap.style.height = '40px';
+          wrap.style.borderRadius = '9999px';
+          wrap.style.overflow = 'hidden';
+          wrap.style.border = '2px solid #5B7CFF';
+          wrap.style.boxShadow = '0 0 0 3px rgba(91,124,255,0.25)';
+          wrap.style.cursor = 'pointer';
+          const img = document.createElement('img');
+          img.src = photo.photo_url;
+          img.alt = '';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          wrap.appendChild(img);
+          wrap.addEventListener('click', () => setSelectedPhoto(photo));
+          new mapboxgl.Marker({ element: wrap }).setLngLat([Number(photo.lng), Number(photo.lat)]).addTo(map);
+        });
+
+        const bounds = new mapboxgl.LngLatBounds();
+        path.forEach((p) => bounds.extend([p.lng, p.lat]));
+        if (userGeoPosition) {
+          bounds.extend([userGeoPosition.lng, userGeoPosition.lat]);
+          userLocationMarkerRef.current?.remove();
+          userLocationMarkerRef.current = createUserLocationMapboxMarker(
+            userGeoPosition.lng,
+            userGeoPosition.lat,
+          ).addTo(map);
+        }
+        map.fitBounds(bounds, { padding: userGeoPosition ? 50 : 40, duration: 0, maxZoom: 16 });
+      };
+
+      if (map.isStyleLoaded()) onStyleReady();
+      else map.once('load', onStyleReady);
     }, 300);
-
-    };
-
-    initMap();
 
     return () => {
       if (timer) clearTimeout(timer);
-      if (pinMarkerRef.current) {
-        pinMarkerRef.current.setMap(null);
-        pinMarkerRef.current = null;
-      }
-      userLocationMarkerRef.current?.setMap(null);
+      pinMarkerRef.current?.remove();
+      pinMarkerRef.current = null;
+      userLocationMarkerRef.current?.remove();
       userLocationMarkerRef.current = null;
+      map?.remove();
       mapRef.current = null;
     };
   }, [open, route, photos, userGeoPosition]);
@@ -308,42 +290,32 @@ export const RouteDetailDialog = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !addPhotoMode || !pinLocation) {
-      if (pinMarkerRef.current) {
-        pinMarkerRef.current.setMap(null);
-        pinMarkerRef.current = null;
-      }
+      pinMarkerRef.current?.remove();
+      pinMarkerRef.current = null;
       return;
     }
 
     const pos = { lat: pinLocation.lat, lng: pinLocation.lng };
 
     if (!pinMarkerRef.current) {
-      pinMarkerRef.current = new google.maps.Marker({
-        position: pos,
-        map,
-        draggable: true,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 14,
-          fillColor: '#5B7CFF',
-          fillOpacity: 0.9,
-          strokeColor: '#fff',
-          strokeWeight: 3,
-        },
-        animation: google.maps.Animation.DROP,
-        zIndex: google.maps.Marker.MAX_ZINDEX + 10,
+      const el = document.createElement('div');
+      el.style.width = '28px';
+      el.style.height = '28px';
+      el.style.borderRadius = '50%';
+      el.style.background = '#5B7CFF';
+      el.style.border = '3px solid #fff';
+      el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+      const m = new mapboxgl.Marker({ element: el, draggable: true })
+        .setLngLat([pos.lng, pos.lat])
+        .addTo(map);
+      m.on('dragend', () => {
+        const ll = m.getLngLat();
+        setPinLocation({ lat: ll.lat, lng: ll.lng });
+        setPhotoPlacementSource('manual');
       });
-      pinMarkerRef.current.addListener('dragend', () => {
-        const p = pinMarkerRef.current?.getPosition();
-        if (p) {
-          setPinLocation({ lat: p.lat(), lng: p.lng() });
-          setPhotoPlacementSource('manual');
-        }
-      });
+      pinMarkerRef.current = m;
     } else {
-      pinMarkerRef.current.setPosition(pos);
-      pinMarkerRef.current.setMap(map);
-      pinMarkerRef.current.setDraggable(true);
+      pinMarkerRef.current.setLngLat([pos.lng, pos.lat]);
     }
   }, [pinLocation, addPhotoMode, open, route?.id, photos.length]);
 
@@ -359,51 +331,52 @@ export const RouteDetailDialog = ({
 
     if (!map || !allowLongPress) return;
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let mouseLatLng: google.maps.LatLng | null = null;
+    let longTimer: ReturnType<typeof setTimeout> | null = null;
+    let mouseXY: { lat: number; lng: number } | null = null;
     let touchX = 0;
     let touchY = 0;
 
     const clearTimer = () => {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
+      if (longTimer) {
+        clearTimeout(longTimer);
+        longTimer = null;
       }
     };
 
-    const placeAt = (latLng: google.maps.LatLng) => {
+    const placeAt = (lat: number, lng: number) => {
       if (!photoFileRef.current) return;
-      setPinLocation({ lat: latLng.lat(), lng: latLng.lng() });
+      setPinLocation({ lat, lng });
       setPhotoPlacementSource('manual');
     };
 
-    const subDown = map.addListener('mousedown', (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return;
-      mouseLatLng = e.latLng;
+    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+      mouseXY = { lat: e.lngLat.lat, lng: e.lngLat.lng };
       clearTimer();
-      timer = setTimeout(() => {
-        timer = null;
-        if (mouseLatLng) placeAt(mouseLatLng);
+      longTimer = setTimeout(() => {
+        longTimer = null;
+        if (mouseXY) placeAt(mouseXY.lat, mouseXY.lng);
       }, 550);
-    });
+    };
 
     const cancelMouse = () => {
       clearTimer();
-      mouseLatLng = null;
+      mouseXY = null;
     };
-    const subUp = map.addListener('mouseup', cancelMouse);
-    const subMove = map.addListener('mousemove', cancelMouse);
 
-    const div = map.getDiv();
+    map.on('mousedown', onMouseDown);
+    map.on('mouseup', cancelMouse);
+    map.on('mousemove', cancelMouse);
+
+    const div = map.getCanvasContainer();
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       touchX = e.touches[0].clientX;
       touchY = e.touches[0].clientY;
       clearTimer();
-      timer = setTimeout(() => {
-        timer = null;
-        const ll = clientXYToLatLng(map, touchX, touchY);
-        if (ll) placeAt(ll);
+      longTimer = setTimeout(() => {
+        longTimer = null;
+        const c = clientXYToMapCoord(map, touchX, touchY);
+        if (c) placeAt(c.lat, c.lng);
       }, 550);
     };
     const onTouchMove = (e: TouchEvent) => {
@@ -423,9 +396,9 @@ export const RouteDetailDialog = ({
 
     const cleanup = () => {
       clearTimer();
-      google.maps.event.removeListener(subDown);
-      google.maps.event.removeListener(subUp);
-      google.maps.event.removeListener(subMove);
+      map.off('mousedown', onMouseDown);
+      map.off('mouseup', cancelMouse);
+      map.off('mousemove', cancelMouse);
       div.removeEventListener('touchstart', onTouchStart);
       div.removeEventListener('touchmove', onTouchMove);
       div.removeEventListener('touchend', endTouch);
@@ -444,10 +417,8 @@ export const RouteDetailDialog = ({
     setPhotoPreview(URL.createObjectURL(file));
     setPinLocation(null);
     setPhotoPlacementSource(null);
-    if (pinMarkerRef.current) {
-      pinMarkerRef.current.setMap(null);
-      pinMarkerRef.current = null;
-    }
+    pinMarkerRef.current?.remove();
+    pinMarkerRef.current = null;
 
     setReadingGps(true);
     try {
@@ -459,8 +430,8 @@ export const RouteDetailDialog = ({
         setTimeout(() => {
           const m = mapRef.current;
           if (m) {
-            m.panTo(coords);
-            m.setZoom(Math.max(m.getZoom() || 14, 15));
+            const z = Math.max(m.getZoom() || 14, 15);
+            m.easeTo({ center: [coords.lng, coords.lat], zoom: z, duration: 400 });
           }
         }, 100);
       } else {
@@ -727,10 +698,8 @@ export const RouteDetailDialog = ({
                           setPhotoPreview(null);
                           setPinLocation(null);
                           setPhotoPlacementSource(null);
-                          if (pinMarkerRef.current) {
-                            pinMarkerRef.current.setMap(null);
-                            pinMarkerRef.current = null;
-                          }
+                          pinMarkerRef.current?.remove();
+                          pinMarkerRef.current = null;
                         }}
                       >
                         <X className="h-3.5 w-3.5" />

@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, RotateCcw, Mountain, MapPin, TrendingUp, Gauge } from 'lucide-react';
-import { Loader } from '@googlemaps/js-api-loader';
-import { supabase } from '@/integrations/supabase/client';
-import { getKeyBody } from '@/lib/googleMapsKey';
+import mapboxgl from 'mapbox-gl';
+import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { bearingDegrees, destinationPointMeters } from '@/lib/geoUtils';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -79,6 +79,19 @@ function lookAheadMeters(polylineLengthM: number): number {
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
+
+function lineStringFeature(coords: { lat: number; lng: number }[]): GeoJSON.Feature<GeoJSON.LineString> {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'LineString', coordinates: coords.map((c) => [c.lng, c.lat]) },
+  };
+}
+
+const ELEV_SAT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12';
+const SRC_REMAIN = 'elev3d-remain';
+const SRC_GLOW = 'elev3d-glow';
+const SRC_TRAV = 'elev3d-traveled';
 
 /** Pitch de base (45–60°) selon le palier perf — vue vraiment inclinée, pas top-down. */
 function baseTiltForTier(tier: 'high' | 'balanced' | 'battery'): number {
@@ -253,11 +266,9 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
   );
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const remainingPolyRef = useRef<google.maps.Polyline | null>(null);
-  const traveledPolyRef = useRef<google.maps.Polyline | null>(null);
-  const traveledGlowRef = useRef<google.maps.Polyline | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const staticEndpointMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const animationRef = useRef<number | null>(null);
   /** Centre caméra lissé le long du trajet */
   const cameraCenterLatRef = useRef<number | null>(null);
@@ -324,179 +335,145 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     return { totalDistance: totalRouteDistance, elevationGain: Math.round(gain), elevationLoss: Math.round(loss) };
   }, [flyoverElevations, routeStats, totalRouteDistance]);
 
-  // Initialize Google Maps
+  // Initialize Mapbox (satellite + pitch / bearing pour le flyover)
   useEffect(() => {
     if (!mapContainerRef.current || flyoverCoordinates.length < 2) return;
+    const token = getMapboxAccessToken();
+    if (!token) return;
 
-    const initMap = async () => {
-      try {
-        if (!window.google?.maps) {
-          const { data: apiKeyData } = await supabase.functions.invoke('google-maps-proxy', {
-            body: getKeyBody()
-          });
-          const apiKey = apiKeyData?.apiKey || '';
-          const loader = new Loader({ apiKey, version: 'weekly', libraries: ['geometry', 'places'] });
-          await loader.load();
-        }
+    let cancelled = false;
+    mapboxgl.accessToken = token;
 
-        if (!mapContainerRef.current) return;
+    const centerLat = flyoverCoordinates.reduce((s, c) => s + c.lat, 0) / flyoverCoordinates.length;
+    const centerLng = flyoverCoordinates.reduce((s, c) => s + c.lng, 0) / flyoverCoordinates.length;
 
-        const centerLat = flyoverCoordinates.reduce((s, c) => s + c.lat, 0) / flyoverCoordinates.length;
-        const centerLng = flyoverCoordinates.reduce((s, c) => s + c.lng, 0) / flyoverCoordinates.length;
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: ELEV_SAT_STYLE,
+      center: [centerLng, centerLat],
+      zoom: 16,
+      pitch: 52,
+      bearing: 0,
+      interactive: true,
+      attributionControl: false,
+    });
+    mapRef.current = map;
 
-        const map = new google.maps.Map(mapContainerRef.current, {
-          center: { lat: centerLat, lng: centerLng },
-          zoom: 16,
-          mapTypeId: 'satellite',
-          tilt: 52,
-          heading: 0,
-          disableDefaultUI: true,
-          zoomControl: false,
-          gestureHandling: 'greedy',
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          isFractionalZoomEnabled: true,
-          styles: [
-            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-          ],
-        });
+    const computeH = (from: { lat: number; lng: number }, to: { lat: number; lng: number }) =>
+      bearingDegrees(from, to);
 
-        mapRef.current = map;
+    const boot = () => {
+      if (cancelled) return;
+      const totalIdxInit = flyoverCoordinates.length - 1;
+      const polyLenInit = cumulativeDistances[totalIdxInit] || 0;
+      const frame0 = computeChaseFrame(
+        flyoverCoordinates,
+        cumulativeDistances,
+        0,
+        polyLenInit,
+        computeH,
+        performanceTier,
+        0,
+      );
+      map.jumpTo({
+        center: [frame0.center.lng, frame0.center.lat],
+        bearing: frame0.heading,
+        pitch: frame0.tilt,
+        zoom: frame0.zoom,
+      });
+      headingSmoothRef.current = frame0.heading;
+      tiltSmoothRef.current = frame0.tilt;
+      zoomSmoothRef.current = frame0.zoom;
+      cameraCenterLatRef.current = frame0.center.lat;
+      cameraCenterLngRef.current = frame0.center.lng;
 
-        const totalIdxInit = flyoverCoordinates.length - 1;
-        const polyLenInit = cumulativeDistances[totalIdxInit] || 0;
-        const computeH = (from: { lat: number; lng: number }, to: { lat: number; lng: number }) =>
-          google.maps.geometry.spherical.computeHeading(
-            new google.maps.LatLng(from.lat, from.lng),
-            new google.maps.LatLng(to.lat, to.lng)
-          );
-        const frame0 = computeChaseFrame(
-          flyoverCoordinates,
-          cumulativeDistances,
-          0,
-          polyLenInit,
-          computeH,
-          performanceTier,
-          0
-        );
-        map.moveCamera({
-          center: frame0.center,
-          heading: frame0.heading,
-          tilt: frame0.tilt,
-          zoom: frame0.zoom,
-        });
-        headingSmoothRef.current = frame0.heading;
-        tiltSmoothRef.current = frame0.tilt;
-        zoomSmoothRef.current = frame0.zoom;
-        cameraCenterLatRef.current = frame0.center.lat;
-        cameraCenterLngRef.current = frame0.center.lng;
+      const fullPath = flyoverCoordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
+      map.addSource(SRC_REMAIN, { type: 'geojson', data: lineStringFeature(fullPath) });
+      map.addLayer({
+        id: `${SRC_REMAIN}-layer`,
+        type: 'line',
+        source: SRC_REMAIN,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#FF5A1F', 'line-opacity': 0.38, 'line-width': 6 },
+      });
 
-        // Tronçon restant (mis à jour en flyover : seulement devant la position → sensation de révélation)
-        const remainingPoly = new google.maps.Polyline({
-          path: flyoverCoordinates.map(c => ({ lat: c.lat, lng: c.lng })),
-          geodesic: true,
-          strokeColor: '#FF5A1F',
-          strokeOpacity: 0.38,
-          strokeWeight: 6,
-          map,
-        });
-        remainingPolyRef.current = remainingPoly;
+      map.addSource(SRC_GLOW, { type: 'geojson', data: lineStringFeature([]) });
+      map.addLayer({
+        id: `${SRC_GLOW}-layer`,
+        type: 'line',
+        source: SRC_GLOW,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#34d399', 'line-opacity': 0.35, 'line-width': 14 },
+      });
 
-        // Traveled glow (outer)
-        const traveledGlow = new google.maps.Polyline({
-          path: [],
-          geodesic: true,
-          strokeColor: '#34d399',
-          strokeOpacity: 0.35,
-          strokeWeight: 14,
-          map,
-        });
-        traveledGlowRef.current = traveledGlow;
+      map.addSource(SRC_TRAV, { type: 'geojson', data: lineStringFeature([]) });
+      map.addLayer({
+        id: `${SRC_TRAV}-layer`,
+        type: 'line',
+        source: SRC_TRAV,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#ffffff', 'line-opacity': 1, 'line-width': 5 },
+      });
 
-        // Traveled path (vivid)
-        const traveledPoly = new google.maps.Polyline({
-          path: [],
-          geodesic: true,
-          strokeColor: '#ffffff',
-          strokeOpacity: 1,
-          strokeWeight: 5,
-          map,
-        });
-        traveledPolyRef.current = traveledPoly;
+      const mkEndDot = (fill: string) => {
+        const el = document.createElement('div');
+        el.style.width = '16px';
+        el.style.height = '16px';
+        el.style.borderRadius = '50%';
+        el.style.background = fill;
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
+        return el;
+      };
+      staticEndpointMarkersRef.current = [
+        new mapboxgl.Marker({ element: mkEndDot('#22c55e') })
+          .setLngLat([flyoverCoordinates[0]!.lng, flyoverCoordinates[0]!.lat])
+          .addTo(map),
+        new mapboxgl.Marker({ element: mkEndDot('#ef4444') })
+          .setLngLat([
+            flyoverCoordinates[flyoverCoordinates.length - 1]!.lng,
+            flyoverCoordinates[flyoverCoordinates.length - 1]!.lat,
+          ])
+          .addTo(map),
+      ];
 
-        // Start marker
-        new google.maps.Marker({
-          position: flyoverCoordinates[0],
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: '#22c55e',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 3,
-          },
-          zIndex: 5,
-        });
+      const progEl = document.createElement('div');
+      progEl.style.width = '12px';
+      progEl.style.height = '12px';
+      progEl.style.borderRadius = '50%';
+      progEl.style.background = '#ffffff';
+      progEl.style.border = '2px solid #2563eb';
+      progEl.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+      markerRef.current = new mapboxgl.Marker({ element: progEl })
+        .setLngLat([flyoverCoordinates[0]!.lng, flyoverCoordinates[0]!.lat])
+        .addTo(map);
 
-        // End marker
-        new google.maps.Marker({
-          position: flyoverCoordinates[flyoverCoordinates.length - 1],
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: '#ef4444',
-            fillOpacity: 1,
-            strokeColor: '#ffffff',
-            strokeWeight: 3,
-          },
-          zIndex: 5,
-        });
-
-        // Marqueur de progression — petit point précis sur le tracé
-        const marker = new google.maps.Marker({
-          position: flyoverCoordinates[0],
-          map,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 4,
-            fillColor: '#ffffff',
-            fillOpacity: 1,
-            strokeColor: '#2563eb',
-            strokeWeight: 2,
-          },
-          zIndex: 10,
-        });
-        markerRef.current = marker;
-
-        setMapReady(true);
-      } catch (err) {
-        console.error('Failed to init Google Maps 3D:', err);
-      }
+      setMapReady(true);
     };
 
-    initMap();
-    return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
+    if (map.isStyleLoaded()) boot();
+    else map.once('load', boot);
+
+    return () => {
+      cancelled = true;
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      staticEndpointMarkersRef.current.forEach((m) => m.remove());
+      staticEndpointMarkersRef.current = [];
+      markerRef.current?.remove();
+      markerRef.current = null;
+      map.remove();
+      mapRef.current = null;
+      setMapReady(false);
+    };
   }, [flyoverCoordinates, cumulativeDistances, performanceTier]);
 
-  // Heading computation
-  const computeHeading = useCallback((from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
-    if (window.google?.maps?.geometry) {
-      return google.maps.geometry.spherical.computeHeading(
-        new google.maps.LatLng(from.lat, from.lng),
-        new google.maps.LatLng(to.lat, to.lng)
-      );
-    }
-    const dLng = (to.lng - from.lng) * Math.PI / 180;
-    const lat1 = from.lat * Math.PI / 180;
-    const lat2 = to.lat * Math.PI / 180;
-    const y = Math.sin(dLng) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-  }, []);
+  const computeHeading = useCallback(
+    (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => bearingDegrees(from, to),
+    [],
+  );
 
   // Boucle d’animation : requestAnimationFrame uniquement pendant la lecture — caméra déplacée le long du GPS
   useEffect(() => {
@@ -556,18 +533,25 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       }
       lastSpeedSampleRef.current = { pos: { ...currentPos }, time: timestamp };
 
-      markerRef.current?.setPosition(currentPos);
+      markerRef.current?.setLngLat([currentPos.lng, currentPos.lat]);
 
       const trailPath = flyoverCoordinates.slice(0, idx + 1).map((c) => ({ lat: c.lat, lng: c.lng }));
       trailPath.push(currentPos);
-      traveledPolyRef.current?.setPath(trailPath);
-      traveledGlowRef.current?.setPath(trailPath);
+      const mapAnim = mapRef.current;
+      if (mapAnim?.getSource(SRC_TRAV)) {
+        (mapAnim.getSource(SRC_TRAV) as mapboxgl.GeoJSONSource).setData(lineStringFeature(trailPath));
+      }
+      if (mapAnim?.getSource(SRC_GLOW)) {
+        (mapAnim.getSource(SRC_GLOW) as mapboxgl.GeoJSONSource).setData(lineStringFeature(trailPath));
+      }
 
-      const remainingPath: google.maps.LatLngLiteral[] = [{ ...currentPos }];
+      const remainingPath: { lat: number; lng: number }[] = [{ ...currentPos }];
       for (let k = idx + 1; k <= totalIdx; k++) {
         remainingPath.push({ lat: flyoverCoordinates[k].lat, lng: flyoverCoordinates[k].lng });
       }
-      remainingPolyRef.current?.setPath(remainingPath);
+      if (mapAnim?.getSource(SRC_REMAIN)) {
+        (mapAnim.getSource(SRC_REMAIN) as mapboxgl.GeoJSONSource).setData(lineStringFeature(remainingPath));
+      }
 
       if (flyoverElevations.length > idx + 1) {
         const elev = flyoverElevations[idx] + (flyoverElevations[idx + 1] - flyoverElevations[idx]) * frac;
@@ -613,7 +597,7 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       zoomSmoothRef.current = zoomSmooth;
 
       const map = mapRef.current;
-      if (!map || !window.google?.maps?.geometry?.spherical) {
+      if (!map) {
         animationRef.current = requestAnimationFrame(animate);
         return;
       }
@@ -623,12 +607,8 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
       const ortho = headingSmooth + 90;
       const wA = easeInOutCubic(clamp(turnIntensity / 28, 0, 1));
       const shift = (diff >= 0 ? 1 : -1) * maxCamShiftM * wA * 0.55;
-      const shifted = google.maps.geometry.spherical.computeOffset(
-        new google.maps.LatLng(targetCam.lat, targetCam.lng),
-        shift,
-        ortho
-      );
-      targetCam = { lat: shifted.lat(), lng: shifted.lng() };
+      const shifted = destinationPointMeters({ lat: targetCam.lat, lng: targetCam.lng }, ortho, shift);
+      targetCam = { lat: shifted.lat, lng: shifted.lng };
 
       const camLerp = performanceTier === 'battery' ? 0.14 : performanceTier === 'balanced' ? 0.19 : 0.22;
       if (cameraCenterLatRef.current === null || cameraCenterLngRef.current === null) {
@@ -639,10 +619,10 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
         cameraCenterLngRef.current += (targetCam.lng - cameraCenterLngRef.current) * camLerp;
       }
 
-      map.moveCamera({
-        center: { lat: cameraCenterLatRef.current, lng: cameraCenterLngRef.current },
-        heading: headingSmooth,
-        tilt: tiltSmooth,
+      map.jumpTo({
+        center: [cameraCenterLngRef.current!, cameraCenterLatRef.current!],
+        bearing: headingSmooth,
+        pitch: tiltSmooth,
         zoom: zoomSmooth,
       });
 
@@ -705,10 +685,19 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     setCurrentSpeedKmh(0);
     if (!mapRef.current || flyoverCoordinates.length < 2) return;
     const map = mapRef.current;
-    traveledPolyRef.current?.setPath([]);
-    traveledGlowRef.current?.setPath([]);
-    remainingPolyRef.current?.setPath(flyoverCoordinates.map((c) => ({ lat: c.lat, lng: c.lng })));
-    markerRef.current?.setPosition(flyoverCoordinates[0]);
+    const empty: { lat: number; lng: number }[] = [];
+    if (map.getSource(SRC_TRAV)) {
+      (map.getSource(SRC_TRAV) as mapboxgl.GeoJSONSource).setData(lineStringFeature(empty));
+    }
+    if (map.getSource(SRC_GLOW)) {
+      (map.getSource(SRC_GLOW) as mapboxgl.GeoJSONSource).setData(lineStringFeature(empty));
+    }
+    if (map.getSource(SRC_REMAIN)) {
+      (map.getSource(SRC_REMAIN) as mapboxgl.GeoJSONSource).setData(
+        lineStringFeature(flyoverCoordinates.map((c) => ({ lat: c.lat, lng: c.lng }))),
+      );
+    }
+    markerRef.current?.setLngLat([flyoverCoordinates[0]!.lng, flyoverCoordinates[0]!.lat]);
 
     const totalIdx = flyoverCoordinates.length - 1;
     const polyLen = cumulativeDistances[totalIdx] || 0;
@@ -726,10 +715,10 @@ export const ElevationProfile3D: React.FC<ElevationProfile3DProps> = ({
     zoomSmoothRef.current = frame0.zoom;
     cameraCenterLatRef.current = frame0.center.lat;
     cameraCenterLngRef.current = frame0.center.lng;
-    map.moveCamera({
-      center: frame0.center,
-      heading: frame0.heading,
-      tilt: frame0.tilt,
+    map.jumpTo({
+      center: [frame0.center.lng, frame0.center.lat],
+      bearing: frame0.heading,
+      pitch: frame0.tilt,
       zoom: frame0.zoom,
     });
   }, [flyoverCoordinates, cumulativeDistances, computeHeading, performanceTier]);

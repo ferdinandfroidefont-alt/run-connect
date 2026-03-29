@@ -9,7 +9,7 @@ import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
+import { geocodeSearchMapbox } from "@/lib/mapboxGeocode";
 import { mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 
@@ -123,34 +123,19 @@ export const WeeklyPlanSessionEditor = ({
     if (!query.trim()) return;
     setIsSearchingLocation(true);
     try {
-      if (window.google?.maps?.places) {
-        const service = new google.maps.places.PlacesService(document.createElement('div'));
-        service.textSearch({ query }, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            setLocationResults(results.slice(0, 4).map(r => ({
-              name: r.formatted_address || r.name || "",
-              lat: r.geometry?.location?.lat() || 0,
-              lng: r.geometry?.location?.lng() || 0,
-            })));
-            setShowLocationResults(true);
-          }
-          setIsSearchingLocation(false);
-        });
-      } else {
-        const { data } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { address: query, type: 'geocode' }
-        });
-        if (data?.results) {
-          setLocationResults(data.results.slice(0, 4).map((r: any) => ({
-            name: r.formatted_address,
-            lat: r.geometry.location.lat,
-            lng: r.geometry.location.lng,
-          })));
-          setShowLocationResults(true);
-        }
-        setIsSearchingLocation(false);
-      }
+      const rows = await geocodeSearchMapbox(query, 4);
+      setLocationResults(
+        rows.map((r) => ({
+          name: r.formatted_address,
+          lat: r.geometry.location.lat,
+          lng: r.geometry.location.lng,
+        })),
+      );
+      setShowLocationResults(rows.length > 0);
     } catch {
+      setLocationResults([]);
+      setShowLocationResults(false);
+    } finally {
       setIsSearchingLocation(false);
     }
   };

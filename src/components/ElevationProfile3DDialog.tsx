@@ -3,6 +3,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ElevationProfile3D } from './ElevationProfile3D';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
+import { densifyMapCoords, pathLengthMeters, type MapCoord } from '@/lib/geoUtils';
 
 interface ElevationProfile3DDialogProps {
   open: boolean;
@@ -37,22 +39,14 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
     }
 
     const fetchElevations = async () => {
-      if (!window.google?.maps) return;
       setLoading(true);
       try {
-        const elevationService = new google.maps.ElevationService();
-        const path = coordinates.map(c => ({ lat: c.lat, lng: c.lng }));
-        const samples = Math.min(512, Math.max(coordinates.length, 50));
-        const result = await new Promise<google.maps.ElevationResult[]>((resolve, reject) => {
-          elevationService.getElevationAlongPath(
-            { path, samples },
-            (results, status) => {
-              if (status === 'OK' && results) resolve(results);
-              else reject(new Error(`Elevation API failed: ${status}`));
-            }
-          );
-        });
-        setElevations(result.map(r => r.elevation));
+        const path: MapCoord[] = coordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
+        const dens = densifyMapCoords(path);
+        const samples = Math.min(512, Math.max(dens.length, 50));
+        const sampled = samplePathCoords(dens, samples);
+        const el = await fetchElevationsForCoords(sampled);
+        setElevations(el.length > 0 ? el : initialElevations);
       } catch (error) {
         console.error('Erreur récupération élévations:', error);
         setElevations(initialElevations);
@@ -75,15 +69,8 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
       else loss += Math.abs(diff);
     }
 
-    let totalDist = 0;
-    if (window.google?.maps?.geometry) {
-      for (let i = 0; i < coordinates.length - 1; i++) {
-        totalDist += google.maps.geometry.spherical.computeDistanceBetween(
-          new google.maps.LatLng(coordinates[i].lat, coordinates[i].lng),
-          new google.maps.LatLng(coordinates[i + 1].lat, coordinates[i + 1].lng)
-        );
-      }
-    }
+    const path: MapCoord[] = coordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
+    const totalDist = path.length >= 2 ? pathLengthMeters(path) : 0;
 
     return {
       totalDistance: totalDist || routeStats?.totalDistance || 0,

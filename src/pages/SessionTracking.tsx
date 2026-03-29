@@ -1,20 +1,34 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
-import { Loader } from '@googlemaps/js-api-loader';
+import mapboxgl from 'mapbox-gl';
 import { ArrowLeft, Navigation, Radio, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getKeyBody } from '@/lib/googleMapsKey';
 import { imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { haversineMeters, formatDistanceLabel } from '@/lib/geo';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
+import type { MapCoord } from '@/lib/geoUtils';
 
 const ROUTE_COLOR = '#FF6B35';
+const ROUTE_SRC = 'session-tracking-route';
+const ROUTE_LAYER = 'session-tracking-route-layer';
+
+function elFromIconDataUrl(url: string, w: number, h: number): HTMLDivElement {
+  const el = document.createElement('div');
+  el.style.width = `${w}px`;
+  el.style.height = `${h}px`;
+  el.style.backgroundImage = `url(${url})`;
+  el.style.backgroundSize = 'contain';
+  el.style.backgroundRepeat = 'no-repeat';
+  el.style.backgroundPosition = 'center';
+  return el;
+}
 
 export default function SessionTracking() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -35,88 +49,60 @@ export default function SessionTracking() {
     isBroadcasting,
   } = useSessionTracking(sessionId);
 
-  const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const userMarkerRef = useRef<google.maps.Marker | null>(null);
-  const participantMarkersRef = useRef<Map<string, google.maps.Marker>>(new Map());
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const participantMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [mapReady, setMapReady] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchKey = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-          body: getKeyBody(),
-        });
-        if (error) throw error;
-        if (data?.apiKey) setApiKey(data.apiKey);
-      } catch (err) {
-        console.error('Failed to fetch Google Maps API key:', err);
-      }
+    if (!session || !mapContainerRef.current) return;
+    if (!getMapboxAccessToken()) return;
+
+    let cancelled = false;
+    const map = createEmbeddedMapboxMap(mapContainerRef.current, {
+      center: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+      zoom: 15,
+      interactive: true,
+    });
+    mapboxMapRef.current = map;
+
+    const boot = () => {
+      if (cancelled) return;
+      setMapReady(true);
     };
-    fetchKey();
-  }, []);
+    if (map.isStyleLoaded()) boot();
+    else map.once('load', boot);
+
+    return () => {
+      cancelled = true;
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+      participantMarkersRef.current.forEach((m) => m.remove());
+      participantMarkersRef.current.clear();
+      map.remove();
+      mapboxMapRef.current = null;
+      setMapReady(false);
+    };
+  }, [session?.id]);
 
   useEffect(() => {
-    if (!session || !apiKey || mapReady) return;
+    const map = mapboxMapRef.current;
+    if (!map || !mapReady || !session) return;
 
-    const initMap = async () => {
-      try {
-        if (!(window as any).google?.maps) {
-          const loader = new Loader({
-            apiKey,
-            version: 'weekly',
-            libraries: ['geometry', 'places', 'marker'],
-          });
-          await loader.load();
-        }
-        if (!mapRef.current) return;
-
-        const center =
-          routeCoordinates.length > 0
-            ? undefined
-            : { lat: Number(session.location_lat), lng: Number(session.location_lng) };
-
-        const map = new google.maps.Map(mapRef.current, {
-          center: center || { lat: 48.8566, lng: 2.3522 },
-          zoom: 15,
-          disableDefaultUI: true,
-          zoomControl: false,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          gestureHandling: 'greedy',
-        });
-
-        if (routeCoordinates.length > 0) {
-          const bounds = new google.maps.LatLngBounds();
-          routeCoordinates.forEach((c) => bounds.extend(c));
-          map.fitBounds(bounds, 60);
-
-          const polyline = new google.maps.Polyline({
-            path: routeCoordinates,
-            strokeColor: ROUTE_COLOR,
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-            geodesic: true,
-          });
-          polyline.setMap(map);
-          polylineRef.current = polyline;
-        } else {
-          map.setCenter({ lat: Number(session.location_lat), lng: Number(session.location_lng) });
-        }
-
-        googleMapRef.current = map;
-        setMapReady(true);
-      } catch (err) {
-        console.error('Map init error:', err);
-      }
-    };
-
-    initMap();
-  }, [session, routeCoordinates, apiKey, mapReady]);
+    const coords: MapCoord[] = routeCoordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
+    if (coords.length > 0) {
+      setOrUpdateLineLayer(map, ROUTE_SRC, ROUTE_LAYER, coords, { color: ROUTE_COLOR, width: 5 });
+      fitMapToCoords(map, coords, 60);
+    } else {
+      removeLineLayer(map, ROUTE_SRC, ROUTE_LAYER);
+      map.jumpTo({
+        center: [Number(session.location_lng), Number(session.location_lat)],
+        zoom: 15,
+      });
+    }
+  }, [mapReady, routeCoordinates, session]);
 
   const createBlueDotIcon = useCallback(() => {
     const size = 60;
@@ -217,55 +203,42 @@ export default function SessionTracking() {
     return canvas.toDataURL('image/png');
   }, []);
 
-  // Marqueur « moi » : photo de profil si dispo, sinon halo vert
   useEffect(() => {
-    if (!googleMapRef.current || !userPosition || !mapReady || !user) return;
+    if (!mapboxMapRef.current || !userPosition || !mapReady || !user) return;
 
     let cancelled = false;
-    const map = googleMapRef.current;
+    const map = mapboxMapRef.current;
     const prof = participantProfiles.get(user.id);
     const avatarUrl = prof?.avatar_url ?? null;
 
     const run = async () => {
-      const iconUrl = avatarUrl
-        ? await createPhotoMarkerIcon(avatarUrl, '#10b981')
-        : createBlueDotIcon();
+      const w = avatarUrl ? 52 : 60;
+      const h = avatarUrl ? 52 : 60;
+      const iconUrl = avatarUrl ? await createPhotoMarkerIcon(avatarUrl, '#10b981') : createBlueDotIcon();
       if (cancelled) return;
 
       if (userMarkerRef.current) {
-        userMarkerRef.current.setPosition(userPosition);
-        userMarkerRef.current.setIcon({
-          url: iconUrl,
-          scaledSize: new google.maps.Size(avatarUrl ? 52 : 60, avatarUrl ? 52 : 60),
-          anchor: new google.maps.Point(avatarUrl ? 26 : 30, avatarUrl ? 26 : 30),
-        });
-        userMarkerRef.current.setTitle('Ma position');
+        userMarkerRef.current.setLngLat([userPosition.lng, userPosition.lat]);
+        userMarkerRef.current.getElement().style.backgroundImage = `url(${iconUrl})`;
+        userMarkerRef.current.getElement().style.width = `${w}px`;
+        userMarkerRef.current.getElement().style.height = `${h}px`;
       } else {
-        userMarkerRef.current = new google.maps.Marker({
-          map,
-          position: userPosition,
-          icon: {
-            url: iconUrl,
-            scaledSize: new google.maps.Size(avatarUrl ? 52 : 60, avatarUrl ? 52 : 60),
-            anchor: new google.maps.Point(avatarUrl ? 26 : 30, avatarUrl ? 26 : 30),
-          },
-          zIndex: 1200,
-          title: 'Ma position',
-        });
-        map.panTo(userPosition);
-        map.setZoom(16);
+        const el = elFromIconDataUrl(iconUrl, w, h);
+        userMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([userPosition.lng, userPosition.lat])
+          .addTo(map);
+        map.flyTo({ center: [userPosition.lng, userPosition.lat], zoom: 16, duration: 500 });
       }
     };
-    run();
+    void run();
     return () => {
       cancelled = true;
     };
   }, [userPosition, mapReady, user, participantProfiles, createPhotoMarkerIcon, createBlueDotIcon]);
 
-  // Autres participants — création synchrone, pas de forEach async
   useEffect(() => {
-    if (!googleMapRef.current || !mapReady) return;
-    const map = googleMapRef.current;
+    if (!mapboxMapRef.current || !mapReady) return;
+    const map = mapboxMapRef.current;
     let cancelled = false;
 
     const sync = async () => {
@@ -276,7 +249,7 @@ export default function SessionTracking() {
 
         const existing = participantMarkersRef.current.get(uid);
         if (existing) {
-          existing.setPosition({ lat: pos.lat, lng: pos.lng });
+          existing.setLngLat([pos.lng, pos.lat]);
           continue;
         }
 
@@ -285,30 +258,22 @@ export default function SessionTracking() {
         const iconUrl = await createPhotoMarkerIcon(avatarUrl, '#3b82f6');
         if (cancelled) return;
 
-        const marker = new google.maps.Marker({
-          map,
-          position: { lat: pos.lat, lng: pos.lng },
-          icon: {
-            url: iconUrl,
-            scaledSize: new google.maps.Size(52, 52),
-            anchor: new google.maps.Point(26, 26),
-          },
-          zIndex: 800,
-          title: profile?.display_name || profile?.username || 'Participant',
-        });
-        marker.addListener('click', () => setPreviewUserId(uid));
+        const el = elFromIconDataUrl(iconUrl, 52, 52);
+        const marker = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => setPreviewUserId(uid));
         participantMarkersRef.current.set(uid, marker);
       }
 
       for (const [uid, marker] of [...participantMarkersRef.current.entries()]) {
         if (!seen.has(uid)) {
-          marker.setMap(null);
+          marker.remove();
           participantMarkersRef.current.delete(uid);
         }
       }
     };
 
-    sync();
+    void sync();
     return () => {
       cancelled = true;
     };
@@ -316,8 +281,8 @@ export default function SessionTracking() {
 
   useEffect(() => {
     return () => {
-      userMarkerRef.current?.setMap(null);
-      participantMarkersRef.current.forEach((m) => m.setMap(null));
+      userMarkerRef.current?.remove();
+      participantMarkersRef.current.forEach((m) => m.remove());
     };
   }, []);
 
@@ -423,7 +388,7 @@ export default function SessionTracking() {
   return (
     <div className="fixed inset-0 bg-background">
       <div className="absolute inset-0 z-0" style={{ isolation: 'isolate' }}>
-        <div ref={mapRef} className="w-full h-full bg-secondary" />
+        <div ref={mapContainerRef} className="w-full h-full bg-secondary" />
       </div>
 
       <div className="absolute top-0 left-0 right-0 z-[9999] bg-card/90 backdrop-blur-xl pt-[env(safe-area-inset-top)] pointer-events-auto border-b border-border/40 shadow-sm">
@@ -447,7 +412,7 @@ export default function SessionTracking() {
                   'text-[11px] leading-tight mt-0.5 line-clamp-2 block',
                   statusBanner.tone === 'ok' && 'text-emerald-600',
                   statusBanner.tone === 'warn' && 'text-amber-600',
-                  statusBanner.tone === 'muted' && 'text-muted-foreground'
+                  statusBanner.tone === 'muted' && 'text-muted-foreground',
                 )}
               >
                 {statusBanner.text}
@@ -465,7 +430,6 @@ export default function SessionTracking() {
         </div>
       </div>
 
-      {/* Liste premium : distances + tap → profil */}
       <div className="absolute bottom-0 left-0 right-0 z-[9999] pointer-events-auto pb-[max(12px,env(safe-area-inset-bottom))] px-3">
         <div className="rounded-[20px] bg-card/92 backdrop-blur-2xl border border-border/50 shadow-[0_-12px_48px_rgba(0,0,0,0.12)] overflow-hidden max-h-[min(40vh,320px)] flex flex-col">
           <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border/40">
@@ -473,9 +437,7 @@ export default function SessionTracking() {
               <Users className="h-4 w-4 text-primary" />
               Autour de toi
             </div>
-            <span className="text-[12px] text-muted-foreground tabular-nums">
-              {othersOnlineCount} en ligne
-            </span>
+            <span className="text-[12px] text-muted-foreground tabular-nums">{othersOnlineCount} en ligne</span>
           </div>
           <div className="overflow-y-auto px-2 py-2 space-y-1">
             {!userPosition && (
@@ -507,7 +469,10 @@ export default function SessionTracking() {
                     <p className="text-[12px] text-muted-foreground flex items-center gap-1">
                       <Navigation className="h-3 w-3 shrink-0" />
                       <span>
-                        À <span className="font-semibold text-foreground tabular-nums">{formatDistanceLabel(row.dist, unit)}</span>
+                        À{' '}
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatDistanceLabel(row.dist, unit)}
+                        </span>
                       </span>
                     </p>
                   </div>

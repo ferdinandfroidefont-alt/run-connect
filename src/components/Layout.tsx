@@ -144,16 +144,12 @@ export const Layout = ({ children }: LayoutProps) => {
             className={
               isHome
                 ? /* Accueil : carte dans le flux flex → hauteur réelle > 0 pour Mapbox */
-                  'relative z-20 flex min-h-0 flex-1 flex-col bg-teal-500/[0.12]'
+                  'relative z-20 flex min-h-0 flex-1 flex-col'
                 : /* Autres onglets : carte persistée en arrière-plan */
                   'absolute inset-0 z-0 flex min-h-0 flex-col'
             }
           >
-            <Suspense
-              fallback={
-                <div className="min-h-0 flex-1 bg-muted/40" aria-hidden />
-              }
-            >
+            <Suspense fallback={null}>
               <PersistentHomeMap
                 visible={isHome}
                 initialLat={mapInitialLat}

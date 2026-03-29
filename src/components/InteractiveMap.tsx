@@ -236,15 +236,6 @@ export const InteractiveMap = ({
   const markers = useRef<mapboxgl.Marker[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
-  /** Overlay debug carte (visible sur l’écran, sans console). */
-  const [mapDebugLog, setMapDebugLog] = useState<string[]>([]);
-  const [mapDebugContainerInfo, setMapDebugContainerInfo] = useState({
-    refPresent: false,
-    w: 0,
-    h: 0,
-    children: 0,
-    canvas: false,
-  });
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -913,46 +904,10 @@ export const InteractiveMap = ({
   }, [isMapLoaded, isRouteDialogOpen]);
 
   useEffect(() => {
-    const tick = () => {
-      const el = mapContainer.current;
-      if (!el) {
-        setMapDebugContainerInfo((p) =>
-          p.refPresent ? { refPresent: false, w: 0, h: 0, children: 0, canvas: false } : p
-        );
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      setMapDebugContainerInfo({
-        refPresent: true,
-        w: Math.round(rect.width),
-        h: Math.round(rect.height),
-        children: el.children.length,
-        canvas: el.querySelector('canvas') !== null,
-      });
-    };
-    tick();
-    const id = window.setInterval(tick, 400);
-    return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    const push = (msg: string) => {
-      setMapDebugLog((prev) => [...prev.slice(-80), msg]);
-    };
-
-    push('init start');
-
-    if (!mapContainer.current || isMapLoaded) {
-      push(
-        `early exit — ref: ${mapContainer.current ? 'présent' : 'absent'}, isMapLoaded: ${String(isMapLoaded)}`
-      );
-      return;
-    }
+    if (!mapContainer.current || isMapLoaded) return;
 
     const token = getMapboxAccessToken();
-    push(`token check: ${token ? 'OK' : 'MANQUANT'}`);
     if (!token) {
-      push('error: token MANQUANT — arrêt init');
       toast.error('Clé Mapbox manquante — ajoutez VITE_MAPBOX_ACCESS_TOKEN dans .env');
       return;
     }
@@ -963,10 +918,7 @@ export const InteractiveMap = ({
     const boot = async () => {
       try {
         const prefPos = await waitForPrefetchedHomeMapPosition(1400);
-        if (!mapContainer.current || cancelled) {
-          push(`boot stop — container: ${mapContainer.current ? 'ok' : 'absent'}, cancelled: ${String(cancelled)}`);
-          return;
-        }
+        if (!mapContainer.current || cancelled) return;
 
         const mapCenter = prefPos ? { lat: prefPos.lat, lng: prefPos.lng } : { lat: 48.8566, lng: 2.3522 };
         const mapZoom = prefPos ? 14 : 12;
@@ -981,31 +933,18 @@ export const InteractiveMap = ({
           antialias: true,
         });
 
-        push('map created');
-
         mapInstance.on('style.load', () => {
-          push('style.load');
           if (routeCoordinates.current.length >= 2) {
             setInteractiveRouteLine(mapInstance, routeCoordinates.current);
           }
-        });
-
-        mapInstance.on('error', (e) => {
-          const msg = e?.error?.message ?? String(e?.error ?? 'erreur Mapbox');
-          push(`error: ${msg}`);
         });
 
         map.current = mapInstance;
 
         mapInstance.once('load', () => {
           if (cancelled) return;
-          push('load');
           setIsMapLoaded(true);
           setMapboxMap(mapInstance);
-        });
-
-        mapInstance.once('idle', () => {
-          push('idle');
         });
 
         const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
@@ -1067,8 +1006,6 @@ export const InteractiveMap = ({
             });
         }
       } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        push(`error: ${errMsg}`);
         console.error('Erreur lors du chargement de Mapbox:', error);
         toast.error('Erreur lors du chargement de la carte');
       }
@@ -1489,53 +1426,13 @@ export const InteractiveMap = ({
       m.off('dragstart', cancelPress);
     };
   }, [isMapLoaded, isRouteCreationMode, user]);
-  const mapboxDebugTokenOk = Boolean(getMapboxAccessToken());
-
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
-      {/* Mapbox : flux flex — hauteur effective pour le canvas (plus seulement absolute inset-0 + parent h 0) */}
       <div
         ref={mapContainer}
-        className="relative min-h-0 w-full flex-1 bg-secondary ring-1 ring-amber-500/40"
+        className="relative min-h-0 w-full flex-1 bg-secondary"
         data-tutorial="map-container"
       />
-
-      {/* Debug overlay Mapbox (lisible sans console) */}
-      <div
-        className="pointer-events-none max-h-[42vh] max-w-[min(100vw-20px,320px)] overflow-y-auto rounded-md px-2 py-1.5"
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          zIndex: 200,
-          background: 'rgba(0,0,0,0.82)',
-          color: '#fff',
-          fontSize: 12,
-          lineHeight: 1.35,
-          fontFamily: 'ui-monospace, monospace',
-        }}
-        aria-hidden
-      >
-        <div>
-          <strong>Token Mapbox:</strong> {mapboxDebugTokenOk ? 'OK' : 'MANQUANT'}
-        </div>
-        <div>
-          <strong>Container:</strong>{' '}
-          {mapDebugContainerInfo.refPresent
-            ? `ref présent — w: ${mapDebugContainerInfo.w} h: ${mapDebugContainerInfo.h}`
-            : 'ref absent — w: 0 h: 0'}
-        </div>
-        <div>
-          <strong>DOM:</strong> enfants: {mapDebugContainerInfo.children} —{' '}
-          {mapDebugContainerInfo.canvas ? 'canvas detected' : 'no canvas'}
-        </div>
-        <div className="my-1 border-t border-white/25" />
-        <div className="space-y-0.5 opacity-95">
-          {mapDebugLog.map((line, i) => (
-            <div key={`${i}-${line.slice(0, 24)}`}>{line}</div>
-          ))}
-        </div>
-      </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (

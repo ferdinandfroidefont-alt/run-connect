@@ -1,42 +1,66 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode, TurnInstruction } from '@/hooks/useTrainingMode';
-import { Loader } from '@googlemaps/js-api-loader';
-import { ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, Pause, Play, Square, AlertTriangle, Navigation, Locate, Mountain, Timer, Gauge, MapPin } from 'lucide-react';
+import mapboxgl from 'mapbox-gl';
+import { ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, Pause, Play, Square, AlertTriangle, Navigation, Locate, MapPin } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { getKeyBody } from '@/lib/googleMapsKey';
+import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
+import type { MapCoord } from '@/lib/geoUtils';
 
-const PRIMARY_BLUE = 'hsl(221, 83%, 53%)';
 const TRAVELED_TEAL = '#14b8a6';
-const MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-];
+const ROUTE_BLUE = '#2563eb';
+
+const TM_BORDER_SRC = 'tm-border';
+const TM_BORDER_LAYER = 'tm-border-l';
+const TM_ROUTE_SRC = 'tm-route';
+const TM_ROUTE_LAYER = 'tm-route-l';
+const TM_TRAV_SRC = 'tm-traveled';
+const TM_TRAV_LAYER = 'tm-traveled-l';
+
+function lineStringFeature(coords: { lat: number; lng: number }[]): GeoJSON.Feature<GeoJSON.LineString> {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'LineString', coordinates: coords.map((c) => [c.lng, c.lat]) },
+  };
+}
 
 function getTurnIcon(direction: TurnInstruction['direction'], size = 'h-8 w-8') {
   switch (direction) {
-    case 'left': return <CornerUpLeft className={size} />;
-    case 'slight-left': return <CornerUpLeft className={size} />;
-    case 'right': return <CornerUpRight className={size} />;
-    case 'slight-right': return <CornerUpRight className={size} />;
-    case 'u-turn': return <RotateCcw className={size} />;
-    default: return <ArrowUp className={size} />;
+    case 'left':
+      return <CornerUpLeft className={size} />;
+    case 'slight-left':
+      return <CornerUpLeft className={size} />;
+    case 'right':
+      return <CornerUpRight className={size} />;
+    case 'slight-right':
+      return <CornerUpRight className={size} />;
+    case 'u-turn':
+      return <RotateCcw className={size} />;
+    default:
+      return <ArrowUp className={size} />;
   }
 }
 
 function getTurnLabel(direction: TurnInstruction['direction']) {
   switch (direction) {
-    case 'left': return 'Tournez à gauche';
-    case 'slight-left': return 'Légèrement à gauche';
-    case 'right': return 'Tournez à droite';
-    case 'slight-right': return 'Légèrement à droite';
-    case 'u-turn': return 'Demi-tour';
-    default: return 'Tout droit';
+    case 'left':
+      return 'Tournez à gauche';
+    case 'slight-left':
+      return 'Légèrement à gauche';
+    case 'right':
+      return 'Tournez à droite';
+    case 'slight-right':
+      return 'Légèrement à droite';
+    case 'u-turn':
+      return 'Demi-tour';
+    default:
+      return 'Tout droit';
   }
 }
 
@@ -92,37 +116,18 @@ export default function TrainingMode() {
     resumeTracking,
   } = useTrainingMode(sessionId, routeId);
 
-  const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const borderPolylineRef = useRef<google.maps.Polyline | null>(null);
-  const traveledPolylineRef = useRef<google.maps.Polyline | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [nearbyParticipants, setNearbyParticipants] = useState<NearbyParticipant[]>([]);
 
   const isCycling = activityType === 'cycling' || activityType === 'vélo' || activityType === 'velo';
   const hasRoute = routeCoordinates.length > 1;
 
-  // Fetch API key
-  useEffect(() => {
-    const fetchKey = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('google-maps-proxy', { body: getKeyBody() });
-        if (error) throw error;
-        if (data?.apiKey) setApiKey(data.apiKey);
-      } catch (err) {
-        console.error('Failed to fetch Google Maps API key:', err);
-      }
-    };
-    fetchKey();
-  }, []);
-
-  // Nearby participants polling
   useEffect(() => {
     if (!sessionId || !userPosition || !user) return;
-    
+
     const fetchNearby = async () => {
       try {
         const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -139,7 +144,6 @@ export default function TrainingMode() {
           return;
         }
 
-        // Get latest point per user
         const latestByUser = new Map<string, { lat: number; lng: number }>();
         for (const pt of data) {
           if (!latestByUser.has(pt.user_id)) {
@@ -154,19 +158,21 @@ export default function TrainingMode() {
           .in('user_id', userIds);
 
         const profileMap = new Map<string, { name: string; avatar: string | null }>();
-        profiles?.forEach(p => {
+        profiles?.forEach((p) => {
           profileMap.set(p.user_id!, { name: p.display_name || p.username || 'Participant', avatar: p.avatar_url });
         });
 
         const R = 6371000;
-        const toRad = (d: number) => d * Math.PI / 180;
+        const toRad = (d: number) => (d * Math.PI) / 180;
         const participants: NearbyParticipant[] = [];
 
         latestByUser.forEach((pos, uid) => {
           const dLat = toRad(pos.lat - userPosition.lat);
           const dLng = toRad(pos.lng - userPosition.lng);
-          const a = Math.sin(dLat/2)**2 + Math.cos(toRad(userPosition.lat)) * Math.cos(toRad(pos.lat)) * Math.sin(dLng/2)**2;
-          const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(userPosition.lat)) * Math.cos(toRad(pos.lat)) * Math.sin(dLng / 2) ** 2;
+          const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           const info = profileMap.get(uid);
           participants.push({
             userId: uid,
@@ -179,7 +185,7 @@ export default function TrainingMode() {
         participants.sort((a, b) => a.distance - b.distance);
         setNearbyParticipants(participants.slice(0, 3));
       } catch {
-        // Silently fail
+        /* ignore */
       }
     };
 
@@ -188,80 +194,44 @@ export default function TrainingMode() {
     return () => clearInterval(interval);
   }, [sessionId, userPosition?.lat, userPosition?.lng, user?.id]);
 
-  // Init map
   useEffect(() => {
-    if (mapReady || !apiKey) return;
-    // Allow map init even without route (free session tracking)
-    const initMap = async () => {
-      try {
-        if (!(window as any).google?.maps) {
-          const loader = new Loader({ apiKey, version: 'weekly', libraries: ['geometry', 'places', 'marker'] });
-          await loader.load();
-        }
-        if (!mapRef.current) return;
+    if (!mapContainerRef.current) return;
+    if (!getMapboxAccessToken()) return;
 
-        const center = routeCoordinates.length > 0
-          ? { lat: routeCoordinates[0].lat, lng: routeCoordinates[0].lng }
-          : { lat: 48.8566, lng: 2.3522 }; // Default Paris
+    const map = createEmbeddedMapboxMap(mapContainerRef.current, {
+      center: { lat: 48.8566, lng: 2.3522 },
+      zoom: 18,
+      interactive: false,
+    });
+    map.setPitch(45);
+    mapboxMapRef.current = map;
 
-        const map = new google.maps.Map(mapRef.current, {
-          center,
-          zoom: 18,
-          disableDefaultUI: true,
-          zoomControl: false,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          gestureHandling: 'none',
-          tilt: 45,
-          styles: MAP_STYLES,
-        });
-
-        if (routeCoordinates.length > 1) {
-          const borderPoly = new google.maps.Polyline({
-            path: routeCoordinates,
-            strokeColor: '#FFFFFF',
-            strokeOpacity: 1,
-            strokeWeight: 11,
-            geodesic: true,
-          });
-          borderPoly.setMap(map);
-
-          const polyline = new google.maps.Polyline({
-            path: routeCoordinates,
-            strokeColor: PRIMARY_BLUE,
-            strokeOpacity: 1,
-            strokeWeight: 7,
-            geodesic: true,
-          });
-          polyline.setMap(map);
-
-          polylineRef.current = polyline;
-          borderPolylineRef.current = borderPoly;
-        }
-
-        // Traveled path polyline
-        const traveledPoly = new google.maps.Polyline({
-          path: [],
-          strokeColor: TRAVELED_TEAL,
-          strokeOpacity: 0.9,
-          strokeWeight: 5,
-          geodesic: true,
-        });
-        traveledPoly.setMap(map);
-        traveledPolylineRef.current = traveledPoly;
-
-        googleMapRef.current = map;
-        setMapReady(true);
-      } catch (err) {
-        console.error('Map init error:', err);
-      }
+    const onLoad = () => {
+      setOrUpdateLineLayer(map, TM_TRAV_SRC, TM_TRAV_LAYER, [], { color: TRAVELED_TEAL, width: 5 });
+      setMapReady(true);
     };
+    if (map.isStyleLoaded()) onLoad();
+    else map.once('load', onLoad);
 
-    initMap();
-  }, [routeCoordinates, mapReady, apiKey]);
+    return () => {
+      markerRef.current?.remove();
+      markerRef.current = null;
+      map.remove();
+      mapboxMapRef.current = null;
+      setMapReady(false);
+    };
+  }, []);
 
-  // Create directional blue dot with heading arrow
+  useEffect(() => {
+    const map = mapboxMapRef.current;
+    if (!map || !mapReady) return;
+    const coords: MapCoord[] = routeCoordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
+    if (coords.length > 1) {
+      setOrUpdateLineLayer(map, TM_BORDER_SRC, TM_BORDER_LAYER, coords, { color: '#FFFFFF', width: 11 });
+      setOrUpdateLineLayer(map, TM_ROUTE_SRC, TM_ROUTE_LAYER, coords, { color: ROUTE_BLUE, width: 7 });
+    }
+  }, [routeCoordinates, mapReady]);
+
   const createDirectionalIcon = useCallback((h: number) => {
     const size = 64;
     const canvas = document.createElement('canvas');
@@ -280,7 +250,7 @@ export default function TrainingMode() {
     ctx.arc(cx, cy, size / 2, 0, 2 * Math.PI);
     ctx.fill();
 
-    const rad = (h - 90) * Math.PI / 180;
+    const rad = ((h - 90) * Math.PI) / 180;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(rad);
@@ -311,39 +281,43 @@ export default function TrainingMode() {
     return canvas.toDataURL('image/png');
   }, []);
 
-  const updateMarker = useCallback((map: google.maps.Map, pos: { lat: number; lng: number }, h: number) => {
-    const iconUrl = createDirectionalIcon(h);
-    if (markerRef.current) {
-      markerRef.current.setPosition(pos);
-      markerRef.current.setIcon({
-        url: iconUrl,
-        scaledSize: new google.maps.Size(64, 64),
-        anchor: new google.maps.Point(32, 32),
+  const updateMarker = useCallback(
+    (map: mapboxgl.Map, pos: { lat: number; lng: number }, h: number) => {
+      const iconUrl = createDirectionalIcon(0);
+      map.easeTo({
+        center: [pos.lng, pos.lat],
+        bearing: h,
+        pitch: 45,
+        zoom: map.getZoom(),
+        offset: [0, -100],
+        duration: 200,
       });
-      return;
-    }
-    markerRef.current = new google.maps.Marker({
-      map,
-      position: pos,
-      icon: {
-        url: iconUrl,
-        scaledSize: new google.maps.Size(64, 64),
-        anchor: new google.maps.Point(32, 32),
-      },
-      zIndex: 1000,
-    });
-  }, [createDirectionalIcon]);
+      if (markerRef.current) {
+        markerRef.current.setLngLat([pos.lng, pos.lat]);
+        const el = markerRef.current.getElement();
+        el.style.width = '64px';
+        el.style.height = '64px';
+        el.style.backgroundImage = `url(${iconUrl})`;
+        el.style.backgroundSize = 'contain';
+        return;
+      }
+      const el = document.createElement('div');
+      el.style.width = '64px';
+      el.style.height = '64px';
+      el.style.backgroundImage = `url(${iconUrl})`;
+      el.style.backgroundSize = 'contain';
+      markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
+    },
+    [createDirectionalIcon],
+  );
 
-  // Center on initial position
   useEffect(() => {
-    if (!mapReady || !googleMapRef.current) return;
+    if (!mapReady || !mapboxMapRef.current) return;
 
     const centerOn = (lat: number, lng: number) => {
-      const map = googleMapRef.current!;
+      const map = mapboxMapRef.current!;
       updateMarker(map, { lat, lng }, 0);
-      map.panTo({ lat, lng });
-      map.panBy(0, -100);
-      map.setZoom(18);
+      map.easeTo({ center: [lng, lat], zoom: 18, pitch: 45, offset: [0, -100], duration: 500 });
     };
 
     const getInitialPosition = async () => {
@@ -353,39 +327,36 @@ export default function TrainingMode() {
           centerOn(pos.coords.latitude, pos.coords.longitude);
           return;
         }
-      } catch {}
+      } catch {
+        /* continue web */
+      }
       navigator.geolocation.getCurrentPosition(
         (pos) => centerOn(pos.coords.latitude, pos.coords.longitude),
         () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000 },
       );
     };
 
-    getInitialPosition();
+    void getInitialPosition();
   }, [mapReady, updateMarker]);
 
-  // Update position + heading on GPS updates
   useEffect(() => {
-    if (!googleMapRef.current || !userPosition || !mapReady) return;
-    const map = googleMapRef.current;
+    if (!mapboxMapRef.current || !userPosition || !mapReady) return;
+    const map = mapboxMapRef.current;
     updateMarker(map, userPosition, heading);
-    map.setHeading(heading);
-    map.panTo(userPosition);
-    map.panBy(0, -100);
   }, [userPosition, heading, mapReady, updateMarker]);
 
-  // Update traveled polyline
   useEffect(() => {
-    if (!traveledPolylineRef.current || traveledPath.length === 0) return;
-    traveledPolylineRef.current.setPath(traveledPath);
-  }, [traveledPath]);
+    const map = mapboxMapRef.current;
+    if (!map || !mapReady || !map.getSource(TM_TRAV_SRC)) return;
+    (map.getSource(TM_TRAV_SRC) as mapboxgl.GeoJSONSource).setData(lineStringFeature(traveledPath));
+  }, [traveledPath, mapReady]);
 
-  // Auto-start tracking
   useEffect(() => {
     if (mapReady && !isActive && !loading) {
-      startTracking();
+      void startTracking();
     }
-  }, [mapReady, loading]);
+  }, [mapReady, loading, isActive, startTracking]);
 
   const handleQuit = useCallback(() => {
     stopTracking().catch(() => {});
@@ -399,13 +370,16 @@ export default function TrainingMode() {
   }, [isPaused, pauseTracking, resumeTracking]);
 
   const handleRecenter = useCallback(() => {
-    if (!googleMapRef.current || !userPosition) return;
-    googleMapRef.current.panTo(userPosition);
-    googleMapRef.current.panBy(0, -100);
-    googleMapRef.current.setZoom(18);
+    if (!mapboxMapRef.current || !userPosition) return;
+    mapboxMapRef.current.easeTo({
+      center: [userPosition.lng, userPosition.lat],
+      zoom: 18,
+      pitch: 45,
+      offset: [0, -100],
+      duration: 400,
+    });
   }, [userPosition]);
 
-  // --- LOADING ---
   if (loading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
@@ -417,14 +391,15 @@ export default function TrainingMode() {
     );
   }
 
-  // --- ERROR ---
   if (error) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center p-6">
         <div className="text-center">
           <p className="text-[17px] text-foreground font-medium mb-2">Erreur</p>
           <p className="text-[15px] text-muted-foreground mb-6">{error}</p>
-          <button onClick={handleQuit} className="text-primary text-[17px] font-medium">Retour</button>
+          <button type="button" onClick={handleQuit} className="text-primary text-[17px] font-medium">
+            Retour
+          </button>
         </div>
       </div>
     );
@@ -432,16 +407,11 @@ export default function TrainingMode() {
 
   return (
     <div className="fixed inset-0">
-      {/* Map - full screen */}
       <div className="absolute inset-0" style={{ zIndex: 0, isolation: 'isolate' }}>
-        <div ref={mapRef} className="w-full h-full" />
+        <div ref={mapContainerRef} className="w-full h-full" />
       </div>
 
-      {/* Direction banner */}
-      <div
-        className="absolute top-0 left-0 right-0 z-[9999]"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
+      <div className="absolute top-0 left-0 right-0 z-[9999]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <AnimatePresence mode="wait">
           {isPaused ? (
             <motion.div
@@ -452,10 +422,7 @@ export default function TrainingMode() {
               className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center justify-center gap-3 px-5 py-5"
               style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
             >
-              <motion.div
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-              >
+              <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}>
                 <Pause className="h-6 w-6 text-white" />
               </motion.div>
               <span className="text-[18px] font-semibold text-white">En pause</span>
@@ -470,16 +437,15 @@ export default function TrainingMode() {
               style={{ backgroundColor: 'rgba(59, 130, 246, 0.92)' }}
             >
               <div className="flex items-center gap-4 px-5 py-4">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                >
                   {getTurnIcon(nextTurn.direction, 'h-7 w-7 text-white')}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[28px] font-bold text-white leading-none">
-                    {formatTurnDistance(nextTurn.distanceMeters)}
-                  </p>
-                  <p className="text-[15px] text-white/80 mt-1">
-                    {getTurnLabel(nextTurn.direction)}
-                  </p>
+                  <p className="text-[28px] font-bold text-white leading-none">{formatTurnDistance(nextTurn.distanceMeters)}</p>
+                  <p className="text-[15px] text-white/80 mt-1">{getTurnLabel(nextTurn.direction)}</p>
                 </div>
               </div>
               {routeName && (
@@ -497,11 +463,14 @@ export default function TrainingMode() {
               className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center gap-4 px-5 py-4"
               style={{ backgroundColor: 'rgba(59, 130, 246, 0.92)' }}
             >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+              >
                 <Navigation className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
-                <p className="text-[17px] font-semibold text-white">Suivez l'itinéraire</p>
+                <p className="text-[17px] font-semibold text-white">Suivez l&apos;itinéraire</p>
                 {routeName && <p className="text-[13px] text-white/60 mt-0.5 truncate">{routeName}</p>}
               </div>
             </motion.div>
@@ -514,7 +483,10 @@ export default function TrainingMode() {
               className="mx-3 mt-2 rounded-2xl backdrop-blur-xl flex items-center gap-4 px-5 py-4"
               style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
             >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+              >
                 <MapPin className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
@@ -526,7 +498,6 @@ export default function TrainingMode() {
         </AnimatePresence>
       </div>
 
-      {/* Off-route toast */}
       <AnimatePresence>
         {isOffRoute && isActive && !isPaused && (
           <motion.div
@@ -544,7 +515,6 @@ export default function TrainingMode() {
         )}
       </AnimatePresence>
 
-      {/* Nearby participants */}
       <AnimatePresence>
         {nearbyParticipants.length > 0 && isActive && !isPaused && (
           <motion.div
@@ -554,7 +524,7 @@ export default function TrainingMode() {
             className="absolute z-[9998] flex flex-col gap-1.5"
             style={{ top: 'calc(env(safe-area-inset-top) + 110px)', left: 12 }}
           >
-            {nearbyParticipants.map(p => (
+            {nearbyParticipants.map((p) => (
               <div
                 key={p.userId}
                 className="flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-lg"
@@ -568,19 +538,16 @@ export default function TrainingMode() {
                   )}
                 </div>
                 <span className="text-[12px] text-white font-medium truncate max-w-[80px]">{p.name.split(' ')[0]}</span>
-                <span className="text-[11px] text-white/60">{p.distance > 999 ? `${(p.distance/1000).toFixed(1)}km` : `${p.distance}m`}</span>
+                <span className="text-[11px] text-white/60">
+                  {p.distance > 999 ? `${(p.distance / 1000).toFixed(1)}km` : `${p.distance}m`}
+                </span>
               </div>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Stats panel + Controls */}
-      <div
-        className="absolute bottom-0 left-0 right-0 z-[9999]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        {/* Stats panel */}
+      <div className="absolute bottom-0 left-0 right-0 z-[9999]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {isActive && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -589,7 +556,6 @@ export default function TrainingMode() {
             style={{ backgroundColor: 'rgba(255,255,255,0.88)', boxShadow: '0 4px 24px rgba(0,0,0,0.12)' }}
           >
             <div className={`grid ${isCycling ? 'grid-cols-4' : 'grid-cols-3'} divide-x divide-black/10`}>
-              {/* Distance */}
               <div className="flex flex-col items-center justify-center py-4 px-2">
                 <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
                   {formatDistance(distanceTraveled)}
@@ -597,39 +563,29 @@ export default function TrainingMode() {
                 <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">km</span>
               </div>
 
-              {/* Time */}
               <div className="flex flex-col items-center justify-center py-4 px-2">
-                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
-                  {formatTime(elapsedTime)}
-                </span>
+                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">{formatTime(elapsedTime)}</span>
                 <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">temps</span>
               </div>
 
-              {/* Speed (cycling only) */}
               {isCycling && (
                 <div className="flex flex-col items-center justify-center py-4 px-2">
-                  <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
-                    {averageSpeed.toFixed(1)}
-                  </span>
+                  <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">{averageSpeed.toFixed(1)}</span>
                   <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">km/h</span>
                 </div>
               )}
 
-              {/* Elevation */}
               <div className="flex flex-col items-center justify-center py-4 px-2">
-                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">
-                  +{Math.round(elevationGain)}
-                </span>
+                <span className="text-[28px] font-bold text-gray-900 leading-none tabular-nums">+{Math.round(elevationGain)}</span>
                 <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mt-1">m D+</span>
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Control buttons */}
         <div className="flex items-center justify-center gap-6 pb-6 pt-1">
-          {/* Stop */}
           <button
+            type="button"
             onClick={handleQuit}
             className="w-[52px] h-[52px] rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90"
             style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)' }}
@@ -637,8 +593,8 @@ export default function TrainingMode() {
             <Square className="h-5 w-5 text-white" fill="white" />
           </button>
 
-          {/* Pause / Resume */}
           <button
+            type="button"
             onClick={handlePauseToggle}
             className="w-[72px] h-[72px] rounded-full flex items-center justify-center shadow-xl transition-transform active:scale-90 backdrop-blur-lg"
             style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
@@ -650,8 +606,8 @@ export default function TrainingMode() {
             )}
           </button>
 
-          {/* Re-center */}
           <button
+            type="button"
             onClick={handleRecenter}
             className="w-[44px] h-[44px] rounded-full flex items-center justify-center shadow-lg backdrop-blur-md transition-transform active:scale-90"
             style={{ backgroundColor: 'rgba(255,255,255,0.85)' }}
