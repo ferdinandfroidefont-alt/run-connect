@@ -17,7 +17,6 @@ type NavItem = {
 };
 
 const ITEM_GAP_PX = 12;
-const FAB_RESERVE_PX = 76;
 /** Nombre de cases visibles ; l’index central = actif (2 à gauche, 2 à droite). */
 const VISIBLE_SLOTS = 5;
 const CENTER_SLOT = 2;
@@ -160,7 +159,7 @@ export const BottomNavigation = () => {
           style={{
             gap: ITEM_GAP_PX,
             paddingLeft: "0.5rem",
-            paddingRight: `calc(0.5rem + ${FAB_RESERVE_PX}px)`,
+            paddingRight: "0.5rem",
           }}
         >
           {visibleRow.map(({ slot, item }) => {

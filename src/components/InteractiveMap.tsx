@@ -1607,7 +1607,7 @@ export const InteractiveMap = ({
               "backdrop-blur-[14px] backdrop-saturate-150"
             )}
           >
-            <div className="relative flex min-h-[52px] items-center justify-between gap-2 px-4 pb-3 pt-5 sm:min-h-[56px] sm:pb-3.5 sm:pt-6 ios-map-header">
+            <div className="relative flex min-h-[3.75rem] items-center justify-between gap-2 px-4 pb-3 pt-5 sm:min-h-16 sm:pb-3.5 sm:pt-6 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 Runconnect
               </h1>
@@ -1630,8 +1630,8 @@ export const InteractiveMap = ({
                     className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
                   >
                     {/*
-                      avatar-fixed : évite la règle iOS « compact » .h-[52px] → 44px (sinon ellipse 52×44).
-                      Tailles fixes via .map-header-profile-avatar (index.css) pour ratio 1:1 WebKit.
+                      avatar-fixed : évite la règle iOS « compact » sur h fixes.
+                      Tailles via .map-header-profile-avatar — aligné sur le FAB « + » (3.75rem / 4rem sm).
                     */}
                     <Avatar className="map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                       <AvatarImage
@@ -1639,7 +1639,7 @@ export const InteractiveMap = ({
                         alt={userProfile.username || userProfile.display_name}
                         className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
                       />
-                      <AvatarFallback className="map-header-profile-fallback text-lg">
+                      <AvatarFallback className="map-header-profile-fallback text-xl font-semibold">
                         {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>

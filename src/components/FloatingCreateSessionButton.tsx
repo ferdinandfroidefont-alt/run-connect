@@ -5,8 +5,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 /**
- * Action principale « créer une séance » : FAB rond, au-dessus de la barre de navigation (carte / pages principales).
- * Les contrôles carte sont à gauche ; placement bas-droite pour limiter les conflits tactiles.
+ * Création de séance : FAB rond, visible uniquement sur la page profil (pas sur l’accueil / autres onglets).
+ * Clic : retour carte si besoin, puis ouverture du flux création (comportement existant).
  */
 export function FloatingCreateSessionButton() {
   const location = useLocation();

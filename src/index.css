@@ -677,8 +677,8 @@ html, body {
   }
 
   /**
-   * Avatar centré header carte : carré strict (width = height), cercle, image cover — aligné iOS / Android.
-   * Les tailles ici remplacent h-[52px] / sm:h-14 sur le composant pour une seule source de vérité.
+   * Avatar centré header carte : même gabarit que le FAB « + » (FloatingCreateSessionButton).
+   * 3.75rem / 4rem @ sm — ratio 1:1, cercle, image cover.
    */
   .map-header-profile-avatar {
     flex-shrink: 0;
@@ -686,24 +686,24 @@ html, body {
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border-radius: 50%;
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
-    min-height: 52px;
-    max-width: 52px;
-    max-height: 52px;
+    width: 3.75rem;
+    height: 3.75rem;
+    min-width: 3.75rem;
+    min-height: 3.75rem;
+    max-width: 3.75rem;
+    max-height: 3.75rem;
     position: relative;
     isolation: isolate;
   }
 
   @media (min-width: 640px) {
     .map-header-profile-avatar {
-      width: 3.5rem;
-      height: 3.5rem;
-      min-width: 3.5rem;
-      min-height: 3.5rem;
-      max-width: 3.5rem;
-      max-height: 3.5rem;
+      width: 4rem;
+      height: 4rem;
+      min-width: 4rem;
+      min-height: 4rem;
+      max-width: 4rem;
+      max-height: 4rem;
     }
   }
 

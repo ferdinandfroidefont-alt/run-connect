@@ -180,7 +180,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </main>
       <TutorialReplayHost />
-      {showBottomNav && <FloatingCreateSessionButton />}
+      {!hideBottomNav && isProfileRoute && <FloatingCreateSessionButton />}
       {showBottomNav && <BottomNavigation />}
     </div>
   );
