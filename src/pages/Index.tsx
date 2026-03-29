@@ -10,7 +10,6 @@ import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from '@/lib/authFlags';
-import { MAPBOX_MINIMAL_MODE } from '@/lib/mapboxDebug';
 
 const OnboardingDialog = lazy(() =>
   import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog }))
@@ -76,44 +75,6 @@ const Index = () => {
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-background px-6">
         <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
         <p className="text-sm text-muted-foreground text-center">{t('common.loading')}</p>
-      </div>
-    );
-  }
-
-  if (MAPBOX_MINIMAL_MODE) {
-    return (
-      <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col bg-transparent">
-        <div className="min-h-0 flex-1 bg-transparent" aria-hidden />
-        <Suspense fallback={null}>
-          <OnboardingDialog isOpen={needsOnboarding} onComplete={completeOnboarding} />
-        </Suspense>
-        {needsProfileSetup && user && !localStorage.getItem('profileCreatedSuccessfully') && (
-          <Suspense fallback={null}>
-            <ProfileSetupDialog
-              open={needsProfileSetup}
-              onOpenChange={() => {}}
-              userId={user.id}
-              email={user.email || ''}
-              onRequestSignIn={async () => {
-                try {
-                  sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
-                } catch {
-                  /* ignore */
-                }
-                try {
-                  await supabase.auth.signOut({ scope: 'global' });
-                } catch (e) {
-                  console.error('[Index] signOut (retour connexion):', e);
-                }
-                navigate('/auth', { replace: true });
-              }}
-              onComplete={() => {
-                completeProfileSetup();
-                recheckOnboarding();
-              }}
-            />
-          </Suspense>
-        )}
       </div>
     );
   }

@@ -24,7 +24,7 @@ export default function PersistentHomeMap({
   return (
     <div
       className={cn(
-        "h-full w-full min-h-0 min-w-0 flex flex-col",
+        "h-full w-full min-h-0",
         !visible && "invisible pointer-events-none [content-visibility:auto]"
       )}
       aria-hidden={!visible}
