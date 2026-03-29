@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 
@@ -457,19 +458,23 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
           header={
             <>
-              <div className="flex items-center justify-between px-4 py-3">
-                <button
-                  onClick={onClose}
-                  className="flex items-center gap-1 text-primary"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="text-[17px]">Fermer</span>
-                </button>
-                <h1 className="text-[17px] font-semibold text-foreground">
-                  {isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'}
-                </h1>
-                <div className="w-16" />
-              </div>
+              <IosPageHeaderBar
+                className="py-3"
+                left={
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex min-w-0 items-center gap-1 text-primary"
+                  >
+                    <X className="h-5 w-5 shrink-0" />
+                    <span className="truncate text-[17px]">Fermer</span>
+                  </button>
+                }
+                right={<div className="h-9 w-16 shrink-0" aria-hidden />}
+                title={
+                  isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
+                }
+              />
               <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
             </>
           }

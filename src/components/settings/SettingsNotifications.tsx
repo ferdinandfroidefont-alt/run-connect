@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 interface Profile {
   notifications_enabled?: boolean;
@@ -130,13 +131,14 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-[17px] font-semibold">Notifications</h1>
-              <div className="w-9" />
-            </div>
+            <IosPageHeaderBar
+              left={
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              }
+              title="Notifications"
+            />
           </div>
         }
       >

@@ -23,6 +23,7 @@ export type IosFixedPageHeaderShellProps = {
   scrollRef?: RefObject<HTMLDivElement | null>;
   scrollClassName?: string;
   scrollProps?: HTMLAttributes<HTMLDivElement>;
+  contentTopOffsetPx?: number;
 };
 
 /**
@@ -39,6 +40,7 @@ export function IosFixedPageHeaderShell({
   scrollRef,
   scrollClassName,
   scrollProps,
+  contentTopOffsetPx = 4,
 }: IosFixedPageHeaderShellProps) {
   const [pin] = useState(() => isIosAppShell());
   const headerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +78,8 @@ export function IosFixedPageHeaderShell({
 
   const { className: scrollPropClass, style: scrollPropStyle, ...restScroll } = scrollProps ?? {};
 
-  const padStyle = pin && padPx > 0 ? { paddingTop: padPx } : undefined;
+  const padStyle =
+    pin && padPx > 0 ? { paddingTop: padPx + Math.max(0, contentTopOffsetPx) } : undefined;
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>

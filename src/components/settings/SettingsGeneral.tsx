@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import type { DistanceUnit } from "@/lib/distanceUnits";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -91,13 +92,14 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
         scrollClassName="min-h-0 bg-secondary"
         header={
           <div className="border-b border-border bg-card">
-            <div className="flex h-[56px] items-center justify-between px-4 ios-shell:px-2.5">
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-[17px] font-semibold">{t("settings.general")}</h1>
-              <div className="w-9" />
-            </div>
+            <IosPageHeaderBar
+              left={
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onBack}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              }
+              title={t("settings.general")}
+            />
           </div>
         }
       >

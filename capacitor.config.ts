@@ -37,11 +37,12 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'runconnect',
     /**
-     * Même bleu que le splash (`RUCONNECT_SPLASH_BLUE` / LoadingScreen) : sinon iOS affiche une bande
-     * blanche native dans la safe area basse pendant le chargement. La tab bar peint le bas avec
-     * `bg-background` sur `<nav>` pour ne pas laisser voir ce bleu une fois l’app chargée.
+     * Fond natif par défaut du WKWebView : blanc hors splash.
+     * Le splash reste bleu via l'écran natif + `LoadingScreen` / `AppBootFallback`,
+     * mais si iOS laisse entrevoir le fond natif (safe area, reprise app, transition),
+     * on veut voir du blanc et jamais la teinte splash.
      */
-    backgroundColor: '#2E68FF',
+    backgroundColor: '#FFFFFF',
     appendUserAgent: 'RunConnect-iOS/1.3'
   }
 };

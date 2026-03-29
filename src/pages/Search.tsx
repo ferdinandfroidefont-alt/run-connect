@@ -8,6 +8,7 @@ import { StravaTab } from '@/components/search/StravaTab';
 import { ContactsTab } from '@/components/search/ContactsTab';
 import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 const SettingsDialog = lazy(() =>
@@ -86,16 +87,21 @@ export default function Search() {
           header={
             <>
               <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
-                <div className="relative flex min-h-[44px] items-center justify-center">
-                  <button
-                    onClick={handleClose}
-                    className="absolute left-0 flex items-center gap-ios-1 text-primary active:opacity-70"
-                  >
-                    <ChevronLeft className="h-6 w-6" />
-                    <span className="text-ios-headline">Retour</span>
-                  </button>
-                  <h1 className="text-ios-headline font-semibold">Rechercher</h1>
-                </div>
+                <IosPageHeaderBar
+                  className="px-0 py-0 min-h-[44px]"
+                  titleClassName="text-ios-headline"
+                  left={
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="flex min-w-0 items-center gap-ios-1 text-primary active:opacity-70"
+                    >
+                      <ChevronLeft className="h-6 w-6 shrink-0" />
+                      <span className="truncate text-ios-headline">Retour</span>
+                    </button>
+                  }
+                title="Rechercher"
+                />
                 <div className="relative mt-ios-3">
                   <SearchIcon className="absolute left-ios-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input

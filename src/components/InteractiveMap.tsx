@@ -1,5 +1,5 @@
 import { RouteDialog } from './RouteDialog';
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
@@ -301,7 +301,7 @@ export const InteractiveMap = ({
     avatar_url: string | null;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  /** Bloc header + recherche + carrousel filtres (mesure pour padding carte). */
+  /** Bloc header + recherche + panneau filtres repliable (mesure pour padding carte). */
   const homeMapTopStackRef = useRef<HTMLDivElement>(null);
   const homeMapFiltersRef = useRef<HTMLDivElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
@@ -309,6 +309,8 @@ export const InteractiveMap = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
+  /** Filtres carte : carrousel + panneaux dérivés (fermé par défaut). */
+  const [mapFiltersPanelOpen, setMapFiltersPanelOpen] = useState(false);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 
   const toggleImmersiveMode = () => {
@@ -371,7 +373,7 @@ export const InteractiveMap = ({
     return () => clearTimeout(t);
   }, [user?.id]);
 
-  /** Un seul panneau ouvert + fermeture au clic extérieur (hors carrousel / panneau filtres). */
+  /** Un seul panneau dérivé ouvert + fermeture au clic extérieur (hors carrousel / panneau filtres). */
   useEffect(() => {
     if (!expandedFilter) return;
     const close = (e: Event) => {
@@ -384,6 +386,18 @@ export const InteractiveMap = ({
     document.addEventListener("pointerdown", close, true);
     return () => document.removeEventListener("pointerdown", close, true);
   }, [expandedFilter]);
+
+  useEffect(() => {
+    if (!mapFiltersPanelOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMapFiltersPanelOpen(false);
+        setExpandedFilter(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mapFiltersPanelOpen]);
 
   const cycleActivity = () => {
     const current = ACTIVITY_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types));
@@ -399,6 +413,18 @@ export const InteractiveMap = ({
 
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
+
+  const activeHomeMapFilterCount = useMemo(() => {
+    let n = 0;
+    if (filters.activity_types.length > 0) n++;
+    if (filters.session_types.length > 0) n++;
+    if (filters.time_slot) n++;
+    if (filters.friends_only) n++;
+    if (filters.selected_club_ids.length > 0) n++;
+    if (filters.level != null) n++;
+    if (!isSameDay(startOfDay(filters.selected_date), startOfDay(new Date()))) n++;
+    return n;
+  }, [filters]);
 
   // Check URL parameters for route creation mode
   const [isRouteCreationMode, setIsRouteCreationMode] = useState(() => {
@@ -874,6 +900,14 @@ export const InteractiveMap = ({
     });
     return () => cancelAnimationFrame(id);
   }, [isActive, isMapLoaded]);
+
+  useEffect(() => {
+    if (!isMapLoaded || !map.current) return;
+    const id = requestAnimationFrame(() => {
+      map.current?.resize();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [mapFiltersPanelOpen, expandedFilter, isMapLoaded]);
 
   // Real-time updates for sessions with improved mobile support
   useEffect(() => {
@@ -1488,18 +1522,18 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Header + recherche fusionnés (carrousel filtres en dessous, hors du bloc) — masqué en mode immersif */}
+      {/* Header léger + search « flottante » (chevauche le bas du bandeau et le haut de la carte) — masqué en mode immersif */}
       {!isImmersiveMode && (
         <div ref={homeMapTopStackRef} className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
-          {/* Un seul panneau : barre d’outils + champ recherche — pas de « double bloc » empilé */}
-          <div
-            className={cn(
-              "border-b border-border/25 dark:border-white/[0.055]",
-              "bg-background/90 supports-[backdrop-filter]:bg-background/76",
-              "backdrop-blur-[14px] backdrop-saturate-150"
-            )}
-          >
-            <div className="relative flex min-h-[3.75rem] items-center justify-between gap-2 px-4 pb-3 pt-5 sm:min-h-16 sm:pb-3.5 sm:pt-6 ios-map-header">
+          <div className="flex flex-col">
+            <div
+              className={cn(
+                "border-b border-border/20 dark:border-white/[0.055]",
+                "bg-background/88 supports-[backdrop-filter]:bg-background/72",
+                "backdrop-blur-[18px] backdrop-saturate-150"
+              )}
+            >
+              <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 Runconnect
               </h1>

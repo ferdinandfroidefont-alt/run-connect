@@ -172,4 +172,8 @@ export function applyWebChromeForTheme(isDark: boolean): void {
 
   document.documentElement.style.backgroundColor = contentBg;
   document.body.style.backgroundColor = contentBg;
+  const appRoot = document.getElementById('root');
+  if (appRoot) {
+    appRoot.style.backgroundColor = contentBg;
+  }
 }
