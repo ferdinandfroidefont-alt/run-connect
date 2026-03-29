@@ -1,51 +1,13 @@
-import { Loader } from '@googlemaps/js-api-loader';
-import { supabase } from '@/integrations/supabase/client';
-import { getKeyBody } from '@/lib/googleMapsKey';
-
 export type PrefetchedHomeMapPosition = {
   lat: number;
   lng: number;
   ts: number;
 };
 
-let mapsPrefetchPromise: Promise<void> | null = null;
 /** Vrai dès que le splash a lancé le prefetch — évite d’attendre inutilement sur l’écran carte. */
 let geoPrefetchStarted = false;
 /** Position résolue pendant le splash (lue une fois par InteractiveMap). */
 let positionPrefetched: PrefetchedHomeMapPosition | null = null;
-
-function startMapsScriptPrefetch(): void {
-  if (mapsPrefetchPromise != null) return;
-  if (typeof window !== 'undefined' && window.google?.maps) {
-    mapsPrefetchPromise = Promise.resolve();
-    return;
-  }
-
-  mapsPrefetchPromise = (async () => {
-    try {
-      const { data: apiKeyData, error: apiKeyError } = await supabase.functions.invoke('google-maps-proxy', {
-        body: getKeyBody(),
-      });
-      if (apiKeyError) {
-        console.warn('[homeMapPrefetch] clé Maps:', apiKeyError.message);
-        return;
-      }
-      const googleMapsApiKey = apiKeyData?.apiKey as string | undefined;
-      if (!googleMapsApiKey) {
-        console.warn('[homeMapPrefetch] pas de clé API');
-        return;
-      }
-      const loader = new Loader({
-        apiKey: googleMapsApiKey,
-        version: 'weekly',
-        libraries: ['geometry', 'places'],
-      });
-      await loader.load();
-    } catch (e) {
-      console.warn('[homeMapPrefetch] échec chargement script Maps', e);
-    }
-  })();
-}
 
 /**
  * Géolocalisation « douce » pendant le splash : pas de demande de permission (silencieux si pas encore accordé).
@@ -98,20 +60,14 @@ async function startGeolocationPrefetch(): Promise<void> {
 }
 
 /**
- * À appeler dès l’écran de chargement : charge le JS Google Maps en parallèle du splash
- * et tente une position en cache si les permissions sont déjà là.
+ * À appeler dès l’écran de chargement : tente une position en cache si les permissions sont déjà là.
+ * (Mapbox GL se charge avec l’app — pas de prefetch de script tiers.)
  */
 export function primeHomeMapDuringSplash(): void {
-  startMapsScriptPrefetch();
   if (!geoPrefetchStarted) {
     geoPrefetchStarted = true;
     void startGeolocationPrefetch();
   }
-}
-
-/** Promesse du chargement Maps (si le prefetch a été lancé). */
-export function getMapsPrefetchPromise(): Promise<void> | null {
-  return mapsPrefetchPromise;
 }
 
 const GEO_WAIT_STEP_MS = 45;

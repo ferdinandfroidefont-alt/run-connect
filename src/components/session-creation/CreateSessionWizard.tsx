@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import mapboxgl from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +12,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
+import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -22,7 +24,8 @@ import { ConfirmStep } from './steps/ConfirmStep';
 
 declare global {
   interface Window {
-    currentRoutePolyline: google.maps.Polyline | null;
+    /** Ancienne surcouche route (écran session) — optionnel. */
+    __runconnectClearSessionRouteOverlay?: (() => void) | undefined;
   }
 }
 
@@ -30,7 +33,7 @@ interface CreateSessionWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onSessionCreated: (sessionId?: string) => void;
-  map: google.maps.Map | null;
+  map: mapboxgl.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   onCreateRoute?: () => void;
   // Edit mode props
@@ -79,18 +82,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
-      const { data, error } = await supabase.functions.invoke('google-maps-proxy', {
-        body: { lat, lng, type: 'reverse' }
-      });
-
-      if (error) throw error;
-
-      if (data?.status === 'OK' && data?.results?.[0]) {
-        wizard.updateLocation({
-          lat,
-          lng,
-          name: data.results[0].formatted_address
-        });
+      const name = await reverseGeocodeMapbox(lat, lng);
+      if (name) {
+        wizard.updateLocation({ lat, lng, name });
       }
     } catch (error) {
       console.error('Geocode error:', error);
@@ -370,19 +364,20 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       // Center map on new session location
       if (map && selectedLocation) {
         setTimeout(() => {
-          map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
-          map.setZoom(15);
+          map.easeTo({
+            center: [selectedLocation.lng, selectedLocation.lat],
+            zoom: 15,
+            duration: 650,
+            essential: true,
+          });
         }, 200);
       }
 
       onClose();
       wizard.resetWizard();
 
-      // Clean up route polyline
-      if (window.currentRoutePolyline) {
-        window.currentRoutePolyline.setMap(null);
-        window.currentRoutePolyline = null;
-      }
+      window.__runconnectClearSessionRouteOverlay?.();
+      window.__runconnectClearSessionRouteOverlay = undefined;
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {

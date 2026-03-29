@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import mapboxgl from 'mapbox-gl';
 import { motion } from 'framer-motion';
 import { MapPin, Search, Navigation, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { geocodeSearchMapbox, reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 import { SelectedLocation } from '../types';
 import { cn } from '@/lib/utils';
 
 interface LocationStepProps {
-  map: google.maps.Map | null;
+  map: mapboxgl.Map | null;
   selectedLocation: SelectedLocation | null;
   onLocationSelect: (location: SelectedLocation) => void;
   onNext: () => void;
@@ -42,31 +43,12 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     
     setIsSearching(true);
     try {
-      if (window.google?.maps?.places) {
-        const service = new google.maps.places.PlacesService(document.createElement('div'));
-        service.textSearch({ query }, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            setSearchResults(results.slice(0, 5).map(r => ({
-              formatted_address: r.formatted_address || r.name,
-              geometry: {
-                location: {
-                  lat: r.geometry?.location?.lat() || 0,
-                  lng: r.geometry?.location?.lng() || 0,
-                }
-              }
-            })));
-          }
-          setIsSearching(false);
-        });
-      } else {
-        const { data } = await supabase.functions.invoke('google-maps-proxy', {
-          body: { address: query, type: 'geocode' }
-        });
-        if (data?.results) setSearchResults(data.results.slice(0, 5));
-        setIsSearching(false);
-      }
+      const rows = await geocodeSearchMapbox(query, 5);
+      setSearchResults(rows);
     } catch (error) {
       console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
       setIsSearching(false);
     }
   };
@@ -95,17 +77,12 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
     setIsLocating(true);
     try {
-      const { data } = await supabase.functions.invoke('google-maps-proxy', {
-        body: { lat: center.lat(), lng: center.lng(), type: 'reverse' }
-      });
-      
-      if (data?.results?.[0]) {
-        onLocationSelect({
-          lat: center.lat(),
-          lng: center.lng(),
-          name: data.results[0].formatted_address
-        });
-        setLocationSearch(data.results[0].formatted_address);
+      const lat = center.lat;
+      const lng = center.lng;
+      const name = await reverseGeocodeMapbox(lat, lng);
+      if (name) {
+        onLocationSelect({ lat, lng, name });
+        setLocationSearch(name);
       }
     } catch (error) {
       console.error('Reverse geocode error:', error);
@@ -124,24 +101,24 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         
         // Center map if available
         if (map) {
-          map.setCenter({ lat: latitude, lng: longitude });
-          map.setZoom(15);
+          map.easeTo({
+            center: [longitude, latitude],
+            zoom: 15,
+            duration: 700,
+            essential: true,
+          });
         }
         
         try {
-          const { data } = await supabase.functions.invoke('google-maps-proxy', {
-            body: { lat: latitude, lng: longitude, type: 'reverse' }
-          });
-          
-          if (data?.results?.[0]) {
+          const placeName = await reverseGeocodeMapbox(latitude, longitude);
+          if (placeName) {
             onLocationSelect({
               lat: latitude,
               lng: longitude,
-              name: data.results[0].formatted_address
+              name: placeName
             });
-            setLocationSearch(data.results[0].formatted_address);
+            setLocationSearch(placeName);
           } else {
-            // Fallback: use coordinates directly
             onLocationSelect({
               lat: latitude,
               lng: longitude,
@@ -150,7 +127,6 @@ export const LocationStep: React.FC<LocationStepProps> = ({
           }
         } catch (error) {
           console.error('Error:', error);
-          // Fallback: use coordinates directly
           onLocationSelect({
             lat: latitude,
             lng: longitude,

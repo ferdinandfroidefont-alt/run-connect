@@ -1,7 +1,6 @@
 import { RouteDialog } from './RouteDialog';
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
-import { getKeyBody } from '@/lib/googleMapsKey';
+import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
@@ -32,6 +31,12 @@ import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
 import { waitForPrefetchedHomeMapPosition } from '@/lib/homeMapPrefetch';
 import { AnimatePresence, motion } from 'framer-motion';
+import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
+import type { MapCoord } from '@/lib/geoUtils';
+import { pathLengthMeters } from '@/lib/geoUtils';
+import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
+import { geocodeForwardDetail } from '@/lib/mapboxGeocode';
+import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -46,12 +51,9 @@ const UserSessionsDialog = lazy(() =>
   import('./UserSessionsDialog').then((m) => ({ default: m.UserSessionsDialog }))
 );
 
-// Declare global google maps types
-declare global {
-  interface Window {
-    google: typeof google;
-  }
-}
+const ROUTE_LINE_SOURCE = 'interactive-route-line';
+const ROUTE_LINE_LAYER = 'interactive-route-line-layer';
+
 interface Session {
   id: string;
   title: string;
@@ -143,51 +145,58 @@ interface InteractiveMapProps {
   isActive?: boolean;
 }
 
-// Factory function to create HTMLMarker class when Google Maps is loaded
-const createHTMLMarkerClass = (): any => {
-  return class HTMLMarker extends google.maps.OverlayView {
-    private position: google.maps.LatLng;
-    private content: HTMLDivElement;
-    private onClick: () => void;
-    constructor(position: google.maps.LatLng, content: HTMLDivElement, onClick: () => void) {
-      super();
-      this.position = position;
-      this.content = content;
-      this.onClick = onClick;
+function coordsToLineString(points: MapCoord[]): GeoJSON.Feature<GeoJSON.LineString> {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'LineString',
+      coordinates: points.map((p) => [p.lng, p.lat]),
+    },
+  };
+}
 
-      // Add click listener
-      this.content.addEventListener('click', this.onClick);
-    }
-    onAdd() {
-      const panes = (this as any).getPanes();
-      if (panes) {
-        panes.overlayMouseTarget.appendChild(this.content);
-      }
-    }
-    draw() {
-      const overlayProjection = (this as any).getProjection();
-      if (overlayProjection) {
-        const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-        if (pos) {
-          this.content.style.left = pos.x + 'px';
-          this.content.style.top = pos.y + 'px';
-        }
-      }
-    }
-    onRemove() {
-      if (this.content && this.content.parentElement) {
-        this.content.removeEventListener('click', this.onClick);
-        this.content.parentElement.removeChild(this.content);
-      }
-    }
-    getPosition() {
-      return this.position;
-    }
-    setVisible(visible: boolean) {
-      this.content.style.display = visible ? 'block' : 'none';
+const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
+  type: 'Feature',
+  properties: {},
+  geometry: { type: 'LineString', coordinates: [] },
+};
+
+function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
+  if (map.getSource(ROUTE_LINE_SOURCE)) return;
+  map.addSource(ROUTE_LINE_SOURCE, {
+    type: 'geojson',
+    data: EMPTY_ROUTE_FEATURE,
+  });
+  map.addLayer({
+    id: ROUTE_LINE_LAYER,
+    type: 'line',
+    source: ROUTE_LINE_SOURCE,
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': '#2563eb',
+      'line-width': 5,
+      'line-opacity': 0.94,
+    },
+  });
+}
+
+function setInteractiveRouteLine(map: mapboxgl.Map | null, points: MapCoord[]) {
+  if (!map) return;
+  const apply = () => {
+    if (!map.isStyleLoaded()) return;
+    ensureInteractiveRouteLayer(map);
+    const src = map.getSource(ROUTE_LINE_SOURCE) as mapboxgl.GeoJSONSource;
+    if (points.length >= 2) {
+      src.setData(coordsToLineString(points));
+    } else {
+      src.setData(EMPTY_ROUTE_FEATURE);
     }
   };
-};
+  if (map.isStyleLoaded()) apply();
+  else map.once('style.load', apply);
+}
+
 export const InteractiveMap = ({
   initialLat,
   initialLng,
@@ -223,10 +232,10 @@ export const InteractiveMap = ({
     getCurrentPosition
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
-  const markers = useRef<any[]>([]);
-  const sessionPolylines = useRef<google.maps.Polyline[]>([]);
-  const userLocationMarker = useRef<google.maps.Marker | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
+  const sessionPolylines = useRef<unknown[]>([]);
+  const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState('roadmap');
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -247,7 +256,7 @@ export const InteractiveMap = ({
     time_slot: null,
     level: null
   });
-  const [searchAutocomplete, setSearchAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
+  const [mapboxMap, setMapboxMap] = useState<mapboxgl.Map | null>(null);
   const [userProfile, setUserProfile] = useState<{
     username: string;
     display_name: string;
@@ -357,16 +366,12 @@ export const InteractiveMap = ({
     console.log('🔍 Initial route creation mode from URL:', shouldCreateRoute);
     return shouldCreateRoute;
   });
-  const routePath = useRef<google.maps.Polyline | null>(null);
-  const routeCoordinates = useRef<google.maps.LatLng[]>([]);
-  const waypoints = useRef<google.maps.LatLng[]>([]);
+  const routeCoordinates = useRef<MapCoord[]>([]);
+  const waypoints = useRef<MapCoord[]>([]);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
   const [showElevationProfile, setShowElevationProfile] = useState(true);
   const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
   const [routeSaving, setRouteSaving] = useState(false);
-  const elevationService = useRef<google.maps.ElevationService | null>(null);
-  const directionsService = useRef<google.maps.DirectionsService | null>(null);
-  const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
   /** Stats D+ / D- issues de RouteCreation (localStorage) quand le profil alti n’est pas rejoué sur la carte */
   const pendingRouteStatsRef = useRef<{ elevationGain: number; elevationLoss: number } | null>(null);
   /** Waypoints avec mode (manuel / guidé) — les LatLng sur la carte ne portent pas le mode */
@@ -394,7 +399,10 @@ export const InteractiveMap = ({
       if (pendingRouteData) {
         try {
           const routeData = JSON.parse(pendingRouteData);
-          routeCoordinates.current = routeData.coordinates.map((coord: any) => new google.maps.LatLng(coord.lat, coord.lng));
+          routeCoordinates.current = routeData.coordinates.map((coord: { lat: number; lng: number }) => ({
+            lat: coord.lat,
+            lng: coord.lng,
+          }));
           setRouteElevations(routeData.elevations || []);
 
           if (
@@ -411,7 +419,10 @@ export const InteractiveMap = ({
 
           // Stocker les waypoints si disponibles (évite un reste de ref entre deux imports)
           if (Array.isArray(routeData.waypoints) && routeData.waypoints.length > 0) {
-            waypoints.current = routeData.waypoints.map((wp: any) => new google.maps.LatLng(wp.lat, wp.lng));
+            waypoints.current = routeData.waypoints.map((wp: { lat: number; lng: number }) => ({
+              lat: wp.lat,
+              lng: wp.lng,
+            }));
             pendingWaypointsForSaveRef.current = routeData.waypoints.map((wp: any) => ({
               lat: wp.lat,
               lng: wp.lng,
@@ -617,24 +628,12 @@ export const InteractiveMap = ({
 
   // Create map markers for sessions
   const createMarkers = async () => {
-    if (!map.current || !window.google) return;
+    if (!map.current) return;
 
-    // Clear marker cache to force regeneration with updated design
-    markerCache.current.clear();
-    console.log('🗑️ Marker cache cleared - regenerating all markers');
-
-    // Clear existing markers and polylines
-    markers.current.forEach(marker => {
-      if (marker instanceof google.maps.Marker) {
-        marker.setMap(null);
-      } else if (marker.setMap) {
-        // Custom HTML marker
-        marker.setMap(null);
-      }
-    });
-    sessionPolylines.current.forEach(polyline => polyline.setMap(null));
-    markers.current = [];
+    // Clear existing markers (Mapbox)
+    markers.current.forEach((marker) => marker.remove());
     sessionPolylines.current = [];
+    markers.current = [];
 
     // Filter sessions based on current filters
     const filteredSessions = sessions.filter(session => {
@@ -694,66 +693,47 @@ export const InteractiveMap = ({
         const diffMinutes = diffMs / 60000;
         const isImminent = diffMinutes > 0 && diffMinutes <= 120; // 0 to 2 hours
         
-        if (isNewSession || isImminent) {
-          // Create HTML marker with pulse animation for new or imminent sessions
-          const HTMLMarkerClass = createHTMLMarkerClass();
-          const markerDiv = document.createElement('div');
-          markerDiv.style.position = 'absolute';
-          markerDiv.style.transform = 'translate(-50%, -100%)';
-          markerDiv.style.cursor = 'pointer';
-          const img = document.createElement('img');
-          img.src = markerIcon;
-          img.style.width = '48px';
-          img.style.height = '60px';
-          img.className = isNewSession ? 'pulse-marker-animation' : 'imminent-marker-animation';
-          markerDiv.appendChild(img);
-          const position = new google.maps.LatLng(Number(session.location_lat), Number(session.location_lng));
-          const htmlMarker = new HTMLMarkerClass(position, markerDiv, () => {
-            setPreviewSession(session);
-          });
-          htmlMarker.setMap(map.current);
-          return htmlMarker;
-        } else {
-          // Create standard marker for normal sessions
-          const marker = new google.maps.Marker({
-            position: {
-              lat: Number(session.location_lat),
-              lng: Number(session.location_lng)
-            },
-            map: map.current,
-            title: session.title,
-            icon: {
-              url: markerIcon,
-              scaledSize: new google.maps.Size(48, 60),
-              anchor: new google.maps.Point(24, 60)
-            }
-          });
-          marker.addListener('click', () => {
-            setPreviewSession(session);
-          });
-          return marker;
-        }
+        const lng = Number(session.location_lng);
+        const lat = Number(session.location_lat);
+        const wrap = document.createElement('div');
+        wrap.style.cursor = 'pointer';
+        const img = document.createElement('img');
+        img.src = markerIcon;
+        img.alt = '';
+        img.style.width = '48px';
+        img.style.height = '60px';
+        img.style.display = 'block';
+        img.draggable = false;
+        if (isNewSession) img.className = 'pulse-marker-animation';
+        else if (isImminent) img.className = 'imminent-marker-animation';
+        wrap.appendChild(img);
+        wrap.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setPreviewSession(session);
+        });
+        const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+          .setLngLat([lng, lat])
+          .addTo(map.current!);
+        return marker;
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
 
-        // Create a basic marker as fallback
         try {
-          const fallbackMarker = new google.maps.Marker({
-            position: {
-              lat: Number(session.location_lat),
-              lng: Number(session.location_lng)
-            },
-            map: map.current,
-            title: session.title,
-            icon: {
-              url: getFallbackIcon(session.activity_type),
-              scaledSize: new google.maps.Size(40, 40),
-              anchor: new google.maps.Point(20, 40)
-            }
-          });
-          fallbackMarker.addListener('click', () => {
+          const wrap = document.createElement('div');
+          wrap.style.cursor = 'pointer';
+          const img = document.createElement('img');
+          img.src = getFallbackIcon(session.activity_type);
+          img.alt = '';
+          img.style.width = '40px';
+          img.style.height = '40px';
+          wrap.appendChild(img);
+          wrap.addEventListener('click', (ev) => {
+            ev.stopPropagation();
             setPreviewSession(session);
           });
+          const fallbackMarker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+            .setLngLat([Number(session.location_lng), Number(session.location_lat)])
+            .addTo(map.current!);
           return fallbackMarker;
         } catch (fallbackError) {
           console.error(`Failed to create fallback marker for session ${session.id}:`, fallbackError);
@@ -824,16 +804,13 @@ export const InteractiveMap = ({
   // Handle shared session link parameters
   useEffect(() => {
     if (isMapLoaded && map.current && initialLat && initialLng) {
-      // Center map on shared session location
-      const sessionLocation = {
-        lat: initialLat,
-        lng: initialLng
-      };
-      map.current.setCenter(sessionLocation);
-      if (initialZoom) {
-        map.current.setZoom(initialZoom);
-      }
-      console.log('Map centered on shared session:', sessionLocation);
+      map.current.easeTo({
+        center: [initialLng, initialLat],
+        zoom: initialZoom ?? map.current.getZoom(),
+        duration: 1200,
+        essential: true,
+      });
+      console.log('Map centered on shared session:', { lat: initialLat, lng: initialLng });
     }
   }, [isMapLoaded, initialLat, initialLng, initialZoom]);
 
@@ -852,9 +829,7 @@ export const InteractiveMap = ({
   useEffect(() => {
     if (!isMapLoaded || !map.current || !isActive) return;
     const id = requestAnimationFrame(() => {
-      if (map.current) {
-        google.maps.event.trigger(map.current, "resize");
-      }
+      map.current?.resize();
     });
     return () => cancelAnimationFrame(id);
   }, [isActive, isMapLoaded]);
@@ -914,157 +889,64 @@ export const InteractiveMap = ({
     };
   }, [user, filters.selected_date, filters.friends_only, filters.selected_club_ids]);
 
-  // Initialize search autocomplete separately
-  useEffect(() => {
-    if (isMapLoaded && searchInputRef.current && !searchAutocomplete) {
-      console.log('Initializing search autocomplete...');
-      const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-        types: ['geocode'],
-        componentRestrictions: {
-          country: 'fr'
-        }
-      });
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        console.log('Place selected:', place);
-        if (place.geometry && place.geometry.location && map.current) {
-          // Center map on selected location
-          map.current.setCenter(place.geometry.location);
-          map.current.setZoom(15);
-
-          // Update search query
-          setFilters(prev => ({
-            ...prev,
-            search_query: place.formatted_address || place.name || ''
-          }));
-        }
-      });
-      setSearchAutocomplete(autocomplete);
-      console.log('Search autocomplete initialized');
-    }
-  }, [isMapLoaded, searchAutocomplete]);
-
   // Update markers when sessions or filters change
   useEffect(() => {
     if (isMapLoaded && map.current) {
       createMarkers();
     }
-  }, [sessions, filters, isMapLoaded]);
+  }, [sessions, filters, isMapLoaded, newSessionIds]);
+
+  useEffect(() => {
+    if (!isMapLoaded || !map.current || !isRouteDialogOpen) return;
+    if (routeCoordinates.current.length >= 2) {
+      setInteractiveRouteLine(map.current, routeCoordinates.current);
+    }
+  }, [isMapLoaded, isRouteDialogOpen]);
+
   useEffect(() => {
     if (!mapContainer.current || isMapLoaded) return;
-    const initializeMap = async () => {
+
+    const token = getMapboxAccessToken();
+    if (!token) {
+      toast.error('Clé Mapbox manquante — ajoutez VITE_MAPBOX_ACCESS_TOKEN dans .env');
+      return;
+    }
+
+    mapboxgl.accessToken = token;
+    let cancelled = false;
+
+    const boot = async () => {
       try {
-        const mapsAlreadyBootstrapped =
-          typeof window !== 'undefined' && Boolean(window.google?.maps);
+        const prefPos = await waitForPrefetchedHomeMapPosition(1400);
+        if (!mapContainer.current || cancelled) return;
 
-        if (!mapsAlreadyBootstrapped) {
-          const {
-            data: apiKeyData,
-            error: apiKeyError
-          } = await supabase.functions.invoke('google-maps-proxy', {
-            body: getKeyBody()
-          });
-
-          if (apiKeyError) {
-            throw new Error(`google-maps-proxy get-key failed: ${apiKeyError.message}`);
-          }
-
-          const googleMapsApiKey = apiKeyData?.apiKey;
-          if (!googleMapsApiKey) {
-            throw new Error('Google Maps API key indisponible');
-          }
-
-          const loader = new Loader({
-            apiKey: googleMapsApiKey,
-            version: 'weekly',
-            libraries: ['geometry', 'places']
-          });
-          await loader.load();
-        }
-
-        if (!mapContainer.current) return;
-
-        /* Petite fenêtre : la géoloc du splash peut finir quelques ms après le montage de la carte */
-        const prefPos = await waitForPrefetchedHomeMapPosition(mapsAlreadyBootstrapped ? 900 : 1400);
-        const mapCenter = prefPos
-          ? { lat: prefPos.lat, lng: prefPos.lng }
-          : { lat: 48.8566, lng: 2.3522 };
+        const mapCenter = prefPos ? { lat: prefPos.lat, lng: prefPos.lng } : { lat: 48.8566, lng: 2.3522 };
         const mapZoom = prefPos ? 14 : 12;
+        const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
-        // Initialize map
-        map.current = new google.maps.Map(mapContainer.current, {
+        const mapInstance = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: styleUrl,
+          center: [mapCenter.lng, mapCenter.lat],
           zoom: mapZoom,
-          center: mapCenter,
-          mapTypeId: currentStyle as google.maps.MapTypeId,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false,
-          zoomControl: false,
-          gestureHandling: 'greedy',
-          styles: currentStyle === 'custom' ? [{
-            featureType: 'all',
-            elementType: 'geometry.fill',
-            stylers: [{
-              color: '#f5f5f5'
-            }]
-          }, {
-            featureType: 'water',
-            elementType: 'geometry',
-            stylers: [{
-              color: '#c9c9c9'
-            }]
-          }] : undefined
+          pitch: 0,
+          antialias: true,
         });
-        setIsMapLoaded(true);
 
-        // Initialize elevation and directions services
-        elevationService.current = new google.maps.ElevationService();
-        directionsService.current = new google.maps.DirectionsService();
-        directionsRenderer.current = new google.maps.DirectionsRenderer({
-          draggable: false,
-          map: null,
-          // Don't attach to map by default
-          polylineOptions: {
-            strokeColor: '#3b82f6',
-            strokeOpacity: 1.0,
-            strokeWeight: 4
+        mapInstance.on('style.load', () => {
+          if (routeCoordinates.current.length >= 2) {
+            setInteractiveRouteLine(mapInstance, routeCoordinates.current);
           }
         });
 
-        // Add event listeners for map interactions
-        let touchTimer: NodeJS.Timeout | null = null;
+        map.current = mapInstance;
 
-        // Long press handler for creating sessions (mobile-friendly) - controlled by user settings
-        map.current.addListener('mousedown', (event: google.maps.MapMouseEvent) => {
-          // Don't create session if in route creation mode
-          if (isRouteCreationMode) return;
-
-          // Check user preference for long press to create session
-          const enableLongPressCreate = localStorage.getItem('enableLongPressCreate') === 'true';
-          if (!enableLongPressCreate) return;
-          touchTimer = setTimeout(() => {
-            handleCreateSessionAtLocation(event.latLng);
-            touchTimer = null;
-          }, 600); // 600ms for long press (reduced for better UX)
-        });
-        map.current.addListener('mouseup', () => {
-          // Don't handle mouseup if in route creation mode
-          if (isRouteCreationMode) return;
-          if (touchTimer) {
-            clearTimeout(touchTimer);
-            touchTimer = null;
-          }
-        });
-        map.current.addListener('mousemove', () => {
-          // Don't handle mousemove if in route creation mode
-          if (isRouteCreationMode) return;
-          if (touchTimer) {
-            clearTimeout(touchTimer);
-            touchTimer = null;
-          }
+        mapInstance.once('load', () => {
+          if (cancelled) return;
+          setIsMapLoaded(true);
+          setMapboxMap(mapInstance);
         });
 
-        // Position fraîche du splash : évite une 2e requête lente ; sinon flux complet (+ toasts si échec)
         const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
         const PREFETCH_MAX_AGE_MS = 45_000;
 
@@ -1072,8 +954,12 @@ export const InteractiveMap = ({
           console.log('🗺️ Géoloc préchargée au splash (', Math.round(prefetchAgeMs), 'ms) — pas de relance immédiate');
           const pos = { lat: prefPos.lat, lng: prefPos.lng };
           setUserLocation(pos);
-          map.current?.setCenter(pos);
-          map.current?.setZoom(14);
+          mapInstance.easeTo({
+            center: [pos.lng, pos.lat],
+            zoom: 14,
+            duration: 900,
+            essential: true,
+          });
         } else {
           console.log('🗺️ Début tentative géolocalisation');
           getCurrentPosition()
@@ -1081,11 +967,14 @@ export const InteractiveMap = ({
               console.log('🗺️ Position reçue dans InteractiveMap:', position);
               if (position) {
                 setUserLocation(position);
-                map.current?.setCenter(position);
-                map.current?.setZoom(14);
+                mapInstance.easeTo({
+                  center: [position.lng, position.lat],
+                  zoom: 14,
+                  duration: 1100,
+                  essential: true,
+                });
                 console.log('✅ Carte centrée sur position utilisateur:', position);
               } else {
-                console.log('❌ Position null reçue');
                 throw new Error('No position returned');
               }
             })
@@ -1117,51 +1006,55 @@ export const InteractiveMap = ({
             });
         }
       } catch (error) {
-        console.error('Erreur lors du chargement de Google Maps:', error);
-        toast.error("Erreur lors du chargement de la carte");
+        console.error('Erreur lors du chargement de Mapbox:', error);
+        toast.error('Erreur lors du chargement de la carte');
       }
     };
-    initializeMap();
-  }, [currentStyle]);
+
+    void boot();
+
+    return () => {
+      cancelled = true;
+      if (userLocationMarker.current) {
+        userLocationMarker.current.remove();
+        userLocationMarker.current = null;
+      }
+      map.current?.remove();
+      map.current = null;
+      setMapboxMap(null);
+      setIsMapLoaded(false);
+    };
+  }, []);
 
   // Create user location marker with pulsating animation
   useEffect(() => {
     if (!map.current || !userLocation || !isMapLoaded) return;
 
-    // Remove old marker if it exists
     if (userLocationMarker.current) {
-      userLocationMarker.current.setMap(null);
+      userLocationMarker.current.remove();
+      userLocationMarker.current = null;
     }
 
-    // Create pulsating blue marker for user location
-    const createPulsatingMarker = () => {
+    const createPulsatingMarkerDataUrl = () => {
       const size = 60;
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d')!;
-
-      // Create gradient for pulse effect
       const gradient = ctx.createRadialGradient(size / 2, size / 2, 5, size / 2, size / 2, size / 2);
-      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)'); // primary blue with opacity
+      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)');
       gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.3)');
       gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-
-      // Draw pulsating circle
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
       ctx.fill();
-
-      // Draw solid center dot
-      ctx.fillStyle = '#3b82f6'; // primary blue
+      ctx.fillStyle = '#3b82f6';
       ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
       ctx.shadowBlur = 10;
       ctx.beginPath();
       ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
       ctx.fill();
-
-      // White border around center
       ctx.strokeStyle = 'white';
       ctx.lineWidth = 3;
       ctx.shadowColor = 'transparent';
@@ -1171,24 +1064,28 @@ export const InteractiveMap = ({
       ctx.stroke();
       return canvas.toDataURL('image/png');
     };
-    const markerIcon = createPulsatingMarker();
-    userLocationMarker.current = new google.maps.Marker({
-      position: userLocation,
-      map: map.current,
-      icon: {
-        url: markerIcon,
-        scaledSize: new google.maps.Size(60, 60),
-        anchor: new google.maps.Point(30, 30)
-      },
-      zIndex: 1000,
-      // Above other markers
-      title: 'Votre position'
-    });
-    console.log('✅ User location marker created with pulse animation');
 
-    // Animate the pulse effect
+    const wrap = document.createElement('div');
+    wrap.style.width = '60px';
+    wrap.style.height = '60px';
+    wrap.style.willChange = 'transform';
+    const img = document.createElement('img');
+    img.src = createPulsatingMarkerDataUrl();
+    img.alt = '';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+    img.style.display = 'block';
+    wrap.appendChild(img);
+
+    const marker = new mapboxgl.Marker({ element: wrap, anchor: 'center' })
+      .setLngLat([userLocation.lng, userLocation.lat])
+      .addTo(map.current);
+    userLocationMarker.current = marker;
+
     let scale = 1;
     let growing = true;
+    let raf = 0;
     const animate = () => {
       if (!userLocationMarker.current) return;
       if (growing) {
@@ -1198,118 +1095,64 @@ export const InteractiveMap = ({
         scale -= 0.02;
         if (scale <= 1) growing = true;
       }
-      const animatedIcon = userLocationMarker.current.getIcon() as google.maps.Icon;
-      if (animatedIcon && animatedIcon.scaledSize) {
-        userLocationMarker.current.setIcon({
-          ...animatedIcon,
-          scaledSize: new google.maps.Size(60 * scale, 60 * scale),
-          anchor: new google.maps.Point(30 * scale, 30 * scale)
-        });
-      }
-      requestAnimationFrame(animate);
+      wrap.style.transform = `scale(${scale})`;
+      raf = requestAnimationFrame(animate);
     };
-    const animationId = requestAnimationFrame(animate);
+    raf = requestAnimationFrame(animate);
+
     return () => {
-      cancelAnimationFrame(animationId);
-      if (userLocationMarker.current) {
-        userLocationMarker.current.setMap(null);
+      cancelAnimationFrame(raf);
+      marker.remove();
+      if (userLocationMarker.current === marker) {
+        userLocationMarker.current = null;
       }
     };
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
-    if (map.current) {
-      if (style === 'custom') {
-        map.current.setOptions({
-          styles: [{
-            featureType: 'all',
-            elementType: 'geometry.fill',
-            stylers: [{
-              color: '#f5f5f5'
-            }]
-          }, {
-            featureType: 'water',
-            elementType: 'geometry',
-            stylers: [{
-              color: '#c9c9c9'
-            }]
-          }]
-        });
-      } else {
-        map.current.setMapTypeId(style as google.maps.MapTypeId);
-        map.current.setOptions({
-          styles: undefined
-        });
-      }
-    }
+    const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+    map.current?.setStyle(nextStyle);
   };
+  const tryGeocodeSearchFromInput = async () => {
+    const q = filters.search_query.trim();
+    if (!q || !map.current) return;
+    const hit = await geocodeForwardDetail(q);
+    if (!hit) {
+      toast.info('Lieu introuvable — essayez une autre formulation ou filtrez les séances par mot-clé.');
+      return;
+    }
+    map.current.flyTo({
+      center: [hit.lng, hit.lat],
+      zoom: 15,
+      duration: 1200,
+      essential: true,
+    });
+    setFilters((prev) => ({ ...prev, search_query: hit.placeName }));
+  };
+
   const handleCreateRoute = () => {
     console.log('🗺️ InteractiveMap handleCreateRoute called - navigating to route creation');
     navigate('/route-create');
   };
-  const createDirectionsRoute = () => {
-    if (!directionsService.current || !directionsRenderer.current || waypoints.current.length < 2) return;
-    const origin = waypoints.current[0];
-    const destination = waypoints.current[waypoints.current.length - 1];
-    const waypointsForDirections = waypoints.current.slice(1, -1).map(point => ({
-      location: point,
-      stopover: true
-    }));
-    const request: google.maps.DirectionsRequest = {
-      origin: origin,
-      destination: destination,
-      waypoints: waypointsForDirections,
-      travelMode: google.maps.TravelMode.WALKING,
-      // or BICYCLING for cycling routes
-      optimizeWaypoints: false
-    };
-    directionsService.current.route(request, (result, status) => {
-      if (status === 'OK' && result) {
-        // Set the directions renderer to display the route
-        directionsRenderer.current!.setMap(map.current);
-        directionsRenderer.current!.setDirections(result);
-
-        // Extract coordinates from the route for elevation calculation
-        const route = result.routes[0];
-        routeCoordinates.current = [];
-        route.legs.forEach(leg => {
-          leg.steps.forEach(step => {
-            step.path.forEach(point => {
-              routeCoordinates.current.push(point);
-            });
-          });
-        });
-
-        // Update elevation profile with the new route
-        updateElevationProfile();
-      } else {
-        toast.error('Impossible de créer un itinéraire suivant les routes');
-        console.error('Directions request failed due to:', status);
-      }
-    });
+  const createDirectionsRoute = async () => {
+    if (waypoints.current.length < 2) return;
+    const path = await fetchMapboxDirectionsPath(waypoints.current, 'walking');
+    if (!path?.length) {
+      toast.error('Impossible de créer un itinéraire suivant les routes');
+      return;
+    }
+    routeCoordinates.current = path;
+    setInteractiveRouteLine(map.current, path);
+    await updateElevationProfile();
   };
   const updateElevationProfile = async () => {
-    if (!elevationService.current || routeCoordinates.current.length === 0) return;
+    if (routeCoordinates.current.length === 0) return;
     try {
-      // Pour les longs itinéraires, on augmente significativement le nombre d'échantillons
-      // Plus de points = calcul plus précis du dénivelé
       const routeLength = routeCoordinates.current.length;
-      let samples = Math.max(100, Math.min(routeLength * 2, 512)); // Minimum 100 points, maximum 512 (limite API)
-
-      // Pour les très longs itinéraires, on prend le maximum de points possible
-      if (routeLength > 100) {
-        samples = 512; // Maximum autorisé par l'API Google Maps
-      }
-      const elevationRequest = {
-        path: routeCoordinates.current,
-        samples: samples
-      };
-      elevationService.current.getElevationAlongPath(elevationRequest, (results, status) => {
-        if (status === 'OK' && results) {
-          const elevations = results.map(result => result.elevation);
-          setRouteElevations(elevations);
-        }
-      });
+      const samples = Math.min(512, Math.max(48, Math.min(routeLength * 2, 512)));
+      const sampled = samplePathCoords(routeCoordinates.current, samples);
+      const elevations = await fetchElevationsForCoords(sampled);
+      setRouteElevations(elevations);
     } catch (error) {
       console.error('Erreur lors du calcul du dénivelé:', error);
     }
@@ -1318,13 +1161,7 @@ export const InteractiveMap = ({
   const calculateRouteStats = () => {
     if (routeCoordinates.current.length < 2) return null;
 
-    let totalDistanceM = 0;
-    for (let i = 1; i < routeCoordinates.current.length; i++) {
-      totalDistanceM += google.maps.geometry.spherical.computeDistanceBetween(
-        routeCoordinates.current[i - 1],
-        routeCoordinates.current[i]
-      );
-    }
+    const totalDistanceM = pathLengthMeters(routeCoordinates.current);
 
     if (routeElevations.length > 0) {
       let elevationGain = 0;
@@ -1391,20 +1228,23 @@ export const InteractiveMap = ({
           }
         }
         return {
-          lat: coord.lat(),
-          lng: coord.lng(),
+          lat: coord.lat,
+          lng: coord.lng,
           elevation: Math.round(el),
         };
       });
       
-      // Sauvegarder les waypoints s'ils existent
-      const waypointsData = waypoints.current.length > 0 
-        ? waypoints.current.map(wp => ({
-            lat: wp.lat(),
-            lng: wp.lng(),
-            mode: 'manual' as const
-          }))
-        : [];
+      const pendingWp = pendingWaypointsForSaveRef.current;
+      const waypointsData =
+        pendingWp && pendingWp.length > 0
+          ? pendingWp
+          : waypoints.current.length > 0
+            ? waypoints.current.map((wp) => ({
+                lat: wp.lat,
+                lng: wp.lng,
+                mode: 'manual' as const,
+              }))
+            : [];
       
       const {
         error
@@ -1448,45 +1288,27 @@ export const InteractiveMap = ({
       setIsRouteDialogOpen(false);
       setIsRouteCreationMode(false);
 
-      // Remove click listener
-      if (map.current) {
-        const listener = map.current.get('routeClickListener');
-        if (listener) {
-          google.maps.event.removeListener(listener);
-        }
-      }
-
-      // Show markers again
       loadSessions();
       if (createSession) {
-        // Sauvegarder les coordonnées du début AVANT de les effacer
-        const startLat = waypoints.current.length > 0 ? waypoints.current[0].lat() : 48.8566;
-        const startLng = waypoints.current.length > 0 ? waypoints.current[0].lng() : 2.3522;
+        const startLat = waypoints.current.length > 0 ? waypoints.current[0]!.lat : 48.8566;
+        const startLng = waypoints.current.length > 0 ? waypoints.current[0]!.lng : 2.3522;
 
-        // Clear route data first
-        if (directionsRenderer.current) {
-          directionsRenderer.current.setMap(null);
-        }
+        setInteractiveRouteLine(map.current, []);
         routeCoordinates.current = [];
         waypoints.current = [];
         setRouteElevations([]);
 
-        // Now open create session dialog with saved coordinates
         setPresetLocation({
           lat: startLat,
           lng: startLng
         });
         setIsCreateDialogOpen(true);
       } else {
-        // Clear route data
-        if (directionsRenderer.current) {
-          directionsRenderer.current.setMap(null);
-        }
+        setInteractiveRouteLine(map.current, []);
         routeCoordinates.current = [];
         waypoints.current = [];
         setRouteElevations([]);
 
-        // Rediriger vers la page "Mes itinéraires"
         navigate('/itinerary/my-routes');
       }
     }
@@ -1494,53 +1316,28 @@ export const InteractiveMap = ({
   const cancelRouteCreation = () => {
     setIsRouteCreationMode(false);
 
-    // Remove click listener
-    if (map.current) {
-      const listener = map.current.get('routeClickListener');
-      if (listener) {
-        google.maps.event.removeListener(listener);
-      }
-    }
-
-    // Clear route
-    if (routePath.current) {
-      routePath.current.setMap(null);
-    }
-    if (directionsRenderer.current) {
-      directionsRenderer.current.setMap(null);
-    }
+    setInteractiveRouteLine(map.current, []);
     routeCoordinates.current = [];
     waypoints.current = [];
     setRouteElevations([]);
 
-    // Show markers again
-    markers.current.forEach(marker => marker.setVisible(true));
+    markers.current.forEach((m) => {
+      const el = m.getElement();
+      if (el) el.style.display = '';
+    });
   };
   const updateRoutePath = () => {
-    if (!map.current || routeCoordinates.current.length === 0) return;
-
-    // Remove existing path
-    if (routePath.current) {
-      routePath.current.setMap(null);
-    }
-
-    // Create new path
-    routePath.current = new google.maps.Polyline({
-      path: routeCoordinates.current,
-      geodesic: true,
-      strokeColor: '#3b82f6',
-      strokeOpacity: 1.0,
-      strokeWeight: 4
-    });
-    routePath.current.setMap(map.current);
+    if (!map.current) return;
+    setInteractiveRouteLine(map.current, routeCoordinates.current);
   };
   const handleResetView = () => {
     if (map.current) {
-      map.current.panTo({
-        lat: 48.8566,
-        lng: 2.3522
+      map.current.easeTo({
+        center: [2.3522, 48.8566],
+        zoom: 12,
+        duration: 800,
+        essential: true,
       });
-      map.current.setZoom(12);
     }
   };
   const handleLocateMe = async () => {
@@ -1549,8 +1346,12 @@ export const InteractiveMap = ({
     try {
       const position = await getCurrentPosition();
       if (position) {
-        map.current.setCenter(position);
-        map.current.setZoom(16);
+        map.current.flyTo({
+          center: [position.lng, position.lat],
+          zoom: 16,
+          duration: 900,
+          essential: true,
+        });
       } else {
         toast.error("Impossible de vous localiser");
       }
@@ -1559,8 +1360,7 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-  const handleCreateSessionAtLocation = (latLng: google.maps.LatLng | null) => {
-    // Don't create session if in route creation mode
+  const handleCreateSessionAtLocation = (latLng: mapboxgl.LngLat | null) => {
     if (isRouteCreationMode) {
       console.log('🚫 Session creation blocked - route creation mode active');
       return;
@@ -1570,11 +1370,62 @@ export const InteractiveMap = ({
       return;
     }
     setPresetLocation({
-      lat: latLng.lat(),
-      lng: latLng.lng()
+      lat: latLng.lat,
+      lng: latLng.lng
     });
     setIsCreateDialogOpen(true);
   };
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !isMapLoaded) return;
+    let touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearTimer = () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    };
+
+    const armLongPress = (lngLat: mapboxgl.LngLat | null | undefined) => {
+      if (!lngLat || isRouteCreationMode) return;
+      if (localStorage.getItem('enableLongPressCreate') !== 'true') return;
+      clearTimer();
+      touchTimer = setTimeout(() => {
+        handleCreateSessionAtLocation(lngLat);
+        touchTimer = null;
+      }, 600);
+    };
+
+    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+      if (e.originalEvent instanceof MouseEvent && e.originalEvent.button !== 0) return;
+      armLongPress(e.lngLat ?? null);
+    };
+    const onTouchStart = (e: mapboxgl.MapTouchEvent) => {
+      armLongPress(e.lngLat ?? null);
+    };
+    const cancelPress = () => clearTimer();
+
+    m.on('mousedown', onMouseDown);
+    m.on('touchstart', onTouchStart);
+    m.on('mouseup', cancelPress);
+    m.on('touchend', cancelPress);
+    m.on('mousemove', cancelPress);
+    m.on('touchmove', cancelPress);
+    m.on('dragstart', cancelPress);
+
+    return () => {
+      clearTimer();
+      m.off('mousedown', onMouseDown);
+      m.off('touchstart', onTouchStart);
+      m.off('mouseup', cancelPress);
+      m.off('touchend', cancelPress);
+      m.off('mousemove', cancelPress);
+      m.off('touchmove', cancelPress);
+      m.off('dragstart', cancelPress);
+    };
+  }, [isMapLoaded, isRouteCreationMode, user]);
   return <div className="relative w-full h-full bg-background overflow-hidden">
       {/* Map Container */}
       <div ref={mapContainer} className="absolute inset-0 bg-secondary" data-tutorial="map-container" />
@@ -1705,6 +1556,12 @@ export const InteractiveMap = ({
                       search_query: e.target.value,
                     }))
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void tryGeocodeSearchFromInput();
+                    }
+                  }}
                   className={cn(
                     "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
                     "shadow-none placeholder:text-muted-foreground/82",
@@ -2042,7 +1899,7 @@ export const InteractiveMap = ({
           await loadSessions();
         }, delay);
       });
-    }} map={map.current} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
+    }} map={mapboxMap} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
 
       {/* Session Preview Popup */}
       <SessionPreviewPopup
