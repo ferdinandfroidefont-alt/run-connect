@@ -184,8 +184,7 @@ export const Layout = ({ children }: LayoutProps) => {
       </main>
       <TutorialReplayHost />
       {/*
-        FAB création : uniquement via BottomNavigation (dockInBottomNav) sur l’accueil —
-        évite le doublon avec un second bouton fixed qui cassait l’alignement des onglets.
+        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
       */}
       {showBottomNav && <BottomNavigation />}
     </div>
