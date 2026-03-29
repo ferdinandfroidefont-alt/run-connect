@@ -54,6 +54,12 @@ const UserSessionsDialog = lazy(() =>
 const ROUTE_LINE_SOURCE = 'interactive-route-line';
 const ROUTE_LINE_LAYER = 'interactive-route-line-layer';
 
+/**
+ * Diagnostic : carte seule (Paris, zoom 12, streets-v12), sans géoloc / marqueurs / listeners / UI carte.
+ * Mettre à `false` pour réactiver l’écran d’accueil complet.
+ */
+const MAPBOX_MINIMAL_MODE = true;
+
 interface Session {
   id: string;
   title: string;
@@ -804,6 +810,7 @@ export const InteractiveMap = ({
 
   // Handle shared session link parameters
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     if (isMapLoaded && map.current && initialLat && initialLng) {
       map.current.easeTo({
         center: [initialLng, initialLat],
@@ -837,6 +844,7 @@ export const InteractiveMap = ({
 
   // Real-time updates for sessions with improved mobile support
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     if (!user) return;
     loadSessions();
     
@@ -892,12 +900,14 @@ export const InteractiveMap = ({
 
   // Update markers when sessions or filters change
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     if (isMapLoaded && map.current) {
       createMarkers();
     }
   }, [sessions, filters, isMapLoaded, newSessionIds]);
 
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     if (!isMapLoaded || !map.current || !isRouteDialogOpen) return;
     if (routeCoordinates.current.length >= 2) {
       setInteractiveRouteLine(map.current, routeCoordinates.current);
@@ -907,17 +917,20 @@ export const InteractiveMap = ({
   useEffect(() => {
     const el = mapContainer.current;
     if (!el) {
-      console.warn('[RunConnect Mapbox] ① init annulé — ref conteneur null (montage trop tôt ?)');
+      console.warn('[RunConnect Mapbox] init annulé — ref conteneur null');
       return;
     }
     if (map.current) {
-      console.warn('[RunConnect Mapbox] ① init ignoré — une Map existe déjà sur ce composant');
+      console.warn('[RunConnect Mapbox] init ignoré — map déjà créée');
       return;
     }
 
+    console.log(
+      '[RunConnect Mapbox] VITE_MAPBOX_ACCESS_TOKEN:',
+      import.meta.env.VITE_MAPBOX_ACCESS_TOKEN ? 'present' : 'missing'
+    );
+
     const token = getMapboxAccessToken();
-    const tokenPresent = Boolean(token?.length);
-    console.log('[RunConnect Mapbox] ① démarrage', { tokenPresent });
     if (!token) {
       toast.error('Clé Mapbox manquante — ajoutez VITE_MAPBOX_ACCESS_TOKEN dans .env');
       return;
@@ -926,150 +939,211 @@ export const InteractiveMap = ({
     mapboxgl.accessToken = token;
     let cancelled = false;
 
-    const logContainer = (step: string) => {
+    const logContainerBeforeInit = (tag: string) => {
       const r = el.getBoundingClientRect();
-      console.log(`[RunConnect Mapbox] ${step} taille conteneur (px)`, {
+      console.log(`[RunConnect Mapbox] ${tag} container size just before init (px)`, {
         w: Math.round(r.width),
         h: Math.round(r.height),
       });
-      if (r.width < 32 || r.height < 32) {
-        console.warn(
-          '[RunConnect Mapbox] conteneur très petit — flex parent sans hauteur ? Vérifie la chaîne min-h-0 / h-full.'
-        );
-      }
     };
 
-    const boot = async () => {
-      try {
-        logContainer('② après premier cadre');
-        const prefPos = await waitForPrefetchedHomeMapPosition(400);
-        if (cancelled) {
-          console.log('[RunConnect Mapbox] ③ arrêt — composant démonté pendant attente géoloc');
-          return;
-        }
-        if (!mapContainer.current) {
-          console.warn('[RunConnect Mapbox] ③ arrêt — conteneur absent');
-          return;
-        }
-
-        await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-        if (cancelled) return;
-
-        logContainer('④ après double requestAnimationFrame (layout)');
-
-        const mapCenter = prefPos ? { lat: prefPos.lat, lng: prefPos.lng } : { lat: 48.8566, lng: 2.3522 };
-        const mapZoom = prefPos ? 14 : 12;
-        const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_STREETS_STYLE;
-
-        console.log('[RunConnect Mapbox] ⑤ new Map()', { styleUrl, center: mapCenter, zoom: mapZoom });
-
-        const mapInstance = new mapboxgl.Map({
-          container: el,
-          style: styleUrl,
-          center: [mapCenter.lng, mapCenter.lat],
-          zoom: mapZoom,
-          pitch: 0,
-          antialias: true,
-        });
-
-        mapInstance.on('error', (e) => {
-          console.error('[RunConnect Mapbox] erreur map', e);
-        });
-
-        mapInstance.on('style.load', () => {
-          console.log('[RunConnect Mapbox] style.load');
-          if (routeCoordinates.current.length >= 2) {
-            setInteractiveRouteLine(mapInstance, routeCoordinates.current);
-          }
-        });
-
-        map.current = mapInstance;
-
-        mapResizeObserverRef.current?.disconnect();
-        mapResizeObserverRef.current = new ResizeObserver(() => {
-          if (map.current === mapInstance && !cancelled) {
-            mapInstance.resize();
-          }
-        });
-        mapResizeObserverRef.current.observe(el);
-
-        mapInstance.once('load', () => {
-          if (cancelled) return;
-          logContainer('⑥ map événement load');
-          console.log('[RunConnect Mapbox] ⑦ load terminé — resize + isMapLoaded');
+    const attachResizeObserver = (mapInstance: mapboxgl.Map) => {
+      mapResizeObserverRef.current?.disconnect();
+      mapResizeObserverRef.current = new ResizeObserver(() => {
+        if (map.current === mapInstance && !cancelled) {
           mapInstance.resize();
-          requestAnimationFrame(() => {
+        }
+      });
+      mapResizeObserverRef.current.observe(el);
+    };
+
+    if (MAPBOX_MINIMAL_MODE) {
+      const bootMinimal = async () => {
+        try {
+          await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+          if (cancelled || !mapContainer.current) return;
+
+          logContainerBeforeInit('[MINIMAL]');
+          console.log('[RunConnect Mapbox][MINIMAL] before new map');
+
+          const mapInstance = new mapboxgl.Map({
+            container: el,
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [2.3522, 48.8566],
+            zoom: 12,
+            pitch: 0,
+          });
+
+          console.log('[RunConnect Mapbox][MINIMAL] after new map');
+
+          mapInstance.on('error', (e) => {
+            console.error('[RunConnect Mapbox][MINIMAL] map.on(error)', e);
+          });
+
+          mapInstance.on('style.load', () => {
+            console.log('[RunConnect Mapbox][MINIMAL] style.load');
+          });
+
+          mapInstance.once('load', () => {
+            if (cancelled) return;
+            console.log('[RunConnect Mapbox][MINIMAL] load');
             mapInstance.resize();
+            requestAnimationFrame(() => mapInstance.resize());
             setIsMapLoaded(true);
             setMapboxMap(mapInstance);
           });
-        });
 
-        const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
-        const PREFETCH_MAX_AGE_MS = 45_000;
-
-        if (prefPos != null && prefetchAgeMs < PREFETCH_MAX_AGE_MS) {
-          console.log('🗺️ Géoloc préchargée au splash (', Math.round(prefetchAgeMs), 'ms) — pas de relance immédiate');
-          const pos = { lat: prefPos.lat, lng: prefPos.lng };
-          setUserLocation(pos);
-          mapInstance.easeTo({
-            center: [pos.lng, pos.lat],
-            zoom: 14,
-            duration: 900,
-            essential: true,
+          mapInstance.once('idle', () => {
+            console.log('[RunConnect Mapbox][MINIMAL] idle');
           });
-        } else {
-          console.log('🗺️ Début tentative géolocalisation');
-          getCurrentPosition()
-            .then((position) => {
-              console.log('🗺️ Position reçue dans InteractiveMap:', position);
-              if (position) {
-                setUserLocation(position);
-                mapInstance.easeTo({
-                  center: [position.lng, position.lat],
-                  zoom: 14,
-                  duration: 1100,
-                  essential: true,
-                });
-                console.log('✅ Carte centrée sur position utilisateur:', position);
-              } else {
-                throw new Error('No position returned');
-              }
-            })
-            .catch((error: Error) => {
-              console.error('❌ Erreur géolocalisation dans InteractiveMap:', error);
 
-              let errorMessage = 'Localisation non disponible';
-              let shouldShowSettings = false;
-              if (error.message?.includes('Permission') || error.message?.includes('denied')) {
-                errorMessage =
-                  'Autorisations de localisation requises - Cliquez pour ouvrir les paramètres';
-                shouldShowSettings = true;
-              } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
-                errorMessage = 'Délai de localisation dépassé - Réessayez';
-              } else if (error.message?.includes('unavailable')) {
-                errorMessage = 'Service de localisation indisponible - Vérifiez vos paramètres';
-                shouldShowSettings = true;
-              }
-              if (shouldShowSettings) {
-                toast.error(errorMessage, {
-                  action: {
-                    label: 'Paramètres',
-                    onClick: openLocationSettings,
-                  },
-                });
-              }
-
-              console.log('🗺️ Pas de position disponible, pas de marqueur');
-            });
+          map.current = mapInstance;
+          attachResizeObserver(mapInstance);
+        } catch (error) {
+          console.error('[RunConnect Mapbox][MINIMAL] boot exception', error);
+          toast.error('Erreur lors du chargement de la carte');
         }
-      } catch (error) {
-        console.error('[RunConnect Mapbox] exception boot', error);
-        toast.error('Erreur lors du chargement de la carte');
-      }
-    };
+      };
+      void bootMinimal();
+    } else {
+      const logContainer = (step: string) => {
+        const r = el.getBoundingClientRect();
+        console.log(`[RunConnect Mapbox] ${step} taille conteneur (px)`, {
+          w: Math.round(r.width),
+          h: Math.round(r.height),
+        });
+        if (r.width < 32 || r.height < 32) {
+          console.warn(
+            '[RunConnect Mapbox] conteneur très petit — flex parent sans hauteur ? Vérifie la chaîne min-h-0 / h-full.'
+          );
+        }
+      };
 
-    void boot();
+      const boot = async () => {
+        try {
+          logContainer('② après premier cadre');
+          const prefPos = await waitForPrefetchedHomeMapPosition(400);
+          if (cancelled) {
+            console.log('[RunConnect Mapbox] ③ arrêt — composant démonté pendant attente géoloc');
+            return;
+          }
+          if (!mapContainer.current) {
+            console.warn('[RunConnect Mapbox] ③ arrêt — conteneur absent');
+            return;
+          }
+
+          await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+          if (cancelled) return;
+
+          logContainer('④ après double requestAnimationFrame (layout)');
+
+          const mapCenter = prefPos ? { lat: prefPos.lat, lng: prefPos.lng } : { lat: 48.8566, lng: 2.3522 };
+          const mapZoom = prefPos ? 14 : 12;
+          const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_STREETS_STYLE;
+
+          console.log('[RunConnect Mapbox] ⑤ new Map()', { styleUrl, center: mapCenter, zoom: mapZoom });
+
+          const mapInstance = new mapboxgl.Map({
+            container: el,
+            style: styleUrl,
+            center: [mapCenter.lng, mapCenter.lat],
+            zoom: mapZoom,
+            pitch: 0,
+            antialias: true,
+          });
+
+          mapInstance.on('error', (e) => {
+            console.error('[RunConnect Mapbox] erreur map', e);
+          });
+
+          mapInstance.on('style.load', () => {
+            console.log('[RunConnect Mapbox] style.load');
+            if (routeCoordinates.current.length >= 2) {
+              setInteractiveRouteLine(mapInstance, routeCoordinates.current);
+            }
+          });
+
+          map.current = mapInstance;
+          attachResizeObserver(mapInstance);
+
+          mapInstance.once('load', () => {
+            if (cancelled) return;
+            logContainer('⑥ map événement load');
+            console.log('[RunConnect Mapbox] ⑦ load terminé — resize + isMapLoaded');
+            mapInstance.resize();
+            requestAnimationFrame(() => {
+              mapInstance.resize();
+              setIsMapLoaded(true);
+              setMapboxMap(mapInstance);
+            });
+          });
+
+          const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
+          const PREFETCH_MAX_AGE_MS = 45_000;
+
+          if (prefPos != null && prefetchAgeMs < PREFETCH_MAX_AGE_MS) {
+            console.log('🗺️ Géoloc préchargée au splash (', Math.round(prefetchAgeMs), 'ms) — pas de relance immédiate');
+            const pos = { lat: prefPos.lat, lng: prefPos.lng };
+            setUserLocation(pos);
+            mapInstance.easeTo({
+              center: [pos.lng, pos.lat],
+              zoom: 14,
+              duration: 900,
+              essential: true,
+            });
+          } else {
+            console.log('🗺️ Début tentative géolocalisation');
+            getCurrentPosition()
+              .then((position) => {
+                console.log('🗺️ Position reçue dans InteractiveMap:', position);
+                if (position) {
+                  setUserLocation(position);
+                  mapInstance.easeTo({
+                    center: [position.lng, position.lat],
+                    zoom: 14,
+                    duration: 1100,
+                    essential: true,
+                  });
+                  console.log('✅ Carte centrée sur position utilisateur:', position);
+                } else {
+                  throw new Error('No position returned');
+                }
+              })
+              .catch((error: Error) => {
+                console.error('❌ Erreur géolocalisation dans InteractiveMap:', error);
+
+                let errorMessage = 'Localisation non disponible';
+                let shouldShowSettings = false;
+                if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+                  errorMessage =
+                    'Autorisations de localisation requises - Cliquez pour ouvrir les paramètres';
+                  shouldShowSettings = true;
+                } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
+                  errorMessage = 'Délai de localisation dépassé - Réessayez';
+                } else if (error.message?.includes('unavailable')) {
+                  errorMessage = 'Service de localisation indisponible - Vérifiez vos paramètres';
+                  shouldShowSettings = true;
+                }
+                if (shouldShowSettings) {
+                  toast.error(errorMessage, {
+                    action: {
+                      label: 'Paramètres',
+                      onClick: openLocationSettings,
+                    },
+                  });
+                }
+
+                console.log('🗺️ Pas de position disponible, pas de marqueur');
+              });
+          }
+        } catch (error) {
+          console.error('[RunConnect Mapbox] exception boot', error);
+          toast.error('Erreur lors du chargement de la carte');
+        }
+      };
+
+      void boot();
+    }
 
     return () => {
       cancelled = true;
@@ -1088,6 +1162,7 @@ export const InteractiveMap = ({
 
   // Create user location marker with pulsating animation
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     if (!map.current || !userLocation || !isMapLoaded) return;
 
     if (userLocationMarker.current) {
@@ -1169,6 +1244,10 @@ export const InteractiveMap = ({
     };
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
+    if (MAPBOX_MINIMAL_MODE) {
+      console.log('[RunConnect Mapbox][MINIMAL] handleStyleChange ignoré');
+      return;
+    }
     setCurrentStyle(style);
     const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_STREETS_STYLE;
     map.current?.setStyle(nextStyle);
@@ -1437,6 +1516,7 @@ export const InteractiveMap = ({
   };
 
   useEffect(() => {
+    if (MAPBOX_MINIMAL_MODE) return;
     const m = map.current;
     if (!m || !isMapLoaded) return;
     let touchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1486,6 +1566,22 @@ export const InteractiveMap = ({
       m.off('dragstart', cancelPress);
     };
   }, [isMapLoaded, isRouteCreationMode, user]);
+
+  if (MAPBOX_MINIMAL_MODE) {
+    return (
+      <div
+        className="relative h-full w-full min-h-0 min-w-0 overflow-hidden bg-background"
+        data-mapbox-minimal="true"
+      >
+        <div
+          ref={mapContainer}
+          className="absolute inset-0 z-0 min-h-0 min-w-0 bg-secondary"
+          data-tutorial="map-container"
+        />
+      </div>
+    );
+  }
+
   return <div className="relative h-full w-full min-h-0 min-w-0 bg-background overflow-hidden">
       {/* Map Container — min-h-0 obligatoire dans les chaînes flex pour une hauteur non nulle */}
       <div
