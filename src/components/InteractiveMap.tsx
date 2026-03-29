@@ -1634,6 +1634,7 @@ export const InteractiveMap = ({
                 />
               </div>
             </div>
+            </div>
           </div>
 
           {/* Carrousel de filtres : z-[30] sur le bloc header pour passer au-dessus des FAB carte (z-20). */}
