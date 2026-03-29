@@ -10,6 +10,7 @@ import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
+import { MAPBOX_MINIMAL_MODE } from '@/lib/mapboxDebug';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -37,6 +38,14 @@ export const Layout = ({ children }: LayoutProps) => {
   }, [isHome]);
 
   // Précharge la carte (+ centre notif en parallèle) : immédiat sur l’accueil, sinon après délai pour ne pas gêner l’onglet courant.
+  useEffect(() => {
+    if (isHome && MAPBOX_MINIMAL_MODE) {
+      console.log(
+        '[Layout DEBUG accueil] sous-main: (1) carte PersistentHomeMap absolute inset-0 z-20, (2) contenu route z-10 bg-transparent — la carte est au-dessus du calque page si z-20 > z-10'
+      );
+    }
+  }, [isHome]);
+
   useEffect(() => {
     if (!user?.id) return;
     if (isHome) {
@@ -156,6 +165,13 @@ export const Layout = ({ children }: LayoutProps) => {
                 highlightSessionId={sessionIdParam}
               />
             </Suspense>
+            {MAPBOX_MINIMAL_MODE && isHome && (
+              <div
+                className="pointer-events-none absolute inset-0 z-[19] ring-2 ring-amber-400/60"
+                aria-hidden
+                data-layout-debug-map-bounds
+              />
+            )}
           </div>
         )}
         {/*
@@ -180,7 +196,7 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </main>
       <TutorialReplayHost />
-      {!hideBottomNav && isHome && <FloatingCreateSessionButton />}
+      {!hideBottomNav && isHome && !MAPBOX_MINIMAL_MODE && <FloatingCreateSessionButton />}
       {showBottomNav && <BottomNavigation />}
     </div>
   );

@@ -1,5 +1,5 @@
 import { RouteDialog } from './RouteDialog';
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
@@ -30,6 +30,7 @@ import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
 import { waitForPrefetchedHomeMapPosition } from '@/lib/homeMapPrefetch';
+import { MAPBOX_MINIMAL_MODE } from '@/lib/mapboxDebug';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getMapboxAccessToken, MAPBOX_STREETS_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -53,12 +54,6 @@ const UserSessionsDialog = lazy(() =>
 
 const ROUTE_LINE_SOURCE = 'interactive-route-line';
 const ROUTE_LINE_LAYER = 'interactive-route-line-layer';
-
-/**
- * Diagnostic : carte seule (Paris, zoom 12, streets-v12), sans géoloc / marqueurs / listeners / UI carte.
- * Mettre à `false` pour réactiver l’écran d’accueil complet.
- */
-const MAPBOX_MINIMAL_MODE = true;
 
 interface Session {
   id: string;
@@ -963,8 +958,8 @@ export const InteractiveMap = ({
           await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
           if (cancelled || !mapContainer.current) return;
 
-          logContainerBeforeInit('[MINIMAL]');
-          console.log('[RunConnect Mapbox][MINIMAL] before new map');
+          logContainerBeforeInit('taille conteneur (juste avant init)');
+          console.log('[RunConnect Mapbox] before new map');
 
           const mapInstance = new mapboxgl.Map({
             container: el,
@@ -974,19 +969,19 @@ export const InteractiveMap = ({
             pitch: 0,
           });
 
-          console.log('[RunConnect Mapbox][MINIMAL] after new map');
+          console.log('[RunConnect Mapbox] after new map');
 
           mapInstance.on('error', (e) => {
-            console.error('[RunConnect Mapbox][MINIMAL] map.on(error)', e);
+            console.error('[RunConnect Mapbox] error', e);
           });
 
           mapInstance.on('style.load', () => {
-            console.log('[RunConnect Mapbox][MINIMAL] style.load');
+            console.log('[RunConnect Mapbox] style.load');
           });
 
           mapInstance.once('load', () => {
             if (cancelled) return;
-            console.log('[RunConnect Mapbox][MINIMAL] load');
+            console.log('[RunConnect Mapbox] load');
             mapInstance.resize();
             requestAnimationFrame(() => mapInstance.resize());
             setIsMapLoaded(true);
@@ -994,13 +989,13 @@ export const InteractiveMap = ({
           });
 
           mapInstance.once('idle', () => {
-            console.log('[RunConnect Mapbox][MINIMAL] idle');
+            console.log('[RunConnect Mapbox] idle');
           });
 
           map.current = mapInstance;
           attachResizeObserver(mapInstance);
         } catch (error) {
-          console.error('[RunConnect Mapbox][MINIMAL] boot exception', error);
+          console.error('[RunConnect Mapbox] boot exception (minimal)', error);
           toast.error('Erreur lors du chargement de la carte');
         }
       };
@@ -1567,17 +1562,49 @@ export const InteractiveMap = ({
     };
   }, [isMapLoaded, isRouteCreationMode, user]);
 
+  useLayoutEffect(() => {
+    if (!MAPBOX_MINIMAL_MODE) return;
+    const el = mapContainer.current;
+    const label = '[RunConnect Mapbox][MINIMAL] taille conteneur au mount (useLayoutEffect)';
+    if (!el) {
+      console.warn(label, '— ref mapContainer encore null');
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    console.log(label, {
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+      top: Math.round(r.top),
+      left: Math.round(r.left),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- log une fois au montage du shell minimal
+  }, []);
+
   if (MAPBOX_MINIMAL_MODE) {
     return (
       <div
-        className="relative h-full w-full min-h-0 min-w-0 overflow-hidden bg-background"
+        className="flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
         data-mapbox-minimal="true"
       >
+        <header
+          className="relative z-10 shrink-0 border-b border-border bg-card px-4 py-3 pt-[var(--safe-area-top)] shadow-sm"
+          data-mapbox-debug-header
+        >
+          <h1 className="text-base font-semibold text-foreground">RunConnect</h1>
+          <p className="text-xs text-muted-foreground">
+            Test carte minimale — fond rouge = emplacement de la zone map
+          </p>
+        </header>
         <div
-          ref={mapContainer}
-          className="absolute inset-0 z-0 min-h-0 min-w-0 bg-secondary"
-          data-tutorial="map-container"
-        />
+          className="relative min-h-0 flex-1 w-full bg-red-500/25 ring-2 ring-inset ring-red-500/50"
+          data-mapbox-debug-map-slot
+        >
+          <div
+            ref={mapContainer}
+            className="absolute inset-0 z-0 min-h-0 min-w-0 bg-red-500/35"
+            data-tutorial="map-container"
+          />
+        </div>
       </div>
     );
   }
