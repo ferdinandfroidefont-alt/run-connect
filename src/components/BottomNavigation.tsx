@@ -17,6 +17,8 @@ type NavItem = {
 };
 
 const ITEM_GAP_PX = 12;
+/** Marge droite de la barre quand le FAB « + » est présent (accueil uniquement). */
+const FAB_RESERVE_PX = 76;
 /** Nombre de cases visibles ; l’index central = actif (2 à gauche, 2 à droite). */
 const VISIBLE_SLOTS = 5;
 const CENTER_SLOT = 2;
@@ -35,6 +37,7 @@ export const BottomNavigation = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const pathname = location.pathname;
+  const isHome = pathname === "/";
 
   const navItems = useMemo<NavItem[]>(
     () => [
@@ -159,7 +162,7 @@ export const BottomNavigation = () => {
           style={{
             gap: ITEM_GAP_PX,
             paddingLeft: "0.5rem",
-            paddingRight: "0.5rem",
+            paddingRight: isHome ? `calc(0.5rem + ${FAB_RESERVE_PX}px)` : "0.5rem",
           }}
         >
           {visibleRow.map(({ slot, item }) => {

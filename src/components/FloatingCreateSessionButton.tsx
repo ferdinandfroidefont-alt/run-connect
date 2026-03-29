@@ -5,8 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 /**
- * Création de séance : FAB rond, visible uniquement sur la page profil (pas sur l’accueil / autres onglets).
- * Clic : retour carte si besoin, puis ouverture du flux création (comportement existant).
+ * Création de séance : FAB rond, visible uniquement sur l’accueil (carte), pas sur les autres onglets ni le profil.
  */
 export function FloatingCreateSessionButton() {
   const location = useLocation();
@@ -14,7 +13,7 @@ export function FloatingCreateSessionButton() {
   const { openCreateSession, hideBottomNav } = useAppContext();
   const { t } = useLanguage();
 
-  if (hideBottomNav) return null;
+  if (hideBottomNav || location.pathname !== "/") return null;
 
   const handleClick = () => {
     if (location.pathname === "/") {
