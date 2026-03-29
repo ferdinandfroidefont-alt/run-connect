@@ -278,6 +278,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
   const canViewContent = isFollowing || isOwnProfile;
 
+  const headerTitleText = profile?.display_name?.trim() || profile?.username?.trim() || "Profil";
+
   const periodTabs: { key: PeriodFilter; label: string }[] = [
     { key: 'total', label: 'Totaux' },
     { key: '30d', label: '30 jours' },
@@ -287,40 +289,57 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   return (
     <>
       <Dialog open={!!userId} onOpenChange={() => onClose()}>
-        <DialogContent className="w-full min-w-0 h-full max-w-full max-h-full rounded-none border-0 p-0 bg-secondary sm:max-w-md sm:max-h-[85vh] sm:rounded-2xl sm:border flex flex-col overflow-x-hidden overflow-y-hidden">
+        <DialogContent className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border">
 
-          {/* ── Header ── */}
-          <div className="flex items-center justify-between px-2 pt-[max(env(safe-area-inset-top),12px)] pb-2 bg-card border-b border-border/50">
-            <button onClick={onClose} className="flex items-center gap-0.5 active:opacity-60 transition-opacity px-1 py-1">
-              <ChevronLeft className="h-5 w-5 text-primary" />
-              <span className="text-[17px] text-primary">Retour</span>
-            </button>
-            <h1 className="text-[17px] font-semibold text-foreground truncate max-w-[200px]">
-              {profile?.display_name || profile?.username || 'Profil'}
-            </h1>
-            {!isOwnProfile ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="h-8 w-8 flex items-center justify-center active:scale-95 transition-transform">
-                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-background border-border shadow-lg z-50 rounded-xl">
-                  {isBlocked ? (
-                    <DropdownMenuItem onClick={handleUnblockUser} className="text-emerald-600 cursor-pointer">
-                      <UserPlus className="h-4 w-4 mr-2" /> Débloquer
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem onClick={handleBlockUser} className="text-destructive cursor-pointer">
-                      <UserMinus className="h-4 w-4 mr-2" /> Bloquer
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="text-destructive cursor-pointer">
-                    <Flag className="h-4 w-4 mr-2" /> Signaler
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : <div className="w-8" />}
+          {/* Header : 3 zones (retour | titre tronqué | actions) — même principe que les écrans Itinéraire / Paramètres */}
+          <div className="min-w-0 shrink-0 border-b border-border/50 bg-card pt-[max(env(safe-area-inset-top),12px)]">
+            <div className="grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 pb-2.5 ios-shell:px-2.5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex shrink-0 items-center gap-0.5 px-1 py-1 text-primary transition-opacity active:opacity-60"
+              >
+                <ChevronLeft className="h-5 w-5 shrink-0" />
+                <span className="text-[17px] font-medium">Retour</span>
+              </button>
+              <h1
+                className="min-w-0 truncate text-center text-[17px] font-semibold leading-snug text-foreground"
+                title={headerTitleText}
+              >
+                {headerTitleText}
+              </h1>
+              <div className="flex w-10 shrink-0 justify-end">
+                {!isOwnProfile ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
+                        aria-label="Plus d’actions"
+                      >
+                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="z-50 rounded-xl border-border bg-background shadow-lg">
+                      {isBlocked ? (
+                        <DropdownMenuItem onClick={handleUnblockUser} className="cursor-pointer text-emerald-600">
+                          <UserPlus className="mr-2 h-4 w-4" /> Débloquer
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
+                          <UserMinus className="mr-2 h-4 w-4" /> Bloquer
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="cursor-pointer text-destructive">
+                        <Flag className="mr-2 h-4 w-4" /> Signaler
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <span className="inline-block w-9" aria-hidden />
+                )}
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -328,17 +347,18 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : profile ? (
-            <ScrollArea className="flex-1">
-              <div className="pb-8">
+            <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+              <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-1">
+                <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-3 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] ios-shell:px-2.5 sm:max-w-2xl">
 
                 {/* ── Identity Card ── */}
-                <div className="mx-4 mt-4">
-                  <div className="bg-card rounded-[10px] p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="relative flex-shrink-0">
+                <div className="pt-3">
+                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <div className="relative shrink-0">
                         <Avatar className="h-20 w-20">
                           <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                          <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-2xl font-bold text-primary-foreground">
                             {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
                           </AvatarFallback>
                         </Avatar>
@@ -346,25 +366,33 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           <OnlineStatus userId={profile.user_id} />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0 max-w-full pt-1">
-                        <div className="flex items-center gap-1.5">
-                          <p className="min-w-0 max-w-full truncate text-[18px] font-bold text-foreground">
+                      <div className="min-w-0 flex-1 overflow-hidden pt-1">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <p
+                            className="min-w-0 flex-1 truncate text-[18px] font-bold text-foreground"
+                            title={profile.display_name || profile.username}
+                          >
                             {profile.display_name || profile.username}
                           </p>
-                          {profile.is_premium && <Crown className="h-4 w-4 text-yellow-500 flex-shrink-0" />}
+                          {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
                         </div>
-                        <p className="min-w-0 max-w-full truncate text-[14px] text-muted-foreground">@{profile.username}</p>
+                        <p
+                          className="min-w-0 truncate text-[14px] text-muted-foreground"
+                          title={`@${profile.username}`}
+                        >
+                          @{profile.username}
+                        </p>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
                     {!isOwnProfile && (
-                      <div className="flex gap-2.5 mt-4">
+                      <div className="mt-4 flex min-w-0 gap-2.5">
                         <Button
                           onClick={handleFollowToggle}
                           disabled={actionLoading}
                           variant={isFollowing ? "outline" : "default"}
-                          className={`flex-1 h-10 rounded-xl text-[14px] font-semibold ${
+                          className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
                             followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
                           }`}
                         >
@@ -385,8 +413,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 </div>
 
                 {/* ── Follow Stats ── */}
-                <div className="mx-4 mt-3">
-                  <div className="bg-card rounded-[10px] flex">
+                <div>
+                  <div className="ios-card flex min-w-0 overflow-hidden border border-border/60">
                     <button
                       onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
                       className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-l-[10px]"
@@ -407,10 +435,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
                 {/* ── Bio ── */}
                 {profile.bio && (
-                  <div className="mx-4 mt-3">
-                    <div className="bg-card rounded-[10px] p-4">
-                      <p className="text-[14px] text-foreground/80 leading-relaxed">{profile.bio}</p>
-                    </div>
+                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
+                      <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
                   </div>
                 )}
 
@@ -418,8 +444,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 {canViewContent ? (
                   <>
                     {/* Period Filter */}
-                    <div className="mx-4 mt-4">
-                      <div className="bg-muted rounded-[8px] p-0.5 flex">
+                    <div>
+                      <div className="flex min-w-0 rounded-[8px] bg-muted p-0.5">
                         {periodTabs.map(tab => (
                           <button
                             key={tab.key}
@@ -437,7 +463,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Stats */}
-                    <div className="mx-4 mt-3">
+                    <div className="min-w-0">
                       <IOSListGroup>
                         <IOSListItem
                           icon={CalendarDays}
@@ -465,7 +491,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Records & Recent */}
-                    <div className="mx-4 mt-3">
+                    <div className="min-w-0">
                       <IOSListGroup>
                         <IOSListItem
                           icon={Trophy}
@@ -484,8 +510,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
                   </>
                 ) : !isOwnProfile ? (
-                  <div className="mx-4 mt-5">
-                    <div className="bg-card rounded-[10px] p-6 text-center">
+                  <div className="pt-2">
+                    <div className="ios-card border border-border/60 p-6 text-center">
                       <div className="text-4xl mb-3">🔒</div>
                       <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
                       <p className="text-[13px] text-muted-foreground mt-1">
@@ -494,6 +520,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
                   </div>
                 ) : null}
+                </div>
               </div>
             </ScrollArea>
           ) : (

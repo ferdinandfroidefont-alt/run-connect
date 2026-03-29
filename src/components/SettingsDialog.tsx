@@ -1,8 +1,6 @@
 import { lazy, Suspense, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useLanguage } from "@/contexts/LanguageContext";
-
 import { Button } from "@/components/ui/button";
 import {
   Settings,
@@ -17,7 +15,6 @@ import {
   Copy,
   Share2,
   Instagram,
-  GraduationCap,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,7 +29,6 @@ import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 import {
   TUTORIAL_REPLAY_DEFINITIONS,
-  TUTORIAL_REPLAY_MENU_ORDER,
   requestTutorialReplay,
   notifyTutorialReplayQueued,
   type TutorialReplayId,
@@ -55,8 +51,18 @@ const SettingsPrivacy = lazy(() =>
 const SettingsSupport = lazy(() =>
   import("./settings/SettingsSupport").then((m) => ({ default: m.SettingsSupport }))
 );
+const SettingsTutorialCatalog = lazy(() =>
+  import("./settings/SettingsTutorialCatalog").then((m) => ({ default: m.SettingsTutorialCatalog }))
+);
 
-type SettingsPage = 'hub' | 'general' | 'notifications' | 'connections' | 'privacy' | 'support';
+type SettingsPage =
+  | "hub"
+  | "general"
+  | "notifications"
+  | "connections"
+  | "privacy"
+  | "support"
+  | "tutorial-catalog";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -96,7 +102,7 @@ const settingsCategories = [
   {
     id: 'support' as const,
     title: 'Aide & Support',
-    description: 'Contact, déconnexion, compte',
+    description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
     color: 'bg-[#FF9500]',
   },
@@ -105,7 +111,6 @@ const settingsCategories = [
 export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
@@ -458,6 +463,16 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
             <SettingsSupport 
               onBack={goToSettingsHub} 
               onClose={() => handleOpenChange(false)}
+              onOpenTutorialCatalog={() => setCurrentPage("tutorial-catalog")}
+            />
+          </Suspense>
+        );
+      case "tutorial-catalog":
+        return (
+          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-7 w-7 animate-spin text-muted-foreground" /></div>}>
+            <SettingsTutorialCatalog
+              onBack={() => setCurrentPage("support")}
+              onReplay={startTutorialReplay}
             />
           </Suspense>
         );
@@ -562,37 +577,6 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                         )}
                       </div>
                     ))}
-                    </div>
-                  </div>
-
-                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <h3 className="px-1 pb-1 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t("tutorial.replayMenu.sectionTitle")}
-                    </h3>
-                    <p className="px-1 pb-3 text-[13px] leading-snug text-muted-foreground">
-                      {t("tutorial.replayMenu.sectionSubtitle")}
-                    </p>
-                    <div className="ios-card w-full min-w-0 overflow-hidden">
-                      {TUTORIAL_REPLAY_MENU_ORDER.map((id, index) => (
-                        <div key={id}>
-                          <button
-                            type="button"
-                            onClick={() => startTutorialReplay(id)}
-                            className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
-                          >
-                            <div className="ios-list-row-icon bg-[#5856D6]">
-                              <GraduationCap className="h-4 w-4 text-white" />
-                            </div>
-                            <div className="min-w-0 flex-1 text-left">
-                              <span className="truncate text-[17px]">{t(`tutorial.replayMenu.items.${id}`)}</span>
-                            </div>
-                            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                          </button>
-                          {index < TUTORIAL_REPLAY_MENU_ORDER.length - 1 ? (
-                            <div className="ios-list-row-inset-sep" />
-                          ) : null}
-                        </div>
-                      ))}
                     </div>
                   </div>
 

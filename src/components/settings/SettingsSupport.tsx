@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { HelpCircle, Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap, Scale } from "lucide-react";
+import { Mail, LogOut, Trash2, Settings, ChevronRight, ArrowLeft, Loader2, FileText, Info, Shield, GraduationCap, Scale, BookOpen } from "lucide-react";
 import { AdminPremiumManager } from "@/components/AdminPremiumManager";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ interface SettingsSupportProps {
   onClose: () => void;
 }
 
-export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
+export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: SettingsSupportProps) => {
   const { user, session, signOut } = useAuth();
   const { userProfile } = useUserProfile();
   const { toast } = useToast();
@@ -182,6 +182,22 @@ export const SettingsSupport = ({ onBack, onClose }: SettingsSupportProps) => {
               Assistance
             </h3>
             <div className="bg-card overflow-hidden">
+              <button
+                type="button"
+                onClick={onOpenTutorialCatalog}
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
+              >
+                <div className="ios-list-row-icon bg-[#5856D6]">
+                  <BookOpen className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-[15px] font-medium">{t("tutorial.catalogEntry")}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
+
+              <div className="ios-list-row-inset-sep" />
+
               <button 
                 onClick={handleRestartTutorial}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"

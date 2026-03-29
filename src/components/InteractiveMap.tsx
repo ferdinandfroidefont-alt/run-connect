@@ -29,7 +29,10 @@ import { ElevationProfile } from './ElevationProfile';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
-import { waitForPrefetchedHomeMapPosition } from '@/lib/homeMapPrefetch';
+import {
+  takePrefetchedHomeMapPositionIfReady,
+  waitForPrefetchedHomeMapPosition,
+} from '@/lib/homeMapPrefetch';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -37,6 +40,7 @@ import { pathLengthMeters } from '@/lib/geoUtils';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
+import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -53,6 +57,40 @@ const UserSessionsDialog = lazy(() =>
 
 const ROUTE_LINE_SOURCE = 'interactive-route-line';
 const ROUTE_LINE_LAYER = 'interactive-route-line-layer';
+
+/** Zoom large au premier rendu (aperçu « social » : plus de séances visibles). */
+const HOME_MAP_BOOT_ZOOM = 11;
+/** Zoom après centrage sur l’utilisateur (plus dézoomé qu’avant ~14, tout en restant lisible). */
+const HOME_MAP_USER_ZOOM = 12;
+const PARIS_FALLBACK: { lng: number; lat: number } = { lng: 2.3522, lat: 48.8566 };
+
+/** Recentrage utilisateur : zone utile = carte hors header/recherche/filtres et hors tab bar. */
+function computeHomeMapViewportPadding(opts: {
+  immersive: boolean;
+  topStackEl: HTMLElement | null;
+}): mapboxgl.PaddingOptions {
+  if (opts.immersive) {
+    return { top: 80, bottom: 120, left: 14, right: 14 };
+  }
+  let top = 168;
+  if (opts.topStackEl) {
+    const b = opts.topStackEl.getBoundingClientRect();
+    top = Math.min(Math.floor(window.innerHeight * 0.5), Math.ceil(b.bottom) + 12);
+  }
+  let bottom = 96;
+  if (typeof document !== 'undefined') {
+    const navEl = document.querySelector<HTMLElement>('nav[aria-label="Navigation principale"]');
+    if (navEl) {
+      bottom = Math.ceil(window.innerHeight - navEl.getBoundingClientRect().top) + 12;
+    }
+  }
+  return {
+    top: Math.max(56, top),
+    bottom: Math.max(72, bottom),
+    left: 12,
+    right: 12,
+  };
+}
 
 interface Session {
   id: string;
@@ -263,6 +301,8 @@ export const InteractiveMap = ({
     avatar_url: string | null;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  /** Bloc header + recherche + carrousel filtres (mesure pour padding carte). */
+  const homeMapTopStackRef = useRef<HTMLDivElement>(null);
   const homeMapFiltersRef = useRef<HTMLDivElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -327,7 +367,8 @@ export const InteractiveMap = ({
         setClubFilters([]);
       }
     };
-    void loadClubFilters();
+    const t = window.setTimeout(() => void loadClubFilters(), 200);
+    return () => clearTimeout(t);
   }, [user?.id]);
 
   /** Un seul panneau ouvert + fermeture au clic extérieur (hors carrousel / panneau filtres). */
@@ -889,11 +930,19 @@ export const InteractiveMap = ({
     };
   }, [user, filters.selected_date, filters.friends_only, filters.selected_club_ids]);
 
-  // Update markers when sessions or filters change
+  const markersDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Update markers when sessions or filters change (léger debounce → moins de regénérations coûteuses lors des rafraîchissements rapides).
   useEffect(() => {
-    if (isMapLoaded && map.current) {
-      createMarkers();
-    }
+    if (!isMapLoaded || !map.current) return;
+    if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
+    markersDebounceRef.current = setTimeout(() => {
+      markersDebounceRef.current = null;
+      void createMarkers();
+    }, 40);
+    return () => {
+      if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
+    };
   }, [sessions, filters, isMapLoaded, newSessionIds]);
 
   useEffect(() => {
@@ -915,22 +964,24 @@ export const InteractiveMap = ({
     mapboxgl.accessToken = token;
     let cancelled = false;
 
-    const boot = async () => {
+    const boot = () => {
       try {
-        const prefPos = await waitForPrefetchedHomeMapPosition(1400);
         if (!mapContainer.current || cancelled) return;
 
-        const mapCenter = prefPos ? { lat: prefPos.lat, lng: prefPos.lng } : { lat: 48.8566, lng: 2.3522 };
-        const mapZoom = prefPos ? 14 : 12;
+        const prefImmediate = takePrefetchedHomeMapPositionIfReady();
+        const mapCenterLngLat: [number, number] = prefImmediate
+          ? [prefImmediate.lng, prefImmediate.lat]
+          : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
         const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
         const mapInstance = new mapboxgl.Map({
           container: mapContainer.current,
           style: styleUrl,
-          center: [mapCenter.lng, mapCenter.lat],
-          zoom: mapZoom,
+          center: mapCenterLngLat,
+          zoom: HOME_MAP_BOOT_ZOOM,
           pitch: 0,
           antialias: true,
+          renderWorldCopies: false,
         });
 
         mapInstance.on('style.load', () => {
@@ -941,77 +992,102 @@ export const InteractiveMap = ({
 
         map.current = mapInstance;
 
+        const PREFETCH_MAX_AGE_MS = 45_000;
+
+        const easeToUserWithChrome = (lng: number, lat: number, zoom: number, duration: number) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const pad = computeHomeMapViewportPadding({
+                immersive: false,
+                topStackEl: homeMapTopStackRef.current,
+              });
+              mapInstance.easeTo({
+                center: [lng, lat],
+                zoom,
+                padding: pad,
+                duration,
+                essential: true,
+              });
+            });
+          });
+        };
+
+        const runGeoRefinement = () => {
+          if (cancelled || !map.current) return;
+
+          const applyFreshPref = (p: { lat: number; lng: number; ts: number }) => {
+            const age = Date.now() - p.ts;
+            if (age >= PREFETCH_MAX_AGE_MS) return false;
+            setUserLocation({ lat: p.lat, lng: p.lng });
+            easeToUserWithChrome(p.lng, p.lat, HOME_MAP_USER_ZOOM, 520);
+            return true;
+          };
+
+          if (prefImmediate != null && applyFreshPref(prefImmediate)) {
+            return;
+          }
+
+          void waitForPrefetchedHomeMapPosition(1600).then((latePref) => {
+            if (cancelled || !map.current) return;
+            if (latePref != null && applyFreshPref(latePref)) {
+              return;
+            }
+            console.log('🗺️ Début tentative géolocalisation');
+            getCurrentPosition()
+              .then((position) => {
+                if (cancelled || !map.current) return;
+                console.log('🗺️ Position reçue dans InteractiveMap:', position);
+                if (position) {
+                  setUserLocation(position);
+                  easeToUserWithChrome(position.lng, position.lat, HOME_MAP_USER_ZOOM, 700);
+                  console.log('✅ Carte centrée sur position utilisateur:', position);
+                } else {
+                  throw new Error('No position returned');
+                }
+              })
+              .catch((error: Error) => {
+                if (cancelled) return;
+                console.error('❌ Erreur géolocalisation dans InteractiveMap:', error);
+
+                let errorMessage = 'Localisation non disponible';
+                let shouldShowSettings = false;
+                if (error.message?.includes('Permission') || error.message?.includes('denied')) {
+                  errorMessage =
+                    'Autorisations de localisation requises - Cliquez pour ouvrir les paramètres';
+                  shouldShowSettings = true;
+                } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
+                  errorMessage = 'Délai de localisation dépassé - Réessayez';
+                } else if (error.message?.includes('unavailable')) {
+                  errorMessage = 'Service de localisation indisponible - Vérifiez vos paramètres';
+                  shouldShowSettings = true;
+                }
+                if (shouldShowSettings) {
+                  toast.error(errorMessage, {
+                    action: {
+                      label: 'Paramètres',
+                      onClick: openLocationSettings,
+                    },
+                  });
+                }
+
+                console.log('🗺️ Pas de position disponible, pas de marqueur');
+              });
+          });
+        };
+
         mapInstance.once('load', () => {
           if (cancelled) return;
           setIsMapLoaded(true);
           setMapboxMap(mapInstance);
+          requestAnimationFrame(() => requestAnimationFrame(runGeoRefinement));
         });
-
-        const prefetchAgeMs = prefPos ? Date.now() - prefPos.ts : Number.POSITIVE_INFINITY;
-        const PREFETCH_MAX_AGE_MS = 45_000;
-
-        if (prefPos != null && prefetchAgeMs < PREFETCH_MAX_AGE_MS) {
-          console.log('🗺️ Géoloc préchargée au splash (', Math.round(prefetchAgeMs), 'ms) — pas de relance immédiate');
-          const pos = { lat: prefPos.lat, lng: prefPos.lng };
-          setUserLocation(pos);
-          mapInstance.easeTo({
-            center: [pos.lng, pos.lat],
-            zoom: 14,
-            duration: 900,
-            essential: true,
-          });
-        } else {
-          console.log('🗺️ Début tentative géolocalisation');
-          getCurrentPosition()
-            .then((position) => {
-              console.log('🗺️ Position reçue dans InteractiveMap:', position);
-              if (position) {
-                setUserLocation(position);
-                mapInstance.easeTo({
-                  center: [position.lng, position.lat],
-                  zoom: 14,
-                  duration: 1100,
-                  essential: true,
-                });
-                console.log('✅ Carte centrée sur position utilisateur:', position);
-              } else {
-                throw new Error('No position returned');
-              }
-            })
-            .catch((error: Error) => {
-              console.error('❌ Erreur géolocalisation dans InteractiveMap:', error);
-
-              let errorMessage = 'Localisation non disponible';
-              let shouldShowSettings = false;
-              if (error.message?.includes('Permission') || error.message?.includes('denied')) {
-                errorMessage =
-                  'Autorisations de localisation requises - Cliquez pour ouvrir les paramètres';
-                shouldShowSettings = true;
-              } else if (error.message?.includes('Timeout') || error.message?.includes('timeout')) {
-                errorMessage = 'Délai de localisation dépassé - Réessayez';
-              } else if (error.message?.includes('unavailable')) {
-                errorMessage = 'Service de localisation indisponible - Vérifiez vos paramètres';
-                shouldShowSettings = true;
-              }
-              if (shouldShowSettings) {
-                toast.error(errorMessage, {
-                  action: {
-                    label: 'Paramètres',
-                    onClick: openLocationSettings,
-                  },
-                });
-              }
-
-              console.log('🗺️ Pas de position disponible, pas de marqueur');
-            });
-        }
       } catch (error) {
         console.error('Erreur lors du chargement de Mapbox:', error);
         toast.error('Erreur lors du chargement de la carte');
       }
     };
 
-    void boot();
+    boot();
 
     return () => {
       cancelled = true;
@@ -1026,87 +1102,23 @@ export const InteractiveMap = ({
     };
   }, []);
 
-  // Create user location marker with pulsating animation
+  /** Marqueur position utilisateur : stable, couleur primaire, mise à jour par setLngLat (évite clignotements). */
   useEffect(() => {
-    if (!map.current || !userLocation || !isMapLoaded) return;
+    if (!map.current || !isMapLoaded) return;
 
-    if (userLocationMarker.current) {
-      userLocationMarker.current.remove();
+    if (!userLocation) {
+      userLocationMarker.current?.remove();
       userLocationMarker.current = null;
+      return;
     }
 
-    const createPulsatingMarkerDataUrl = () => {
-      const size = 60;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d')!;
-      const gradient = ctx.createRadialGradient(size / 2, size / 2, 5, size / 2, size / 2, size / 2);
-      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.6)');
-      gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.3)');
-      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.fillStyle = '#3b82f6';
-      ctx.shadowColor = 'rgba(59, 130, 246, 0.8)';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.strokeStyle = 'white';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, 8, 0, 2 * Math.PI);
-      ctx.stroke();
-      return canvas.toDataURL('image/png');
-    };
+    if (userLocationMarker.current) {
+      userLocationMarker.current.setLngLat([userLocation.lng, userLocation.lat]);
+      return;
+    }
 
-    const wrap = document.createElement('div');
-    wrap.style.width = '60px';
-    wrap.style.height = '60px';
-    wrap.style.willChange = 'transform';
-    const img = document.createElement('img');
-    img.src = createPulsatingMarkerDataUrl();
-    img.alt = '';
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'contain';
-    img.style.display = 'block';
-    wrap.appendChild(img);
-
-    const marker = new mapboxgl.Marker({ element: wrap, anchor: 'center' })
-      .setLngLat([userLocation.lng, userLocation.lat])
-      .addTo(map.current);
+    const marker = createUserLocationMapboxMarker(userLocation.lng, userLocation.lat).addTo(map.current);
     userLocationMarker.current = marker;
-
-    let scale = 1;
-    let growing = true;
-    let raf = 0;
-    const animate = () => {
-      if (!userLocationMarker.current) return;
-      if (growing) {
-        scale += 0.02;
-        if (scale >= 1.3) growing = false;
-      } else {
-        scale -= 0.02;
-        if (scale <= 1) growing = true;
-      }
-      wrap.style.transform = `scale(${scale})`;
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      marker.remove();
-      if (userLocationMarker.current === marker) {
-        userLocationMarker.current = null;
-      }
-    };
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
@@ -1121,9 +1133,14 @@ export const InteractiveMap = ({
       toast.info('Lieu introuvable — essayez une autre formulation ou filtrez les séances par mot-clé.');
       return;
     }
-    map.current.flyTo({
+    const padding = computeHomeMapViewportPadding({
+      immersive: isImmersiveMode,
+      topStackEl: homeMapTopStackRef.current,
+    });
+    map.current.easeTo({
       center: [hit.lng, hit.lat],
       zoom: 15,
+      padding,
       duration: 1200,
       essential: true,
     });
@@ -1333,8 +1350,8 @@ export const InteractiveMap = ({
   const handleResetView = () => {
     if (map.current) {
       map.current.easeTo({
-        center: [2.3522, 48.8566],
-        zoom: 12,
+        center: [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat],
+        zoom: HOME_MAP_BOOT_ZOOM,
         duration: 800,
         essential: true,
       });
@@ -1346,11 +1363,22 @@ export const InteractiveMap = ({
     try {
       const position = await getCurrentPosition();
       if (position) {
-        map.current.flyTo({
-          center: [position.lng, position.lat],
-          zoom: 16,
-          duration: 900,
-          essential: true,
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const m = map.current;
+            if (!m) return;
+            const padding = computeHomeMapViewportPadding({
+              immersive: isImmersiveMode,
+              topStackEl: homeMapTopStackRef.current,
+            });
+            m.easeTo({
+              center: [position.lng, position.lat],
+              zoom: 16,
+              padding,
+              duration: 900,
+              essential: true,
+            });
+          });
         });
       } else {
         toast.error("Impossible de vous localiser");
@@ -1428,11 +1456,20 @@ export const InteractiveMap = ({
   }, [isMapLoaded, isRouteCreationMode, user]);
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
-      <div
-        ref={mapContainer}
-        className="relative min-h-0 w-full flex-1 bg-secondary"
-        data-tutorial="map-container"
-      />
+      <div className="relative min-h-0 w-full flex-1">
+        <div
+          ref={mapContainer}
+          className="relative min-h-0 h-full w-full bg-secondary"
+          data-tutorial="map-container"
+        />
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 z-[1] bg-muted/20 transition-opacity duration-200 motion-reduce:transition-none',
+            isMapLoaded ? 'opacity-0' : 'opacity-100'
+          )}
+          aria-hidden
+        />
+      </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
@@ -1453,7 +1490,7 @@ export const InteractiveMap = ({
 
       {/* Header + recherche fusionnés (carrousel filtres en dessous, hors du bloc) — masqué en mode immersif */}
       {!isImmersiveMode && (
-        <div className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
+        <div ref={homeMapTopStackRef} className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
           {/* Un seul panneau : barre d’outils + champ recherche — pas de « double bloc » empilé */}
           <div
             className={cn(

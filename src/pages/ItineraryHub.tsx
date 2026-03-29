@@ -61,7 +61,7 @@ export default function ItineraryHub() {
 
   return (
     <IosFixedPageHeaderShell
-      className="flex h-full min-h-0 flex-col bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
       headerWrapperClassName="shrink-0"
       contentScroll
       scrollClassName="min-h-0 bg-secondary"
@@ -77,7 +77,7 @@ export default function ItineraryHub() {
                 Retour
               </button>
             </div>
-            <h1 className="max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
+            <h1 className="min-w-0 max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
               Itinéraire
             </h1>
             <div className="flex min-w-0 justify-end" aria-hidden>
@@ -87,13 +87,17 @@ export default function ItineraryHub() {
         </div>
       }
     >
-      <ScrollArea className="h-full min-h-0 flex-1 [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-        <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-            <p className="text-ios-subheadline text-muted-foreground mb-4 leading-relaxed px-1">
+      <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+        <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+          {/* Alignement Profil / Paramètres : gouttières + largeur utile sm:max-w-2xl */}
+          <div className="mx-auto box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5 sm:max-w-2xl">
+            <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">
               Choisissez une fonctionnalité. Les écrans existants s’ouvrent ici sans duplication.
             </p>
-            <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+            <div
+              className="ios-card w-full min-w-0 overflow-hidden border border-border/60"
+              data-tutorial="tutorial-itinerary-hub"
+            >
               {hubItems.map((item, index) => (
                 <div key={item.path}>
                   <button
@@ -101,12 +105,12 @@ export default function ItineraryHub() {
                     onClick={() => navigate(item.path)}
                     className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-3 transition-colors active:bg-secondary ios-shell:px-2.5 min-h-[56px]"
                   >
-                    <div className={`ios-list-row-icon ${item.color}`}>
+                    <div className={`ios-list-row-icon shrink-0 ${item.color}`}>
                       <item.icon className="h-4 w-4 text-white" />
                     </div>
-                    <div className="min-w-0 flex-1 text-left">
+                    <div className="min-w-0 flex-1 overflow-hidden text-left">
                       <span className="block truncate text-[17px] font-medium text-foreground">{item.title}</span>
-                      <span className="block truncate text-[13px] text-muted-foreground mt-0.5">{item.description}</span>
+                      <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">{item.description}</span>
                     </div>
                     <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                   </button>

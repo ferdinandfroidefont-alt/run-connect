@@ -158,11 +158,15 @@ export const BottomNavigation = () => {
       {isHome && <FloatingCreateSessionButton dockInBottomNav />}
       <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5">
         <div
-          className="mx-auto flex max-w-full items-stretch justify-center"
+          className={cn(
+            "mx-auto flex max-w-full items-stretch justify-center",
+            /* Réserve la colonne du FAB accueil : mêmes largeurs que FloatingCreateSessionButton (3.75rem / sm:16). */
+            isHome && "pr-[calc(3.75rem+0.625rem)] sm:pr-[calc(4rem+0.625rem)]"
+          )}
           style={{
             gap: ITEM_GAP_PX,
             paddingLeft: "0.5rem",
-            paddingRight: "0.5rem",
+            paddingRight: isHome ? undefined : "0.5rem",
           }}
         >
           {visibleRow.map(({ slot, item }) => {

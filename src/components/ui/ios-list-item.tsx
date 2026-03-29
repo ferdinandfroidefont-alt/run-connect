@@ -45,18 +45,18 @@ export const IOSListItem = ({
           </div>
         )}
         
-        {/* Content */}
-        <div className="min-w-0 flex-1">
+        {/* Content — min-w-0 + overflow-hidden pour ne pas pousser la colonne droite hors écran (iOS) */}
+        <div className="min-w-0 flex-1 overflow-hidden">
           <p className="truncate text-[17px] leading-snug text-foreground">{title}</p>
           {subtitle && (
             <p className="mt-px line-clamp-2 text-[13px] leading-snug text-muted-foreground">{subtitle}</p>
           )}
         </div>
         
-        {/* Right side : valeur tronquée seule (iPhone) */}
-        <div className="flex min-w-0 shrink items-center gap-ios-2">
+        {/* Right side : valeur tronquée + chevron toujours visible */}
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-ios-2">
           {value && (
-            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-right text-[17px] text-muted-foreground">
+            <span className="min-w-0 max-w-[min(11rem,42vw)] overflow-hidden text-ellipsis whitespace-nowrap text-right text-[17px] text-muted-foreground sm:max-w-[14rem]">
               {value}
             </span>
           )}

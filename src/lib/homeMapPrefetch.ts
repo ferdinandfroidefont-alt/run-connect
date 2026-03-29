@@ -70,6 +70,17 @@ export function primeHomeMapDuringSplash(): void {
   }
 }
 
+/**
+ * Si la géoloc du splash est déjà arrivée, la consomme tout de suite (sans attente).
+ * Permet d’initialiser Mapbox immédiatement au bon centre sans bloquer sur une boucle d’attente.
+ */
+export function takePrefetchedHomeMapPositionIfReady(): PrefetchedHomeMapPosition | null {
+  if (positionPrefetched == null) return null;
+  const p = positionPrefetched;
+  positionPrefetched = null;
+  return p;
+}
+
 const GEO_WAIT_STEP_MS = 45;
 
 /**

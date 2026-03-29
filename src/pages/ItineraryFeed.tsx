@@ -24,7 +24,7 @@ export default function ItineraryFeed() {
   return (
     <>
       <IosFixedPageHeaderShell
-        className="flex h-full min-h-0 flex-col bg-secondary"
+        className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
         headerWrapperClassName="shrink-0"
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
@@ -40,7 +40,7 @@ export default function ItineraryFeed() {
                   Retour
                 </button>
               </div>
-              <h1 className="max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
+              <h1 className="min-w-0 max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
                 Feed itinéraire
               </h1>
               <div className="flex min-w-0 justify-end" aria-hidden>
@@ -105,6 +105,7 @@ export default function ItineraryFeed() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </ScrollArea>
       </IosFixedPageHeaderShell>

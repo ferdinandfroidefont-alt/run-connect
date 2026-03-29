@@ -98,7 +98,7 @@ export function ProfileSportsCard({ favoriteSport, isOwnProfile, onUpdated }: Pr
   if (!isOwnProfile) {
     if (selected.length === 0) return null;
     return (
-      <div className="ios-card overflow-hidden px-ios-4 py-ios-3 ios-shell:px-2.5 ios-shell:py-2.5">
+      <div className="ios-card overflow-hidden px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
         <p className="mb-ios-2 text-ios-footnote uppercase tracking-wide text-muted-foreground">Sports</p>
         <ProfileSportChips sportKeys={selected} className="justify-start" />
       </div>
@@ -111,7 +111,7 @@ export function ProfileSportsCard({ favoriteSport, isOwnProfile, onUpdated }: Pr
         <button
           type="button"
           onClick={openSheet}
-          className="flex w-full min-w-0 items-center gap-ios-3 px-ios-4 py-ios-3 text-left transition-colors active:bg-secondary/60 ios-shell:px-2.5 ios-shell:py-2.5"
+          className="flex w-full min-w-0 items-center gap-ios-3 px-4 py-3 text-left transition-colors active:bg-secondary/60 ios-shell:px-2.5 ios-shell:py-2.5"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-ios-sm bg-[#FF6B00]">
             <Dumbbell className="h-[18px] w-[18px] text-white" />

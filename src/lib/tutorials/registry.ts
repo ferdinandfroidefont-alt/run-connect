@@ -58,6 +58,20 @@ function introStep(
   };
 }
 
+function pageStep(
+  t: (key: string) => string,
+  i18nKey: string,
+  placement: TutorialStep["placement"] = "bottom"
+): TutorialStep {
+  const targets: Record<string, string> = {
+    "tutorial.replayPages.leaderboard": '[data-tutorial="tutorial-leaderboard"]',
+    "tutorial.replayPages.routes": '[data-tutorial="tutorial-itinerary-hub"]',
+    "tutorial.replayPages.coaching": '[data-tutorial="tutorial-coaching"]',
+  };
+  const target = targets[i18nKey] ?? "body";
+  return introStep(target, t, i18nKey, placement);
+}
+
 export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialReplayDefinition> = {
   full: {
     id: "full",
@@ -145,7 +159,7 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
 };
 
-/** Ordre d’affichage dans Paramètres */
+/** Ordre d’affichage dans le catalogue tutoriels (Paramètres → Aide & Support). */
 export const TUTORIAL_REPLAY_MENU_ORDER: TutorialReplayId[] = [
   "full",
   "map",

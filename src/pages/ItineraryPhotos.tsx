@@ -55,7 +55,7 @@ export default function ItineraryPhotos() {
   return (
     <>
       <IosFixedPageHeaderShell
-        className="flex h-full min-h-0 flex-col bg-secondary"
+        className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
         headerWrapperClassName="shrink-0"
         contentScroll
         scrollClassName="min-h-0 bg-secondary"
@@ -71,7 +71,7 @@ export default function ItineraryPhotos() {
                   Retour
                 </button>
               </div>
-              <h1 className="max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
+              <h1 className="min-w-0 max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
                 Photos
               </h1>
               <div className="flex min-w-0 justify-end" aria-hidden>
@@ -81,8 +81,9 @@ export default function ItineraryPhotos() {
           </div>
         }
       >
-        <ScrollArea className="h-full min-h-0 flex-1 [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-          <div className="space-y-ios-3 px-ios-4 py-4 pb-24">
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+          <div className="min-w-0 max-w-full overflow-x-hidden py-4 pb-24">
+            <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-ios-3 px-4 ios-shell:px-2.5 sm:max-w-2xl">
             <div className="ios-card rounded-ios-lg border border-border p-ios-3">
               <p className="text-ios-footnote font-semibold text-foreground uppercase tracking-wide mb-ios-2">
                 Ajouter une photo
@@ -137,6 +138,7 @@ export default function ItineraryPhotos() {
             <Suspense fallback={null}>
               <RoutePhotosGallery syncKey={routePhotosSyncKey} />
             </Suspense>
+            </div>
           </div>
         </ScrollArea>
       </IosFixedPageHeaderShell>

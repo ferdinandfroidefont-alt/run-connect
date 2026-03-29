@@ -10,7 +10,7 @@ export default function ItineraryTraining() {
 
   return (
     <IosFixedPageHeaderShell
-      className="flex h-full min-h-0 flex-col bg-secondary"
+      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
       headerWrapperClassName="shrink-0"
       contentScroll
       scrollClassName="min-h-0 bg-secondary"
@@ -26,7 +26,7 @@ export default function ItineraryTraining() {
                 Retour
               </button>
             </div>
-            <h1 className="max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
+            <h1 className="min-w-0 max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
               Entraînement
             </h1>
             <div className="flex min-w-0 justify-end" aria-hidden>
@@ -36,44 +36,46 @@ export default function ItineraryTraining() {
         </div>
       }
     >
-      <ScrollArea className="h-full min-h-0 flex-1 [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-        <div className="px-4 py-4 pb-24 space-y-3">
-          <p className="text-ios-subheadline text-muted-foreground leading-relaxed">
-            Ouvrez le mode entraînement pour un de vos itinéraires (même écran qu’ depuis la carte itinéraire).
-          </p>
-          {loading ? (
-            <div className="ios-card p-6 animate-pulse h-24 bg-secondary/80" />
-          ) : routes.length === 0 ? (
-            <div className="ios-card p-6 text-center text-muted-foreground text-ios-subheadline border border-border/60">
-              Aucun itinéraire — créez-en un depuis le hub.
-            </div>
-          ) : (
-            <div className="ios-card overflow-hidden border border-border/60">
-              {routes.map((r, i) => (
-                <div key={r.id}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/training/route/${r.id}`)}
-                    className="flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left active:bg-secondary min-h-[52px]"
-                  >
-                    <div className="ios-list-row-icon bg-[#FF2D55]">
-                      <Navigation className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[17px] font-medium truncate text-foreground">{r.name}</p>
-                      {r.total_distance != null && (
-                        <p className="text-[13px] text-muted-foreground">
-                          {(r.total_distance / 1000).toFixed(1)} km
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  </button>
-                  {i < routes.length - 1 && <div className="ios-list-row-inset-sep" />}
-                </div>
-              ))}
-            </div>
-          )}
+      <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
+        <div className="min-w-0 max-w-full overflow-x-hidden py-4 pb-24">
+          <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-3 px-4 ios-shell:px-2.5 sm:max-w-2xl">
+            <p className="text-ios-subheadline leading-relaxed text-muted-foreground">
+              Ouvrez le mode entraînement pour un de vos itinéraires (même écran qu’ depuis la carte itinéraire).
+            </p>
+            {loading ? (
+              <div className="ios-card h-24 animate-pulse bg-secondary/80 p-6" />
+            ) : routes.length === 0 ? (
+              <div className="ios-card border border-border/60 p-6 text-center text-ios-subheadline text-muted-foreground">
+                Aucun itinéraire — créez-en un depuis le hub.
+              </div>
+            ) : (
+              <div className="ios-card overflow-hidden border border-border/60">
+                {routes.map((r, i) => (
+                  <div key={r.id}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/training/route/${r.id}`)}
+                      className="flex min-h-[52px] w-full min-w-0 max-w-full items-center gap-3 px-4 py-3 text-left active:bg-secondary ios-shell:px-2.5"
+                    >
+                      <div className="ios-list-row-icon shrink-0 bg-[#FF2D55]">
+                        <Navigation className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p className="truncate text-[17px] font-medium text-foreground">{r.name}</p>
+                        {r.total_distance != null && (
+                          <p className="text-[13px] text-muted-foreground">
+                            {(r.total_distance / 1000).toFixed(1)} km
+                          </p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    </button>
+                    {i < routes.length - 1 && <div className="ios-list-row-inset-sep" />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </ScrollArea>
     </IosFixedPageHeaderShell>

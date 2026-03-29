@@ -237,6 +237,9 @@ const _translationBundles: Record<string, any> = {
       skip: 'Passer',
       finish: 'Terminer',
       restartTutorial: 'Revoir le tutoriel',
+      catalogEntry: 'Catalogue de tutoriels',
+      catalogPageTitle: 'Catalogue de tutoriels',
+      catalogPageSubtitle: 'Relancez les visites guidées quand vous voulez.',
       replayMenu: {
         sectionTitle: 'Tutoriels',
         sectionSubtitle: 'Relancez les visites guidées quand vous voulez.',
@@ -578,6 +581,9 @@ const _translationBundles: Record<string, any> = {
       skip: 'Skip',
       finish: 'Finish',
       restartTutorial: 'Replay Tutorial',
+      catalogEntry: 'Tutorial catalog',
+      catalogPageTitle: 'Tutorial catalog',
+      catalogPageSubtitle: 'Replay guided tours anytime.',
       replayMenu: {
         sectionTitle: 'Tutorials',
         sectionSubtitle: 'Replay guided tours anytime.',

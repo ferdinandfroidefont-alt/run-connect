@@ -183,7 +183,10 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </main>
       <TutorialReplayHost />
-      {!hideBottomNav && isHome && <FloatingCreateSessionButton />}
+      {/*
+        FAB création : uniquement via BottomNavigation (dockInBottomNav) sur l’accueil —
+        évite le doublon avec un second bouton fixed qui cassait l’alignement des onglets.
+      */}
       {showBottomNav && <BottomNavigation />}
     </div>
   );
