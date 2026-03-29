@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const hubItems = [
@@ -67,8 +68,8 @@ export default function ItineraryHub() {
       scrollClassName="min-h-0 bg-secondary"
       header={
         <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5 ios-shell:px-2.5">
-            <div className="flex min-w-0 justify-start">
+          <IosPageHeaderBar
+            left={
               <button
                 type="button"
                 onClick={() => navigate(-1)}
@@ -76,14 +77,9 @@ export default function ItineraryHub() {
               >
                 Retour
               </button>
-            </div>
-            <h1 className="min-w-0 max-w-[220px] truncate text-center text-[17px] font-semibold text-foreground">
-              Itinéraire
-            </h1>
-            <div className="flex min-w-0 justify-end" aria-hidden>
-              <div className="h-9 w-14 shrink-0" />
-            </div>
-          </div>
+            }
+            title="Itinéraire"
+          />
         </div>
       }
     >

@@ -14,6 +14,9 @@ import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog
 import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { IosPageIntro } from "@/components/layout/IosPageIntro";
 
 type ClubOption = {
   id: string;
@@ -151,10 +154,19 @@ export default function Coaching() {
   const upcomingSessions = sessions.filter((s) => new Date(s.scheduled_at) >= new Date()).slice(0, 6);
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-hidden bg-secondary">
+      <IosFixedPageHeaderShell
+        className="min-h-0 flex-1"
+        headerWrapperClassName="z-20 ios-header-blur"
+        header={
+          <div className="ios-page-shell pt-[var(--safe-area-top)]">
+            <IosPageHeaderBar className="px-0 py-2" title="Coaching" />
+          </div>
+        }
+      >
       {loading ? (
         <div
-          className="flex flex-1 flex-col items-center justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]"
+          className="flex flex-1 flex-col items-center justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-6"
           role="status"
           aria-live="polite"
         >
@@ -163,15 +175,15 @@ export default function Coaching() {
         </div>
       ) : clubs.length === 0 ? (
         <>
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
-            <div className="ios-card overflow-hidden border border-border/60">
+          <div className="ios-page-shell flex flex-1 flex-col justify-center pb-[calc(1.5rem+var(--safe-area-bottom))] pt-4">
+            <div className="ios-empty-state-panel">
               <div className={emptyStateSx.shell}>
                 <div className={emptyStateSx.iconCircle}>
                   <Dumbbell className="h-12 w-12 text-muted-foreground" aria-hidden />
                 </div>
                 <div className={emptyStateSx.textBlock}>
                   <h3 className="text-ios-title3 font-semibold text-foreground">Aucun espace coaching trouvé</h3>
-                  <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed mx-auto">
+                  <p className="mx-auto max-w-xs text-ios-subheadline leading-relaxed text-muted-foreground">
                     Rejoins un club ou demande un accès coach pour voir tes plans et outils.
                   </p>
                 </div>
@@ -199,27 +211,37 @@ export default function Coaching() {
         </>
       ) : (
         <>
-          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
-            <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
-                    <Dumbbell className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
-                    <p className="text-sm text-muted-foreground">Experience premium, ordre clair, actions rapides</p>
-                  </div>
-                </div>
-                {selectedClub && (
-                  <div className={cn("rounded-full px-3 py-1 text-[11px] font-semibold", isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground")}>
+          <div className="ios-page-shell ios-page-stack">
+            <IosPageIntro
+              eyebrow="Coaching premium"
+              title="Pilote ton club"
+              subtitle="Retrouve la semaine active, les outils coach et les prochaines séances dans une interface plus claire et plus premium."
+              badge={
+                selectedClub ? (
+                  <div
+                    className={cn(
+                      "rounded-full px-3 py-1 text-[11px] font-semibold",
+                      isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground"
+                    )}
+                  >
                     {isCoach ? "Mode coach" : "Mode athlete"}
                   </div>
-                )}
+                ) : null
+              }
+              className="mt-0"
+            >
+              <div className="flex items-center gap-3" data-tutorial="tutorial-coaching">
+                <div className="ios-soft-icon">
+                  <Dumbbell className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-ios-headline text-foreground">{selectedClub?.name ?? "Coaching"}</p>
+                  <p className="text-ios-footnote text-muted-foreground">{weekLabel}</p>
+                </div>
               </div>
-            </header>
+            </IosPageIntro>
 
-            <section className="ios-card border border-border/60 p-2">
+            <section className="ios-toolbar-card p-2">
               <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                 {clubs.map((club) => (
                   <button
@@ -239,7 +261,7 @@ export default function Coaching() {
 
             {selectedClub && (
           <>
-            <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+            <section className="ios-section-shell px-ios-4 py-ios-4">
               <p className="text-[12px] uppercase tracking-wide text-muted-foreground">Semaine active</p>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div>
@@ -252,15 +274,15 @@ export default function Coaching() {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2.5">
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
+                <div className="ios-premium-subtle px-3 py-2.5">
                   <p className="text-[11px] text-muted-foreground">Membres</p>
                   <p className="text-[16px] font-semibold text-foreground">{memberCount}</p>
                 </div>
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
+                <div className="ios-premium-subtle px-3 py-2.5">
                   <p className="text-[11px] text-muted-foreground">A venir</p>
                   <p className="text-[16px] font-semibold text-foreground">{upcomingSessions.length}</p>
                 </div>
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
+                <div className="ios-premium-subtle px-3 py-2.5">
                   <p className="text-[11px] text-muted-foreground">Profil</p>
                   <p className="text-[16px] font-semibold text-foreground">{isCoach ? "Coach" : "Athlete"}</p>
                 </div>
@@ -268,7 +290,7 @@ export default function Coaching() {
             </section>
 
             {isCoach ? (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="ios-section-shell px-ios-4 py-ios-4">
                 <h2 className="text-[16px] font-semibold text-foreground">Outils coaching</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowWeeklyPlan(true)}>
@@ -290,7 +312,7 @@ export default function Coaching() {
                 </div>
               </section>
             ) : (
-              <section className="ios-card border border-border/60 px-ios-2 py-ios-2">
+              <section className="ios-section-shell px-ios-2 py-ios-2">
                 <div className="px-2 pb-2 pt-1">
                   <h2 className="text-[16px] font-semibold text-foreground">Mon plan de la semaine</h2>
                   <p className="text-sm text-muted-foreground">Vue claire, validation des seances, notes et progression.</p>
@@ -300,11 +322,11 @@ export default function Coaching() {
             )}
 
             {isCoach && (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="ios-section-shell px-ios-4 py-ios-4">
                 <h2 className="text-[16px] font-semibold text-foreground">Prochaines seances</h2>
                 <div className="mt-3 space-y-2">
                   {upcomingSessions.length === 0 ? (
-                    <div className="rounded-xl bg-secondary px-3 py-4 text-sm text-muted-foreground">
+                    <div className="ios-premium-subtle px-3 py-4 text-sm text-muted-foreground">
                       Aucune seance a venir. Commence par creer le plan de la semaine.
                     </div>
                   ) : (
@@ -313,7 +335,7 @@ export default function Coaching() {
                         key={session.id}
                         type="button"
                         onClick={() => setSelectedSession(session)}
-                        className="flex w-full items-center justify-between rounded-xl bg-secondary px-3 py-3 text-left"
+                        className="ios-premium-subtle flex w-full items-center justify-between px-3 py-3 text-left"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-[15px] font-semibold text-foreground">{session.title}</p>
@@ -367,6 +389,7 @@ export default function Coaching() {
           )}
         </>
       )}
+      </IosFixedPageHeaderShell>
     </div>
   );
 }

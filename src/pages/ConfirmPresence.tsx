@@ -8,6 +8,7 @@ import { SessionSelector } from '@/components/SessionSelector';
 import { CreatorValidationView } from '@/components/CreatorValidationView';
 import { ParticipantValidationView } from '@/components/ParticipantValidationView';
 import { cn } from '@/lib/utils';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ChevronLeft, Loader2, UserCheck, Users, MapPin } from 'lucide-react';
 
 interface Session {
@@ -291,20 +292,15 @@ export default function ConfirmPresence() {
     <div className="fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary">
       {/* iOS Header */}
       <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
-          <div className="flex min-w-0 justify-start">
+        <IosPageHeaderBar
+          left={
             <button onClick={handleBack} className="flex min-w-0 max-w-full items-center gap-1 text-primary">
               <ChevronLeft className="h-5 w-5 shrink-0" />
               <span className="truncate text-[17px]">Retour</span>
             </button>
-          </div>
-          <h1 className="max-w-[200px] truncate text-center text-[17px] font-semibold text-foreground">
-            Présence
-          </h1>
-          <div className="flex min-w-0 justify-end" aria-hidden>
-            <div className="h-9 w-16 shrink-0" />
-          </div>
-        </div>
+          }
+          title="Présence"
+        />
       </div>
 
       {/* Content : hauteur utile = espace entre header et bas (tab bar déjà hors du fixed-fill) */}

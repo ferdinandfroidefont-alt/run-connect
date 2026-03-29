@@ -81,8 +81,20 @@ html, body {
     --input: 240 5% 94%;
     --ring: 221 83% 53%;
 
-    --shadow-card: 0 1px 2px hsl(240 6% 10% / 0.04), 0 4px 12px hsl(240 6% 10% / 0.06);
-    --shadow-sm: 0 1px 3px hsl(240 6% 10% / 0.06), 0 6px 16px hsl(240 6% 10% / 0.05);
+    --shadow-card: 0 1px 2px hsl(240 6% 10% / 0.04), 0 12px 30px hsl(240 6% 10% / 0.07);
+    --shadow-sm: 0 1px 3px hsl(240 6% 10% / 0.06), 0 10px 24px hsl(240 6% 10% / 0.07);
+    --shadow-floating: 0 20px 48px hsl(220 30% 18% / 0.14);
+    --shadow-soft-panel: 0 10px 30px hsl(215 32% 18% / 0.08);
+    --surface-soft: 220 30% 98%;
+    --surface-elevated: 0 0% 100%;
+    --surface-accent: 212 100% 97%;
+    --surface-strong: 220 30% 96.5%;
+    --surface-hero-ring: 212 100% 88%;
+    --surface-overlay: 0 0% 100% / 0.78;
+    --surface-overlay-strong: 0 0% 100% / 0.9;
+    --hero-gradient: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 33% 98%) 100%);
+    --hero-accent-gradient: radial-gradient(circle at top right, hsl(212 100% 92% / 0.95), transparent 36%), linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 33% 98%) 100%);
+    --hero-mesh-gradient: radial-gradient(circle at top left, hsl(212 100% 92% / 0.9), transparent 34%), radial-gradient(circle at 82% 16%, hsl(190 95% 90% / 0.7), transparent 28%), linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 33% 98%) 100%);
 
     /* Default component radius */
     --radius: var(--radius-md);
@@ -181,8 +193,20 @@ html, body {
     --chart-4: 271 75% 62%;
     --chart-5: 0 72% 52%;
 
-    --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.06), 0 4px 20px hsl(0 0% 0% / 0.45);
-    --shadow-sm: 0 2px 10px hsl(0 0% 0% / 0.35);
+    --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.06), 0 10px 30px hsl(0 0% 0% / 0.46);
+    --shadow-sm: 0 2px 14px hsl(0 0% 0% / 0.38);
+    --shadow-floating: 0 26px 60px hsl(0 0% 0% / 0.44);
+    --shadow-soft-panel: 0 16px 42px hsl(0 0% 0% / 0.4);
+    --surface-soft: 240 4% 17%;
+    --surface-elevated: 240 5% 16%;
+    --surface-accent: 211 52% 20%;
+    --surface-strong: 240 4% 20%;
+    --surface-hero-ring: 211 75% 26%;
+    --surface-overlay: 240 5% 11% / 0.78;
+    --surface-overlay-strong: 240 5% 12% / 0.9;
+    --hero-gradient: linear-gradient(180deg, hsl(240 5% 16%) 0%, hsl(240 5% 13%) 100%);
+    --hero-accent-gradient: radial-gradient(circle at top right, hsl(211 100% 32% / 0.32), transparent 40%), linear-gradient(180deg, hsl(240 5% 16%) 0%, hsl(240 5% 13%) 100%);
+    --hero-mesh-gradient: radial-gradient(circle at top left, hsl(211 100% 32% / 0.32), transparent 34%), radial-gradient(circle at 80% 16%, hsl(190 100% 30% / 0.18), transparent 28%), linear-gradient(180deg, hsl(240 5% 16%) 0%, hsl(240 5% 13%) 100%);
     --shadow: 0 4px 20px hsl(0 0% 0% / 0.4);
     --shadow-md: 0 8px 28px hsl(0 0% 0% / 0.45);
     --shadow-lg: 0 12px 40px hsl(0 0% 0% / 0.5);
@@ -337,6 +361,13 @@ html, body {
   .ios-card {
     @apply bg-card rounded-ios-md;
     box-shadow: var(--shadow-card);
+    background-image: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card)) 100%);
+  }
+
+  .ios-card-premium {
+    @apply overflow-hidden rounded-[22px] border border-border/70 bg-card;
+    background-image: linear-gradient(180deg, hsl(var(--surface-elevated)) 0%, hsl(var(--card)) 100%);
+    box-shadow: var(--shadow-floating);
   }
 
   /* Conteneur inset-grouped (référence Réglages iOS) */
@@ -390,17 +421,155 @@ html, body {
     @apply bg-card border border-border/60;
   }
 
+  .ios-page-surface {
+    @apply bg-card/95 supports-[backdrop-filter]:bg-card/88 border-b border-border/70;
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
+  }
+
+  .ios-page-intro {
+    @apply overflow-hidden rounded-[24px] border border-border/70 px-5 py-5;
+    background: var(--hero-accent-gradient);
+    box-shadow: var(--shadow-floating);
+  }
+
+  .ios-page-shell {
+    @apply mx-auto w-full max-w-2xl px-4 ios-shell:px-2.5;
+  }
+
+  .ios-page-stack {
+    @apply space-y-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-4;
+  }
+
+  .ios-section-shell {
+    @apply overflow-hidden rounded-[22px] border border-border/70 bg-card;
+    background-image: linear-gradient(180deg, hsl(var(--surface-elevated)) 0%, hsl(var(--card)) 100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .ios-section-header-row {
+    @apply flex items-start justify-between gap-3 px-4 pb-3 pt-4;
+  }
+
+  .ios-section-kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  .ios-section-title {
+    @apply mt-1 text-[18px] font-semibold tracking-tight text-foreground;
+  }
+
+  .ios-section-description {
+    @apply mt-1 text-[14px] leading-relaxed text-muted-foreground;
+  }
+
+  .ios-stat-grid {
+    @apply grid grid-cols-2 gap-2.5 sm:grid-cols-4;
+  }
+
+  .ios-stat-tile {
+    @apply rounded-[18px] border border-border/60 px-3 py-3;
+    background-color: hsl(var(--surface-soft));
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.42);
+  }
+
+  .ios-stat-label {
+    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  .ios-stat-value {
+    @apply mt-1 text-[20px] font-semibold tracking-tight text-foreground;
+  }
+
+  .ios-section-list {
+    @apply divide-y divide-border/70;
+  }
+
+  .ios-action-pill {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-border/60 px-3.5 py-2 text-[12px] font-semibold tracking-tight text-foreground transition-all duration-200 active:scale-[0.98];
+    background-color: hsl(var(--surface-overlay-strong));
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(16px) saturate(170%);
+    -webkit-backdrop-filter: blur(16px) saturate(170%);
+  }
+
+  .ios-toolbar-card {
+    @apply overflow-hidden rounded-[20px] border border-border/70 p-2;
+    background-color: hsl(var(--surface-overlay-strong));
+    box-shadow: var(--shadow-soft-panel);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+  }
+
+  .ios-search-surface {
+    @apply rounded-[18px] border border-border/60 px-3.5 py-2.5;
+    background-color: hsl(var(--surface-overlay-strong));
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.45), var(--shadow-sm);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+  }
+
+  .ios-empty-state-panel {
+    @apply ios-page-intro mx-auto flex max-w-xl flex-col items-center text-center;
+  }
+
+  .ios-header-blur {
+    @apply border-b border-border/70;
+    background-color: hsl(var(--surface-overlay));
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
+  }
+
+  .ios-hero-mesh {
+    background: var(--hero-mesh-gradient);
+  }
+
+  .ios-premium-panel {
+    @apply overflow-hidden rounded-[22px] border border-border/70 bg-card;
+    background-image: linear-gradient(180deg, hsl(var(--surface-elevated)) 0%, hsl(var(--card)) 100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .ios-premium-subtle {
+    @apply rounded-[18px] border border-border/60;
+    background-color: hsl(var(--surface-soft));
+  }
+
+  .ios-soft-icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px];
+    background-color: hsl(var(--surface-accent));
+    color: hsl(var(--primary));
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.5);
+  }
+
+  .ios-toolbar-segmented {
+    @apply inline-flex rounded-[14px] border border-border/60 bg-secondary/80 p-1;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.32);
+  }
+
+  .ios-toolbar-segmented-button {
+    @apply rounded-[11px] px-3 py-2 text-[12px] font-semibold tracking-tight text-muted-foreground transition-all duration-200;
+  }
+
+  .ios-toolbar-segmented-button[data-state="active"] {
+    @apply bg-card text-foreground shadow-sm;
+  }
+
+  .ios-search-field {
+    @apply h-[44px] rounded-[14px] border border-border/60 bg-secondary/85 text-ios-subheadline;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.45);
+  }
+
   .ios-nav-shell {
-    /* Fond plein (pas de verre) pour coller à la zone système iOS en bas */
-    background-color: hsl(var(--background));
-    @apply border-t border-black/[0.06] dark:border-white/[0.08] shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.35)];
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background-color: hsl(var(--background) / 0.92);
+    @apply rounded-[28px] border border-border/70 shadow-[0_12px_32px_-16px_rgba(15,23,42,0.34)] dark:shadow-[0_16px_36px_-16px_rgba(0,0,0,0.56)];
+    backdrop-filter: blur(18px) saturate(175%);
+    -webkit-backdrop-filter: blur(18px) saturate(175%);
   }
 
   /* Contenu principal : léger dégradé façon iOS */
   .ios-app-canvas {
-    @apply bg-gradient-to-b from-background from-0% via-background via-40% to-secondary/50 to-100%;
+    @apply bg-gradient-to-b from-background from-0% via-background via-40% to-secondary/70 to-100%;
   }
 
   /* Mode sombre : fond plat = même teinte partout (html/body/#root/--background).

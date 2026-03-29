@@ -25,23 +25,25 @@ export function IosPageHeaderBar({
   return (
     <div
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5 ios-shell:px-2.5",
+        "grid min-w-0 grid-cols-3 items-center gap-x-2 gap-y-1 px-4 py-2.5 ios-shell:px-2.5",
         className
       )}
     >
-      <div className={cn("flex min-w-0 justify-start", sideClassName)}>
-        {left ?? <div className="h-9 w-9 shrink-0" aria-hidden />}
+      <div className={cn("flex min-w-0 items-center justify-self-start", sideClassName)}>
+        {left ?? <span className="inline-flex h-9 w-9 shrink-0" aria-hidden />}
       </div>
-      <h1
-        className={cn(
-          "min-w-0 max-w-[min(16rem,calc(100vw-8rem))] truncate text-center text-[17px] font-semibold text-foreground",
-          titleClassName
-        )}
-      >
-        {title}
-      </h1>
-      <div className={cn("flex min-w-0 justify-end", sideClassName)}>
-        {right ?? <div className="h-9 w-9 shrink-0" aria-hidden />}
+      <div className="flex min-w-0 min-h-[44px] items-center justify-center justify-self-stretch px-0.5">
+        <h1
+          className={cn(
+            "min-w-0 max-w-full truncate text-center text-[17px] font-semibold leading-snug text-foreground",
+            titleClassName
+          )}
+        >
+          {title}
+        </h1>
+      </div>
+      <div className={cn("flex min-w-0 items-center justify-self-end", sideClassName)}>
+        {right ?? <span className="inline-flex h-9 w-9 shrink-0" aria-hidden />}
       </div>
     </div>
   );

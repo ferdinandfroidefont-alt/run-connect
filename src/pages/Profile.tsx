@@ -618,13 +618,12 @@ const Profile = () => {
       className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      {/* Même logique que les sous-pages Paramètres : scroll flex-1, gouttières px-4 / ios-shell:px-2.5 */}
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
-      <div className="mx-auto box-border min-h-0 min-w-0 w-full max-w-full sm:max-w-2xl">
+      <div className="ios-page-shell box-border min-h-0 min-w-0 w-full max-w-full sm:max-w-2xl">
       {/* Cover Image - Facebook Style */}
       <div className="relative min-w-0 max-w-full overflow-x-hidden">
         {/* Cover Photo */}
-        <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
+        <div className="ios-hero-mesh relative h-52 w-full overflow-hidden rounded-[30px] border border-border/60 shadow-[var(--shadow-floating)]">
           {(coverPreview || profile?.cover_image_url) ? (
             <img 
               src={coverPreview || profile?.cover_image_url || ''} 
@@ -640,7 +639,7 @@ const Profile = () => {
           {/* Top bar buttons */}
           <div className="absolute left-0 right-0 top-0 z-10 flex min-w-0 items-center justify-between px-4 pt-[max(0.75rem,var(--safe-area-top))] ios-shell:px-2.5">
             {isViewingOtherUser ? (
-              <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
+              <button onClick={() => navigate(-1)} className="ios-action-pill text-white">
                 <ChevronLeft className="h-5 w-5" />
                 <span className="text-ios-headline">Retour</span>
               </button>
@@ -648,11 +647,11 @@ const Profile = () => {
             <div className="flex items-center gap-ios-2">
               {!isViewingOtherUser && (
                 <>
-                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
+                  <label className="ios-action-pill h-9 w-9 cursor-pointer rounded-full px-0 text-white">
                     <Camera className="h-4 w-4 text-white" />
                     <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
                   </label>
-                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                  <button onClick={() => setShowSettingsDialog(true)} className="ios-action-pill h-9 w-9 rounded-full px-0 text-white">
                     <Settings className="h-4 w-4 text-white" />
                   </button>
                 </>
@@ -711,8 +710,8 @@ const Profile = () => {
 
       {/* Hub Paramètres : py-5, cartes groupées = px-4 + ios-shell:px-2.5 + ios-card */}
       <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
+        <div className="box-border min-w-0 w-full max-w-full">
+          <div className="ios-card-premium w-full min-w-0 px-4 py-4 ios-shell:px-2.5 ios-shell:py-3">
             <div className="flex flex-col items-center pb-ios-1 pt-ios-1">
             <div className="mb-0.5 flex max-w-full items-center justify-center gap-ios-2">
               <h2 className="max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
@@ -744,8 +743,8 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+        <div className="box-border min-w-0 w-full max-w-full">
+          <div className="ios-section-shell w-full min-w-0 overflow-hidden">
             <ProfileQuickStats
               userId={viewingUserId || user?.id || ''}
               followerCount={followerCount}
@@ -775,13 +774,13 @@ const Profile = () => {
 
 
         {!isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+          <div className="box-border min-w-0 w-full max-w-full">
             <PersonalGoals />
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+        <div className="box-border min-w-0 w-full max-w-full">
+          <div className="ios-section-shell w-full min-w-0 overflow-hidden">
             <IOSListGroup flush className="mb-0">
               <IOSListItem
                 icon={Route}
@@ -805,8 +804,8 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <Collapsible className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+        <div className="box-border min-w-0 w-full max-w-full">
+          <Collapsible className="ios-section-shell w-full min-w-0 overflow-hidden">
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
                 Succès & Records
@@ -828,8 +827,8 @@ const Profile = () => {
         </div>
 
         {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-            <div className="ios-card overflow-hidden border border-border/60">
+          <div className="box-border min-w-0 w-full max-w-full">
+            <div className="ios-section-shell overflow-hidden">
             <div className="space-y-ios-3 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
@@ -911,7 +910,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full">
           <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
         </div>
 

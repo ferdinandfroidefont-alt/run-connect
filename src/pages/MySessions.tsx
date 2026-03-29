@@ -20,6 +20,9 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
+import { IosPageIntro } from '@/components/layout/IosPageIntro';
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
 );
@@ -512,50 +515,98 @@ export default function MySessions() {
     
     return (
       <>
-        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
-          {/* iOS Header */}
-          <div className="z-50 shrink-0 bg-card pt-[var(--safe-area-top)]">
-            <div className="flex items-center justify-between px-4 py-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  stopParticipantTracking();
-                  setSelectedSession(null);
-                }}
-                className="gap-1 text-primary p-0 h-auto font-normal"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                Retour
-              </Button>
-              {!isViewingJoinedSession && (
-                <div className="flex items-center gap-2">
-                  {isUpcoming && (
+        <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-hidden bg-secondary">
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            headerWrapperClassName="z-20 ios-header-blur"
+            header={
+              <div className="ios-page-shell pt-[var(--safe-area-top)]">
+                <IosPageHeaderBar
+                  className="px-0 py-2"
+                  left={
                     <Button
                       variant="ghost"
-                      size="icon"
-                      onClick={handleEditClick}
-                      className="h-9 w-9"
+                      size="sm"
+                      onClick={() => {
+                        stopParticipantTracking();
+                        setSelectedSession(null);
+                      }}
+                      className="h-auto gap-1 p-0 font-normal text-primary"
                     >
-                      <Edit className="h-5 w-5 text-primary" />
+                      <ArrowLeft className="h-5 w-5" />
+                      Retour
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="h-9 w-9"
-                  >
-                    <Trash2 className="h-5 w-5 text-destructive" />
-                  </Button>
+                  }
+                  title="Séance"
+                  right={
+                    !isViewingJoinedSession ? (
+                      <div className="flex items-center gap-2">
+                        {isUpcoming && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleEditClick}
+                            className="ios-action-pill h-9 w-9 rounded-full px-0"
+                          >
+                            <Edit className="h-4.5 w-4.5 text-primary" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="ios-action-pill h-9 w-9 rounded-full px-0"
+                        >
+                          <Trash2 className="h-4.5 w-4.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : undefined
+                  }
+                />
+              </div>
+            }
+          >
+          <div className="ios-page-shell ios-page-stack">
+            <IosPageIntro
+              eyebrow={isViewingJoinedSession ? "Séance rejointe" : isUpcoming ? "À venir" : "Historique"}
+              title={selectedSession.title}
+              subtitle={
+                selectedSession.description ||
+                `${getActivityLabel(selectedSession.activity_type)} · ${selectedSession.location_name}`
+              }
+              badge={
+                isViewingJoinedSession ? (
+                  <Badge className="bg-blue-500 text-xs text-white">Rejointe</Badge>
+                ) : (
+                  <Badge variant={isUpcoming ? "default" : "secondary"} className="text-xs">
+                    {isUpcoming ? "À venir" : "Terminée"}
+                  </Badge>
+                )
+              }
+            >
+              <div className="ios-stat-grid">
+                <div className="ios-stat-tile">
+                  <p className="ios-stat-label">Sport</p>
+                  <p className="ios-stat-value text-[16px]">{getActivityLabel(selectedSession.activity_type)}</p>
                 </div>
-              )}
-            </div>
-            <div className="h-px bg-border" />
-          </div>
-
-          <div className="ios-scroll-region">
-          <div className="space-y-6 p-4 pb-ios-4">
+                <div className="ios-stat-tile">
+                  <p className="ios-stat-label">Participants</p>
+                  <p className="ios-stat-value">{participants.length}</p>
+                </div>
+                <div className="ios-stat-tile">
+                  <p className="ios-stat-label">Date</p>
+                  <p className="ios-stat-value text-[16px]">
+                    {format(new Date(selectedSession.scheduled_at), 'dd MMM', { locale: fr })}
+                  </p>
+                </div>
+                <div className="ios-stat-tile">
+                  <p className="ios-stat-label">Heure</p>
+                  <p className="ios-stat-value text-[16px]">
+                    {format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
+                  </p>
+                </div>
+              </div>
+            </IosPageIntro>
             {/* Session Header Card */}
             <IOSListGroup>
               <div className="p-4">
@@ -727,7 +778,7 @@ export default function MySessions() {
               <div className="px-0">
                 <Button
                   variant="destructive"
-                  className="w-full rounded-[10px]"
+                  className="w-full rounded-[14px]"
                   onClick={() => setShowLeaveConfirm(true)}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -736,7 +787,7 @@ export default function MySessions() {
               </div>
             )}
           </div>
-          </div>
+          </IosFixedPageHeaderShell>
         </div>
 
         <Suspense fallback={null}>
@@ -817,88 +868,84 @@ export default function MySessions() {
   // Main list view
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
-        {/* iOS Header */}
-        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
-            <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
-          </div>
-          
-          {/* iOS Segmented Control - Two columns layout */}
-          <div className="px-ios-4 pb-ios-2">
-            <div className="flex gap-ios-1">
-              {/* Left column: Séances + sub-filter */}
-              <div className="w-1/2">
-                <div className="bg-secondary rounded-t-ios-md p-ios-1 pb-ios-1">
-                  <div
-                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center"
-                  >
-                    Séances
-                  </div>
-                </div>
-                  <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
-                    <div className="flex gap-ios-1">
-                      <button
-                        onClick={() => { setSessionSource('created'); setSessionPage(0); }}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          sessionSource === 'created'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Créées
-                      </button>
-                      <button
-                        onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          sessionSource === 'joined'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Rejointes
-                      </button>
-                    </div>
-                  </div>
-              </div>
-
-              {/* Right column: accès Présence (page existante) */}
-              <div className="w-1/2">
-                <div className="bg-secondary rounded-ios-md p-ios-1 pb-ios-1">
+      <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
+        <IosFixedPageHeaderShell
+          className="min-h-0 flex-1"
+          headerWrapperClassName="z-20 ios-header-blur"
+          header={
+            <div className="ios-page-shell pt-[var(--safe-area-top)]">
+              <IosPageHeaderBar
+                className="px-0 py-2"
+                titleClassName="text-[32px] font-bold tracking-tight"
+                title="Mes séances"
+                right={
                   <button
                     type="button"
                     onClick={() => navigate('/confirm-presence')}
-                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors bg-card text-foreground shadow-sm flex items-center justify-center gap-ios-1 active:opacity-90"
+                    className="ios-action-pill h-9 rounded-full"
                   >
                     <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
                     Présence
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   </button>
+                }
+              />
+            </div>
+          }
+        >
+        <div className="ios-page-shell ios-page-stack">
+            <IosPageIntro
+              eyebrow="Organisation"
+              title={sessionSource === 'created' ? 'Tes séances créées' : 'Tes séances rejointes'}
+              subtitle="Retrouve tes entraînements, bascule entre vue liste et calendrier et garde un accès rapide à la présence."
+            >
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="ios-toolbar-card">
+                  <p className="ios-section-kicker mb-2">Source</p>
+                  <div className="ios-toolbar-segmented flex w-full">
+                    <button
+                      onClick={() => { setSessionSource('created'); setSessionPage(0); }}
+                      data-state={sessionSource === 'created' ? 'active' : 'inactive'}
+                      className="ios-toolbar-segmented-button flex-1"
+                    >
+                      Créées
+                    </button>
+                    <button
+                      onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
+                      data-state={sessionSource === 'joined' ? 'active' : 'inactive'}
+                      className="ios-toolbar-segmented-button flex-1"
+                    >
+                      Rejointes
+                    </button>
+                  </div>
+                </div>
+                <div className="ios-stat-grid sm:grid-cols-2">
+                  <div className="ios-stat-tile">
+                    <p className="ios-stat-label">Affichage</p>
+                    <p className="ios-stat-value text-[16px]">
+                      {sessionsDisplayMode === 'calendar' ? 'Calendrier' : 'Liste'}
+                    </p>
+                  </div>
+                  <div className="ios-stat-tile">
+                    <p className="ios-stat-label">Total</p>
+                    <p className="ios-stat-value">{filteredSessions.length}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div className="h-px bg-border" />
-        </div>
-
-        <div className="ios-scroll-region pt-ios-2 pb-ios-6">
-            <>
+            </IosPageIntro>
               {/* List/Calendar toggle */}
-              <div className="flex px-ios-4 mb-ios-1">
-                <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
+              <div className="flex mb-ios-1">
+                <div className="ios-toolbar-card flex shrink-0">
                   <button
                     onClick={() => setSessionsDisplayMode('list')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
+                    data-state={sessionsDisplayMode === 'list' ? 'active' : 'inactive'}
+                    className="ios-toolbar-segmented-button rounded-[12px]"
                   >
                     <List className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setSessionsDisplayMode('calendar')}
-                    className={`p-ios-1 rounded-ios-sm transition-colors ${
-                      sessionsDisplayMode === 'calendar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                    }`}
+                    data-state={sessionsDisplayMode === 'calendar' ? 'active' : 'inactive'}
+                    className="ios-toolbar-segmented-button rounded-[12px]"
                   >
                     <CalendarDays className="h-4 w-4" />
                   </button>
@@ -906,7 +953,7 @@ export default function MySessions() {
               </div>
 
               {/* Filter Pills — hauteur légèrement réduite, style iOS conservé */}
-              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 px-ios-4 mb-ios-3">
+              <div className="flex gap-ios-2 overflow-x-auto pb-ios-1 mb-ios-3">
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
@@ -918,7 +965,7 @@ export default function MySessions() {
                     className={`px-ios-3 py-1.5 min-h-[32px] rounded-full text-[12px] leading-tight font-medium whitespace-nowrap transition-colors ${
                       filter === f.key
                         ? 'bg-primary text-primary-foreground'
-                        : 'bg-card text-muted-foreground'
+                        : 'bg-card text-muted-foreground shadow-sm'
                     }`}
                   >
                     {f.label}
@@ -928,7 +975,7 @@ export default function MySessions() {
 
               {/* Sessions Display */}
               {sessionsDisplayMode === 'calendar' ? (
-                <div className="box-border min-w-0 w-full max-w-full px-4">
+                <div className="box-border min-w-0 w-full max-w-full">
                   <SessionCalendarView
                     sessions={filteredSessions}
                     onSessionClick={handleSessionClick}
@@ -949,7 +996,7 @@ export default function MySessions() {
                   ))}
                 </div>
               ) : filteredSessions.length === 0 ? (
-                <div className={emptyStateSx.shell}>
+                <div className={`${emptyStateSx.shell} ios-empty-state-panel`}>
                   <div className={emptyStateSx.iconCircle}>
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                   </div>
@@ -974,7 +1021,8 @@ export default function MySessions() {
                   )}
                 </div>
               ) : (
-                <div className="ios-list-stack">
+                <div className="ios-section-shell p-2">
+                  <div className="ios-list-stack">
                   {/* Flèche haut */}
                   {sessionPage > 0 && (
                     <button
@@ -1066,18 +1114,19 @@ export default function MySessions() {
                     </p>
                   )}
                 </div>
+                </div>
               )}
 
               {/* Organizer Stats - only for created sessions */}
               {sessionSource === 'created' && (
                 <div className="mt-ios-3 pb-ios-6">
                   <Suspense fallback={null}>
-                    <div className="px-ios-4"><OrganizerStatsCard /></div>
+                    <div><OrganizerStatsCard /></div>
                   </Suspense>
                 </div>
               )}
-            </>
         </div>
+        </IosFixedPageHeaderShell>
       </div>
 
       <Suspense fallback={null}>

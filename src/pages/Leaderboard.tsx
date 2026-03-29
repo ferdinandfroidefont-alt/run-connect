@@ -11,6 +11,9 @@ import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 import { FilterBar, FilterType, ActivityType, ScopeType } from "@/components/leaderboard/FilterBar";
 import { RulesSheet } from "@/components/leaderboard/RulesSheet";
 import { cn } from "@/lib/utils";
+import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { IosPageIntro } from "@/components/layout/IosPageIntro";
 
 interface LeaderboardUser {
   user_id: string;
@@ -424,33 +427,67 @@ const Leaderboard = () => {
 
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-background">
-      <header className="z-20 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-        <div className="flex items-center justify-between px-4 py-2.5">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-primary text-[16px] font-medium"
+      <IosFixedPageHeaderShell
+        className="min-h-0 flex-1"
+        headerWrapperClassName="z-20 ios-header-blur"
+        header={
+          <div className="ios-page-shell pt-[var(--safe-area-top)]">
+            <IosPageHeaderBar
+              className="px-0 py-2"
+              left={
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="flex items-center gap-1 text-[16px] font-medium text-primary"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  <span className="text-[15px] font-normal">Retour</span>
+                </button>
+              }
+              title="Classement"
+              right={
+                <button
+                  type="button"
+                  onClick={() => setShowRules(true)}
+                  className="ios-action-pill h-9 w-9 rounded-full px-0"
+                  aria-label="Règles du classement"
+                >
+                  <BookOpen className="h-4 w-4 text-primary" />
+                </button>
+              }
+            />
+          </div>
+        }
+      >
+      <main className="ios-page-shell ios-page-stack min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+        <div className="flex w-full flex-col gap-4">
+          <IosPageIntro
+            eyebrow="Saison active"
+            title="Monte dans le classement"
+            subtitle={`${totalUsers.toLocaleString()} participants · Saison ${getCurrentSeasonDates().number}`}
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px] font-normal">Retour</span>
-          </button>
-          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
-          <button
-            type="button"
-            onClick={() => setShowRules(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-primary transition-all hover:bg-secondary/50"
-            aria-label="Règles du classement"
-          >
-            <BookOpen className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-4 pb-6 pt-4">
-        <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
+            <div className="ios-stat-grid">
+              <div className="ios-stat-tile">
+                <p className="ios-stat-label">Portée</p>
+                <p className="ios-stat-value text-[16px] capitalize">{activeScope}</p>
+              </div>
+              <div className="ios-stat-tile">
+                <p className="ios-stat-label">Filtre</p>
+                <p className="ios-stat-value text-[16px] capitalize">{getEffectiveFilter()}</p>
+              </div>
+              <div className="ios-stat-tile">
+                <p className="ios-stat-label">Clubs</p>
+                <p className="ios-stat-value">{selectedClubs.length}</p>
+              </div>
+              <div className="ios-stat-tile">
+                <p className="ios-stat-label">Page</p>
+                <p className="ios-stat-value">{currentPage}</p>
+              </div>
+            </div>
+          </IosPageIntro>
           <section
             aria-label="Filtres classement"
-            className="rounded-[12px] border border-border bg-card p-3 shadow-sm"
+            className="ios-section-shell p-3"
             data-tutorial="tutorial-leaderboard"
           >
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Filtres</p>
@@ -472,12 +509,12 @@ const Leaderboard = () => {
           </section>
 
           {!fullscreenOpen && (
-            <section aria-label="Leaderboard" className="rounded-[12px] border border-border bg-card shadow-sm overflow-hidden">
+            <section aria-label="Leaderboard" className="ios-section-shell overflow-hidden">
               <div className="flex items-start gap-2 border-b border-border bg-card px-4 py-3">
                 <button
                   type="button"
                   onClick={() => setFullscreenOpen(true)}
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-background text-[18px] leading-none transition-colors hover:bg-secondary/60 active:bg-secondary/80"
+                  className="ios-action-pill mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full px-0 text-[18px] leading-none"
                   aria-label="Agrandir le classement"
                 >
                   ⛶
@@ -498,6 +535,7 @@ const Leaderboard = () => {
           )}
         </div>
       </main>
+      </IosFixedPageHeaderShell>
 
       {fullscreenOpen && (
         <div
@@ -519,7 +557,7 @@ const Leaderboard = () => {
             <div className="w-[72px]" aria-hidden />
           </div>
 
-          <div className="shrink-0 border-b border-border bg-card px-4 py-3">
+          <div className="ios-header-blur shrink-0 px-4 py-3">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
             </p>
@@ -529,7 +567,7 @@ const Leaderboard = () => {
                 placeholder="Rechercher un membre"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 rounded-[10px] border border-border bg-background pl-9 text-[14px]"
+                className="ios-search-surface h-10 border-0 bg-transparent pl-9 text-[14px]"
               />
             </div>
           </div>

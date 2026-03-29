@@ -40,7 +40,7 @@ export function IosFixedPageHeaderShell({
   scrollRef,
   scrollClassName,
   scrollProps,
-  contentTopOffsetPx = 4,
+  contentTopOffsetPx = 12,
 }: IosFixedPageHeaderShellProps) {
   const [pin] = useState(() => isIosAppShell());
   const headerRef = useRef<HTMLDivElement>(null);
@@ -61,7 +61,8 @@ export function IosFixedPageHeaderShell({
     const el = headerRef.current;
     if (!el) return;
     const sync = () => {
-      setPadPx(Math.ceil(el.getBoundingClientRect().height));
+      /* +1 px : évite qu’un filet de contenu reste sous le header (arrondis / sous-pixels iOS). */
+      setPadPx(Math.ceil(el.getBoundingClientRect().height) + 1);
     };
     sync();
     const ro = new ResizeObserver(sync);

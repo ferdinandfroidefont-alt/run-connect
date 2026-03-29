@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 type CoachingFullscreenHeaderProps = {
   title: string;
@@ -25,8 +26,9 @@ export function CoachingFullscreenHeader({
         className
       )}
     >
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-4 py-2.5">
-        <div className="flex min-w-0 justify-start">
+      <IosPageHeaderBar
+        className="py-2.5"
+        left={
           <button
             type="button"
             onClick={onBack}
@@ -35,14 +37,10 @@ export function CoachingFullscreenHeader({
             <ChevronLeft className="h-5 w-5 shrink-0" strokeWidth={2} />
             <span className="text-[17px]">{backLabel}</span>
           </button>
-        </div>
-        <h1 className="max-w-[min(240px,46vw)] truncate text-center text-[17px] font-semibold leading-tight text-foreground">
-          {title}
-        </h1>
-        <div className="flex min-w-0 justify-end">
-          {rightSlot ?? <div className="h-9 w-12 shrink-0" aria-hidden />}
-        </div>
-      </div>
+        }
+        title={title}
+        right={rightSlot}
+      />
     </header>
   );
 }

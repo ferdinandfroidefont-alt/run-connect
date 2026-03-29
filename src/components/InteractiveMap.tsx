@@ -1507,8 +1507,8 @@ export const InteractiveMap = ({
       
       {/* Immersive Mode: Minimal top bar with back button */}
       {isImmersiveMode && (
-        <div className="absolute top-0 left-0 right-0 z-10 bg-card pt-[var(--safe-area-top)]">
-          <div className="flex items-center px-4 py-2 border-b border-border/30">
+        <div className="ios-header-blur absolute left-0 right-0 top-0 z-10 pt-[var(--safe-area-top)]">
+          <div className="ios-page-shell flex items-center py-2">
             <Button
               variant="ghost"
               size="sm"
@@ -1526,14 +1526,8 @@ export const InteractiveMap = ({
       {!isImmersiveMode && (
         <div ref={homeMapTopStackRef} className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
           <div className="flex flex-col">
-            <div
-              className={cn(
-                "border-b border-border/20 dark:border-white/[0.055]",
-                "bg-background/88 supports-[backdrop-filter]:bg-background/72",
-                "backdrop-blur-[18px] backdrop-saturate-150"
-              )}
-            >
-              <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
+            <div className="ios-header-blur">
+              <div className="ios-page-shell relative flex min-h-[3.25rem] items-center justify-between gap-2 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 Runconnect
               </h1>
@@ -1594,7 +1588,7 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   className={cn(
-                    "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
+                    "ios-action-pill flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] px-0 outline-none",
                     "text-foreground transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
                     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   )}
@@ -1607,15 +1601,8 @@ export const InteractiveMap = ({
             </div>
 
             {/* Recherche : fond quasi identique au header — icône + texte seuls ressortent, léger relief au focus */}
-            <div className="px-4 pb-4 pt-2.5 sm:pt-3">
-              <div
-                className={cn(
-                  "flex min-h-[44px] items-center gap-3 px-1 py-1.5 sm:min-h-[46px]",
-                  "rounded-xl bg-transparent",
-                  "transition-[background-color] duration-200 ease-out",
-                  "focus-within:bg-foreground/[0.045] dark:focus-within:bg-white/[0.06]"
-                )}
-              >
+            <div className="ios-page-shell pb-4 pt-2.5 sm:pt-3">
+              <div className="ios-search-surface flex min-h-[44px] items-center gap-3 px-3 py-1.5 sm:min-h-[46px]">
                 <Search
                   className="h-[17px] w-[17px] shrink-0 text-muted-foreground sm:h-[18px] sm:w-[18px]"
                   strokeWidth={2.05}
@@ -1650,7 +1637,7 @@ export const InteractiveMap = ({
           </div>
 
           {/* Carrousel de filtres : z-[30] sur le bloc header pour passer au-dessus des FAB carte (z-20). */}
-          <div className="px-4 pb-4 pt-3">
+          <div className="ios-page-shell pb-4 pt-3">
             <div ref={homeMapFiltersRef} className="relative z-10 space-y-2">
             <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
@@ -1875,13 +1862,13 @@ export const InteractiveMap = ({
       )}
 
       {/* Route Creation Mode Banner */}
-      {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
+      {isRouteCreationMode && <div className="absolute left-1/2 top-4 z-20 -translate-x-1/2">
+          <div className="ios-card-premium flex items-center gap-3 px-4 py-3 text-foreground">
             <span className="text-sm font-medium">
               Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
             </span>
             <div className="flex gap-2">
-              <Button size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-medium" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
+              <Button size="sm" className="font-medium" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
                 Terminer
               </Button>
               <Button size="sm" variant="outline" onClick={cancelRouteCreation}>

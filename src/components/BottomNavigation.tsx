@@ -148,7 +148,7 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[100] w-full shrink-0 border-t border-border/60 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85",
+        "relative z-[100] w-full shrink-0 bg-transparent px-3 pt-2",
         "pointer-events-auto"
       )}
       role="navigation"
@@ -157,13 +157,13 @@ export const BottomNavigation = () => {
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5">
+      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden px-2 pb-1.5 pt-1.5">
         <div
           className="mx-auto flex max-w-full items-stretch justify-center"
           style={{
-            gap: ITEM_GAP_PX,
-            paddingLeft: "0.5rem",
-            paddingRight: "0.5rem",
+            gap: ITEM_GAP_PX - 2,
+            paddingLeft: "0.125rem",
+            paddingRight: "0.125rem",
           }}
         >
           {visibleRow.map(({ slot, item }) => {
@@ -180,18 +180,20 @@ export const BottomNavigation = () => {
                 data-tutorial={tutorialId}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
-                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]",
-                  !isCenter && "opacity-[0.92]"
+                  "flex min-h-[52px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-[22px] px-1.5",
+                  "touch-manipulation transition-[transform,color,opacity,background-color,box-shadow] duration-300 ease-ios active:scale-[0.96]",
+                  isActive
+                    ? "bg-gradient-to-b from-primary/[0.18] to-primary/[0.10] shadow-[inset_0_1px_0_rgba(255,255,255,0.52),0_10px_22px_-16px_rgba(0,122,255,0.6)]"
+                    : "opacity-[0.92] hover:bg-secondary/50"
                 )}
               >
                 <div className="relative shrink-0">
                   <Icon
                     className={cn(
-                      "h-[26px] w-[26px] transition-colors duration-300 ease-ios",
+                      "h-[24px] w-[24px] transition-colors duration-300 ease-ios",
                       isActive ? "text-primary" : "text-muted-foreground"
                     )}
-                    strokeWidth={isActive ? 2.4 : 1.65}
+                    strokeWidth={isActive ? 2.25 : 1.7}
                     aria-hidden
                   />
                   {showBadge && (
@@ -202,7 +204,7 @@ export const BottomNavigation = () => {
                 </div>
                 <span
                   className={cn(
-                    "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
+                    "w-full truncate text-center text-[10px] leading-none tracking-tight transition-colors duration-300 ease-ios",
                     isActive ? "font-semibold text-primary" : "font-medium text-muted-foreground"
                   )}
                 >

@@ -470,7 +470,6 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                     <span className="truncate text-[17px]">Fermer</span>
                   </button>
                 }
-                right={<div className="h-9 w-16 shrink-0" aria-hidden />}
                 title={
                   isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
                 }

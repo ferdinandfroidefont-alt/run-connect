@@ -86,7 +86,7 @@ export default function Search() {
           headerWrapperClassName="shrink-0"
           header={
             <>
-              <header className="shrink-0 border-b border-border bg-card px-ios-4 pb-ios-3 pt-ios-4">
+              <header className="ios-header-blur shrink-0 px-ios-4 pb-ios-3 pt-ios-4">
                 <IosPageHeaderBar
                   className="px-0 py-0 min-h-[44px]"
                   titleClassName="text-ios-headline"
@@ -109,7 +109,7 @@ export default function Search() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={getPlaceholder()}
-                    className="h-[44px] rounded-ios-md border-0 bg-secondary pl-ios-6 text-ios-subheadline"
+                    className="ios-search-surface h-[44px] border-0 bg-transparent pl-ios-6 text-ios-subheadline"
                   />
                 </div>
               </header>

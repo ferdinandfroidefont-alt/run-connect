@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 
 export type FeedMode = 'friends' | 'discover';
 
@@ -38,62 +39,58 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
   }, [user]);
 
   return (
-    <header className="shrink-0 bg-card border-b border-border pt-[var(--safe-area-top)]">
-      <div className="px-4 pt-2 pb-3 relative flex items-center justify-center min-h-[52px]">
-        {/* Avatar - Left */}
-        <button 
-          onClick={onProfileClick}
-          className="active:opacity-70 transition-opacity absolute left-4"
-        >
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={profile.avatar_url || ''} />
-            <AvatarFallback className="bg-secondary text-foreground text-sm font-medium">
-              {profile.username?.[0]?.toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-        </button>
+    <header className="ios-header-blur shrink-0 pt-[var(--safe-area-top)]">
+      <div className="ios-page-shell pb-3 pt-2">
+        <IosPageHeaderBar
+          className="px-0 py-0"
+          titleClassName="text-[34px] font-bold tracking-tight"
+          left={
+            <button
+              type="button"
+              onClick={onProfileClick}
+              className="active:opacity-70 transition-opacity"
+            >
+              <Avatar className="h-9 w-9 ring-1 ring-black/5 shadow-sm">
+                <AvatarImage src={profile.avatar_url || ''} />
+                <AvatarFallback className="bg-secondary text-foreground text-sm font-medium">
+                  {profile.username?.[0]?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          }
+          title="Feed"
+          right={
+            <button
+              type="button"
+              onClick={onSearch}
+              className="ios-action-pill h-9 w-9 rounded-full px-0"
+            >
+              <Search className="h-[20px] w-[20px] text-primary" />
+            </button>
+          }
+        />
 
-        {/* Title - Center */}
-        <h1 className="text-[34px] font-bold tracking-tight text-center">
-          Feed
-        </h1>
-
-        {/* Actions - Right */}
-        <div className="absolute right-4 flex items-center gap-1">
-          <button
-            onClick={onSearch}
-            className="h-9 w-9 flex items-center justify-center rounded-full active:bg-secondary transition-colors"
-          >
-            <Search className="h-[22px] w-[22px] text-primary" />
-          </button>
-        </div>
-      </div>
-
-      {/* Segmented Control - iOS Style */}
-      <div className="px-4 pb-3">
-        <div className="bg-secondary rounded-[9px] p-[2px] flex">
+        <div className="ios-toolbar-card mt-3">
+          <div className="ios-toolbar-segmented flex w-full">
           <button
             onClick={() => onModeChange('friends')}
+            data-state={mode === 'friends' ? 'active' : 'inactive'}
             className={cn(
-              "flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all",
-              mode === 'friends'
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
+              "ios-toolbar-segmented-button flex-1"
             )}
           >
             Amis
           </button>
           <button
             onClick={() => onModeChange('discover')}
+            data-state={mode === 'discover' ? 'active' : 'inactive'}
             className={cn(
-              "flex-1 py-2 text-[13px] font-semibold rounded-[7px] transition-all",
-              mode === 'discover'
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
+              "ios-toolbar-segmented-button flex-1"
             )}
           >
             Découvrir
           </button>
+          </div>
         </div>
       </div>
     </header>

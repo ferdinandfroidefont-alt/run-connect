@@ -159,13 +159,13 @@ export default function Feed() {
           </div>
         )}
 
-        <div className="mx-auto max-w-2xl">
+        <div className="ios-page-shell">
         {mode === 'friends' ? (
           // Friends Feed
           <>
             {loading && feedItems.length === 0 ? (
               // Skeleton loaders
-              <div className="space-y-ios-3 pt-ios-2 px-ios-3">
+              <div className="space-y-ios-3 pt-ios-2">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="ios-card p-ios-4 space-y-ios-3 animate-fade-in" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
                     <div className="flex items-center gap-ios-3">
@@ -189,7 +189,7 @@ export default function Feed() {
             ) : feedItems.length === 0 ? (
               <FeedEmptyState />
             ) : (
-              <div className="pt-ios-1 px-ios-3 pb-ios-2 space-y-ios-3">
+              <div className="pt-ios-1 pb-ios-2 space-y-ios-3">
                 {feedItems.map((session, index) => (
                   <FeedCard
                     key={session.id}
@@ -225,7 +225,7 @@ export default function Feed() {
           <>
             {loading ? (
               <div className="py-ios-4">
-                <div className="ios-card flex flex-col items-center justify-center gap-ios-3 p-ios-8">
+                <div className="ios-card-premium flex flex-col items-center justify-center gap-ios-3 p-ios-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
                 </div>
@@ -238,7 +238,7 @@ export default function Feed() {
                 />
               </div>
             ) : (
-              <div className="py-ios-4 px-ios-3 space-y-ios-3">
+              <div className="py-ios-4 space-y-ios-3">
                 {discoverSessions.map((session, index) => (
                   <DiscoverCard
                     key={session.id}
