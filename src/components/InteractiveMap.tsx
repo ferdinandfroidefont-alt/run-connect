@@ -1534,10 +1534,16 @@ export const InteractiveMap = ({
       {!isImmersiveMode && (
         <div
           ref={homeMapTopStackRef}
-          className="pointer-events-none absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]"
+          className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
+          {/* Bandeau blanc sous l’encoche / la status bar, collé au header (remonte le bloc sans changer la taille des contrôles) */}
+          <div
+            className="pointer-events-none h-[var(--safe-area-top)] w-full shrink-0 bg-white dark:bg-background"
+            aria-hidden
+          />
           <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
-            <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
+            {/* pb-4 compense le +8px retiré du stack : le bas du header blanc reste aligné avec l’état précédent */}
+            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-4 pt-2 sm:min-h-[3rem] sm:pb-4 sm:pt-2.5 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
@@ -1611,8 +1617,8 @@ export const InteractiveMap = ({
             </div>
           </header>
 
-          {/* Recherche : chevauche le bas du header et le haut de la carte (marge calée sur header haut) */}
-          <div className="pointer-events-none relative z-[35] -mt-[22px] px-4 pb-2 sm:-mt-[23px]">
+          {/* Recherche : chevauche un peu moins le header → légèrement plus bas sur la carte */}
+          <div className="pointer-events-none relative z-[35] -mt-[9px] px-4 pb-1 sm:-mt-[10px]">
             <div className="pointer-events-auto relative mx-auto w-full max-w-lg">
               <div
                 className={cn(
