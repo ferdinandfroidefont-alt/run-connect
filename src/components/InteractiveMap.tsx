@@ -1642,15 +1642,12 @@ export const InteractiveMap = ({
             <div className="pointer-events-auto relative mx-auto w-full max-w-lg">
               <div
                 className={cn(
-                  "flex min-h-[44px] items-center gap-3 rounded-2xl border border-black/[0.06] bg-white px-3.5 py-2 sm:min-h-[46px]",
-                  "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.14),0_2px_8px_-2px_rgba(0,0,0,0.08)]",
-                  "transition-[box-shadow] duration-200 ease-out",
-                  "focus-within:border-black/10 focus-within:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.16),0_2px_10px_-2px_rgba(0,0,0,0.1)]",
-                  "dark:border-white/10 dark:bg-card dark:shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55)]"
+                  "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
+                  "transition-[box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none"
                 )}
               >
                 <Search
-                  className="h-[17px] w-[17px] shrink-0 text-muted-foreground sm:h-[18px] sm:w-[18px]"
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
                   strokeWidth={2.05}
                   aria-hidden
                 />
@@ -1671,7 +1668,7 @@ export const InteractiveMap = ({
                     }
                   }}
                   className={cn(
-                    "h-10 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
+                    "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
                     "shadow-none placeholder:text-muted-foreground/82",
                     "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                     "focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -1680,27 +1677,26 @@ export const InteractiveMap = ({
                 />
               </div>
 
-              {/* Filtres : carrousel sous la recherche, ouvert via le FAB carte (pas dans le flux → pas de saut de padding carte) */}
+              {/* Filtres : puces verre flottantes, alignées sous la recherche (toggle via FAB carte) */}
               <AnimatePresence initial={false}>
                 {mapFiltersPanelOpen && (
                   <motion.div
                     key="home-map-filter-carousel"
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute left-0 right-0 top-full z-[40] pt-3"
+                    className="absolute left-0 right-0 top-full z-[40] pt-2.5"
                   >
                     <div ref={homeMapFiltersRef} className="relative space-y-2">
-            <div className="ios-inset-group rounded-[18px] bg-white p-2 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.22)] dark:bg-card dark:shadow-[0_8px_32px_-12px_rgba(0,0,0,0.65)]">
-              <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
+              <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
                   type="button"
                   onClick={cycleActivity}
                   className={cn(
-                    "ios-chip snap-start",
-                    filters.activity_types.length > 0 && "ios-chip-active"
+                    "home-map-filter-chip snap-start",
+                    filters.activity_types.length > 0 && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Sport: {activeActivityLabel}</span>
@@ -1709,8 +1705,8 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'time' ? null : 'time'))}
                   className={cn(
-                    "ios-chip snap-start",
-                    (expandedFilter === 'time' || filters.time_slot) && "ios-chip-active"
+                    "home-map-filter-chip snap-start",
+                    (expandedFilter === 'time' || filters.time_slot) && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex min-w-0 max-w-[9rem] items-center gap-1.5">
@@ -1725,7 +1721,7 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
-                  className={cn("ios-chip snap-start", filters.friends_only && "ios-chip-active")}
+                  className={cn("home-map-filter-chip snap-start", filters.friends_only && "home-map-filter-chip-active")}
                 >
                   <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5" /> Amis uniquement</span>
                 </button>
@@ -1733,8 +1729,8 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'club' ? null : 'club'))}
                   className={cn(
-                    "ios-chip snap-start",
-                    (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "ios-chip-active"
+                    "home-map-filter-chip snap-start",
+                    (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
@@ -1743,8 +1739,8 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={cycleSessionType}
                   className={cn(
-                    "ios-chip snap-start",
-                    filters.session_types.length > 0 && "ios-chip-active"
+                    "home-map-filter-chip snap-start",
+                    filters.session_types.length > 0 && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5" /> Type: {activeSessionTypeLabel}</span>
@@ -1753,10 +1749,10 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'day' ? null : 'day'))}
                   className={cn(
-                    "ios-chip snap-start",
+                    "home-map-filter-chip snap-start",
                     (expandedFilter === 'day' ||
                       !isSameDay(startOfDay(filters.selected_date), startOfDay(new Date()))) &&
-                      "ios-chip-active"
+                      "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex min-w-0 max-w-[10rem] items-center gap-1.5">
@@ -1770,8 +1766,8 @@ export const InteractiveMap = ({
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'level' ? null : 'level'))}
                   className={cn(
-                    "ios-chip snap-start",
-                    (expandedFilter === 'level' || filters.level != null) && "ios-chip-active"
+                    "home-map-filter-chip snap-start",
+                    (expandedFilter === 'level' || filters.level != null) && "home-map-filter-chip-active"
                   )}
                 >
                   <span className="flex min-w-0 max-w-[8.5rem] items-center gap-1.5">
@@ -1783,17 +1779,16 @@ export const InteractiveMap = ({
                 </button>
                 </div>
               </div>
-            </div>
 
             <AnimatePresence initial={false} mode="wait">
               {expandedFilter && (
                 <motion.div
                   key={expandedFilter}
-                  initial={{ opacity: 0, y: -8 }}
+                  initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  className="ios-card relative z-20 rounded-[16px] border border-black/10 bg-card/98 p-3 shadow-lg"
+                  className="home-map-filter-sheet relative z-20 p-3"
                 >
                   {expandedFilter === 'time' && (
                     <div className="grid grid-cols-4 gap-2">

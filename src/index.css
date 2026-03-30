@@ -386,6 +386,103 @@ html, body {
     @apply scale-[0.96];
   }
 
+  /**
+   * Carte accueil — recherche & filtres flottants (verre léger, style Apple Maps / Strava).
+   */
+  .home-map-search-glass {
+    box-sizing: border-box;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(18px) saturate(1.25);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    box-shadow:
+      0 2px 14px -3px rgba(0, 0, 0, 0.12),
+      0 1px 5px -2px rgba(0, 0, 0, 0.07);
+  }
+
+  .home-map-search-glass:focus-within {
+    border-color: rgba(0, 0, 0, 0.12);
+    box-shadow:
+      0 4px 20px -4px rgba(0, 0, 0, 0.14),
+      0 2px 8px -3px rgba(0, 0, 0, 0.09);
+  }
+
+  .dark .home-map-search-glass {
+    background: rgba(28, 28, 30, 0.82);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 2px 18px -4px rgba(0, 0, 0, 0.45),
+      0 1px 6px -2px rgba(0, 0, 0, 0.28);
+  }
+
+  .dark .home-map-search-glass:focus-within {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .home-map-filter-chip {
+    @apply flex h-8 shrink-0 items-center justify-center gap-1.5 px-3 text-[11px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.97] motion-reduce:transition-none;
+    border-radius: 9999px;
+    color: hsl(var(--foreground));
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    box-shadow:
+      0 2px 12px -4px rgba(0, 0, 0, 0.14),
+      0 1px 4px -2px rgba(0, 0, 0, 0.08);
+  }
+
+  .home-map-filter-chip-active {
+    @apply border-primary text-primary-foreground;
+    background: hsl(var(--primary));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow:
+      0 2px 12px -3px rgba(0, 0, 0, 0.22),
+      0 1px 5px -2px rgba(0, 0, 0, 0.12);
+  }
+
+  .home-map-filter-chip-active svg {
+    stroke: hsl(var(--primary-foreground));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .dark .home-map-filter-chip {
+    background: rgba(44, 44, 46, 0.88);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 2px 16px -4px rgba(0, 0, 0, 0.45),
+      0 1px 6px -2px rgba(0, 0, 0, 0.25);
+  }
+
+  .dark .home-map-filter-chip-active {
+    /* garde le primaire solide en actif : lisible sur fond sombre */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .home-map-filter-sheet {
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    box-shadow:
+      0 8px 28px -12px rgba(0, 0, 0, 0.2),
+      0 2px 10px -4px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .home-map-filter-sheet {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(28, 28, 30, 0.88);
+    box-shadow:
+      0 10px 36px -14px rgba(0, 0, 0, 0.55),
+      0 2px 12px -4px rgba(0, 0, 0, 0.32);
+  }
+
   .ios-surface {
     @apply bg-card border border-border/60;
   }
