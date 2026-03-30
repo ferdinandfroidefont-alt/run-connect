@@ -101,6 +101,7 @@ export default function ItineraryFeed() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </ScrollArea>
       </IosFixedPageHeaderShell>

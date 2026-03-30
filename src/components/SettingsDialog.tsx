@@ -516,7 +516,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 contentScroll
                 scrollClassName="min-h-0 bg-secondary"
                 header={
-                  <div className="ios-header-blur min-w-0 max-w-full">
+                  <div className="min-w-0 max-w-full border-b border-border bg-card/95">
                     <IosPageHeaderBar
                       left={
                         <button
@@ -537,7 +537,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           placeholder="Rechercher"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="ios-search-surface w-full min-w-0 max-w-full border-0 bg-transparent pl-10"
+                          className="w-full min-w-0 max-w-full bg-background pl-10"
                         />
                       </div>
                     </div>
@@ -548,7 +548,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
                   {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
                   <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-                    <div className="ios-section-shell w-full min-w-0 overflow-hidden">
+                    <div className="ios-card w-full min-w-0 overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
                         <button
@@ -586,7 +586,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                   {profile && (
                     <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4 ios-shell:px-2">
                       <div className="w-full min-w-0 max-w-md">
-                        <div className="ios-card-premium box-border w-full min-w-0 max-w-full space-y-ios-3 p-ios-3 ios-shell:p-2.5">
+                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3 ios-shell:p-2.5">
                           <h3 className="text-center text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
                             Partager mon profil
                           </h3>
