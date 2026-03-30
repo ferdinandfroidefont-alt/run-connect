@@ -9,6 +9,7 @@ import { ContactsTab } from '@/components/search/ContactsTab';
 import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
+import { applyWebChromeForTheme } from '@/lib/iosStatusBarTheme';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 const SettingsDialog = lazy(() =>

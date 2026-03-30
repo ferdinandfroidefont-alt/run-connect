@@ -1541,14 +1541,13 @@ export const InteractiveMap = ({
           ref={homeMapTopStackRef}
           className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
-          {/* Bandeau blanc sous l’encoche / la status bar, collé au header (remonte le bloc sans changer la taille des contrôles) */}
-          <div
-            className="pointer-events-none h-[var(--safe-area-top)] w-full shrink-0 bg-white dark:bg-background"
-            aria-hidden
-          />
+          {/*
+            Une seule couche d’inset : le header intègre la safe-area.
+            (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
+          */}
           <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
             {/* pb plus généreux : allonge le blanc sous la rangée (titre / avatar / actions inchangés en hauteur) */}
-            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-2 sm:min-h-[3rem] sm:pb-6 sm:pt-2.5 ios-map-header">
+            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>

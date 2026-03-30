@@ -708,9 +708,16 @@ html, body {
     margin-top: 0.75rem !important;
   }
 
+  /* Même inset que le composant : évite 0.5rem fixe qui écrase calc(...+safe-area) du header carte */
   .ios-map-header {
     align-items: center !important;
-    padding-top: 0.5rem !important;
+    padding-top: calc(var(--safe-area-top) + 0.5rem) !important;
+  }
+
+  @media (min-width: 640px) {
+    .ios-map-header {
+      padding-top: calc(var(--safe-area-top) + 0.625rem) !important;
+    }
   }
 
   /**
