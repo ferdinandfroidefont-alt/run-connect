@@ -84,7 +84,7 @@ export function localGradePercent(
     if (run < 0.5) return 0;
     return ((elevations[1]! - elevations[0]!) / run) * 100;
   }
-  const run = distanceMeters(coords[i - 1]!, coords[i]!]);
+  const run = distanceMeters(coords[i - 1]!, coords[i]!);
   if (run < 0.5) return 0;
   return ((elevations[i]! - elevations[i - 1]!) / run) * 100;
 }
