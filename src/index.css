@@ -387,52 +387,59 @@ html, body {
   }
 
   /**
-   * Carte accueil — recherche & filtres flottants (verre léger, style Apple Maps / Strava).
+   * Carte accueil — recherche & filtres (verre teinté façon iOS, pas blanc dur).
    */
   .home-map-search-glass {
     box-sizing: border-box;
     height: 44px;
     min-height: 44px;
     max-height: 44px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(18px) saturate(1.25);
-    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    /* Fond clair légèrement bleuté, translucide */
+    background: rgba(244, 245, 248, 0.68);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    backdrop-filter: blur(22px) saturate(1.45);
+    -webkit-backdrop-filter: blur(22px) saturate(1.45);
     box-shadow:
-      0 2px 14px -3px rgba(0, 0, 0, 0.12),
-      0 1px 5px -2px rgba(0, 0, 0, 0.07);
+      0 1px 2px rgba(15, 23, 42, 0.03),
+      0 6px 18px -8px rgba(15, 23, 42, 0.11),
+      0 2px 6px -3px rgba(15, 23, 42, 0.06);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(0, 0, 0, 0.12);
+    border-color: rgba(15, 23, 42, 0.08);
+    background: rgba(244, 245, 248, 0.8);
     box-shadow:
-      0 4px 20px -4px rgba(0, 0, 0, 0.14),
-      0 2px 8px -3px rgba(0, 0, 0, 0.09);
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 8px 24px -8px rgba(15, 23, 42, 0.13),
+      0 2px 8px -3px rgba(15, 23, 42, 0.07);
   }
 
   .dark .home-map-search-glass {
-    background: rgba(28, 28, 30, 0.82);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(38, 40, 44, 0.68);
+    border-color: rgba(255, 255, 255, 0.09);
     box-shadow:
-      0 2px 18px -4px rgba(0, 0, 0, 0.45),
-      0 1px 6px -2px rgba(0, 0, 0, 0.28);
+      0 1px 2px rgba(0, 0, 0, 0.15),
+      0 6px 20px -8px rgba(0, 0, 0, 0.4),
+      0 2px 8px -4px rgba(0, 0, 0, 0.22);
   }
 
   .dark .home-map-search-glass:focus-within {
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(38, 40, 44, 0.78);
   }
 
   .home-map-filter-chip {
     @apply flex h-8 shrink-0 items-center justify-center gap-1.5 px-3 text-[11px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.97] motion-reduce:transition-none;
     border-radius: 9999px;
     color: hsl(var(--foreground));
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    background: rgba(244, 245, 248, 0.72);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    backdrop-filter: blur(18px) saturate(1.35);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
     box-shadow:
-      0 2px 12px -4px rgba(0, 0, 0, 0.14),
-      0 1px 4px -2px rgba(0, 0, 0, 0.08);
+      0 1px 2px rgba(15, 23, 42, 0.03),
+      0 4px 14px -6px rgba(15, 23, 42, 0.12),
+      0 1px 4px -2px rgba(15, 23, 42, 0.06);
   }
 
   .home-map-filter-chip-active {
@@ -451,11 +458,12 @@ html, body {
   }
 
   .dark .home-map-filter-chip {
-    background: rgba(44, 44, 46, 0.88);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(44, 44, 48, 0.72);
+    border-color: rgba(255, 255, 255, 0.1);
     box-shadow:
-      0 2px 16px -4px rgba(0, 0, 0, 0.45),
-      0 1px 6px -2px rgba(0, 0, 0, 0.25);
+      0 1px 2px rgba(0, 0, 0, 0.18),
+      0 4px 16px -6px rgba(0, 0, 0, 0.42),
+      0 1px 5px -2px rgba(0, 0, 0, 0.22);
   }
 
   .dark .home-map-filter-chip-active {
@@ -466,18 +474,18 @@ html, body {
 
   .home-map-filter-sheet {
     border-radius: 1rem;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(244, 245, 248, 0.82);
+    backdrop-filter: blur(22px) saturate(1.35);
+    -webkit-backdrop-filter: blur(22px) saturate(1.35);
     box-shadow:
-      0 8px 28px -12px rgba(0, 0, 0, 0.2),
-      0 2px 10px -4px rgba(0, 0, 0, 0.1);
+      0 8px 28px -12px rgba(15, 23, 42, 0.14),
+      0 2px 10px -4px rgba(15, 23, 42, 0.08);
   }
 
   .dark .home-map-filter-sheet {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(28, 28, 30, 0.88);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(36, 38, 42, 0.82);
     box-shadow:
       0 10px 36px -14px rgba(0, 0, 0, 0.55),
       0 2px 12px -4px rgba(0, 0, 0, 0.32);

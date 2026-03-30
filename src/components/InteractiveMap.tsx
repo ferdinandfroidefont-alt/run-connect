@@ -1542,8 +1542,8 @@ export const InteractiveMap = ({
             aria-hidden
           />
           <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
-            {/* pb-4 compense le +8px retiré du stack : le bas du header blanc reste aligné avec l’état précédent */}
-            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-4 pt-2 sm:min-h-[3rem] sm:pb-4 sm:pt-2.5 ios-map-header">
+            {/* pb plus généreux : allonge le blanc sous la rangée (titre / avatar / actions inchangés en hauteur) */}
+            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-2 sm:min-h-[3rem] sm:pb-6 sm:pt-2.5 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
@@ -1617,9 +1617,9 @@ export const InteractiveMap = ({
             </div>
           </header>
 
-          {/* Recherche : chevauche un peu moins le header → légèrement plus bas sur la carte */}
-          <div className="pointer-events-none relative z-[35] -mt-[9px] px-4 pb-1 sm:-mt-[10px]">
-            <div className="pointer-events-auto relative mx-auto w-full max-w-lg">
+          {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
+          <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
+            <div className="pointer-events-auto relative min-w-0 w-full max-w-full">
               <div
                 className={cn(
                   "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
@@ -1658,7 +1658,7 @@ export const InteractiveMap = ({
               </div>
 
               {/* Filtres : carrousel toujours visible sous la recherche */}
-              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-2.5">
+              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
