@@ -8,17 +8,20 @@ interface MapStyleSelectorProps {
   onStyleChange: (style: string) => void;
 }
 
-/** Vignettes miniatures : composition visuelle pour chaque type de carte. */
+const previewFrame =
+  'relative h-8 w-full overflow-hidden rounded-md border shadow-inner';
+
+/** Vignettes compactes : ~32px de hauteur pour ne pas surcharger le panneau. */
 function PreviewStandard() {
   return (
-    <div className="relative h-14 w-full overflow-hidden rounded-[10px] border border-black/10 bg-gradient-to-br from-[#f4f4f2] via-[#eceae6] to-[#e2dfd8] shadow-inner">
+    <div className={`${previewFrame} border-black/10 bg-gradient-to-br from-[#f4f4f2] via-[#eceae6] to-[#e2dfd8]`}>
       <div className="absolute inset-0 opacity-90">
-        <div className="absolute left-1 top-2 h-px w-[85%] bg-neutral-400/35" />
-        <div className="absolute left-1 top-2 h-full w-px bg-neutral-400/30" />
-        <div className="absolute left-[38%] top-1 bottom-0 w-px bg-neutral-400/22" />
-        <div className="absolute left-0 top-[55%] h-px w-full bg-neutral-400/25" />
-        <div className="absolute right-2 top-3 h-6 w-5 rounded-[3px] bg-amber-200/80 shadow-sm" />
-        <div className="absolute bottom-2 left-3 h-4 w-8 rounded-[2px] bg-sky-200/70" />
+        <div className="absolute left-0.5 top-1.5 h-px w-[82%] bg-neutral-400/35" />
+        <div className="absolute left-0.5 top-1.5 h-[calc(100%-6px)] w-px bg-neutral-400/30" />
+        <div className="absolute left-[34%] top-0.5 bottom-0.5 w-px bg-neutral-400/22" />
+        <div className="absolute left-0 top-[52%] h-px w-full bg-neutral-400/25" />
+        <div className="absolute right-1 top-1.5 h-2.5 w-2 rounded-[2px] bg-amber-200/80" />
+        <div className="absolute bottom-1 left-1.5 h-2 w-5 rounded-[1px] bg-sky-200/70" />
       </div>
     </div>
   );
@@ -26,46 +29,46 @@ function PreviewStandard() {
 
 function PreviewSatellite() {
   return (
-    <div className="relative h-14 w-full overflow-hidden rounded-[10px] border border-black/15 shadow-inner">
+    <div className={`${previewFrame} border-black/15`}>
       <div className="absolute inset-0 bg-gradient-to-br from-[#2d5016] via-[#4a7c23] to-[#1e3a5f]" />
-      <div className="absolute -right-1 -top-1 h-10 w-12 rotate-12 rounded-full bg-white/15 blur-[2px]" />
-      <div className="absolute bottom-1 left-2 h-5 w-16 skew-x-6 rounded-sm bg-[#3d2914]/55" />
-      <div className="absolute top-3 right-3 h-3 w-3 rounded-full bg-white/40 ring-1 ring-white/30" />
+      <div className="absolute -right-0.5 -top-0.5 h-5 w-6 rotate-12 rounded-full bg-white/15 blur-[1px]" />
+      <div className="absolute bottom-0.5 left-1 h-2 w-9 skew-x-6 rounded-[2px] bg-[#3d2914]/55" />
+      <div className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-white/40 ring-1 ring-white/25" />
     </div>
   );
 }
 
 function PreviewRelief() {
   return (
-    <div className="relative h-14 w-full overflow-hidden rounded-[10px] border border-emerald-900/20 shadow-inner">
+    <div className={`${previewFrame} border-emerald-900/20`}>
       <div className="absolute inset-0 bg-gradient-to-br from-[#d4e4c8] via-[#8fb88a] to-[#4a7350]" />
-      <svg className="absolute inset-0 h-full w-full opacity-55" viewBox="0 0 80 56" preserveAspectRatio="none">
+      <svg className="absolute inset-0 h-full w-full opacity-50" viewBox="0 0 80 32" preserveAspectRatio="none">
         <path
-          d="M0 38 Q20 28 40 32 T80 24 V56 H0 Z"
+          d="M0 22 Q20 16 40 18 T80 14 V32 H0 Z"
           fill="none"
           stroke="rgba(255,255,255,0.45)"
-          strokeWidth="1.2"
-        />
-        <path
-          d="M0 44 Q25 36 45 40 T80 34 V56 H0 Z"
-          fill="none"
-          stroke="rgba(255,255,255,0.3)"
           strokeWidth="1"
         />
+        <path
+          d="M0 26 Q25 20 45 22 T80 18 V32 H0 Z"
+          fill="none"
+          stroke="rgba(255,255,255,0.28)"
+          strokeWidth="0.9"
+        />
       </svg>
-      <div className="absolute left-2 top-2 h-2 w-8 rounded-full bg-white/25" />
+      <div className="absolute left-1 top-1 h-1 w-5 rounded-full bg-white/25" />
     </div>
   );
 }
 
 function PreviewDark() {
   return (
-    <div className="relative h-14 w-full overflow-hidden rounded-[10px] border border-white/10 bg-gradient-to-b from-[#1a1d24] to-[#0d0f14] shadow-inner">
+    <div className={`${previewFrame} border-white/10 bg-gradient-to-b from-[#1a1d24] to-[#0d0f14]`}>
       <div className="absolute inset-0 opacity-40">
-        <div className="absolute left-2 top-3 h-px w-[75%] bg-slate-500/35" />
-        <div className="absolute left-2 top-3 h-[70%] w-px bg-slate-500/30" />
-        <div className="absolute right-3 bottom-3 h-1 w-1 rounded-full bg-cyan-400/90 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
-        <div className="absolute left-6 top-5 h-1 w-1 rounded-full bg-amber-400/70" />
+        <div className="absolute left-1 top-1.5 h-px w-[72%] bg-slate-500/35" />
+        <div className="absolute left-1 top-1.5 h-[calc(100%-8px)] w-px bg-slate-500/30" />
+        <div className="absolute right-1.5 bottom-1 h-0.5 w-0.5 rounded-full bg-cyan-400/90 shadow-[0_0_3px_rgba(34,211,238,0.7)]" />
+        <div className="absolute left-3.5 top-2 h-0.5 w-0.5 rounded-full bg-amber-400/70" />
       </div>
     </div>
   );
@@ -73,13 +76,13 @@ function PreviewDark() {
 
 function Preview3D() {
   return (
-    <div className="relative h-14 w-full overflow-hidden rounded-[10px] border border-slate-600/30 bg-gradient-to-b from-[#94a3b8] to-[#475569] shadow-inner">
-      <div className="absolute bottom-1 left-1/2 flex -translate-x-1/2 items-end gap-0.5 [perspective:180px]">
-        <div className="h-5 w-3 translate-y-0.5 rounded-t-[2px] bg-slate-200/95 shadow-md" style={{ transform: 'skewX(-6deg)' }} />
-        <div className="h-8 w-3.5 rounded-t-[3px] bg-white shadow-lg" style={{ transform: 'skewX(-4deg)' }} />
-        <div className="h-6 w-3 translate-y-0.5 rounded-t-[2px] bg-slate-100/90 shadow-md" style={{ transform: 'skewX(5deg)' }} />
+    <div className={`${previewFrame} border-slate-600/30 bg-gradient-to-b from-[#94a3b8] to-[#475569]`}>
+      <div className="absolute bottom-0.5 left-1/2 flex -translate-x-1/2 items-end gap-px [perspective:100px]">
+        <div className="h-3 w-2 translate-y-px rounded-t-[1px] bg-slate-200/95 shadow-sm" style={{ transform: 'skewX(-6deg)' }} />
+        <div className="h-4 w-2 rounded-t-[2px] bg-white shadow-md" style={{ transform: 'skewX(-4deg)' }} />
+        <div className="h-3 w-1.5 translate-y-px rounded-t-[1px] bg-slate-100/90 shadow-sm" style={{ transform: 'skewX(5deg)' }} />
       </div>
-      <div className="absolute -bottom-2 left-0 right-0 h-4 bg-black/20 blur-sm" />
+      <div className="absolute -bottom-1 left-0 right-0 h-2 bg-black/18 blur-sm" />
     </div>
   );
 }
@@ -183,17 +186,17 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({ currentStyle
                         : 'border-transparent bg-secondary/40 hover:border-border hover:bg-secondary/70',
                     )}
                   >
-                    <div className="p-1.5 pb-0">
+                    <div className="px-1.5 pt-1.5 pb-0">
                       <Preview />
                     </div>
-                    <div className="flex items-start gap-2 px-2 py-2 pt-1.5">
+                    <div className="flex items-start gap-1.5 px-2 py-1.5 pt-1">
                       <div
                         className={cn(
-                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                          'mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
                           isActive ? 'bg-primary/15 text-primary' : 'bg-background/80 text-muted-foreground',
                         )}
                       >
-                        <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+                        <Icon className="h-3 w-3" strokeWidth={2} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="block text-[12px] font-semibold leading-tight text-foreground">{item.label}</span>
