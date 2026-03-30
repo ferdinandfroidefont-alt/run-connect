@@ -22,6 +22,7 @@ type RouteFlyover3DProps = {
 
 const DEBUG_PREFIX = '[RouteFlyover3D]';
 const DEBUG_MINIMAL_MAP = true;
+const MAX_DEBUG_LINES = 14;
 
 export function RouteFlyover3D({
   coordinates,
@@ -37,6 +38,8 @@ export function RouteFlyover3D({
   const [sceneReady, setSceneReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [containerDebug, setContainerDebug] = useState<{ width: number; height: number } | null>(null);
+  const [debugLines, setDebugLines] = useState<string[]>([]);
+  const [canvasDebug, setCanvasDebug] = useState<{ hasCanvas: boolean; childCount: number } | null>(null);
 
   const playback = useRouteFlyoverPlayback({
     coordinates,
@@ -47,6 +50,17 @@ export function RouteFlyover3D({
 
   const logDebug = (...args: unknown[]) => {
     console.log(DEBUG_PREFIX, ...args);
+    const line = args
+      .map((value) => {
+        if (typeof value === 'string') return value;
+        try {
+          return JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
+      })
+      .join(' ');
+    setDebugLines((previous) => [...previous.slice(-(MAX_DEBUG_LINES - 1)), line]);
   };
 
   useEffect(() => {
@@ -93,6 +107,20 @@ export function RouteFlyover3D({
     });
     resizeObserver.observe(container);
 
+    const syncCanvasDebug = () => {
+      const hasCanvas = !!container.querySelector('.mapboxgl-canvas');
+      const childCount = container.childElementCount;
+      const next = { hasCanvas, childCount };
+      setCanvasDebug(next);
+      logDebug('container children', next);
+    };
+
+    const mutationObserver = new MutationObserver(() => {
+      syncCanvasDebug();
+    });
+    mutationObserver.observe(container, { childList: true, subtree: true });
+    syncCanvasDebug();
+
     const token = getMapboxAccessToken();
     if (!token) {
       logDebug('token missing');
@@ -107,7 +135,8 @@ export function RouteFlyover3D({
     setMapError(null);
 
     const fallbackCenter: MapCoord = { lat: 48.8566, lng: 2.3522 };
-    const mapCenter = playback.flyoverCoordinates[0] ?? fallbackCenter;
+    const routeCenter = playback.flyoverCoordinates[0] ?? fallbackCenter;
+    const mapCenter = DEBUG_MINIMAL_MAP ? fallbackCenter : routeCenter;
     logDebug('before new map', {
       center: mapCenter,
       style: MAPBOX_STYLE_BY_UI_ID.roadmap,
@@ -127,6 +156,7 @@ export function RouteFlyover3D({
     });
     mapRef.current = map;
     logDebug('after new map');
+    syncCanvasDebug();
 
     map.on('error', (event) => {
       const message =
@@ -142,18 +172,21 @@ export function RouteFlyover3D({
 
     map.on('style.load', () => {
       logDebug('style.load');
+      syncCanvasDebug();
     });
 
     map.on('load', () => {
       logDebug('load');
       map.resize();
       setSceneReady(true);
+      syncCanvasDebug();
     });
 
     map.on('idle', () => {
       logDebug('idle');
       setSceneReady(true);
       map.resize();
+      syncCanvasDebug();
     });
 
     window.requestAnimationFrame(() => map.resize());
@@ -164,6 +197,7 @@ export function RouteFlyover3D({
     return () => {
       logDebug('cleanup');
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
       setSceneReady(false);
       map.remove();
       mapRef.current = null;
@@ -180,7 +214,12 @@ export function RouteFlyover3D({
 
   return (
     <div className={cn('relative overflow-hidden rounded-[28px] bg-black', className)} style={{ minHeight: 320 }}>
-      <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#0f172a_50%,#020617_100%)]" />
+      <div
+        ref={mapContainerRef}
+        className="absolute inset-0 z-0 outline outline-1 outline-lime-400/70"
+        style={{ background: 'rgba(255,255,255,0.06)' }}
+      />
       {!sceneReady && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/18">
           <div className="rounded-3xl border border-white/10 bg-black/30 px-5 py-4 text-center text-white backdrop-blur-xl">
@@ -195,6 +234,18 @@ export function RouteFlyover3D({
         <div>
           Conteneur: {containerDebug ? `${containerDebug.width}x${containerDebug.height}` : 'inconnu'}
         </div>
+        <div>
+          Canvas: {canvasDebug ? `${canvasDebug.hasCanvas ? 'oui' : 'non'} / enfants ${canvasDebug.childCount}` : 'inconnu'}
+        </div>
+      </div>
+      <div className="absolute inset-x-3 bottom-[108px] z-20 max-h-40 overflow-auto rounded-2xl border border-white/10 bg-black/52 px-3 py-2 text-[10px] leading-relaxed text-white/82 backdrop-blur-xl">
+        {debugLines.length === 0 ? (
+          <div>Aucun log embarqué pour l’instant.</div>
+        ) : (
+          debugLines.map((line, index) => (
+            <div key={`${index}-${line}`}>{line}</div>
+          ))
+        )}
       </div>
       {mapError && (
         <div className="absolute inset-x-4 top-4 z-20 rounded-2xl border border-red-400/25 bg-red-500/14 px-4 py-3 text-sm text-white backdrop-blur-xl">
