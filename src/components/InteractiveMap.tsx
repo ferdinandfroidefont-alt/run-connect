@@ -1616,9 +1616,15 @@ export const InteractiveMap = ({
             Une seule couche d’inset : le header intègre la safe-area.
             (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
           */}
-          <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
-            {/* pb plus généreux : allonge le blanc sous la rangée (titre / avatar / actions inchangés en hauteur) */}
-            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
+          <header
+            className={cn(
+              "pointer-events-auto relative bg-white dark:bg-background",
+              /* Prolonge le fond blanc sous le header (~moitié de la barre de recherche) sans bouger la recherche : la loupe reste en place grâce au -mt du bloc suivant. */
+              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-background",
+            )}
+          >
+            {/* Bordure uniquement sous la rangée titre / avatar — pas sous la zone « fusion » avec la recherche */}
+            <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 border-b border-black/[0.06] px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] dark:border-white/[0.08] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
