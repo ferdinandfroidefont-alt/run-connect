@@ -685,16 +685,10 @@ export const InteractiveMap = ({
     markers.current = [];
 
     // Filter sessions based on current filters
-    const searchQ = filters.search_query.trim().toLowerCase();
     const filteredSessions = sessions.filter(session => {
       const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
-      const matchesSearch =
-        !searchQ ||
-        (session.title?.toLowerCase().includes(searchQ) ?? false) ||
-        (session.location_name?.toLowerCase().includes(searchQ) ?? false) ||
-        (session.profiles?.username?.toLowerCase().includes(searchQ) ?? false) ||
-        (session.profiles?.display_name?.toLowerCase().includes(searchQ) ?? false);
+      const matchesSearch = !filters.search_query || session.title.toLowerCase().includes(filters.search_query.toLowerCase()) || session.location_name.toLowerCase().includes(filters.search_query.toLowerCase());
       
       // Time slot filter
       let matchesTimeSlot = true;
@@ -1508,8 +1502,8 @@ export const InteractiveMap = ({
     };
   }, [isMapLoaded, isRouteCreationMode, user]);
   return (
-    <div className="interactive-map-root relative isolate flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
-      <div className="interactive-map-canvas-wrap relative min-h-0 w-full flex-1">
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
+      <div className="relative min-h-0 w-full flex-1">
         <div
           ref={mapContainer}
           className="relative min-h-0 h-full w-full bg-secondary"
@@ -1545,14 +1539,15 @@ export const InteractiveMap = ({
       {!isImmersiveMode && (
         <div
           ref={homeMapTopStackRef}
-          className="pointer-events-none absolute left-0 right-0 top-0 z-[50]"
+          className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
           {/*
             Une seule couche d’inset : le header intègre la safe-area.
-            z-[50] + .interactive-map-root isolate : la pile UI reste au-dessus du canvas Mapbox (sinon clics / saisie peuvent être « mangés »).
+            (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
           */}
-          <header className="pointer-events-auto border-b border-black/[0.05] bg-white dark:border-white/[0.08] dark:bg-background">
-            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-2 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-2 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
+          <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
+            {/* pb plus généreux : allonge le blanc sous la rangée (titre / avatar / actions inchangés en hauteur) */}
+            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
@@ -1624,13 +1619,15 @@ export const InteractiveMap = ({
                 </button>
               </div>
             </div>
+          </header>
 
-            {/* Barre recherche intégrée au header (style champ iOS discret) */}
-            <div className="pointer-events-auto px-4 pb-3">
+          {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
+          <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
+            <div className="pointer-events-auto relative min-w-0 w-full max-w-full">
               <form
                 className={cn(
-                  "home-map-search-glass flex min-h-[36px] items-center gap-2 rounded-[10px] px-2.5 sm:min-h-[38px]",
-                  "transition-[background-color,border-color,box-shadow] duration-200 ease-out motion-reduce:transition-none"
+                  "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
+                  "transition-[box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none"
                 )}
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1638,43 +1635,34 @@ export const InteractiveMap = ({
                 }}
               >
                 <Search
-                  className="pointer-events-none h-[15px] w-[15px] shrink-0 text-muted-foreground/55"
-                  strokeWidth={2.15}
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  strokeWidth={2.05}
                   aria-hidden
                 />
                 <Input
                   ref={searchInputRef}
                   placeholder="Rechercher un lieu ou une séance…"
                   value={filters.search_query}
-                  onChange={(e) => {
-                    const v = e.target.value;
+                  onChange={(e) =>
                     setFilters((prev) => ({
                       ...prev,
-                      search_query: v,
-                    }));
-                  }}
+                      search_query: e.target.value,
+                    }))
+                  }
                   enterKeyHint="search"
                   autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
                   className={cn(
-                    "h-8 min-h-0 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground/90",
-                    "shadow-none placeholder:text-muted-foreground/45",
+                    "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
+                    "shadow-none placeholder:text-muted-foreground/82",
                     "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
-                    "focus-visible:ring-0 focus-visible:ring-offset-0",
-                    "disabled:opacity-100"
+                    "focus-visible:ring-0 focus-visible:ring-offset-0"
                   )}
                   aria-label="Rechercher un lieu ou une séance"
                 />
               </form>
-            </div>
-          </header>
 
-          {/* Filtres sous le header — même gouttière px-4 */}
-          <div className="pointer-events-none relative z-[50] box-border w-full px-4 pb-1.5">
-            <div className="pointer-events-auto relative min-w-0 w-full max-w-full">
               {/* Filtres : carrousel toujours visible sous la recherche */}
-              <div ref={homeMapFiltersRef} className="relative space-y-2 pt-2">
+              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button

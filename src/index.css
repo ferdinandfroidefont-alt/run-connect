@@ -387,43 +387,45 @@ html, body {
   }
 
   /**
-   * Carte accueil — champ recherche type « Search Field » iOS : gris très clair, discret, fusionné au header.
+   * Carte accueil — recherche & filtres (verre teinté façon iOS, pas blanc dur).
    */
   .home-map-search-glass {
     box-sizing: border-box;
-    /* Fond proche blanc, légère teinte système (pas bleuté marqué) */
-    background: rgba(142, 142, 147, 0.1);
-    border: 1px solid rgba(60, 60, 67, 0.08);
-    backdrop-filter: blur(16px) saturate(1.25);
-    -webkit-backdrop-filter: blur(16px) saturate(1.25);
-    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.35);
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    /* Gris très légèrement bleuté, doux, translucide (iOS) */
+    background: rgba(236, 241, 247, 0.76);
+    border: 1px solid rgba(30, 58, 95, 0.06);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    box-shadow:
+      0 1px 2px rgba(30, 58, 95, 0.04),
+      0 6px 20px -10px rgba(30, 58, 95, 0.1),
+      0 2px 6px -3px rgba(30, 41, 59, 0.05);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(60, 60, 67, 0.14);
-    background: rgba(142, 142, 147, 0.14);
+    border-color: rgba(30, 58, 95, 0.1);
+    background: rgba(236, 241, 247, 0.88);
     box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
-      0 0 0 2px hsl(var(--primary) / 0.14);
+      0 1px 2px rgba(30, 58, 95, 0.05),
+      0 8px 26px -10px rgba(30, 58, 95, 0.12),
+      0 2px 8px -3px rgba(30, 41, 59, 0.06);
   }
 
   .dark .home-map-search-glass {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+    background: rgba(38, 44, 52, 0.72);
+    border-color: rgba(200, 220, 255, 0.1);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.15),
+      0 6px 22px -10px rgba(0, 0, 0, 0.42),
+      0 2px 8px -4px rgba(0, 0, 0, 0.22);
   }
 
   .dark .home-map-search-glass:focus-within {
-    border-color: rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.11);
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.08),
-      0 0 0 2px hsl(var(--primary) / 0.22);
-  }
-
-  /* Canvas Mapbox sous la pile UI (header z-50) pour fiabiliser clics / saisie sur la barre de recherche */
-  .interactive-map-root .mapboxgl-canvas-container {
-    z-index: 0 !important;
+    border-color: rgba(200, 220, 255, 0.16);
+    background: rgba(42, 48, 58, 0.82);
   }
 
   .home-map-filter-chip {
