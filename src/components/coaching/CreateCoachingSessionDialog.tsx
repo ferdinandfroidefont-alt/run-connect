@@ -24,7 +24,7 @@ import {
   type RCCResult,
   type ParsedBlock,
 } from "@/lib/rccParser";
-import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import { resolveSessionRpeForInsert, stripPerBlockRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -61,6 +61,7 @@ export const CreateCoachingSessionDialog = ({
   const [rccCode, setRccCode] = useState("");
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
+  const [sessionRpe, setSessionRpe] = useState(5);
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
   // Recipients
@@ -161,10 +162,10 @@ export const CreateCoachingSessionDialog = ({
     setLoading(true);
     try {
       const targetIds = sendMode === "individual" ? Array.from(selectedAthletes) : [];
-      const sessionBlocks =
-        parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : null;
+      const rawBlocks = parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : null;
+      const sessionBlocks = rawBlocks ? stripPerBlockRpeFromSessionBlocks(rawBlocks) : null;
       const title = `${objective.trim()}`;
-      const aggregatedRpe = aggregateRpeFromSessionBlocks(sessionBlocks);
+      const resolvedRpe = resolveSessionRpeForInsert(sessionRpe, rawBlocks);
 
       const { data: session, error } = await supabase
         .from("coaching_sessions")
@@ -183,7 +184,7 @@ export const CreateCoachingSessionDialog = ({
           rcc_code: rccCode.trim(),
           objective: objective.trim(),
           default_location_name: locationName.trim() || null,
-          rpe: aggregatedRpe,
+          rpe: resolvedRpe,
         } as any)
         .select("id")
         .single();
@@ -241,6 +242,7 @@ export const CreateCoachingSessionDialog = ({
     setRccCode("");
     setParsedResult({ blocks: [], errors: [] });
     setParsedBlocks([]);
+    setSessionRpe(5);
     setCoachNotes("");
     setLocationName("");
     setSendMode("club");
@@ -256,15 +258,6 @@ export const CreateCoachingSessionDialog = ({
   const handleParsedChange = (result: RCCResult) => {
     setParsedResult(result);
     setParsedBlocks((prev) => mergeParsedBlocksByIndex(result.blocks, prev));
-  };
-
-  const handleBlockRpe = (index: number, payload: { rpe?: number; recoveryRpe?: number }) => {
-    setParsedBlocks((prev) => {
-      const next = [...prev];
-      if (!next[index]) return prev;
-      next[index] = { ...next[index], ...payload };
-      return next;
-    });
   };
 
   const canSubmit =
@@ -354,18 +347,11 @@ export const CreateCoachingSessionDialog = ({
                   onParsedChange={handleParsedChange}
                 />
                 {parsedBlocks.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[12px] leading-snug text-muted-foreground">
-                      Sous l’aperçu, indiquez le <span className="font-medium text-foreground">RPE cible (1–10)</span> pour
-                      chaque partie (échauffement, séries, retour au calme). Sur les fractionnés, vous pouvez aussi fixer le
-                      RPE de la récup entre répétitions.
-                    </p>
-                    <RCCBlocksPreview
-                      blocks={parsedBlocks}
-                      editableRpe
-                      onRpeChange={handleBlockRpe}
-                    />
-                  </div>
+                  <RCCBlocksPreview
+                    blocks={parsedBlocks}
+                    sessionRpe={sessionRpe}
+                    onSessionRpeChange={setSessionRpe}
+                  />
                 )}
               </div>
 

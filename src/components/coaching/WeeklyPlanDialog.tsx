@@ -18,7 +18,7 @@ import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { parseRCC, rccToSessionBlocks, computeRCCSummary, mergeParsedBlocksByIndex, mergeStoredSessionBlocksIntoParsed } from "@/lib/rccParser";
-import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import { resolveSessionRpeForInsert, stripPerBlockRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +69,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   coachNotes: "",
   locationName: "",
   athleteOverrides: {},
+  rpe: 5,
 });
 
 export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId, initialAthleteName, initialAthleteId }: WeeklyPlanDialogProps) => {
@@ -215,6 +216,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           const scheduledDate = new Date(cs.scheduled_at);
           const dayOfWeek = scheduledDate.getDay();
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          const rawBlocks = cs.session_blocks;
+          const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
           return {
             dayIndex,
             activityType: cs.activity_type || "running",
@@ -224,6 +227,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             coachNotes: cs.coach_notes || "",
             locationName: cs.default_location_name || "",
             athleteOverrides: {},
+            rpe: rpeResolved ?? undefined,
           };
         });
         setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
@@ -258,6 +262,8 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         const scheduledDate = new Date(cs.scheduled_at);
         const dayOfWeek = scheduledDate.getDay();
         const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const rawBlocks = cs.session_blocks;
+        const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
         return {
           dayIndex,
           activityType: cs.activity_type || "running",
@@ -267,6 +273,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           coachNotes: cs.coach_notes || "",
           locationName: cs.default_location_name || "",
           athleteOverrides: {},
+          rpe: rpeResolved ?? undefined,
         };
       });
       setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
@@ -582,21 +589,24 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       return;
     }
 
-    const imported: WeekSession[] = data.map(cs => {
-      const scheduledDate = new Date(cs.scheduled_at);
-      const dayOfWeek = scheduledDate.getDay();
-      const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      return {
-        dayIndex,
-        activityType: cs.activity_type || "running",
-        objective: cs.objective || cs.title || "",
-        rccCode: cs.rcc_code || "",
-        parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
-        coachNotes: cs.coach_notes || "",
-        locationName: cs.default_location_name || "",
-        athleteOverrides: {},
-      };
-    });
+      const imported: WeekSession[] = data.map(cs => {
+        const scheduledDate = new Date(cs.scheduled_at);
+        const dayOfWeek = scheduledDate.getDay();
+        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const rawBlocks = cs.session_blocks;
+        const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
+        return {
+          dayIndex,
+          activityType: cs.activity_type || "running",
+          objective: cs.objective || cs.title || "",
+          rccCode: cs.rcc_code || "",
+          parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+          coachNotes: cs.coach_notes || "",
+          locationName: cs.default_location_name || "",
+          athleteOverrides: {},
+          rpe: rpeResolved ?? undefined,
+        };
+      });
 
     setSessions(() => imported);
     setSelectedIndex(null);
@@ -625,8 +635,9 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           scheduledDate.setHours(8, 0, 0, 0);
           const { blocks: freshBlocks } = parseRCC(session.rccCode);
           const mergedBlocks = mergeParsedBlocksByIndex(freshBlocks, session.parsedBlocks || []);
-          const sessionBlocks = rccToSessionBlocks(mergedBlocks);
-          const aggregatedRpe = aggregateRpeFromSessionBlocks(sessionBlocks);
+          const rawBlocks = rccToSessionBlocks(mergedBlocks);
+          const resolvedRpe = resolveSessionRpeForInsert(session.rpe, rawBlocks);
+          const sessionBlocks = stripPerBlockRpeFromSessionBlocks(rawBlocks);
 
           const { data: created, error } = await supabase
             .from("coaching_sessions")
@@ -645,7 +656,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               send_mode: sendMode,
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
-              rpe: aggregatedRpe,
+              rpe: resolvedRpe,
             } as any)
             .select("id")
             .single();

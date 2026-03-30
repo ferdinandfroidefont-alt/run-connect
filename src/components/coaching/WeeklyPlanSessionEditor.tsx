@@ -156,13 +156,6 @@ export const WeeklyPlanSessionEditor = ({
     update("parsedBlocks", merged);
   };
 
-  const handleBlockRpe = (index: number, payload: { rpe?: number; recoveryRpe?: number }) => {
-    const next = [...(session.parsedBlocks || [])];
-    if (!next[index]) return;
-    next[index] = { ...next[index], ...payload };
-    update("parsedBlocks", next);
-  };
-
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
     .filter(d => d.index !== session.dayIndex);
 
@@ -318,18 +311,11 @@ export const WeeklyPlanSessionEditor = ({
             onParsedChange={handleParsedChange}
           />
           {session.parsedBlocks && session.parsedBlocks.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                RPE par segment (1–10)
-              </label>
-              <p className="text-[12px] text-muted-foreground leading-snug">
-                Un RPE par bloc : échauffement, partie principale (ex. 10×1000), retour au calme. Sur les fractionnés,
-                ajoutez aussi le RPE de la récup entre les répétitions si besoin.
-              </p>
+            <div className="mt-4">
               <RCCBlocksPreview
                 blocks={session.parsedBlocks}
-                editableRpe
-                onRpeChange={handleBlockRpe}
+                sessionRpe={session.rpe ?? 5}
+                onSessionRpeChange={(v) => update("rpe", v)}
               />
             </div>
           )}
