@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 import { CalendarDays, ChartColumnBig, ClipboardCheck, Dumbbell, FolderKanban, Loader2, Users, Building2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
@@ -16,9 +17,6 @@ import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManager
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
 
-const CreateClubDialogPremium = lazy(() =>
-  import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubDialogPremium }))
-);
 const ClubInfoDialog = lazy(() =>
   import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
 );
@@ -65,7 +63,7 @@ type ClubInfoRow = {
 };
 
 export default function Coaching() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const [clubs, setClubs] = useState<ClubOption[]>([]);
@@ -84,13 +82,20 @@ export default function Coaching() {
   const [draftInitialGroup, setDraftInitialGroup] = useState<string | undefined>();
 
   const [athleteClubs, setAthleteClubs] = useState<AthleteClubRow[]>([]);
+  const [athleteClubsLoading, setAthleteClubsLoading] = useState(true);
   const [clubInfoData, setClubInfoData] = useState<ClubInfoRow | null>(null);
   const [showClubInfo, setShowClubInfo] = useState(false);
   const [showEditClub, setShowEditClub] = useState(false);
 
+  /** Clubs où l’utilisateur est membre, ou repli sur les clubs liés au plan athlète (participations) */
+  const displayClubs = useMemo((): ClubOption[] => {
+    if (clubs.length > 0) return clubs;
+    return athleteClubs.map((ac) => ({ id: ac.clubId, name: ac.clubName, isCoach: false }));
+  }, [clubs, athleteClubs]);
+
   const selectedClub = useMemo(
-    () => clubs.find((club) => club.id === selectedClubId) || null,
-    [clubs, selectedClubId]
+    () => displayClubs.find((club) => club.id === selectedClubId) || null,
+    [displayClubs, selectedClubId]
   );
   const isCoach = !!selectedClub?.isCoach;
 
@@ -107,23 +112,24 @@ export default function Coaching() {
     }
     setLoading(true);
     try {
-      const { data: memberships } = await supabase
+      const { data: memberships, error: memErr } = await supabase
         .from("group_members")
         .select("conversation_id, is_coach")
         .eq("user_id", user.id);
+      if (memErr) throw memErr;
 
       const clubIds = (memberships || []).map((m) => m.conversation_id);
       if (clubIds.length === 0) {
         setClubs([]);
-        setSelectedClubId(null);
         return;
       }
 
-      const { data: conversations } = await supabase
+      const { data: conversations, error: convErr } = await supabase
         .from("conversations")
         .select("id, group_name, is_group")
         .in("id", clubIds)
         .eq("is_group", true);
+      if (convErr) throw convErr;
 
       const mapCoachByClub = new Map<string, boolean>();
       (memberships || []).forEach((m) => mapCoachByClub.set(m.conversation_id, !!m.is_coach));
@@ -138,7 +144,9 @@ export default function Coaching() {
         .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
       setClubs(clubOptions);
-      setSelectedClubId((prev) => (prev && clubOptions.some((c) => c.id === prev) ? prev : clubOptions[0]?.id || null));
+    } catch (e) {
+      console.error("Coaching loadClubs:", e);
+      setClubs([]);
     } finally {
       setLoading(false);
     }
@@ -175,8 +183,10 @@ export default function Coaching() {
   const loadAthleteClubs = useCallback(async () => {
     if (!user) {
       setAthleteClubs([]);
+      setAthleteClubsLoading(false);
       return;
     }
+    setAthleteClubsLoading(true);
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -241,12 +251,22 @@ export default function Coaching() {
     } catch (e) {
       console.error("Error loading athlete coaching clubs:", e);
       setAthleteClubs([]);
+    } finally {
+      setAthleteClubsLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
     void loadAthleteClubs();
   }, [loadAthleteClubs]);
+
+  useEffect(() => {
+    if (displayClubs.length === 0) {
+      setSelectedClubId(null);
+      return;
+    }
+    setSelectedClubId((prev) => (prev && displayClubs.some((c) => c.id === prev) ? prev : displayClubs[0].id));
+  }, [displayClubs]);
 
   const openClubManagement = async () => {
     if (!selectedClubId) return;
@@ -267,9 +287,13 @@ export default function Coaching() {
   });
   const upcomingSessions = sessions.filter((s) => new Date(s.scheduled_at) >= new Date()).slice(0, 6);
 
+  /** Sans membres de club, on attend le chargement des participations pour savoir si un plan athlète existe */
+  const waitAthleteWhenNoClub = clubs.length === 0 && athleteClubsLoading;
+  const showPageLoader = authLoading || loading || waitAthleteWhenNoClub;
+
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
-      {loading ? (
+      {showPageLoader ? (
         <div
           className="flex flex-1 flex-col items-center justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]"
           role="status"
@@ -278,7 +302,7 @@ export default function Coaching() {
           <Loader2 className="h-9 w-9 animate-spin text-muted-foreground" aria-hidden />
           <span className="sr-only">Chargement du coaching</span>
         </div>
-      ) : clubs.length === 0 ? (
+      ) : displayClubs.length === 0 ? (
         <>
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
             <div className="ios-card overflow-hidden border border-border/60">
@@ -303,7 +327,7 @@ export default function Coaching() {
               </div>
             </div>
           </div>
-          <Suspense fallback={null}>
+          {showCreateClub ? (
             <CreateClubDialogPremium
               isOpen={showCreateClub}
               onClose={() => setShowCreateClub(false)}
@@ -312,7 +336,7 @@ export default function Coaching() {
                 setShowCreateClub(false);
               }}
             />
-          </Suspense>
+          ) : null}
         </>
       ) : (
         <>
@@ -338,7 +362,7 @@ export default function Coaching() {
 
             <section className="ios-card border border-border/60 p-2">
               <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                {clubs.map((club) => (
+                {displayClubs.map((club) => (
                   <button
                     key={club.id}
                     type="button"
@@ -354,7 +378,7 @@ export default function Coaching() {
               </div>
             </section>
 
-            {athleteClubs.length > 0 && (
+            {clubs.length > 0 && athleteClubs.length > 0 && (
               <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
                 <h2 className="text-[16px] font-semibold text-foreground">Mon plan coaching</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
