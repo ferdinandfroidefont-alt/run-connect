@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { RouteFlyoverHud } from '@/components/RouteFlyoverHud';
 import { useRouteFlyoverPlayback } from '@/hooks/useRouteFlyoverPlayback';
@@ -54,6 +54,8 @@ export function RouteFlyover3D({
   const smoothedBearingRef = useRef<number | null>(null);
   const smoothedPitchRef = useRef<number | null>(null);
   const smoothedZoomRef = useRef<number | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   const playback = useRouteFlyoverPlayback({
     coordinates,
@@ -80,14 +82,19 @@ export function RouteFlyover3D({
   useEffect(() => {
     if (!mapContainerRef.current || playback.flyoverCoordinates.length < 2) return;
     const token = getMapboxAccessToken();
-    if (!token) return;
+    if (!token) {
+      setMapError('Token Mapbox manquant.');
+      return;
+    }
 
     mapboxgl.accessToken = token;
+    setSceneReady(false);
+    setMapError(null);
 
     const startFrame = playback.frame;
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: MAPBOX_STYLE_BY_UI_ID.satellite,
+      style: MAPBOX_STYLE_BY_UI_ID.terrain,
       center: [startFrame.focusCenter.lng, startFrame.focusCenter.lat],
       zoom: startFrame.zoom,
       pitch: startFrame.pitch,
@@ -99,6 +106,13 @@ export function RouteFlyover3D({
     });
 
     mapRef.current = map;
+
+    const scheduleResizePass = () => {
+      window.requestAnimationFrame(() => map.resize());
+      window.setTimeout(() => map.resize(), 120);
+      window.setTimeout(() => map.resize(), 420);
+      window.setTimeout(() => map.resize(), 900);
+    };
 
     const bootScene = () => {
       if (!mapRef.current) return;
@@ -241,6 +255,7 @@ export function RouteFlyover3D({
       smoothedPitchRef.current = initialFrame.pitch;
       smoothedZoomRef.current = initialFrame.zoom;
       mapReadyRef.current = true;
+      scheduleResizePass();
 
       map.easeTo({
         center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
@@ -251,7 +266,26 @@ export function RouteFlyover3D({
         essential: true,
         easing: easeOutQuart,
       });
+
+      window.setTimeout(() => {
+        if (mapRef.current) {
+          setSceneReady(true);
+        }
+      }, 350);
     };
+
+    map.on('error', (event) => {
+      const message =
+        typeof event.error?.message === 'string' && event.error.message.trim()
+          ? event.error.message
+          : 'La scène 3D n’a pas pu se charger.';
+      setMapError(message);
+    });
+
+    map.once('idle', () => {
+      setSceneReady(true);
+      scheduleResizePass();
+    });
 
     if (map.isStyleLoaded()) {
       bootScene();
@@ -266,6 +300,7 @@ export function RouteFlyover3D({
       smoothedBearingRef.current = null;
       smoothedPitchRef.current = null;
       smoothedZoomRef.current = null;
+      setSceneReady(false);
       map.remove();
       mapRef.current = null;
     };
@@ -345,6 +380,19 @@ export function RouteFlyover3D({
   return (
     <div className={cn('relative overflow-hidden rounded-[28px] bg-black', className)} style={{ minHeight: 320 }}>
       <div ref={mapContainerRef} className="absolute inset-0" />
+      {!sceneReady && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(circle_at_top,#172554_0%,#020617_68%)]">
+          <div className="rounded-3xl border border-white/10 bg-black/30 px-5 py-4 text-center text-white backdrop-blur-xl">
+            <p className="text-[15px] font-medium">Préparation du survol 3D</p>
+            <p className="mt-1 text-[12px] text-white/60">Chargement de la carte et du relief…</p>
+          </div>
+        </div>
+      )}
+      {mapError && (
+        <div className="absolute inset-x-4 top-4 z-20 rounded-2xl border border-red-400/25 bg-red-500/14 px-4 py-3 text-sm text-white backdrop-blur-xl">
+          {mapError}
+        </div>
+      )}
       <RouteFlyoverHud
         routeName={routeName}
         isPlaying={playback.isPlaying}
