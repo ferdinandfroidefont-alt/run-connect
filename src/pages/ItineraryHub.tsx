@@ -84,7 +84,11 @@ export default function ItineraryHub() {
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-        <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+        {/*
+          Tab bar visible : le <main> s’arrête déjà au-dessus de la nav (safe-area gérée sur la nav seule).
+          Éviter pb + safe-area-bottom ici → doublon visuel / insets qui peuvent perturber WebKit au retour accueil.
+        */}
+        <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
           {/* Alignement Profil / Paramètres : gouttières + largeur utile sm:max-w-2xl */}
           <div className="mx-auto box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5 sm:max-w-2xl">
             <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">

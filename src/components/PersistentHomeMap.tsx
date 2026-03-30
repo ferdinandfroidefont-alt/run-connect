@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +22,33 @@ export default function PersistentHomeMap({
   initialZoom,
   highlightSessionId,
 }: PersistentHomeMapProps) {
+  /**
+   * Pas de `content-visibility: auto` ici : sous iOS/WebKit, basculer cet attribut sur un grand sous-arbre
+   * (carte + header) puis revenir sur l’accueil peut laisser un mauvais calcul de viewport / safe-area
+   * (« double » bande basse type home indicator + inset CSS).
+   */
+  const prevVisibleRef = useRef(visible);
+  useEffect(() => {
+    const had = prevVisibleRef.current;
+    prevVisibleRef.current = visible;
+    if (!visible || had) return;
+    const t = window.setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 0);
+    const t2 = window.setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 120);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(t2);
+    };
+  }, [visible]);
+
   return (
     <div
       className={cn(
         "flex h-full min-h-0 w-full flex-1 flex-col",
-        !visible && "invisible pointer-events-none [content-visibility:auto]"
+        !visible && "invisible pointer-events-none"
       )}
       aria-hidden={!visible}
     >

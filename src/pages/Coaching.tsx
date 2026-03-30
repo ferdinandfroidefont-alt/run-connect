@@ -295,7 +295,7 @@ export default function Coaching() {
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
       {showPageLoader ? (
         <div
-          className="flex flex-1 flex-col items-center justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]"
+          className="flex flex-1 flex-col items-center justify-center px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]"
           role="status"
           aria-live="polite"
         >
@@ -304,7 +304,7 @@ export default function Coaching() {
         </div>
       ) : displayClubs.length === 0 ? (
         <>
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
             <div className="ios-card overflow-hidden border border-border/60">
               <div className={emptyStateSx.shell}>
                 <div className={emptyStateSx.iconCircle}>
@@ -340,7 +340,10 @@ export default function Coaching() {
         </>
       ) : (
         <>
-          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-[calc(1.5rem+var(--safe-area-bottom))] pt-[max(0.9rem,var(--safe-area-top))]">
+          {/*
+            fixed-fill-with-bottom-nav + tab bar : pas de safe-area-bottom dans le scroll (déjà sur la nav).
+          */}
+          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
             <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">

@@ -367,7 +367,7 @@ export default function ConfirmPresence() {
           </div>
         ) : !selectedSession ? (
           // Session selection screen - iOS Style
-          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-0">
+          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
             {sessions.length === 0 ? (
               <div className="ios-card p-8 text-center">
                 <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
@@ -406,7 +406,7 @@ export default function ConfirmPresence() {
           </div>
         ) : (
           // Validation view
-          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-0">
+          <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
             {/* Track participants button */}
             <button
               onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
