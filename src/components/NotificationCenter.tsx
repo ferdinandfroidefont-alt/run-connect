@@ -637,23 +637,32 @@ export const NotificationCenter = ({
       </SheetTrigger>
       <SheetContent
         side="top"
-        closeButtonClassName={isIosPhone ? "right-5 top-6" : undefined}
+        closeButtonClassName={
+          isIosPhone
+            ? "right-5 top-[calc(env(safe-area-inset-top,0px)+0.375rem)]"
+            : undefined
+        }
         className={cn(
           "box-border w-full max-w-full min-w-0 h-full min-h-screen border-0 overflow-x-hidden",
           isIosPhone
-            ? "mx-auto max-w-lg py-6 pl-[max(1.25rem,env(safe-area-inset-left,0px))] pr-[max(1.25rem,env(safe-area-inset-right,0px))]"
+            ? cn(
+                "mx-auto max-w-lg gap-0 p-0",
+                /* Un seul espace haut : safe-area + petit intervalle (pas py-6 + barre en plus) */
+                "pt-[calc(env(safe-area-inset-top,0px)+0.5rem)]",
+                "pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]",
+                "pl-[max(1.25rem,env(safe-area-inset-left,0px))]",
+                "pr-[max(1.25rem,env(safe-area-inset-right,0px))]"
+              )
             : "p-6"
         )}
       >
-        {/* Petite barre en haut comme dans MySessions */}
-        <div className="w-full h-6 bg-background"></div>
-        <SheetHeader>
+        <SheetHeader className="space-y-1.5 px-0 text-left">
           <SheetTitle>Notifications</SheetTitle>
           <SheetDescription>
             {unreadCount > 0 ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}` : 'Aucune nouvelle notification'}
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="mt-6 h-[calc(100vh-8rem)] w-full min-w-0 max-w-full overflow-x-hidden">
+        <ScrollArea className="mt-4 h-[calc(100vh-7.25rem)] w-full min-w-0 max-w-full overflow-x-hidden">
           <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
                 Aucune notification
