@@ -28,7 +28,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # sharp (@capacitor/assets) télécharge libvips depuis GitHub — 502 / proxy passagers → retenter npm ci.
+      # sharp (@capacitor/assets) tente par défaut de télécharger libvips depuis GitHub → 502 fréquent côté CI.
+      # Avec libvips fourni par Homebrew, sharp compile contre la lib système et n’a plus besoin de ce téléchargement.
+      - name: 🍺 Install libvips for sharp
+        run: |
+          brew install vips
+          pkg-config --modversion vips-cpp
+
+      # Retries npm conservés pour d’autres aléas réseau ; l’étape Homebrew ci-dessus évite surtout les 502 sharp-libvips.
       - name: 📦 Install dependencies
         env:
           npm_config_fetch_retries: '5'
