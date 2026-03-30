@@ -81,8 +81,8 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent fullScreen className="p-0 bg-black" aria-describedby={undefined}>
-        {/* Floating back button — top left only, HUD handles route name */}
+      <DialogContent fullScreen hideCloseButton className="overflow-hidden p-0 bg-black" aria-describedby={undefined}>
+        {/* Floating back button — l'overlay flyover gère ensuite les infos de lecture */}
         <div className="absolute top-0 left-0 z-30 pt-[env(safe-area-inset-top)]">
           <div className="px-3 py-2">
             <Button
@@ -106,8 +106,8 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
                 <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/20 animate-ping" />
               </div>
               <div className="text-center">
-                <p className="text-[15px] font-medium text-white">Chargement du relief</p>
-                <p className="text-[13px] text-white/50 mt-1">Préparation du survol 3D...</p>
+                <p className="text-[15px] font-medium text-white">Préparation du flyover 3D</p>
+                <p className="text-[13px] text-white/50 mt-1">Chargement du relief et de la caméra immersive…</p>
               </div>
             </div>
           ) : (
