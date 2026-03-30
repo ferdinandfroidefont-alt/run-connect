@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, PenTool, Crown } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, PenTool, Crown, ListFilter } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -301,7 +301,7 @@ export const InteractiveMap = ({
     avatar_url: string | null;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  /** Bloc header + recherche + panneau filtres repliable (mesure pour padding carte). */
+  /** Bloc header + barre de recherche (mesure padding carte ; carrousel filtres en overlay). */
   const homeMapTopStackRef = useRef<HTMLDivElement>(null);
   const homeMapFiltersRef = useRef<HTMLDivElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
@@ -317,6 +317,14 @@ export const InteractiveMap = ({
     setIsImmersiveMode(prev => {
       const next = !prev;
       // Ne plus cacher la barre de navigation en mode immersif
+      return next;
+    });
+  };
+
+  const toggleMapFiltersPanel = () => {
+    setMapFiltersPanelOpen((prev) => {
+      const next = !prev;
+      if (!next) setExpandedFilter(null);
       return next;
     });
   };
@@ -1548,20 +1556,16 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Header léger + search « flottante » (chevauche le bas du bandeau et le haut de la carte) — masqué en mode immersif */}
+      {/* Bandeau supérieur opaque + barre de recherche flottante (hors header) — masqué en mode immersif */}
       {!isImmersiveMode && (
-        <div ref={homeMapTopStackRef} className="absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]">
-          <div className="flex flex-col">
-            <div
-              className={cn(
-                "border-b border-border/20 dark:border-white/[0.055]",
-                "bg-background/88 supports-[backdrop-filter]:bg-background/72",
-                "backdrop-blur-[18px] backdrop-saturate-150"
-              )}
-            >
-              <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
-              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
-                Runconnect
+        <div
+          ref={homeMapTopStackRef}
+          className="pointer-events-none absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]"
+        >
+          <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
+            <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-3 pt-3 sm:min-h-14 sm:pb-3.5 sm:pt-4 ios-map-header">
+              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-foreground">
+                RunConnect
               </h1>
 
               {userProfile && (
@@ -1621,7 +1625,7 @@ export const InteractiveMap = ({
                   type="button"
                   className={cn(
                     "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
-                    "text-foreground transition-[opacity,transform] active:scale-[0.97] active:opacity-80",
+                    "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
                     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   )}
                   aria-label="Paramètres"
@@ -1631,15 +1635,18 @@ export const InteractiveMap = ({
                 </button>
               </div>
             </div>
+          </header>
 
-            {/* Recherche : fond quasi identique au header — icône + texte seuls ressortent, léger relief au focus */}
-            <div className="px-4 pb-4 pt-2.5 sm:pt-3">
+          {/* Recherche : composant visuel séparé, chevauche le bas du header et le haut de la carte */}
+          <div className="pointer-events-none relative z-[35] -mt-[22px] px-4 pb-2 sm:-mt-[23px]">
+            <div className="pointer-events-auto relative mx-auto w-full max-w-lg">
               <div
                 className={cn(
-                  "flex min-h-[44px] items-center gap-3 px-1 py-1.5 sm:min-h-[46px]",
-                  "rounded-xl bg-transparent",
-                  "transition-[background-color] duration-200 ease-out",
-                  "focus-within:bg-foreground/[0.045] dark:focus-within:bg-white/[0.06]"
+                  "flex min-h-[44px] items-center gap-3 rounded-2xl border border-black/[0.06] bg-white px-3.5 py-2 sm:min-h-[46px]",
+                  "shadow-[0_4px_20px_-4px_rgba(0,0,0,0.14),0_2px_8px_-2px_rgba(0,0,0,0.08)]",
+                  "transition-[box-shadow] duration-200 ease-out",
+                  "focus-within:border-black/10 focus-within:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.16),0_2px_10px_-2px_rgba(0,0,0,0.1)]",
+                  "dark:border-white/10 dark:bg-card dark:shadow-[0_4px_24px_-6px_rgba(0,0,0,0.55)]"
                 )}
               >
                 <Search
@@ -1658,7 +1665,7 @@ export const InteractiveMap = ({
                     }))
                   }
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       void tryGeocodeSearchFromInput();
                     }
@@ -1672,13 +1679,20 @@ export const InteractiveMap = ({
                   aria-label="Rechercher un lieu ou une séance"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Carrousel de filtres : z-[30] sur le bloc header pour passer au-dessus des FAB carte (z-20). */}
-          <div className="px-4 pb-4 pt-3">
-            <div ref={homeMapFiltersRef} className="relative z-10 space-y-2">
-            <div className="ios-inset-group rounded-[18px] bg-card/95 p-2 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.35)]">
+              {/* Filtres : carrousel sous la recherche, ouvert via le FAB carte (pas dans le flux → pas de saut de padding carte) */}
+              <AnimatePresence initial={false}>
+                {mapFiltersPanelOpen && (
+                  <motion.div
+                    key="home-map-filter-carousel"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                    className="absolute left-0 right-0 top-full z-[40] pt-3"
+                  >
+                    <div ref={homeMapFiltersRef} className="relative space-y-2">
+            <div className="ios-inset-group rounded-[18px] bg-white p-2 shadow-[0_8px_28px_-12px_rgba(0,0,0,0.22)] dark:bg-card dark:shadow-[0_8px_32px_-12px_rgba(0,0,0,0.65)]">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch]">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
@@ -1895,8 +1909,11 @@ export const InteractiveMap = ({
                 </motion.div>
               )}
             </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
           </div>
         </div>
       )}
@@ -1930,8 +1947,8 @@ export const InteractiveMap = ({
           </Button>
         </div>}
 
-      {/* All Map Controls - iOS Style */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
+      {/* Plein écran : hors pile gauche (ordre carte : Filtres → Localisation → …) */}
+      <div className="absolute bottom-4 right-4 z-20 ios-map-bottom-buttons">
         <MapIosColoredFab
           tone="gray"
           title="Carte plein écran"
@@ -1940,6 +1957,23 @@ export const InteractiveMap = ({
         >
           <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </MapIosColoredFab>
+      </div>
+
+      {/* Contrôles carte — pile gauche : Filtres, Localisation, Tracé, Classement, Style, Réinitialiser */}
+      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
+        {!isImmersiveMode && (
+          <MapIosColoredFab
+            tone="gray"
+            title={mapFiltersPanelOpen ? "Masquer les filtres" : "Filtres des séances"}
+            aria-expanded={mapFiltersPanelOpen}
+            onClick={toggleMapFiltersPanel}
+            active={mapFiltersPanelOpen || activeHomeMapFilterCount > 0}
+            badgeCount={!mapFiltersPanelOpen ? activeHomeMapFilterCount : undefined}
+            className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+          >
+            <ListFilter className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </MapIosColoredFab>
+        )}
 
         <MapIosColoredFab
           tone="gray"

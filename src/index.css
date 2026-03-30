@@ -624,7 +624,7 @@ html, body {
     min-height: 4.125rem !important;
   }
 
-  /* Barre recherche carte : intégrée dans le header (InteractiveMap) */
+  /* Barre recherche carte : flottante sous le header opaque (InteractiveMap) */
   .ios-map-bottom-buttons {
     bottom: 0.5rem !important;
   }
