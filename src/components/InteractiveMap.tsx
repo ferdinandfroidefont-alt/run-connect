@@ -1869,9 +1869,10 @@ export const InteractiveMap = ({
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
+          </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Route Creation Mode Banner */}
