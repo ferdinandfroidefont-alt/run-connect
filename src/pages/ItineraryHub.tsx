@@ -89,8 +89,9 @@ export default function ItineraryHub() {
           Éviter pb + safe-area-bottom ici → doublon visuel / insets qui peuvent perturber WebKit au retour accueil.
         */}
         <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
-          {/* Alignement Profil / Paramètres : gouttières + largeur utile sm:max-w-2xl */}
-          <div className="mx-auto box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5 sm:max-w-2xl">
+          {/* Même schéma que SettingsDialog hub : colonne max-width sans w-full+mx sur le bloc paddé */}
+          <div className="box-border min-w-0 max-w-full sm:mx-auto sm:max-w-2xl">
+            <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
             <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">
               Choisissez une fonctionnalité. Les écrans existants s’ouvrent ici sans duplication.
             </p>
@@ -117,6 +118,7 @@ export default function ItineraryHub() {
                   {index < hubItems.length - 1 && <div className="ios-list-row-inset-sep" />}
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </div>

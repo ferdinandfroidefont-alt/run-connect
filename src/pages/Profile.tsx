@@ -618,9 +618,9 @@ const Profile = () => {
       className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
       data-tutorial="tutorial-profile-page"
     >
-      {/* Même logique que les sous-pages Paramètres : scroll flex-1, gouttières px-4 / ios-shell:px-2.5 */}
+      {/* Aligné hub Paramètres (SettingsDialog) : pas de w-full + mx-auto sur le même bloc ; gouttières px-4 / ios-shell:px-2 */}
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
-      <div className="mx-auto box-border min-h-0 min-w-0 w-full max-w-full sm:max-w-2xl">
+      <div className="box-border min-h-0 min-w-0 max-w-full sm:mx-auto sm:max-w-2xl">
       {/* Cover Image - Facebook Style */}
       <div className="relative min-w-0 max-w-full overflow-x-hidden">
         {/* Cover Photo */}
@@ -638,7 +638,7 @@ const Profile = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
           
           {/* Top bar buttons */}
-          <div className="absolute left-0 right-0 top-0 z-10 flex min-w-0 items-center justify-between px-4 pt-[max(0.75rem,var(--safe-area-top))] ios-shell:px-2.5">
+          <div className="absolute left-0 right-0 top-0 z-10 flex min-w-0 items-center justify-between px-4 pt-[max(0.75rem,var(--safe-area-top))] ios-shell:px-2">
             {isViewingOtherUser ? (
               <button onClick={() => navigate(-1)} className="flex items-center gap-ios-1 text-white drop-shadow-lg">
                 <ChevronLeft className="h-5 w-5" />
@@ -709,11 +709,11 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      {/* Hub Paramètres : py-5, cartes groupées = px-4 + ios-shell:px-2.5 + ios-card */}
+      {/* Hub Paramètres : py-5, cartes groupées = px-4 + ios-shell:px-2 + ios-card (sans pad horizontal sur la carte, comme le hub) */}
       <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
-            <div className="flex flex-col items-center pb-ios-1 pt-ios-1">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+            <div className="flex flex-col items-center px-4 py-3 pb-ios-1 pt-ios-1 ios-shell:px-2.5 ios-shell:py-2.5">
             <div className="mb-0.5 flex max-w-full items-center justify-center gap-ios-2">
               <h2 className="max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
                 {profile?.display_name || profile?.username}
@@ -744,7 +744,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
             <ProfileQuickStats
               userId={viewingUserId || user?.id || ''}
@@ -762,7 +762,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <ProfileSportsCard
             favoriteSport={profile?.favorite_sport}
             isOwnProfile={!isViewingOtherUser}
@@ -775,12 +775,12 @@ const Profile = () => {
 
 
         {!isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
             <PersonalGoals />
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <IOSListGroup
             header="RACCOURCIS"
             className="ios-card mb-0 w-full min-w-0 border border-border/60 shadow-[var(--shadow-card)]"
@@ -806,7 +806,7 @@ const Profile = () => {
           </IOSListGroup>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <Collapsible className="ios-card mb-0 w-full min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
@@ -829,7 +829,7 @@ const Profile = () => {
         </div>
 
         {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
             <div className="ios-card overflow-hidden border border-border/60">
             <div className="space-y-ios-3 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
                 <div>
@@ -912,7 +912,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
+        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
         </div>
 
