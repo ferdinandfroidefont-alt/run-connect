@@ -22,6 +22,13 @@ export default function Search() {
   const inputRef = useRef<HTMLInputElement>(null);
   
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+
+  useEffect(() => {
+    const q = searchParams.get('tab') as TabType | null;
+    if (q === 'profiles' || q === 'clubs' || q === 'strava' || q === 'contacts') {
+      setActiveTab(q);
+    }
+  }, [searchParams]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isClosing, setIsClosing] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);

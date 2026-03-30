@@ -1,9 +1,10 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, endOfWeek, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarDays, ChartColumnBig, ClipboardCheck, Dumbbell, FolderKanban, Loader2, Users } from "lucide-react";
+import { CalendarDays, ChartColumnBig, ClipboardCheck, Dumbbell, FolderKanban, Loader2, Users, Building2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
@@ -14,6 +15,16 @@ import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog
 import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
+
+const CreateClubDialogPremium = lazy(() =>
+  import("@/components/CreateClubDialogPremium").then((m) => ({ default: m.CreateClubDialogPremium }))
+);
+const ClubInfoDialog = lazy(() =>
+  import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
+);
+const EditClubDialog = lazy(() =>
+  import("@/components/EditClubDialog").then((m) => ({ default: m.EditClubDialog }))
+);
 
 type ClubOption = {
   id: string;
@@ -37,6 +48,22 @@ type CoachingSession = {
   coach_notes?: string | null;
 };
 
+type AthleteClubRow = {
+  clubId: string;
+  clubName: string;
+  completed: number;
+  total: number;
+};
+
+type ClubInfoRow = {
+  id: string;
+  group_name: string | null;
+  group_description: string | null;
+  group_avatar_url: string | null;
+  club_code: string | null;
+  created_by: string | null;
+};
+
 export default function Coaching() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -55,6 +82,11 @@ export default function Coaching() {
   const [showDrafts, setShowDrafts] = useState(false);
   const [draftInitialWeek, setDraftInitialWeek] = useState<Date | undefined>();
   const [draftInitialGroup, setDraftInitialGroup] = useState<string | undefined>();
+
+  const [athleteClubs, setAthleteClubs] = useState<AthleteClubRow[]>([]);
+  const [clubInfoData, setClubInfoData] = useState<ClubInfoRow | null>(null);
+  const [showClubInfo, setShowClubInfo] = useState(false);
+  const [showEditClub, setShowEditClub] = useState(false);
 
   const selectedClub = useMemo(
     () => clubs.find((club) => club.id === selectedClubId) || null,
@@ -140,8 +172,93 @@ export default function Coaching() {
     void loadClubData();
   }, [selectedClubId]);
 
+  const loadAthleteClubs = useCallback(async () => {
+    if (!user) {
+      setAthleteClubs([]);
+      return;
+    }
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: participations } = await supabase
+        .from("coaching_participations")
+        .select("coaching_session_id, status")
+        .eq("user_id", user.id);
+
+      if (!participations?.length) {
+        setAthleteClubs([]);
+        return;
+      }
+
+      const sessionIds = participations.map((p) => p.coaching_session_id);
+      const { data: sessionRows } = await supabase
+        .from("coaching_sessions")
+        .select("id, club_id, scheduled_at")
+        .in("id", sessionIds)
+        .gte("scheduled_at", thirtyDaysAgo.toISOString());
+
+      if (!sessionRows?.length) {
+        setAthleteClubs([]);
+        return;
+      }
+
+      const clubMap = new Map<string, { sessionIds: string[] }>();
+      sessionRows.forEach((s) => {
+        if (!clubMap.has(s.club_id)) clubMap.set(s.club_id, { sessionIds: [] });
+        clubMap.get(s.club_id)!.sessionIds.push(s.id);
+      });
+
+      const clubIds = [...clubMap.keys()];
+      const { data: conversations } = await supabase.from("conversations").select("id, group_name").in("id", clubIds);
+
+      const wStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const wEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+
+      const result: AthleteClubRow[] = clubIds.map((clubId) => {
+        const conv = conversations?.find((c) => c.id === clubId);
+        const clubSessions = sessionRows.filter((s) => s.club_id === clubId);
+        const thisWeekSessionIds = clubSessions
+          .filter((s) => {
+            const d = new Date(s.scheduled_at);
+            return d >= wStart && d <= wEnd;
+          })
+          .map((s) => s.id);
+
+        const completedThisWeek = participations.filter(
+          (p) => thisWeekSessionIds.includes(p.coaching_session_id) && p.status === "completed"
+        ).length;
+
+        return {
+          clubId,
+          clubName: conv?.group_name || "Club",
+          completed: completedThisWeek,
+          total: thisWeekSessionIds.length,
+        };
+      });
+
+      setAthleteClubs(result);
+    } catch (e) {
+      console.error("Error loading athlete coaching clubs:", e);
+      setAthleteClubs([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void loadAthleteClubs();
+  }, [loadAthleteClubs]);
+
+  const openClubManagement = async () => {
+    if (!selectedClubId) return;
+    const { data, error } = await supabase.from("conversations").select("*").eq("id", selectedClubId).single();
+    if (error || !data) return;
+    setClubInfoData(data as ClubInfoRow);
+    setShowClubInfo(true);
+  };
+
   const refreshCurrentClub = async () => {
     await loadClubData();
+    await loadAthleteClubs();
   };
 
   const thisWeekSessions = sessions.filter((s) => {
@@ -208,7 +325,7 @@ export default function Coaching() {
                   </div>
                   <div className="min-w-0">
                     <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
-                    <p className="text-sm text-muted-foreground">Experience premium, ordre clair, actions rapides</p>
+                    <p className="text-sm text-muted-foreground">Expérience claire, actions rapides</p>
                   </div>
                 </div>
                 {selectedClub && (
@@ -236,6 +353,53 @@ export default function Coaching() {
                 ))}
               </div>
             </section>
+
+            {athleteClubs.length > 0 && (
+              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+                <h2 className="text-[16px] font-semibold text-foreground">Mon plan coaching</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Tes clubs avec une planification active — touche une ligne pour afficher le club.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {athleteClubs.map((club) => {
+                    const pct = club.total > 0 ? Math.round((club.completed / club.total) * 100) : 0;
+                    return (
+                      <button
+                        key={club.clubId}
+                        type="button"
+                        onClick={() => setSelectedClubId(club.clubId)}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-3 rounded-xl bg-secondary px-3 py-3 text-left transition-colors active:opacity-90",
+                          selectedClubId === club.clubId && "ring-2 ring-primary/35"
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-[15px] font-semibold text-foreground">{club.clubName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {club.completed}/{club.total} séances validées cette semaine
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {club.total > 0 ? (
+                            <Badge
+                              className={cn(
+                                "border-0 text-[11px] px-2 py-0.5",
+                                pct >= 80 && "bg-green-500/15 text-green-600 dark:text-green-400",
+                                pct >= 50 && pct < 80 && "bg-orange-500/15 text-orange-600 dark:text-orange-400",
+                                pct < 50 && "bg-red-500/15 text-red-600 dark:text-red-400"
+                              )}
+                            >
+                              {pct}%
+                            </Badge>
+                          ) : null}
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {selectedClub && (
           <>
@@ -289,7 +453,28 @@ export default function Coaching() {
                   </Button>
                 </div>
               </section>
-            ) : (
+            ) : null}
+
+            {isCoach && (
+              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary">
+                    <Building2 className="h-5 w-5 text-primary" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-[16px] font-semibold text-foreground">Informations du club</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Membres, invitations, rôles coach, groupes d’entraînement et paramètres du club.
+                    </p>
+                    <Button className="mt-3" type="button" variant="secondary" onClick={() => void openClubManagement()}>
+                      Gérer le club
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {!isCoach ? (
               <section className="ios-card border border-border/60 px-ios-2 py-ios-2">
                 <div className="px-2 pb-2 pt-1">
                   <h2 className="text-[16px] font-semibold text-foreground">Mon plan de la semaine</h2>
@@ -297,7 +482,7 @@ export default function Coaching() {
                 </div>
                 <AthleteWeeklyView clubId={selectedClub.id} sessions={thisWeekSessions} onSessionClick={(session) => setSelectedSession(session)} />
               </section>
-            )}
+            ) : null}
 
             {isCoach && (
               <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
@@ -365,6 +550,47 @@ export default function Coaching() {
               />
             </>
           )}
+
+          <Suspense fallback={null}>
+            {clubInfoData && user && (
+              <>
+                <ClubInfoDialog
+                  isOpen={showClubInfo}
+                  onClose={() => {
+                    setShowClubInfo(false);
+                    void refreshCurrentClub();
+                  }}
+                  conversationId={clubInfoData.id}
+                  groupName={clubInfoData.group_name || ""}
+                  groupDescription={clubInfoData.group_description}
+                  groupAvatarUrl={clubInfoData.group_avatar_url}
+                  isAdmin={clubInfoData.created_by === user.id}
+                  clubCode={clubInfoData.club_code || ""}
+                  createdBy={clubInfoData.created_by || ""}
+                  onEditGroup={() => {
+                    setShowClubInfo(false);
+                    setTimeout(() => setShowEditClub(true), 100);
+                  }}
+                />
+                <EditClubDialog
+                  isOpen={showEditClub}
+                  onClose={() => setShowEditClub(false)}
+                  conversationId={clubInfoData.id}
+                  groupName={clubInfoData.group_name || ""}
+                  groupDescription={clubInfoData.group_description}
+                  groupAvatarUrl={clubInfoData.group_avatar_url}
+                  clubCode={clubInfoData.club_code || ""}
+                  createdBy={clubInfoData.created_by || ""}
+                  isAdmin={clubInfoData.created_by === user.id}
+                  onGroupUpdated={() => {
+                    void loadClubs();
+                    void refreshCurrentClub();
+                    setShowEditClub(false);
+                  }}
+                />
+              </>
+            )}
+          </Suspense>
         </>
       )}
     </div>

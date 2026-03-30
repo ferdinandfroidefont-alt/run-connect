@@ -53,7 +53,6 @@ import {
   Smile,
   BarChart3,
   Camera,
-  GraduationCap,
   ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
@@ -96,10 +95,6 @@ const ContactsDialog = lazy(() =>
 const AvatarViewer = lazy(() =>
   import("@/components/AvatarViewer").then((m) => ({ default: m.AvatarViewer }))
 );
-const CoachAccessDialog = lazy(() =>
-  import("@/components/coaching/CoachAccessDialog").then((m) => ({ default: m.CoachAccessDialog }))
-);
-
 interface Profile {
   user_id: string;
   username: string;
@@ -212,9 +207,7 @@ const Messages = () => {
   const [conversationToDelete, setConversationToDelete] = useState<Conversation | null>(null);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
-  const [showCoachAccess, setShowCoachAccess] = useState(false);
   const [showCoachCreate, setShowCoachCreate] = useState(false);
-  const [coachClubId, setCoachClubId] = useState<string | null>(null);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [longPressMessage, setLongPressMessage] = useState<Message | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2644,13 +2637,16 @@ const Messages = () => {
               </button>
               
               <button
-                onClick={() => setShowCoachAccess(true)}
+                type="button"
+                onClick={() => navigate("/search?tab=strava")}
                 className="flex flex-col items-center gap-ios-2 py-ios-3 rounded-ios-md active:bg-secondary transition-colors"
               >
-                <div className="h-10 w-10 rounded-full bg-orange-500 flex items-center justify-center">
-                  <GraduationCap className="h-5 w-5 text-white" />
+                <div className="h-10 w-10 rounded-full bg-[#FC4C02] flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="currentColor" aria-hidden>
+                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L8.443 0 2.335 12.172h4.171" />
+                  </svg>
                 </div>
-                <span className="text-[11px] text-muted-foreground">Coach</span>
+                <span className="text-[11px] text-muted-foreground">Strava</span>
               </button>
 
               <button
@@ -2993,27 +2989,6 @@ const Messages = () => {
             username={selectedAvatarData?.username || "Utilisateur"}
           />
         </Suspense>
-        {/* Coach Access Dialog */}
-        <Suspense fallback={null}>
-          <CoachAccessDialog
-            isOpen={showCoachAccess}
-            onClose={() => setShowCoachAccess(false)}
-            onSelectClub={async (clubId) => {
-              const { data: clubData } = await supabase
-                .from("conversations")
-                .select("*")
-                .eq("id", clubId)
-                .single();
-              if (clubData) {
-                setGroupInfoData(clubData);
-                setShowGroupInfo(true);
-              }
-            }}
-            onCreateClub={() => setShowCreateGroup(true)}
-          />
-        </Suspense>
-
-
       </div>
 
     </>
