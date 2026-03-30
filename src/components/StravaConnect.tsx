@@ -138,7 +138,7 @@ export const StravaConnect = ({ profile, isOwnProfile = false, onProfileUpdate }
   }
 
   return (
-    <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card">
+    <Card className="ios-card w-full min-w-0 overflow-hidden rounded-ios-md border border-border/60 bg-card shadow-[var(--shadow-card)]">
       <CardHeader className="space-y-0 px-4 py-2.5">
         <CardTitle className="flex items-center gap-2 text-[17px]">
           <span className="text-orange-600">🏃</span>

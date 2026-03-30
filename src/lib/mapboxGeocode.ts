@@ -14,11 +14,21 @@ export async function geocodeForwardMapbox(query: string): Promise<MapCoord | nu
   return d ? { lat: d.lat, lng: d.lng } : null;
 }
 
-export async function geocodeForwardDetail(query: string): Promise<GeocodeDetail | null> {
+/** @param countryCode Codes ISO 3166-1 alpha-2 (ex. FR). Omit pour recherche mondiale (carte accueil). */
+export async function geocodeForwardDetail(
+  query: string,
+  countryCode?: string | null
+): Promise<GeocodeDetail | null> {
   const token = getMapboxAccessToken();
   if (!token || !query.trim()) return null;
   const q = encodeURIComponent(query.trim());
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json?country=FR&limit=1&language=fr&access_token=${encodeURIComponent(token)}`;
+  const countryQs =
+    countryCode === null || countryCode === undefined
+      ? ""
+      : countryCode
+        ? `&country=${encodeURIComponent(countryCode)}`
+        : "";
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json?limit=1&language=fr${countryQs}&access_token=${encodeURIComponent(token)}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const data = (await res.json()) as {

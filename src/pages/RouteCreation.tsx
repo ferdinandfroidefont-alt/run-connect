@@ -41,41 +41,6 @@ interface EditRouteData {
 /** Réduit le bruit des petites oscillations du MNE (m). */
 const ELEV_NOISE_THRESHOLD_M = 2;
 
-/** Diagnostic carte (retirer ou passer à false avant release). */
-const ROUTE_MAP_DEBUG = import.meta.env.DEV;
-
-type RouteMapDebugInfo = {
-  token: 'ok' | 'missing';
-  containerRef: 'present' | 'absent';
-  w: number;
-  h: number;
-  childCount: number;
-  hasCanvas: boolean;
-  initStart: boolean;
-  tokenCheck: boolean;
-  mapCreated: boolean;
-  styleLoad: boolean;
-  load: boolean;
-  idle: boolean;
-  error: string | null;
-};
-
-const emptyRouteMapDebug = (): RouteMapDebugInfo => ({
-  token: 'missing',
-  containerRef: 'absent',
-  w: 0,
-  h: 0,
-  childCount: 0,
-  hasCanvas: false,
-  initStart: false,
-  tokenCheck: false,
-  mapCreated: false,
-  styleLoad: false,
-  load: false,
-  idle: false,
-  error: null,
-});
-
 export const RouteCreation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -114,7 +79,6 @@ export const RouteCreation = () => {
     }>
   >([]);
   const [canRedo, setCanRedo] = useState(false);
-  const [routeMapDebug, setRouteMapDebug] = useState<RouteMapDebugInfo>(emptyRouteMapDebug);
 
   const isManualModeRef = useRef(false);
 
@@ -210,57 +174,9 @@ export const RouteCreation = () => {
   };
 
   useEffect(() => {
-    if (!ROUTE_MAP_DEBUG) return;
-
-    const tick = () => {
-      const el = mapContainer.current;
-      if (!el) {
-        setRouteMapDebug((d) => ({
-          ...d,
-          containerRef: 'absent',
-          w: 0,
-          h: 0,
-          childCount: 0,
-          hasCanvas: false,
-        }));
-        return;
-      }
-      const r = el.getBoundingClientRect();
-      const hasCanvas = el.querySelector('canvas') !== null;
-      setRouteMapDebug((d) => ({
-        ...d,
-        containerRef: 'present',
-        w: Math.round(r.width),
-        h: Math.round(r.height),
-        childCount: el.childNodes.length,
-        hasCanvas,
-      }));
-    };
-
-    tick();
-    const id = window.setInterval(tick, 400);
-    const ro = new ResizeObserver(tick);
-    if (mapContainer.current) ro.observe(mapContainer.current);
-    return () => {
-      window.clearInterval(id);
-      ro.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
     const initializeMap = () => {
-      if (ROUTE_MAP_DEBUG) {
-        setRouteMapDebug((d) => ({ ...d, initStart: true }));
-      }
       try {
         const tokenOk = !!getMapboxAccessToken();
-        if (ROUTE_MAP_DEBUG) {
-          setRouteMapDebug((d) => ({
-            ...d,
-            token: tokenOk ? 'ok' : 'missing',
-            tokenCheck: true,
-          }));
-        }
         if (!tokenOk) {
           setMapError(true);
           toast.error('Carte : configurez VITE_MAPBOX_ACCESS_TOKEN');
@@ -274,19 +190,6 @@ export const RouteCreation = () => {
           interactive: true,
         });
         map.current = m;
-
-        if (ROUTE_MAP_DEBUG) {
-          setRouteMapDebug((d) => ({ ...d, mapCreated: true }));
-          m.on('style.load', () => setRouteMapDebug((d) => ({ ...d, styleLoad: true })));
-          m.on('load', () => setRouteMapDebug((d) => ({ ...d, load: true })));
-          m.on('idle', () => setRouteMapDebug((d) => ({ ...d, idle: true })));
-          m.on('error', (e) =>
-            setRouteMapDebug((d) => ({
-              ...d,
-              error: e?.error?.message ?? String(e?.type ?? 'map error'),
-            })),
-          );
-        }
 
         const ro = new ResizeObserver(() => {
           map.current?.resize();
@@ -322,12 +225,6 @@ export const RouteCreation = () => {
         };
       } catch (error) {
         console.error('Erreur lors du chargement de la carte:', error);
-        if (ROUTE_MAP_DEBUG) {
-          setRouteMapDebug((d) => ({
-            ...d,
-            error: error instanceof Error ? error.message : String(error),
-          }));
-        }
         setMapError(true);
         toast.error('Erreur lors du chargement de la carte');
       }
@@ -717,8 +614,6 @@ export const RouteCreation = () => {
 
   addWaypointRef.current = addWaypoint;
 
-  const debugStep = (ok: boolean) => (ok ? '✓' : '…');
-
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
       <div className="relative z-20 shrink-0 bg-background/95 backdrop-blur-md border-b border-border/30 pt-[var(--safe-area-top)]">
@@ -758,53 +653,11 @@ export const RouteCreation = () => {
       </div>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        {/* Calque teinté : visible si la zone carte a une taille mais la carte ne peint pas encore. */}
-        <div
-          className="pointer-events-none absolute inset-0 z-0 bg-cyan-400/20"
-          aria-hidden
-        />
         <div
           ref={mapContainer}
           className="relative z-[1] h-full min-h-0 w-full min-w-0"
           data-tutorial="tutorial-route-creation-map"
         />
-
-        {ROUTE_MAP_DEBUG && (
-          <div className="pointer-events-none absolute right-1 top-1 z-[200] max-w-[min(92vw,20rem)] rounded-md bg-black/80 px-2 py-1.5 font-mono text-[10px] leading-snug text-white shadow-lg">
-            <div className="font-semibold text-cyan-300">Map debug (dev)</div>
-            <div>token: {routeMapDebug.token}</div>
-            <div>
-              container: {routeMapDebug.containerRef} ({routeMapDebug.w}×{routeMapDebug.h}
-              )
-            </div>
-            <div>
-              DOM children: {routeMapDebug.childCount} · canvas: {routeMapDebug.hasCanvas ? 'yes' : 'no'}
-            </div>
-            <div className="mt-1 border-t border-white/20 pt-1">
-              <div>
-                {debugStep(routeMapDebug.initStart)} init start
-              </div>
-              <div>
-                {debugStep(routeMapDebug.tokenCheck)} token check
-              </div>
-              <div>
-                {debugStep(routeMapDebug.mapCreated)} map created
-              </div>
-              <div>
-                {debugStep(routeMapDebug.styleLoad)} style.load
-              </div>
-              <div>
-                {debugStep(routeMapDebug.load)} load
-              </div>
-              <div>
-                {debugStep(routeMapDebug.idle)} idle
-              </div>
-              <div className={routeMapDebug.error ? 'text-red-300' : ''}>
-                {routeMapDebug.error ? `✗ ${routeMapDebug.error}` : '— error (none)'}
-              </div>
-            </div>
-          </div>
-        )}
 
       {!isMapLoaded && !mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-secondary/90 z-[5]">

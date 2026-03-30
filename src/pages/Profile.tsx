@@ -781,32 +781,33 @@ const Profile = () => {
         )}
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
-            <IOSListGroup flush className="mb-0">
+          <IOSListGroup
+            header="RACCOURCIS"
+            className="ios-card mb-0 w-full min-w-0 border border-border/60 shadow-[var(--shadow-card)]"
+          >
+            <IOSListItem
+              icon={Route}
+              iconBgColor="bg-teal-500"
+              iconColor="text-white"
+              title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
+              onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
+              showSeparator={!isViewingOtherUser}
+            />
+            {!isViewingOtherUser && (
               <IOSListItem
-                icon={Route}
-                iconBgColor="bg-primary/80"
-                iconColor="text-primary-foreground"
-                title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
-                onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
-                showSeparator={!isViewingOtherUser}
+                icon={MapPin}
+                iconBgColor="bg-purple-500"
+                iconColor="text-white"
+                title="Créer un parcours"
+                onClick={() => navigate('/route-creation')}
+                showSeparator={false}
               />
-              {!isViewingOtherUser && (
-                <IOSListItem
-                  icon={MapPin}
-                  iconBgColor="bg-accent/80"
-                  iconColor="text-accent-foreground"
-                  title="Créer un parcours"
-                  onClick={() => navigate('/route-creation')}
-                  showSeparator={false}
-                />
-              )}
-            </IOSListGroup>
-          </div>
+            )}
+          </IOSListGroup>
         </div>
 
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2.5">
-          <Collapsible className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+          <Collapsible className="ios-card mb-0 w-full min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
               <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
                 Succès & Records

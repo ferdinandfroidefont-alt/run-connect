@@ -394,52 +394,51 @@ html, body {
     height: 44px;
     min-height: 44px;
     max-height: 44px;
-    /* Fond clair légèrement bleuté, translucide */
-    background: rgba(244, 245, 248, 0.68);
-    border: 1px solid rgba(15, 23, 42, 0.05);
-    backdrop-filter: blur(22px) saturate(1.45);
-    -webkit-backdrop-filter: blur(22px) saturate(1.45);
+    /* Gris très légèrement bleuté, doux, translucide (iOS) */
+    background: rgba(236, 241, 247, 0.76);
+    border: 1px solid rgba(30, 58, 95, 0.06);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.03),
-      0 6px 18px -8px rgba(15, 23, 42, 0.11),
-      0 2px 6px -3px rgba(15, 23, 42, 0.06);
+      0 1px 2px rgba(30, 58, 95, 0.04),
+      0 6px 20px -10px rgba(30, 58, 95, 0.1),
+      0 2px 6px -3px rgba(30, 41, 59, 0.05);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(15, 23, 42, 0.08);
-    background: rgba(244, 245, 248, 0.8);
+    border-color: rgba(30, 58, 95, 0.1);
+    background: rgba(236, 241, 247, 0.88);
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.04),
-      0 8px 24px -8px rgba(15, 23, 42, 0.13),
-      0 2px 8px -3px rgba(15, 23, 42, 0.07);
+      0 1px 2px rgba(30, 58, 95, 0.05),
+      0 8px 26px -10px rgba(30, 58, 95, 0.12),
+      0 2px 8px -3px rgba(30, 41, 59, 0.06);
   }
 
   .dark .home-map-search-glass {
-    background: rgba(38, 40, 44, 0.68);
-    border-color: rgba(255, 255, 255, 0.09);
+    background: rgba(38, 44, 52, 0.72);
+    border-color: rgba(200, 220, 255, 0.1);
     box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.15),
-      0 6px 20px -8px rgba(0, 0, 0, 0.4),
+      0 6px 22px -10px rgba(0, 0, 0, 0.42),
       0 2px 8px -4px rgba(0, 0, 0, 0.22);
   }
 
   .dark .home-map-search-glass:focus-within {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(38, 40, 44, 0.78);
+    border-color: rgba(200, 220, 255, 0.16);
+    background: rgba(42, 48, 58, 0.82);
   }
 
   .home-map-filter-chip {
-    @apply flex h-8 shrink-0 items-center justify-center gap-1.5 px-3 text-[11px] font-semibold tracking-tight transition-[transform,box-shadow] duration-200 active:scale-[0.97] motion-reduce:transition-none;
+    @apply flex h-8 shrink-0 items-center justify-center gap-1.5 px-3 text-[11px] font-semibold tracking-tight text-foreground transition-[transform,box-shadow] duration-200 active:scale-[0.97] motion-reduce:transition-none;
     border-radius: 9999px;
-    color: hsl(var(--foreground));
-    background: rgba(244, 245, 248, 0.72);
-    border: 1px solid rgba(15, 23, 42, 0.05);
-    backdrop-filter: blur(18px) saturate(1.35);
-    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    backdrop-filter: blur(12px) saturate(1.15);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
     box-shadow:
-      0 1px 2px rgba(15, 23, 42, 0.03),
-      0 4px 14px -6px rgba(15, 23, 42, 0.12),
-      0 1px 4px -2px rgba(15, 23, 42, 0.06);
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 4px 14px -6px rgba(0, 0, 0, 0.1),
+      0 1px 4px -2px rgba(0, 0, 0, 0.06);
   }
 
   .home-map-filter-chip-active {
@@ -458,11 +457,11 @@ html, body {
   }
 
   .dark .home-map-filter-chip {
-    background: rgba(44, 44, 48, 0.72);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(55, 55, 57, 0.94);
+    border-color: rgba(255, 255, 255, 0.11);
     box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.18),
-      0 4px 16px -6px rgba(0, 0, 0, 0.42),
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 4px 16px -6px rgba(0, 0, 0, 0.4),
       0 1px 5px -2px rgba(0, 0, 0, 0.22);
   }
 

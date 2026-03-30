@@ -1169,7 +1169,12 @@ export const InteractiveMap = ({
   };
   const tryGeocodeSearchFromInput = async () => {
     const q = filters.search_query.trim();
-    if (!q || !map.current) return;
+    const m = map.current ?? mapboxMap;
+    if (!q || !m) {
+      if (!m && q) toast.info('Carte non prête — réessayez dans un instant.');
+      return;
+    }
+    // Pas de pays imposé : lieux en France et ailleurs + meilleure tolérance des intitulés
     const hit = await geocodeForwardDetail(q);
     if (!hit) {
       toast.info('Lieu introuvable — essayez une autre formulation ou filtrez les séances par mot-clé.');
@@ -1179,7 +1184,7 @@ export const InteractiveMap = ({
       immersive: isImmersiveMode,
       topStackEl: homeMapTopStackRef.current,
     });
-    map.current.easeTo({
+    m.easeTo({
       center: [hit.lng, hit.lat],
       zoom: 15,
       padding,
@@ -1620,11 +1625,15 @@ export const InteractiveMap = ({
           {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
           <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
             <div className="pointer-events-auto relative min-w-0 w-full max-w-full">
-              <div
+              <form
                 className={cn(
                   "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
                   "transition-[box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none"
                 )}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void tryGeocodeSearchFromInput();
+                }}
               >
                 <Search
                   className="h-4 w-4 shrink-0 text-muted-foreground"
@@ -1641,12 +1650,8 @@ export const InteractiveMap = ({
                       search_query: e.target.value,
                     }))
                   }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void tryGeocodeSearchFromInput();
-                    }
-                  }}
+                  enterKeyHint="search"
+                  autoComplete="off"
                   className={cn(
                     "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
                     "shadow-none placeholder:text-muted-foreground/82",
@@ -1655,7 +1660,7 @@ export const InteractiveMap = ({
                   )}
                   aria-label="Rechercher un lieu ou une séance"
                 />
-              </div>
+              </form>
 
               {/* Filtres : carrousel toujours visible sous la recherche */}
               <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-3">
