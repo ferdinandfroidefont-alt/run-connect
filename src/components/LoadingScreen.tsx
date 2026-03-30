@@ -34,8 +34,10 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
+      /**
+       * Ne pas retirer les fonds avant la restauration : course avec `ThemeProvider` au premier rendu
+       * (flash / bande basse non bleue). `restoreChromeAfterRuconnectSplash` réapplique html/body/#root.
+       */
       void restoreAfterSplash();
     };
   }, [onLoadingComplete]);

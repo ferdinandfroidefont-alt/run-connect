@@ -9,7 +9,7 @@ import { ContactsTab } from '@/components/search/ContactsTab';
 import { Input } from '@/components/ui/input';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
-import { applyWebChromeForTheme } from '@/lib/iosStatusBarTheme';
+import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 
 type TabType = 'profiles' | 'clubs' | 'strava' | 'contacts';
 const SettingsDialog = lazy(() =>
@@ -50,23 +50,15 @@ export default function Search() {
     }
   };
 
-  // Désactiver le scroll du body
+  /**
+   * Pas de verrou `body.style.overflow` : seul cas dans l’app ; sur iOS WebKit ça peut perturber
+   * le viewport / les insets avec `position:fixed` + clavier. Le conteneur `fixed inset-0 overflow-hidden`
+   * suffit à isoler le scroll.
+   * À la sortie : même réinitialisation que le Layout pour éviter un état body/html incohérent.
+   */
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
-  // Couleurs iOS Status Bar + WKWebView background
-  useEffect(() => {
-    document.documentElement.style.setProperty('--ios-top-color', '#FFFFFF');
-    document.documentElement.style.backgroundColor = '#FFFFFF';
-    document.body.style.backgroundColor = '#FFFFFF';
-    return () => {
-      document.documentElement.style.removeProperty('--ios-top-color');
-      document.documentElement.style.removeProperty('background-color');
-      document.body.style.removeProperty('background-color');
+      resetBodyInteractionLocks();
     };
   }, []);
 

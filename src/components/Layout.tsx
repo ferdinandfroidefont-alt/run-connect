@@ -63,6 +63,9 @@ export const Layout = ({ children }: LayoutProps) => {
       '--layout-bottom-inset',
       hideBottomNav || isProfileRoute ? '0px' : 'var(--bottom-nav-offset)'
     );
+    return () => {
+      document.documentElement.style.removeProperty('--layout-bottom-inset');
+    };
   }, [hideBottomNav, isProfileRoute]);
   
   // État local pour éviter la boucle infinie RGPD

@@ -30,7 +30,12 @@ const config: CapacitorConfig = {
     appendUserAgent: 'RunConnect/1.3'
   },
   ios: {
-    contentInset: 'automatic',
+    /**
+     * `never` : les insets safe-area viennent uniquement du CSS (`env(safe-area-inset-*)` + tab bar).
+     * `automatic` sur WKWebView + notre barre d’onglets pouvait cumuler deux « bandes » en bas après
+     * certaines pages (ex. Recherche + scroll/clavier).
+     */
+    contentInset: 'never',
     allowsLinkPreview: false,
     scrollEnabled: true,
     preferredContentMode: 'mobile',
