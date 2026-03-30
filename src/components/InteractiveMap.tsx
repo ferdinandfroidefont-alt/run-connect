@@ -20,12 +20,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, PenTool, Crown } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ElevationProfile } from './ElevationProfile';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
@@ -41,6 +40,8 @@ import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
+import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import { insertRouteRecord } from '@/lib/insertRouteRecord';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -252,6 +253,7 @@ export const InteractiveMap = ({
     setOpenCreateRoute,
   } = useAppContext();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
 
   // Track newly created sessions for pulse animation
@@ -275,7 +277,7 @@ export const InteractiveMap = ({
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [currentStyle, setCurrentStyle] = useState('roadmap');
+  const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [previewSession, setPreviewSession] = useState<Session | null>(null);
@@ -412,17 +414,9 @@ export const InteractiveMap = ({
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
 
-  // Check URL parameters for route creation mode
-  const [isRouteCreationMode, setIsRouteCreationMode] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldCreateRoute = urlParams.get('createRoute') === 'true';
-    console.log('🔍 Initial route creation mode from URL:', shouldCreateRoute);
-    return shouldCreateRoute;
-  });
   const routeCoordinates = useRef<MapCoord[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
-  const [showElevationProfile, setShowElevationProfile] = useState(true);
   const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
   const [routeSaving, setRouteSaving] = useState(false);
   /** Stats D+ / D- issues de RouteCreation (localStorage) quand le profil alti n’est pas rejoué sur la carte */
@@ -430,80 +424,65 @@ export const InteractiveMap = ({
   /** Waypoints avec mode (manuel / guidé) — les LatLng sur la carte ne portent pas le mode */
   const pendingWaypointsForSaveRef = useRef<Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }> | null>(null);
 
-  // Handle URL parameter changes for route creation and save
+  // Legacy : ouverture du dialogue de sauvegarde depuis localStorage (?saveRoute=true) — la création se fait sur /route-create
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldCreateRoute = urlParams.get('createRoute') === 'true';
-    const shouldSaveRoute = urlParams.get('saveRoute') === 'true';
-    if (shouldCreateRoute && !isRouteCreationMode) {
-      console.log('🎯 URL parameter detected - activating route creation mode');
-      setIsRouteCreationMode(true);
+    if (searchParams.get('saveRoute') !== 'true') return;
 
-      // Clear the URL parameter after activation
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-      console.log('✅ URL parameter cleared');
-    }
-    if (shouldSaveRoute) {
-      console.log('💾 URL parameter detected - opening route save dialog');
+    const pendingRouteData = localStorage.getItem('pendingRoute');
+    if (pendingRouteData) {
+      try {
+        const routeData = JSON.parse(pendingRouteData);
+        routeCoordinates.current = routeData.coordinates.map((coord: { lat: number; lng: number }) => ({
+          lat: coord.lat,
+          lng: coord.lng,
+        }));
+        setRouteElevations(routeData.elevations || []);
 
-      // Récupérer les données du parcours depuis localStorage
-      const pendingRouteData = localStorage.getItem('pendingRoute');
-      if (pendingRouteData) {
-        try {
-          const routeData = JSON.parse(pendingRouteData);
-          routeCoordinates.current = routeData.coordinates.map((coord: { lat: number; lng: number }) => ({
-            lat: coord.lat,
-            lng: coord.lng,
-          }));
-          setRouteElevations(routeData.elevations || []);
-
-          if (
-            typeof routeData.elevationGain === 'number' &&
-            typeof routeData.elevationLoss === 'number'
-          ) {
-            pendingRouteStatsRef.current = {
-              elevationGain: routeData.elevationGain,
-              elevationLoss: routeData.elevationLoss,
-            };
-          } else {
-            pendingRouteStatsRef.current = null;
-          }
-
-          // Stocker les waypoints si disponibles (évite un reste de ref entre deux imports)
-          if (Array.isArray(routeData.waypoints) && routeData.waypoints.length > 0) {
-            waypoints.current = routeData.waypoints.map((wp: { lat: number; lng: number }) => ({
-              lat: wp.lat,
-              lng: wp.lng,
-            }));
-            pendingWaypointsForSaveRef.current = routeData.waypoints.map((wp: any) => ({
-              lat: wp.lat,
-              lng: wp.lng,
-              mode: wp.mode === 'guided' ? 'guided' : 'manual',
-            }));
-          } else {
-            waypoints.current = [];
-            pendingWaypointsForSaveRef.current = null;
-          }
-
-          // Ouvrir le dialog de sauvegarde
-          setIsRouteDialogOpen(true);
-
-          // Nettoyer localStorage
-          localStorage.removeItem('pendingRoute');
-        } catch (error) {
-          console.error('Erreur lors de la récupération du parcours:', error);
+        if (
+          typeof routeData.elevationGain === 'number' &&
+          typeof routeData.elevationLoss === 'number'
+        ) {
+          pendingRouteStatsRef.current = {
+            elevationGain: routeData.elevationGain,
+            elevationLoss: routeData.elevationLoss,
+          };
+        } else {
           pendingRouteStatsRef.current = null;
+        }
+
+        if (Array.isArray(routeData.waypoints) && routeData.waypoints.length > 0) {
+          waypoints.current = routeData.waypoints.map((wp: { lat: number; lng: number }) => ({
+            lat: wp.lat,
+            lng: wp.lng,
+          }));
+          pendingWaypointsForSaveRef.current = routeData.waypoints.map((wp: { lat: number; lng: number; mode?: string }) => ({
+            lat: wp.lat,
+            lng: wp.lng,
+            mode: wp.mode === 'guided' ? 'guided' : 'manual',
+          }));
+        } else {
+          waypoints.current = [];
           pendingWaypointsForSaveRef.current = null;
         }
-      }
 
-      // Clear the URL parameter after activation
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-      console.log('✅ URL parameter cleared');
+        setIsRouteDialogOpen(true);
+        localStorage.removeItem('pendingRoute');
+      } catch (error) {
+        console.error('Erreur lors de la récupération du parcours:', error);
+        pendingRouteStatsRef.current = null;
+        pendingWaypointsForSaveRef.current = null;
+      }
     }
-  }, [isRouteCreationMode]);
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('saveRoute');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams]);
 
   // Load user profile
   useEffect(() => {
@@ -1184,6 +1163,7 @@ export const InteractiveMap = ({
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
+    persistMapStyleId(style);
     const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
     const m = map.current;
     if (!m) return;
@@ -1331,7 +1311,7 @@ export const InteractiveMap = ({
     };
   };
 
-  const saveRoute = async (routeName: string, routeDescription: string) => {
+  const saveRoute = async (routeName: string, routeDescription: string, isPublic?: boolean) => {
     if (!user) {
       toast.error('Connectez-vous pour enregistrer un itinéraire');
       return false;
@@ -1345,83 +1325,52 @@ export const InteractiveMap = ({
       toast.error('Impossible de calculer les statistiques du parcours');
       return false;
     }
-    try {
-      const nCoord = routeCoordinates.current.length;
-      const elev = routeElevations;
-      const coordinates = routeCoordinates.current.map((coord, index) => {
-        let el = 0;
-        if (elev.length > 0) {
-          if (elev.length === nCoord) {
-            el = elev[index] ?? 0;
-          } else {
-            const t = nCoord <= 1 ? 0 : index / (nCoord - 1);
-            const ePos = t * (elev.length - 1);
-            const a = Math.floor(ePos);
-            const b = Math.min(elev.length - 1, a + 1);
-            const f = ePos - a;
-            el = (elev[a] ?? 0) * (1 - f) + (elev[b] ?? 0) * f;
-          }
-        }
-        return {
-          lat: coord.lat,
-          lng: coord.lng,
-          elevation: Math.round(el),
-        };
-      });
-      
-      const pendingWp = pendingWaypointsForSaveRef.current;
-      const waypointsData =
-        pendingWp && pendingWp.length > 0
-          ? pendingWp
-          : waypoints.current.length > 0
-            ? waypoints.current.map((wp) => ({
-                lat: wp.lat,
-                lng: wp.lng,
-                mode: 'manual' as const,
-              }))
-            : [];
-      
-      const {
-        error
-      } = await supabase.from('routes').insert({
-        name: routeName,
-        description: routeDescription,
-        coordinates: coordinates,
-        waypoints: waypointsData,
-        total_distance: routeStats.totalDistance,
-        total_elevation_gain: routeStats.elevationGain,
-        total_elevation_loss: routeStats.elevationLoss,
-        min_elevation: routeStats.minElevation,
-        max_elevation: routeStats.maxElevation,
-        created_by: user.id
-      });
-      if (error) throw error;
-      pendingRouteStatsRef.current = null;
-      pendingWaypointsForSaveRef.current = null;
-      toast.success('Itinéraire enregistré avec succès !');
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de l\'enregistrement:', error);
-      toast.error("Erreur lors de l'enregistrement de l'itinéraire");
+
+    const pendingWp = pendingWaypointsForSaveRef.current;
+    const waypointsData =
+      pendingWp && pendingWp.length > 0
+        ? pendingWp
+        : waypoints.current.length > 0
+          ? waypoints.current.map((wp) => ({
+              lat: wp.lat,
+              lng: wp.lng,
+              mode: 'manual' as const,
+            }))
+          : [];
+
+    const result = await insertRouteRecord({
+      userId: user.id,
+      name: routeName,
+      description: routeDescription,
+      pathCoords: routeCoordinates.current,
+      elevations: routeElevations,
+      waypoints: waypointsData,
+      isPublic: isPublic ?? false,
+      statsOverride: routeStats,
+    });
+
+    if (!result.ok) {
+      toast.error(result.message);
       return false;
     }
+    pendingRouteStatsRef.current = null;
+    pendingWaypointsForSaveRef.current = null;
+    toast.success('Itinéraire enregistré avec succès !');
+    return true;
   };
-  const finishRouteCreation = () => {
-    if (waypoints.current.length < 2) {
-      toast('Vous devez tracer au moins 2 points pour créer un itinéraire');
-      return;
-    }
-    setIsRouteDialogOpen(true);
-  };
-  const handleSaveRoute = async (routeName: string, routeDescription: string, createSession?: boolean) => {
+  const handleSaveRoute = async (
+    routeName: string,
+    routeDescription: string,
+    createSession?: boolean,
+    isPublic?: boolean,
+  ) => {
     setRouteSaving(true);
-    const success = await saveRoute(routeName, routeDescription);
+    const success = await saveRoute(routeName, routeDescription, isPublic);
     setRouteSaving(false);
     if (success) {
       pendingRouteStatsRef.current = null;
       pendingWaypointsForSaveRef.current = null;
       setIsRouteDialogOpen(false);
-      setIsRouteCreationMode(false);
 
       loadSessions();
       if (createSession) {
@@ -1447,19 +1396,6 @@ export const InteractiveMap = ({
         navigate('/itinerary/my-routes');
       }
     }
-  };
-  const cancelRouteCreation = () => {
-    setIsRouteCreationMode(false);
-
-    setInteractiveRouteLine(map.current, []);
-    routeCoordinates.current = [];
-    waypoints.current = [];
-    setRouteElevations([]);
-
-    markers.current.forEach((m) => {
-      const el = m.getElement();
-      if (el) el.style.display = '';
-    });
   };
   const updateRoutePath = () => {
     if (!map.current) return;
@@ -1507,10 +1443,6 @@ export const InteractiveMap = ({
     }
   };
   const handleCreateSessionAtLocation = (latLng: mapboxgl.LngLat | null) => {
-    if (isRouteCreationMode) {
-      console.log('🚫 Session creation blocked - route creation mode active');
-      return;
-    }
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
@@ -1535,7 +1467,7 @@ export const InteractiveMap = ({
     };
 
     const armLongPress = (lngLat: mapboxgl.LngLat | null | undefined) => {
-      if (!lngLat || isRouteCreationMode) return;
+      if (!lngLat) return;
       if (localStorage.getItem('enableLongPressCreate') !== 'true') return;
       clearTimer();
       touchTimer = setTimeout(() => {
@@ -1571,7 +1503,7 @@ export const InteractiveMap = ({
       m.off('touchmove', cancelPress);
       m.off('dragstart', cancelPress);
     };
-  }, [isMapLoaded, isRouteCreationMode, user]);
+  }, [isMapLoaded, user]);
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-background">
       <div className="relative min-h-0 w-full flex-1">
@@ -2005,35 +1937,6 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Route Creation Mode Banner */}
-      {isRouteCreationMode && <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-blue-600 text-black px-4 py-2 rounded-lg shadow-lg flex items-center gap-3">
-            <span className="text-sm font-medium">
-              Mode création d'itinéraire - Cliquez sur la carte pour créer un parcours qui suit les routes
-            </span>
-            <div className="flex gap-2">
-              <Button size="sm" className="bg-white text-blue-600 hover:bg-gray-100 font-medium" onClick={finishRouteCreation} disabled={waypoints.current.length < 2}>
-                Terminer
-              </Button>
-              <Button size="sm" variant="outline" onClick={cancelRouteCreation}>
-                Annuler
-              </Button>
-            </div>
-          </div>
-        </div>}
-
-      {/* Elevation Profile - Show during route creation */}
-      {isRouteCreationMode && showElevationProfile && <div className="absolute bottom-6 right-6 z-20">
-          <ElevationProfile elevations={routeElevations} routeStats={calculateRouteStats()} />
-        </div>}
-
-      {/* Toggle Elevation Profile Button */}
-      {isRouteCreationMode && <div className="absolute bottom-4 left-20 z-20">
-          <Button variant="outline" size="sm" onClick={() => setShowElevationProfile(!showElevationProfile)} className="bg-white/90 backdrop-blur-sm shadow-lg border-2 hover:bg-white" title={showElevationProfile ? "Masquer le profil d'élévation" : "Afficher le profil d'élévation"}>
-            {showElevationProfile ? "📈 Masquer profil" : "📈 Profil"}
-          </Button>
-        </div>}
-
       {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Classement, Style, Réinitialiser */}
       <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
         <MapIosColoredFab
@@ -2153,7 +2056,15 @@ export const InteractiveMap = ({
       {qrData && <QRShareDialog open={showQRDialog} onOpenChange={setShowQRDialog} profileUrl={qrData.profileUrl} username={qrData.username} displayName={qrData.displayName} avatarUrl={qrData.avatarUrl} referralCode={qrData.referralCode} />}
 
       {/* Route Dialog */}
-      <RouteDialog isOpen={isRouteDialogOpen} onClose={() => setIsRouteDialogOpen(false)} onSave={handleSaveRoute} title="Créer un itinéraire" loading={routeSaving} showCreateSessionOption={true} />
+      <RouteDialog
+        isOpen={isRouteDialogOpen}
+        onClose={() => setIsRouteDialogOpen(false)}
+        onSave={handleSaveRoute}
+        title="Créer un itinéraire"
+        loading={routeSaving}
+        showCreateSessionOption={true}
+        showPublicToggle={true}
+      />
     </div>
   );
 };

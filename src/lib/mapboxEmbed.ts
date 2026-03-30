@@ -1,5 +1,5 @@
 import mapboxgl from "mapbox-gl";
-import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE } from "@/lib/mapboxConfig";
+import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from "@/lib/mapboxConfig";
 import type { MapCoord } from "@/lib/geoUtils";
 
 let accessTokenSet = false;
@@ -25,22 +25,38 @@ export function clientXYToMapCoord(map: mapboxgl.Map, clientX: number, clientY: 
   return { lng: ll.lng, lat: ll.lat };
 }
 
-/** Carte embarquée (prévisualisations, dialogs) — style navigation jour par défaut. */
+/**
+ * Carte embarquée — mêmes réglages de base que la carte Accueil (antialias, pas de copies du monde).
+ * Style par défaut = `roadmap` (streets-v12), comme InteractiveMap au premier rendu.
+ */
 export function createEmbeddedMapboxMap(
   container: HTMLElement,
-  options: { interactive?: boolean; center?: MapCoord; zoom?: number; style?: string } = {},
+  options: {
+    interactive?: boolean;
+    center?: MapCoord;
+    zoom?: number;
+    style?: string;
+    antialias?: boolean;
+    renderWorldCopies?: boolean;
+    pitch?: number;
+  } = {},
 ): mapboxgl.Map {
   ensureMapboxToken();
   const c = options.center ?? { lat: 48.8566, lng: 2.3522 };
+  const styleUrl =
+    options.style ?? MAPBOX_STYLE_BY_UI_ID.roadmap ?? MAPBOX_NAVIGATION_DAY_STYLE;
   return new mapboxgl.Map({
     container,
-    style: options.style ?? MAPBOX_NAVIGATION_DAY_STYLE,
+    style: styleUrl,
     center: [c.lng, c.lat],
     zoom: options.zoom ?? 12,
     interactive: options.interactive ?? false,
     attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,
+    antialias: options.antialias ?? true,
+    renderWorldCopies: options.renderWorldCopies ?? false,
+    pitch: options.pitch ?? 0,
   });
 }
 

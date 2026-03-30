@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-import { ElevationProfile } from '@/components/ElevationProfile';
+import { RouteDialog } from '@/components/RouteDialog';
+import { MapStyleSelector } from '@/components/MapStyleSelector';
+import {
+  RouteElevationPanel,
+  type RouteElevationScrubMeta,
+} from '@/components/route-creation/RouteElevationPanel';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
@@ -18,7 +23,13 @@ import {
   resamplePathEvenlyMapCoords,
   type MapCoord,
 } from '@/lib/geoUtils';
-import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import {
+  getMapboxAccessToken,
+  MAPBOX_NAVIGATION_DAY_STYLE,
+  MAPBOX_STYLE_BY_UI_ID,
+} from '@/lib/mapboxConfig';
+import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 
 interface RouteSegment {
@@ -62,7 +73,10 @@ export const RouteCreation = () => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [routeElevations, setRouteElevations] = useState<number[]>([]);
-  const [showElevationProfile, setShowElevationProfile] = useState(true);
+  const [mapStyleId, setMapStyleId] = useState(() => getStoredMapStyleId());
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [routeSaving, setRouteSaving] = useState(false);
+  const scrubMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
@@ -184,10 +198,13 @@ export const RouteCreation = () => {
         }
         if (!mapContainer.current) return;
 
+        const initialStyle =
+          MAPBOX_STYLE_BY_UI_ID[mapStyleId] ?? MAPBOX_NAVIGATION_DAY_STYLE;
         const m = createEmbeddedMapboxMap(mapContainer.current, {
           center: { lat: 48.8566, lng: 2.3522 },
           zoom: 13,
           interactive: true,
+          style: initialStyle,
         });
         map.current = m;
 
@@ -234,6 +251,8 @@ export const RouteCreation = () => {
 
     return () => {
       disposer?.();
+      scrubMarkerRef.current?.remove();
+      scrubMarkerRef.current = null;
       map.current?.remove();
       map.current = null;
     };
@@ -274,6 +293,57 @@ export const RouteCreation = () => {
     segments.current.forEach((segment) => removeLineLayer(m, segment.layerSourceId, segment.layerId));
     segments.current = [];
   };
+
+  const replayAllSegments = () => {
+    const m = map.current;
+    if (!m || !m.isStyleLoaded()) return;
+    segments.current.forEach((seg) => {
+      setOrUpdateLineLayer(m, seg.layerSourceId, seg.layerId, seg.coordinates, {
+        color: seg.mode === 'guided' ? '#3b82f6' : '#f97316',
+        width: 4,
+      });
+    });
+  };
+
+  const handleMapStyleChange = useCallback((style: string) => {
+    setMapStyleId(style);
+    persistMapStyleId(style);
+    const m = map.current;
+    if (!m) return;
+    const url = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+    m.setStyle(url);
+    m.once('style.load', () => {
+      replayAllSegments();
+    });
+  }, []);
+
+  const clearScrubMarker = () => {
+    scrubMarkerRef.current?.remove();
+    scrubMarkerRef.current = null;
+  };
+
+  const handleElevationScrub = useCallback((meta: RouteElevationScrubMeta | null) => {
+    const m = map.current;
+    if (!m) return;
+    if (!meta) {
+      clearScrubMarker();
+      return;
+    }
+    if (!scrubMarkerRef.current) {
+      const el = document.createElement('div');
+      el.style.width = '14px';
+      el.style.height = '14px';
+      el.style.borderRadius = '9999px';
+      el.style.background = '#2563eb';
+      el.style.border = '2px solid white';
+      el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
+      scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat([meta.lng, meta.lat])
+        .addTo(m);
+    } else {
+      scrubMarkerRef.current.setLngLat([meta.lng, meta.lat]);
+    }
+  }, []);
 
   const createManualSegment = (startPoint: MapCoord, endPoint: MapCoord): RouteSegment => {
     const coordinates = [startPoint, endPoint];
@@ -516,6 +586,7 @@ export const RouteCreation = () => {
     waypoints.current = [];
     clearMarkers();
     clearSegments();
+    clearScrubMarker();
     setRouteElevations([]);
     setElevationChartCoords([]);
     setTotalDistance(0);
@@ -553,10 +624,6 @@ export const RouteCreation = () => {
 
     const allCoordinates = getAllCoordinates();
 
-    const hasManual = segments.current.some((s) => s.mode === 'manual');
-    const hasGuided = segments.current.some((s) => s.mode === 'guided');
-    const routeType = hasManual && hasGuided ? 'hybrid' : hasManual ? 'manual' : 'guided';
-
     const coordinates = allCoordinates.map((coord) => ({
       lat: coord.lat,
       lng: coord.lng,
@@ -588,7 +655,7 @@ export const RouteCreation = () => {
         if (error) throw error;
 
         toast.success('Itinéraire modifié avec succès');
-        navigate('/');
+        navigate('/itinerary/my-routes');
         return;
       } catch (error) {
         console.error('Erreur mise à jour itinéraire:', error);
@@ -597,19 +664,58 @@ export const RouteCreation = () => {
       }
     }
 
-    const routeData = {
-      coordinates,
+    if (!user) {
+      toast.error('Connectez-vous pour enregistrer un itinéraire');
+      return;
+    }
+
+    setSaveDialogOpen(true);
+  };
+
+  const handleSaveRouteDialog = async (
+    name: string,
+    description: string,
+    _createSession?: boolean,
+    isPublic?: boolean,
+  ) => {
+    if (!user) {
+      toast.error('Connectez-vous pour enregistrer un itinéraire');
+      return;
+    }
+    const pathCoords = getAllCoordinates();
+    if (pathCoords.length < 2) {
+      toast.error('Parcours invalide');
+      return;
+    }
+    const waypointsData = waypoints.current.map((wp, index) => {
+      const segmentMode = index < segments.current.length ? segments.current[index]!.mode : 'manual';
+      return {
+        lat: wp.lat,
+        lng: wp.lng,
+        mode: segmentMode,
+      };
+    });
+
+    setRouteSaving(true);
+    const result = await insertRouteRecord({
+      userId: user.id,
+      name,
+      description,
+      pathCoords,
+      elevations: routeElevations,
       waypoints: waypointsData,
-      distance: freshStats.distanceKm,
-      elevationGain: freshStats.elevationGain,
-      elevationLoss: freshStats.elevationLoss,
-      elevations: freshStats.elevations,
-      routeType,
-    };
+      isPublic: isPublic ?? false,
+    });
+    setRouteSaving(false);
 
-    localStorage.setItem('pendingRoute', JSON.stringify(routeData));
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
 
-    navigate('/?saveRoute=true');
+    toast.success('Itinéraire enregistré');
+    setSaveDialogOpen(false);
+    navigate('/itinerary/my-routes');
   };
 
   addWaypointRef.current = addWaypoint;
@@ -748,61 +854,43 @@ export const RouteCreation = () => {
         >
           <Trash2 className="w-4 h-4" />
         </Button>
+
+        <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pointer-events-none pb-4">
-        <div className="pointer-events-auto px-ios-4 w-full flex flex-col gap-ios-2">
-          {totalDistance > 0 && (
-            <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-ios-lg px-ios-4 py-ios-2.5 shadow-lg">
-              <div className="flex flex-wrap items-center justify-center gap-x-ios-4 gap-y-ios-1 text-ios-subheadline">
-                <div className="flex items-center gap-ios-1">
-                  <span className="text-muted-foreground">📏</span>
-                  <span className="font-semibold text-foreground">{formatKm(totalDistance)}</span>
-                </div>
-                <div className="hidden sm:block w-px h-4 bg-border" />
-                <div className="flex items-center gap-ios-1">
-                  <span className="text-green-500">⬆️</span>
-                  <span className="font-semibold text-foreground">D+ {totalElevationGain}m</span>
-                </div>
-                <div className="hidden sm:block w-px h-4 bg-border" />
-                <div className="flex items-center gap-ios-1">
-                  <span className="text-red-500">⬇️</span>
-                  <span className="font-semibold text-foreground">D- {totalElevationLoss}m</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {routeElevations.length > 0 && (
-            <div className="bg-background/80 backdrop-blur-md border border-border/50 rounded-lg shadow-lg overflow-hidden">
-              <div
-                className="flex items-center justify-between p-ios-2 cursor-pointer hover:bg-background/90 transition-colors"
-                onClick={() => setShowElevationProfile(!showElevationProfile)}
-              >
-                <span className="text-ios-subheadline font-medium text-foreground">Profil d&apos;élévation</span>
-                {showElevationProfile ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                )}
-              </div>
-
-              {showElevationProfile && (
-                <div className="p-ios-4 pt-0 max-h-[40vh] overflow-y-auto">
-                  <ElevationProfile elevations={routeElevations} coordinates={elevationChartCoords} />
-                </div>
-              )}
-            </div>
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">
+        <div className="pointer-events-auto w-full px-ios-4">
+          {routeElevations.length > 1 && elevationChartCoords.length > 1 && (
+            <RouteElevationPanel
+              elevations={routeElevations}
+              coords={elevationChartCoords}
+              totalDistanceM={Math.max(0, totalDistance * 1000)}
+              elevationGain={totalElevationGain}
+              elevationLoss={totalElevationLoss}
+              formatDistanceKm={formatKm}
+              defaultExpanded={false}
+              onScrub={handleElevationScrub}
+            />
           )}
         </div>
       </div>
 
       {waypointCount === 0 && (
-        <div className="absolute bottom-ios-4 left-1/2 transform -translate-x-1/2 z-10 bg-background/90 backdrop-blur-md border border-border/50 rounded-full px-ios-4 py-ios-2 shadow-lg">
-          <p className="text-ios-subheadline text-foreground text-center">👆 Cliquez sur la carte pour tracer votre parcours</p>
+        <div className="absolute bottom-ios-4 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border/50 bg-background/90 px-ios-4 py-ios-2 shadow-lg backdrop-blur-md">
+          <p className="text-center text-ios-subheadline text-foreground">👆 Cliquez sur la carte pour tracer votre parcours</p>
         </div>
       )}
       </div>
+
+      <RouteDialog
+        isOpen={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        onSave={handleSaveRouteDialog}
+        title="Enregistrer l'itinéraire"
+        loading={routeSaving}
+        showCreateSessionOption={false}
+        showPublicToggle={true}
+      />
     </div>
   );
 };

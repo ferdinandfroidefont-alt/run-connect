@@ -11,12 +11,14 @@ import { ArrowLeft } from "lucide-react";
 interface RouteDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, description: string, createSession?: boolean) => void;
+  onSave: (name: string, description: string, createSession?: boolean, isPublic?: boolean) => void;
   title: string;
   initialName?: string;
   initialDescription?: string;
   loading?: boolean;
   showCreateSessionOption?: boolean;
+  /** Proposer la publication dans le feed / carte (colonne `is_public` sur `routes`). */
+  showPublicToggle?: boolean;
 }
 
 export const RouteDialog = ({ 
@@ -27,7 +29,8 @@ export const RouteDialog = ({
   initialName = "", 
   initialDescription = "",
   loading = false,
-  showCreateSessionOption = false
+  showCreateSessionOption = false,
+  showPublicToggle = false,
 }: RouteDialogProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -36,6 +39,7 @@ export const RouteDialog = ({
     description: initialDescription
   });
   const [createSession, setCreateSession] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,6 +47,7 @@ export const RouteDialog = ({
         name: initialName,
         description: initialDescription
       });
+      setIsPublic(false);
     }
   }, [isOpen, initialName, initialDescription]);
 
@@ -58,12 +63,13 @@ export const RouteDialog = ({
       return;
     }
 
-    onSave(formData.name.trim(), formData.description.trim(), createSession);
+    onSave(formData.name.trim(), formData.description.trim(), createSession, showPublicToggle ? isPublic : undefined);
   };
 
   const handleClose = () => {
     setFormData({ name: "", description: "" });
     setCreateSession(false);
+    setIsPublic(false);
     onClose();
   };
 
@@ -114,6 +120,21 @@ export const RouteDialog = ({
               maxLength={500}
             />
           </div>
+
+          {showPublicToggle && (
+            <div className="flex items-center space-x-2 rounded-lg border border-border/60 bg-secondary/40 p-3">
+              <input
+                type="checkbox"
+                id="route-public"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="route-public" className="text-sm leading-snug">
+                Rendre cet itinéraire public (visible par les autres utilisateurs dans le feed itinéraire)
+              </Label>
+            </div>
+          )}
 
           {showCreateSessionOption && (
             <div className="flex items-center space-x-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
