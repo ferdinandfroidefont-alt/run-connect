@@ -38,7 +38,7 @@ import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_I
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters } from '@/lib/geoUtils';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
-import { geocodeForwardDetail } from '@/lib/mapboxGeocode';
+import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 
@@ -301,6 +301,10 @@ export const InteractiveMap = ({
     avatar_url: string | null;
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  /** Incrémenté à chaque `createMarkers` pour ignorer les invocations async obsolètes (courses au clavier). */
+  const markersRunIdRef = useRef(0);
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeocodeSearchRow[]>([]);
+  const [placeSuggestLoading, setPlaceSuggestLoading] = useState(false);
   /** Bloc header + recherche + carrousel filtres (mesure padding carte). */
   const homeMapTopStackRef = useRef<HTMLDivElement>(null);
   const homeMapFiltersRef = useRef<HTMLDivElement>(null);
@@ -678,17 +682,24 @@ export const InteractiveMap = ({
   // Create map markers for sessions
   const createMarkers = async () => {
     if (!map.current) return;
+    const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
     markers.current.forEach((marker) => marker.remove());
     sessionPolylines.current = [];
     markers.current = [];
 
+    const q = (filters.search_query ?? '').trim().toLowerCase();
+
     // Filter sessions based on current filters
     const filteredSessions = sessions.filter(session => {
       const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
-      const matchesSearch = !filters.search_query || session.title.toLowerCase().includes(filters.search_query.toLowerCase()) || session.location_name.toLowerCase().includes(filters.search_query.toLowerCase());
+      const matchesSearch =
+        !q ||
+        (session.title ?? '').toLowerCase().includes(q) ||
+        (session.location_name ?? '').toLowerCase().includes(q) ||
+        (session.description ?? '').toLowerCase().includes(q);
       
       // Time slot filter
       let matchesTimeSlot = true;
@@ -723,6 +734,7 @@ export const InteractiveMap = ({
     // Create markers for filtered sessions with error handling
     const markerPromises = filteredSessions.map(async (session, index) => {
       try {
+        if (runId !== markersRunIdRef.current) return null;
         // Ensure session has valid data
         if (!session.location_lat || !session.location_lng || !session.profiles) {
           console.warn(`Session ${session.id} missing required data:`, {
@@ -733,6 +745,7 @@ export const InteractiveMap = ({
           return null;
         }
         const markerIcon = await createCustomMarker(session);
+        if (runId !== markersRunIdRef.current) return null;
         const isNewSession = newSessionIds.has(session.id);
         
         // Check if session is imminent (starts in less than 2 hours)
@@ -766,6 +779,7 @@ export const InteractiveMap = ({
         return marker;
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
+        if (runId !== markersRunIdRef.current) return null;
 
         try {
           const wrap = document.createElement('div');
@@ -793,6 +807,7 @@ export const InteractiveMap = ({
 
     // Wait for all markers to be created and add successful ones
     const createdMarkers = await Promise.all(markerPromises);
+    if (runId !== markersRunIdRef.current) return;
     const validMarkers = createdMarkers.filter(marker => marker !== null);
     markers.current = validMarkers;
     console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
@@ -960,6 +975,37 @@ export const InteractiveMap = ({
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
   }, [sessions, filters, isMapLoaded, newSessionIds]);
+
+  /** Suggestions de lieux Mapbox pendant la saisie (monde entier, sans restriction pays). */
+  useEffect(() => {
+    const raw = filters.search_query.trim();
+    if (raw.length < 2) {
+      setPlaceSuggestions([]);
+      setPlaceSuggestLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPlaceSuggestLoading(true);
+    const t = window.setTimeout(() => {
+      void geocodeSearchMapbox(raw, 5, null)
+        .then((rows) => {
+          if (cancelled) return;
+          setPlaceSuggestions(rows);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setPlaceSuggestions([]);
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setPlaceSuggestLoading(false);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [filters.search_query]);
 
   useEffect(() => {
     if (!isMapLoaded || !map.current || !isRouteDialogOpen) return;
@@ -1170,6 +1216,7 @@ export const InteractiveMap = ({
   const tryGeocodeSearchFromInput = async () => {
     const q = filters.search_query.trim();
     const m = map.current ?? mapboxMap;
+    setPlaceSuggestions([]);
     if (!q || !m) {
       if (!m && q) toast.info('Carte non prête — réessayez dans un instant.');
       return;
@@ -1192,6 +1239,30 @@ export const InteractiveMap = ({
       essential: true,
     });
     setFilters((prev) => ({ ...prev, search_query: hit.placeName }));
+  };
+
+  const applyPlaceSuggestion = (row: GeocodeSearchRow) => {
+    const m = map.current ?? mapboxMap;
+    if (!m) {
+      toast.info('Carte non prête — réessayez dans un instant.');
+      return;
+    }
+    setPlaceSuggestions([]);
+    setPlaceSuggestLoading(false);
+    const { lat, lng } = row.geometry.location;
+    const label = row.formatted_address || `${lat},${lng}`;
+    setFilters((prev) => ({ ...prev, search_query: label }));
+    const padding = computeHomeMapViewportPadding({
+      immersive: isImmersiveMode,
+      topStackEl: homeMapTopStackRef.current,
+    });
+    m.easeTo({
+      center: [lng, lat],
+      zoom: 14,
+      padding,
+      duration: 1000,
+      essential: true,
+    });
   };
 
   const handleCreateRoute = () => {
@@ -1623,11 +1694,11 @@ export const InteractiveMap = ({
 
           {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
           <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
-            <div className="pointer-events-auto relative min-w-0 w-full max-w-full">
+            <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
               <form
                 className={cn(
                   "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
-                  "transition-[box-shadow,border-color] duration-200 ease-out motion-reduce:transition-none"
+                  "transition-[box-shadow,border-color,background-color] duration-200 ease-out motion-reduce:transition-none"
                 )}
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1635,8 +1706,8 @@ export const InteractiveMap = ({
                 }}
               >
                 <Search
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
-                  strokeWidth={2.05}
+                  className="h-4 w-4 shrink-0 text-muted-foreground/55"
+                  strokeWidth={2}
                   aria-hidden
                 />
                 <Input
@@ -1651,15 +1722,54 @@ export const InteractiveMap = ({
                   }
                   enterKeyHint="search"
                   autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   className={cn(
-                    "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground",
-                    "shadow-none placeholder:text-muted-foreground/82",
+                    "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground/88",
+                    "shadow-none placeholder:text-muted-foreground/48",
                     "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
                     "focus-visible:ring-0 focus-visible:ring-offset-0"
                   )}
                   aria-label="Rechercher un lieu ou une séance"
+                  aria-autocomplete="list"
+                  aria-controls="home-map-search-suggestions"
+                  aria-expanded={placeSuggestions.length > 0 || placeSuggestLoading}
                 />
               </form>
+
+              {(placeSuggestLoading || placeSuggestions.length > 0) && (
+                <div
+                  id="home-map-search-suggestions"
+                  role="listbox"
+                  aria-label="Suggestions de lieux"
+                  className={cn(
+                    "absolute left-0 right-0 top-[calc(100%+6px)] z-[40] max-h-[min(42vh,18rem)] overflow-y-auto overflow-x-hidden rounded-2xl",
+                    "border border-black/[0.05] bg-[rgba(252,252,252,0.94)] shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)] backdrop-blur-md dark:border-white/[0.08] dark:bg-[rgba(28,28,30,0.94)]",
+                    "[-webkit-overflow-scrolling:touch]"
+                  )}
+                >
+                  {placeSuggestLoading && placeSuggestions.length === 0 ? (
+                    <div className="px-3 py-3 text-[13px] text-muted-foreground/75">Recherche…</div>
+                  ) : (
+                    placeSuggestions.map((row, i) => (
+                      <button
+                        key={`${row.formatted_address}-${i}`}
+                        type="button"
+                        role="option"
+                        className={cn(
+                          "flex w-full min-w-0 items-start gap-2 border-0 px-3 py-2.5 text-left text-[15px] leading-snug outline-none",
+                          "text-foreground/90 transition-colors active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                        )}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyPlaceSuggestion(row)}
+                      >
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50" aria-hidden />
+                        <span className="min-w-0 truncate">{row.formatted_address}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
 
               {/* Filtres : carrousel toujours visible sous la recherche */}
               <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-3">

@@ -45,12 +45,23 @@ export async function geocodeForwardDetail(
   return { lng: c[0]!, lat: c[1]!, placeName };
 }
 
-/** Plusieurs résultats pour l’autocomplétion de lieu (LocationStep). */
-export async function geocodeSearchMapbox(query: string, limit = 5): Promise<GeocodeSearchRow[]> {
+/**
+ * Plusieurs résultats pour l’autocomplétion de lieu.
+ * @param countryRestrict `undefined` → défaut FR (comportement historique). `null` → pas de restriction pays (carte accueil).
+ */
+export async function geocodeSearchMapbox(
+  query: string,
+  limit = 5,
+  countryRestrict: string | null | undefined = 'FR'
+): Promise<GeocodeSearchRow[]> {
   const token = getMapboxAccessToken();
   if (!token || !query.trim()) return [];
   const q = encodeURIComponent(query.trim());
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json?country=FR&limit=${limit}&language=fr&access_token=${encodeURIComponent(token)}`;
+  const countryQs =
+    countryRestrict === null || countryRestrict === ''
+      ? ''
+      : `&country=${encodeURIComponent(countryRestrict)}`;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json?limit=${limit}&language=fr${countryQs}&access_token=${encodeURIComponent(token)}`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = (await res.json()) as {
