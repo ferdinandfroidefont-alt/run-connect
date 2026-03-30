@@ -1619,12 +1619,11 @@ export const InteractiveMap = ({
           <header
             className={cn(
               "pointer-events-auto relative bg-white dark:bg-background",
-              /* Prolonge le fond blanc sous le header (~moitié de la barre de recherche) sans bouger la recherche : la loupe reste en place grâce au -mt du bloc suivant. */
+              /* Prolonge le fond blanc sous le header — pas de border-b sur la rangée : évite une couture visuelle avec ce bloc. */
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-background",
             )}
           >
-            {/* Bordure uniquement sous la rangée titre / avatar — pas sous la zone « fusion » avec la recherche */}
-            <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 border-b border-black/[0.06] px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] dark:border-white/[0.08] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
+            <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
@@ -1701,84 +1700,90 @@ export const InteractiveMap = ({
           {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
           <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
             <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
-              <form
-                className={cn(
-                  "home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
-                  "transition-[box-shadow,border-color,background-color] duration-200 ease-out motion-reduce:transition-none"
-                )}
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void tryGeocodeSearchFromInput();
-                }}
-              >
-                <Search
-                  className="h-4 w-4 shrink-0 text-muted-foreground/55"
-                  strokeWidth={2}
-                  aria-hidden
-                />
-                <Input
-                  ref={searchInputRef}
-                  placeholder="Rechercher un lieu ou une séance…"
-                  value={filters.search_query}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      search_query: e.target.value,
-                    }))
-                  }
-                  enterKeyHint="search"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
+              {/*
+                Ancêtre positionné limité à la barre de recherche + liste : sinon top-[100%] du dropdown
+                se calcule sur toute la colonne (recherche + filtres) et le panneau se mélange aux filtres.
+              */}
+              <div className="relative z-[45] min-w-0 isolate">
+                <form
                   className={cn(
-                    "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground/88",
-                    "shadow-none placeholder:text-muted-foreground/48",
-                    "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
-                    "focus-visible:ring-0 focus-visible:ring-offset-0"
+                    "relative z-0 home-map-search-glass flex items-center gap-2 rounded-2xl px-2.5",
+                    "transition-[box-shadow,border-color,background-color] duration-200 ease-out motion-reduce:transition-none"
                   )}
-                  aria-label="Rechercher un lieu ou une séance"
-                  aria-autocomplete="list"
-                  aria-controls="home-map-search-suggestions"
-                  aria-expanded={placeSuggestions.length > 0 || placeSuggestLoading}
-                />
-              </form>
-
-              {(placeSuggestLoading || placeSuggestions.length > 0) && (
-                <div
-                  id="home-map-search-suggestions"
-                  role="listbox"
-                  aria-label="Suggestions de lieux"
-                  className={cn(
-                    "absolute left-0 right-0 top-[calc(100%+6px)] z-[40] max-h-[min(42vh,18rem)] overflow-y-auto overflow-x-hidden rounded-2xl",
-                    "border border-black/[0.05] bg-[rgba(252,252,252,0.94)] shadow-[0_8px_28px_-8px_rgba(0,0,0,0.12)] backdrop-blur-md dark:border-white/[0.08] dark:bg-[rgba(28,28,30,0.94)]",
-                    "[-webkit-overflow-scrolling:touch]"
-                  )}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void tryGeocodeSearchFromInput();
+                  }}
                 >
-                  {placeSuggestLoading && placeSuggestions.length === 0 ? (
-                    <div className="px-3 py-3 text-[13px] text-muted-foreground/75">Recherche…</div>
-                  ) : (
-                    placeSuggestions.map((row, i) => (
-                      <button
-                        key={`${row.formatted_address}-${i}`}
-                        type="button"
-                        role="option"
-                        className={cn(
-                          "flex w-full min-w-0 items-start gap-2 border-0 px-3 py-2.5 text-left text-[15px] leading-snug outline-none",
-                          "text-foreground/90 transition-colors active:bg-black/[0.04] dark:active:bg-white/[0.06]"
-                        )}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => applyPlaceSuggestion(row)}
-                      >
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50" aria-hidden />
-                        <span className="min-w-0 truncate">{row.formatted_address}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+                  <Search
+                    className="h-4 w-4 shrink-0 text-muted-foreground/55"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Rechercher un lieu ou une séance…"
+                    value={filters.search_query}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        search_query: e.target.value,
+                      }))
+                    }
+                    enterKeyHint="search"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className={cn(
+                      "h-9 min-w-0 flex-1 border-0 bg-transparent py-0 text-[15px] leading-snug tracking-tight text-foreground/88",
+                      "shadow-none placeholder:text-muted-foreground/48",
+                      "focus:border-0 focus:bg-transparent focus:outline-none focus:ring-0 focus:ring-offset-0",
+                      "focus-visible:ring-0 focus-visible:ring-offset-0"
+                    )}
+                    aria-label="Rechercher un lieu ou une séance"
+                    aria-autocomplete="list"
+                    aria-controls="home-map-search-suggestions"
+                    aria-expanded={placeSuggestions.length > 0 || placeSuggestLoading}
+                  />
+                </form>
 
-              {/* Filtres : carrousel toujours visible sous la recherche */}
-              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-3">
+                {(placeSuggestLoading || placeSuggestions.length > 0) && (
+                  <div
+                    id="home-map-search-suggestions"
+                    role="listbox"
+                    aria-label="Suggestions de lieux"
+                    className={cn(
+                      "absolute left-0 right-0 top-full z-[60] mt-1.5 max-h-[min(42vh,18rem)] overflow-y-auto overflow-x-hidden rounded-2xl",
+                      "border border-black/[0.08] bg-[rgba(252,252,252,0.98)] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.22)] backdrop-blur-md ring-1 ring-black/[0.04] dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.98)] dark:ring-white/[0.06]",
+                      "[-webkit-overflow-scrolling:touch]"
+                    )}
+                  >
+                    {placeSuggestLoading && placeSuggestions.length === 0 ? (
+                      <div className="px-3 py-3 text-[13px] text-muted-foreground/75">Recherche…</div>
+                    ) : (
+                      placeSuggestions.map((row, i) => (
+                        <button
+                          key={`${row.formatted_address}-${i}`}
+                          type="button"
+                          role="option"
+                          className={cn(
+                            "flex w-full min-w-0 items-start gap-2 border-0 px-3 py-2.5 text-left text-[15px] leading-snug outline-none",
+                            "text-foreground/90 transition-colors active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                          )}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyPlaceSuggestion(row)}
+                        >
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50" aria-hidden />
+                          <span className="min-w-0 truncate">{row.formatted_address}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Filtres : sous le bloc recherche — z-index plus bas que le panneau suggestions */}
+              <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
