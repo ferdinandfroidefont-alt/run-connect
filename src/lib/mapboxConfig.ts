@@ -10,6 +10,9 @@ export const MAPBOX_STYLE_BY_UI_ID: Record<string, string> = {
   satellite: "mapbox://styles/mapbox/satellite-streets-v12",
   hybrid: "mapbox://styles/mapbox/satellite-streets-v12",
   terrain: "mapbox://styles/mapbox/outdoors-v12",
+  dark: "mapbox://styles/mapbox/dark-v11",
+  /** Bâtiments 3D et rendu type « Mapbox Standard » (GL JS 3.x). */
+  standard3d: "mapbox://styles/mapbox/standard",
   /** Ancien thème custom Google — approx. clair */
   custom: "mapbox://styles/mapbox/light-v11",
 };

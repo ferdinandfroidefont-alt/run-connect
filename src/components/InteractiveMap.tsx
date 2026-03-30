@@ -1157,7 +1157,33 @@ export const InteractiveMap = ({
   const handleStyleChange = (style: string) => {
     setCurrentStyle(style);
     const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
-    map.current?.setStyle(nextStyle);
+    const m = map.current;
+    if (!m) return;
+    m.setStyle(nextStyle);
+    m.once('style.load', () => {
+      if (routeCoordinates.current.length >= 2) {
+        setInteractiveRouteLine(m, routeCoordinates.current);
+      }
+      const pad = computeHomeMapViewportPadding({
+        immersive: isImmersiveMode,
+        topStackEl: homeMapTopStackRef.current,
+      });
+      if (style === 'standard3d') {
+        m.easeTo({
+          pitch: 52,
+          padding: pad,
+          duration: 700,
+          essential: true,
+        });
+      } else {
+        m.easeTo({
+          pitch: 0,
+          padding: pad,
+          duration: 500,
+          essential: true,
+        });
+      }
+    });
   };
   const tryGeocodeSearchFromInput = async () => {
     const q = filters.search_query.trim();
