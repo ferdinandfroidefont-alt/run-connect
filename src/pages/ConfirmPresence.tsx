@@ -39,6 +39,7 @@ export default function ConfirmPresence() {
   const rafRef = useRef<number | null>(null);
   const [focusedCardIndex, setFocusedCardIndex] = useState<number>(0);
 
+  /* Mêmes teintes que les carrés icônes du hub Paramètres (Notifications / Connexions / Aide & Support) */
   const roleCards = useMemo(
     () => [
       {
@@ -46,8 +47,8 @@ export default function ConfirmPresence() {
         title: t('confirmPresence.creator'),
         description: t('confirmPresence.creatorDescription'),
         icon: UserCheck,
-        iconBg: 'bg-primary',
-        iconClass: 'h-[18px] w-[18px] text-primary-foreground',
+        iconBg: 'bg-[#FF3B30]',
+        iconClass: 'h-[18px] w-[18px] text-white',
       },
       {
         role: 'participant' as const,
@@ -62,7 +63,7 @@ export default function ConfirmPresence() {
         title: 'Suivre les participants',
         description: 'Voir en temps réel où se trouvent les autres sur la carte',
         icon: MapPin,
-        iconBg: 'bg-[#34C759]',
+        iconBg: 'bg-[#FF9500]',
         iconClass: 'h-[18px] w-[18px] text-white',
       },
     ],
