@@ -1534,10 +1534,10 @@ export const InteractiveMap = ({
       {!isImmersiveMode && (
         <div
           ref={homeMapTopStackRef}
-          className="pointer-events-none absolute left-0 right-0 top-0 z-[30] pt-[calc(var(--safe-area-top)+8px)]"
+          className="pointer-events-none absolute left-0 right-0 top-0 z-[30] pt-[var(--safe-area-top)]"
         >
           <header className="pointer-events-auto border-b border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-background">
-            <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-2 pt-2 sm:min-h-[3rem] sm:pb-2 sm:pt-2.5 ios-map-header">
+            <div className="relative flex min-h-[3.25rem] items-center justify-between gap-2 px-4 pb-2.5 pt-4 sm:min-h-14 sm:pb-3 sm:pt-5 ios-map-header">
               <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
                 RunConnect
               </h1>
@@ -1611,8 +1611,8 @@ export const InteractiveMap = ({
             </div>
           </header>
 
-          {/* Recherche : chevauche légèrement le bas du header et le haut de la carte */}
-          <div className="pointer-events-none relative z-[35] -mt-[14px] px-4 pb-1.5 sm:-mt-[15px]">
+          {/* Recherche : chevauche le bas du header et le haut de la carte (marge calée sur header haut) */}
+          <div className="pointer-events-none relative z-[35] -mt-[22px] px-4 pb-2 sm:-mt-[23px]">
             <div className="pointer-events-auto relative mx-auto w-full max-w-lg">
               <div
                 className={cn(
@@ -1652,7 +1652,7 @@ export const InteractiveMap = ({
               </div>
 
               {/* Filtres : carrousel toujours visible sous la recherche */}
-              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-1.5">
+              <div ref={homeMapFiltersRef} className="relative z-[35] space-y-2 pt-2.5">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
