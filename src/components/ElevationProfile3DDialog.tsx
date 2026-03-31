@@ -84,17 +84,16 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
       <DialogContent
         fullScreen
         hideCloseButton
-        className="flex h-[100dvh] max-h-[100dvh] min-h-0 w-full flex-col overflow-hidden p-0 bg-black"
+        className="flex h-[100dvh] max-h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-background p-0"
         aria-describedby={undefined}
       >
-        {/* Floating back button — l'overlay flyover gère ensuite les infos de lecture */}
-        <div className="absolute top-0 left-0 z-30 pt-[env(safe-area-inset-top)]">
+        <div className="absolute top-0 left-0 z-40 pt-[env(safe-area-inset-top)]">
           <div className="px-3 py-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="bg-black/40 backdrop-blur-xl border border-white/15 text-white hover:bg-black/60 gap-1.5 rounded-full h-9 px-3"
+              className="h-9 gap-1.5 rounded-full border-border/80 bg-card/90 px-3 shadow-sm backdrop-blur-md"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="text-[13px]">Retour</span>
@@ -102,17 +101,17 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
           </div>
         </div>
 
-        {/* Full-screen 3D view — hauteur explicite évite canvas Mapbox 0×0 (écran noir). */}
-        <div className="relative flex min-h-[50dvh] flex-1 flex-col">
+        {/* flex-1 + min-h-0 : hauteur réelle pour le canvas Mapbox (éviter 0×0). */}
+        <div className="relative flex min-h-0 flex-1 basis-0 flex-col">
           {loading ? (
-            <div className="flex min-h-[50dvh] flex-1 flex-col items-center justify-center gap-4 bg-black">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-secondary/30">
               <div className="relative">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/20 animate-ping" />
+                <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/15 animate-ping" />
               </div>
-              <div className="text-center">
-                <p className="text-[15px] font-medium text-white">Préparation du flyover 3D</p>
-                <p className="text-[13px] text-white/50 mt-1">Chargement du relief et de la caméra immersive…</p>
+              <div className="text-center px-4">
+                <p className="text-[15px] font-medium text-foreground">Préparation du survol 3D</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">Chargement du relief et du tracé…</p>
               </div>
             </div>
           ) : (
@@ -122,7 +121,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               autoPlay={false}
               routeName={routeName}
               routeStats={computedStats}
-              className="min-h-0 w-full flex-1"
+              className="min-h-0 w-full flex-1 rounded-none"
             />
           )}
         </div>

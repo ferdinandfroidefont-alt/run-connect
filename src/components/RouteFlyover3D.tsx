@@ -117,29 +117,35 @@ export function RouteFlyover3D({
     };
 
     const bootScene = () => {
-      if (!mapRef.current) return;
+      const m = mapRef.current;
+      if (!m || mapReadyRef.current) return;
 
-      map.addSource(BASE_SOURCE_ID, {
+      try {
+      m.addSource(BASE_SOURCE_ID, {
         type: 'geojson',
         data: lineStringFeature(playback.flyoverCoordinates),
       });
-      map.addSource(TRAVELED_SOURCE_ID, {
+      m.addSource(TRAVELED_SOURCE_ID, {
         type: 'geojson',
         data: lineStringFeature([playback.frame.currentPosition]),
       });
-      map.addSource(POINT_SOURCE_ID, {
+      m.addSource(POINT_SOURCE_ID, {
         type: 'geojson',
         data: pointFeature(playback.frame.currentPosition),
       });
-      map.addSource(ENDPOINT_SOURCE_ID, {
+      m.addSource(ENDPOINT_SOURCE_ID, {
         type: 'geojson',
         data: multiPointFeature(endpoints),
       });
 
-      map.addLayer({
+      /** Slots requis pour Mapbox Standard (GL v3) — sinon tracé invisible / rendu incorrect. */
+      const slot = 'top' as const;
+
+      m.addLayer({
         id: `${BASE_SOURCE_ID}-shadow`,
         type: 'line',
         source: BASE_SOURCE_ID,
+        slot,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': '#ffffff',
@@ -148,10 +154,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${BASE_SOURCE_ID}-line`,
         type: 'line',
         source: BASE_SOURCE_ID,
+        slot,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': '#7dd3fc',
@@ -160,10 +167,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${TRAVELED_SOURCE_ID}-glow`,
         type: 'line',
         source: TRAVELED_SOURCE_ID,
+        slot,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': '#38bdf8',
@@ -173,10 +181,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${TRAVELED_SOURCE_ID}-line`,
         type: 'line',
         source: TRAVELED_SOURCE_ID,
+        slot,
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': '#f97316',
@@ -185,10 +194,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${ENDPOINT_SOURCE_ID}-halo`,
         type: 'circle',
         source: ENDPOINT_SOURCE_ID,
+        slot,
         paint: {
           'circle-radius': 10,
           'circle-color': '#ffffff',
@@ -196,10 +206,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${ENDPOINT_SOURCE_ID}-dot`,
         type: 'circle',
         source: ENDPOINT_SOURCE_ID,
+        slot,
         paint: {
           'circle-radius': 5.5,
           'circle-color': '#ffffff',
@@ -209,10 +220,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${POINT_SOURCE_ID}-halo`,
         type: 'circle',
         source: POINT_SOURCE_ID,
+        slot,
         paint: {
           'circle-radius': 18,
           'circle-color': '#38bdf8',
@@ -221,10 +233,11 @@ export function RouteFlyover3D({
         },
       });
 
-      map.addLayer({
+      m.addLayer({
         id: `${POINT_SOURCE_ID}-dot`,
         type: 'circle',
         source: POINT_SOURCE_ID,
+        slot,
         paint: {
           'circle-radius': 6,
           'circle-color': '#ffffff',
@@ -240,7 +253,7 @@ export function RouteFlyover3D({
       mapReadyRef.current = true;
 
       scheduleResizePass();
-      map.easeTo({
+      m.easeTo({
         center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
         bearing: initialFrame.bearing,
         pitch: initialFrame.pitch,
@@ -249,6 +262,13 @@ export function RouteFlyover3D({
         essential: true,
         easing: easeOutQuart,
       });
+      } catch (err) {
+        const msg =
+          err instanceof Error && err.message.trim()
+            ? err.message
+            : 'Impossible d’afficher le survol sur la carte 3D.';
+        setMapError(msg);
+      }
     };
 
     map.on('error', (event) => {
@@ -264,10 +284,11 @@ export function RouteFlyover3D({
       map.resize();
     });
 
+    /** Standard (mapbox://styles/mapbox/standard) : attendre style.load, pas load seul. */
     if (map.isStyleLoaded()) {
       bootScene();
     } else {
-      map.once('load', bootScene);
+      map.once('style.load', bootScene);
     }
 
     return () => {
@@ -358,22 +379,21 @@ export function RouteFlyover3D({
   return (
     <div
       className={cn(
-        'relative flex w-full min-h-[min(360px,55dvh)] flex-1 flex-col overflow-hidden rounded-[28px] bg-black',
+        'relative flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] bg-muted/40',
         className,
       )}
     >
-      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#0f172a_50%,#020617_100%)] opacity-80" />
-      <div ref={mapContainerRef} className="absolute inset-0 z-0 min-h-[min(280px,45dvh)] w-full" />
+      <div ref={mapContainerRef} className="absolute inset-0 z-0 min-h-[180px] w-full bg-muted/30" />
       {!sceneReady && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/18">
-          <div className="rounded-3xl border border-white/10 bg-black/30 px-5 py-4 text-center text-white backdrop-blur-xl">
-            <p className="text-[15px] font-medium">Préparation du survol 3D</p>
-            <p className="mt-1 text-[12px] text-white/60">Chargement de la carte, du relief et du tracé…</p>
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/35">
+          <div className="ios-card max-w-[min(100%,20rem)] border border-border/80 bg-card/95 px-5 py-4 text-center shadow-lg backdrop-blur-xl">
+            <p className="text-[15px] font-medium text-foreground">Préparation du survol 3D</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Chargement de la carte Mapbox Standard et du tracé…</p>
           </div>
         </div>
       )}
       {mapError && (
-        <div className="absolute inset-x-4 top-4 z-20 rounded-2xl border border-red-400/25 bg-red-500/14 px-4 py-3 text-sm text-white backdrop-blur-xl">
+        <div className="absolute inset-x-4 top-4 z-20 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive backdrop-blur-xl">
           {mapError}
         </div>
       )}

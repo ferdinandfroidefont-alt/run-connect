@@ -59,16 +59,16 @@ export default function Itinerary3D() {
         <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
           <div className="min-w-0 max-w-full overflow-x-hidden py-4 pb-24">
             <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-4 px-4 ios-shell:px-2.5 sm:max-w-2xl">
-              <section className="overflow-hidden rounded-[26px] border border-black/10 bg-[linear-gradient(145deg,#0f172a_0%,#111827_48%,#1d4ed8_100%)] px-5 py-5 text-white shadow-[0_18px_45px_-22px_rgba(15,23,42,0.75)]">
-                <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.18em] text-white/60">
-                  <Box className="h-4 w-4" />
-                  Flyover immersif
+              <section className="ios-card overflow-hidden border border-border/70 px-5 py-5 shadow-sm">
+                <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <Box className="h-4 w-4 text-primary" />
+                  Survol 3D
                 </div>
-                <h2 className="mt-3 text-[26px] font-semibold leading-tight tracking-tight">
-                  Survolez vos itinéraires comme un drone.
+                <h2 className="mt-3 text-[22px] font-semibold leading-tight tracking-tight text-foreground sm:text-[24px]">
+                  Parcours en vue Mapbox Standard
                 </h2>
-                <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/74">
-                  Relief 3D, caméra inclinée, suivi fluide du tracé et interface minimale pour une lecture plus premium.
+                <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-muted-foreground">
+                  Même style que « 3D » dans la palette carte : bâtiments, caméra inclinée et tracé synchronisé avec la lecture.
                 </p>
               </section>
 
