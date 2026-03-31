@@ -33,8 +33,6 @@ export function RouteFlyoverHud({
 }: RouteFlyoverHudProps) {
   return (
     <>
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-28 bg-gradient-to-b from-background/55 via-background/12 to-transparent" />
-
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top)]">
         <div className="mx-4 mt-3 rounded-[20px] border border-border/70 bg-card/92 px-3.5 py-3 text-foreground shadow-[0_12px_32px_-18px_rgba(0,0,0,0.22)] backdrop-blur-xl dark:shadow-[0_12px_32px_-18px_rgba(0,0,0,0.45)]">
           {routeName && (
@@ -58,8 +56,6 @@ export function RouteFlyoverHud({
           </div>
         </div>
       </div>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-36 bg-gradient-to-t from-background/65 via-background/14 to-transparent" />
 
       <div className="absolute inset-x-0 bottom-0 z-30 px-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
         <div className="rounded-[22px] border border-border/70 bg-card/92 px-4 py-3.5 shadow-[0_12px_32px_-18px_rgba(0,0,0,0.22)] backdrop-blur-xl dark:shadow-[0_12px_32px_-18px_rgba(0,0,0,0.45)]">
