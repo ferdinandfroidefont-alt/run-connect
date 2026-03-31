@@ -35,10 +35,10 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
-import { pathLengthMeters } from '@/lib/geoUtils';
+import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
-import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
+import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
@@ -1263,9 +1263,9 @@ export const InteractiveMap = ({
   const updateElevationProfile = async () => {
     if (routeCoordinates.current.length === 0) return;
     try {
-      const routeLength = routeCoordinates.current.length;
-      const samples = Math.min(512, Math.max(48, Math.min(routeLength * 2, 512)));
-      const sampled = samplePathCoords(routeCoordinates.current, samples);
+      const lenM = pathLengthMeters(routeCoordinates.current);
+      const samples = Math.min(4000, Math.max(64, Math.ceil(lenM / 12)));
+      const sampled = resamplePathEvenlyMapCoords(routeCoordinates.current, samples);
       const elevations = await fetchElevationsForCoords(sampled);
       setRouteElevations(elevations);
     } catch (error) {

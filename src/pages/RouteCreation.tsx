@@ -17,12 +17,13 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { formatDistanceAlongPathMeters } from '@/lib/distanceUnits';
 import { fetchRoutedPathBetweenWaypoints } from '@/lib/mapboxDirections';
-import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
+import { fetchElevationsForCoords } from '@/lib/openElevation';
 import {
   distanceMeters,
   densifyMapCoords,
   pathLengthMeters,
   resamplePathEveryMeters,
+  resamplePathEvenlyMapCoords,
   type MapCoord,
 } from '@/lib/geoUtils';
 import {
@@ -461,13 +462,15 @@ export const RouteCreation = () => {
     const reqId = ++elevationRequestId.current;
     setElevationLoading(true);
 
-    const pathForElevation = densifyMapCoords(allCoordinates, 9);
+    const pathForElevation = densifyMapCoords(allCoordinates, 7);
     const totalPathM = pathLengthMeters(pathForElevation);
-    const stepM = totalPathM > 55_000 ? 14 : totalPathM > 28_000 ? 11 : 8;
+    /** Pas grossier sur lointain : ~7–11 m entre requêtes MNE selon longueur. */
+    const stepM =
+      totalPathM > 90_000 ? 11 : totalPathM > 55_000 ? 10 : totalPathM > 28_000 ? 9 : 7;
     let sampled = resamplePathEveryMeters(pathForElevation, stepM);
-    const MAX_POINTS = 2200;
+    const MAX_POINTS = 4000;
     if (sampled.length > MAX_POINTS) {
-      sampled = samplePathCoords(sampled, MAX_POINTS);
+      sampled = resamplePathEvenlyMapCoords(sampled, MAX_POINTS);
     }
 
     try {

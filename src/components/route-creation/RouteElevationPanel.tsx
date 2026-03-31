@@ -119,6 +119,11 @@ export function RouteElevationPanel({
   const minElev = seriesOk ? Math.min(...elevations) : 0;
   const maxElev = seriesOk ? Math.max(...elevations) : 1;
   const elevSpan = seriesOk ? Math.max(maxElev - minElev, 1) : 1;
+  /** Marge verticale (lecture type GPS) : le relief ne colle pas aux bords du graphe. */
+  const chartYPad = seriesOk ? elevSpan * 0.07 : 0;
+  const chartMinElev = minElev - chartYPad;
+  const chartMaxElev = maxElev + chartYPad;
+  const chartSpan = seriesOk ? Math.max(chartMaxElev - chartMinElev, 0.5) : 1;
 
   const xAtDist = (d: number) => PAD.l + (d / chartTotalM) * innerW;
 
@@ -126,7 +131,7 @@ export function RouteElevationPanel({
     ? elevations
         .map((elev, index) => {
           const x = xAtDist(distCum[index] ?? 0);
-          const y = PAD.t + innerH - ((elev - minElev) / elevSpan) * innerH;
+          const y = PAD.t + innerH - ((elev - chartMinElev) / chartSpan) * innerH;
           return `${x},${y}`;
         })
         .join(' ')
@@ -140,7 +145,7 @@ export function RouteElevationPanel({
   const cursorX = scrubSample != null ? xAtDist(scrubSample.distFromStartM) : null;
   const cursorY =
     scrubSample != null
-      ? PAD.t + innerH - ((scrubSample.elevM - minElev) / elevSpan) * innerH
+      ? PAD.t + innerH - ((scrubSample.elevM - chartMinElev) / chartSpan) * innerH
       : null;
 
   const formatGrade = (g: number) => `${g >= 0 ? '+' : ''}${g.toFixed(2)}%`;

@@ -3,8 +3,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ElevationProfile3D } from './ElevationProfile3D';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
-import { densifyMapCoords, pathLengthMeters, type MapCoord } from '@/lib/geoUtils';
+import { fetchElevationsForCoords } from '@/lib/openElevation';
+import { densifyMapCoords, pathLengthMeters, resamplePathEvenlyMapCoords, type MapCoord } from '@/lib/geoUtils';
 
 interface ElevationProfile3DDialogProps {
   open: boolean;
@@ -42,9 +42,10 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
       setLoading(true);
       try {
         const path: MapCoord[] = coordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
-        const dens = densifyMapCoords(path);
-        const samples = Math.min(512, Math.max(dens.length, 50));
-        const sampled = samplePathCoords(dens, samples);
+        const dens = densifyMapCoords(path, 14);
+        const lenM = pathLengthMeters(dens);
+        const samples = Math.min(4000, Math.max(80, Math.ceil(lenM / 12)));
+        const sampled = resamplePathEvenlyMapCoords(dens, samples);
         const el = await fetchElevationsForCoords(sampled);
         setElevations(el.length > 0 ? el : initialElevations);
       } catch (error) {

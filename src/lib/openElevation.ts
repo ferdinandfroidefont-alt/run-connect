@@ -12,8 +12,8 @@ export function samplePathCoords(points: MapCoord[], max: number): MapCoord[] {
   return out;
 }
 
-/** Open-Meteo : max 100 / requête ; 90 pour rester sous les limites de longueur d’URL (proxies ~2048). */
-const OPEN_METEO_BATCH = 90;
+/** Open-Meteo : jusqu’à 100 points / requête (doc) ; 5 décimales pour limiter la longueur d’URL. */
+const OPEN_METEO_BATCH = 100;
 const OPEN_ELEVATION_BATCH = 80;
 /** Pause entre lots pour limiter 429 / annulation réseau sur longs parcours. */
 const OPEN_METEO_INTER_CHUNK_MS = 100;
@@ -58,8 +58,8 @@ export function smoothElevationSeries(values: number[], halfWindow: number): num
  * https://open-meteo.com/en/docs/elevation-api
  */
 async function fetchOpenMeteoChunk(chunk: MapCoord[]): Promise<number[] | null> {
-  const lat = chunk.map((p) => p.lat.toFixed(6)).join(",");
-  const lng = chunk.map((p) => p.lng.toFixed(6)).join(",");
+  const lat = chunk.map((p) => p.lat.toFixed(5)).join(",");
+  const lng = chunk.map((p) => p.lng.toFixed(5)).join(",");
   const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
 
   for (let attempt = 0; attempt < OPEN_METEO_CHUNK_RETRIES; attempt++) {
@@ -105,7 +105,7 @@ async function fetchOpenMeteoElevations(coords: MapCoord[]): Promise<number[] | 
     if (part == null) return null;
     all.push(...part);
   }
-  return all;
+  return all.length === coords.length ? all : null;
 }
 
 /** Fallback lent : Open-Elevation public (souvent saturé). */
@@ -130,11 +130,11 @@ async function fetchOpenElevationLookup(coords: MapCoord[]): Promise<number[] | 
     if (list.length !== chunk.length) return null;
     all.push(...list);
   }
-  return all;
+  return all.length === coords.length ? all : null;
 }
 
 /**
- * Altitudes (m) alignées sur `sampled` — Open-Meteo en priorité, léger lissage.
+ * Altitudes (m) alignées sur `sampled` — Open-Meteo en priorité, sans lissage (fidélité relief).
  */
 export async function fetchElevationsForCoords(sampled: MapCoord[]): Promise<number[]> {
   if (sampled.length === 0) return [];
@@ -144,9 +144,8 @@ export async function fetchElevationsForCoords(sampled: MapCoord[]): Promise<num
     if (raw == null || raw.length !== sampled.length) {
       return sampled.map(() => 0);
     }
-    const smoothed =
-      raw.length >= 16 ? smoothElevationSeries(raw, Math.min(2, Math.floor(raw.length / 200) + 1)) : raw;
-    return smoothed;
+    /** Pas de lissage par défaut : sur longs parcours il écrase le relief côté affichage. */
+    return raw;
   } catch {
     return sampled.map(() => 0);
   }

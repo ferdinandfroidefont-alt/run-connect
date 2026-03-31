@@ -39,8 +39,8 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
 
   return (
     <header className="shrink-0 bg-card border-b border-border pt-[var(--safe-area-top)]">
-      <div className="grid min-h-[52px] min-w-0 grid-cols-3 items-center gap-2 px-4 pb-3 pt-2">
-        <div className="flex min-w-0 justify-self-start">
+      <div className="flex min-h-[52px] min-w-0 items-center gap-2 px-4 pb-3 pt-2">
+        <div className="flex min-w-0 shrink-0 items-center justify-start">
           <button
             type="button"
             onClick={onProfileClick}
@@ -54,12 +54,12 @@ export const FeedHeader = ({ onSearch, onProfileClick, mode, onModeChange }: Fee
             </Avatar>
           </button>
         </div>
-        <div className="flex min-w-0 justify-center justify-self-stretch px-1">
-          <h1 className="max-w-full truncate text-center text-[34px] font-bold tracking-tight">
+        <div className="flex min-w-0 flex-1 items-center justify-center px-1">
+          <h1 className="min-w-0 w-full max-w-full truncate text-center text-[34px] font-bold tracking-tight">
             Feed
           </h1>
         </div>
-        <div className="flex min-w-0 justify-end justify-self-end">
+        <div className="flex min-w-0 shrink-0 items-center justify-end">
           <button
             type="button"
             onClick={onSearch}
