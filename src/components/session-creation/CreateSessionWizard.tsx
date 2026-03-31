@@ -53,6 +53,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   onSessionCreated,
   map,
   presetLocation,
+  presetRouteId = null,
   onCreateRoute,
   editSession,
   isEditMode = false,

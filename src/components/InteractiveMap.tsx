@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Crown } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Crown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -399,18 +399,6 @@ export const InteractiveMap = ({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  const cycleActivity = () => {
-    const current = ACTIVITY_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types));
-    const next = ACTIVITY_OPTIONS[(current + 1) % ACTIVITY_OPTIONS.length];
-    setFilters((prev) => ({ ...prev, activity_types: next.values }));
-  };
-
-  const cycleSessionType = () => {
-    const current = SESSION_TYPE_OPTIONS.findIndex((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types));
-    const next = SESSION_TYPE_OPTIONS[(current + 1) % SESSION_TYPE_OPTIONS.length];
-    setFilters((prev) => ({ ...prev, session_types: next.values }));
-  };
 
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
@@ -1703,8 +1691,8 @@ export const InteractiveMap = ({
                     role="listbox"
                     aria-label="Suggestions de lieux"
                     className={cn(
-                      "absolute left-0 right-0 top-full z-[60] mt-1.5 max-h-[min(42vh,18rem)] overflow-y-auto overflow-x-hidden rounded-2xl",
-                      "border border-black/[0.08] bg-[rgba(252,252,252,0.98)] shadow-[0_12px_40px_-10px_rgba(0,0,0,0.22)] backdrop-blur-md ring-1 ring-black/[0.04] dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.98)] dark:ring-white/[0.06]",
+                      "absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
+                      "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.97)] dark:ring-white/[0.05]",
                       "[-webkit-overflow-scrolling:touch]"
                     )}
                   >
@@ -1717,8 +1705,8 @@ export const InteractiveMap = ({
                           type="button"
                           role="option"
                           className={cn(
-                            "flex w-full min-w-0 items-start gap-2 border-0 px-3 py-2.5 text-left text-[15px] leading-snug outline-none",
-                            "text-foreground/90 transition-colors active:bg-black/[0.04] dark:active:bg-white/[0.06]"
+                            "flex w-full min-w-0 items-start gap-3 border-0 px-4 py-3.5 text-left text-[15px] leading-snug outline-none",
+                            "text-foreground/90 transition-colors active:bg-black/[0.045] dark:active:bg-white/[0.06]"
                           )}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => applyPlaceSuggestion(row)}
@@ -1738,13 +1726,13 @@ export const InteractiveMap = ({
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
                   type="button"
-                  onClick={cycleActivity}
+                  onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
                     "home-map-filter-chip snap-start",
-                    filters.activity_types.length > 0 && "home-map-filter-chip-active"
+                    (expandedFilter === 'activity' || filters.activity_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Sport: {activeActivityLabel}</span>
+                  <span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 shrink-0" /> Sport: {activeActivityLabel}</span>
                 </button>
                 <button
                   type="button"
@@ -1768,7 +1756,7 @@ export const InteractiveMap = ({
                   onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
                   className={cn("home-map-filter-chip snap-start", filters.friends_only && "home-map-filter-chip-active")}
                 >
-                  <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5" /> Amis uniquement</span>
+                  <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement</span>
                 </button>
                 <button
                   type="button"
@@ -1778,17 +1766,17 @@ export const InteractiveMap = ({
                     (expandedFilter === 'club' || filters.selected_club_ids.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
+                  <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 shrink-0" /> Club{filters.selected_club_ids.length > 0 ? ` (${filters.selected_club_ids.length})` : ''}</span>
                 </button>
                 <button
                   type="button"
-                  onClick={cycleSessionType}
+                  onClick={() => setExpandedFilter((prev) => (prev === 'sessionType' ? null : 'sessionType'))}
                   className={cn(
                     "home-map-filter-chip snap-start",
-                    filters.session_types.length > 0 && "home-map-filter-chip-active"
+                    (expandedFilter === 'sessionType' || filters.session_types.length > 0) && "home-map-filter-chip-active"
                   )}
                 >
-                  <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5" /> Type: {activeSessionTypeLabel}</span>
+                  <span className="flex items-center gap-1.5"><Route className="h-3.5 w-3.5 shrink-0" /> Type: {activeSessionTypeLabel}</span>
                 </button>
                 <button
                   type="button"
@@ -1829,42 +1817,129 @@ export const InteractiveMap = ({
               {expandedFilter && (
                 <motion.div
                   key={expandedFilter}
-                  initial={{ opacity: 0, y: -6 }}
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  className="home-map-filter-sheet relative z-20 p-3"
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                  className="home-map-filter-sheet relative z-20 mt-3 rounded-[1.25rem] p-4 sm:p-5"
                 >
+                  {expandedFilter === 'activity' && (
+                    <div className="space-y-1">
+                      <div className="mb-3 px-0.5">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Sport</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Affinez par discipline</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {ACTIVITY_OPTIONS.map((opt) => {
+                          const active =
+                            JSON.stringify(filters.activity_types) === JSON.stringify(opt.values);
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setFilters((prev) => ({ ...prev, activity_types: opt.values }));
+                                setExpandedFilter(null);
+                              }}
+                              className={cn(
+                                'flex min-h-[52px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
+                                active
+                                  ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20'
+                                  : 'border-border/60 bg-background/90 hover:border-border hover:bg-background'
+                              )}
+                            >
+                              <span className="text-[16px] font-medium text-foreground">{opt.label}</span>
+                              {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {expandedFilter === 'sessionType' && (
+                    <div className="space-y-1">
+                      <div className="mb-3 px-0.5">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Type de séance</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Footing, fractionné, etc.</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {SESSION_TYPE_OPTIONS.map((opt) => {
+                          const active =
+                            JSON.stringify(filters.session_types) === JSON.stringify(opt.values);
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setFilters((prev) => ({ ...prev, session_types: opt.values }));
+                                setExpandedFilter(null);
+                              }}
+                              className={cn(
+                                'flex min-h-[52px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
+                                active
+                                  ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20'
+                                  : 'border-border/60 bg-background/90 hover:border-border hover:bg-background'
+                              )}
+                            >
+                              <span className="text-[16px] font-medium text-foreground">{opt.label}</span>
+                              {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {expandedFilter === 'time' && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {TIME_SLOTS.map((slot) => {
-                        const active = filters.time_slot === slot.id;
-                        const Icon = slot.icon;
-                        return (
-                          <button
-                            key={slot.id}
-                            type="button"
-                            onClick={() => {
-                              setFilters((prev) => ({
-                                ...prev,
-                                time_slot: prev.time_slot === slot.id ? null : slot.id,
-                              }));
-                              setExpandedFilter(null);
-                            }}
-                            className={cn(
-                              "h-12 rounded-xl border text-xs font-medium transition-colors",
-                              active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"
-                            )}
-                          >
-                            <span className="flex items-center justify-center gap-1"><Icon className={cn("h-3.5 w-3.5", !active && TIME_SLOT_ICON_CLASS[slot.id])} />{slot.label}</span>
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-1">
+                      <div className="mb-3 px-0.5">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Créneau</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Filtrer par plage horaire</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {TIME_SLOTS.map((slot) => {
+                          const active = filters.time_slot === slot.id;
+                          const Icon = slot.icon;
+                          return (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              onClick={() => {
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  time_slot: prev.time_slot === slot.id ? null : slot.id,
+                                }));
+                                setExpandedFilter(null);
+                              }}
+                              className={cn(
+                                'flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-center transition-all',
+                                active
+                                  ? 'border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/25'
+                                  : 'border-border/60 bg-background/90 text-foreground hover:border-border hover:shadow-sm'
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'h-6 w-6 shrink-0',
+                                  active ? 'text-primary-foreground' : TIME_SLOT_ICON_CLASS[slot.id]
+                                )}
+                                strokeWidth={2}
+                              />
+                              <span className="text-[13px] font-semibold leading-tight">{slot.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
                   {expandedFilter === 'club' && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
+                      <div className="px-0.5">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Club</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Une ou plusieurs équipes</p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1872,13 +1947,18 @@ export const InteractiveMap = ({
                           setExpandedFilter(null);
                         }}
                         className={cn(
-                          "h-9 w-full rounded-xl border text-left px-3 text-xs",
-                          filters.selected_club_ids.length === 0 ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"
+                          'flex min-h-[48px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
+                          filters.selected_club_ids.length === 0
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                            : 'border-border/60 bg-background/90 hover:border-border'
                         )}
                       >
-                        Tous les clubs
+                        <span className="text-[16px] font-medium text-foreground">Tous les clubs</span>
+                        {filters.selected_club_ids.length === 0 && (
+                          <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />
+                        )}
                       </button>
-                      <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                      <div className="max-h-[min(40vh,240px)] space-y-2 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                         {clubFilters.map((club) => {
                           const active = filters.selected_club_ids.includes(club.id);
                           return (
@@ -1894,13 +1974,17 @@ export const InteractiveMap = ({
                                 }))
                               }
                               className={cn(
-                                "h-10 w-full rounded-xl border px-3 text-left text-xs",
-                                active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"
+                                'flex min-h-[48px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
+                                active
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/15'
+                                  : 'border-border/60 bg-background/90 hover:border-border'
                               )}
                             >
-                              <span className="flex items-center justify-between">
-                                <span className="truncate">{club.name}</span>
-                                <span className="text-[10px] text-muted-foreground">{club.memberCount}</span>
+                              <span className="min-w-0 truncate text-[16px] font-medium text-foreground">
+                                {club.name}
+                              </span>
+                              <span className="ml-2 shrink-0 text-[13px] tabular-nums text-muted-foreground">
+                                {club.memberCount}
                               </span>
                             </button>
                           );
@@ -1910,40 +1994,56 @@ export const InteractiveMap = ({
                   )}
 
                   {expandedFilter === 'day' && (
-                    <CalendarComponent
-                      mode="single"
-                      selected={filters.selected_date}
-                      onSelect={(date) => {
-                        if (!date) return;
-                        setFilters((prev) => ({ ...prev, selected_date: date }));
-                        setExpandedFilter(null);
-                      }}
-                      initialFocus
-                      className="pointer-events-auto p-0"
-                    />
+                    <div className="space-y-2">
+                      <div className="px-0.5 pb-1">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Date</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Séances prévues ce jour</p>
+                      </div>
+                      <div className="rounded-2xl border border-border/50 bg-background/95 p-2 shadow-inner dark:bg-background/80">
+                        <CalendarComponent
+                          mode="single"
+                          selected={filters.selected_date}
+                          onSelect={(date) => {
+                            if (!date) return;
+                            setFilters((prev) => ({ ...prev, selected_date: date }));
+                            setExpandedFilter(null);
+                          }}
+                          initialFocus
+                          className="pointer-events-auto w-full p-0"
+                        />
+                      </div>
+                    </div>
                   )}
 
                   {expandedFilter === 'level' && (
-                    <div className="grid grid-cols-6 gap-2">
-                      {[1, 2, 3, 4, 5, 6].map((lvl) => (
-                        <button
-                          key={lvl}
-                          type="button"
-                          onClick={() => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              level: prev.level === lvl ? null : lvl,
-                            }));
-                            setExpandedFilter(null);
-                          }}
-                          className={cn(
-                            "h-10 rounded-xl border text-sm font-semibold",
-                            filters.level === lvl ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"
-                          )}
-                        >
-                          {lvl}
-                        </button>
-                      ))}
+                    <div className="space-y-1">
+                      <div className="mb-3 px-0.5">
+                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Niveau</p>
+                        <p className="mt-0.5 text-[15px] text-muted-foreground">Difficulté minimale (1–6)</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                        {[1, 2, 3, 4, 5, 6].map((lvl) => (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => {
+                              setFilters((prev) => ({
+                                ...prev,
+                                level: prev.level === lvl ? null : lvl,
+                              }));
+                              setExpandedFilter(null);
+                            }}
+                            className={cn(
+                              'flex h-14 min-h-[52px] items-center justify-center rounded-2xl border text-[17px] font-semibold transition-all',
+                              filters.level === lvl
+                                ? 'border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/25'
+                                : 'border-border/60 bg-background/90 text-foreground hover:border-border'
+                            )}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </motion.div>
