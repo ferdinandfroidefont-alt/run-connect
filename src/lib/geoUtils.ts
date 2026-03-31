@@ -102,3 +102,40 @@ export function resamplePathEvenlyMapCoords(points: MapCoord[], sampleCount: num
   }
   return out;
 }
+
+/**
+ * Rééchantillonne le long du tracé par pas fixe (mètres) — profils d’élévation denses.
+ */
+export function resamplePathEveryMeters(points: MapCoord[], stepM: number): MapCoord[] {
+  if (points.length < 2) return points.map((p) => ({ ...p }));
+  if (!Number.isFinite(stepM) || stepM < 1) return points.map((p) => ({ ...p }));
+
+  const cumulative: number[] = [0];
+  for (let i = 0; i < points.length - 1; i++) {
+    cumulative.push(cumulative[i]! + distanceMeters(points[i]!, points[i + 1]!));
+  }
+  const total = cumulative[cumulative.length - 1]!;
+  if (total < 1e-6) return [points[0]!, points[points.length - 1]!];
+
+  function pointAtDist(d: number): MapCoord {
+    const dist = Math.max(0, Math.min(d, total));
+    let j = 0;
+    while (j < cumulative.length - 1 && cumulative[j + 1]! < dist) j++;
+    const d0 = cumulative[j]!;
+    const d1 = cumulative[j + 1]!;
+    const segLen = d1 - d0;
+    const t = segLen < 1e-6 ? 0 : (dist - d0) / segLen;
+    const j1 = Math.min(j + 1, points.length - 1);
+    return interpolateGreatCircle(points[j]!, points[j1]!, Math.min(1, Math.max(0, t)));
+  }
+
+  const out: MapCoord[] = [];
+  for (let d = 0; d < total + 1e-6; d += stepM) {
+    out.push(pointAtDist(Math.min(d, total)));
+  }
+  const lastPt = points[points.length - 1]!;
+  if (out.length === 0 || distanceMeters(out[out.length - 1]!, lastPt) > 1.5) {
+    out.push(lastPt);
+  }
+  return out;
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { cumulativeDistanceAlongPath, sampleAlongPathAtDistance } from '@/lib/routePersistence';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -22,6 +22,8 @@ type Props = {
   formatDistanceKm: (km: number) => string;
   /** Distance le long du tracé (curseur), plus précis que le résumé km. */
   formatDistanceAlongPath: (meters: number) => string;
+  /** Altitudes en cours de récupération (distance déjà affichée). */
+  isLoadingElevation?: boolean;
   className?: string;
   onScrub: (meta: RouteElevationScrubMeta | null) => void;
   defaultExpanded?: boolean;
@@ -43,6 +45,7 @@ export function RouteElevationPanel({
   elevationLoss,
   formatDistanceKm,
   formatDistanceAlongPath,
+  isLoadingElevation = false,
   className,
   onScrub,
   defaultExpanded = false,
@@ -113,24 +116,26 @@ export function RouteElevationPanel({
     [chartTotalM, innerW],
   );
 
-  if (!seriesOk) return null;
-
-  const minElev = Math.min(...elevations);
-  const maxElev = Math.max(...elevations);
-  const elevSpan = Math.max(maxElev - minElev, 1);
+  const minElev = seriesOk ? Math.min(...elevations) : 0;
+  const maxElev = seriesOk ? Math.max(...elevations) : 1;
+  const elevSpan = seriesOk ? Math.max(maxElev - minElev, 1) : 1;
 
   const xAtDist = (d: number) => PAD.l + (d / chartTotalM) * innerW;
 
-  const pointsStr = elevations
-    .map((elev, index) => {
-      const x = xAtDist(distCum[index] ?? 0);
-      const y = PAD.t + innerH - ((elev - minElev) / elevSpan) * innerH;
-      return `${x},${y}`;
-    })
-    .join(' ');
+  const pointsStr = seriesOk
+    ? elevations
+        .map((elev, index) => {
+          const x = xAtDist(distCum[index] ?? 0);
+          const y = PAD.t + innerH - ((elev - minElev) / elevSpan) * innerH;
+          return `${x},${y}`;
+        })
+        .join(' ')
+    : '';
 
   const scrubSample =
-    scrubDistM != null ? sampleAlongPathAtDistance(coords, elevations, distCum, scrubDistM) : null;
+    seriesOk && scrubDistM != null
+      ? sampleAlongPathAtDistance(coords, elevations, distCum, scrubDistM)
+      : null;
 
   const cursorX = scrubSample != null ? xAtDist(scrubSample.distFromStartM) : null;
   const cursorY =
@@ -153,14 +158,21 @@ export function RouteElevationPanel({
         onClick={() => setExpanded((e) => !e)}
       >
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] leading-tight tabular-nums text-foreground">
+          <p className="flex flex-wrap items-center gap-x-1 truncate text-[12px] leading-tight tabular-nums text-foreground">
             <span className="font-semibold">{formatDistanceKm(totalDistanceM / 1000)}</span>
-            <span className="mx-1 text-muted-foreground">·</span>
-            <span className="text-emerald-600 dark:text-emerald-400">D+ {Math.round(elevationGain)}</span>
-            <span className="text-muted-foreground/80"> m</span>
-            <span className="mx-1 text-muted-foreground">·</span>
-            <span className="text-rose-600 dark:text-rose-400">D− {Math.round(elevationLoss)}</span>
-            <span className="text-muted-foreground/80"> m</span>
+            <span className="text-muted-foreground">·</span>
+            {isLoadingElevation ? (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" aria-hidden />
+                <span className="text-[11px]">Dénivelé…</span>
+              </span>
+            ) : (
+              <>
+                <span className="text-emerald-600 dark:text-emerald-400">D+ {Math.round(elevationGain)} m</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-rose-600 dark:text-rose-400">D− {Math.round(elevationLoss)} m</span>
+              </>
+            )}
           </p>
         </div>
         {expanded ? (
@@ -172,6 +184,19 @@ export function RouteElevationPanel({
 
       {expanded && (
         <div className="border-t border-border/40 px-1.5 pb-1.5 pt-0">
+          {!seriesOk ? (
+            <div className="flex items-center justify-center gap-2 px-0.5 py-4 text-[11px] text-muted-foreground">
+              {isLoadingElevation ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0 text-primary" aria-hidden />
+                  <span>Calcul du profil (échantillons le long du tracé)…</span>
+                </>
+              ) : (
+                <span>Profil indisponible.</span>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="flex min-h-[1.375rem] flex-wrap items-center gap-x-2.5 gap-y-0 px-0.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
             {scrubSample != null ? (
               <>
@@ -288,6 +313,8 @@ export function RouteElevationPanel({
               {Math.round(minElev)} m
             </text>
           </svg>
+            </>
+          )}
         </div>
       )}
     </div>

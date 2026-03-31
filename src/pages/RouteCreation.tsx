@@ -16,12 +16,14 @@ import {
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 import { formatDistanceAlongPathMeters } from '@/lib/distanceUnits';
-import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
+import { fetchRoutedPathBetweenWaypoints } from '@/lib/mapboxDirections';
 import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
 import {
   distanceMeters,
   densifyMapCoords,
+  pathLengthMeters,
   resamplePathEvenlyMapCoords,
+  resamplePathEveryMeters,
   type MapCoord,
 } from '@/lib/geoUtils';
 import {
@@ -84,6 +86,8 @@ export const RouteCreation = () => {
   const [elevationChartCoords, setElevationChartCoords] = useState<Array<{ lat: number; lng: number }>>([]);
   const [isManualMode, setIsManualMode] = useState(false);
   const [waypointCount, setWaypointCount] = useState(0);
+  const [elevationLoading, setElevationLoading] = useState(false);
+  const elevationRequestId = useRef(0);
 
   const undoHistory = useRef<
     Array<{
@@ -372,13 +376,7 @@ export const RouteCreation = () => {
   ): Promise<RouteSegment | null> => {
     if (!map.current) return null;
 
-    const profiles = ['walking', 'cycling', 'driving'] as const;
-    let path: MapCoord[] | null = null;
-
-    for (const profile of profiles) {
-      path = await fetchMapboxDirectionsPath([startPoint, endPoint], profile);
-      if (path && path.length >= 2) break;
-    }
+    const path = await fetchRoutedPathBetweenWaypoints(startPoint, endPoint);
 
     if (!path || path.length < 2) {
       console.error('Erreur création segment guidé (Mapbox Directions)');
@@ -460,12 +458,22 @@ export const RouteCreation = () => {
     const distanceKm = distance / 1000;
     setTotalDistance(distanceKm);
 
-    const pathForElevation = densifyMapCoords(allCoordinates);
+    const reqId = ++elevationRequestId.current;
+    setElevationLoading(true);
+
+    const pathForElevation = densifyMapCoords(allCoordinates, 9);
+    const totalPathM = pathLengthMeters(pathForElevation);
+    const stepM = totalPathM > 55_000 ? 14 : totalPathM > 28_000 ? 11 : 8;
+    let sampled = resamplePathEveryMeters(pathForElevation, stepM);
+    const MAX_POINTS = 2200;
+    if (sampled.length > MAX_POINTS) {
+      sampled = samplePathCoords(sampled, MAX_POINTS);
+    }
 
     try {
-      const numSamples = Math.min(512, Math.max(pathForElevation.length * 2, 96));
-      const sampled = samplePathCoords(pathForElevation, numSamples);
       const elevations = await fetchElevationsForCoords(sampled);
+
+      if (reqId !== elevationRequestId.current) return null;
 
       let elevationGain = 0;
       let elevationLoss = 0;
@@ -492,16 +500,22 @@ export const RouteCreation = () => {
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des altitudes:', error);
-      setElevationChartCoords([]);
-      setRouteElevations([]);
-      setTotalElevationGain(0);
-      setTotalElevationLoss(0);
+      if (reqId === elevationRequestId.current) {
+        setElevationChartCoords([]);
+        setRouteElevations([]);
+        setTotalElevationGain(0);
+        setTotalElevationLoss(0);
+      }
       return {
         distanceKm,
         elevations: [],
         elevationGain: 0,
         elevationLoss: 0,
       };
+    } finally {
+      if (reqId === elevationRequestId.current) {
+        setElevationLoading(false);
+      }
     }
   };
 
@@ -588,6 +602,8 @@ export const RouteCreation = () => {
     clearMarkers();
     clearSegments();
     clearScrubMarker();
+    elevationRequestId.current += 1;
+    setElevationLoading(false);
     setRouteElevations([]);
     setElevationChartCoords([]);
     setTotalDistance(0);
@@ -617,12 +633,6 @@ export const RouteCreation = () => {
       return;
     }
 
-    const freshStats = await updateElevationAndStats();
-    if (!freshStats) {
-      toast.error('Impossible de finaliser le parcours (élévation / distance)');
-      return;
-    }
-
     const allCoordinates = getAllCoordinates();
 
     const coordinates = allCoordinates.map((coord) => ({
@@ -640,15 +650,16 @@ export const RouteCreation = () => {
     });
 
     if (isEditMode && editRouteDataRef.current && user) {
+      const elevStats = await updateElevationAndStats();
       try {
         const { error } = await supabase
           .from('routes')
           .update({
             coordinates,
             waypoints: waypointsData,
-            total_distance: totalDistance * 1000,
-            total_elevation_gain: totalElevationGain,
-            total_elevation_loss: totalElevationLoss,
+            total_distance: Math.round(pathLengthMeters(allCoordinates)),
+            total_elevation_gain: elevStats?.elevationGain ?? totalElevationGain,
+            total_elevation_loss: elevStats?.elevationLoss ?? totalElevationLoss,
           })
           .eq('id', editRouteDataRef.current.id)
           .eq('created_by', user.id);
@@ -670,6 +681,7 @@ export const RouteCreation = () => {
       return;
     }
 
+    void updateElevationAndStats();
     setSaveDialogOpen(true);
   };
 
@@ -688,6 +700,16 @@ export const RouteCreation = () => {
       toast.error('Parcours invalide');
       return;
     }
+
+    let elevationsForSave = routeElevations;
+    if (elevationsForSave.length < 2) {
+      const refreshed = await updateElevationAndStats();
+      if (!refreshed || refreshed.elevations.length < 2) {
+        toast.error('Impossible de calculer le dénivelé — réessayez dans un instant');
+        return;
+      }
+      elevationsForSave = refreshed.elevations;
+    }
     const waypointsData = waypoints.current.map((wp, index) => {
       const segmentMode = index < segments.current.length ? segments.current[index]!.mode : 'manual';
       return {
@@ -703,7 +725,7 @@ export const RouteCreation = () => {
       name,
       description,
       pathCoords,
-      elevations: routeElevations,
+      elevations: elevationsForSave,
       waypoints: waypointsData,
       isPublic: isPublic ?? false,
     });
@@ -861,7 +883,7 @@ export const RouteCreation = () => {
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">
         <div className="pointer-events-auto w-full px-ios-4">
-          {routeElevations.length > 1 && elevationChartCoords.length > 1 && (
+          {waypointCount >= 2 && (
             <RouteElevationPanel
               elevations={routeElevations}
               coords={elevationChartCoords}
@@ -870,6 +892,7 @@ export const RouteCreation = () => {
               elevationLoss={totalElevationLoss}
               formatDistanceKm={formatKm}
               formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
+              isLoadingElevation={elevationLoading}
               defaultExpanded={false}
               onScrub={handleElevationScrub}
             />
