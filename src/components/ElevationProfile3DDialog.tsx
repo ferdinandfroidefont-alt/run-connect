@@ -84,7 +84,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
       <DialogContent
         fullScreen
         hideCloseButton
-        className="flex h-[100dvh] max-h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-background p-0"
+        className="flex h-[100dvh] max-h-[100dvh] min-h-0 min-w-0 w-full flex-col overflow-hidden bg-background p-0"
         aria-describedby={undefined}
       >
         <div className="absolute top-0 left-0 z-40 pt-[env(safe-area-inset-top)]">
@@ -101,10 +101,9 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
           </div>
         </div>
 
-        {/* flex-1 + min-h-0 : hauteur réelle pour le canvas Mapbox (éviter 0×0). */}
-        <div className="relative flex min-h-0 flex-1 basis-0 flex-col">
+        <div className="relative flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
           {loading ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-secondary/30">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-4 bg-secondary/30">
               <div className="relative">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/15 animate-ping" />
@@ -121,7 +120,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               autoPlay={false}
               routeName={routeName}
               routeStats={computedStats}
-              className="min-h-0 w-full flex-1 rounded-none"
+              className="min-h-0 min-w-0 flex-1 basis-0 rounded-none"
             />
           )}
         </div>

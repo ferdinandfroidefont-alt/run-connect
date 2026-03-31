@@ -379,11 +379,14 @@ export function RouteFlyover3D({
   return (
     <div
       className={cn(
-        'relative flex w-full min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] bg-muted/40',
+        'relative flex min-h-0 w-full min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-[28px] bg-muted/40',
         className,
       )}
     >
-      <div ref={mapContainerRef} className="absolute inset-0 z-0 min-h-[180px] w-full bg-transparent" />
+      <div
+        ref={mapContainerRef}
+        className="relative z-0 min-h-0 w-full min-w-0 flex-1 basis-0 bg-transparent"
+      />
       {!sceneReady && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/35">
           <div className="ios-card max-w-[min(100%,20rem)] border border-border/80 bg-card/95 px-5 py-4 text-center shadow-lg backdrop-blur-xl">
