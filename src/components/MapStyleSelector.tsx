@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useDragControls } from 'framer-motion';
 import { Check, Map, Moon, Box, Mountain, Palette, Satellite, X } from 'lucide-react';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 import { cn } from '@/lib/utils';
+
+/** Au-dessus nav (z-100), FAB (105), modales — hors contexte z-20 de la pile carte */
+const SHEET_OVERLAY_Z = 10060;
+const SHEET_PANEL_Z = 10061;
 
 interface MapStyleSelectorProps {
   currentStyle: string;
   onStyleChange: (style: string) => void;
   /**
-   * `viewport-left` : panneau carte flottant (création d’itinéraire).
-   * `fab` : feuille basse type app premium (accueil).
+   * `viewport-left` : carte flottante (création d’itinéraire).
+   * `fab` : bottom sheet léger (accueil).
    */
   panelAnchor?: 'fab' | 'viewport-left';
 }
 
-/** Tuiles d’aperçu — proportions type fiche Komoot / Apple Maps */
+/** Tuiles d’aperçu */
 const tilePreview =
   'relative w-full overflow-hidden rounded-xl bg-muted/40 ring-1 ring-black/[0.06] dark:ring-white/[0.08]';
 
@@ -127,39 +133,39 @@ function MapStylePickerContent({
   titleId?: string;
 }) {
   return (
-    <div className="flex max-h-[min(78dvh,640px)] flex-col">
-      <div className="flex shrink-0 items-start justify-between gap-3 px-1 pb-2 pt-0.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-start justify-between gap-3 pb-2 pt-0.5">
         <div className="min-w-0">
-          <h2 id={titleId} className="text-[20px] font-semibold tracking-tight text-foreground">
+          <h2 id={titleId} className="text-[19px] font-semibold tracking-tight text-foreground">
             Style de carte
           </h2>
-          <p className="mt-1 text-[15px] leading-snug text-muted-foreground">
-            Choisissez un fond clair, satellite ou relief selon votre sortie.
+          <p className="mt-1 text-[14px] leading-snug text-muted-foreground">
+            Fonds adaptés à la ville, l’outdoor ou la nuit — la carte reste visible derrière.
           </p>
         </div>
         {showClose && (
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-foreground transition-colors active:bg-black/[0.08] dark:bg-white/[0.08] dark:active:bg-white/[0.12]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground transition-colors active:bg-black/[0.1] dark:bg-white/[0.1] dark:active:bg-white/[0.15]"
             aria-label="Fermer"
           >
-            <X className="h-5 w-5" strokeWidth={2} />
+            <X className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
         )}
       </div>
 
-      <div className="scrollbar-thin mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-0.5 pb-[env(safe-area-bottom,0px)]">
-        <div className="space-y-8 pb-4">
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pb-1 [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
+        <div className="space-y-7 pb-1 pt-3">
           {MAP_SECTIONS.map((section) => (
             <section key={section.title}>
-              <h3 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              <h3 className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {section.title}
               </h3>
               {section.subtitle && (
-                <p className="mt-1 text-[14px] text-muted-foreground/90">{section.subtitle}</p>
+                <p className="mt-1 text-[13px] text-muted-foreground/90">{section.subtitle}</p>
               )}
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="mt-3 grid grid-cols-2 gap-3">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = currentStyle === item.id;
@@ -170,35 +176,35 @@ function MapStylePickerContent({
                       type="button"
                       onClick={() => onSelect(item.id)}
                       className={cn(
-                        'group flex min-w-0 flex-col rounded-2xl border bg-background p-2.5 text-left transition-[box-shadow,transform,border-color] duration-200',
+                        'group flex min-w-0 flex-col rounded-2xl border bg-card/80 p-2 text-left transition-[box-shadow,transform,border-color] duration-200',
                         'active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                         isActive
-                          ? 'border-primary shadow-[0_8px_28px_-12px_rgba(0,0,0,0.25)] ring-2 ring-primary/35 dark:shadow-[0_10px_36px_-14px_rgba(0,0,0,0.5)]'
-                          : 'border-border/50 shadow-[0_2px_16px_-8px_rgba(0,0,0,0.12)] hover:border-border hover:shadow-md dark:border-white/[0.08]'
+                          ? 'border-primary shadow-md ring-2 ring-primary/30'
+                          : 'border-border/50 shadow-sm hover:border-border hover:shadow-md dark:border-white/[0.08]'
                       )}
                     >
                       <div className="relative">
                         <Preview />
                         {isActive && (
-                          <div className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-                            <Check className="h-4 w-4" strokeWidth={2.5} />
+                          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
                           </div>
                         )}
                       </div>
-                      <div className="mt-3 flex items-start gap-2 px-0.5">
+                      <div className="mt-2 flex items-start gap-2 px-0.5">
                         <div
                           className={cn(
-                            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl',
+                            'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
                             isActive ? 'bg-primary/12 text-primary' : 'bg-muted/80 text-muted-foreground'
                           )}
                         >
-                          <Icon className="h-4 w-4" strokeWidth={2} />
+                          <Icon className="h-3.5 w-3.5" strokeWidth={2} />
                         </div>
                         <div className="min-w-0 flex-1 pb-0.5">
-                          <span className="block text-[16px] font-semibold leading-tight text-foreground">
+                          <span className="block text-[15px] font-semibold leading-tight text-foreground">
                             {item.label}
                           </span>
-                          <span className="mt-1 block text-[13px] leading-snug text-muted-foreground">
+                          <span className="mt-0.5 block text-[12px] leading-snug text-muted-foreground">
                             {item.description}
                           </span>
                         </div>
@@ -212,6 +218,160 @@ function MapStylePickerContent({
         </div>
       </div>
     </div>
+  );
+}
+
+function BottomStyleSheet({
+  isOpen,
+  onClose,
+  currentStyle,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentStyle: string;
+  onSelect: (id: string) => void;
+}) {
+  const dragControls = useDragControls();
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.button
+            key="map-style-overlay"
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 border-0 bg-black/25 backdrop-blur-[1px] motion-reduce:backdrop-blur-none"
+            style={{ zIndex: SHEET_OVERLAY_Z }}
+            aria-label="Fermer le sélecteur de carte"
+            onClick={onClose}
+          />
+
+          <motion.div
+            key="map-style-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="map-style-picker-title-main"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 32, stiffness: 380, mass: 0.85 }}
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0 }}
+            dragElastic={{ top: 0, bottom: 0.35 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 420) {
+                onClose();
+              }
+            }}
+            className={cn(
+              'fixed inset-x-0 bottom-0 flex max-h-[min(65dvh,560px)] flex-col overflow-hidden',
+              'rounded-t-[1.35rem] border border-b-0 border-black/[0.07]',
+              'bg-[rgba(252,252,252,0.97)] shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.22)] supports-[backdrop-filter]:bg-[rgba(252,252,252,0.92)] supports-[backdrop-filter]:backdrop-blur-xl',
+              'dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.96)] dark:shadow-[0_-16px_48px_-20px_rgba(0,0,0,0.55)] dark:supports-[backdrop-filter]:bg-[rgba(28,28,30,0.92)]'
+            )}
+            style={{ zIndex: SHEET_PANEL_Z, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle — zone de drag (style Komoot / iOS) */}
+            <div
+              className="flex shrink-0 cursor-grab touch-none flex-col items-center pt-3 pb-2 active:cursor-grabbing"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              <div
+                className="h-1 w-10 shrink-0 rounded-full bg-foreground/20 dark:bg-foreground/30"
+                aria-hidden
+              />
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col px-4 sm:px-5">
+              <MapStylePickerContent
+                titleId="map-style-picker-title-main"
+                currentStyle={currentStyle}
+                onSelect={onSelect}
+                showClose
+                onClose={onClose}
+              />
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+function LeftStylePanel({
+  isOpen,
+  onClose,
+  currentStyle,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  currentStyle: string;
+  onSelect: (id: string) => void;
+}) {
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.button
+            key="map-style-overlay-left"
+            type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 border-0 bg-black/25 backdrop-blur-[1px] motion-reduce:backdrop-blur-none"
+            style={{ zIndex: SHEET_OVERLAY_Z }}
+            aria-label="Fermer le sélecteur de carte"
+            onClick={onClose}
+          />
+
+          <motion.div
+            key="map-style-panel-left"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="map-style-picker-title"
+            initial={{ opacity: 0, x: -12, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -12, scale: 0.98 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            className={cn(
+              'fixed max-h-[min(65dvh,calc(100dvh-5rem))] w-[min(calc(100vw-1.25rem),20.5rem)] overflow-hidden rounded-[1.35rem]',
+              'left-[max(0.625rem,env(safe-area-inset-left,0px))]',
+              'top-[calc(env(safe-area-inset-top,0px)+4.25rem)]',
+              'border border-black/[0.07] bg-[rgba(252,252,252,0.97)] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.35)] supports-[backdrop-filter]:backdrop-blur-xl',
+              'dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.96)]'
+            )}
+            style={{ zIndex: SHEET_PANEL_Z }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex max-h-[min(65dvh,calc(100dvh-5rem))] min-h-0 flex-col overflow-hidden p-4 sm:p-5">
+              <MapStylePickerContent
+                titleId="map-style-picker-title"
+                currentStyle={currentStyle}
+                onSelect={onSelect}
+                showClose
+                onClose={onClose}
+              />
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -256,64 +416,10 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
         <Palette className="h-[15px] w-[15px]" strokeWidth={2} />
       </MapIosColoredFab>
 
-      {isOpen && (
-        <>
-          <button
-            type="button"
-            className="fixed inset-0 z-[118] border-0 bg-black/35 backdrop-blur-[2px] transition-opacity motion-reduce:backdrop-blur-none"
-            aria-label="Fermer le sélecteur de carte"
-            onClick={() => setIsOpen(false)}
-          />
-
-          {leftPanel ? (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="map-style-picker-title"
-              className={cn(
-                'fixed z-[120] max-h-[min(78dvh,calc(100dvh-5rem))] w-[min(calc(100vw-1.5rem),21rem)] overflow-hidden rounded-[1.35rem]',
-                'left-[max(0.75rem,env(safe-area-inset-left,0px))]',
-                'top-[calc(env(safe-area-inset-top,0px)+4.5rem)]',
-                'border border-black/[0.06] bg-[#FAFAFA] shadow-[0_24px_64px_-20px_rgba(0,0,0,0.35)] dark:border-white/[0.1] dark:bg-[#1C1C1E]'
-              )}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="max-h-[inherit] overflow-y-auto p-4 sm:p-5">
-                <MapStylePickerContent
-                  titleId="map-style-picker-title"
-                  currentStyle={currentStyle}
-                  onSelect={commit}
-                  showClose
-                  onClose={() => setIsOpen(false)}
-                />
-              </div>
-            </div>
-          ) : (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="map-style-picker-title-main"
-              className={cn(
-                'fixed inset-x-0 bottom-0 z-[120] flex max-h-[min(88dvh,720px)] flex-col rounded-t-[1.35rem]',
-                'border border-b-0 border-black/[0.06] bg-[#FAFAFA] shadow-[0_-8px_48px_-12px_rgba(0,0,0,0.28)] dark:border-white/[0.1] dark:bg-[#1C1C1E]'
-              )}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex shrink-0 flex-col items-center pt-3 pb-1">
-                <div className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/25" aria-hidden />
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-2 sm:px-6 sm:pb-6">
-                <MapStylePickerContent
-                  titleId="map-style-picker-title-main"
-                  currentStyle={currentStyle}
-                  onSelect={commit}
-                  showClose
-                  onClose={() => setIsOpen(false)}
-                />
-              </div>
-            </div>
-          )}
-        </>
+      {leftPanel ? (
+        <LeftStylePanel isOpen={isOpen} onClose={() => setIsOpen(false)} currentStyle={currentStyle} onSelect={commit} />
+      ) : (
+        <BottomStyleSheet isOpen={isOpen} onClose={() => setIsOpen(false)} currentStyle={currentStyle} onSelect={commit} />
       )}
     </div>
   );
