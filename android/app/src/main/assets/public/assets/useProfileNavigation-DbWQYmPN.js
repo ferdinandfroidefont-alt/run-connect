@@ -1,0 +1,1 @@
+import{r as s}from"./react-vendor-C9Ckbb75.js";import{u as a}from"./index-Bx1Gry0U.js";const u=()=>{const{user:e}=a(),[i,t]=s.useState(null),[l,r]=s.useState(!1);return{selectedUserId:i,showProfilePreview:l,navigateToProfile:o=>{!o||o===(e==null?void 0:e.id)||(t(o),r(!0))},closeProfilePreview:()=>{r(!1),t(null)}}};export{u};

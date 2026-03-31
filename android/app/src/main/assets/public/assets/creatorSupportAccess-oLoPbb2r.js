@@ -1,0 +1,1 @@
+const s="ferdinand.froidefont@gmail.com",e="ferdinand_stat_triathlon";function c(t,o){const r=t==null?void 0:t.trim().toLowerCase();if(r&&r===s.toLowerCase())return!0;const n=o==null?void 0:o.trim().toLowerCase();return!!(n&&n===e.toLowerCase())}export{c as h};

@@ -1,0 +1,40 @@
+{
+	"appId": "com.ferdi.runconnect",
+	"appName": "RunConnect",
+	"webDir": "dist",
+	"bundledWebRuntime": false,
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		},
+		"Geolocation": {},
+		"Camera": {},
+		"StatusBar": {
+			"style": "LIGHT",
+			"backgroundColor": "#FFFFFF"
+		}
+	},
+	"android": {
+		"allowMixedContent": false,
+		"captureInput": true,
+		"webContentsDebuggingEnabled": false,
+		"allowMultipleWindows": false,
+		"useLegacyBridge": false,
+		"deepLinkScheme": "app.runconnect",
+		"appendUserAgent": "RunConnect/1.3"
+	},
+	"ios": {
+		"contentInset": "never",
+		"allowsLinkPreview": false,
+		"scrollEnabled": true,
+		"preferredContentMode": "mobile",
+		"limitsNavigationsToAppBoundDomains": false,
+		"scheme": "runconnect",
+		"backgroundColor": "#FFFFFF",
+		"appendUserAgent": "RunConnect-iOS/1.3"
+	}
+}

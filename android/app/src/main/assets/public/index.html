@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <title>RunConnect | Réseau social sportif</title>
+    <meta name="description" content="Rejoignez la communauté sportive RunConnect. Organisez des sessions, suivez vos amis, participez aux classements et progressez ensemble !">
+    <meta name="author" content="RunConnect" />
+
+    <!-- Google Fonts Premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <meta property="og:title" content="RunConnect | Réseau social sportif" />
+    <meta property="og:description" content="Organisez des séances, suivez vos amis, classements et progression — communauté sportive RunConnect." />
+    <meta property="og:type" content="website" />
+    <!-- Remplace par une image absolue HTTPS (1200×630) hébergée sur ton domaine pour le partage réseaux sociaux -->
+    <meta property="og:image" content="/favicon.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RunConnect | Réseau social sportif" />
+    <meta name="twitter:description" content="Organisez des séances, suivez vos amis, classements et progression." />
+    <meta name="twitter:image" content="/favicon.png" />
+
+    <!-- Premier rendu : même bleu que le splash (voir src/lib/ruconnectSplashChrome.ts) ; le thème met à jour ensuite -->
+    <meta name="theme-color" content="#2E68FF" />
+    <!-- default = barre d’état opaque claire ; le thème sombre met « black » via JS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Anti-flash thème (next-themes / runconnect-ui-theme) -->
+    <script>
+      (function () {
+        try {
+          var key = 'runconnect-ui-theme';
+          var t = localStorage.getItem(key);
+          var dark = false;
+          if (t === 'dark') dark = true;
+          else if (t === 'light') dark = false;
+          else dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+      /* Avant React : même fond que --background en sombre (évite frange bleu #2455EB / noir #000). */
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          if (document.documentElement.classList.contains('dark') && document.body) {
+            var d = 'hsl(240 5% 11%)';
+            document.documentElement.style.backgroundColor = d;
+            document.body.style.backgroundColor = d;
+          }
+        } catch (e) {}
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-Bx1Gry0U.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-C9Ckbb75.js">
+    <link rel="modulepreload" crossorigin href="/assets/radix-gJk5Q-1i.js">
+    <link rel="modulepreload" crossorigin href="/assets/supabase-wGKtG3Rv.js">
+    <link rel="modulepreload" crossorigin href="/assets/icons-Cy5wFYAe.js">
+    <link rel="modulepreload" crossorigin href="/assets/router-on6LeVA1.js">
+    <link rel="modulepreload" crossorigin href="/assets/motion-JtH5KYFB.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-COtabIz7.css">
+  </head>
+
+  <body style="background-color:#2c5dd9;margin:0">
+    <div id="root"></div>
+    
+    <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT (Fallback) -->
+    <script>
+      console.log('🔥 [GLOBAL] Listener fcmTokenReady installé (fallback)');
+      window.__fcmTokenReceived = false;
+      window.__fcmTokenBuffer = null;
+      
+      window.addEventListener('fcmTokenReady', (e) => {
+        console.log('🔥 [GLOBAL] Événement fcmTokenReady capturé:', e.detail?.token?.substring(0, 30) + '...');
+        window.__fcmTokenBuffer = e.detail?.token;
+        window.__fcmTokenPlatform = e.detail?.platform || 'unknown';
+      });
+    </script>
+    
+    <!-- Pas de window.scrollTo sur focus : ça combat le scroll interne des pages et fait bouger la barre titre (voir IosFixedPageHeaderShell). -->
+  </body>
+</html>

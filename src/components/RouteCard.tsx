@@ -7,7 +7,7 @@ import { Route, TrendingUp, Mountain, Edit, Trash2, Download, Box, Navigation, G
 import { RoutePhotoUploader } from '@/components/routes-feed/RoutePhotoUploader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { exportToGPX, downloadGPXFile, GPXTrackPoint } from '@/lib/gpxExport';
+import { exportToGPX, shareOrDownloadGPX, GPXTrackPoint } from '@/lib/gpxExport';
 import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -62,7 +62,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     return `${min} min`;
   };
 
-  const handleExportGPX = () => {
+  const handleExportGPX = async () => {
     if (!route.coordinates || !Array.isArray(route.coordinates)) return;
     const trackPoints: GPXTrackPoint[] = route.coordinates.map((coord: any) => {
       if (coord.lat !== undefined && coord.lng !== undefined) {
@@ -74,8 +74,7 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     }).filter((point): point is NonNullable<typeof point> => point !== null);
     if (trackPoints.length === 0) return;
     const gpxContent = exportToGPX(route.name, trackPoints, route.description || undefined);
-    const filename = route.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    downloadGPXFile(filename, gpxContent);
+    await shareOrDownloadGPX(route.name, gpxContent, { title: route.name });
   };
 
   useEffect(() => {
