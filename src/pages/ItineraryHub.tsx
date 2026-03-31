@@ -1,13 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  PenTool,
-  MapPin,
-  Newspaper,
-  Box,
-  Navigation,
-  Camera,
-  ChevronRight,
-} from 'lucide-react';
+import { PenTool, MapPin, Box, Navigation, ChevronRight } from 'lucide-react';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,16 +15,9 @@ const hubItems = [
   {
     path: '/itinerary/my-routes',
     title: 'Mes itinéraires',
-    description: 'Itinéraires que vous avez créés',
+    description: 'Parcours enregistrés et actions rapides',
     icon: MapPin,
     color: 'bg-[#34C759]',
-  },
-  {
-    path: '/itinerary/feed',
-    title: 'Feed itinéraire',
-    description: 'Découvrir des parcours publics',
-    icon: Newspaper,
-    color: 'bg-[#FF9500]',
   },
   {
     path: '/itinerary/3d',
@@ -47,13 +32,6 @@ const hubItems = [
     description: 'Course ou vélo guidé sur un tracé',
     icon: Navigation,
     color: 'bg-[#FF2D55]',
-  },
-  {
-    path: '/itinerary/photos',
-    title: 'Photos itinéraire',
-    description: 'Publier et parcourir les photos du feed',
-    icon: Camera,
-    color: 'bg-[#8E8E93]',
   },
 ] as const;
 
@@ -92,7 +70,7 @@ export default function ItineraryHub() {
         <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
           <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
             <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">
-              Choisissez une fonctionnalité. Les écrans existants s’ouvrent ici sans duplication.
+              Créez un tracé, retrouvez vos parcours ou lancez un mode guidé — tout est regroupé ici.
             </p>
             <div
               className="ios-card w-full min-w-0 overflow-hidden border border-border/60"

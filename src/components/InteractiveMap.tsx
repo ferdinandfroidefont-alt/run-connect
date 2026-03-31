@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, PenTool, Crown } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -282,6 +282,7 @@ export const InteractiveMap = ({
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [previewSession, setPreviewSession] = useState<Session | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [sessionPresetRouteId, setSessionPresetRouteId] = useState<string | null>(null);
   const [presetLocation, setPresetLocation] = useState<{
     lat: number;
     lng: number;
@@ -483,6 +484,23 @@ export const InteractiveMap = ({
       { replace: true },
     );
   }, [searchParams, setSearchParams]);
+
+  /** Création de séance avec itinéraire pré-sélectionné (?presetRoute=uuid) — même écran que le +. */
+  useEffect(() => {
+    if (!isActive) return;
+    const pr = searchParams.get('presetRoute');
+    if (!pr) return;
+    setSessionPresetRouteId(pr);
+    setIsCreateDialogOpen(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('presetRoute');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [isActive, searchParams, setSearchParams]);
 
   // Load user profile
   useEffect(() => {
@@ -1958,25 +1976,14 @@ export const InteractiveMap = ({
         </MapIosColoredFab>
 
         {isActive && (
-          <>
-            <MapIosColoredFab
-              tone="gray"
-              title={t("navigation.itinerary")}
-              onClick={() => navigate("/itinerary")}
-              className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-            >
-              <PenTool className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </MapIosColoredFab>
-
-            <MapIosColoredFab
-              tone="gray"
-              title={t("navigation.leaderboard")}
-              onClick={() => navigate("/leaderboard")}
-              className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-            >
-              <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} />
-            </MapIosColoredFab>
-          </>
+          <MapIosColoredFab
+            tone="gray"
+            title={t("navigation.leaderboard")}
+            onClick={() => navigate("/leaderboard")}
+            className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+          >
+            <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} />
+          </MapIosColoredFab>
         )}
 
         <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
@@ -1986,10 +1993,15 @@ export const InteractiveMap = ({
       
 
       {/* Create Session Wizard */}
-      <CreateSessionWizard isOpen={isCreateDialogOpen} onClose={() => {
-      setIsCreateDialogOpen(false);
-      setPresetLocation(null);
-    }} onSessionCreated={async (sessionId) => {
+      <CreateSessionWizard
+        isOpen={isCreateDialogOpen}
+        onClose={() => {
+          setIsCreateDialogOpen(false);
+          setPresetLocation(null);
+          setSessionPresetRouteId(null);
+        }}
+        presetRouteId={sessionPresetRouteId}
+        onSessionCreated={async (sessionId) => {
       console.log('🎯 Session created callback triggered, sessionId:', sessionId);
       
       if (sessionId) {
@@ -2008,7 +2020,11 @@ export const InteractiveMap = ({
           await loadSessions();
         }, delay);
       });
-    }} map={mapboxMap} presetLocation={presetLocation} onCreateRoute={handleCreateRoute} />
+        }}
+        map={mapboxMap}
+        presetLocation={presetLocation}
+        onCreateRoute={handleCreateRoute}
+      />
 
       {/* Session Preview Popup */}
       <SessionPreviewPopup

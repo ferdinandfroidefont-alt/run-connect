@@ -36,8 +36,7 @@ const Search = lazy(() => import("./pages/Search"));
 const RouteCreation = lazy(() => import("./pages/RouteCreation"));
 const ItineraryHub = lazy(() => import("./pages/ItineraryHub"));
 const ItineraryMyRoutes = lazy(() => import("./pages/ItineraryMyRoutes"));
-const ItineraryFeed = lazy(() => import("./pages/ItineraryFeed"));
-const ItineraryPhotos = lazy(() => import("./pages/ItineraryPhotos"));
+const ItineraryRouteDetail = lazy(() => import("./pages/ItineraryRouteDetail"));
 const Itinerary3D = lazy(() => import("./pages/Itinerary3D"));
 const ItineraryTraining = lazy(() => import("./pages/ItineraryTraining"));
 const Privacy = lazy(() => import("./pages/Privacy"));
@@ -213,8 +212,7 @@ const App = () => {
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
                   <Route path="/itinerary" element={<Layout><PageTransition><PageSuspense><ItineraryHub /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/itinerary/feed" element={<Layout><PageTransition><PageSuspense><ItineraryFeed /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/itinerary/photos" element={<Layout><PageTransition><PageSuspense><ItineraryPhotos /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/3d" element={<Layout><PageTransition><PageSuspense><Itinerary3D /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/training" element={<Layout><PageTransition><PageSuspense><ItineraryTraining /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/route-create" element={<Layout><PageTransition><PageSuspense><RouteCreation /></PageSuspense></PageTransition></Layout>} />

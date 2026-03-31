@@ -203,6 +203,12 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
     }
   }, [isEditMode]);
 
+  const applyExistingRoutePreset = useCallback((routeId: string) => {
+    setFormData((prev) => ({ ...prev, route_id: routeId }));
+    setSelectedRoute(routeId);
+    setRouteMode('existing');
+  }, []);
+
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
       case 'location':
@@ -243,6 +249,7 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
     updateBlocks,
     setSessionMode,
     resetWizard,
+    applyExistingRoutePreset,
     canProceed,
   };
 };

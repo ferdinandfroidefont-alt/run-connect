@@ -131,7 +131,7 @@ export const RouteDialog = ({
                 className="h-4 w-4 rounded border-border"
               />
               <Label htmlFor="route-public" className="text-sm leading-snug">
-                Rendre cet itinéraire public (visible par les autres utilisateurs dans le feed itinéraire)
+                Itinéraire public (partageable avec d’autres utilisateurs)
               </Label>
             </div>
           )}

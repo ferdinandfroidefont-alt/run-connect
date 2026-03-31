@@ -750,15 +750,15 @@ export const RouteCreation = () => {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden bg-background">
       <div className="relative z-20 shrink-0 bg-background/95 backdrop-blur-md border-b border-border/30 pt-[var(--safe-area-top)]">
-        <div className="flex items-center justify-between h-11 px-ios-2">
+        <div className="flex h-11 items-center justify-between px-ios-2">
           <button
             onClick={handleCancel}
-            className="flex items-center gap-ios-1 text-primary active:opacity-60 px-ios-2 py-ios-1"
+            className="flex items-center gap-ios-1 px-ios-2 py-ios-1 text-primary active:opacity-60"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-ios-headline">Retour</span>
           </button>
-          <h1 className="text-ios-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
+          <h1 className="absolute left-1/2 -translate-x-1/2 text-ios-headline font-semibold text-foreground">
             {isEditMode ? 'Modifier' : 'Itinéraire'}
           </h1>
           <div className="flex items-center gap-ios-1">
@@ -782,6 +782,15 @@ export const RouteCreation = () => {
               <Trash2 className="h-5 w-5" />
             </Button>
           </div>
+        </div>
+        <div className="flex justify-end border-t border-border/20 px-ios-3 py-1.5">
+          <button
+            type="button"
+            onClick={() => navigate('/itinerary/my-routes')}
+            className="text-[13px] font-medium text-primary active:opacity-70"
+          >
+            Mes itinéraires
+          </button>
         </div>
       </div>
 

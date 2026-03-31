@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -36,6 +36,8 @@ interface CreateSessionWizardProps {
   onSessionCreated: (sessionId?: string) => void;
   map: mapboxgl.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
+  /** Pré-sélectionne un itinéraire enregistré (query `?presetRoute=` sur l’accueil). */
+  presetRouteId?: string | null;
   onCreateRoute?: () => void;
   // Edit mode props
   editSession?: any;
@@ -66,6 +68,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode, coachingSession });
+  const lastAppliedPresetRouteRef = useRef<string | null>(null);
 
   // Handle preset location
   useEffect(() => {
@@ -74,12 +77,22 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     }
   }, [presetLocation, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      lastAppliedPresetRouteRef.current = null;
+      return;
+    }
+    if (!presetRouteId || lastAppliedPresetRouteRef.current === presetRouteId) return;
+    lastAppliedPresetRouteRef.current = presetRouteId;
+    wizard.applyExistingRoutePreset(presetRouteId);
+  }, [isOpen, presetRouteId, wizard.applyExistingRoutePreset]);
+
   // Reset wizard when closing
   useEffect(() => {
     if (!isOpen) {
       wizard.resetWizard();
     }
-  }, [isOpen]);
+  }, [isOpen, wizard.resetWizard]);
 
   const handleReverseGeocode = async (lat: number, lng: number) => {
     try {
