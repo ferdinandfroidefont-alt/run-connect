@@ -620,9 +620,8 @@ const Profile = () => {
     >
       {/* Aligné hub Paramètres (SettingsDialog) : pas de w-full + mx-auto sur le même bloc ; gouttières px-4 / ios-shell:px-2 */}
       <div className="ios-scroll-region flex-1 min-h-0 min-w-0 w-full max-w-full">
-      <div className="box-border min-h-0 min-w-0 max-w-full sm:mx-auto sm:max-w-2xl">
-      {/* Cover Image - Facebook Style */}
-      <div className="relative min-w-0 max-w-full overflow-x-hidden">
+      {/* Couverture pleine largeur — pas de max-w-2xl ici (évite flex/scroll WebKit + recentrage qui coupent les cartes). */}
+      <div className="relative w-full min-w-0 max-w-full overflow-x-hidden">
         {/* Cover Photo */}
         <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
           {(coverPreview || profile?.cover_image_url) ? (
@@ -709,8 +708,9 @@ const Profile = () => {
         <input id="avatar-upload" type="file" accept="image/*" capture="environment" onChange={handleAvatarChange} className="hidden" />
       )}
 
-      {/* Hub Paramètres : py-5, cartes groupées = px-4 + ios-shell:px-2 + ios-card (sans pad horizontal sur la carte, comme le hub) */}
-      <div className="min-h-0 w-full min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+      {/* Colonne cartes : pleine largeur puis max-w-2xl centré sans w-full+mx sur le même nœud (cf. SettingsDialog). */}
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
+        <div className="box-border min-h-0 min-w-0 max-w-full space-y-4 sm:mx-auto sm:max-w-2xl">
         <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
           <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
             <div className="flex flex-col items-center px-4 py-3 pb-ios-1 pt-ios-1 ios-shell:px-2.5 ios-shell:py-2.5">
@@ -930,7 +930,7 @@ const Profile = () => {
         {/* Image Crop Editor */}
         <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
 
-      </div>
+        </div>
       </div>
       </div>
     </div>

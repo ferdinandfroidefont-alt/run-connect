@@ -153,11 +153,14 @@ export const BottomNavigation = () => {
       )}
       role="navigation"
       aria-label="Navigation principale"
-      style={{ paddingBottom: "var(--safe-area-bottom)" }}
+      style={{
+        /* Safe area home indicator, légèrement resserrée pour éviter l’air “double” sous les onglets. */
+        paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+      }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
-      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5">
+      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5 pb-0">
         <div
           className="mx-auto flex max-w-full items-stretch justify-center"
           style={{

@@ -88,10 +88,9 @@ export default function ItineraryHub() {
           Tab bar visible : le <main> s’arrête déjà au-dessus de la nav (safe-area gérée sur la nav seule).
           Éviter pb + safe-area-bottom ici → doublon visuel / insets qui peuvent perturber WebKit au retour accueil.
         */}
-        <div className="box-border min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
-          {/* Même schéma que SettingsDialog hub : colonne max-width sans w-full+mx sur le bloc paddé */}
-          <div className="box-border min-w-0 max-w-full sm:mx-auto sm:max-w-2xl">
-            <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+        {/* Même empilement que SettingsDialog hub : pas de max-w-2xl / mx entre ScrollArea et le wrapper px (évite le clip iOS). */}
+        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5 pb-8">
+          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
             <p className="mb-4 px-0.5 text-ios-subheadline leading-relaxed text-muted-foreground">
               Choisissez une fonctionnalité. Les écrans existants s’ouvrent ici sans duplication.
             </p>
@@ -118,7 +117,6 @@ export default function ItineraryHub() {
                   {index < hubItems.length - 1 && <div className="ios-list-row-inset-sep" />}
                 </div>
               ))}
-            </div>
             </div>
           </div>
         </div>

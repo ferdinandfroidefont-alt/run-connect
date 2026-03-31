@@ -656,12 +656,33 @@ export const NotificationCenter = ({
             : "p-6"
         )}
       >
-        <SheetHeader className="space-y-1.5 px-0 text-left">
-          <SheetTitle>Notifications</SheetTitle>
-          <SheetDescription>
-            {unreadCount > 0 ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}` : 'Aucune nouvelle notification'}
-          </SheetDescription>
-        </SheetHeader>
+        {isIosPhone ? (
+          <div className="relative w-full min-w-0 space-y-1.5 px-0">
+            {/*
+              Centrage visuel type iOS : le titre ne doit pas suivre le flex du SheetHeader (sinon décalé par le X).
+              Le bouton fermer reste géré par SheetContent (absolute right).
+            */}
+            <div className="relative min-h-[1.75rem] w-full">
+              <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center">
+                Notifications
+              </SheetTitle>
+            </div>
+            <SheetDescription className="text-center">
+              {unreadCount > 0
+                ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}`
+                : 'Aucune nouvelle notification'}
+            </SheetDescription>
+          </div>
+        ) : (
+          <SheetHeader className="space-y-1.5 px-0 text-left">
+            <SheetTitle>Notifications</SheetTitle>
+            <SheetDescription>
+              {unreadCount > 0
+                ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}`
+                : 'Aucune nouvelle notification'}
+            </SheetDescription>
+          </SheetHeader>
+        )}
         <ScrollArea className="mt-4 h-[calc(100vh-7.25rem)] w-full min-w-0 max-w-full overflow-x-hidden">
           <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">

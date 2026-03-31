@@ -31,8 +31,8 @@ html, body {
     --radius-sm: 0.625rem;
     --radius-md: 0.875rem;
     --radius-lg: 1.125rem;
-    /* Barre de navigation basse (icône + libellé) + réserve scroll (--bottom-nav-offset) */
-    --nav-height: 4.25rem;
+    /* Tab bar : un peu moins haute que l’ancien 4.25rem pour réduire la marge vide sous les libellés (icônes quasi inchangées). */
+    --nav-height: 4rem;
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
