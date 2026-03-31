@@ -36,6 +36,27 @@ export function formatDistanceMeters(
 /**
  * @param km distance en kilomètres (données API / BDD)
  */
+/**
+ * Distance le long du tracé (ex. curseur sur profil) : précision accrue vs l’affichage standard.
+ */
+export function formatDistanceAlongPathMeters(
+  meters: number | null | undefined,
+  unit: DistanceUnit,
+): string {
+  if (meters == null || !Number.isFinite(meters) || meters < 0) return '—';
+  if (unit === 'mi') {
+    const mi = kmToMiles(meters / 1000);
+    const decimals = mi < 10 ? 2 : 1;
+    return `${mi.toFixed(decimals)}\u00a0mi`;
+  }
+  if (meters < 1000) {
+    return `${meters < 10 ? meters.toFixed(1) : Math.round(meters)}\u00a0m`;
+  }
+  const km = meters / 1000;
+  const decimals = km < 10 ? 2 : 1;
+  return `${km.toFixed(decimals)}\u00a0km`;
+}
+
 export function formatDistanceKm(km: number | null | undefined, unit: DistanceUnit): string {
   if (km == null || !Number.isFinite(km)) return '—';
   if (unit === 'mi') {

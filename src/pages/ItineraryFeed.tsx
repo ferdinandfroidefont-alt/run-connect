@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,8 +16,13 @@ const RouteDetailDialog = lazy(() =>
 export default function ItineraryFeed() {
   const navigate = useNavigate();
   const routesFeed = useRoutesFeed();
+  const { position: mapUserPosition, getCurrentPosition } = useGeolocation();
   const [selectedFeedRoute, setSelectedFeedRoute] = useState<FeedRoute | null>(null);
   const [showRouteDetail, setShowRouteDetail] = useState(false);
+
+  useEffect(() => {
+    void getCurrentPosition();
+  }, [getCurrentPosition]);
 
   const bumpAfterMutation = useCallback(() => {
     routesFeed.refresh();
@@ -93,6 +99,7 @@ export default function ItineraryFeed() {
                     key={route.id}
                     route={route}
                     index={i}
+                    mapUserPosition={mapUserPosition}
                     onClick={(r) => {
                       setSelectedFeedRoute(r);
                       setShowRouteDetail(true);

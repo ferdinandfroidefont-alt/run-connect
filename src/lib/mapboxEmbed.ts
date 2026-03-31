@@ -1,5 +1,6 @@
 import mapboxgl from "mapbox-gl";
-import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from "@/lib/mapboxConfig";
+import { getMapboxAccessToken } from "@/lib/mapboxConfig";
+import { getHomeMapboxStyleUrl } from "@/lib/mapboxMapStylePreference";
 import type { MapCoord } from "@/lib/geoUtils";
 
 let accessTokenSet = false;
@@ -27,7 +28,7 @@ export function clientXYToMapCoord(map: mapboxgl.Map, clientX: number, clientY: 
 
 /**
  * Carte embarquée — mêmes réglages de base que la carte Accueil (antialias, pas de copies du monde).
- * Style par défaut = `roadmap` (streets-v12), comme InteractiveMap au premier rendu.
+ * Style par défaut = préférence stockée (même URL que la carte Accueil).
  */
 export function createEmbeddedMapboxMap(
   container: HTMLElement,
@@ -43,8 +44,7 @@ export function createEmbeddedMapboxMap(
 ): mapboxgl.Map {
   ensureMapboxToken();
   const c = options.center ?? { lat: 48.8566, lng: 2.3522 };
-  const styleUrl =
-    options.style ?? MAPBOX_STYLE_BY_UI_ID.roadmap ?? MAPBOX_NAVIGATION_DAY_STYLE;
+  const styleUrl = options.style ?? getHomeMapboxStyleUrl();
   return new mapboxgl.Map({
     container,
     style: styleUrl,

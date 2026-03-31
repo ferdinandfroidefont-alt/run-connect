@@ -17,6 +17,8 @@ interface RoutesFeedCardProps {
   route: FeedRoute;
   onClick: (route: FeedRoute) => void;
   index?: number;
+  /** Position courante (ex. fournie par le feed — une seule requête GPS pour la liste). */
+  mapUserPosition?: { lat: number; lng: number } | null;
 }
 
 const formatElevation = (meters: number | null) => {
@@ -27,13 +29,19 @@ const formatElevation = (meters: number | null) => {
 const ROUTE_SRC = 'routes-feed-mini-line';
 const ROUTE_LAYER = 'routes-feed-mini-line-layer';
 
-export const RoutesFeedCard = ({ route, onClick, index = 0 }: RoutesFeedCardProps) => {
+export const RoutesFeedCard = ({ route, onClick, index = 0, mapUserPosition }: RoutesFeedCardProps) => {
   const { formatMeters, formatKm } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [miniMapReady, setMiniMapReady] = useState(false);
-  const { position } = useGeolocation();
+  const { position: hookPosition, getCurrentPosition } = useGeolocation();
+  const position = mapUserPosition !== undefined ? mapUserPosition : hookPosition;
+
+  useEffect(() => {
+    if (mapUserPosition !== undefined) return;
+    void getCurrentPosition();
+  }, [mapUserPosition, getCurrentPosition]);
 
   useEffect(() => {
     if (!mapContainer.current || !route.coordinates?.length || !getMapboxAccessToken()) return;

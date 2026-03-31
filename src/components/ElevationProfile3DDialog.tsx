@@ -84,7 +84,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
       <DialogContent
         fullScreen
         hideCloseButton
-        className="flex min-h-0 flex-col overflow-hidden p-0 bg-black"
+        className="flex h-[100dvh] max-h-[100dvh] min-h-0 w-full flex-col overflow-hidden p-0 bg-black"
         aria-describedby={undefined}
       >
         {/* Floating back button — l'overlay flyover gère ensuite les infos de lecture */}
@@ -102,10 +102,10 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
           </div>
         </div>
 
-        {/* Full-screen 3D view */}
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* Full-screen 3D view — hauteur explicite évite canvas Mapbox 0×0 (écran noir). */}
+        <div className="relative flex min-h-[50dvh] flex-1 flex-col">
           {loading ? (
-            <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-black">
+            <div className="flex min-h-[50dvh] flex-1 flex-col items-center justify-center gap-4 bg-black">
               <div className="relative">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 <div className="absolute inset-0 h-10 w-10 rounded-full bg-primary/20 animate-ping" />
@@ -122,7 +122,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               autoPlay={false}
               routeName={routeName}
               routeStats={computedStats}
-              className="min-h-0 flex-1 w-full"
+              className="min-h-0 w-full flex-1"
             />
           )}
         </div>

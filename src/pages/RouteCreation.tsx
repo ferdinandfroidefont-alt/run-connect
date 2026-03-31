@@ -15,6 +15,7 @@ import {
 } from '@/components/route-creation/RouteElevationPanel';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import { formatDistanceAlongPathMeters } from '@/lib/distanceUnits';
 import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { fetchElevationsForCoords, samplePathCoords } from '@/lib/openElevation';
 import {
@@ -56,7 +57,7 @@ export const RouteCreation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { formatKm } = useDistanceUnits();
+  const { formatKm, unit } = useDistanceUnits();
 
   const { getCurrentPosition } = useGeolocation();
 
@@ -868,6 +869,7 @@ export const RouteCreation = () => {
               elevationGain={totalElevationGain}
               elevationLoss={totalElevationLoss}
               formatDistanceKm={formatKm}
+              formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
               defaultExpanded={false}
               onScrub={handleElevationScrub}
             />

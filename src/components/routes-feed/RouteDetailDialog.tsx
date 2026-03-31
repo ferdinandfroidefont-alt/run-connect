@@ -20,7 +20,7 @@ import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
 import { cn } from '@/lib/utils';
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer, clientXYToMapCoord } from '@/lib/mapboxEmbed';
-import { MAPBOX_STYLE_BY_UI_ID, getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -73,7 +73,15 @@ export const RouteDetailDialog = ({
 }: RouteDetailDialogProps) => {
   const { user } = useAuth();
   const { formatMeters } = useDistanceUnits();
-  const { position: userGeoPosition } = useGeolocation();
+  const { position: userGeoPosition, getCurrentPosition } = useGeolocation();
+  const userGeoRef = useRef(userGeoPosition);
+  useEffect(() => {
+    userGeoRef.current = userGeoPosition;
+  }, [userGeoPosition]);
+
+  useEffect(() => {
+    if (open) void getCurrentPosition();
+  }, [open, getCurrentPosition]);
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -223,7 +231,6 @@ export const RouteDetailDialog = ({
       if (path.length === 0) return;
 
       map = createEmbeddedMapboxMap(mapContainer.current, {
-        style: MAPBOX_STYLE_BY_UI_ID.terrain,
         center: path[0],
         zoom: 10,
         interactive: true,
@@ -260,15 +267,15 @@ export const RouteDetailDialog = ({
 
         const bounds = new mapboxgl.LngLatBounds();
         path.forEach((p) => bounds.extend([p.lng, p.lat]));
-        if (userGeoPosition) {
-          bounds.extend([userGeoPosition.lng, userGeoPosition.lat]);
-          userLocationMarkerRef.current?.remove();
-          userLocationMarkerRef.current = createUserLocationMapboxMarker(
-            userGeoPosition.lng,
-            userGeoPosition.lat,
-          ).addTo(map);
+        const u = userGeoRef.current;
+        if (u) bounds.extend([u.lng, u.lat]);
+        map.fitBounds(bounds, { padding: u ? 50 : 40, duration: 0, maxZoom: 16 });
+
+        userLocationMarkerRef.current?.remove();
+        userLocationMarkerRef.current = null;
+        if (u) {
+          userLocationMarkerRef.current = createUserLocationMapboxMarker(u.lng, u.lat).addTo(map);
         }
-        map.fitBounds(bounds, { padding: userGeoPosition ? 50 : 40, duration: 0, maxZoom: 16 });
       };
 
       if (map.isStyleLoaded()) onStyleReady();
@@ -284,7 +291,19 @@ export const RouteDetailDialog = ({
       map?.remove();
       mapRef.current = null;
     };
-  }, [open, route, photos, userGeoPosition]);
+  }, [open, route, photos]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!open || !map || !map.isStyleLoaded()) return;
+    userLocationMarkerRef.current?.remove();
+    userLocationMarkerRef.current = null;
+    if (!userGeoPosition) return;
+    userLocationMarkerRef.current = createUserLocationMapboxMarker(
+      userGeoPosition.lng,
+      userGeoPosition.lat,
+    ).addTo(map);
+  }, [open, userGeoPosition]);
 
   // Marqueur de placement : draggable pour corriger avant publication (EXIF ou manuel)
   useEffect(() => {

@@ -21,7 +21,6 @@ type RouteFlyover3DProps = {
   } | null;
 };
 
-const DEM_SOURCE_ID = 'route-flyover-dem';
 const BASE_SOURCE_ID = 'route-flyover-base';
 const TRAVELED_SOURCE_ID = 'route-flyover-traveled';
 const POINT_SOURCE_ID = 'route-flyover-point';
@@ -35,7 +34,6 @@ export function RouteFlyover3D({
   coordinates,
   elevations,
   autoPlay = false,
-  elevationExaggeration = 1.3,
   className,
   routeName,
   routeStats,
@@ -95,9 +93,10 @@ export function RouteFlyover3D({
     setSceneReady(false);
     setMapError(null);
 
+    /** Même base que le mode 3D Accueil (`standard3d` — bâtiments / rendu Mapbox Standard). */
     const map = new mapboxgl.Map({
       container,
-      style: MAPBOX_STYLE_BY_UI_ID.terrain,
+      style: MAPBOX_STYLE_BY_UI_ID.standard3d,
       center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
       zoom: initialFrame.zoom,
       pitch: initialFrame.pitch,
@@ -106,6 +105,7 @@ export function RouteFlyover3D({
       attributionControl: false,
       antialias: true,
       pitchWithRotate: false,
+      renderWorldCopies: false,
     });
     mapRef.current = map;
 
@@ -118,25 +118,6 @@ export function RouteFlyover3D({
 
     const bootScene = () => {
       if (!mapRef.current) return;
-
-      if (!map.getSource(DEM_SOURCE_ID)) {
-        map.addSource(DEM_SOURCE_ID, {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14,
-        });
-      }
-
-      map.setTerrain({ source: DEM_SOURCE_ID, exaggeration: elevationExaggeration });
-      map.setFog({
-        range: [0.8, 8],
-        color: 'rgb(198, 217, 240)',
-        'high-color': 'rgb(36, 88, 168)',
-        'space-color': 'rgb(8, 10, 20)',
-        'horizon-blend': 0.08,
-        'star-intensity': 0.12,
-      });
 
       map.addSource(BASE_SOURCE_ID, {
         type: 'geojson',
@@ -301,7 +282,7 @@ export function RouteFlyover3D({
       map.remove();
       mapRef.current = null;
     };
-  }, [elevationExaggeration, endpoints, initialFrame, playback.flyoverCoordinates]);
+  }, [endpoints, initialFrame, playback.flyoverCoordinates]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -376,10 +357,13 @@ export function RouteFlyover3D({
 
   return (
     <div
-      className={cn('relative block h-full min-h-[320px] overflow-hidden rounded-[28px] bg-black', className)}
+      className={cn(
+        'relative flex w-full min-h-[min(360px,55dvh)] flex-1 flex-col overflow-hidden rounded-[28px] bg-black',
+        className,
+      )}
     >
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#0f172a_50%,#020617_100%)]" />
-      <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(135deg,#1d4ed8_0%,#0f172a_50%,#020617_100%)] opacity-80" />
+      <div ref={mapContainerRef} className="absolute inset-0 z-0 min-h-[min(280px,45dvh)] w-full" />
       {!sceneReady && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/18">
           <div className="rounded-3xl border border-white/10 bg-black/30 px-5 py-4 text-center text-white backdrop-blur-xl">

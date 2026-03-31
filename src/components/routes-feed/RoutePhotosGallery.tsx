@@ -38,7 +38,11 @@ interface RoutePhotosGalleryProps {
 
 export const RoutePhotosGallery = ({ syncKey = 0 }: RoutePhotosGalleryProps) => {
   const { photos, loading, refresh } = useRoutePhotosGallery();
-  const { position } = useGeolocation();
+  const { position, getCurrentPosition } = useGeolocation();
+
+  useEffect(() => {
+    void getCurrentPosition();
+  }, [getCurrentPosition]);
   const positionRef = useRef(position);
   useLayoutEffect(() => {
     positionRef.current = position;

@@ -1,8 +1,14 @@
-import { MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
+import { MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 
 export const RUNCONNECT_MAP_STYLE_STORAGE_KEY = 'runconnect_map_style_id';
 
 const VALID_IDS = new Set(Object.keys(MAPBOX_STYLE_BY_UI_ID));
+
+/** Style Mapbox effectif — identique à la carte Accueil (`InteractiveMap`). */
+export function getHomeMapboxStyleUrl(): string {
+  const id = getStoredMapStyleId();
+  return MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+}
 
 export function getStoredMapStyleId(): string {
   if (typeof window === 'undefined') return 'roadmap';
