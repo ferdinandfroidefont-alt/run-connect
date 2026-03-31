@@ -12,18 +12,25 @@ export function samplePathCoords(points: MapCoord[], max: number): MapCoord[] {
   return out;
 }
 
-/** Lots courts = URLs GET fiables (proxies / longueur max). */
-const OPEN_METEO_BATCH = 48;
+/** Open-Meteo : max 100 / requête ; 90 pour rester sous les limites de longueur d’URL (proxies ~2048). */
+const OPEN_METEO_BATCH = 90;
 const OPEN_ELEVATION_BATCH = 80;
-/** Timeout par requête — pas un signal global sur toute la boucle (sinon >10 km multi-lots annule avant la fin → altitudes à 0). */
-const OPEN_METEO_CHUNK_TIMEOUT_MS = 35_000;
-const OPEN_ELEVATION_CHUNK_TIMEOUT_MS = 25_000;
+/** Pause entre lots pour limiter 429 / annulation réseau sur longs parcours. */
+const OPEN_METEO_INTER_CHUNK_MS = 100;
+const OPEN_METEO_CHUNK_RETRIES = 2;
+/** Timeout par requête — pas un signal global sur toute la boucle. */
+const OPEN_METEO_CHUNK_TIMEOUT_MS = 45_000;
+const OPEN_ELEVATION_CHUNK_TIMEOUT_MS = 35_000;
 
 function withTimeoutSignal(ms: number): AbortSignal {
   const c = new AbortController();
   const t = window.setTimeout(() => c.abort(), ms);
   c.signal.addEventListener("abort", () => window.clearTimeout(t));
   return c.signal;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => window.setTimeout(r, ms));
 }
 
 /** Moyenne mobile légère (réduit « créneaux » sans trop lisser les bosses). */
@@ -50,25 +57,53 @@ export function smoothElevationSeries(values: number[], halfWindow: number): num
  * Altitudes via Open-Meteo (rapide, modèle SRTM/terrain, sans clé).
  * https://open-meteo.com/en/docs/elevation-api
  */
+async function fetchOpenMeteoChunk(chunk: MapCoord[]): Promise<number[] | null> {
+  const lat = chunk.map((p) => p.lat.toFixed(6)).join(",");
+  const lng = chunk.map((p) => p.lng.toFixed(6)).join(",");
+  const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
+
+  for (let attempt = 0; attempt < OPEN_METEO_CHUNK_RETRIES; attempt++) {
+    const signal = withTimeoutSignal(OPEN_METEO_CHUNK_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal });
+      let data: { elevation?: number[]; error?: boolean };
+      try {
+        data = (await res.json()) as { elevation?: number[]; error?: boolean };
+      } catch {
+        await sleep(300);
+        continue;
+      }
+      if (!res.ok || data.error === true) {
+        await sleep(300);
+        continue;
+      }
+      const list = data.elevation;
+      if (!Array.isArray(list) || list.length !== chunk.length) {
+        await sleep(300);
+        continue;
+      }
+      if (list.some((z) => typeof z !== "number" || !Number.isFinite(z))) {
+        await sleep(300);
+        continue;
+      }
+      return list as number[];
+    } catch {
+      await sleep(300);
+    }
+  }
+  return null;
+}
+
 async function fetchOpenMeteoElevations(coords: MapCoord[]): Promise<number[] | null> {
   if (coords.length === 0) return [];
   const all: number[] = [];
 
   for (let i = 0; i < coords.length; i += OPEN_METEO_BATCH) {
+    if (i > 0) await sleep(OPEN_METEO_INTER_CHUNK_MS);
     const chunk = coords.slice(i, i + OPEN_METEO_BATCH);
-    const lat = chunk.map((p) => p.lat.toFixed(6)).join(",");
-    const lng = chunk.map((p) => p.lng.toFixed(6)).join(",");
-    const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
-    const signal = withTimeoutSignal(OPEN_METEO_CHUNK_TIMEOUT_MS);
-    const res = await fetch(url, { signal });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { elevation?: number[] };
-    const list = data.elevation;
-    if (!Array.isArray(list) || list.length !== chunk.length) return null;
-    for (const z of list) {
-      if (typeof z !== "number" || !Number.isFinite(z)) return null;
-      all.push(z);
-    }
+    const part = await fetchOpenMeteoChunk(chunk);
+    if (part == null) return null;
+    all.push(...part);
   }
   return all;
 }

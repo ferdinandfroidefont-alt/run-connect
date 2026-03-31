@@ -107,7 +107,8 @@ export function setOrUpdateLineLayer(
   };
 
   if (map.isStyleLoaded()) apply();
-  else map.once("load", apply);
+  /** Après `setStyle`, c’est `style.load` qui refire — pas toujours `load` (v2/v3). */
+  else map.once("style.load", apply);
 }
 
 export function removeLineLayer(map: mapboxgl.Map, sourceId: string, layerId: string) {

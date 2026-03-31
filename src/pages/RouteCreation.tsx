@@ -318,6 +318,7 @@ export const RouteCreation = () => {
     m.setStyle(url);
     m.once('style.load', () => {
       replayAllSegments();
+      window.setTimeout(() => replayAllSegments(), 160);
     });
   }, []);
 
@@ -878,7 +879,11 @@ export const RouteCreation = () => {
           <Trash2 className="w-4 h-4" />
         </Button>
 
-        <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
+        <MapStyleSelector
+          currentStyle={mapStyleId}
+          onStyleChange={handleMapStyleChange}
+          panelAnchor="viewport-left"
+        />
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">
