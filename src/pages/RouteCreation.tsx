@@ -22,7 +22,6 @@ import {
   distanceMeters,
   densifyMapCoords,
   pathLengthMeters,
-  resamplePathEvenlyMapCoords,
   resamplePathEveryMeters,
   type MapCoord,
 } from '@/lib/geoUtils';
@@ -491,7 +490,8 @@ export const RouteCreation = () => {
       setRouteElevations(elevations);
       setTotalElevationGain(roundedGain);
       setTotalElevationLoss(roundedLoss);
-      setElevationChartCoords(resamplePathEvenlyMapCoords(pathForElevation, elevations.length));
+      // Même série que les altitudes (évite désalignement / profil « plat » sur longs tracés).
+      setElevationChartCoords(sampled.map((c) => ({ lat: c.lat, lng: c.lng })));
       return {
         distanceKm,
         elevations,

@@ -12,9 +12,12 @@ export function samplePathCoords(points: MapCoord[], max: number): MapCoord[] {
   return out;
 }
 
-const OPEN_METEO_BATCH = 100;
+/** Lots courts = URLs GET fiables (proxies / longueur max). */
+const OPEN_METEO_BATCH = 48;
 const OPEN_ELEVATION_BATCH = 80;
-const FETCH_TIMEOUT_MS = 22_000;
+/** Timeout par requête — pas un signal global sur toute la boucle (sinon >10 km multi-lots annule avant la fin → altitudes à 0). */
+const OPEN_METEO_CHUNK_TIMEOUT_MS = 35_000;
+const OPEN_ELEVATION_CHUNK_TIMEOUT_MS = 25_000;
 
 function withTimeoutSignal(ms: number): AbortSignal {
   const c = new AbortController();
@@ -50,13 +53,13 @@ export function smoothElevationSeries(values: number[], halfWindow: number): num
 async function fetchOpenMeteoElevations(coords: MapCoord[]): Promise<number[] | null> {
   if (coords.length === 0) return [];
   const all: number[] = [];
-  const signal = withTimeoutSignal(FETCH_TIMEOUT_MS);
 
   for (let i = 0; i < coords.length; i += OPEN_METEO_BATCH) {
     const chunk = coords.slice(i, i + OPEN_METEO_BATCH);
     const lat = chunk.map((p) => p.lat.toFixed(6)).join(",");
     const lng = chunk.map((p) => p.lng.toFixed(6)).join(",");
     const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
+    const signal = withTimeoutSignal(OPEN_METEO_CHUNK_TIMEOUT_MS);
     const res = await fetch(url, { signal });
     if (!res.ok) return null;
     const data = (await res.json()) as { elevation?: number[] };
@@ -74,10 +77,10 @@ async function fetchOpenMeteoElevations(coords: MapCoord[]): Promise<number[] | 
 async function fetchOpenElevationLookup(coords: MapCoord[]): Promise<number[] | null> {
   if (coords.length === 0) return [];
   const all: number[] = [];
-  const signal = withTimeoutSignal(Math.min(FETCH_TIMEOUT_MS, 18_000));
 
   for (let i = 0; i < coords.length; i += OPEN_ELEVATION_BATCH) {
     const chunk = coords.slice(i, i + OPEN_ELEVATION_BATCH);
+    const signal = withTimeoutSignal(OPEN_ELEVATION_CHUNK_TIMEOUT_MS);
     const res = await fetch("https://api.open-elevation.com/api/v1/lookup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
