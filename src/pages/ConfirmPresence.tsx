@@ -320,26 +320,28 @@ export default function ConfirmPresence({
           : "fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary"
       }
     >
-      {/* iOS Header */}
-      <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-        <IosPageHeaderBar
-          left={
-            <button onClick={handleBack} className="flex min-w-0 max-w-full items-center gap-1 text-primary">
-              <ChevronLeft className="h-5 w-5 shrink-0" />
-              <span className="truncate text-[17px]">Retour</span>
-            </button>
-          }
-          title="Présence"
-        />
-      </div>
+      {!embedded && (
+        <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
+          <IosPageHeaderBar
+            left={
+              <button onClick={handleBack} className="flex min-w-0 max-w-full items-center gap-1 text-primary">
+                <ChevronLeft className="h-5 w-5 shrink-0" />
+                <span className="truncate text-[17px]">Retour</span>
+              </button>
+            }
+            title="Présence"
+          />
+        </div>
+      )}
 
       {/* Content : hauteur utile = espace entre header et bas (tab bar déjà hors du fixed-fill) */}
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-ios-4',
+          embedded && 'pt-ios-2',
           !roleChoice && !loading
-            ? 'overflow-hidden px-ios-4 pb-0 pt-0'
-            : 'overflow-y-auto px-ios-4 pb-0 pt-0',
+            ? 'overflow-hidden pb-0'
+            : 'overflow-y-auto pb-0',
         )}
         style={{
           WebkitOverflowScrolling: 'touch',
@@ -359,7 +361,10 @@ export default function ConfirmPresence({
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
-                className="min-h-0 w-full min-w-0 flex-1 snap-y snap-mandatory overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain touch-pan-y py-[min(22vh,7.5rem)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className={cn(
+                  'min-h-0 w-full min-w-0 flex-1 snap-y snap-mandatory overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain touch-pan-y [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                  embedded ? 'py-3' : 'py-[min(22vh,7.5rem)]',
+                )}
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 <div className="mx-auto w-full min-w-0 max-w-full space-y-3">
@@ -397,6 +402,16 @@ export default function ConfirmPresence({
         ) : !selectedSession ? (
           // Session selection screen - iOS Style
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
+            {embedded && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="-ml-1 flex w-fit items-center gap-0.5 text-[15px] font-medium text-primary active:opacity-70"
+              >
+                <ChevronLeft className="h-5 w-5 shrink-0" />
+                Retour
+              </button>
+            )}
             {sessions.length === 0 ? (
               <div className="ios-card p-8 text-center">
                 <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
@@ -436,6 +451,16 @@ export default function ConfirmPresence({
         ) : (
           // Validation view
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
+            {embedded && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="-ml-1 flex w-fit items-center gap-0.5 text-[15px] font-medium text-primary active:opacity-70"
+              >
+                <ChevronLeft className="h-5 w-5 shrink-0" />
+                Retour
+              </button>
+            )}
             {/* Track participants button */}
             <button
               onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
