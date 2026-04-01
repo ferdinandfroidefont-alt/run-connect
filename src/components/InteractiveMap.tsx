@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Check } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -32,7 +32,12 @@ import {
   takePrefetchedHomeMapPositionIfReady,
   waitForPrefetchedHomeMapPosition,
 } from '@/lib/homeMapPrefetch';
-import { AnimatePresence, motion } from 'framer-motion';
+import {
+  HomeMapFilterGroupedList,
+  HomeMapFilterRow,
+  HomeMapFilterSheet,
+  HOME_MAP_FILTER_PORTAL_SELECTOR,
+} from '@/components/map/HomeMapFilterSheet';
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
@@ -167,7 +172,28 @@ const SESSION_TYPE_OPTIONS = [
   { id: 'competition', label: 'Compétition', values: ['competition'] },
 ];
 
-type ExpandedFilter = 'time' | 'club' | 'day' | 'level' | null;
+type ExpandedFilter =
+  | 'activity'
+  | 'sessionType'
+  | 'time'
+  | 'friends'
+  | 'club'
+  | 'day'
+  | 'level'
+  | null;
+
+const FILTER_SHEET_META: Record<
+  NonNullable<ExpandedFilter>,
+  { title: string; description?: string }
+> = {
+  activity: { title: 'Sport', description: 'Affinez par discipline' },
+  sessionType: { title: 'Type de séance', description: 'Footing, fractionné, etc.' },
+  time: { title: 'Créneau', description: 'Plage horaire sur la journée' },
+  friends: { title: 'Visibilité', description: 'Carte complète ou focus sur tes amis' },
+  club: { title: 'Club', description: 'Filtrer par une ou plusieurs équipes' },
+  day: { title: 'Date', description: 'Jour des séances sur la carte' },
+  level: { title: 'Niveau', description: 'Difficulté minimale (1 à 6)' },
+};
 
 interface ClubFilterOption {
   id: string;
@@ -378,15 +404,17 @@ export const InteractiveMap = ({
     return () => clearTimeout(t);
   }, [user?.id]);
 
-  /** Un seul panneau dérivé ouvert + fermeture au clic extérieur (hors carrousel / panneau filtres). */
+  /** Fermeture au clic extérieur (hors chips filtres et hors feuille portail). */
   useEffect(() => {
     if (!expandedFilter) return;
     const close = (e: Event) => {
-      const el = homeMapFiltersRef.current;
       const t = e.target;
-      if (el && t instanceof Node && !el.contains(t)) {
-        setExpandedFilter(null);
-      }
+      if (!(t instanceof Node)) return;
+      const portal = document.querySelector(HOME_MAP_FILTER_PORTAL_SELECTOR);
+      if (portal?.contains(t)) return;
+      const el = homeMapFiltersRef.current;
+      if (el?.contains(t)) return;
+      setExpandedFilter(null);
     };
     document.addEventListener("pointerdown", close, true);
     return () => document.removeEventListener("pointerdown", close, true);
@@ -1753,10 +1781,15 @@ export const InteractiveMap = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFilters((prev) => ({ ...prev, friends_only: !prev.friends_only }))}
-                  className={cn("home-map-filter-chip snap-start", filters.friends_only && "home-map-filter-chip-active")}
+                  onClick={() => setExpandedFilter((prev) => (prev === 'friends' ? null : 'friends'))}
+                  className={cn(
+                    "home-map-filter-chip snap-start",
+                    (expandedFilter === 'friends' || filters.friends_only) && "home-map-filter-chip-active"
+                  )}
                 >
-                  <span className="flex items-center gap-1.5"><PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement</span>
+                  <span className="flex items-center gap-1.5">
+                    <PersonStanding className="h-3.5 w-3.5 shrink-0" /> Amis uniquement
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1813,242 +1846,206 @@ export const InteractiveMap = ({
                 </div>
               </div>
 
-            <AnimatePresence initial={false} mode="wait">
-              {expandedFilter && (
-                <motion.div
-                  key={expandedFilter}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-                  className="home-map-filter-sheet relative z-20 mt-3 rounded-[1.25rem] p-4 sm:p-5"
-                >
-                  {expandedFilter === 'activity' && (
-                    <div className="space-y-1">
-                      <div className="mb-3 px-0.5">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Sport</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Affinez par discipline</p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {ACTIVITY_OPTIONS.map((opt) => {
-                          const active =
-                            JSON.stringify(filters.activity_types) === JSON.stringify(opt.values);
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => {
-                                setFilters((prev) => ({ ...prev, activity_types: opt.values }));
-                                setExpandedFilter(null);
-                              }}
-                              className={cn(
-                                'flex min-h-[52px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
-                                active
-                                  ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20'
-                                  : 'border-border/60 bg-background/90 hover:border-border hover:bg-background'
-                              )}
-                            >
-                              <span className="text-[16px] font-medium text-foreground">{opt.label}</span>
-                              {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {expandedFilter === 'sessionType' && (
-                    <div className="space-y-1">
-                      <div className="mb-3 px-0.5">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Type de séance</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Footing, fractionné, etc.</p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {SESSION_TYPE_OPTIONS.map((opt) => {
-                          const active =
-                            JSON.stringify(filters.session_types) === JSON.stringify(opt.values);
-                          return (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => {
-                                setFilters((prev) => ({ ...prev, session_types: opt.values }));
-                                setExpandedFilter(null);
-                              }}
-                              className={cn(
-                                'flex min-h-[52px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
-                                active
-                                  ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20'
-                                  : 'border-border/60 bg-background/90 hover:border-border hover:bg-background'
-                              )}
-                            >
-                              <span className="text-[16px] font-medium text-foreground">{opt.label}</span>
-                              {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {expandedFilter === 'time' && (
-                    <div className="space-y-1">
-                      <div className="mb-3 px-0.5">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Créneau</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Filtrer par plage horaire</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        {TIME_SLOTS.map((slot) => {
-                          const active = filters.time_slot === slot.id;
-                          const Icon = slot.icon;
-                          return (
-                            <button
-                              key={slot.id}
-                              type="button"
-                              onClick={() => {
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  time_slot: prev.time_slot === slot.id ? null : slot.id,
-                                }));
-                                setExpandedFilter(null);
-                              }}
-                              className={cn(
-                                'flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border px-2 py-3 text-center transition-all',
-                                active
-                                  ? 'border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/25'
-                                  : 'border-border/60 bg-background/90 text-foreground hover:border-border hover:shadow-sm'
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  'h-6 w-6 shrink-0',
-                                  active ? 'text-primary-foreground' : TIME_SLOT_ICON_CLASS[slot.id]
-                                )}
-                                strokeWidth={2}
-                              />
-                              <span className="text-[13px] font-semibold leading-tight">{slot.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {expandedFilter === 'club' && (
-                    <div className="space-y-3">
-                      <div className="px-0.5">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Club</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Une ou plusieurs équipes</p>
-                      </div>
-                      <button
-                        type="button"
+            <HomeMapFilterSheet
+              open={!!expandedFilter}
+              onClose={() => setExpandedFilter(null)}
+              title={expandedFilter ? FILTER_SHEET_META[expandedFilter].title : ''}
+              description={expandedFilter ? FILTER_SHEET_META[expandedFilter].description : undefined}
+              titleId={expandedFilter ? `home-map-filter-title-${expandedFilter}` : 'home-map-filter-title'}
+              variant={expandedFilter === 'club' ? 'tall' : 'default'}
+              footer={
+                expandedFilter === 'club' ? (
+                  <button
+                    type="button"
+                    className="flex h-12 w-full items-center justify-center rounded-[14px] bg-primary text-[17px] font-semibold text-primary-foreground shadow-sm active:opacity-90"
+                    onClick={() => setExpandedFilter(null)}
+                  >
+                    Terminé
+                  </button>
+                ) : undefined
+              }
+            >
+              {expandedFilter === 'activity' && (
+                <HomeMapFilterGroupedList>
+                  {ACTIVITY_OPTIONS.map((opt) => {
+                    const active =
+                      JSON.stringify(filters.activity_types) === JSON.stringify(opt.values);
+                    return (
+                      <HomeMapFilterRow
+                        key={opt.id}
+                        label={opt.label}
+                        selected={active}
                         onClick={() => {
-                          setFilters((prev) => ({ ...prev, selected_club_ids: [] }));
+                          setFilters((prev) => ({ ...prev, activity_types: opt.values }));
                           setExpandedFilter(null);
                         }}
-                        className={cn(
-                          'flex min-h-[48px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
-                          filters.selected_club_ids.length === 0
-                            ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                            : 'border-border/60 bg-background/90 hover:border-border'
-                        )}
-                      >
-                        <span className="text-[16px] font-medium text-foreground">Tous les clubs</span>
-                        {filters.selected_club_ids.length === 0 && (
-                          <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />
-                        )}
-                      </button>
-                      <div className="max-h-[min(40vh,240px)] space-y-2 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
-                        {clubFilters.map((club) => {
-                          const active = filters.selected_club_ids.includes(club.id);
-                          return (
-                            <button
-                              key={club.id}
-                              type="button"
-                              onClick={() =>
-                                setFilters((prev) => ({
-                                  ...prev,
-                                  selected_club_ids: active
-                                    ? prev.selected_club_ids.filter((id) => id !== club.id)
-                                    : [...prev.selected_club_ids, club.id],
-                                }))
-                              }
-                              className={cn(
-                                'flex min-h-[48px] w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors',
-                                active
-                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/15'
-                                  : 'border-border/60 bg-background/90 hover:border-border'
-                              )}
-                            >
-                              <span className="min-w-0 truncate text-[16px] font-medium text-foreground">
-                                {club.name}
-                              </span>
-                              <span className="ml-2 shrink-0 text-[13px] tabular-nums text-muted-foreground">
-                                {club.memberCount}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {expandedFilter === 'day' && (
-                    <div className="space-y-2">
-                      <div className="px-0.5 pb-1">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Date</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Séances prévues ce jour</p>
-                      </div>
-                      <div className="rounded-2xl border border-border/50 bg-background/95 p-2 shadow-inner dark:bg-background/80">
-                        <CalendarComponent
-                          mode="single"
-                          selected={filters.selected_date}
-                          onSelect={(date) => {
-                            if (!date) return;
-                            setFilters((prev) => ({ ...prev, selected_date: date }));
-                            setExpandedFilter(null);
-                          }}
-                          initialFocus
-                          className="pointer-events-auto w-full p-0"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {expandedFilter === 'level' && (
-                    <div className="space-y-1">
-                      <div className="mb-3 px-0.5">
-                        <p className="text-[17px] font-semibold tracking-tight text-foreground">Niveau</p>
-                        <p className="mt-0.5 text-[15px] text-muted-foreground">Difficulté minimale (1–6)</p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-                        {[1, 2, 3, 4, 5, 6].map((lvl) => (
-                          <button
-                            key={lvl}
-                            type="button"
-                            onClick={() => {
-                              setFilters((prev) => ({
-                                ...prev,
-                                level: prev.level === lvl ? null : lvl,
-                              }));
-                              setExpandedFilter(null);
-                            }}
-                            className={cn(
-                              'flex h-14 min-h-[52px] items-center justify-center rounded-2xl border text-[17px] font-semibold transition-all',
-                              filters.level === lvl
-                                ? 'border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/25'
-                                : 'border-border/60 bg-background/90 text-foreground hover:border-border'
-                            )}
-                          >
-                            {lvl}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
+                      />
+                    );
+                  })}
+                </HomeMapFilterGroupedList>
               )}
-            </AnimatePresence>
+
+              {expandedFilter === 'sessionType' && (
+                <HomeMapFilterGroupedList>
+                  {SESSION_TYPE_OPTIONS.map((opt) => {
+                    const active =
+                      JSON.stringify(filters.session_types) === JSON.stringify(opt.values);
+                    return (
+                      <HomeMapFilterRow
+                        key={opt.id}
+                        label={opt.label}
+                        selected={active}
+                        onClick={() => {
+                          setFilters((prev) => ({ ...prev, session_types: opt.values }));
+                          setExpandedFilter(null);
+                        }}
+                      />
+                    );
+                  })}
+                </HomeMapFilterGroupedList>
+              )}
+
+              {expandedFilter === 'friends' && (
+                <HomeMapFilterGroupedList>
+                  <HomeMapFilterRow
+                    label="Toutes les séances"
+                    hint="Affichage selon les règles de visibilité"
+                    selected={!filters.friends_only}
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, friends_only: false }));
+                      setExpandedFilter(null);
+                    }}
+                  />
+                  <HomeMapFilterRow
+                    label="Amis uniquement"
+                    hint="Séances de tes amis et les tiennes"
+                    selected={filters.friends_only}
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, friends_only: true }));
+                      setExpandedFilter(null);
+                    }}
+                  />
+                </HomeMapFilterGroupedList>
+              )}
+
+              {expandedFilter === 'time' && (
+                <HomeMapFilterGroupedList>
+                  {TIME_SLOTS.map((slot) => {
+                    const active = filters.time_slot === slot.id;
+                    const Icon = slot.icon;
+                    return (
+                      <HomeMapFilterRow
+                        key={slot.id}
+                        label={slot.label}
+                        hint={
+                          slot.id === 'morning'
+                            ? '6h – 12h'
+                            : slot.id === 'afternoon'
+                              ? '12h – 18h'
+                              : slot.id === 'evening'
+                                ? '18h – 23h'
+                                : '23h – 6h'
+                        }
+                        selected={active}
+                        leading={
+                          <Icon
+                            className={cn(
+                              'h-6 w-6',
+                              active ? 'text-primary' : TIME_SLOT_ICON_CLASS[slot.id]
+                            )}
+                            strokeWidth={2}
+                          />
+                        }
+                        onClick={() => {
+                          setFilters((prev) => ({
+                            ...prev,
+                            time_slot: prev.time_slot === slot.id ? null : slot.id,
+                          }));
+                          setExpandedFilter(null);
+                        }}
+                      />
+                    );
+                  })}
+                </HomeMapFilterGroupedList>
+              )}
+
+              {expandedFilter === 'club' && (
+                <HomeMapFilterGroupedList>
+                  <HomeMapFilterRow
+                    label="Tous les clubs"
+                    hint="Aucun filtre par équipe"
+                    selected={filters.selected_club_ids.length === 0}
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, selected_club_ids: [] }));
+                      setExpandedFilter(null);
+                    }}
+                  />
+                  {clubFilters.map((club) => {
+                    const active = filters.selected_club_ids.includes(club.id);
+                    return (
+                      <HomeMapFilterRow
+                        key={club.id}
+                        label={club.name}
+                        selected={active}
+                        trailing={club.memberCount}
+                        onClick={() =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            selected_club_ids: active
+                              ? prev.selected_club_ids.filter((id) => id !== club.id)
+                              : [...prev.selected_club_ids, club.id],
+                          }))
+                        }
+                      />
+                    );
+                  })}
+                </HomeMapFilterGroupedList>
+              )}
+
+              {expandedFilter === 'day' && (
+                <div className="mt-1 overflow-hidden rounded-[12px] border border-border/60 bg-card p-2 shadow-sm dark:border-white/[0.1]">
+                  <CalendarComponent
+                    mode="single"
+                    selected={filters.selected_date}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      setFilters((prev) => ({ ...prev, selected_date: date }));
+                      setExpandedFilter(null);
+                    }}
+                    initialFocus
+                    className="pointer-events-auto w-full p-0"
+                  />
+                </div>
+              )}
+
+              {expandedFilter === 'level' && (
+                <HomeMapFilterGroupedList>
+                  <HomeMapFilterRow
+                    label="Tous niveaux"
+                    hint="Pas de filtre de difficulté"
+                    selected={filters.level == null}
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, level: null }));
+                      setExpandedFilter(null);
+                    }}
+                  />
+                  {[1, 2, 3, 4, 5, 6].map((lvl) => (
+                    <HomeMapFilterRow
+                      key={lvl}
+                      label={`Niveau ${lvl}`}
+                      selected={filters.level === lvl}
+                      onClick={() => {
+                        setFilters((prev) => ({
+                          ...prev,
+                          level: prev.level === lvl ? null : lvl,
+                        }));
+                        setExpandedFilter(null);
+                      }}
+                    />
+                  ))}
+                </HomeMapFilterGroupedList>
+              )}
+            </HomeMapFilterSheet>
               </div>
             </div>
           </div>
