@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, Newspaper, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, Trophy, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
