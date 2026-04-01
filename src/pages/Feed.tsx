@@ -288,6 +288,10 @@ export default function Feed() {
 
       <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 
+      <Suspense fallback={null}>
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+      </Suspense>
+
       <SessionDetailsDialog
         session={selectedDiscoverSession}
         onClose={() => setSelectedDiscoverSession(null)}
