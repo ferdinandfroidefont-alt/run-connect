@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
