@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -1752,6 +1752,13 @@ export const InteractiveMap = ({
               <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/feed')}
+                  className="home-map-filter-chip snap-start home-map-filter-chip-active"
+                >
+                  <span className="flex items-center gap-1.5"><Newspaper className="h-3.5 w-3.5 shrink-0" /> Feed</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}

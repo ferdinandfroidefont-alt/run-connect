@@ -918,7 +918,6 @@ export type Database = {
           created_at: string
           cycling_records: Json | null
           display_name: string | null
-          distance_unit: string
           favorite_sport: string | null
           id: string
           instagram_access_token: string | null
@@ -930,7 +929,6 @@ export type Database = {
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
-          language_manually_set: boolean
           last_seen: string | null
           notif_club_invitation: boolean | null
           notif_follow_request: boolean | null
@@ -978,7 +976,6 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
-          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
@@ -990,7 +987,6 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          language_manually_set?: boolean
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
@@ -1038,7 +1034,6 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
-          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
@@ -1050,7 +1045,6 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          language_manually_set?: boolean
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
