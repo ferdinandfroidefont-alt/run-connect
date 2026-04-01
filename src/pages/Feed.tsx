@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, lazy, Suspense } from 'react';
 import { useFeed } from '@/hooks/useFeed';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import { FeedCard } from '@/components/feed/FeedCard';
@@ -9,12 +9,17 @@ import { DiscoverCard } from '@/components/feed/DiscoverCard';
 import { DiscoverEmptyState } from '@/components/feed/DiscoverEmptyState';
 import { ProfileDialog } from '@/components/ProfileDialog';
 import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+
+const SettingsDialog = lazy(() =>
+  import('@/components/SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
+);
 
 export default function Feed() {
   const navigate = useNavigate();
