@@ -3,7 +3,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, CheckCircle, Navigation } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, UserCheck } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
@@ -20,6 +20,9 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { CompletedActivityCard } from '@/components/sessions/CompletedActivityCard';
+import { useCompletedActivities } from '@/hooks/useCompletedActivities';
+
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
 );
@@ -71,6 +74,12 @@ export default function MySessions() {
   const navigate = useNavigate();
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
+  const [mainTab, setMainTab] = useState<'planned' | 'completed'>('planned');
+  const [completedSubTab, setCompletedSubTab] = useState<'mine' | 'public'>('mine');
+  const { items: completedItems, loading: completedLoading } = useCompletedActivities(
+    completedSubTab,
+    mainTab === 'completed'
+  );
   const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
@@ -824,64 +833,112 @@ export default function MySessions() {
             <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
           </div>
           
-          {/* iOS Segmented Control - Two columns layout */}
+          {/* Planification vs activités réalisées */}
           <div className="px-ios-4 pb-ios-2">
             <div className="flex gap-ios-1">
-              {/* Left column: Séances + sub-filter */}
               <div className="w-1/2">
-                <div className="bg-secondary rounded-t-ios-md p-ios-1 pb-ios-1">
-                  <div
-                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center"
-                  >
-                    Séances
-                  </div>
-                </div>
-                  <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
-                    <div className="flex gap-ios-1">
-                      <button
-                        onClick={() => { setSessionSource('created'); setSessionPage(0); }}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          sessionSource === 'created'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Créées
-                      </button>
-                      <button
-                        onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
-                        className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
-                          sessionSource === 'joined'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        Rejointes
-                      </button>
-                    </div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setMainTab('planned')}
+                  className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-md transition-colors ${
+                    mainTab === 'planned'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'bg-secondary text-muted-foreground active:opacity-90'
+                  }`}
+                >
+                  Programmées
+                </button>
               </div>
-
-              {/* Right column: accès Présence (page existante) */}
               <div className="w-1/2">
-                <div className="bg-secondary rounded-ios-md p-ios-1 pb-ios-1">
+                <button
+                  type="button"
+                  onClick={() => setMainTab('completed')}
+                  className={`w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-md transition-colors ${
+                    mainTab === 'completed'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'bg-secondary text-muted-foreground active:opacity-90'
+                  }`}
+                >
+                  Terminées
+                </button>
+              </div>
+            </div>
+
+            {mainTab === 'planned' && (
+              <div className="mt-ios-2 bg-secondary rounded-b-ios-md rounded-t-ios-sm p-ios-1">
+                <div className="flex gap-ios-1">
                   <button
                     type="button"
-                    onClick={() => navigate('/confirm-presence')}
-                    className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm transition-colors bg-card text-foreground shadow-sm flex items-center justify-center gap-ios-1 active:opacity-90"
+                    onClick={() => { setSessionSource('created'); setSessionPage(0); }}
+                    className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                      sessionSource === 'created'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
                   >
-                    <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
-                    Présence
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    Créées
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSessionSource('joined'); setSessionPage(0); }}
+                    className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                      sessionSource === 'joined'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Rejointes
                   </button>
                 </div>
               </div>
-            </div>
+            )}
+
+            {mainTab === 'completed' && (
+              <div className="mt-ios-2 bg-secondary rounded-b-ios-md rounded-t-ios-sm p-ios-1">
+                <div className="flex gap-ios-1">
+                  <button
+                    type="button"
+                    onClick={() => setCompletedSubTab('mine')}
+                    className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                      completedSubTab === 'mine'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Mes séances
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCompletedSubTab('public')}
+                    className={`flex-1 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                      completedSubTab === 'public'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground'
+                    }`}
+                  >
+                    Publiques
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mainTab === 'planned' && (
+              <button
+                type="button"
+                onClick={() => navigate('/confirm-presence')}
+                className="mt-ios-2 flex w-full items-center justify-center gap-1.5 rounded-ios-md py-2 text-[12px] font-medium text-primary active:opacity-80"
+              >
+                <UserCheck className="h-3.5 w-3.5 shrink-0" />
+                Confirmer ma présence à une séance
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
+              </button>
+            )}
           </div>
           <div className="h-px bg-border" />
         </div>
 
         <div className="ios-scroll-region pt-ios-2 pb-ios-6">
+            {mainTab === 'planned' ? (
             <>
               {/* List/Calendar toggle */}
               <div className="flex px-ios-4 mb-ios-1">
@@ -910,7 +967,7 @@ export default function MySessions() {
                 {[
                   { key: 'all', label: 'Toutes' },
                   { key: 'upcoming', label: 'À venir' },
-                  { key: 'completed', label: 'Terminées' }
+                  { key: 'completed', label: 'Passées' }
                 ].map((f) => (
                   <button
                     key={f.key}
@@ -1077,6 +1134,56 @@ export default function MySessions() {
                 </div>
               )}
             </>
+            ) : (
+            <>
+              <p className="px-ios-4 pb-ios-2 text-center text-[12px] leading-relaxed text-muted-foreground">
+                Activités réellement effectuées (tracé GPS si tu as activé le partage pendant la séance). Connexions Garmin, Strava et Coros arriveront ici.
+              </p>
+              {completedLoading ? (
+                <div className="space-y-ios-3 px-ios-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="ios-card animate-pulse border border-border/60 p-ios-4">
+                      <div className="flex gap-ios-3">
+                        <div className="h-12 w-12 rounded-ios-md bg-secondary" />
+                        <div className="flex-1 space-y-ios-2">
+                          <div className="h-4 w-2/3 rounded bg-secondary" />
+                          <div className="h-3 w-1/2 rounded bg-secondary" />
+                        </div>
+                      </div>
+                      <div className="mt-ios-3 h-36 rounded-[10px] bg-secondary" />
+                    </div>
+                  ))}
+                </div>
+              ) : completedItems.length === 0 ? (
+                <div className={emptyStateSx.shell}>
+                  <div className={emptyStateSx.iconCircle}>
+                    <Navigation className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                  <div className={emptyStateSx.textBlock}>
+                    <h3 className="text-ios-title3 font-semibold text-foreground">
+                      {completedSubTab === 'mine' ? 'Aucune activité enregistrée' : 'Aucune séance publique à afficher'}
+                    </h3>
+                    <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
+                      {completedSubTab === 'mine'
+                        ? 'Quand une séance est passée et que tu as partagé ta position, ton parcours apparaît ici. Tu peux aussi consulter les séances publiques des autres runners.'
+                        : 'Les séances terminées visibles par tous (sans club, non réservées aux amis) s’affichent ici.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="ios-list-stack px-ios-4">
+                  {completedItems.map((item, index) => (
+                    <CompletedActivityCard
+                      key={item.session.id}
+                      item={item}
+                      index={index}
+                      variant={completedSubTab === 'public' ? 'public' : 'mine'}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+            )}
         </div>
       </div>
 
