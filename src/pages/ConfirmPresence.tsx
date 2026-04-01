@@ -22,8 +22,23 @@ interface Session {
   activity_type: string;
 }
 
-export default function ConfirmPresence() {
-  const { sessionId } = useParams();
+export type ConfirmPresenceProps = {
+  embedded?: boolean;
+  onEmbeddedBack?: () => void;
+  /** Quand intégré dans Mes séances : ouvre directement cette séance si fourni. */
+  forcedSessionId?: string | null;
+  /** Après chargement d’une séance imposée (Strava → confirmer), pour éviter une boucle de rechargement. */
+  onForcedSessionConsumed?: () => void;
+};
+
+export default function ConfirmPresence({
+  embedded = false,
+  onEmbeddedBack,
+  forcedSessionId = null,
+  onForcedSessionConsumed,
+}: ConfirmPresenceProps = {}) {
+  const { sessionId: sessionIdFromRoute } = useParams<{ sessionId?: string }>();
+  const sessionId = forcedSessionId || sessionIdFromRoute;
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -143,7 +158,8 @@ export default function ConfirmPresence() {
 
   const loadSpecificSession = async () => {
     if (!user || !sessionId) return;
-    
+    const openedViaForced = !!forcedSessionId;
+
     setLoading(true);
     try {
       const { data: session, error } = await supabase
@@ -159,6 +175,9 @@ export default function ConfirmPresence() {
         const isCreator = session.organizer_id === user.id;
         setUserRole(isCreator ? 'creator' : 'participant');
         setRoleChoice(isCreator ? 'creator' : 'participant');
+        if (embedded && openedViaForced) {
+          onForcedSessionConsumed?.();
+        }
       }
     } catch (error) {
       console.error('Error loading session:', error);
@@ -285,12 +304,22 @@ export default function ConfirmPresence() {
       setRoleChoice(null);
       setSessions([]);
     } else {
-      navigate(-1);
+      if (embedded) {
+        onEmbeddedBack?.();
+      } else {
+        navigate(-1);
+      }
     }
   };
 
   return (
-    <div className="fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary">
+    <div
+      className={
+        embedded
+          ? "z-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden bg-secondary"
+          : "fixed-fill-with-bottom-nav z-0 flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-secondary"
+      }
+    >
       {/* iOS Header */}
       <div className="shrink-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
         <IosPageHeaderBar

@@ -5,10 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { ActivityPolylineMap } from "@/components/sessions/ActivityPolylineMap";
-import type { CompletedActivityItem } from "@/hooks/useCompletedActivities";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { useCallback } from "react";
 
 function formatDuration(totalSec: number | null) {
   if (totalSec == null || totalSec <= 0) return "—";
@@ -34,6 +32,26 @@ function formatDistanceKm(distanceM: number | null, fallbackKm: number | null) {
   return "—";
 }
 
+export type CompletedActivityItem = {
+  session: {
+    id: string;
+    title: string;
+    scheduled_at: string;
+    location_name: string;
+    location_lat: number;
+    location_lng: number;
+    activity_type: string;
+    distance_km?: number | null;
+  };
+  trackCoords: [number, number][];
+  distanceM: number | null;
+  durationSec: number | null;
+  paceMinPerKm: number | null;
+  speedKmh: number | null;
+  role: "organizer" | "participant";
+  organizer?: { username: string; avatar_url: string | null } | null;
+};
+
 type CompletedActivityCardProps = {
   item: CompletedActivityItem;
   index?: number;
@@ -47,7 +65,7 @@ export function CompletedActivityCard({ item, index = 0, variant }: CompletedAct
   const label = getActivityLabel(session.activity_type);
   const cycling = session.activity_type === "cycling" || session.activity_type === "mtb";
 
-  const openMap = useCallback(() => {
+  const openMap = () => {
     const params = new URLSearchParams({
       lat: String(session.location_lat),
       lng: String(session.location_lng),
@@ -55,7 +73,7 @@ export function CompletedActivityCard({ item, index = 0, variant }: CompletedAct
       sessionId: session.id,
     });
     navigate(`/?${params.toString()}`);
-  }, [navigate, session.id, session.location_lat, session.location_lng]);
+  };
 
   return (
     <div

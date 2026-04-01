@@ -60,6 +60,9 @@ verify_jwt = false
 [functions.strava-disconnect]
 verify_jwt = true
 
+[functions.strava-recent-activities]
+verify_jwt = true
+
 [functions.admin-manage-premium]
 verify_jwt = false
 
