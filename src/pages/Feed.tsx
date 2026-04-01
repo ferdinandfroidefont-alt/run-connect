@@ -13,9 +13,13 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Feed() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [feedLeaderboardBadge, setFeedLeaderboardBadge] = useState<string | null>(null);
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -125,7 +129,8 @@ export default function Feed() {
         header={
           <>
             <FeedHeader
-              onSearch={() => navigate('/search')}
+              onLeaderboardClick={() => navigate('/leaderboard')}
+              leaderboardRankBadge={feedLeaderboardBadge}
               onProfileClick={() => setShowProfileDialog(true)}
               mode={mode}
               onModeChange={setMode}

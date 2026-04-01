@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, ChevronRight, Search, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Input } from "@/components/ui/input";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
-import { FilterBar, FilterType, ActivityType, ScopeType } from "@/components/leaderboard/FilterBar";
 import { RulesSheet } from "@/components/leaderboard/RulesSheet";
 import { cn } from "@/lib/utils";
+
+type PointsMode = "season" | "total";
 
 interface LeaderboardUser {
   user_id: string;
@@ -25,528 +26,505 @@ interface LeaderboardUser {
   };
   rank: number;
   user_rank: string;
-  rank_change?: number;
 }
 
-interface Club {
-  id: string;
-  name: string;
+interface MySnapshot {
+  rank: number;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  points: number;
 }
 
 const USERS_PER_PAGE = 20;
+const META_LIMIT = 10000;
+
+const orderColumn = (m: PointsMode): "seasonal_points" | "total_points" =>
+  m === "season" ? "seasonal_points" : "total_points";
+
+const pointsForMode = (u: LeaderboardUser, m: PointsMode) =>
+  m === "season" ? u.seasonal_points : u.total_points;
 
 const getUserRank = (points: number): string => {
-  if (points >= 5000) return 'diamant';
-  if (points >= 3000) return 'platine';
-  if (points >= 2000) return 'or';
-  if (points >= 1000) return 'argent';
-  if (points >= 500) return 'bronze';
-  return 'novice';
+  if (points >= 5000) return "diamant";
+  if (points >= 3000) return "platine";
+  if (points >= 2000) return "or";
+  if (points >= 1000) return "argent";
+  if (points >= 500) return "bronze";
+  return "novice";
 };
 
 const getRankRing = (rank: string) => {
   switch (rank) {
-    case 'diamant': return 'ring-2 ring-cyan-400';
-    case 'platine': return 'ring-2 ring-purple-500';
-    case 'or': return 'ring-2 ring-yellow-500';
-    case 'argent': return 'ring-2 ring-gray-400';
-    case 'bronze': return 'ring-2 ring-amber-600';
-    default: return 'ring-1 ring-border';
+    case "diamant":
+      return "ring-2 ring-cyan-400";
+    case "platine":
+      return "ring-2 ring-purple-500";
+    case "or":
+      return "ring-2 ring-yellow-500";
+    case "argent":
+      return "ring-2 ring-gray-400";
+    case "bronze":
+      return "ring-2 ring-amber-600";
+    default:
+      return "ring-1 ring-border";
   }
 };
 
-const getRankColor = (rank: string) => {
-  switch (rank) {
-    case 'diamant': return 'from-cyan-400 to-cyan-500';
-    case 'platine': return 'from-purple-400 to-purple-600';
-    case 'or': return 'from-yellow-400 to-yellow-600';
-    case 'argent': return 'from-gray-300 to-gray-500';
-    case 'bronze': return 'from-amber-500 to-amber-700';
-    default: return 'from-muted to-muted';
-  }
-};
+function PodiumBlock({
+  rank,
+  user,
+  pointsMode,
+  maxWidthClass,
+  avatarSize,
+  onProfile,
+}: {
+  rank: number;
+  user: LeaderboardUser | undefined;
+  pointsMode: PointsMode;
+  maxWidthClass: string;
+  avatarSize: "lg" | "md" | "sm";
+  onProfile: () => void;
+}) {
+  const empty = !user;
+  const pts = user ? pointsForMode(user, pointsMode) : 0;
+  const av = avatarSize === "lg" ? "h-[72px] w-[72px]" : avatarSize === "md" ? "h-14 w-14" : "h-12 w-12";
+  const podiumH = rank === 1 ? "h-[88px]" : rank === 2 ? "h-[64px]" : "h-[52px]";
 
-const getCurrentSeasonDates = () => {
-  const startRef = new Date('2024-08-15');
-  const now = new Date();
-  const seasonDuration = 45 * 24 * 60 * 60 * 1000;
-  const timeSinceStart = now.getTime() - startRef.getTime();
-  const seasonsElapsed = Math.floor(timeSinceStart / seasonDuration);
-  const currentSeasonStart = new Date(startRef.getTime() + (seasonsElapsed * seasonDuration));
-  const currentSeasonEnd = new Date(currentSeasonStart.getTime() + seasonDuration - 1);
-  return { start: currentSeasonStart, end: currentSeasonEnd, number: seasonsElapsed + 1 };
-};
-
-const getMedal = (rank: number) => {
-  if (rank === 1) return "🥇";
-  if (rank === 2) return "🥈";
-  if (rank === 3) return "🥉";
-  return null;
-};
-
-const RankMovement = ({ change }: { change?: number }) => {
-  if (!change || change === 0) return null;
-  if (change > 0) return (
-    <span className="text-[11px] font-bold text-green-600">+{change}</span>
-  );
   return (
-    <span className="text-[11px] font-bold text-destructive">{change}</span>
-  );
-};
-
-const podiumRowClass = (rank: number) => {
-  if (rank === 1) {
-    return "bg-amber-500/10 border border-amber-500/30";
-  }
-  if (rank === 2) {
-    return "bg-slate-500/10 border border-slate-500/30";
-  }
-  if (rank === 3) {
-    return "bg-orange-500/10 border border-orange-500/30";
-  }
-  return "";
-};
-
-const RankBadge = ({ rank, isMe }: { rank: number; isMe: boolean }) => {
-  const medal = getMedal(rank);
-  if (medal) {
-    return (
-      <div
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: rank === 1 ? 0.05 : rank === 2 ? 0 : 0.1 }}
+      className={cn("flex min-w-0 flex-1 flex-col items-center", maxWidthClass)}
+    >
+      <button
+        type="button"
+        disabled={empty}
+        onClick={onProfile}
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[15px] shadow-sm border",
-          rank === 1 && "bg-amber-500/15 border-amber-500/40",
-          rank === 2 && "bg-slate-500/15 border-slate-500/40",
-          rank === 3 && "bg-orange-500/15 border-orange-500/40"
+          "flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 pt-2 transition-opacity",
+          empty ? "opacity-40" : "active:opacity-85"
         )}
       >
-        <span>{medal}</span>
-      </div>
-    );
-  }
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/80 dark:bg-secondary/50">
-      <span className={cn("text-[13px] font-bold tabular-nums", isMe ? "text-primary" : "text-muted-foreground")}>
-        #{rank}
-      </span>
-    </div>
+        <div
+          className={cn(
+            "relative flex items-center justify-center rounded-full bg-gradient-to-br shadow-lg",
+            rank === 1 && "from-amber-400/90 to-amber-600/80 p-[3px]",
+            rank === 2 && "from-slate-300/90 to-slate-500/80 p-[2.5px]",
+            rank === 3 && "from-amber-700/70 to-orange-800/75 p-[2.5px]"
+          )}
+        >
+          <Avatar className={cn(av, "border-2 border-card shadow-md ring-2 ring-background/80")}>
+            <AvatarImage src={user?.profile?.avatar_url} className="object-cover" />
+            <AvatarFallback className="text-sm font-bold bg-secondary">
+              {user?.profile?.username?.[0]?.toUpperCase() || "—"}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 flex h-6 min-w-[24px] items-center justify-center rounded-full border-2 border-card px-1.5 text-[11px] font-bold tabular-nums shadow-sm",
+              rank === 1 && "bg-amber-500 text-white",
+              rank === 2 && "bg-slate-500 text-white",
+              rank === 3 && "bg-orange-700 text-white"
+            )}
+          >
+            {rank}
+          </span>
+        </div>
+        <p className="max-w-full truncate px-0.5 text-center text-[13px] font-semibold leading-tight text-foreground">
+          {empty ? "—" : user.profile?.display_name || user.profile?.username}
+        </p>
+        <p className="text-center text-[14px] font-bold tabular-nums text-primary">
+          {empty ? "—" : pts.toLocaleString()} <span className="text-[11px] font-semibold text-muted-foreground">pts</span>
+        </p>
+      </button>
+      <div
+        className={cn(
+          "mt-2 w-full rounded-t-xl bg-gradient-to-b shadow-inner",
+          rank === 1 && "from-amber-500/25 to-amber-600/10",
+          rank === 2 && "from-slate-400/25 to-slate-600/10",
+          rank === 3 && "from-orange-600/20 to-orange-800/10",
+          podiumH
+        )}
+      />
+    </motion.div>
   );
-};
+}
 
-const LeaderboardRow = ({ u, isMe, onClick }: { u: LeaderboardUser; isMe: boolean; onClick: () => void }) => {
-  const podium = u.rank <= 3;
-
+function LeaderboardListRow({
+  u,
+  isMe,
+  pointsMode,
+  onClick,
+}: {
+  u: LeaderboardUser;
+  isMe: boolean;
+  pointsMode: PointsMode;
+  onClick: () => void;
+}) {
+  const pts = pointsForMode(u, pointsMode);
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "ios-list-item w-full gap-3 text-left transition-colors active:bg-secondary/70",
-        podium && podiumRowClass(u.rank),
-        isMe && !podium && "bg-primary/[0.06]"
+        "ios-card flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 px-3 py-2.5 text-left transition-colors active:bg-secondary/70",
+        isMe && "ring-1 ring-primary/35 bg-primary/[0.07]"
       )}
     >
-      <RankBadge rank={u.rank} isMe={isMe} />
-
-      <div className="relative shrink-0">
-        <Avatar
-          className={cn(
-            'h-11 w-11 shadow-md',
-            podium && u.rank === 1 && 'ring-2 ring-amber-400/50',
-            podium && u.rank === 2 && 'ring-2 ring-slate-300/60 dark:ring-slate-500/50',
-            podium && u.rank === 3 && 'ring-2 ring-amber-700/45',
-            !podium && getRankRing(u.user_rank)
-          )}
-        >
+        <span className="w-8 shrink-0 text-center text-[13px] font-bold tabular-nums text-muted-foreground">#{u.rank}</span>
+        <Avatar className={cn("h-10 w-10 shrink-0 shadow-sm", getRankRing(u.user_rank))}>
           <AvatarImage src={u.profile?.avatar_url} className="object-cover" />
-          <AvatarFallback className="text-sm font-bold bg-secondary">
-            {u.profile?.username?.[0]?.toUpperCase() || '?'}
+          <AvatarFallback className="bg-secondary text-xs font-bold">
+            {u.profile?.username?.[0]?.toUpperCase() || "?"}
           </AvatarFallback>
         </Avatar>
-        {u.user_rank !== 'novice' && (
-          <div
-            className={cn(
-              "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-gradient-to-br border-2 border-card shadow-sm",
-              getRankColor(u.user_rank)
-            )}
-          />
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className={cn("truncate text-[15px] leading-snug", isMe ? "font-bold text-foreground" : "font-semibold text-foreground")}>
-          {u.profile?.display_name || u.profile?.username}
-        </p>
-        {u.profile?.username && (
-          <p className="truncate text-[12px] leading-snug text-muted-foreground">@{u.profile.username}</p>
-        )}
-      </div>
-
-      <div className="flex shrink-0 flex-col items-end gap-0.5 pr-0.5">
-        <div className="flex items-baseline gap-1">
-          <span className={cn("text-[15px] font-bold tabular-nums tracking-tight", isMe ? "text-primary" : "text-foreground")}>
-            {u.seasonal_points.toLocaleString()}
-          </span>
-          <span className="text-[11px] font-medium text-muted-foreground">pts</span>
+        <div className="min-w-0 flex-1">
+          <p className={cn("truncate text-[15px] font-semibold leading-tight", isMe && "text-primary")}>
+            {u.profile?.display_name || u.profile?.username}
+          </p>
+          {u.profile?.username ? (
+            <p className="truncate text-[12px] text-muted-foreground">@{u.profile.username}</p>
+          ) : null}
         </div>
-        <RankMovement change={u.rank_change} />
-      </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/35" />
-    </button>
+        <div className="shrink-0 text-right">
+          <p className="text-[15px] font-bold tabular-nums text-foreground">{pts.toLocaleString()}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">pts</p>
+        </div>
+      </button>
   );
-};
+}
 
-/* ═══════ Main Page ═══════ */
 const Leaderboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-
+  const [pointsMode, setPointsMode] = useState<PointsMode>("season");
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [activeScope, setActiveScope] = useState<ScopeType>('global');
-  const [activeFilter, setActiveFilter] = useState<FilterType>('general');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
-  const [userClubs, setUserClubs] = useState<Club[]>([]);
-  const [selectedClubs, setSelectedClubs] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [mySnapshot, setMySnapshot] = useState<MySnapshot | null>(null);
+  const [meRowInView, setMeRowInView] = useState(false);
   const [showRules, setShowRules] = useState(false);
+
+  const listScrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const leaderboardScrollRef = useRef<HTMLDivElement>(null);
+  const meRowRef = useRef<HTMLDivElement>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
-  const getEffectiveFilter = useCallback((): FilterType => {
-    if (activeScope === 'friends') return 'friends';
-    if (activeScope === 'clubs') return 'clubs';
-    return activeFilter;
-  }, [activeScope, activeFilter]);
+  const mapRow = useCallback(
+    (item: any, indexInPage: number, page: number): LeaderboardUser => {
+      const offset = (page - 1) * USERS_PER_PAGE;
+      const rank = offset + indexInPage + 1;
+      const pts = pointsMode === "season" ? item.seasonal_points : item.total_points;
+      return {
+        user_id: item.user_id,
+        total_points: item.total_points,
+        weekly_points: item.weekly_points,
+        seasonal_points: item.seasonal_points,
+        profile: {
+          username: item.username,
+          display_name: item.display_name,
+          avatar_url: item.avatar_url,
+          is_premium: item.is_premium,
+        },
+        rank,
+        user_rank: getUserRank(pts),
+      };
+    },
+    [pointsMode]
+  );
 
-  // Fetch on filter change — reset page and fetch immediately (no full-page reload)
-  useEffect(() => {
-    if (user) {
-      setCurrentPage(1);
-      setLeaderboard([]);
-      fetchLeaderboard(1);
-      fetchUserClubs();
-    }
-  }, [user, activeFilter, activeScope, selectedClubs]);
-
-  // Load more pages
-  useEffect(() => {
-    if (user && currentPage > 1) fetchLeaderboard(currentPage);
-  }, [currentPage]);
-
-  const fetchUserClubs = async () => {
+  const fetchMeta = useCallback(async () => {
     if (!user) return;
-    const { data: membershipData } = await supabase
-      .from('group_members').select('conversation_id').eq('user_id', user.id);
-    if (!membershipData?.length) { setUserClubs([]); return; }
-    const clubIds = membershipData.map(m => m.conversation_id);
-    const { data: clubsData } = await supabase
-      .from('conversations').select('id, group_name').in('id', clubIds).eq('is_group', true);
-    if (clubsData) setUserClubs(clubsData.map(c => ({ id: c.id, name: c.group_name || 'Club sans nom' })));
-  };
+    const col = orderColumn(pointsMode);
+    const { data, error } = await supabase.rpc("get_complete_leaderboard", {
+      limit_count: META_LIMIT,
+      offset_count: 0,
+      order_by_column: col,
+    });
+    if (error) {
+      console.error("Leaderboard meta:", error);
+      setTotalUsers(0);
+      setMySnapshot(null);
+      return;
+    }
+    const rows = data ?? [];
+    setTotalUsers(rows.length);
+    const idx = rows.findIndex((r: { user_id: string }) => r.user_id === user.id);
+    if (idx >= 0) {
+      const row = rows[idx] as {
+        username: string;
+        display_name: string;
+        avatar_url: string;
+        seasonal_points: number;
+        total_points: number;
+      };
+      setMySnapshot({
+        rank: idx + 1,
+        username: row.username,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+        points: pointsMode === "season" ? row.seasonal_points : row.total_points,
+      });
+    } else {
+      setMySnapshot(null);
+    }
+  }, [user, pointsMode]);
 
   const fetchLeaderboard = async (page: number) => {
     if (page === 1) setLoading(true);
     else setLoadingMore(true);
 
     try {
-      const effectiveFilter = getEffectiveFilter();
-
-      if (user && page === 1) {
-        const { data: allData } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
-        });
-        setTotalUsers(allData?.length || 0);
-      }
-
-      const activityTypes: ActivityType[] = ['running', 'cycling', 'walking', 'swimming', 'basketball', 'football', 'petanque', 'tennis'];
-      let finalData: any[] = [];
-
-      if (activityTypes.includes(effectiveFilter as ActivityType) || (activeFilter !== 'general' && activeFilter !== 'friends' && activeFilter !== 'clubs')) {
-        const filterValue = activeFilter;
-        const offset = (page - 1) * USERS_PER_PAGE;
-        const { data: activityData, error: activityError } = await supabase
-          .from('session_participants')
-          .select('user_id, points_awarded, sessions!inner(activity_type)')
-          .eq('sessions.activity_type', filterValue)
-          .gte('joined_at', getCurrentSeasonDates().start.toISOString())
-          .lte('joined_at', getCurrentSeasonDates().end.toISOString());
-        if (activityError) throw activityError;
-
-        const userPtsMap = new Map<string, number>();
-        activityData?.forEach(item => {
-          userPtsMap.set(item.user_id, (userPtsMap.get(item.user_id) || 0) + (item.points_awarded || 0));
-        });
-        const userIds = Array.from(userPtsMap.keys());
-        if (userIds.length > 0) {
-          const { data: profilesData } = await supabase
-            .from('profiles').select('user_id, username, display_name, avatar_url, is_premium').in('user_id', userIds);
-          const combined = profilesData?.map(p => ({
-            user_id: p.user_id, seasonal_points: userPtsMap.get(p.user_id) || 0,
-            total_points: userPtsMap.get(p.user_id) || 0, weekly_points: 0,
-            username: p.username, display_name: p.display_name,
-            avatar_url: p.avatar_url, is_premium: p.is_premium
-          })) || [];
-          combined.sort((a, b) => b.seasonal_points - a.seasonal_points);
-          finalData = combined.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(combined.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < combined.length);
-        }
-      } else if (effectiveFilter === 'friends') {
-        const offset = (page - 1) * USERS_PER_PAGE;
-        const { data: friendsData } = await supabase
-          .from('user_follows').select('following_id').eq('follower_id', user!.id).eq('status', 'accepted');
-        const friendIds = friendsData?.map(f => f.following_id) || [];
-        if (friendIds.length > 0) {
-          const { data: lbData } = await supabase.rpc('get_complete_leaderboard', {
-            limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
-          });
-          const filtered = lbData?.filter((u: any) => friendIds.includes(u.user_id)) || [];
-          finalData = filtered.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(filtered.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < filtered.length);
-        }
-      } else if (effectiveFilter === 'clubs' && selectedClubs.length > 0) {
-        const offset = (page - 1) * USERS_PER_PAGE;
-        const { data: membersData } = await supabase
-          .from('group_members').select('user_id').in('conversation_id', selectedClubs);
-        const memberIds = [...new Set(membersData?.map(m => m.user_id) || [])];
-        if (memberIds.length > 0) {
-          const { data: lbData } = await supabase.rpc('get_complete_leaderboard', {
-            limit_count: 10000, offset_count: 0, order_by_column: 'seasonal_points'
-          });
-          const filtered = lbData?.filter((u: any) => memberIds.includes(u.user_id)) || [];
-          finalData = filtered.slice(offset, offset + USERS_PER_PAGE);
-          setTotalUsers(filtered.length);
-          setHasMoreUsers(offset + USERS_PER_PAGE < filtered.length);
-        }
-      } else {
-        const offset = (page - 1) * USERS_PER_PAGE;
-        const { data, error } = await supabase.rpc('get_complete_leaderboard', {
-          limit_count: USERS_PER_PAGE, offset_count: offset, order_by_column: 'seasonal_points'
-        });
-        if (error) throw error;
-        finalData = data || [];
-        setHasMoreUsers(finalData.length === USERS_PER_PAGE);
-      }
-
-      const formatted = finalData?.map((item: any) => ({
-        user_id: item.user_id,
-        total_points: item.total_points,
-        weekly_points: item.weekly_points,
-        seasonal_points: item.seasonal_points,
-        profile: {
-          username: item.username, display_name: item.display_name,
-          avatar_url: item.avatar_url, is_premium: item.is_premium
-        },
-        rank: finalData.findIndex((u: any) => u.user_id === item.user_id) + 1 + ((page - 1) * USERS_PER_PAGE),
-        user_rank: getUserRank(effectiveFilter === 'general' ? item.seasonal_points : item.total_points),
-        rank_change: 0
-      })) || [];
+      const offset = (page - 1) * USERS_PER_PAGE;
+      const { data, error } = await supabase.rpc("get_complete_leaderboard", {
+        limit_count: USERS_PER_PAGE,
+        offset_count: offset,
+        order_by_column: orderColumn(pointsMode),
+      });
+      if (error) throw error;
+      const pageRows = data || [];
+      const formatted = pageRows.map((item: any, i: number) => mapRow(item, i, page));
 
       if (page === 1) setLeaderboard(formatted);
-      else setLeaderboard(prev => [...prev, ...formatted]);
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      else setLeaderboard((prev) => [...prev, ...formatted]);
+
+      setHasMoreUsers(pageRows.length === USERS_PER_PAGE);
+    } catch (e) {
+      console.error("Error fetching leaderboard:", e);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
 
-  const filteredLeaderboard =
-    fullscreenOpen && searchQuery.trim()
-      ? leaderboard.filter(
-          (u) =>
-            u.profile?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.profile?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : leaderboard;
+  useEffect(() => {
+    if (!user) return;
+    setCurrentPage(1);
+    setLeaderboard([]);
+    setMeRowInView(false);
+    void fetchMeta();
+    void fetchLeaderboard(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional reset on mode/user
+  }, [user, pointsMode]);
 
-  // Infinite scroll dans le bloc leaderboard (scroll interne)
+  useEffect(() => {
+    if (!user || currentPage <= 1) return;
+    void fetchLeaderboard(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  const topThree = leaderboard.filter((u) => u.rank <= 3);
+  const u1 = topThree.find((u) => u.rank === 1);
+  const u2 = topThree.find((u) => u.rank === 2);
+  const u3 = topThree.find((u) => u.rank === 3);
+  const listFromRank4 = leaderboard.filter((u) => u.rank > 3);
+
+  const hideBottomMe =
+    (mySnapshot !== null && mySnapshot.rank <= 3) || (mySnapshot !== null && mySnapshot.rank > 3 && meRowInView);
+
+  useEffect(() => {
+    const root = listScrollRef.current;
+    const el = meRowRef.current;
+    if (!root || !el || !user || !mySnapshot || mySnapshot.rank <= 3) {
+      setMeRowInView(false);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        setMeRowInView(entry.isIntersecting);
+      },
+      { root, threshold: 0.2, rootMargin: "-8px 0px -64px 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [user, mySnapshot, listFromRank4.length, leaderboard.length]);
+
   useEffect(() => {
     const el = sentinelRef.current;
-    const root = leaderboardScrollRef.current;
-    if (!el || !root || !hasMoreUsers || loading || loadingMore || searchQuery.trim()) return;
+    const root = listScrollRef.current;
+    if (!el || !root || !hasMoreUsers || loading || loadingMore) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMoreUsers && !loading && !loadingMore) setCurrentPage((p) => p + 1);
+        if (entry.isIntersecting) setCurrentPage((p) => p + 1);
       },
-      { root, threshold: 0.1, rootMargin: '120px' }
+      { root, threshold: 0.1, rootMargin: "100px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasMoreUsers, loading, loadingMore, searchQuery, filteredLeaderboard.length, fullscreenOpen]);
+  }, [hasMoreUsers, loading, loadingMore, listFromRank4.length]);
 
-  const closeFullscreen = () => {
-    setFullscreenOpen(false);
-    setSearchQuery('');
+  const modeLabels: Record<PointsMode, string> = {
+    season: "Saison",
+    total: "Total",
   };
 
-  const leaderboardListBody =
+  const listBody =
     loading && leaderboard.length === 0 ? (
-      <div className="p-4">
+      <div className="px-1 py-2">
         <LeaderboardSkeleton />
       </div>
-    ) : filteredLeaderboard.length === 0 ? (
-      <div className="flex flex-col items-center justify-center px-6 py-16">
-        <p className="mb-1 text-[17px] font-semibold text-foreground">Aucun résultat</p>
-        <p className="text-center text-[14px] text-muted-foreground">
-          {fullscreenOpen && searchQuery ? 'Aucun participant ne correspond' : 'Aucun participant pour ce filtre'}
-        </p>
+    ) : leaderboard.length === 0 ? (
+      <div className="flex flex-col items-center px-6 py-12 text-center">
+        <Trophy className="mb-2 h-10 w-10 text-muted-foreground/50" />
+        <p className="text-[16px] font-semibold text-foreground">Aucun participant</p>
+        <p className="mt-1 text-[14px] text-muted-foreground">Reviens plus tard pour voir le classement.</p>
       </div>
     ) : (
-      <div className="bg-card">
-        {filteredLeaderboard.map((u, index) => {
+      <div className="flex flex-col gap-2 px-1 pb-2">
+        {listFromRank4.map((u) => {
           const isMe = u.user_id === user?.id;
           return (
-            <div key={u.user_id}>
-              <LeaderboardRow u={u} isMe={isMe} onClick={() => navigateToProfile(u.user_id)} />
-              {index < filteredLeaderboard.length - 1 && <div className="ios-list-separator" />}
+            <div key={u.user_id} ref={isMe ? meRowRef : undefined}>
+              <LeaderboardListRow
+                u={u}
+                isMe={isMe}
+                pointsMode={pointsMode}
+                onClick={() => navigateToProfile(u.user_id)}
+              />
             </div>
           );
         })}
-
-        {hasMoreUsers && !(fullscreenOpen && searchQuery.trim()) && (
-          <div ref={sentinelRef} className="flex justify-center py-4">
-            {loadingMore && (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            )}
+        {hasMoreUsers && (
+          <div ref={sentinelRef} className="flex justify-center py-5">
+            {loadingMore && <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
           </div>
         )}
       </div>
     );
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-background">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
       <header className="z-20 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-        <div className="flex items-center justify-between px-4 py-2.5">
+        <div className="relative flex min-h-[52px] items-center px-4 pb-2 pt-2">
           <button
             type="button"
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 text-primary text-[16px] font-medium"
+            onClick={() => navigate("/")}
+            className="z-10 flex shrink-0 items-center gap-1 text-primary"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px] font-normal">Retour</span>
+            <span className="text-[15px] font-medium">Retour</span>
           </button>
-          <h1 className="text-[17px] font-semibold text-foreground">Classement</h1>
+          <h1 className="pointer-events-none absolute inset-x-10 top-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold text-foreground">
+            Classement
+          </h1>
           <button
             type="button"
             onClick={() => setShowRules(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-border bg-card text-primary transition-all hover:bg-secondary/50"
+            className="z-10 ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card text-primary"
             aria-label="Règles du classement"
           >
             <BookOpen className="h-4 w-4" />
           </button>
         </div>
+
+        <div
+          className="scrollbar-none flex gap-2 overflow-x-auto px-4 pb-3 [-webkit-overflow-scrolling:touch]"
+          data-tutorial="tutorial-leaderboard"
+        >
+          {(["season", "total"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setPointsMode(m)}
+              className={cn(
+                "shrink-0 rounded-[16px] px-5 py-2.5 text-[15px] font-semibold transition-all",
+                pointsMode === m
+                  ? "bg-foreground text-background shadow-md"
+                  : "border border-border/80 bg-card text-foreground active:bg-secondary/80"
+              )}
+            >
+              {modeLabels[m]}
+            </button>
+          ))}
+        </div>
+
+        <p className="px-4 pb-2 text-center text-[12px] text-muted-foreground">
+          {totalUsers.toLocaleString()} participant{totalUsers !== 1 ? "s" : ""}
+        </p>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-4 pb-6 pt-4">
-        <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-          <section
-            aria-label="Filtres classement"
-            className="rounded-[12px] border border-border bg-card p-3 shadow-sm"
-            data-tutorial="tutorial-leaderboard"
-          >
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Filtres</p>
-            <FilterBar
-              activeScope={activeScope}
-              onScopeChange={(s) => {
-                setActiveScope(s);
-                setSearchQuery('');
-              }}
-              activeFilter={activeFilter}
-              onFilterChange={(f) => {
-                setActiveFilter(f);
-                setSearchQuery('');
-              }}
-              selectedClubs={selectedClubs}
-              onClubsChange={setSelectedClubs}
-              userClubs={userClubs}
-            />
-          </section>
-
-          {!fullscreenOpen && (
-            <section aria-label="Leaderboard" className="rounded-[12px] border border-border bg-card shadow-sm overflow-hidden">
-              <div className="flex items-start gap-2 border-b border-border bg-card px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setFullscreenOpen(true)}
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-background text-[18px] leading-none transition-colors hover:bg-secondary/60 active:bg-secondary/80"
-                  aria-label="Agrandir le classement"
-                >
-                  ⛶
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Leaderboard</p>
-                  <p className="text-[15px] font-semibold text-foreground">Top saison</p>
-                </div>
-              </div>
-
-              <div
-                ref={leaderboardScrollRef}
-                className="h-[34rem] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
-              >
-                {leaderboardListBody}
-              </div>
-            </section>
-          )}
+      <div className="shrink-0 border-b border-border/60 bg-secondary px-4 pb-3 pt-1">
+        <div className="mx-auto flex w-full max-w-lg items-end justify-center gap-1.5">
+          <PodiumBlock
+            rank={2}
+            user={u2}
+            pointsMode={pointsMode}
+            maxWidthClass="max-w-[32%]"
+            avatarSize="md"
+            onProfile={() => u2 && navigateToProfile(u2.user_id)}
+          />
+          <PodiumBlock
+            rank={1}
+            user={u1}
+            pointsMode={pointsMode}
+            maxWidthClass="max-w-[36%]"
+            avatarSize="lg"
+            onProfile={() => u1 && navigateToProfile(u1.user_id)}
+          />
+          <PodiumBlock
+            rank={3}
+            user={u3}
+            pointsMode={pointsMode}
+            maxWidthClass="max-w-[32%]"
+            avatarSize="md"
+            onProfile={() => u3 && navigateToProfile(u3.user_id)}
+          />
         </div>
-      </main>
+      </div>
 
-      {fullscreenOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex min-h-0 flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Classement agrandi"
+      <div
+        ref={listScrollRef}
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pt-3",
+          hideBottomMe || !mySnapshot ? "pb-4" : "pb-2"
+        )}
+      >
+        <motion.div
+          className="mx-auto w-full max-w-lg"
+          initial={{ opacity: 0.88, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-2.5">
-            <button
-              type="button"
-              onClick={closeFullscreen}
-              className="flex items-center gap-1 text-primary text-[16px] font-medium"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="text-[15px] font-normal">Réduire</span>
-            </button>
-            <h2 className="text-[17px] font-semibold text-foreground">Classement</h2>
-            <div className="w-[72px]" aria-hidden />
-          </div>
+          {listBody}
+        </motion.div>
+      </div>
 
-          <div className="shrink-0 border-b border-border bg-card px-4 py-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              {totalUsers.toLocaleString()} participants · Saison {getCurrentSeasonDates().number}
-            </p>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un membre"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 rounded-[10px] border border-border bg-background pl-9 text-[14px]"
-              />
+      {mySnapshot && !hideBottomMe ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="shrink-0 border-t border-border bg-card/95 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.12)] backdrop-blur-md supports-[backdrop-filter]:bg-card/85"
+        >
+          <div className="mx-auto flex max-w-lg items-center gap-3">
+            <span className="shrink-0 text-[13px] font-bold tabular-nums text-primary">#{mySnapshot.rank}</span>
+            <Avatar className="h-10 w-10 shrink-0 shadow-sm ring-1 ring-border">
+              <AvatarImage src={mySnapshot.avatar_url || ""} className="object-cover" />
+              <AvatarFallback className="bg-secondary text-sm font-bold">
+                {mySnapshot.username?.[0]?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-foreground">Toi</p>
+              <p className="truncate text-[12px] text-muted-foreground">
+                @{mySnapshot.username}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[16px] font-bold tabular-nums text-foreground">{mySnapshot.points.toLocaleString()}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">pts</p>
             </div>
           </div>
+        </motion.div>
+      ) : null}
 
-          <div
-            ref={leaderboardScrollRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
-          >
-            {leaderboardListBody}
-          </div>
-        </div>
-      )}
-
-      {/* ── Rules Sheet ── */}
       <RulesSheet open={showRules} onOpenChange={setShowRules} />
 
-      {/* ── Profile Preview ── */}
       {showProfilePreview && selectedUserId && (
         <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
       )}

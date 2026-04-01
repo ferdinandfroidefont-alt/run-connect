@@ -18,7 +18,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Crown, Check } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -2055,7 +2055,7 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Classement, Style, Réinitialiser */}
+      {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Style, Réinitialiser */}
       <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
         <MapIosColoredFab
           tone="gray"
@@ -2074,17 +2074,6 @@ export const InteractiveMap = ({
         >
           <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
         </MapIosColoredFab>
-
-        {isActive && (
-          <MapIosColoredFab
-            tone="gray"
-            title={t("navigation.leaderboard")}
-            onClick={() => navigate("/leaderboard")}
-            className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-          >
-            <Crown className="h-[18px] w-[18px]" strokeWidth={2.25} />
-          </MapIosColoredFab>
-        )}
 
         <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
 
