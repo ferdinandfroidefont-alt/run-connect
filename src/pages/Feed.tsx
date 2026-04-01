@@ -24,10 +24,10 @@ const SettingsDialog = lazy(() =>
 export default function Feed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [feedLeaderboardBadge, setFeedLeaderboardBadge] = useState<string | null>(null);
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<any>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const touchStartY = useRef(0);
