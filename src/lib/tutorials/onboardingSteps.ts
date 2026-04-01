@@ -29,9 +29,9 @@ export function getDefaultOnboardingSteps(t: (key: string) => string): TutorialS
       placement: "top",
     },
     {
-      target: '[data-tutorial="nav-leaderboard"]',
-      title: t("tutorial.replayPages.leaderboard.title"),
-      content: t("tutorial.replayPages.leaderboard.content"),
+      target: '[data-tutorial="nav-feed"]',
+      title: t("tutorial.feedTitle"),
+      content: t("tutorial.feedContent"),
       placement: "top",
     },
     {

@@ -112,10 +112,10 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
   feed: {
     id: "feed",
-    path: "/leaderboard",
+    path: "/feed",
     startDelayMs: 380,
     getSteps: (t) => [
-      introStep('[data-tutorial="nav-leaderboard"]', t, "tutorial.replayPages.leaderboard", "bottom"),
+      introStep('[data-tutorial="tutorial-feed"]', t, "tutorial.replayPages.feed", "bottom"),
     ],
   },
   profile: {
@@ -166,6 +166,7 @@ export const TUTORIAL_REPLAY_MENU_ORDER: TutorialReplayId[] = [
   "create",
   "sessions",
   "messages",
+  "feed",
   "profile",
   "notifications",
   "leaderboard",
