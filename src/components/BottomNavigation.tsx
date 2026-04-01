@@ -57,11 +57,11 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/feed",
-        icon: Newspaper,
-        label: t("navigation.feed"),
-        tutorialId: "nav-feed",
-        isActive: (p) => p === "/feed" || p.startsWith("/feed/"),
+        path: "/leaderboard",
+        icon: Trophy,
+        label: t("navigation.leaderboard") || "Classement",
+        tutorialId: "nav-leaderboard",
+        isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
       },
       {
         path: "/coaching",
