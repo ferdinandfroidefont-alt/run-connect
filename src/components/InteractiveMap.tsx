@@ -1754,6 +1754,13 @@ export const InteractiveMap = ({
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => navigate('/feed')}
+                  className="home-map-filter-chip snap-start home-map-filter-chip-active"
+                >
+                  <span className="flex items-center gap-1.5"><Newspaper className="h-3.5 w-3.5 shrink-0" /> Feed</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
                   className={cn(
                     "home-map-filter-chip snap-start",
