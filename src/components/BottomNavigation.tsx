@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType }
 
 type NavItem = {
   path: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
+  icon: ComponentType<Record<string, unknown>>;
   label: string;
   tutorialId?: string;
   isActive: (pathname: string) => boolean;
