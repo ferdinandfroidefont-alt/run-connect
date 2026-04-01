@@ -1,5 +1,5 @@
 import { RouteDialog } from './RouteDialog';
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
@@ -16,9 +16,10 @@ import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route } from 'lucide-react';
+import { Search, MapPin, Map as MapIcon, LayoutList, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, UserPlus, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -47,6 +48,10 @@ import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
+import { ActivityIcon } from '@/lib/activityIcons';
+import { SessionLevelBadge } from '@/components/SessionLevelBadge';
+import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
+import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -127,6 +132,7 @@ interface Session {
     total_distance: number;
     total_elevation_gain: number;
   } | null;
+  friends_only?: boolean;
 }
 interface Filter {
   activity_types: string[];
@@ -146,6 +152,43 @@ const TIME_SLOTS = [
   { id: "evening" as const, icon: Moon, label: "18h-23h", startHour: 18, endHour: 23 },
   { id: "night" as const, icon: Moon, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
+
+const HOME_VIEW_MODE_STORAGE_KEY = 'runconnect-home-view-mode';
+
+function filterHomeMapSessions(sessions: Session[], filters: Filter): Session[] {
+  const q = (filters.search_query ?? '').trim().toLowerCase();
+  return sessions.filter((session) => {
+    const matchesActivity =
+      filters.activity_types.length === 0 ||
+      filters.activity_types.includes(session.activity_type);
+    const matchesType =
+      filters.session_types.length === 0 ||
+      filters.session_types.includes(session.session_type);
+    const matchesSearch =
+      !q ||
+      (session.title ?? '').toLowerCase().includes(q) ||
+      (session.location_name ?? '').toLowerCase().includes(q) ||
+      (session.description ?? '').toLowerCase().includes(q);
+
+    let matchesTimeSlot = true;
+    if (filters.time_slot) {
+      const slot = TIME_SLOTS.find((s) => s.id === filters.time_slot);
+      if (slot) {
+        const sessionHour = new Date(session.scheduled_at).getHours();
+        if (slot.id === 'night') {
+          matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
+        } else {
+          matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+        }
+      }
+    }
+
+    const matchesLevel =
+      !filters.level || (session.calculated_level || 3) >= filters.level;
+
+    return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
+  });
+}
 
 /** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
 /** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
@@ -171,6 +214,170 @@ const SESSION_TYPE_OPTIONS = [
   { id: 'fractionne', label: 'Fractionné', values: ['fractionne'] },
   { id: 'competition', label: 'Compétition', values: ['competition'] },
 ];
+
+function homeFeedActivityBorderClass(activityType: string): string {
+  switch (activityType) {
+    case 'course':
+    case 'trail':
+      return 'border-l-orange-400';
+    case 'velo':
+    case 'vtt':
+    case 'gravel':
+      return 'border-l-sky-500';
+    case 'natation':
+      return 'border-l-cyan-500';
+    case 'marche':
+      return 'border-l-amber-500';
+    default:
+      return 'border-l-primary';
+  }
+}
+
+function HomeSessionFeedCard({
+  session,
+  index,
+  onOpenDetails,
+  onJoin,
+  joinBusy,
+  isOrganizer,
+  isParticipant,
+  isFull,
+}: {
+  session: Session;
+  index: number;
+  onOpenDetails: () => void;
+  onJoin: () => void;
+  joinBusy: boolean;
+  isOrganizer: boolean;
+  isParticipant: boolean;
+  isFull: boolean;
+}) {
+  const sportLabel =
+    ACTIVITY_TYPES.find((a) => a.value === session.activity_type)?.label ?? session.activity_type;
+  const sessionTypeOpt = SESSION_TYPE_OPTIONS.find(
+    (o) => o.values.length === 1 && o.values[0] === session.session_type
+  );
+  const typeLabel = sessionTypeOpt?.label ?? session.session_type;
+  const orgName =
+    session.profiles?.display_name?.trim() ||
+    session.profiles?.username ||
+    'Organisateur';
+  const distKm = session.routes?.total_distance;
+  const canRequestJoin = !isOrganizer && !isParticipant && !isFull;
+
+  const intensityCls =
+    session.intensity?.toLowerCase() === 'faible'
+      ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
+      : ['modere', 'modérée'].includes(session.intensity?.toLowerCase() ?? '')
+        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200'
+        : ['elevee', 'élevée'].includes(session.intensity?.toLowerCase() ?? '')
+          ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
+          : 'bg-secondary text-muted-foreground';
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpenDetails}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpenDetails();
+        }
+      }}
+      className={cn(
+        'ios-card cursor-pointer overflow-hidden border-l-4 text-left transition-colors active:bg-secondary',
+        'animate-fade-in',
+        homeFeedActivityBorderClass(session.activity_type)
+      )}
+      style={{ animationDelay: `${index * 70}ms`, animationFillMode: 'both' }}
+    >
+      <div className="space-y-ios-3 p-ios-4">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-ios-headline line-clamp-2 font-semibold">{session.title}</h3>
+            <p className="text-ios-footnote mt-1 text-muted-foreground">
+              par <span className="font-medium text-foreground/90">{orgName}</span>
+            </p>
+          </div>
+          {typeof distKm === 'number' && distKm > 0 && (
+            <span className="shrink-0 text-[13px] font-medium text-primary">
+              {distKm < 10 ? `${distKm.toFixed(1)} km` : `${Math.round(distKm)} km`}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <SessionLevelBadge
+            level={(session.calculated_level || 3) as SessionLevel}
+            variant="compact"
+            size="sm"
+          />
+          <Badge variant="outline" className="flex items-center gap-1.5 rounded-full text-[11px]">
+            <ActivityIcon activityType={session.activity_type} size="sm" />
+            {sportLabel}
+          </Badge>
+          <Badge variant="outline" className="rounded-full text-[11px]">
+            {typeLabel}
+          </Badge>
+          {session.intensity && (
+            <Badge className={cn('rounded-full text-[11px]', intensityCls)}>{session.intensity}</Badge>
+          )}
+          {session.friends_only && (
+            <Badge variant="secondary" className="rounded-full text-[11px]">
+              Amis
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-1.5 text-[13px] text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+            <span>{format(new Date(session.scheduled_at), 'EEE d MMM · HH:mm', { locale: fr })}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="truncate">{session.location_name || 'Lieu à préciser'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 shrink-0" aria-hidden />
+            <span>
+              {session.current_participants}/{session.max_participants} participants
+            </span>
+          </div>
+        </div>
+
+        {session.description ? (
+          <p className="line-clamp-2 text-[13px] text-muted-foreground">{session.description}</p>
+        ) : null}
+
+        <div className="flex border-t border-foreground/5 pt-3">
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canRequestJoin || joinBusy}
+            className="h-10 flex-1 rounded-full border-0 ios-gradient-btn text-white shadow-lg shadow-primary/25"
+            onClick={(e) => {
+              e.stopPropagation();
+              onJoin();
+            }}
+          >
+            <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+            {isOrganizer
+              ? 'Organisateur'
+              : isParticipant
+                ? 'Inscrit'
+                : isFull
+                  ? 'Complet'
+                  : session.friends_only
+                    ? 'Demander'
+                    : 'Rejoindre'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ExpandedFilter =
   | 'activity'
@@ -343,8 +550,31 @@ export const InteractiveMap = ({
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
+  const [homeDisplayMode, setHomeDisplayModeState] = useState<'map' | 'feed'>(() => {
+    try {
+      const v = sessionStorage.getItem(HOME_VIEW_MODE_STORAGE_KEY);
+      if (v === 'feed' || v === 'map') return v;
+    } catch {
+      /* ignore */
+    }
+    return 'map';
+  });
+  const [feedTopInsetPx, setFeedTopInsetPx] = useState(240);
+  const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(() => new Set());
+  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
+
+  const setHomeDisplayMode = useCallback((mode: 'map' | 'feed') => {
+    setHomeDisplayModeState(mode);
+    if (mode === 'feed') setIsImmersiveMode(false);
+    try {
+      sessionStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const toggleImmersiveMode = () => {
+    if (homeDisplayMode === 'feed') return;
     setIsImmersiveMode(prev => {
       const next = !prev;
       // Ne plus cacher la barre de navigation en mode immersif
@@ -430,6 +660,19 @@ export const InteractiveMap = ({
 
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
+
+  const filteredSessions = useMemo(
+    () => filterHomeMapSessions(sessions, filters),
+    [sessions, filters],
+  );
+
+  const sortedFeedSessions = useMemo(
+    () =>
+      [...filteredSessions].sort(
+        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+      ),
+    [filteredSessions],
+  );
 
   const routeCoordinates = useRef<MapCoord[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
@@ -692,6 +935,80 @@ export const InteractiveMap = ({
     }
   };
 
+  const joinHomeSession = async (session: Session) => {
+    if (!user) {
+      toast.error('Connectez-vous pour rejoindre une séance');
+      return;
+    }
+    if (session.organizer_id === user.id) return;
+    setJoiningSessionId(session.id);
+    try {
+      if (session.friends_only) {
+        const { error: requestError } = await supabase.from('session_requests').insert([
+          {
+            session_id: session.id,
+            user_id: user.id,
+            requester_name:
+              user.user_metadata?.display_name || user.email?.split('@')[0] || 'Utilisateur',
+            requester_avatar: user.user_metadata?.avatar_url || null,
+          },
+        ]);
+        if (requestError) throw requestError;
+        toast.success("Demande envoyée à l'organisateur");
+      } else {
+        const { error } = await supabase.from('session_participants').insert([
+          { session_id: session.id, user_id: user.id },
+        ]);
+        if (error) throw error;
+        await supabase
+          .from('sessions')
+          .update({ current_participants: session.current_participants + 1 })
+          .eq('id', session.id);
+        toast.success('Vous avez rejoint la séance !');
+        setJoinedSessionIds((prev) => new Set(prev).add(session.id));
+        await loadSessions();
+      }
+    } catch (error: unknown) {
+      console.error('Error joining session:', error);
+      const msg = error instanceof Error ? error.message : 'Impossible de rejoindre la séance';
+      toast.error(msg);
+    } finally {
+      setJoiningSessionId(null);
+    }
+  };
+
+  useEffect(() => {
+    const el = homeMapTopStackRef.current;
+    if (!el || isImmersiveMode) return;
+    const apply = () => setFeedTopInsetPx(Math.ceil(el.getBoundingClientRect().height));
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isImmersiveMode, expandedFilter, homeDisplayMode, filters]);
+
+  useEffect(() => {
+    if (!user?.id || homeDisplayMode !== 'feed') return;
+    const ids = filteredSessions.map((s) => s.id);
+    if (ids.length === 0) {
+      setJoinedSessionIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from('session_participants')
+        .select('session_id')
+        .eq('user_id', user.id)
+        .in('session_id', ids);
+      if (cancelled) return;
+      setJoinedSessionIds(new Set((data ?? []).map((r) => r.session_id)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, homeDisplayMode, filteredSessions]);
+
   // Create map markers for sessions
   const createMarkers = async () => {
     if (!map.current) return;
@@ -702,39 +1019,6 @@ export const InteractiveMap = ({
     sessionPolylines.current = [];
     markers.current = [];
 
-    const q = (filters.search_query ?? '').trim().toLowerCase();
-
-    // Filter sessions based on current filters
-    const filteredSessions = sessions.filter(session => {
-      const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
-      const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
-      const matchesSearch =
-        !q ||
-        (session.title ?? '').toLowerCase().includes(q) ||
-        (session.location_name ?? '').toLowerCase().includes(q) ||
-        (session.description ?? '').toLowerCase().includes(q);
-      
-      // Time slot filter
-      let matchesTimeSlot = true;
-      if (filters.time_slot) {
-        const slot = TIME_SLOTS.find(s => s.id === filters.time_slot);
-        if (slot) {
-          const sessionHour = new Date(session.scheduled_at).getHours();
-          if (slot.id === 'night') {
-            matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
-          } else {
-            matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
-          }
-        }
-      }
-
-      // Level filter - show sessions at selected level or higher (minimum level)
-      const matchesLevel = !filters.level || (
-        (session.calculated_level || 3) >= filters.level
-      );
-      
-      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
-    });
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
     console.log('Sessions with profiles:', filteredSessions.map(s => ({
       id: s.id,
@@ -979,6 +1263,11 @@ export const InteractiveMap = ({
   // Update markers when sessions or filters change (léger debounce → moins de regénérations coûteuses lors des rafraîchissements rapides).
   useEffect(() => {
     if (!isMapLoaded || !map.current) return;
+    if (homeDisplayMode !== 'map') {
+      markers.current.forEach((marker) => marker.remove());
+      markers.current = [];
+      return;
+    }
     if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     markersDebounceRef.current = setTimeout(() => {
       markersDebounceRef.current = null;
@@ -987,7 +1276,7 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [sessions, filters, isMapLoaded, newSessionIds]);
+  }, [filteredSessions, isMapLoaded, newSessionIds, homeDisplayMode]);
 
   /** Suggestions de lieux Mapbox pendant la saisie (monde entier, sans restriction pays). */
   useEffect(() => {
@@ -1543,7 +1832,10 @@ export const InteractiveMap = ({
       <div className="relative min-h-0 w-full flex-1">
         <div
           ref={mapContainer}
-          className="relative min-h-0 h-full w-full bg-secondary"
+          className={cn(
+            'relative min-h-0 h-full w-full bg-secondary transition-opacity duration-200 ease-out motion-reduce:transition-none',
+            homeDisplayMode === 'feed' && 'pointer-events-none opacity-0',
+          )}
           data-tutorial="map-container"
         />
         <div
@@ -1553,6 +1845,50 @@ export const InteractiveMap = ({
           )}
           aria-hidden
         />
+
+        <div
+          className={cn(
+            'absolute inset-x-0 bottom-0 z-[14] flex flex-col bg-background transition-opacity duration-200 ease-out motion-reduce:transition-none',
+            homeDisplayMode === 'feed'
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0',
+          )}
+          style={{ top: feedTopInsetPx }}
+          aria-hidden={homeDisplayMode !== 'feed'}
+        >
+          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-1 [-webkit-overflow-scrolling:touch]">
+            {sortedFeedSessions.length === 0 ? (
+              <div className="ios-card mt-2 p-ios-5 text-center">
+                <p className="text-ios-body text-muted-foreground">
+                  Aucune séance ne correspond à vos filtres pour cette journée.
+                </p>
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full max-w-2xl flex-col gap-ios-3 pb-4">
+                {sortedFeedSessions.map((session, index) => {
+                  const isOrg = !!user && session.organizer_id === user.id;
+                  const isPart = joinedSessionIds.has(session.id);
+                  const full =
+                    session.max_participants > 0 &&
+                    session.current_participants >= session.max_participants;
+                  return (
+                    <HomeSessionFeedCard
+                      key={session.id}
+                      session={session}
+                      index={index}
+                      onOpenDetails={() => setSelectedSession(session)}
+                      onJoin={() => void joinHomeSession(session)}
+                      joinBusy={joiningSessionId === session.id}
+                      isOrganizer={isOrg}
+                      isParticipant={isPart}
+                      isFull={full}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
@@ -1658,6 +1994,48 @@ export const InteractiveMap = ({
                   onClick={() => setShowSettingsDialog(true)}
                 >
                   <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="pointer-events-auto px-4 pb-3"
+              data-tutorial="home-view-toggle"
+            >
+              <div
+                role="tablist"
+                aria-label="Mode d’affichage accueil"
+                className="flex h-10 w-full rounded-xl bg-muted/90 p-0.5 dark:bg-muted/50"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={homeDisplayMode === 'map'}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-semibold transition-colors duration-200 ease-out',
+                    homeDisplayMode === 'map'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground',
+                  )}
+                  onClick={() => setHomeDisplayMode('map')}
+                >
+                  <MapIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                  Carte
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={homeDisplayMode === 'feed'}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-semibold transition-colors duration-200 ease-out',
+                    homeDisplayMode === 'feed'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground',
+                  )}
+                  onClick={() => setHomeDisplayMode('feed')}
+                >
+                  <LayoutList className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                  Feed
                 </button>
               </div>
             </div>
@@ -2053,6 +2431,7 @@ export const InteractiveMap = ({
       )}
 
       {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Style, Réinitialiser */}
+      {homeDisplayMode === 'map' && (
       <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
         <MapIosColoredFab
           tone="gray"
@@ -2076,6 +2455,7 @@ export const InteractiveMap = ({
 
         <MapControls onResetView={handleResetView} />
       </div>
+      )}
       
 
       {/* Create Session Wizard */}
