@@ -2069,10 +2069,7 @@ export const InteractiveMap = ({
           <button
             type="button"
             title="Couches"
-            onClick={() => {
-              /* trigger MapStyleSelector — we use a ref-based approach */
-              setShowMapStyleSelector(prev => !prev);
-            }}
+            onClick={() => setShowMapStyleSelector(prev => !prev)}
             className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
           >
             <SlidersHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -2098,14 +2095,10 @@ export const InteractiveMap = ({
         </div>
       </div>
 
-      {/* MapStyleSelector dialog (rendered separately) */}
-      {showMapStyleSelector && (
-        <div className="fixed inset-0 z-[200]" onClick={() => setShowMapStyleSelector(false)}>
-          <div className="absolute bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.5rem)] right-[max(4.5rem,calc(env(safe-area-inset-right,0px)+4.5rem))]" onClick={e => e.stopPropagation()}>
-            <MapStyleSelector currentStyle={currentStyle} onStyleChange={(s) => { handleStyleChange(s); setShowMapStyleSelector(false); }} />
-          </div>
-        </div>
-      )}
+      {/* Hidden MapStyleSelector — triggers its own bottom sheet */}
+      <div className="hidden">
+        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} ref={mapStyleSelectorRef} />
+      </div>
       
 
       {/* Create Session Wizard */}
