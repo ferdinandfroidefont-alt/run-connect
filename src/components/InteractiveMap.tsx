@@ -1590,9 +1590,13 @@ export const InteractiveMap = ({
             )}
           >
             <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
-              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
+              <button
+                type="button"
+                onClick={() => navigate('/feed')}
+                className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+              >
                 RunConnect
-              </h1>
+              </button>
 
               {userProfile && (
                 <div
