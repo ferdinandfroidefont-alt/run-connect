@@ -51,7 +51,7 @@ export const FeedHeader = ({
   return (
     <header className="shrink-0 bg-white dark:bg-background pt-[var(--safe-area-top)]">
       {/* Top row: RunConnect + centered avatar + bell + settings */}
-      <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
+      <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
         <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
           RunConnect
         </h1>
