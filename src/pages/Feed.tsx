@@ -9,7 +9,7 @@ import { DiscoverCard } from '@/components/feed/DiscoverCard';
 import { DiscoverEmptyState } from '@/components/feed/DiscoverEmptyState';
 import { ProfileDialog } from '@/components/ProfileDialog';
 import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
-import { Loader2, RefreshCw, Map } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
@@ -139,20 +139,7 @@ export default function Feed() {
               mode={mode}
               onModeChange={setMode}
             />
-            {/* Toggle map/feed */}
-            <div className="px-4 pb-2 flex items-center">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[12px] font-semibold text-muted-foreground',
-                  'active:opacity-80 transition-opacity'
-                )}
-              >
-                <Map className="h-4 w-4" />
-                <span>Carte</span>
-              </button>
-            </div>
+            
             {mode === 'discover' && (
               <DiscoverFilters
                 maxDistance={maxDistance}

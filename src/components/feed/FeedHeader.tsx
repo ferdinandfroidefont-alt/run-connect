@@ -2,6 +2,7 @@ import { Settings } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
@@ -26,6 +27,7 @@ export const FeedHeader = ({
   onModeChange,
 }: FeedHeaderProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
     avatar_url: null,
     username: null,
@@ -51,10 +53,14 @@ export const FeedHeader = ({
   return (
     <header className="shrink-0 bg-white dark:bg-background pt-[var(--safe-area-top)]">
       {/* Top row: RunConnect + centered avatar + bell + settings */}
-      <div className="relative flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
-        <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
+      <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+        >
           RunConnect
-        </h1>
+        </button>
 
         {/* Centered profile avatar */}
         {profile && (
@@ -71,7 +77,7 @@ export const FeedHeader = ({
               }}
               className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
             >
-              <Avatar className="h-10 w-10 ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+              <Avatar className="h-11 w-11 ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                 <AvatarImage
                   src={profile.avatar_url || undefined}
                   alt={profile.username || profile.display_name || 'Profile'}

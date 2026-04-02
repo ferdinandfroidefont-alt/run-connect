@@ -341,6 +341,7 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [showMapStyleSelector, setShowMapStyleSelector] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 
@@ -1590,9 +1591,13 @@ export const InteractiveMap = ({
             )}
           >
             <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
-              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
+              <button
+                type="button"
+                onClick={() => navigate('/feed')}
+                className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+              >
                 RunConnect
-              </h1>
+              </button>
 
               {userProfile && (
                 <div
@@ -1752,13 +1757,6 @@ export const InteractiveMap = ({
               <div ref={homeMapFiltersRef} className="relative z-[25] space-y-2 pt-3">
               <div className="overflow-x-auto scrollbar-hide [-webkit-overflow-scrolling:touch] px-0.5">
                 <div className="flex min-w-max snap-x snap-mandatory items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/feed')}
-                  className="home-map-filter-chip snap-start home-map-filter-chip-active"
-                >
-                  <span className="flex items-center gap-1.5"><Newspaper className="h-3.5 w-3.5 shrink-0" /> Feed</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => setExpandedFilter((prev) => (prev === 'activity' ? null : 'activity'))}
@@ -2059,29 +2057,37 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Style, Réinitialiser */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
-        <MapIosColoredFab
-          tone="gray"
-          title="Carte plein écran"
-          onClick={toggleImmersiveMode}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-        >
-          <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapIosColoredFab
-          tone="gray"
-          title="Me localiser"
-          onClick={handleLocateMe}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-        >
-          <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-
-        <MapControls onResetView={handleResetView} />
+      {/* Contrôles carte — bloc vertical droit au-dessus du FAB "+" */}
+      <div
+        className={cn(
+          "pointer-events-none fixed z-[104] flex flex-col items-end",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.5rem)]",
+          "right-[max(1rem,env(safe-area-inset-right,0px))]"
+        )}
+      >
+        <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
+          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+          </div>
+          <div className="mx-2 h-px w-7 bg-border/50" />
+          <button
+            type="button"
+            title="Me localiser"
+            onClick={handleLocateMe}
+            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+          >
+            <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/50" />
+          <button
+            type="button"
+            title="Recentrer"
+            onClick={handleResetView}
+            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+          >
+            <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+        </div>
       </div>
       
 
