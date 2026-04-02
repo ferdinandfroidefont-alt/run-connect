@@ -27,6 +27,7 @@ export const FeedHeader = ({
   onModeChange,
 }: FeedHeaderProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
     avatar_url: null,
     username: null,
