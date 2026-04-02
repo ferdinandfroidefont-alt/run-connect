@@ -48,6 +48,7 @@ import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
+import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -157,12 +158,13 @@ const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night'
   night: 'text-[#3730A3]',
 };
 
-const ACTIVITY_OPTIONS = [
-  { id: 'all', label: 'Tous sports', values: [] as string[] },
-  { id: 'course', label: 'Course', values: ['course'] },
-  { id: 'velo', label: 'Vélo', values: ['velo'] },
-  { id: 'natation', label: 'Natation', values: ['natation'] },
-  { id: 'marche', label: 'Marche', values: ['marche'] },
+const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
+  { id: 'all', label: 'Tous sports', values: [] },
+  ...ACTIVITY_TYPES.map((a) => ({
+    id: a.value,
+    label: a.label,
+    values: [a.value],
+  })),
 ];
 
 const SESSION_TYPE_OPTIONS = [
