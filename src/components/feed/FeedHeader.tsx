@@ -56,7 +56,7 @@ export const FeedHeader = ({
       <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
         <button
           type="button"
-          onClick={() => window.location.href = '/'}
+          onClick={() => navigate('/')}
           className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
         >
           RunConnect
