@@ -11,10 +11,16 @@ const NotificationCenter = lazy(() =>
 );
 
 const homeMapIconButtonClass = cn(
-  "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
-  "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
+  "touch-manipulation relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] border border-[#E5E7EB] bg-white",
+  "shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] outline-none transition-[opacity,transform] active:scale-[0.96] active:opacity-90",
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-  "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
+  "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.55)]"
+);
+
+/** Itinéraire : se démarque des icônes neutres (accent primaire) */
+const homeMapItineraryButtonClass = cn(
+  homeMapIconButtonClass,
+  "border-primary/35 bg-primary/[0.08] ring-1 ring-primary/15 dark:border-primary/40 dark:bg-primary/15 dark:ring-primary/25"
 );
 
 /**
@@ -45,15 +51,21 @@ export function FloatingCreateSessionButton() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed z-[105] flex flex-row items-center gap-2 sm:gap-3",
+        "pointer-events-none fixed z-[105] flex flex-row items-center gap-2.5 sm:gap-3",
         "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+0.5rem)]",
         "right-[max(1rem,env(safe-area-inset-right,0px))]"
       )}
     >
+      <div
+        className={cn(
+          "pointer-events-auto flex flex-row items-center gap-2.5 rounded-[22px] border border-black/[0.06] bg-white/95 p-1.5 shadow-[0_10px_28px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)] backdrop-blur-[8px]",
+          "dark:border-[#1f1f1f] dark:bg-[#0a0a0a]/95 dark:shadow-[0_12px_36px_-16px_rgba(0,0,0,0.65)]"
+        )}
+      >
       <button
         type="button"
         onClick={() => navigate("/route-create")}
-        className={cn("pointer-events-auto", homeMapIconButtonClass)}
+        className={cn("pointer-events-auto", homeMapItineraryButtonClass)}
         aria-label="Créer un itinéraire"
       >
         <PenLine className="h-[22px] w-[22px] text-primary" strokeWidth={2.25} aria-hidden />
@@ -63,7 +75,7 @@ export function FloatingCreateSessionButton() {
         <Suspense
           fallback={
             <div
-              className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+              className="h-[42px] w-[42px] shrink-0 rounded-[14px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
               aria-hidden
             />
           }
@@ -95,6 +107,7 @@ export function FloatingCreateSessionButton() {
       >
         <Plus className="h-6 w-6" strokeWidth={2.35} aria-hidden />
       </button>
+      </div>
     </div>
   );
 }

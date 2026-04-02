@@ -19,7 +19,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -1440,16 +1440,6 @@ export const InteractiveMap = ({
     if (!map.current) return;
     setInteractiveRouteLine(map.current, routeCoordinates.current);
   };
-  const handleResetView = () => {
-    if (map.current) {
-      map.current.easeTo({
-        center: [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat],
-        zoom: HOME_MAP_BOOT_ZOOM,
-        duration: 800,
-        essential: true,
-      });
-    }
-  };
   const handleLocateMe = async () => {
     if (!map.current) return;
     console.log("🗺️ handleLocateMe");
@@ -1599,10 +1589,19 @@ export const InteractiveMap = ({
                 <button
                   type="button"
                   onClick={() => navigate('/feed')}
-                  className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+                  className={cn(
+                    "group relative flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center overflow-hidden rounded-full",
+                    "border border-primary/30 bg-gradient-to-br from-primary/[0.14] via-primary/[0.08] to-transparent",
+                    "px-4 py-2.5 text-[17px] font-bold leading-none tracking-tight text-primary",
+                    "shadow-[0_2px_14px_-4px_hsl(var(--primary)/0.45),0_1px_0_rgba(255,255,255,0.06)_inset] dark:shadow-[0_2px_18px_-4px_hsl(var(--primary)/0.35)]",
+                    "ring-1 ring-primary/20 transition-[transform,opacity,box-shadow] active:scale-[0.98] active:opacity-95 touch-manipulation",
+                    "dark:border-primary/35 dark:from-primary/20 dark:via-primary/12 dark:ring-primary/25"
+                  )}
                   data-tutorial="runconnect-toggle"
                 >
-                  RunConnect
+                  <span className="relative z-[1] truncate font-bold text-primary dark:text-white">
+                    RunConnect
+                  </span>
                 </button>
               </div>
 
@@ -2048,27 +2047,38 @@ export const InteractiveMap = ({
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
-        <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] border border-transparent bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
+        <div
+          className={cn(
+            "pointer-events-auto flex flex-col items-center overflow-hidden rounded-[20px] border",
+            "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
+            "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
+          )}
+        >
           <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
-          <div className="mx-2 h-px w-7 bg-border dark:bg-[#1f1f1f]" />
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <button
             type="button"
             title="Me localiser"
             onClick={handleLocateMe}
-            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
-          <div className="mx-2 h-px w-7 bg-border dark:bg-[#1f1f1f]" />
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <button
             type="button"
-            title="Recentrer"
-            onClick={handleResetView}
-            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+            title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
+            aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
+            onClick={toggleImmersiveMode}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
-            <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2} />
+            {isImmersiveMode ? (
+              <Minimize2 className="h-[18px] w-[18px]" strokeWidth={2} />
+            ) : (
+              <Expand className="h-[18px] w-[18px]" strokeWidth={2} />
+            )}
           </button>
         </div>
       </div>
