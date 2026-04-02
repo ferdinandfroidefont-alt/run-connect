@@ -220,6 +220,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bienvenue sur RunConnect !',
       mapContent: 'Voici la carte interactive où vous pouvez découvrir les séances sportives autour de vous.',
+      runconnectTitle: 'Basculer vers le Feed',
+      runconnectContent: 'Appuyez sur « RunConnect » pour passer au fil d\'actualités de la communauté.',
       createTitle: 'Créer une séance',
       createContent: 'Appuyez sur ce bouton pour organiser une sortie running, vélo ou toute autre activité sportive.',
       sessionsTitle: 'Mes séances',
@@ -564,6 +566,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Welcome to RunConnect!',
       mapContent: 'This is the interactive map where you can discover sports sessions around you.',
+      runconnectTitle: 'Switch to Feed',
+      runconnectContent: 'Tap "RunConnect" to switch to the community news feed.',
       createTitle: 'Create a Session',
       createContent: 'Tap this button to organize a running, cycling or any other sports activity.',
       sessionsTitle: 'My Sessions',
@@ -862,6 +866,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '¡Bienvenido a RunConnect!',
       mapContent: 'Este es el mapa interactivo donde puedes descubrir sesiones deportivas a tu alrededor.',
+      runconnectTitle: 'Cambiar al Feed',
+      runconnectContent: 'Toca "RunConnect" para cambiar al feed de la comunidad.',
       createTitle: 'Crear una sesión',
       createContent: 'Toca este botón para organizar una salida de running, ciclismo o cualquier otra actividad deportiva.',
       sessionsTitle: 'Mis sesiones',
@@ -1044,6 +1050,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bem-vindo ao RunConnect!',
       mapContent: 'Este é o mapa interativo onde você pode descobrir sessões esportivas ao seu redor.',
+      runconnectTitle: 'Mudar para o Feed',
+      runconnectContent: 'Toque em "RunConnect" para mudar para o feed da comunidade.',
       createTitle: 'Criar uma sessão',
       createContent: 'Toque neste botão para organizar uma corrida, ciclismo ou qualquer outra atividade esportiva.',
       sessionsTitle: 'Minhas sessões',
@@ -1226,6 +1234,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Willkommen bei RunConnect!',
       mapContent: 'Dies ist die interaktive Karte, auf der Sie Sportveranstaltungen in Ihrer Nähe entdecken können.',
+      runconnectTitle: 'Zum Feed wechseln',
+      runconnectContent: 'Tippen Sie auf „RunConnect", um zum Community-Feed zu wechseln.',
       createTitle: 'Sitzung erstellen',
       createContent: 'Tippen Sie auf diese Schaltfläche, um einen Lauf, eine Radtour oder eine andere sportliche Aktivität zu organisieren.',
       sessionsTitle: 'Meine Sitzungen',
@@ -1408,6 +1418,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '欢迎来到 RunConnect！',
       mapContent: '这是互动地图，您可以在这里发现周围的体育活动。',
+      runconnectTitle: '切换到动态',
+      runconnectContent: '点击「RunConnect」切换到社区动态。',
       createTitle: '创建活动',
       createContent: '点击此按钮组织跑步、骑行或任何其他体育活动。',
       sessionsTitle: '我的活动',
@@ -1590,6 +1602,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'مرحباً بك في RunConnect!',
       mapContent: 'هذه هي الخريطة التفاعلية حيث يمكنك اكتشاف الجلسات الرياضية من حولك.',
+      runconnectTitle: 'التبديل إلى الخلاصة',
+      runconnectContent: 'اضغط على "RunConnect" للتبديل إلى خلاصة المجتمع.',
       createTitle: 'إنشاء جلسة',
       createContent: 'اضغط على هذا الزر لتنظيم نشاط الجري أو ركوب الدراجات أو أي نشاط رياضي آخر.',
       sessionsTitle: 'جلساتي',

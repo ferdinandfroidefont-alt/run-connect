@@ -1595,6 +1595,7 @@ export const InteractiveMap = ({
                 type="button"
                 onClick={() => navigate('/feed')}
                 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+                data-tutorial="runconnect-toggle"
               >
                 RunConnect
               </button>
@@ -2061,7 +2062,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.5rem)]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+5.5rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >

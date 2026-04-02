@@ -28,9 +28,9 @@ export function FloatingCreateSessionButton() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed z-[105] flex flex-col items-center gap-2",
+        "pointer-events-none fixed z-[105] flex flex-col items-center gap-1.5",
         "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+0.5rem)]",
-        "left-1/2 -translate-x-1/2"
+        "right-[max(1rem,env(safe-area-inset-right,0px))]"
       )}
     >
       <button
@@ -52,13 +52,13 @@ export function FloatingCreateSessionButton() {
         type="button"
         onClick={() => navigate("/route-create")}
         className={cn(
-          "pointer-events-auto flex h-8 min-h-[32px] items-center justify-center gap-1.5 rounded-full px-3",
-          "border border-border/60 bg-background/95 text-[11px] font-semibold text-foreground shadow-[0_4px_16px_-6px_rgb(0_0_0/0.2)] backdrop-blur-md",
+          "pointer-events-auto flex h-7 min-h-[28px] items-center justify-center gap-1 rounded-full px-2.5",
+          "border border-border/60 bg-background/95 text-[10px] font-semibold text-foreground shadow-[0_4px_16px_-6px_rgb(0_0_0/0.2)] backdrop-blur-md",
           "ring-[2px] ring-background/90 transition-transform duration-200 ease-ios active:scale-[0.97] touch-manipulation dark:ring-background/80"
         )}
         aria-label="Créer un itinéraire"
       >
-        <PenLine className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+        <PenLine className="h-3 w-3 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
         <span className="truncate">Itinéraire</span>
       </button>
     </div>
