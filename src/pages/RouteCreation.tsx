@@ -34,6 +34,7 @@ import {
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
+import { cn } from '@/lib/utils';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -891,11 +892,15 @@ export const RouteCreation = () => {
           <Trash2 className="w-4 h-4" />
         </Button>
 
-        <MapStyleSelector
-          currentStyle={mapStyleId}
-          onStyleChange={handleMapStyleChange}
-          panelAnchor="viewport-left"
-        />
+        {/* Même bottom sheet « Style de carte » que l’accueil ; gabarit h-11 comme les boutons outline */}
+        <div
+          className={cn(
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-ios-lg border border-border/50 bg-background/80 shadow-lg backdrop-blur-md hover:bg-background/90',
+            '[&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:border-0 [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/85 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/85'
+          )}
+        >
+          <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
+        </div>
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">
