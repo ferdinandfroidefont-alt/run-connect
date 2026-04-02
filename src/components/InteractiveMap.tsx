@@ -1,5 +1,6 @@
 import { RouteDialog } from './RouteDialog';
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { RUNCONNECT_OPEN_HOME_SETTINGS_EVENT } from '@/lib/homeMapEvents';
 import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
@@ -18,7 +19,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -48,9 +49,6 @@ import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 
-const NotificationCenter = lazy(() =>
-  import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
-);
 const SettingsDialog = lazy(() =>
   import('./SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
 );
@@ -341,6 +339,12 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  useEffect(() => {
+    const openSettings = () => setShowSettingsDialog(true);
+    window.addEventListener(RUNCONNECT_OPEN_HOME_SETTINGS_EVENT, openSettings);
+    return () => window.removeEventListener(RUNCONNECT_OPEN_HOME_SETTINGS_EVENT, openSettings);
+  }, []);
   const [showMapStyleSelector, setShowMapStyleSelector] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
@@ -1590,15 +1594,17 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-background",
             )}
           >
-            <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
-              <button
-                type="button"
-                onClick={() => navigate('/feed')}
-                className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
-                data-tutorial="runconnect-toggle"
-              >
-                RunConnect
-              </button>
+            <div className="relative z-[1] flex min-h-[2.75rem] items-center gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
+              <div className="flex min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/feed')}
+                  className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+                  data-tutorial="runconnect-toggle"
+                >
+                  RunConnect
+                </button>
+              </div>
 
               {userProfile && (
                 <div
@@ -1619,7 +1625,7 @@ export const InteractiveMap = ({
                   >
                     {/*
                       avatar-fixed : évite la règle iOS « compact » sur h fixes.
-                      Tailles via .map-header-profile-avatar — aligné sur le FAB « + » (3.75rem / 4rem sm).
+                      Tailles via .map-header-profile-avatar — aligné sur le FAB « + » (h-14 / 3.5rem).
                     */}
                     <Avatar className="map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                       <AvatarImage
@@ -1640,32 +1646,8 @@ export const InteractiveMap = ({
                 </div>
               )}
 
-              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                  <Suspense
-                    fallback={
-                      <div
-                        className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-border dark:bg-card"
-                        aria-hidden
-                      />
-                    }
-                  >
-                    <NotificationCenter onSessionUpdated={loadSessions} />
-                  </Suspense>
-                </div>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
-                    "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
-                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  )}
-                  aria-label="Paramètres"
-                  onClick={() => setShowSettingsDialog(true)}
-                >
-                  <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                </button>
-              </div>
+              {/* Droite : équilibre horizontal avec le titre (notif / réglages / itinéraire / + sont en bas — FloatingCreateSessionButton) */}
+              <div className="min-w-0 flex-1" aria-hidden />
             </div>
           </header>
 

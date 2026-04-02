@@ -784,8 +784,8 @@ html, body {
   }
 
   /**
-   * Avatar centré header carte : même gabarit que le FAB « + » (FloatingCreateSessionButton).
-   * 3.75rem / 4rem @ sm — ratio 1:1, cercle, image cover.
+   * Avatar centré header carte : même gabarit que le FAB « + » (h-14 / 3.5rem).
+   * Ratio 1:1, cercle, image cover.
    */
   .map-header-profile-avatar {
     flex-shrink: 0;
@@ -793,25 +793,14 @@ html, body {
     aspect-ratio: 1 / 1;
     overflow: hidden;
     border-radius: 50%;
-    width: 2.75rem;
-    height: 2.75rem;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    max-width: 2.75rem;
-    max-height: 2.75rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    min-width: 3.5rem;
+    min-height: 3.5rem;
+    max-width: 3.5rem;
+    max-height: 3.5rem;
     position: relative;
     isolation: isolate;
-  }
-
-  @media (min-width: 640px) {
-    .map-header-profile-avatar {
-      width: 3rem;
-      height: 3rem;
-      min-width: 3rem;
-      min-height: 3rem;
-      max-width: 3rem;
-      max-height: 3rem;
-    }
   }
 
   /* Image : pas d’espace inline, remplissage du cercle (WKWebView inclus) */
