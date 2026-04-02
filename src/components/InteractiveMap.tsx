@@ -2056,30 +2056,55 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Style, Réinitialiser */}
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
-        <MapIosColoredFab
-          tone="gray"
-          title="Carte plein écran"
-          onClick={toggleImmersiveMode}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-        >
-          <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapIosColoredFab
-          tone="gray"
-          title="Me localiser"
-          onClick={handleLocateMe}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-        >
-          <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-
-        <MapControls onResetView={handleResetView} />
+      {/* Contrôles carte — bloc vertical droit au-dessus du FAB "+" */}
+      <div
+        className={cn(
+          "pointer-events-none fixed z-[104] flex flex-col items-end",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.5rem)]",
+          "right-[max(1rem,env(safe-area-inset-right,0px))]"
+        )}
+      >
+        <div className="pointer-events-auto flex flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
+          <button
+            type="button"
+            title="Couches"
+            onClick={() => {
+              /* trigger MapStyleSelector — we use a ref-based approach */
+              setShowMapStyleSelector(prev => !prev);
+            }}
+            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+          >
+            <SlidersHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px bg-border/50" />
+          <button
+            type="button"
+            title="Me localiser"
+            onClick={handleLocateMe}
+            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+          >
+            <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px bg-border/50" />
+          <button
+            type="button"
+            title="Recentrer"
+            onClick={handleResetView}
+            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
+          >
+            <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+        </div>
       </div>
+
+      {/* MapStyleSelector dialog (rendered separately) */}
+      {showMapStyleSelector && (
+        <div className="fixed inset-0 z-[200]" onClick={() => setShowMapStyleSelector(false)}>
+          <div className="absolute bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.5rem)] right-[max(4.5rem,calc(env(safe-area-inset-right,0px)+4.5rem))]" onClick={e => e.stopPropagation()}>
+            <MapStyleSelector currentStyle={currentStyle} onStyleChange={(s) => { handleStyleChange(s); setShowMapStyleSelector(false); }} />
+          </div>
+        </div>
+      )}
       
 
       {/* Create Session Wizard */}

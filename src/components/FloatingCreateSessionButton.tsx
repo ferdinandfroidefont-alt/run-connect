@@ -28,17 +28,16 @@ export function FloatingCreateSessionButton() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed z-[105] flex flex-col items-end gap-2.5",
-        /* Légèrement remonté pour respirer au-dessus de la tab bar + secondaire en dessous */
-        "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+1rem)]",
-        "right-[max(1rem,env(safe-area-inset-right,0px))]"
+        "pointer-events-none fixed z-[105] flex flex-col items-center gap-2",
+        "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+0.5rem)]",
+        "left-1/2 -translate-x-1/2"
       )}
     >
       <button
         type="button"
         onClick={handlePlusClick}
         className={cn(
-          "pointer-events-auto flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full sm:h-16 sm:w-16",
+          "pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full",
           "bg-primary text-primary-foreground shadow-[0_8px_28px_-6px_hsl(var(--primary)/0.45),0_4px_14px_-8px_rgb(0_0_0/0.2)]",
           "ring-[3px] ring-background transition-transform duration-200 ease-ios",
           "active:scale-[0.94] touch-manipulation dark:ring-background"
@@ -46,21 +45,21 @@ export function FloatingCreateSessionButton() {
         data-tutorial="create-session"
         aria-label={t("navigation.createSession")}
       >
-        <Plus className="h-[1.65rem] w-[1.65rem] sm:h-7 sm:w-7" strokeWidth={2.35} aria-hidden />
+        <Plus className="h-6 w-6" strokeWidth={2.35} aria-hidden />
       </button>
 
       <button
         type="button"
         onClick={() => navigate("/route-create")}
         className={cn(
-          "pointer-events-auto flex h-11 min-h-[44px] max-w-[min(calc(100vw-2rem),17.5rem)] items-center justify-center gap-2 rounded-full px-4 sm:px-5",
-          "border border-border/70 bg-background/95 text-[14px] font-semibold text-foreground shadow-[0_6px_22px_-8px_rgb(0_0_0/0.28)] backdrop-blur-md",
-          "ring-[2.5px] ring-background/90 transition-transform duration-200 ease-ios active:scale-[0.97] touch-manipulation dark:ring-background/80"
+          "pointer-events-auto flex h-8 min-h-[32px] items-center justify-center gap-1.5 rounded-full px-3",
+          "border border-border/60 bg-background/95 text-[11px] font-semibold text-foreground shadow-[0_4px_16px_-6px_rgb(0_0_0/0.2)] backdrop-blur-md",
+          "ring-[2px] ring-background/90 transition-transform duration-200 ease-ios active:scale-[0.97] touch-manipulation dark:ring-background/80"
         )}
         aria-label="Créer un itinéraire"
       >
-        <PenLine className="h-[18px] w-[18px] shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
-        <span className="truncate">Créer un itinéraire</span>
+        <PenLine className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={2.25} aria-hidden />
+        <span className="truncate">Itinéraire</span>
       </button>
     </div>
   );
