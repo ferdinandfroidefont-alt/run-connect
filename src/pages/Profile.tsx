@@ -26,6 +26,7 @@ import { PersonalRecords } from "@/components/PersonalRecords";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
+import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
@@ -114,6 +115,11 @@ const Profile = () => {
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
+  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
+  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
+  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
+  const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const {
     toast
   } = useToast();
@@ -176,8 +182,8 @@ const Profile = () => {
         fetchProfile();
       }
       fetchFollowCounts();
-      // fetchReliabilityRate removed - no longer shown on profile
       if (!isViewingOtherUser) {
+        fetchReliabilityStats();
         fetchUserRoutes();
       } else {
         fetchCommonClubs();
@@ -192,6 +198,32 @@ const Profile = () => {
       setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
+  const fetchReliabilityStats = async () => {
+    if (!user?.id) return;
+    try {
+      const { data: statsData } = await supabase
+        .from("user_stats")
+        .select("reliability_rate, total_sessions_joined, total_sessions_completed")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (statsData) {
+        setReliabilityRate(Number(statsData.reliability_rate) || 100);
+        setTotalSessionsJoined(statsData.total_sessions_joined || 0);
+        setTotalSessionsCompleted(statsData.total_sessions_completed || 0);
+      } else {
+        setReliabilityRate(100);
+      }
+      const { count: createdCount } = await supabase
+        .from("sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("organizer_id", user.id);
+      setTotalSessionsCreated(createdCount || 0);
+    } catch (e) {
+      console.error("Error fetching reliability stats:", e);
+      setReliabilityRate(100);
+    }
+  };
+
   const fetchFollowCounts = async () => {
     const targetUserId = viewingUserId || user?.id;
     if (!targetUserId) return;
@@ -758,6 +790,10 @@ const Profile = () => {
                 setFollowDialogType('following');
                 setShowFollowDialog(true);
               }}
+              reliabilityPercent={!isViewingOtherUser ? reliabilityRate : undefined}
+              onReliabilityClick={
+                !isViewingOtherUser ? () => setShowReliabilityDialog(true) : undefined
+              }
             />
           </div>
         </div>
@@ -918,6 +954,17 @@ const Profile = () => {
 
         {/* Follow Dialog */}
         <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} targetUserId={viewingUserId || undefined} />
+
+        {!isViewingOtherUser && (
+          <ReliabilityDetailsDialog
+            open={showReliabilityDialog}
+            onOpenChange={setShowReliabilityDialog}
+            reliabilityRate={reliabilityRate ?? 100}
+            totalSessionsCreated={totalSessionsCreated}
+            totalSessionsJoined={totalSessionsJoined}
+            totalSessionsCompleted={totalSessionsCompleted}
+          />
+        )}
 
         {/* Settings Dialog */}
         <Suspense fallback={null}>

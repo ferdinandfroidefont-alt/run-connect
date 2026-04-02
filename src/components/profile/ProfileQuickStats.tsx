@@ -8,6 +8,9 @@ interface ProfileQuickStatsProps {
   followingCount?: number;
   onFollowersClick?: () => void;
   onFollowingClick?: () => void;
+  /** Affiche la colonne Fiabilité (ex. profil perso), à côté des abonnés / abonnements */
+  reliabilityPercent?: number | null;
+  onReliabilityClick?: () => void;
 }
 
 export const ProfileQuickStats = ({
@@ -16,6 +19,8 @@ export const ProfileQuickStats = ({
   followingCount = 0,
   onFollowersClick,
   onFollowingClick,
+  reliabilityPercent,
+  onReliabilityClick,
 }: ProfileQuickStatsProps) => {
   const { formatKm } = useDistanceUnits();
   const [totalActivities, setTotalActivities] = useState(0);
@@ -58,28 +63,52 @@ export const ProfileQuickStats = ({
     }
   };
 
-  const stats = [
+  const showReliability = typeof onReliabilityClick === "function";
+
+  const stats: {
+    value: string | number;
+    label: string;
+    onClick?: () => void;
+  }[] = [
     { value: totalActivities, label: "Activités", onClick: undefined },
     { value: formatKm(totalDistance), label: "Distance", onClick: undefined },
     { value: followerCount, label: "Abonnés", onClick: onFollowersClick },
     { value: followingCount, label: "Abonnements", onClick: onFollowingClick },
   ];
 
+  if (showReliability) {
+    const rel =
+      reliabilityPercent != null && !Number.isNaN(Number(reliabilityPercent))
+        ? `${Math.round(Number(reliabilityPercent))}%`
+        : "–";
+    stats.push({
+      value: rel,
+      label: "Fiabilité",
+      onClick: onReliabilityClick,
+    });
+  }
+
+  const colCount = stats.length;
+
   return (
-    <div className="grid w-full min-w-0 grid-cols-4 overflow-hidden">
+    <div
+      className={`grid w-full min-w-0 overflow-hidden ${
+        colCount === 5 ? "grid-cols-5" : "grid-cols-4"
+      }`}
+    >
       {stats.map((stat, i) => {
         const cell = (
           <>
-            <p className="truncate px-0.5 text-[16px] font-bold tabular-nums leading-none text-foreground sm:text-[17px]">
-              {loading ? '–' : stat.value}
+            <p className="truncate px-0.5 text-[15px] font-bold tabular-nums leading-none text-foreground sm:text-[16px]">
+              {loading && stat.label !== "Fiabilité" ? "–" : stat.value}
             </p>
-            <p className="mt-0.5 truncate px-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+            <p className="mt-0.5 truncate px-0.5 text-[8px] font-medium uppercase tracking-wide text-muted-foreground sm:text-[10px]">
               {stat.label}
             </p>
           </>
         );
         const className = `min-w-0 py-2.5 text-center transition-colors active:bg-secondary/60 ${
-          i < 3 ? 'border-r border-border/50' : ''
+          i < colCount - 1 ? "border-r border-border/50" : ""
         }`;
         return stat.onClick ? (
           <button key={stat.label} type="button" onClick={stat.onClick} className={className}>

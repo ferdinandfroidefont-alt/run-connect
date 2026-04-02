@@ -3,22 +3,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 interface Profile {
   username: string;
@@ -534,11 +530,6 @@ export const ProfileDialog = ({
                 </div>
               </IOSListGroup>
 
-              {/* Gamification Section */}
-              {user?.id && (
-                <ProfileStatsGroup userId={user.id} />
-              )}
-
               {/* Personal Info or Edit Form */}
               {isEditing ? (
                 <IOSListGroup
@@ -754,6 +745,6 @@ export const ProfileDialog = ({
       </Suspense>
 
       {/* Reliability Details Dialog */}
-      <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} userName={profile?.display_name || profile?.username || ''} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+      <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
     </>;
 };
