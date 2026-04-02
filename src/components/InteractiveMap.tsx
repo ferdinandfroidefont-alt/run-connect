@@ -2066,7 +2066,7 @@ export const InteractiveMap = ({
         )}
       >
         <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
-          <div className="flex h-11 w-11 items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
           <div className="mx-2 h-px w-7 bg-border/50" />
