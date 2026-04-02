@@ -341,6 +341,7 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [showMapStyleSelector, setShowMapStyleSelector] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 

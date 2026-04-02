@@ -75,7 +75,7 @@ export const FeedHeader = ({
               }}
               className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
             >
-              <Avatar className="h-10 w-10 ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+              <Avatar className="h-11 w-11 ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                 <AvatarImage
                   src={profile.avatar_url || undefined}
                   alt={profile.username || profile.display_name || 'Profile'}
