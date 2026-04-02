@@ -1617,13 +1617,13 @@ export const InteractiveMap = ({
                       }}
                       className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
                     >
-                      <Avatar className="h-11 w-11 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+                      <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                         <AvatarImage
                           src={userProfile.avatar_url || undefined}
                           alt={userProfile.username || userProfile.display_name}
                           className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
                         />
-                        <AvatarFallback className="map-header-profile-fallback text-xl font-semibold">
+                        <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
                           {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

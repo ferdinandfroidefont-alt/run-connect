@@ -77,13 +77,13 @@ export const FeedHeader = ({
               }}
               className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
             >
-              <Avatar className="h-11 w-11 ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+              <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
                 <AvatarImage
                   src={profile.avatar_url || undefined}
                   alt={profile.username || profile.display_name || 'Profile'}
                   className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
                 />
-                <AvatarFallback className="text-xl font-semibold">
+                <AvatarFallback className="text-2xl font-semibold">
                   {(profile.username || profile.display_name || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
