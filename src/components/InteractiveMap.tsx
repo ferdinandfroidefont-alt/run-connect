@@ -2065,16 +2065,11 @@ export const InteractiveMap = ({
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
-        <div className="pointer-events-auto flex flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
-          <button
-            type="button"
-            title="Couches"
-            onClick={() => setShowMapStyleSelector(prev => !prev)}
-            className="flex h-11 w-11 items-center justify-center text-foreground/80 transition-all duration-150 active:scale-[0.92] active:bg-muted/40"
-          >
-            <SlidersHorizontal className="h-[18px] w-[18px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px bg-border/50" />
+        <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
+          <div className="flex h-11 w-11 items-center justify-center">
+            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+          </div>
+          <div className="mx-2 h-px w-7 bg-border/50" />
           <button
             type="button"
             title="Me localiser"
@@ -2083,7 +2078,7 @@ export const InteractiveMap = ({
           >
             <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
-          <div className="mx-2 h-px bg-border/50" />
+          <div className="mx-2 h-px w-7 bg-border/50" />
           <button
             type="button"
             title="Recentrer"
@@ -2093,11 +2088,6 @@ export const InteractiveMap = ({
             <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
         </div>
-      </div>
-
-      {/* Hidden MapStyleSelector — triggers its own bottom sheet */}
-      <div className="hidden">
-        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} ref={mapStyleSelectorRef} />
       </div>
       
 
