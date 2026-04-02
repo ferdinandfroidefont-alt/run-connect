@@ -130,7 +130,9 @@ export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> 
       /* Capacitor Style.Dark = texte / icônes clairs sur fond sombre */
       await StatusBar.setStyle({ style: Style.Dark });
       try {
-        const hex = nativeHexFromShadcnTripletVar('--card', '#2c2c2e');
+        // En mode sombre profond, on veut une teinte “barre iOS” cohérente avec le reste (barres et surfaces globales)
+        // : utiliser --background (#000) plutôt que --card (#0A0A0A).
+        const hex = nativeHexFromShadcnTripletVar('--background', '#000000');
         await StatusBar.setBackgroundColor({ color: hex });
       } catch {
         /* iOS peut ignorer setBackgroundColor */
