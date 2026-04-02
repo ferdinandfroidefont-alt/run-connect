@@ -2056,12 +2056,11 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — bloc vertical droit au-dessus du FAB "+" */}
+      {/* Contrôles carte — bloc vertical droit au-dessus du FAB "+" (offset serré : ~12px entre bas colonne et haut du +) */}
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          /* +1 rangée (itinéraire) : remonter un peu pour ne pas empiéter sur la recherche */
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.25rem)]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+4.75rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
