@@ -88,8 +88,8 @@ function PodiumBlock({
 }) {
   const empty = !user;
   const pts = user ? pointsForMode(user, pointsMode) : 0;
-  const av = avatarSize === "lg" ? "h-[72px] w-[72px]" : avatarSize === "md" ? "h-14 w-14" : "h-12 w-12";
-  const podiumH = rank === 1 ? "h-[88px]" : rank === 2 ? "h-[64px]" : "h-[52px]";
+  const av = avatarSize === "lg" ? "h-[60px] w-[60px]" : avatarSize === "md" ? "h-12 w-12" : "h-11 w-11";
+  const podiumH = rank === 1 ? "h-[72px]" : rank === 2 ? "h-[52px]" : "h-[44px]";
 
   return (
     <motion.div
@@ -449,8 +449,8 @@ const Leaderboard = () => {
         </p>
       </header>
 
-      <div className="shrink-0 border-b border-border/60 bg-secondary px-4 pb-3 pt-1">
-        <div className="mx-auto flex w-full max-w-lg items-end justify-center gap-1.5">
+      <div className="shrink-0 border-b border-border/60 bg-secondary px-4 pb-2 pt-1">
+        <div className="mx-auto flex w-full max-w-md items-end justify-center gap-1.5">
           <PodiumBlock
             rank={2}
             user={u2}

@@ -19,7 +19,7 @@ import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/l
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -49,6 +49,9 @@ import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 
+const NotificationCenter = lazy(() =>
+  import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
+);
 const SettingsDialog = lazy(() =>
   import('./SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
 );
@@ -1579,74 +1582,86 @@ export const InteractiveMap = ({
           */}
           <header
             className={cn(
-              "pointer-events-auto relative bg-white dark:bg-black",
-              /* Prolonge le fond sous le header — pas de border-b sur la rangée : évite une couture visuelle avec ce bloc. */
+              "pointer-events-auto relative shrink-0 bg-white dark:bg-black",
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
-            <div className="relative z-[1] flex min-h-[2.75rem] items-center gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
-              <div className="flex min-w-0 flex-1">
+            {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
+            <div className="relative z-[1] pt-[var(--safe-area-top)]">
+              <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/feed')}
-                  className={cn(
-                    "group relative flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center overflow-hidden rounded-full",
-                    "border border-primary/30 bg-gradient-to-br from-primary/[0.14] via-primary/[0.08] to-transparent",
-                    "px-4 py-2.5 text-[17px] font-bold leading-none tracking-tight text-primary",
-                    "shadow-[0_2px_14px_-4px_hsl(var(--primary)/0.45),0_1px_0_rgba(255,255,255,0.06)_inset] dark:shadow-[0_2px_18px_-4px_hsl(var(--primary)/0.35)]",
-                    "ring-1 ring-primary/20 transition-[transform,opacity,box-shadow] active:scale-[0.98] active:opacity-95 touch-manipulation",
-                    "dark:border-primary/35 dark:from-primary/20 dark:via-primary/12 dark:ring-primary/25"
-                  )}
+                  onClick={() => navigate("/feed")}
+                  className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
                   data-tutorial="runconnect-toggle"
                 >
-                  <span className="relative z-[1] truncate font-bold text-primary dark:text-white">
-                    RunConnect
-                  </span>
+                  RunConnect
                 </button>
-              </div>
 
-              {userProfile && (
-                <div
-                  className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
-                  data-tutorial="profile-avatar"
-                >
+                {userProfile && (
                   <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setShowProfileDialog(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setShowProfileDialog(true);
-                      }
-                    }}
-                    className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                    className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
+                    data-tutorial="profile-avatar"
                   >
-                    {/*
-                      avatar-fixed : évite la règle iOS « compact » sur h fixes.
-                      Tailles via .map-header-profile-avatar — aligné sur le FAB « + » (h-14 / 3.5rem).
-                    */}
-                    <Avatar className="map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
-                      <AvatarImage
-                        src={userProfile.avatar_url || undefined}
-                        alt={userProfile.username || userProfile.display_name}
-                        className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
-                      />
-                      <AvatarFallback className="map-header-profile-fallback text-xl font-semibold">
-                        {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {user && (
-                      <div className="absolute -bottom-1 -right-1 scale-75">
-                        <StreakBadge userId={user.id} variant="compact" />
-                      </div>
-                    )}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setShowProfileDialog(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setShowProfileDialog(true);
+                        }
+                      }}
+                      className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                    >
+                      <Avatar className="h-11 w-11 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+                        <AvatarImage
+                          src={userProfile.avatar_url || undefined}
+                          alt={userProfile.username || userProfile.display_name}
+                          className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
+                        />
+                        <AvatarFallback className="map-header-profile-fallback text-xl font-semibold">
+                          {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user && (
+                        <div className="absolute -bottom-1 -right-1 scale-75">
+                          <StreakBadge userId={user.id} variant="compact" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Droite : équilibre horizontal avec le titre (notif / réglages / itinéraire / + sont en bas — FloatingCreateSessionButton) */}
-              <div className="min-w-0 flex-1" aria-hidden />
+                <div className="flex shrink-0 items-center gap-2">
+                  <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
+                    <Suspense
+                      fallback={
+                        <div
+                          className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                          aria-hidden
+                        />
+                      }
+                    >
+                      <NotificationCenter onSessionUpdated={loadSessions} />
+                    </Suspense>
+                  </div>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
+                      "border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+                      "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    )}
+                    aria-label="Paramètres"
+                    onClick={() => setShowSettingsDialog(true)}
+                  >
+                    <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+                  </button>
+                </div>
+              </div>
             </div>
           </header>
 
@@ -2043,7 +2058,8 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+5.5rem)]",
+          /* +1 rangée (itinéraire) : remonter un peu pour ne pas empiéter sur la recherche */
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+6.25rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
@@ -2054,6 +2070,16 @@ export const InteractiveMap = ({
             "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
           )}
         >
+          <button
+            type="button"
+            title="Créer un itinéraire"
+            aria-label="Créer un itinéraire"
+            onClick={() => navigate("/route-create")}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <PenLine className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>

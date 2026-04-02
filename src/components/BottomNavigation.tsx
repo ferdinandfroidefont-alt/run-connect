@@ -189,10 +189,11 @@ export const BottomNavigation = () => {
                   !isCenter && "opacity-[0.92]"
                 )}
               >
-                <div className="relative shrink-0">
+                <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
                   <Icon
+                    size={26}
                     className={cn(
-                      "h-[26px] w-[26px] transition-colors duration-300 ease-ios",
+                      "transition-colors duration-300 ease-ios",
                       isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
                     )}
                     strokeWidth={isActive ? 2.4 : 1.65}
