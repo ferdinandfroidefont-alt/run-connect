@@ -14,7 +14,7 @@ const homeMapIconButtonClass = cn(
   "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
   "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
   "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-  "dark:border-border dark:bg-card"
+  "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
 );
 
 /**
@@ -63,7 +63,7 @@ export function FloatingCreateSessionButton() {
         <Suspense
           fallback={
             <div
-              className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-border dark:bg-card"
+              className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
               aria-hidden
             />
           }
@@ -78,7 +78,7 @@ export function FloatingCreateSessionButton() {
         className={cn("pointer-events-auto", homeMapIconButtonClass)}
         aria-label="Paramètres"
       >
-        <Settings className="h-[22px] w-[22px] text-[#1A1A1A] dark:text-foreground" strokeWidth={1.85} aria-hidden />
+        <Settings className="h-[22px] w-[22px] text-[#1A1A1A] dark:text-white" strokeWidth={1.85} aria-hidden />
       </button>
 
       <button

@@ -147,7 +147,7 @@ function MapStylePickerContent({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground transition-colors active:bg-black/[0.1] dark:bg-white/[0.1] dark:active:bg-white/[0.15]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground transition-colors active:bg-black/[0.1] dark:bg-[#111111] dark:active:bg-[#1a1a1a]"
             aria-label="Fermer"
           >
             <X className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -276,7 +276,7 @@ function BottomStyleSheet({
               'fixed inset-x-0 bottom-0 flex max-h-[min(65dvh,560px)] flex-col overflow-hidden',
               'rounded-t-[1.35rem] border border-b-0 border-black/[0.07]',
               'bg-[rgba(252,252,252,0.97)] shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.22)] supports-[backdrop-filter]:bg-[rgba(252,252,252,0.92)] supports-[backdrop-filter]:backdrop-blur-xl',
-              'dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.96)] dark:shadow-[0_-16px_48px_-20px_rgba(0,0,0,0.55)] dark:supports-[backdrop-filter]:bg-[rgba(28,28,30,0.92)]'
+              'dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_-16px_48px_-20px_rgba(0,0,0,0.65)] dark:supports-[backdrop-filter]:bg-[#0a0a0a]'
             )}
             style={{ zIndex: SHEET_PANEL_Z, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             onClick={(e) => e.stopPropagation()}
@@ -353,7 +353,7 @@ function LeftStylePanel({
               'left-[max(0.625rem,env(safe-area-inset-left,0px))]',
               'top-[calc(env(safe-area-inset-top,0px)+4.25rem)]',
               'border border-black/[0.07] bg-[rgba(252,252,252,0.97)] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.35)] supports-[backdrop-filter]:backdrop-blur-xl',
-              'dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.96)]'
+              'dark:border-[#1f1f1f] dark:bg-[#0a0a0a]'
             )}
             style={{ zIndex: SHEET_PANEL_Z }}
             onClick={(e) => e.stopPropagation()}
@@ -406,6 +406,7 @@ export const MapStyleSelector: React.FC<MapStyleSelectorProps> = ({
         active={isOpen}
         className={cn(
           'h-9 w-9 bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black',
+          'dark:bg-[#0a0a0a] dark:text-foreground dark:border dark:border-[#1f1f1f] dark:[&_span]:text-foreground dark:[&_span_svg]:stroke-foreground dark:[&_span_svg]:text-foreground',
         )}
         onClick={(e) => {
           e.preventDefault();

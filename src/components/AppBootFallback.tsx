@@ -103,7 +103,7 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
               type="button"
               variant="secondary"
               size="sm"
-              className="gap-2 rounded-ios-lg bg-white/95 text-foreground hover:bg-white"
+              className="gap-2 rounded-ios-lg bg-white/95 text-foreground hover:bg-white dark:bg-secondary dark:text-foreground dark:hover:bg-[#1a1a1a]"
               onClick={handleRetry}
             >
               <RefreshCw className="h-4 w-4" />

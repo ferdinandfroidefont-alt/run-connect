@@ -615,13 +615,13 @@ export const NotificationCenter = ({
           type="button"
           className={cn(
             /* Pas h-10 w-10 : sur iOS WebKit, index.css force .h-10.w-10 à 2rem et décale le badge */
-            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
+            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
             "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           )}
           aria-label="Notifications"
         >
-          <Bell className="h-[22px] w-[22px] text-[#1A1A1A]" strokeWidth={1.85} />
+          <Bell className="h-[22px] w-[22px] text-[#1A1A1A] dark:text-foreground" strokeWidth={1.85} />
           {unreadCount > 0 && (
             <span
               className={cn(

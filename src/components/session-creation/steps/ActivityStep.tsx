@@ -74,7 +74,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                   "flex flex-col items-center p-3 rounded-xl transition-all",
                   activityType === activity.value
                     ? "bg-primary text-primary-foreground"
-                    : "bg-white/5 hover:bg-white/10"
+                    : "bg-white/5 hover:bg-white/10 dark:bg-secondary/60 dark:hover:bg-secondary"
                 )}
                 whileTap={{ scale: 0.95 }}
               >
@@ -100,7 +100,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                     "flex flex-col items-center p-3 rounded-xl transition-all",
                     activityType === activity.value
                       ? "bg-primary text-primary-foreground"
-                      : "bg-white/5 hover:bg-white/10"
+                      : "bg-white/5 hover:bg-white/10 dark:bg-secondary/60 dark:hover:bg-secondary"
                   )}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -127,7 +127,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
                     "p-3 rounded-xl text-sm font-medium transition-all",
                     sessionType === type.value
                       ? "bg-primary text-primary-foreground"
-                      : "bg-white/5 hover:bg-white/10"
+                      : "bg-white/5 hover:bg-white/10 dark:bg-secondary/60 dark:hover:bg-secondary"
                   )}
                   whileTap={{ scale: 0.95 }}
                 >

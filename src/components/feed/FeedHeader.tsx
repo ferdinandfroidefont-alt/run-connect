@@ -51,7 +51,7 @@ export const FeedHeader = ({
   }, [user]);
 
   return (
-    <header className="shrink-0 bg-white dark:bg-background pt-[var(--safe-area-top)]">
+    <header className="shrink-0 bg-white dark:bg-black pt-[var(--safe-area-top)]">
       {/* Top row: RunConnect + centered avatar + bell + settings */}
       <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
         <button
@@ -101,7 +101,7 @@ export const FeedHeader = ({
             <Suspense
               fallback={
                 <div
-                  className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-border dark:bg-card"
+                  className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
                   aria-hidden
                 />
               }
@@ -113,6 +113,7 @@ export const FeedHeader = ({
             type="button"
             className={cn(
               'flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none',
+              'border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]',
               'text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80',
               'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
             )}

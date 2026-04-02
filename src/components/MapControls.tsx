@@ -14,7 +14,7 @@ export const MapControls: React.FC<MapControlsProps> = ({ onResetView }) => {
         tone="gray"
         title="Réinitialiser la vue"
         onClick={onResetView}
-        className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+        className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black dark:bg-[#0a0a0a] dark:text-foreground dark:border dark:border-[#1f1f1f] dark:[&_span]:text-foreground dark:[&_span_svg]:stroke-foreground dark:[&_span_svg]:text-foreground"
       >
         <RotateCcw className="h-[18px] w-[18px]" strokeWidth={2.25} />
       </MapIosColoredFab>

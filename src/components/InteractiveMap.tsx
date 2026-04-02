@@ -1589,9 +1589,9 @@ export const InteractiveMap = ({
           */}
           <header
             className={cn(
-              "pointer-events-auto relative bg-white dark:bg-background",
-              /* Prolonge le fond blanc sous le header — pas de border-b sur la rangée : évite une couture visuelle avec ce bloc. */
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-background",
+              "pointer-events-auto relative bg-white dark:bg-black",
+              /* Prolonge le fond sous le header — pas de border-b sur la rangée : évite une couture visuelle avec ce bloc. */
+              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
             <div className="relative z-[1] flex min-h-[2.75rem] items-center gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
@@ -1708,7 +1708,7 @@ export const InteractiveMap = ({
                     aria-label="Suggestions de lieux"
                     className={cn(
                       "absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
-                      "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.97)] dark:ring-white/[0.05]",
+                      "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:ring-[#1f1f1f] dark:backdrop-blur-none",
                       "[-webkit-overflow-scrolling:touch]"
                     )}
                   >
@@ -1722,7 +1722,7 @@ export const InteractiveMap = ({
                           role="option"
                           className={cn(
                             "flex w-full min-w-0 items-start gap-3 border-0 px-4 py-3.5 text-left text-[15px] leading-snug outline-none",
-                            "text-foreground/90 transition-colors active:bg-black/[0.045] dark:active:bg-white/[0.06]"
+                            "text-foreground/90 transition-colors active:bg-black/[0.045] dark:active:bg-[#111111]"
                           )}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => applyPlaceSuggestion(row)}
@@ -2048,11 +2048,11 @@ export const InteractiveMap = ({
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
-        <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:bg-card">
+        <div className="pointer-events-auto flex flex-col items-center overflow-hidden rounded-[18px] border border-transparent bg-white shadow-[0_4px_20px_-6px_rgba(0,0,0,0.18)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]">
           <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
-          <div className="mx-2 h-px w-7 bg-border/50" />
+          <div className="mx-2 h-px w-7 bg-border dark:bg-[#1f1f1f]" />
           <button
             type="button"
             title="Me localiser"
@@ -2061,7 +2061,7 @@ export const InteractiveMap = ({
           >
             <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
           </button>
-          <div className="mx-2 h-px w-7 bg-border/50" />
+          <div className="mx-2 h-px w-7 bg-border dark:bg-[#1f1f1f]" />
           <button
             type="button"
             title="Recentrer"

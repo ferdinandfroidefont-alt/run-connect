@@ -148,7 +148,8 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[100] w-full shrink-0 border-t border-border/60 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85",
+        "relative z-[100] w-full shrink-0 border-t border-border bg-background",
+        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
       role="navigation"
@@ -192,7 +193,7 @@ export const BottomNavigation = () => {
                   <Icon
                     className={cn(
                       "h-[26px] w-[26px] transition-colors duration-300 ease-ios",
-                      isActive ? "text-primary" : "text-muted-foreground"
+                      isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
                     )}
                     strokeWidth={isActive ? 2.4 : 1.65}
                     aria-hidden
@@ -206,7 +207,9 @@ export const BottomNavigation = () => {
                 <span
                   className={cn(
                     "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
-                    isActive ? "font-semibold text-primary" : "font-medium text-muted-foreground"
+                    isActive
+                      ? "font-semibold text-primary"
+                      : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
                   )}
                 >
                   {label}

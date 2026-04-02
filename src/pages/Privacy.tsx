@@ -10,7 +10,7 @@ export default function Privacy() {
   return (
     <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden">
       {/* Header fixe */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50">
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50 dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none">
         <div className="flex items-center gap-3 p-4">
           <Button
             variant="ghost"
