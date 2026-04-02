@@ -52,9 +52,13 @@ export const FeedHeader = ({
     <header className="shrink-0 bg-white dark:bg-background pt-[var(--safe-area-top)]">
       {/* Top row: RunConnect + centered avatar + bell + settings */}
       <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
-        <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
+        <button
+          type="button"
+          onClick={() => window.location.href = '/'}
+          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+        >
           RunConnect
-        </h1>
+        </button>
 
         {/* Centered profile avatar */}
         {profile && (
