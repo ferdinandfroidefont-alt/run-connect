@@ -8,12 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 interface Profile {
@@ -395,35 +394,42 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
+  /** Même gabarit que SettingsDialog : évite le débordement horizontal iOS (100vw + translate). */
+  const profileDialogShellClassName =
+    "fixed inset-0 left-0 right-0 top-0 z-[116] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border";
+
   if (loading && open) {
-    return <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
-          <div className="flex items-center justify-center p-8">
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent hideCloseButton className={profileDialogShellClassName}>
+          <div className="flex flex-1 items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </DialogContent>
-      </Dialog>;
+      </Dialog>
+    );
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary border-0 sm:border">
+        <DialogContent hideCloseButton className={profileDialogShellClassName}>
           {/* iOS Header */}
-          <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
-            <div className="flex items-center justify-between px-4 py-3">
+          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
               <button
+                type="button"
                 onClick={() => onOpenChange(false)}
-                className="flex items-center gap-1 text-primary"
+                className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
               >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <ArrowLeft className="h-5 w-5 shrink-0" />
+                <span className="truncate text-[17px]">Retour</span>
               </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Mon Profil</h1>
-              <div className="w-16" />
+              <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
+              <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
             </div>
           </div>
-          
-           <ScrollArea className="flex-1">
-            <div className="px-4 py-4 space-y-4 pb-0">
+
+          <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+            <div className="box-border min-w-0 max-w-full space-y-4 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {/* Profile Header - Centered */}
               <div className="flex flex-col items-center pt-4 pb-2">
                 <div className="relative mb-3">
@@ -463,7 +469,7 @@ export const ProfileDialog = ({
                 </p>
                 
                 {/* Status Badges */}
-                <div className="flex items-center gap-1.5 mt-2">
+                <div className="mt-2 flex max-w-full flex-wrap items-center justify-center gap-1.5 px-1">
                   {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                     <div className="flex items-center gap-1 bg-primary/12 text-primary px-2 py-0.5 rounded-full">
                       <Crown className="h-3 w-3" />
@@ -498,7 +504,7 @@ export const ProfileDialog = ({
 
               {/* Social Stats - iOS Segmented */}
               <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
-                <div className="flex items-center divide-x divide-border">
+                <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
                   <button
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
                     className="flex-1 py-3 active:bg-secondary/50 transition-colors relative"
@@ -731,7 +737,7 @@ export const ProfileDialog = ({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
