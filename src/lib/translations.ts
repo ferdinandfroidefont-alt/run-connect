@@ -1602,6 +1602,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'مرحباً بك في RunConnect!',
       mapContent: 'هذه هي الخريطة التفاعلية حيث يمكنك اكتشاف الجلسات الرياضية من حولك.',
+      runconnectTitle: 'التبديل إلى الخلاصة',
+      runconnectContent: 'اضغط على "RunConnect" للتبديل إلى خلاصة المجتمع.',
       createTitle: 'إنشاء جلسة',
       createContent: 'اضغط على هذا الزر لتنظيم نشاط الجري أو ركوب الدراجات أو أي نشاط رياضي آخر.',
       sessionsTitle: 'جلساتي',
