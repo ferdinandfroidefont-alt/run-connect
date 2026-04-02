@@ -1418,6 +1418,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '欢迎来到 RunConnect！',
       mapContent: '这是互动地图，您可以在这里发现周围的体育活动。',
+      runconnectTitle: '切换到动态',
+      runconnectContent: '点击「RunConnect」切换到社区动态。',
       createTitle: '创建活动',
       createContent: '点击此按钮组织跑步、骑行或任何其他体育活动。',
       sessionsTitle: '我的活动',
