@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCorsHeaders, verifyCronSecret } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireCron } from "../_shared/auth.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -10,7 +11,7 @@ serve(async (req) => {
   }
 
   // Verify cron secret for internal calls
-  if (!verifyCronSecret(req)) {
+  if (!requireCron(req)) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 

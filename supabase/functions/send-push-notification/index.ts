@@ -182,7 +182,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // ─── Optional JWT validation (allows unauthenticated internal calls) ───
+    const internalSecret = Deno.env.get('INTERNAL_PUSH_INVOKE_SECRET');
+    const providedInternal = req.headers.get('x-internal-push-secret');
+    const internalOk = !!internalSecret && !!providedInternal && providedInternal === internalSecret;
+
     const authHeader = req.headers.get('Authorization');
     let callerUserId: string | null = null;
     if (authHeader?.startsWith('Bearer ')) {
@@ -191,15 +194,21 @@ serve(async (req) => {
         const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
         if (authUser && !authError) {
           callerUserId = authUser.id;
-          console.log('🔐 [AUTH] Authenticated caller:', callerUserId.substring(0, 8) + '...');
-        } else {
-          console.warn('⚠️ [AUTH] Invalid token provided, proceeding without auth');
         }
-      } catch (authErr) {
-        console.warn('⚠️ [AUTH] Token validation error:', authErr);
+      } catch {
+        /* ignore */
       }
-    } else {
-      console.log('ℹ️ [AUTH] No Authorization header — internal/cron call');
+    }
+
+    if (internalSecret) {
+      if (!internalOk && !callerUserId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else if (!callerUserId) {
+      console.warn('⚠️ [AUTH] INTERNAL_PUSH_INVOKE_SECRET non défini — appels sans JWT utilisateur acceptés (à corriger en prod)');
     }
 
     const { user_id, title, body, data, type }: NotificationPayload = await req.json();

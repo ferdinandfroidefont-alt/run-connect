@@ -6,11 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
 import { isReallyNative } from '@/lib/nativeDetection';
+import { requireSupabaseUrl } from '@/lib/supabaseEnv';
 
 const log = (...args: any[]) => console.log('[PUSH]', ...args);
 const logError = (...args: any[]) => console.error('[PUSH]', ...args);
-
-const SUPABASE_URL = 'https://dbptgehpknjsoisirviz.supabase.co';
 
 interface NotificationPermissionStatus {
   granted: boolean;
@@ -149,7 +148,7 @@ export const usePushNotifications = () => {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/save-push-token`, {
+      const response = await fetch(`${requireSupabaseUrl()}/functions/v1/save-push-token`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ user_id: userId, token: pushToken, platform, trace_id: traceId })

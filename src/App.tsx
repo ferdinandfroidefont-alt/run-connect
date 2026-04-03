@@ -86,7 +86,11 @@ const App = () => {
         const { Browser } = await import('@capacitor/browser');
 
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
-          console.log('🍎 [GLOBAL] appUrlOpen:', url);
+          if (import.meta.env.DEV) {
+            console.log('🍎 [GLOBAL] appUrlOpen:', url);
+          } else {
+            console.log('🍎 [GLOBAL] appUrlOpen (redacted in prod)');
+          }
 
           const isAuthCallback =
             url.startsWith('runconnect://auth/callback') ||

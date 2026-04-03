@@ -1,6 +1,10 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** URL du projet Supabase (obligatoire au runtime — voir supabaseEnv). */
+  readonly VITE_SUPABASE_URL?: string;
+  /** Clé anon Supabase (obligatoire au runtime). */
+  readonly VITE_SUPABASE_ANON_KEY?: string;
   /** Email support affiché dans les pages légales (optionnel). */
   readonly VITE_PUBLIC_SUPPORT_EMAIL?: string;
   /** Raison sociale (mentions légales). */

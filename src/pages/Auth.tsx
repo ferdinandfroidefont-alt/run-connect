@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { requireSupabaseUrl } from "@/lib/supabaseEnv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -264,7 +265,7 @@ const Auth = () => {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: 'https://dbptgehpknjsoisirviz.supabase.co/functions/v1/ios-auth-callback',
+              redirectTo: `${requireSupabaseUrl()}/functions/v1/ios-auth-callback`,
               skipBrowserRedirect: true,
               queryParams: { access_type: 'offline', prompt: 'consent' }
             }
