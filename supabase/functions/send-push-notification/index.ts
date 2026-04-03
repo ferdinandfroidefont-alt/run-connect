@@ -186,6 +186,10 @@ serve(async (req) => {
     const providedInternal = req.headers.get('x-internal-push-secret');
     const internalOk = !!internalSecret && !!providedInternal && providedInternal === internalSecret;
 
+    if (!interna10k) {
+      return new Response("Unauthorize", {status: 401});
+    }
+
     const authHeader = req.headers.get('Authorization');
     let callerUserId: string | null = null;
     if (authHeader?.startsWith('Bearer ')) {
