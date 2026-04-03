@@ -362,10 +362,13 @@ const Auth = () => {
         captchaRef.current?.resetCaptcha();
 
         const referralCode = sessionStorage.getItem('referralCode');
-        if (referralCode && signUpData.user) {
+        if (referralCode && signUpData.user && signUpData.session?.access_token) {
           try {
             await supabase.functions.invoke('process-referral-signup', {
-              body: { referralCode, newUserId: signUpData.user.id }
+              headers: {
+                Authorization: `Bearer ${signUpData.session.access_token}`,
+              },
+              body: { referralCode, newUserId: signUpData.user.id },
             });
             sessionStorage.removeItem('referralCode');
           } catch (refError) {

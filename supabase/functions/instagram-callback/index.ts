@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { logDbError, logException, logHttpUpstream, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const url = new URL(req.url)
@@ -79,25 +80,23 @@ serve(async (req) => {
     })
 
     if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text()
-      console.error('Instagram token exchange failed:', errorText)
+      await tokenResponse.text().catch(() => "");
+      logHttpUpstream("instagram-callback", tokenResponse.status, "token_exchange");
       throw new Error('Failed to exchange code for token')
     }
 
     const tokenData = await tokenResponse.json()
-    console.log('Instagram token data:', tokenData)
 
     // Get user info from Instagram
     const userResponse = await fetch(`https://graph.instagram.com/me?fields=id,username&access_token=${tokenData.access_token}`)
     
     if (!userResponse.ok) {
-      const errorText = await userResponse.text()
-      console.error('Instagram user info failed:', errorText)
+      await userResponse.text().catch(() => "");
+      logHttpUpstream("instagram-callback", userResponse.status, "user_info");
       throw new Error('Failed to get user info from Instagram')
     }
 
     const userData = await userResponse.json()
-    console.log('Instagram user data:', userData)
 
     // Update user profile in Supabase
     const { error: updateError } = await supabaseClient
@@ -112,11 +111,11 @@ serve(async (req) => {
       .eq('user_id', state)
 
     if (updateError) {
-      console.error('Error updating profile:', updateError)
+      logDbError("instagram-callback", updateError)
       throw updateError
     }
 
-    console.log('Instagram connection successful for user:', state)
+    logStructured("instagram-callback", "profile_updated", { user: logUserRef(state) })
 
     return new Response(`
       <!DOCTYPE html>
@@ -138,7 +137,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Error in instagram-callback function:', error)
+    logException("instagram-callback", error)
     return new Response(`
       <!DOCTYPE html>
       <html>

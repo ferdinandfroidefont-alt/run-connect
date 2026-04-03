@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { requireUserJwt } from "../_shared/auth.ts";
+import { logDbError, logException, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
     }
     const { user } = authResult
 
-    console.log('Deleting account for user:', user.id)
+    logStructured("delete-account", "start", { user: logUserRef(user.id) });
 
     try {
       // First, delete all user data using the new function
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       })
 
       if (deleteDataError) {
-        console.error('Error deleting user data:', deleteDataError)
+        logDbError("delete-account", deleteDataError);
         return new Response(
           JSON.stringify({ error: 'Failed to delete user data' }),
           { 
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
 
       if (deleteError) {
-        console.error('Delete user error:', deleteError)
+        logDbError("delete-account-auth", deleteError);
         return new Response(
           JSON.stringify({ error: 'Failed to delete account' }),
           { 
@@ -57,9 +58,9 @@ Deno.serve(async (req) => {
         )
       }
 
-      console.log('Account successfully deleted for user:', user.id)
+      logStructured("delete-account", "done", { user: logUserRef(user.id) });
     } catch (error) {
-      console.error('Unexpected error during account deletion:', error)
+      logException("delete-account", error);
       return new Response(
         JSON.stringify({ error: 'Failed to delete account' }),
         { 
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Function error:', error)
+    logException("delete-account-outer", error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

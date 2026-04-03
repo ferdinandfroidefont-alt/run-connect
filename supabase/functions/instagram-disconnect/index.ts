@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,31 +10,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
+  const auth = await requireUserJwtCors(req, supabaseClient, corsHeaders);
+  if (auth instanceof Response) return auth;
+
   try {
-    // Initialize Supabase client with service role for admin operations
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    // Get user from request
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
-
-    if (!user.user) {
-      throw new Error('Not authenticated')
-    }
-
     // First, get the current profile to retrieve Instagram tokens
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('instagram_access_token')
-      .eq('user_id', user.user.id)
+      .eq('user_id', auth.user.id)
       .single()
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError)
+      logDbError("instagram-disconnect", profileError);
       throw profileError
     }
 
@@ -40,7 +36,7 @@ serve(async (req) => {
     // However, Instagram doesn't provide a simple revoke endpoint like Strava
     // So we'll just clear our local data
     if (profile?.instagram_access_token) {
-      console.log('Disconnecting Instagram for user:', user.user.id)
+      logStructured("instagram-disconnect", "clear_token", { user: logUserRef(auth.user.id) });
     }
 
     // Update user profile to disconnect Instagram
@@ -53,14 +49,14 @@ serve(async (req) => {
         instagram_access_token: null,
         instagram_username: null,
       })
-      .eq('user_id', user.user.id)
+      .eq('user_id', auth.user.id)
 
     if (error) {
-      console.error('Error disconnecting Instagram:', error)
+      logDbError("instagram-disconnect-update", error);
       throw error
     }
 
-    console.log('Successfully disconnected Instagram for user:', user.user.id)
+    logStructured("instagram-disconnect", "done", { user: logUserRef(auth.user.id) });
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -73,9 +69,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in instagram-disconnect function:', error)
+    logException("instagram-disconnect", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "instagram_disconnect_failed" }),
       { 
         status: 400,
         headers: { 

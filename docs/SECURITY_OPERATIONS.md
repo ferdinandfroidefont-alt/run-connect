@@ -43,9 +43,14 @@ Dans **Supabase → Edge Functions → Secrets**, définir `INTERNAL_PUSH_INVOKE
 
 Si un secret Vault manque, le trigger **n’appelle pas** HTTP (warning Postgres) et l’insertion dans `notifications` réussit quand même.
 
-### Rétrocompatibilité Edge
+### Edge `send-push-notification` (production)
 
-Tant que `INTERNAL_PUSH_INVOKE_SECRET` n’est **pas** défini sur la fonction `send-push-notification`, les appels sans JWT utilisateur restent acceptés (avec un avertissement dans les logs). Dès que le secret est défini, seuls les appels avec `x-internal-push-secret` correct **ou** un JWT utilisateur valide sont autorisés.
+Chaque requête doit satisfaire **l’un** des deux cas :
+
+1. **Interne** : en-tête `x-internal-push-secret` égal à `INTERNAL_PUSH_INVOKE_SECRET` (configuré uniquement côté serveur : Vault + trigger `pg_net`, cron, backend). **Ne jamais** embarquer ce secret dans l’app mobile ou le frontend.
+2. **Utilisateur** : en-tête `Authorization: Bearer <access_token>` avec un JWT de session valide (`auth.getUser`).
+
+Sinon la fonction répond **401 Unauthorized** (codes `missing_bearer`, `empty_bearer`, `invalid_session`).
 
 ## Durcissement dashboard (équipe)
 

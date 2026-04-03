@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { logDbError, logException, logHttpUpstream, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 // firebase-auth is called from native WebView without Origin header — keep permissive CORS
 const corsHeaders = {
@@ -13,15 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🚀 [FIREBASE AUTH] Edge function called');
-    
     const body = await req.json();
     const { idToken } = body;
 
-    console.log('📦 [FIREBASE AUTH] Request body received:', { hasToken: !!idToken });
+    logStructured("firebase-auth", "body", { has_id_token: !!idToken });
 
     if (!idToken) {
-      console.error('❌ [FIREBASE AUTH] Missing idToken in request body');
+      console.error("[firebase-auth] missing id_token");
       throw new Error('Missing Firebase ID Token');
     }
 
@@ -29,19 +28,20 @@ serve(async (req) => {
 
     // 1. Vérifier le Firebase ID Token avec Firebase API
     const firebaseServiceAccountRaw = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
-    console.log('🔐 [FIREBASE AUTH] Service account exists:', !!firebaseServiceAccountRaw);
+    logStructured("firebase-auth", "env", { has_service_account_json: !!firebaseServiceAccountRaw });
 
     if (!firebaseServiceAccountRaw) {
-      console.error('❌ [FIREBASE AUTH] FIREBASE_SERVICE_ACCOUNT_JSON env var not found');
+      console.error("[firebase-auth] FIREBASE_SERVICE_ACCOUNT_JSON missing");
       throw new Error('Firebase service account not configured');
     }
 
     const firebaseServiceAccount = JSON.parse(firebaseServiceAccountRaw);
-    console.log('🔐 [FIREBASE AUTH] Service account parsed successfully');
-    console.log('🔑 [FIREBASE AUTH] Project ID:', firebaseServiceAccount.project_id);
+    logStructured("firebase-auth", "service_account", {
+      has_project_id: !!firebaseServiceAccount.project_id,
+    });
 
     if (!firebaseServiceAccount.project_id) {
-      console.error('❌ [FIREBASE AUTH] project_id missing in service account JSON');
+      console.error("[firebase-auth] project_id missing in service account");
       throw new Error('Firebase service account missing project_id');
     }
 
@@ -51,15 +51,12 @@ serve(async (req) => {
     );
 
     if (!verifyResponse.ok) {
-      const errorText = await verifyResponse.text();
-      console.error('❌ [FIREBASE AUTH] Token verification failed');
-      console.error('❌ [FIREBASE AUTH] Status:', verifyResponse.status);
-      console.error('❌ [FIREBASE AUTH] Response:', errorText);
+      await verifyResponse.text().catch(() => "");
+      logHttpUpstream("firebase-auth", verifyResponse.status, "tokeninfo");
       
       return new Response(
         JSON.stringify({ 
           error: 'Invalid Firebase ID Token',
-          details: errorText,
           status: verifyResponse.status
         }),
         { 
@@ -70,7 +67,7 @@ serve(async (req) => {
     }
 
     const tokenInfo = await verifyResponse.json();
-    console.log('✅ [FIREBASE AUTH] Token verified for email:', tokenInfo.email);
+    logStructured("firebase-auth", "token_ok", { sub_prefix: typeof tokenInfo.sub === "string" ? logUserRef(tokenInfo.sub) : "—" });
 
     // 2. Créer/récupérer l'utilisateur Supabase
     const supabaseAdmin = createClient(
@@ -114,10 +111,10 @@ serve(async (req) => {
     };
     
     const tempPassword = generateSecurePassword();
-    console.log('🔐 [FIREBASE AUTH] Secure password generated');
+    logStructured("firebase-auth", "temp_password_ready", {});
 
     if (!supabaseUser) {
-      console.log('👤 [FIREBASE AUTH] Creating new Supabase user for:', tokenInfo.email);
+      logStructured("firebase-auth", "create_user", {});
       
       // Créer un nouvel utilisateur avec un mot de passe
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -133,28 +130,28 @@ serve(async (req) => {
       });
 
       if (createError) {
-        console.error('❌ [FIREBASE AUTH] Error creating user:', createError);
+        logDbError("firebase-auth", createError);
         throw createError;
       }
       
       supabaseUser = newUser.user;
-      console.log('✅ [FIREBASE AUTH] User created with ID:', supabaseUser?.id);
+      logStructured("firebase-auth", "user_created", { user: logUserRef(supabaseUser?.id) });
     } else {
-      console.log('✅ [FIREBASE AUTH] Existing user found with ID:', supabaseUser.id);
+      logStructured("firebase-auth", "user_exists", { user: logUserRef(supabaseUser.id) });
       
       // Utilisateur existant : mettre à jour le mot de passe
-      console.log('🔄 [FIREBASE AUTH] Updating user password for session');
+      logStructured("firebase-auth", "password_rotate", {});
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         supabaseUser.id,
         { password: tempPassword }
       );
       
       if (updateError) {
-        console.error('❌ [FIREBASE AUTH] Error updating user password:', updateError);
+        logDbError("firebase-auth", updateError);
         throw updateError;
       }
       
-      console.log('✅ [FIREBASE AUTH] User password updated');
+      logStructured("firebase-auth", "password_updated", {});
     }
 
     if (!supabaseUser) {
@@ -162,23 +159,23 @@ serve(async (req) => {
     }
 
     // 3. Générer une session Supabase via magic link (contourne le captcha)
-    console.log('🔐 [FIREBASE AUTH] Generating magic link for session...');
+    logStructured("firebase-auth", "generate_link", {});
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: tokenInfo.email,
     });
 
     if (linkError || !linkData) {
-      console.error('❌ [FIREBASE AUTH] Error generating link:', linkError);
+      logDbError("firebase-auth", linkError);
       throw linkError || new Error('Failed to generate magic link');
     }
 
-    console.log('✅ [FIREBASE AUTH] Magic link generated');
+    logStructured("firebase-auth", "link_ok", {});
 
     // Extraire le token du lien et l'échanger contre une session
     const actionLink = linkData.properties?.action_link;
     if (!actionLink) {
-      console.error('❌ [FIREBASE AUTH] No action_link in response');
+      console.error("[firebase-auth] no action_link");
       throw new Error('No action_link in generated link');
     }
 
@@ -186,11 +183,11 @@ serve(async (req) => {
     const token_hash = url.searchParams.get('token');
     
     if (!token_hash) {
-      console.error('❌ [FIREBASE AUTH] No token in link URL:', actionLink);
+      console.error("[firebase-auth] no token_hash in magic link");
       throw new Error('No token in generated link');
     }
 
-    console.log('🔑 [FIREBASE AUTH] Token extracted, verifying OTP...');
+    logStructured("firebase-auth", "verify_otp", {});
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -203,14 +200,13 @@ serve(async (req) => {
     });
 
     if (sessionError || !sessionData.session) {
-      console.error('❌ [FIREBASE AUTH] Error verifying OTP:', sessionError);
+      logDbError("firebase-auth", sessionError);
       throw sessionError || new Error('Failed to create session');
     }
 
     const signInData = sessionData;
 
-    console.log('✅ [FIREBASE AUTH] Session created successfully with valid tokens');
-    console.log('✅ [FIREBASE AUTH] Session created successfully');
+    logStructured("firebase-auth", "session_ok", { user: logUserRef(signInData.user?.id) });
 
     return new Response(
       JSON.stringify({
@@ -231,7 +227,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('❌ [FIREBASE AUTH] Error:', error);
+    logException("firebase-auth", error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error'

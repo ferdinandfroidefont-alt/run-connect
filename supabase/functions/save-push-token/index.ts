@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException, logUserRef } from "../_shared/secureLog.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APNS_HEX_REGEX = /^[A-Fa-f0-9]{64}$/;
@@ -18,7 +19,7 @@ serve(async (req) => {
     const { user_id, token, platform, trace_id: bodyTraceId } = await req.json();
     const effectiveTraceId = traceId !== 'no-trace' ? traceId : (bodyTraceId || 'no-trace');
 
-    console.log(`[SAVE-TOKEN][ENTRY] traceId=${effectiveTraceId} user=${user_id?.substring(0, 8)}... platform=${platform} token_length=${token?.length}`);
+    console.log(`[SAVE-TOKEN][ENTRY] traceId=${effectiveTraceId} user=${logUserRef(user_id)} platform=${platform} token_length=${token?.length}`);
 
     // Validate inputs
     if (!user_id || !UUID_REGEX.test(user_id)) {
@@ -67,7 +68,7 @@ serve(async (req) => {
 
     const { data: userData, error: authError } = await supabaseAuth.auth.getUser(jwtToken);
     if (authError || !userData?.user) {
-      console.error(`[SAVE-TOKEN][AUTH] JWT validation failed: ${authError?.message} traceId=${effectiveTraceId}`);
+      console.error(`[SAVE-TOKEN][AUTH] JWT validation failed traceId=${effectiveTraceId}`);
       return new Response(
         JSON.stringify({ error: 'Unauthorized: invalid JWT', trace_id: effectiveTraceId }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -103,9 +104,9 @@ serve(async (req) => {
       .maybeSingle();
 
     if (error) {
-      console.error(`[SAVE-TOKEN][UPDATE] DB error: ${error.message} traceId=${effectiveTraceId}`);
+      logDbError("save-push-token", error);
       return new Response(
-        JSON.stringify({ error: 'Erreur sauvegarde', details: error.message, trace_id: effectiveTraceId }),
+        JSON.stringify({ error: 'Erreur sauvegarde', trace_id: effectiveTraceId }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -132,9 +133,10 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (e) {
-    console.error(`[SAVE-TOKEN][EXCEPTION] ${e} traceId=${traceId}`);
+    logException("save-push-token", e);
+    console.error(`[SAVE-TOKEN][EXCEPTION] traceId=${traceId}`);
     return new Response(
-      JSON.stringify({ error: 'Erreur serveur', details: String(e), trace_id: traceId }),
+      JSON.stringify({ error: 'Erreur serveur', trace_id: traceId }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

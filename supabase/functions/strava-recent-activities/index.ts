@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException, logHttpUpstream } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,35 +10,20 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+
+  const auth = await requireUserJwtCors(req, supabaseClient, corsHeaders);
+  if (auth instanceof Response) return auth;
+
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { data: profile, error: profileError } = await supabaseClient
       .from("profiles")
       .select("strava_access_token, strava_connected")
-      .eq("user_id", user.id)
+      .eq("user_id", auth.user.id)
       .maybeSingle();
 
     if (profileError) {
@@ -78,8 +65,8 @@ serve(async (req) => {
     );
 
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Strava activities error:", res.status, text);
+      await res.text().catch(() => "");
+      logHttpUpstream("strava-recent-activities", res.status, "activities");
       return new Response(
         JSON.stringify({
           error: "Strava API error",
@@ -124,7 +111,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("strava-recent-activities:", e);
+    logException("strava-recent-activities", e);
     return new Response(JSON.stringify({ error: "Internal error", activities: [] }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

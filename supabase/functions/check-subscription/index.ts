@@ -2,11 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logException, logStructured, logStripeRef, logUserRef } from "../_shared/secureLog.ts";
 
-// Helper logging function for enhanced debugging
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  if (details) logStructured("CHECK-SUBSCRIPTION", step, details);
+  else console.log(`[CHECK-SUBSCRIPTION] ${step}`);
 };
 
 serve(async (req) => {
@@ -41,7 +41,7 @@ serve(async (req) => {
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { user: logUserRef(user.id) });
 
     // First check if user already has manual premium access
     const { data: existingSubscriber } = await supabaseClient
@@ -53,7 +53,7 @@ serve(async (req) => {
     // If user has manual premium access (like admin override), return that data
     if (existingSubscriber?.stripe_customer_id === 'admin_override' && existingSubscriber.subscribed) {
       logStep("Found manual premium access (admin override)", { 
-        email: user.email, 
+        user: logUserRef(user.id),
         tier: existingSubscriber.subscription_tier 
       });
       return new Response(JSON.stringify({
@@ -101,7 +101,7 @@ serve(async (req) => {
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      logStep("Active subscription found", { subscription: logStripeRef(subscription.id), endDate: subscriptionEnd });
       // Determine subscription tier from price
       const priceId = subscription.items.data[0].price.id;
       const price = await stripe.prices.retrieve(priceId);
@@ -111,7 +111,7 @@ serve(async (req) => {
       } else {
         subscriptionTier = "Annuel";
       }
-      logStep("Determined subscription tier", { priceId, amount, subscriptionTier });
+      logStep("Determined subscription tier", { price: logStripeRef(priceId), amount, subscriptionTier });
     } else {
       logStep("No active subscription found");
     }
@@ -136,9 +136,8 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in check-subscription", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    logException("CHECK-SUBSCRIPTION", error);
+    return new Response(JSON.stringify({ error: "Subscription check failed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  logException,
+  logStructured,
+  logUserRef,
+  summarizeFcmErrorBody,
+  summarizeGoogleApiError,
+} from "../_shared/secureLog.ts";
 
 interface NotificationPayload {
   user_id: string;
@@ -9,6 +16,30 @@ interface NotificationPayload {
   data?: any;
   type?: string;
 }
+
+/** Comparaison constante du secret interne (mitigation timing attacks). */
+function timingSafeEqualString(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+type PushAuthResult =
+  | { ok: true; mode: "internal" }
+  | { ok: true; mode: "user"; callerUserId: string }
+  | { ok: false; response: Response };
+
+type SupabaseAuthAdmin = {
+  auth: {
+    getUser: (jwt: string) => Promise<{
+      data: { user: { id: string } | null };
+      error: { message?: string } | null;
+    }>;
+  };
+};
 
 interface FirebaseServiceAccount {
   type: string;
@@ -62,11 +93,11 @@ async function createFirebaseJWT(sa: FirebaseServiceAccount): Promise<string> {
 async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<string> {
   // Return cached token if still valid (50min margin)
   if (cachedAccessToken && Date.now() < cachedTokenExpiry) {
-    console.log('✅ [AUTH] Using cached Firebase token');
+    logStructured("send-push", "firebase_oauth_cached", {});
     return cachedAccessToken;
   }
 
-  console.log('🔑 [AUTH] Generating new Firebase access token...');
+  logStructured("send-push", "firebase_oauth_refresh", {});
   const jwt = await createFirebaseJWT(sa);
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
@@ -80,14 +111,16 @@ async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<strin
 
   const tokenData = await response.json();
   if (!response.ok) {
-    console.error('❌ [AUTH] OAuth2 failed:', response.status, JSON.stringify(tokenData));
-    throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
+    console.error(
+      `[send-push] firebase_oauth status=${response.status} summary=${summarizeGoogleApiError(tokenData)}`,
+    );
+    throw new Error("Token request failed");
   }
 
   cachedAccessToken = tokenData.access_token;
   // Cache for 50 minutes (token valid for 60min)
   cachedTokenExpiry = Date.now() + 50 * 60 * 1000;
-  console.log('✅ [AUTH] Firebase token obtained and cached');
+  logStructured("send-push", "firebase_oauth_ok", {});
 
   return cachedAccessToken!;
 }
@@ -125,7 +158,7 @@ async function sendFCMNotification(
       }
     };
 
-    console.log('🚀 [FCM] Sending to project:', projectId, '| token:', token.substring(0, 20) + '...');
+    logStructured("send-push", "fcm_send", { project_id: projectId, device_token_len: token.length });
 
     const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
       method: 'POST',
@@ -136,19 +169,21 @@ async function sendFCMNotification(
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ [FCM] Failed:', response.status, JSON.stringify(responseData));
+      console.error(
+        `[send-push] fcm_failed status=${response.status} summary=${summarizeFcmErrorBody(responseData)}`,
+      );
 
       // UNREGISTERED or INVALID_ARGUMENT token → clean up
       const errorCode = responseData?.error?.details?.[0]?.errorCode;
       if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
-        console.log(`🗑️ [FCM] Token ${errorCode} → cleanup needed`);
+        logStructured("send-push", "fcm_token_cleanup", { code: String(errorCode) });
         return { unregistered: true, token };
       }
 
       // Retry on transient errors
       if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-        console.log(`🔄 [FCM] Retry in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        logStructured("send-push", "fcm_retry", { delay_ms: delay, attempt: retryCount + 1, max: maxRetries });
         await new Promise(r => setTimeout(r, delay));
         return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
       }
@@ -156,10 +191,10 @@ async function sendFCMNotification(
       return false;
     }
 
-    console.log('✅ [FCM] Sent:', responseData.name);
+    logStructured("send-push", "fcm_sent", { name_len: typeof responseData?.name === "string" ? responseData.name.length : 0 });
     return true;
   } catch (error) {
-    console.error('❌ [FCM] Exception:', error);
+    logException("send-push-fcm", error);
     if (retryCount < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       await new Promise(r => setTimeout(r, delay));
@@ -167,6 +202,68 @@ async function sendFCMNotification(
     }
     return false;
   }
+}
+
+function unauthorized(corsHeaders: Record<string, string>, code: string, message: string): Response {
+  return new Response(
+    JSON.stringify({ error: "Unauthorized", code, message }),
+    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
+/**
+ * Auth production :
+ * 1) x-internal-push-secret === INTERNAL_PUSH_INVOKE_SECRET → appels serveur uniquement (pg_net, cron) — ne jamais mettre ce secret dans le frontend.
+ * 2) Sinon Authorization: Bearer <JWT utilisateur> valide via auth.getUser().
+ */
+async function authenticatePushRequest(
+  req: Request,
+  supabaseAdmin: SupabaseAuthAdmin,
+  corsHeaders: Record<string, string>,
+): Promise<PushAuthResult> {
+  const configuredInternal = Deno.env.get("INTERNAL_PUSH_INVOKE_SECRET");
+  const providedInternal = req.headers.get("x-internal-push-secret") ?? "";
+
+  if (configuredInternal && providedInternal && timingSafeEqualString(providedInternal, configuredInternal)) {
+    logStructured("send-push", "auth_internal", {});
+    return { ok: true, mode: "internal" };
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      ok: false,
+      response: unauthorized(
+        corsHeaders,
+        "missing_bearer",
+        "Authorization Bearer requis (session utilisateur) ou en-tête serveur x-internal-push-secret.",
+      ),
+    };
+  }
+
+  const jwt = authHeader.slice("Bearer ".length).trim();
+  if (!jwt) {
+    return {
+      ok: false,
+      response: unauthorized(corsHeaders, "empty_bearer", "Jeton Bearer vide."),
+    };
+  }
+
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(jwt);
+  if (error || !user) {
+    console.warn("[send-push] auth=user rejected: invalid or expired JWT");
+    return {
+      ok: false,
+      response: unauthorized(
+        corsHeaders,
+        "invalid_session",
+        "Session invalide ou expirée. Reconnectez-vous.",
+      ),
+    };
+  }
+
+  logStructured("send-push", "auth_user", { user: logUserRef(user.id) });
+  return { ok: true, mode: "user", callerUserId: user.id };
 }
 
 serve(async (req) => {
@@ -182,33 +279,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const internalSecret = Deno.env.get('INTERNAL_PUSH_INVOKE_SECRET');
-    const providedInternal = req.headers.get('x-internal-push-secret');
-    const internalOk = !!internalSecret && !!providedInternal && providedInternal === internalSecret;
-
-    const authHeader = req.headers.get('Authorization');
-    let callerUserId: string | null = null;
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
-        if (authUser && !authError) {
-          callerUserId = authUser.id;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (internalSecret) {
-      if (!internalOk && !callerUserId) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else if (!callerUserId) {
-      console.warn('⚠️ [AUTH] INTERNAL_PUSH_INVOKE_SECRET non défini — appels sans JWT utilisateur acceptés (à corriger en prod)');
+    const auth = await authenticatePushRequest(req, supabaseClient, corsHeaders);
+    if (!auth.ok) {
+      return auth.response;
     }
 
     const { user_id, title, body, data, type }: NotificationPayload = await req.json();
@@ -220,7 +293,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('🔔 [ENTRY] Notification:', { user_id: user_id.substring(0, 8) + '...', title, type });
+    logStructured("send-push", "entry", {
+      target_user: logUserRef(user_id),
+      type: type ?? "default",
+      title_len: typeof title === "string" ? title.length : 0,
+    });
 
     // 1. Firebase service account
     const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
@@ -311,7 +388,7 @@ serve(async (req) => {
       }
       notificationId = notifData?.id ?? null;
     } else {
-      console.log(`ℹ️ [DB] Skipping notification insert for type '${type}' (handled by DB trigger)`);
+      logStructured("send-push", "db_skip_insert_trigger", { type: type ?? "" });
     }
 
     // notificationId already set above
@@ -358,7 +435,7 @@ serve(async (req) => {
     // 8. Send FCM
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      console.log('📤 [FCM] Sending | channel: runconnect_channel | title:', finalTitle);
+      logStructured("send-push", "fcm_dispatch", { title_len: finalTitle.length, channel: "runconnect_channel" });
 
       const fcmResult = await sendFCMNotification(
         accessToken, serviceAccount.project_id, profile.push_token, finalTitle, finalBody, fcmData
@@ -366,7 +443,7 @@ serve(async (req) => {
 
       // Handle UNREGISTERED token
       if (typeof fcmResult === 'object' && fcmResult.unregistered) {
-        console.log('🗑️ [CLEANUP] Removing invalid token');
+        logStructured("send-push", "cleanup_invalid_token", { target_user: logUserRef(user_id) });
         await supabaseClient.from('profiles').update({ push_token: null, push_token_updated_at: null }).eq('user_id', user_id);
 
         if (notificationId) {
@@ -376,7 +453,7 @@ serve(async (req) => {
               fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
             });
           } catch (logErr) {
-            console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+            logException("send-push-notification_log", logErr);
           }
         }
 
@@ -397,7 +474,7 @@ serve(async (req) => {
             fcm_response: { type, title: finalTitle }
           });
         } catch (logErr) {
-          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+          logException("send-push-notification_log", logErr);
         }
       }
 
@@ -409,29 +486,29 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (fcmError) {
-      console.error('❌ [FCM] Exception:', fcmError);
+      logException("send-push-fcm-handler", fcmError);
 
       if (notificationId) {
         try {
           await supabaseClient.from('notification_logs').insert({
             notification_id: notificationId, user_id, push_token: profile.push_token,
-            fcm_success: false, fcm_error: String(fcmError), fcm_response: { error: String(fcmError) }
+            fcm_success: false, fcm_error: "exception", fcm_response: { type: type ?? "unknown" }
           });
         } catch (logErr) {
-          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+          logException("send-push-notification_log", logErr);
         }
       }
 
       return new Response(
-        JSON.stringify({ success: true, fcm_sent: false, fcm_error: String(fcmError), stage: 'FCM_EXCEPTION', push_token: profile.push_token }),
+        JSON.stringify({ success: true, fcm_sent: false, fcm_error: "exception", stage: 'FCM_EXCEPTION', push_token: profile.push_token }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
   } catch (error) {
-    console.error('❌ [GENERAL] Error:', error);
+    logException("send-push-general", error);
     return new Response(
-      JSON.stringify({ error: 'Erreur serveur interne', details: String(error), stage: 'GENERAL_ERROR', push_token: null }),
+      JSON.stringify({ error: 'Erreur serveur interne', stage: 'GENERAL_ERROR' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

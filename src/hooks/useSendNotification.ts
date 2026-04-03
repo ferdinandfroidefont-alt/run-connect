@@ -46,14 +46,22 @@ export const useSendNotification = () => {
         console.log('✅ [PUSH] Session rafraîchie avec succès');
       }
       
-      // Get session for Authorization header
       const { data: sessionData2 } = await supabase.auth.getSession();
       const accessToken = sessionData2?.session?.access_token;
 
-      const invokeHeaders: Record<string, string> = {};
-      if (accessToken) {
-        invokeHeaders['Authorization'] = `Bearer ${accessToken}`;
+      if (!accessToken) {
+        console.error('❌ [PUSH] Pas de jeton d’accès — impossible d’appeler send-push-notification sans session');
+        setLastPushError({
+          stage: 'NO_ACCESS_TOKEN',
+          reason: 'Session sans access_token',
+          token: null,
+        });
+        return false;
       }
+
+      const invokeHeaders: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+      };
 
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
         headers: invokeHeaders,
@@ -78,15 +86,19 @@ export const useSendNotification = () => {
           if (!refreshError && refreshData?.session) {
             console.log('✅ [PUSH] Session rafraîchie, nouvelle tentative...');
             
-            // Retry the call
-            const retryHeaders: Record<string, string> = {};
             const retrySession = await supabase.auth.getSession();
-            if (retrySession.data?.session?.access_token) {
-              retryHeaders['Authorization'] = `Bearer ${retrySession.data.session.access_token}`;
+            const retryToken = retrySession.data?.session?.access_token;
+            if (!retryToken) {
+              setLastPushError({
+                stage: 'NO_ACCESS_TOKEN_RETRY',
+                reason: 'Session sans access_token après refresh',
+                token: null,
+              });
+              return false;
             }
 
             const { data: retryResult, error: retryError } = await supabase.functions.invoke('send-push-notification', {
-              headers: retryHeaders,
+              headers: { Authorization: `Bearer ${retryToken}` },
               body: {
                 user_id: userId,
                 title,

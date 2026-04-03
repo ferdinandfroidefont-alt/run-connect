@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0'
+import { logDbError, logException, logHttpUpstream, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 // strava-callback is called by Strava servers — keep permissive CORS
 const corsHeaders = {
@@ -23,10 +24,14 @@ Deno.serve(async (req) => {
     const state = url.searchParams.get('state'); // This contains the user ID
     const error = url.searchParams.get('error');
 
-    console.log('Strava callback received:', { code: !!code, state, error });
+    logStructured("strava-callback", "request", {
+      has_code: !!code,
+      user: state ? logUserRef(state) : "—",
+      oauth_error: !!error,
+    });
 
     if (error || !code || !state) {
-      console.error('Error in Strava callback:', error);
+      console.error(`[strava-callback] reject oauth_error=${!!error} missing=${!code || !state}`);
       return new Response(
         `
         <html>
@@ -66,8 +71,8 @@ Deno.serve(async (req) => {
     });
 
     if (!stravaTokenResponse.ok) {
-      const errorText = await stravaTokenResponse.text();
-      console.error('Failed to exchange code for token:', errorText);
+      await stravaTokenResponse.text().catch(() => "");
+      logHttpUpstream("strava-callback", stravaTokenResponse.status, "token_exchange");
       
       // Handle 403 Athlete quota exceeded
       if (stravaTokenResponse.status === 403) {
@@ -105,7 +110,7 @@ Deno.serve(async (req) => {
     }
 
     const tokenData = await stravaTokenResponse.json();
-    console.log('Token exchange successful for user:', state);
+    logStructured("strava-callback", "token_ok", { user: logUserRef(state) });
 
     // Update user profile with Strava info
     const { error: updateError } = await supabase
@@ -120,11 +125,11 @@ Deno.serve(async (req) => {
       .eq('user_id', state);
 
     if (updateError) {
-      console.error('Error updating profile:', updateError);
+      logDbError("strava-callback", updateError);
       throw updateError;
     }
 
-    console.log('Profile updated successfully for user:', state);
+    logStructured("strava-callback", "profile_updated", { user: logUserRef(state) });
 
     // Determine if we're in a native app or web browser
     const userAgent = req.headers.get('user-agent') || '';
@@ -132,18 +137,15 @@ Deno.serve(async (req) => {
                      userAgent.includes('wv') || 
                      userAgent.includes('Android');
 
-    console.log('User agent:', userAgent);
-    console.log('Is native app:', isNative);
+    logStructured("strava-callback", "client_hint", { is_native: isNative, ua_len: userAgent.length });
 
     // Return success - different handling for native vs web
     const deepLinkUrl = `app.runconnect://auth/strava/success`;
     const webUrl = `https://run-connect.lovable.app/profile`;
 
-    console.log('User agent indicates native:', isNative);
-    
     // For native apps: Direct HTTP redirect to deep link
     if (isNative) {
-      console.log('Native app detected - redirecting to deep link:', deepLinkUrl);
+      logStructured("strava-callback", "redirect_native", { deep_link_scheme: "app.runconnect" });
       return new Response(null, {
         status: 302,
         headers: {
@@ -154,7 +156,7 @@ Deno.serve(async (req) => {
     }
 
     // For web: HTML page with postMessage
-    console.log('Web browser detected - showing success page');
+    logStructured("strava-callback", "redirect_web", {});
     return new Response(
       `
       <!DOCTYPE html>
@@ -191,7 +193,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in Strava callback:', error);
+    logException("strava-callback", error);
     
     const webUrl = 'https://runconnectlovable.app/profile';
     

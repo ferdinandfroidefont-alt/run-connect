@@ -21,15 +21,40 @@ export async function requireUserJwt(
       headers: { "Content-Type": "application/json" },
     });
   }
-  const token = authHeader.replace("Bearer ", "");
+  const token = authHeader.replace("Bearer ", "").trim();
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Unauthorized", code: "empty_bearer" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) {
-    return new Response(JSON.stringify({ error: "Invalid token" }), {
+    return new Response(JSON.stringify({ error: "Unauthorized", code: "invalid_session" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
   }
   return { user };
+}
+
+/**
+ * Comme requireUserJwt mais fusionne les en-têtes CORS sur les réponses 401 (usage Edge Functions).
+ */
+export async function requireUserJwtCors(
+  req: Request,
+  supabaseAdmin: SupabaseClient,
+  corsHeaders: Record<string, string>,
+): Promise<AuthSuccess | Response> {
+  const r = await requireUserJwt(req, supabaseAdmin);
+  if (r instanceof Response) {
+    const text = await r.text();
+    return new Response(text, {
+      status: r.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  return r;
 }
 
 /** Cron / tâches planifiées : en-tête x-cron-secret doit égaler CRON_SECRET. */

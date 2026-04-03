@@ -1,6 +1,6 @@
 # Matrice d’authentification des Edge Functions
 
-Helpers partagés : [`supabase/functions/_shared/auth.ts`](../supabase/functions/_shared/auth.ts) (`requireUserJwt`, `requireCron`).
+Helpers partagés : [`supabase/functions/_shared/auth.ts`](../supabase/functions/_shared/auth.ts) (`requireUserJwt`, `requireUserJwtCors`, `requireCron`).
 
 | Fonction | Auth attendue | Notes |
 |----------|----------------|-------|
@@ -13,21 +13,21 @@ Helpers partagés : [`supabase/functions/_shared/auth.ts`](../supabase/functions
 | create-donation | JWT utilisateur | |
 | customer-portal | JWT utilisateur | |
 | delete-account | JWT utilisateur | `requireUserJwt` |
-| firebase-auth | Flux Firebase | Valider le corps / tokens Firebase |
-| get-strava-friends | JWT utilisateur | |
-| google-maps-proxy | À durcir si exposée | Limiter clé / quotas |
+| firebase-auth | Flux Firebase | Valider le corps / tokens Firebase ; pas de JWT Supabase (exception documentée) |
+| get-strava-friends | JWT utilisateur | `requireUserJwtCors` + service role (requêtes bornées à `user_id` du JWT) |
+| google-maps-proxy | JWT utilisateur | `requireUserJwtCors` obligatoire pour `get-key`, geocode et reverse |
 | instagram-callback | OAuth redirect | |
 | instagram-connect | JWT utilisateur | |
 | instagram-disconnect | JWT utilisateur | |
 | ios-auth-callback | OAuth (serveur) | |
 | mark-absent-cron | CRON_SECRET | |
 | notify-challenge-progress | CRON_SECRET ou secret interne | |
-| process-referral | Service role / interne | |
-| process-referral-signup | Service role / interne | |
-| report-user | Aucune auth Supabase actuellement | **À renforcer** (JWT + rate limit) si abus |
+| process-referral | JWT utilisateur | `requireUserJwtCors` ; RPC avec `new_user_id` = JWT |
+| process-referral-signup | JWT utilisateur | `requireUserJwtCors` ; `newUserId` doit égaler l’utilisateur du JWT |
+| report-user | JWT utilisateur | `requireUserJwtCors` ; pas d’auto-signalement ; signaleur dans l’email modération |
 | save-push-token | JWT utilisateur | |
 | season-reset | CRON_SECRET | |
-| send-push-notification | `x-internal-push-secret` **ou** JWT utilisateur | Voir `INTERNAL_PUSH_INVOKE_SECRET` |
+| send-push-notification | **`x-internal-push-secret` (prioritaire, serveur uniquement)** **ou** `Authorization: Bearer` + JWT utilisateur valide | Jamais de secret interne dans le frontend ; le client utilise uniquement la session Supabase (`functions.invoke` + JWT). |
 | strava-callback | OAuth | |
 | strava-connect | JWT utilisateur | |
 | strava-disconnect | JWT utilisateur | |
