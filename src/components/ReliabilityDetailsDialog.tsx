@@ -1,5 +1,5 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Calendar, CheckCircle2, Info, XCircle, X } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReliabilityDetailsDialogProps {
@@ -31,18 +31,18 @@ export const ReliabilityDetailsDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent hideCloseButton className={cn(RELIABILITY_FULLSCREEN_SHELL)}>
-        <div className="shrink-0 border-b border-border/60 bg-card pt-[env(safe-area-inset-top,0px)]">
-          <div className="flex min-w-0 items-center justify-between gap-2 px-ios-4 py-ios-3">
+        <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+          <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
-              aria-label="Fermer"
+              className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
             >
-              <X className="h-5 w-5" strokeWidth={2} />
+              <ArrowLeft className="h-5 w-5 shrink-0" />
+              <span className="truncate text-[17px]">Retour</span>
             </button>
-            <h2 className="flex-1 text-center text-ios-headline font-semibold text-foreground">Fiabilité</h2>
-            <div className="h-9 w-9 shrink-0" aria-hidden />
+            <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Fiabilité</h1>
+            <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
           </div>
         </div>
 
