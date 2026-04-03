@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 import { Capacitor } from '@capacitor/core';
 import { applyIosStatusBarForTheme, applyWebChromeForTheme } from '@/lib/iosStatusBarTheme';
+import { syncMapStyleWithAppTheme } from '@/lib/mapboxMapStylePreference';
 
 const STORAGE_KEY = 'runconnect-ui-theme';
 
@@ -17,6 +18,10 @@ function ThemeMetaSync() {
     };
 
     applyChrome();
+
+    if (resolvedTheme === 'dark' || resolvedTheme === 'light') {
+      syncMapStyleWithAppTheme(isDark);
+    }
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {

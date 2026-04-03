@@ -46,7 +46,12 @@ import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
-import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import {
+  clearMapStyleThemeRollback,
+  getStoredMapStyleId,
+  MAP_STYLE_THEME_SYNC_EVENT,
+  persistMapStyleId,
+} from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 
@@ -1206,6 +1211,7 @@ export const InteractiveMap = ({
     userLocationMarker.current = marker;
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
+    clearMapStyleThemeRollback();
     setCurrentStyle(style);
     persistMapStyleId(style);
     const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
@@ -1237,6 +1243,44 @@ export const InteractiveMap = ({
       }
     });
   };
+
+  useEffect(() => {
+    const onThemeMapSync = () => {
+      const id = getStoredMapStyleId();
+      setCurrentStyle(id);
+      const m = map.current;
+      if (!m || !isMapLoaded) return;
+      const nextStyle = MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+      m.setStyle(nextStyle);
+      m.once('style.load', () => {
+        if (routeCoordinates.current.length >= 2) {
+          setInteractiveRouteLine(m, routeCoordinates.current);
+        }
+        const pad = computeHomeMapViewportPadding({
+          immersive: isImmersiveMode,
+          topStackEl: homeMapTopStackRef.current,
+        });
+        if (id === 'standard3d') {
+          m.easeTo({
+            pitch: 52,
+            padding: pad,
+            duration: 700,
+            essential: true,
+          });
+        } else {
+          m.easeTo({
+            pitch: 0,
+            padding: pad,
+            duration: 500,
+            essential: true,
+          });
+        }
+      });
+    };
+    window.addEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+    return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+  }, [isMapLoaded, isImmersiveMode]);
+
   const tryGeocodeSearchFromInput = async () => {
     const q = filters.search_query.trim();
     const m = map.current ?? mapboxMap;

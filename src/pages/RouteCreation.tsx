@@ -31,7 +31,12 @@ import {
   MAPBOX_NAVIGATION_DAY_STYLE,
   MAPBOX_STYLE_BY_UI_ID,
 } from '@/lib/mapboxConfig';
-import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import {
+  clearMapStyleThemeRollback,
+  getStoredMapStyleId,
+  MAP_STYLE_THEME_SYNC_EVENT,
+  persistMapStyleId,
+} from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { cn } from '@/lib/utils';
@@ -312,6 +317,7 @@ export const RouteCreation = () => {
   };
 
   const handleMapStyleChange = useCallback((style: string) => {
+    clearMapStyleThemeRollback();
     setMapStyleId(style);
     persistMapStyleId(style);
     const m = map.current;
@@ -322,6 +328,23 @@ export const RouteCreation = () => {
       replayAllSegments();
       window.setTimeout(() => replayAllSegments(), 160);
     });
+  }, []);
+
+  useEffect(() => {
+    const onThemeMapSync = () => {
+      const id = getStoredMapStyleId();
+      setMapStyleId(id);
+      const m = map.current;
+      if (!m) return;
+      const url = MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+      m.setStyle(url);
+      m.once('style.load', () => {
+        replayAllSegments();
+        window.setTimeout(() => replayAllSegments(), 160);
+      });
+    };
+    window.addEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+    return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
   }, []);
 
   const clearScrubMarker = () => {
