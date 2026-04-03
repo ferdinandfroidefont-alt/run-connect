@@ -107,6 +107,11 @@ export default function Privacy() {
               <p className="font-medium text-foreground">
                 Aucune donnée n'est vendue, partagée ou transférée à des tiers sans votre consentement explicite.
               </p>
+              <p>
+                Sur votre appareil, l&apos;application peut enregistrer localement (navigateur ou stockage de
+                l&apos;app) la dernière position utilisée pour centrer la carte d&apos;accueil, afin d&apos;améliorer
+                la réactivité ; ces coordonnées ne sont pas envoyées à nos serveurs pour ce seul usage.
+              </p>
             </div>
           </div>
 

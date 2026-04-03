@@ -506,8 +506,9 @@ export const ProfileDialog = ({
               <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
                 <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
                   <button
+                    type="button"
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors relative"
+                    className="relative min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
                   >
                     <div className="flex items-center justify-center gap-1">
                       <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
@@ -520,15 +521,17 @@ export const ProfileDialog = ({
                     <p className="text-[12px] text-muted-foreground">Abonnés</p>
                   </button>
                   <button
+                    type="button"
                     onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
+                    className="min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
                   >
                     <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
                     <p className="text-[12px] text-muted-foreground">Abonnements</p>
                   </button>
                   <button
+                    type="button"
                     onClick={() => setShowReliabilityDialog(true)}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
+                    className="min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
                   >
                     <p className="text-[20px] font-bold text-foreground">{reliabilityRate}%</p>
                     <p className="text-[12px] text-muted-foreground">Fiabilité</p>

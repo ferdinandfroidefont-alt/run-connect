@@ -2,6 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { Position } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { HOME_MAP_GEO_CACHE_MAX_AGE_MS } from '@/lib/homeMapPrefetch';
+
+/** `fast` : cache OS / pas de haute précision, sans délais artificiels — carte d’accueil & premier centrage. */
+export type GetCurrentPositionOptions = { mode?: 'default' | 'fast' };
 
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
@@ -245,12 +249,15 @@ export const useGeolocation = () => {
     }
   };
 
-  const getCurrentPosition = useCallback(async (retryCount = 0): Promise<Position | null> => {
-    console.log('🚀 useGeolocation: Début getCurrentPosition, native:', isNative(), 'retry:', retryCount);
+  const getCurrentPosition = useCallback(async (retryCount = 0, options?: GetCurrentPositionOptions): Promise<Position | null> => {
+    const fast = options?.mode === 'fast';
+    console.log('🚀 useGeolocation: Début getCurrentPosition, native:', isNative(), 'retry:', retryCount, 'fast:', fast);
     const deviceInfo = getDeviceInfo();
     const maxRetries = 2;
     
-    setLoading(true);
+    if (!fast) {
+      setLoading(true);
+    }
 
     try {
       // ✅ NOUVEAU : Toujours vérifier et demander les permissions AVANT d'essayer de récupérer la position
@@ -275,17 +282,29 @@ export const useGeolocation = () => {
           
           console.log('✅ Permissions accordées !');
           
-          // Attendre un peu pour que les permissions soient bien enregistrées
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Court délai après accord tout juste obtenu (évite course côté OS)
+          await new Promise(resolve => setTimeout(resolve, fast ? 100 : 500));
         }
       }
       
-      // Attendre que les flags soient injectés par MainActivity (AAB fix)
-      const waitTime = retryCount === 0 ? 1000 : 500;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
       const androidPerms = (window as any).androidPermissions;
       const isAAB = (window as any).isAABBuild;
       const injectionComplete = (window as any).androidInjectionComplete;
+
+      // Ancien délai fixe 1s / 0,5s — supprimé en mode rapide ; réduit sinon (AAB seulement si injection pas prête)
+      if (!fast) {
+        const waitTime =
+          retryCount === 0
+            ? isAAB && !injectionComplete
+              ? 500
+              : 0
+            : 300;
+        if (waitTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      } else if (!fast && isAAB && !injectionComplete) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
       
       console.log('🌍 GÉOLOCALISATION - Début tentative', retryCount + 1);
       console.log('🌍 Mode:', nativeMode ? 'NATIF' : 'WEB');
@@ -312,7 +331,10 @@ export const useGeolocation = () => {
           }
           
           const startTime = Date.now();
-          const permissions = await Geolocation.requestPermissions();
+          let permissions = await Geolocation.checkPermissions();
+          if (permissions.location !== 'granted') {
+            permissions = await Geolocation.requestPermissions();
+          }
           console.log('📱 Permissions Capacitor obtenues en', Date.now() - startTime, 'ms:', permissions);
           
           if (permissions.location !== 'granted') {
@@ -320,16 +342,20 @@ export const useGeolocation = () => {
             throw new Error(`Permission Capacitor refusée: ${permissions.location}`);
           }
           
-          // Tentative Capacitor avec timeout augmenté
+          const capTimeout = fast ? 4000 : 15000;
+          const capHighAccuracy = fast ? false : deviceInfo.manufacturer !== 'samsung';
+          const capMaxAge = fast ? HOME_MAP_GEO_CACHE_MAX_AGE_MS : 300_000;
+
+          // Tentative Capacitor (mode rapide = cache OS, pas de GPS forcé)
           const capacitorStartTime = Date.now();
           const result = await Promise.race([
             Geolocation.getCurrentPosition({
-              enableHighAccuracy: deviceInfo.manufacturer !== 'samsung', // Samsung parfois problématique
-              timeout: 15000, // Augmenté à 15s
-              maximumAge: 300000
+              enableHighAccuracy: capHighAccuracy,
+              timeout: capTimeout,
+              maximumAge: capMaxAge
             }),
             new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout Capacitor')), 15000)
+              setTimeout(() => reject(new Error('Timeout Capacitor')), capTimeout)
             )
           ]);
           
@@ -346,9 +372,9 @@ export const useGeolocation = () => {
           console.warn('⚠️ useGeolocation: Erreur Capacitor (tentative', retryCount + 1, '):', capacitorError);
           
           // Retry logic pour Capacitor
-          if (retryCount < maxRetries && capacitorError.message.includes('timeout')) {
+          if (retryCount < maxRetries && String((capacitorError as Error)?.message ?? '').includes('timeout')) {
             console.log('🔄 useGeolocation: Retry Capacitor...');
-            return getCurrentPosition(retryCount + 1);
+            return getCurrentPosition(retryCount + 1, options);
           }
           
           console.log('🔄 Essai fallback Navigator dans AAB...');
@@ -358,11 +384,15 @@ export const useGeolocation = () => {
             throw new Error('Navigator.geolocation indisponible');
           }
           
+          const navTimeout = fast ? 4000 : 15000;
+          const navHighAccuracy = fast ? false : deviceInfo.manufacturer !== 'samsung';
+          const navMaxAge = fast ? HOME_MAP_GEO_CACHE_MAX_AGE_MS : 300_000;
+
           return new Promise((resolve, reject) => {
             const navigatorStartTime = Date.now();
             const timeoutId = setTimeout(() => {
               reject(new Error('Timeout Navigator fallback'));
-            }, 15000);
+            }, navTimeout);
             
             navigator.geolocation.getCurrentPosition(
               (geoPosition) => {
@@ -383,16 +413,16 @@ export const useGeolocation = () => {
                 if (retryCount < maxRetries && navError.code === 3) { // TIMEOUT
                   console.log('🔄 useGeolocation: Retry navigator...');
                   setTimeout(() => {
-                    getCurrentPosition(retryCount + 1).then(resolve).catch(reject);
-                  }, 1000);
+                    getCurrentPosition(retryCount + 1, options).then(resolve).catch(reject);
+                  }, fast ? 300 : 1000);
                 } else {
                   reject(navError);
                 }
               },
               {
-                enableHighAccuracy: deviceInfo.manufacturer !== 'samsung', // Samsung parfois problématique avec high accuracy
-                timeout: 15000,
-                maximumAge: 300000
+                enableHighAccuracy: navHighAccuracy,
+                timeout: navTimeout,
+                maximumAge: navMaxAge
               }
             );
           });
@@ -406,11 +436,15 @@ export const useGeolocation = () => {
         throw new Error('Géolocalisation non supportée par ce navigateur');
       }
       
+      const webTimeout = fast ? 4000 : 15000;
+      const webHighAccuracy = !fast;
+      const webMaxAge = fast ? HOME_MAP_GEO_CACHE_MAX_AGE_MS : 300_000;
+
       return new Promise((resolve, reject) => {
         const navigatorStartTime = Date.now();
         const timeoutId = setTimeout(() => {
           reject(new Error('Timeout géolocalisation web'));
-        }, 15000);
+        }, webTimeout);
         
         navigator.geolocation.getCurrentPosition(
           (geoPosition) => {
@@ -431,8 +465,8 @@ export const useGeolocation = () => {
             if (retryCount < maxRetries && error.code === 3) { // TIMEOUT
               console.log('🔄 useGeolocation: Retry navigator web...');
               setTimeout(() => {
-                getCurrentPosition(retryCount + 1).then(resolve).catch(reject);
-              }, 1000);
+                getCurrentPosition(retryCount + 1, options).then(resolve).catch(reject);
+              }, fast ? 300 : 1000);
             } else {
               let message = 'Erreur géolocalisation';
               switch (error.code) {
@@ -450,9 +484,9 @@ export const useGeolocation = () => {
             }
           },
           {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 300000
+            enableHighAccuracy: webHighAccuracy,
+            timeout: webTimeout,
+            maximumAge: webMaxAge
           }
         );
       });
@@ -463,8 +497,8 @@ export const useGeolocation = () => {
       // Retry logic global
       if (retryCount < maxRetries) {
         console.log('🔄 useGeolocation: Retry global...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return getCurrentPosition(retryCount + 1);
+        await new Promise(resolve => setTimeout(resolve, fast ? 300 : 1000));
+        return getCurrentPosition(retryCount + 1, options);
       }
       
       throw error;

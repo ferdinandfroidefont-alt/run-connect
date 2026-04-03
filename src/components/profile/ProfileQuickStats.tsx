@@ -107,7 +107,7 @@ export const ProfileQuickStats = ({
             </p>
           </>
         );
-        const className = `min-w-0 py-2.5 text-center transition-colors active:bg-secondary/60 ${
+        const className = `min-h-[44px] min-w-0 touch-manipulation py-2.5 text-center transition-colors active:bg-secondary/60 ${
           i < colCount - 1 ? "border-r border-border/50" : ""
         }`;
         return stat.onClick ? (

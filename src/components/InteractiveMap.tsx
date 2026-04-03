@@ -13,6 +13,7 @@ import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import type { Position } from '@/types/permissions';
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
@@ -30,6 +31,10 @@ import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
 import {
+  getPersistedHomeMapPosition,
+  HOME_HOT_PREFETCH_MAX_AGE_MS,
+  HOME_MAP_GEO_CACHE_MAX_AGE_MS,
+  persistHomeMapPosition,
   takePrefetchedHomeMapPositionIfReady,
   waitForPrefetchedHomeMapPosition,
 } from '@/lib/homeMapPrefetch';
@@ -378,6 +383,18 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
+
+  /**
+   * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
+   * réutilisée dans la course au lieu d’un 2e appel au `load`).
+   */
+  const homeFastGeoPromiseRef = useRef<Promise<Position | null> | null>(null);
+  useEffect(() => {
+    homeFastGeoPromiseRef.current = getCurrentPosition(0, { mode: 'fast' });
+    return () => {
+      homeFastGeoPromiseRef.current = null;
+    };
+  }, [getCurrentPosition]);
 
   useEffect(() => {
     const loadClubFilters = async () => {
@@ -1059,9 +1076,12 @@ export const InteractiveMap = ({
         if (!mapContainer.current || cancelled) return;
 
         const prefImmediate = takePrefetchedHomeMapPositionIfReady();
+        const persistedHint = getPersistedHomeMapPosition();
         const mapCenterLngLat: [number, number] = prefImmediate
           ? [prefImmediate.lng, prefImmediate.lat]
-          : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
+          : persistedHint
+            ? [persistedHint.lng, persistedHint.lat]
+            : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
         const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
         const mapInstance = new mapboxgl.Map({
@@ -1081,8 +1101,6 @@ export const InteractiveMap = ({
         });
 
         map.current = mapInstance;
-
-        const PREFETCH_MAX_AGE_MS = 45_000;
 
         const easeToUserWithChrome = (lng: number, lat: number, zoom: number, duration: number) => {
           requestAnimationFrame(() => {
@@ -1105,21 +1123,64 @@ export const InteractiveMap = ({
         const runGeoRefinement = () => {
           if (cancelled || !map.current) return;
 
-          const applyFreshPref = (p: { lat: number; lng: number; ts: number }) => {
+          const applyHomePosition = (
+            p: { lat: number; lng: number; ts: number },
+            maxAgeMs: number,
+            easeMs: number,
+          ) => {
             const age = Date.now() - p.ts;
-            if (age >= PREFETCH_MAX_AGE_MS) return false;
+            if (age >= maxAgeMs) return false;
             setUserLocation({ lat: p.lat, lng: p.lng });
-            easeToUserWithChrome(p.lng, p.lat, HOME_MAP_USER_ZOOM, 520);
+            easeToUserWithChrome(p.lng, p.lat, HOME_MAP_USER_ZOOM, easeMs);
             return true;
           };
 
-          if (prefImmediate != null && applyFreshPref(prefImmediate)) {
+          if (prefImmediate != null && applyHomePosition(prefImmediate, HOME_HOT_PREFETCH_MAX_AGE_MS, 260)) {
+            persistHomeMapPosition(prefImmediate);
             return;
           }
 
-          void waitForPrefetchedHomeMapPosition(1600).then((latePref) => {
+          /** Dernière position locale : affichage immédiat, puis course pour rafraîchir. */
+          if (
+            persistedHint != null &&
+            applyHomePosition(persistedHint, HOME_MAP_GEO_CACHE_MAX_AGE_MS, 220)
+          ) {
+            /* ne pas return — on affine avec la course + fallback précis */
+          }
+
+          /** Prefetch splash + promesse « fast » démarrée au montage : premier fix valide gagne. */
+          const raceQuickHomePosition = (): Promise<{ lat: number; lng: number; ts: number } | null> =>
+            new Promise((resolve) => {
+              let settled = false;
+              const finish = (p: { lat: number; lng: number; ts: number }) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(safetyTimer);
+                resolve(p);
+              };
+              void waitForPrefetchedHomeMapPosition(800).then((latePref) => {
+                if (latePref) finish(latePref);
+              });
+              const pFast = homeFastGeoPromiseRef.current;
+              if (pFast) {
+                void pFast
+                  .then((pos) => {
+                    if (pos) finish({ lat: pos.lat, lng: pos.lng, ts: Date.now() });
+                  })
+                  .catch(() => {});
+              }
+              const safetyTimer = setTimeout(() => {
+                if (!settled) {
+                  settled = true;
+                  resolve(null);
+                }
+              }, 4000);
+            });
+
+          void raceQuickHomePosition().then((quick) => {
             if (cancelled || !map.current) return;
-            if (latePref != null && applyFreshPref(latePref)) {
+            if (quick != null && applyHomePosition(quick, HOME_MAP_GEO_CACHE_MAX_AGE_MS, 280)) {
+              persistHomeMapPosition(quick);
               return;
             }
             console.log('🗺️ Début tentative géolocalisation');
@@ -1129,7 +1190,8 @@ export const InteractiveMap = ({
                 console.log('🗺️ Position reçue dans InteractiveMap:', position);
                 if (position) {
                   setUserLocation(position);
-                  easeToUserWithChrome(position.lng, position.lat, HOME_MAP_USER_ZOOM, 700);
+                  easeToUserWithChrome(position.lng, position.lat, HOME_MAP_USER_ZOOM, 620);
+                  persistHomeMapPosition(position);
                   console.log('✅ Carte centrée sur position utilisateur:', position);
                 } else {
                   throw new Error('No position returned');
@@ -1493,8 +1555,13 @@ export const InteractiveMap = ({
     if (!map.current) return;
     console.log("🗺️ handleLocateMe");
     try {
-      const position = await getCurrentPosition();
+      let position = await getCurrentPosition(0, { mode: 'fast' });
+      if (!position) {
+        position = await getCurrentPosition();
+      }
       if (position) {
+        setUserLocation(position);
+        persistHomeMapPosition(position);
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const m = map.current;
@@ -1507,7 +1574,7 @@ export const InteractiveMap = ({
               center: [position.lng, position.lat],
               zoom: 16,
               padding,
-              duration: 900,
+              duration: 620,
               essential: true,
             });
           });

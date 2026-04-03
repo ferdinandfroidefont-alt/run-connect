@@ -514,9 +514,10 @@ export const FollowDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        hideCloseButton 
+      <DialogContent
+        hideCloseButton
         fullScreen
+        stackNested
         className="flex flex-col gap-0 overflow-hidden bg-secondary p-0"
       >
         {/* iOS Header */}

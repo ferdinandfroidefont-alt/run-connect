@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -93,6 +94,9 @@ const detectNativeImmediately = () => {
 
 // ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
+
+/** Géoloc accueil en parallèle du splash / React — cache OS + persistance locale au maximum tôt. */
+primeHomeMapAtAppEntry();
 
 // 🍎 Marges « Réglages » resserrées : variante Tailwind `ios-shell:` (évite de toucher au navigateur desktop étroit)
 if (typeof document !== 'undefined' && isIosAppShell()) {

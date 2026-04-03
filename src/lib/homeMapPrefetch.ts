@@ -4,6 +4,52 @@ export type PrefetchedHomeMapPosition = {
   ts: number;
 };
 
+/** Âge max accepté pour un fix « instantané » depuis le cache OS (évite valeurs absurdes côté natif). */
+export const HOME_MAP_GEO_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Prefetch mémoire (splash) : au-delà, on considère le point trop vieux pour un seul flux sans rafraîchir. */
+export const HOME_HOT_PREFETCH_MAX_AGE_MS = 45_000;
+
+const LAST_HOME_GEO_STORAGE_KEY = 'runconnect_last_home_geo_v1';
+
+function isValidCoord(lat: number, lng: number): boolean {
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+/**
+ * Dernière position carte d’accueil connue (localStorage, appareil uniquement).
+ * Permet un centre / marqueur immédiat avant tout appel géoloc.
+ */
+export function getPersistedHomeMapPosition(): PrefetchedHomeMapPosition | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(LAST_HOME_GEO_STORAGE_KEY);
+    if (!raw) return null;
+    const o = JSON.parse(raw) as { lat?: unknown; lng?: unknown; ts?: unknown };
+    const lat = Number(o.lat);
+    const lng = Number(o.lng);
+    const ts = Number(o.ts);
+    if (!isValidCoord(lat, lng) || !Number.isFinite(ts)) return null;
+    if (Date.now() - ts > HOME_MAP_GEO_CACHE_MAX_AGE_MS) return null;
+    return { lat, lng, ts };
+  } catch {
+    return null;
+  }
+}
+
+export function persistHomeMapPosition(p: { lat: number; lng: number }): void {
+  if (typeof localStorage === 'undefined') return;
+  if (!isValidCoord(p.lat, p.lng)) return;
+  try {
+    localStorage.setItem(
+      LAST_HOME_GEO_STORAGE_KEY,
+      JSON.stringify({ lat: p.lat, lng: p.lng, ts: Date.now() }),
+    );
+  } catch {
+    /* quota / mode privé */
+  }
+}
+
 /** Vrai dès que le splash a lancé le prefetch — évite d’attendre inutilement sur l’écran carte. */
 let geoPrefetchStarted = false;
 /** Position résolue pendant le splash (lue une fois par InteractiveMap). */
@@ -25,14 +71,16 @@ async function startGeolocationPrefetch(): Promise<void> {
       }
       const pos = await Geolocation.getCurrentPosition({
         enableHighAccuracy: false,
-        timeout: 12_000,
-        maximumAge: 600_000,
+        timeout: 5_000,
+        maximumAge: HOME_MAP_GEO_CACHE_MAX_AGE_MS,
       });
-      positionPrefetched = {
+      const row: PrefetchedHomeMapPosition = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         ts: Date.now(),
       };
+      positionPrefetched = row;
+      persistHomeMapPosition(row);
       return;
     }
 
@@ -43,15 +91,17 @@ async function startGeolocationPrefetch(): Promise<void> {
     await new Promise<void>((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (p) => {
-          positionPrefetched = {
+          const row: PrefetchedHomeMapPosition = {
             lat: p.coords.latitude,
             lng: p.coords.longitude,
             ts: Date.now(),
           };
+          positionPrefetched = row;
+          persistHomeMapPosition(row);
           resolve();
         },
         () => resolve(),
-        { enableHighAccuracy: false, timeout: 12_000, maximumAge: 300_000 },
+        { enableHighAccuracy: false, timeout: 5_000, maximumAge: HOME_MAP_GEO_CACHE_MAX_AGE_MS },
       );
     });
   } catch {
@@ -70,6 +120,11 @@ export function primeHomeMapDuringSplash(): void {
   }
 }
 
+/** Dès le chargement du bundle — avant React — pour maximiser le chevauchement avec le splash / le routeur. */
+export function primeHomeMapAtAppEntry(): void {
+  primeHomeMapDuringSplash();
+}
+
 /**
  * Si la géoloc du splash est déjà arrivée, la consomme tout de suite (sans attente).
  * Permet d’initialiser Mapbox immédiatement au bon centre sans bloquer sur une boucle d’attente.
@@ -81,7 +136,7 @@ export function takePrefetchedHomeMapPositionIfReady(): PrefetchedHomeMapPositio
   return p;
 }
 
-const GEO_WAIT_STEP_MS = 45;
+const GEO_WAIT_STEP_MS = 4;
 
 /**
  * Attend que la géoloc du splash arrive (ou timeout) pour éviter la course splash → carte InteractiveMap.
