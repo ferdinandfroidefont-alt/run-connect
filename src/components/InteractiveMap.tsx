@@ -2061,7 +2061,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+4.75rem)]",
+          "bottom-[calc(var(--layout-bottom-inset)+4.75rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
