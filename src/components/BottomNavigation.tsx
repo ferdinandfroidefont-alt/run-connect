@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, Trophy, GraduationCap } from "lucide-react";
+import { Map, Calendar, MessageCircle, LayoutList, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -40,7 +40,13 @@ export const BottomNavigation = () => {
 
   const navItems = useMemo<NavItem[]>(
     () => [
-      { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
+      {
+        path: "/",
+        icon: Map,
+        label: t("navigation.map"),
+        tutorialId: "nav-map",
+        isActive: (p) => p === "/",
+      },
       {
         path: "/my-sessions",
         icon: Calendar,
@@ -57,11 +63,11 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/leaderboard",
-        icon: Trophy,
-        label: t("navigation.leaderboard") || "Classement",
-        tutorialId: "nav-leaderboard",
-        isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
+        path: "/feed",
+        icon: LayoutList,
+        label: t("navigation.feed"),
+        tutorialId: "nav-feed",
+        isActive: (p) => p === "/feed" || p.startsWith("/feed/"),
       },
       {
         path: "/coaching",
@@ -148,8 +154,8 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[100] w-full shrink-0 border-t border-border/80 bg-card",
-        "dark:border-border dark:bg-card dark:backdrop-blur-none",
+        "relative z-[100] w-full shrink-0 border-t border-border bg-background",
+        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
       role="navigation"
@@ -200,14 +206,14 @@ export const BottomNavigation = () => {
                     aria-hidden
                   />
                   {showBadge && (
-                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-card bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-sm">
+                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
                       {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                     </span>
                   )}
                 </div>
                 <span
                   className={cn(
-                    "w-full truncate text-center font-display text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
+                    "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
                     isActive
                       ? "font-semibold text-primary"
                       : "font-medium text-muted-foreground dark:text-tab-icon-inactive"

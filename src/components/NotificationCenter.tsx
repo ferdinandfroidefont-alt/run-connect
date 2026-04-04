@@ -739,7 +739,7 @@ export const NotificationCenter = ({
                     handleOpenProfilePreview(userId);
                   }
                 }}>
-                          {notification.type === 'follow_request' ? <UserPlus className="h-5 w-5 text-primary" strokeWidth={2} /> : notification.type === 'follow_accepted' ? <UserCheck className="h-5 w-5 text-muted-foreground" strokeWidth={2} /> : notification.type === 'club_invitation' ? <UserPlus className="h-5 w-5 text-muted-foreground" strokeWidth={2} /> : <User className="h-5 w-5 text-muted-foreground" strokeWidth={2} />}
+                          {notification.type === 'follow_request' ? <UserPlus className="h-5 w-5 text-primary" /> : notification.type === 'follow_accepted' ? <UserCheck className="h-5 w-5 text-green-600" /> : notification.type === 'club_invitation' ? <UserPlus className="h-5 w-5 text-blue-600" /> : <User className="h-5 w-5 text-primary" />}
                         </div>}
                      
                      <div className="min-w-0 flex-1 max-w-full overflow-hidden pr-0 sm:pr-2">

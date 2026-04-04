@@ -2,7 +2,6 @@ import { Settings } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
@@ -27,7 +26,6 @@ export const FeedHeader = ({
   onModeChange,
 }: FeedHeaderProps) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
     avatar_url: null,
     username: null,
@@ -52,15 +50,11 @@ export const FeedHeader = ({
 
   return (
     <header className="shrink-0 bg-white dark:bg-black pt-[var(--safe-area-top)]">
-      {/* Top row: RunConnect + centered avatar + bell + settings */}
+      {/* Top row: marque (non cliquable) + avatar + cloche + réglages */}
       <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
-        >
+        <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
           RunConnect
-        </button>
+        </span>
 
         {/* Centered profile avatar */}
         {profile && (

@@ -111,16 +111,16 @@ export const FeedCard = ({
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Avatar className="h-11 w-11 shrink-0 ring-1 ring-border/60">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
             <AvatarImage src={session.organizer.avatar_url} />
-            <AvatarFallback className="bg-muted text-[15px] font-semibold text-foreground">
+            <AvatarFallback className="bg-secondary text-[15px] font-medium">
               {session.organizer.username[0]?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0">
-            <p className="truncate font-display text-[16px] font-semibold tracking-tight">@{session.organizer.username}</p>
+          <div>
+            <p className="font-semibold text-[15px]">@{session.organizer.username}</p>
             <p className="text-[13px] text-muted-foreground">
               {formatDistanceToNow(new Date(session.created_at), {
                 addSuffix: true,
@@ -137,17 +137,16 @@ export const FeedCard = ({
             variant="compact"
             size="sm"
           />
-          <span className="rounded-full border border-border/80 bg-muted/40 px-3 py-1 font-display text-[12px] font-semibold tracking-tight text-muted-foreground">
+          <span className="text-[13px] font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
             {activityLabel}
           </span>
         </div>
       </div>
 
       {/* Content */}
-      <div className="space-y-4 px-5 pb-5">
-        <h3 className="font-display text-xl font-semibold leading-snug tracking-tight text-foreground">
-          {session.title}
-        </h3>
+      <div className="px-4 pb-3 space-y-3">
+        {/* Title */}
+        <h3 className="font-semibold text-[17px] leading-tight">{session.title}</h3>
 
         {/* Description */}
         {session.description && (
@@ -172,14 +171,12 @@ export const FeedCard = ({
         </div>
 
         {/* Date/Time */}
-        <div
-          className={`flex items-center gap-3 rounded-ios-md border border-border/60 px-4 py-3 ${
-            isUpcoming ? "bg-primary/[0.07]" : "bg-muted/35"
-          }`}
-        >
-          <Calendar className={`h-5 w-5 shrink-0 ${isUpcoming ? "text-primary" : "text-muted-foreground"}`} strokeWidth={2} />
+        <div className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 ${
+          isUpcoming ? 'bg-primary/5' : 'bg-secondary'
+        }`}>
+          <Calendar className="h-5 w-5 text-primary" />
           <div className="flex-1">
-            <p className="font-display text-[16px] font-semibold tracking-tight">
+            <p className="font-medium text-[15px]">
               {format(scheduledDate, "EEEE d MMMM", { locale: fr })}
             </p>
             <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">

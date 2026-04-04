@@ -57,12 +57,12 @@ const getSessionDotColor = (s: CoachingSession): string => {
   const obj = (s.objective || "").toLowerCase();
   const title = (s.title || "").toLowerCase();
   if (obj.includes("vma") || obj.includes("interval") || title.includes("vma") || title.includes("fractionné"))
-    return "bg-primary";
+    return "bg-red-500";
   if (obj.includes("récup") || obj.includes("recup") || title.includes("récup"))
-    return "bg-muted-foreground/45";
+    return "bg-blue-500";
   if (obj.includes("seuil") || title.includes("seuil"))
-    return "bg-primary/70";
-  return "bg-foreground/30";
+    return "bg-orange-500";
+  return "bg-green-500"; // EF / default
 };
 
 export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
@@ -235,10 +235,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   }
 
   const tools = [
-    { icon: FileText, label: "Brouillons", iconWrap: "bg-primary/12 text-primary", onClick: () => setShowDrafts(true) },
-    { icon: CalendarDays, label: "Plan hebdo", iconWrap: "bg-primary/12 text-primary", onClick: () => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); } },
-    { icon: Users, label: "Groupes", iconWrap: "bg-muted/60 text-foreground", onClick: () => setShowGroups(true) },
-    { icon: BarChart3, label: "Suivi", iconWrap: "bg-muted/60 text-foreground", onClick: () => setShowTracking(true) },
+    { icon: FileText, label: "Brouillons", iconWrap: "bg-primary/15 text-primary", onClick: () => setShowDrafts(true) },
+    { icon: CalendarDays, label: "Plan hebdo", iconWrap: "bg-blue-500/15 text-blue-600 dark:text-blue-400", onClick: () => { setDraftInitialWeek(undefined); setDraftInitialGroup(undefined); setShowWeeklyPlan(true); } },
+    { icon: Users, label: "Groupes", iconWrap: "bg-orange-500/15 text-orange-600 dark:text-orange-400", onClick: () => setShowGroups(true) },
+    { icon: BarChart3, label: "Suivi", iconWrap: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", onClick: () => setShowTracking(true) },
   ];
 
   return (
@@ -303,21 +303,21 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
               {/* Segmented progress bar */}
               <div className="space-y-1.5">
                 <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-muted/50">
-                  {segmentProportions.volume > 0 && <div className="rounded-full bg-foreground/25 transition-all" style={{ width: `${segmentProportions.volume}%` }} />}
-                  {segmentProportions.intensity > 0 && <div className="rounded-full bg-primary transition-all" style={{ width: `${segmentProportions.intensity}%` }} />}
-                  {segmentProportions.recovery > 0 && <div className="rounded-full bg-muted-foreground/40 transition-all" style={{ width: `${segmentProportions.recovery}%` }} />}
+                  {segmentProportions.volume > 0 && <div className="bg-green-500 rounded-full transition-all" style={{ width: `${segmentProportions.volume}%` }} />}
+                  {segmentProportions.intensity > 0 && <div className="bg-orange-500 rounded-full transition-all" style={{ width: `${segmentProportions.intensity}%` }} />}
+                  {segmentProportions.recovery > 0 && <div className="bg-blue-500 rounded-full transition-all" style={{ width: `${segmentProportions.recovery}%` }} />}
                 </div>
                 <div className="flex justify-between px-0.5 text-[10px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/25" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
                     Volume
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
                     Intensité
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
                     Récup
                   </span>
                 </div>
@@ -347,6 +347,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           <IOSListGroup className="ios-card mb-0 border border-border/60 shadow-[var(--shadow-card)]">
             <IOSListItem
               icon={BookOpen}
+              iconBgColor="bg-purple-500"
               title="Modèles de séances"
               onClick={() => setShowTemplates(true)}
               showSeparator={false}

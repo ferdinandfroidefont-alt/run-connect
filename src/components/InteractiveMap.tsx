@@ -7,7 +7,6 @@ import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
-import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -18,9 +17,8 @@ import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, PenLine } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, PenLine, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -60,14 +58,8 @@ import {
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 
-const NotificationCenter = lazy(() =>
-  import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
-);
 const SettingsDialog = lazy(() =>
   import('./SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
-);
-const ProfileDialog = lazy(() =>
-  import('./ProfileDialog').then((m) => ({ default: m.ProfileDialog }))
 );
 const UserSessionsDialog = lazy(() =>
   import('./UserSessionsDialog').then((m) => ({ default: m.UserSessionsDialog }))
@@ -337,11 +329,6 @@ export const InteractiveMap = ({
     level: null
   });
   const [mapboxMap, setMapboxMap] = useState<mapboxgl.Map | null>(null);
-  const [userProfile, setUserProfile] = useState<{
-    username: string;
-    display_name: string;
-    avatar_url: string | null;
-  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   /** Incrémenté à chaque `createMarkers` pour ignorer les invocations async obsolètes (courses au clavier). */
   const markersRunIdRef = useRef(0);
@@ -351,7 +338,6 @@ export const InteractiveMap = ({
   const homeMapTopStackRef = useRef<HTMLDivElement>(null);
   const homeMapFiltersRef = useRef<HTMLDivElement>(null);
   const [isUserSessionsOpen, setIsUserSessionsOpen] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
 
@@ -549,19 +535,6 @@ export const InteractiveMap = ({
       { replace: true },
     );
   }, [isActive, searchParams, setSearchParams]);
-
-  // Load user profile
-  useEffect(() => {
-    if (user) {
-      const loadUserProfile = async () => {
-        const {
-          data: profile
-        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', user.id).single();
-        setUserProfile(profile);
-      };
-      loadUserProfile();
-    }
-  }, [user]);
 
   // Function to mark a session as new with 5 second pulse animation
   const markSessionAsNew = (sessionId: string) => {
@@ -1689,97 +1662,14 @@ export const InteractiveMap = ({
           ref={homeMapTopStackRef}
           className="pointer-events-none absolute left-0 right-0 top-0 z-[30]"
         >
-          {/*
-            Une seule couche d’inset : le header intègre la safe-area.
-            (StatusBar overlay: false → bande h-[safe-area] + pt header doublait la zone système.)
-          */}
-          <header
+          {/* Carte : uniquement recherche + carrousel filtres (profil / notif / réglages via l’onglet Accueil) */}
+          <div
             className={cn(
-              "pointer-events-auto relative shrink-0 bg-white dark:bg-black",
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
+              "pointer-events-none relative z-[35] box-border w-full px-4 pb-1.5 pt-[var(--safe-area-top)]",
+              "bg-white dark:bg-black",
+              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[20px] after:bg-gradient-to-b after:from-white after:to-transparent dark:after:from-black dark:after:to-transparent",
             )}
           >
-            {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
-            <div className="relative z-[1] pt-[var(--safe-area-top)]">
-              <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate("/feed")}
-                  className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
-                  data-tutorial="runconnect-toggle"
-                >
-                  RunConnect
-                </button>
-
-                {userProfile && (
-                  <div
-                    className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
-                    data-tutorial="profile-avatar"
-                  >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setShowProfileDialog(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setShowProfileDialog(true);
-                        }
-                      }}
-                      className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
-                    >
-                      <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
-                        <AvatarImage
-                          src={userProfile.avatar_url || undefined}
-                          alt={userProfile.username || userProfile.display_name}
-                          className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
-                        />
-                        <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
-                          {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user && (
-                        <div className="absolute -bottom-1 -right-1 scale-75">
-                          <StreakBadge userId={user.id} variant="compact" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                    <Suspense
-                      fallback={
-                        <div
-                          className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
-                          aria-hidden
-                        />
-                      }
-                    >
-                      <NotificationCenter onSessionUpdated={loadSessions} />
-                    </Suspense>
-                  </div>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
-                      "border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
-                      "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
-                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    )}
-                    aria-label="Paramètres"
-                    onClick={() => setShowSettingsDialog(true)}
-                  >
-                    <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Recherche + filtres : même gouttière que la pile FAB (left-4 / px-4), pleine largeur entre marges — pas de max-w qui décale le centre */}
-          <div className="pointer-events-none relative z-[35] box-border w-full -mt-[6px] px-4 pb-1.5 sm:-mt-2">
             <div className="pointer-events-auto relative z-[36] min-w-0 w-full max-w-full">
               {/*
                 Ancêtre positionné limité à la barre de recherche + liste : sinon top-[100%] du dropdown
@@ -2184,6 +2074,16 @@ export const InteractiveMap = ({
         >
           <button
             type="button"
+            title="Classement"
+            aria-label="Classement"
+            onClick={() => navigate("/leaderboard")}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <Trophy className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <button
+            type="button"
             title="Créer un itinéraire"
             aria-label="Créer un itinéraire"
             onClick={() => navigate("/route-create")}
@@ -2278,12 +2178,6 @@ export const InteractiveMap = ({
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <Suspense fallback={null}>
-      <Suspense fallback={null}>
-        <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
-      </Suspense>
-      </Suspense>
-
       <Suspense fallback={null}>
       <Suspense fallback={null}>
         <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />

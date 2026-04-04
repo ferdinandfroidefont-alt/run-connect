@@ -49,10 +49,10 @@ interface SessionBlockProps {
 }
 
 const BLOCK_CONFIG: Record<BlockType, { icon: React.ElementType; label: string; bgColor: string; iconColor: string }> = {
-  warmup: { icon: Flame, label: 'Échauffement', bgColor: 'bg-muted/40', iconColor: 'text-foreground' },
-  interval: { icon: Zap, label: 'Série / Fractionné', bgColor: 'bg-primary/[0.09]', iconColor: 'text-primary' },
-  steady: { icon: Activity, label: 'Bloc constant', bgColor: 'bg-muted/40', iconColor: 'text-foreground' },
-  cooldown: { icon: Snowflake, label: 'Retour au calme', bgColor: 'bg-muted/40', iconColor: 'text-foreground' },
+  warmup: { icon: Flame, label: 'Échauffement', bgColor: 'bg-green-500/10', iconColor: 'text-green-500' },
+  interval: { icon: Zap, label: 'Série / Fractionné', bgColor: 'bg-orange-500/10', iconColor: 'text-orange-500' },
+  steady: { icon: Activity, label: 'Bloc constant', bgColor: 'bg-blue-500/10', iconColor: 'text-blue-500' },
+  cooldown: { icon: Snowflake, label: 'Retour au calme', bgColor: 'bg-purple-500/10', iconColor: 'text-purple-500' },
 };
 
 export const SessionBlockComponent: React.FC<SessionBlockProps> = ({

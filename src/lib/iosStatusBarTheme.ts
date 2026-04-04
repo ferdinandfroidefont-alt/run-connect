@@ -25,8 +25,8 @@ export function getPreferredDarkFromStorage(): boolean {
   }
 }
 
-/** Couleur native de la barre d’état (hors contenu Web), mode clair — alignée sur --background chaud */
-const STATUS_BAR_LIGHT = '#F7F5EF';
+/** Couleur native de la barre d’état (hors contenu Web), mode clair */
+const STATUS_BAR_LIGHT = '#FFFFFF';
 
 /**
  * Triplet Shadcn/Tailwind `H S% L%` → hex #RRGGBB (sRGB) pour les plugins natifs.

@@ -11,12 +11,6 @@ export function getDefaultOnboardingSteps(t: (key: string) => string): TutorialS
       disableBeacon: true,
     },
     {
-      target: '[data-tutorial="runconnect-toggle"]',
-      title: t("tutorial.runconnectTitle"),
-      content: t("tutorial.runconnectContent"),
-      placement: "bottom",
-    },
-    {
       target: '[data-tutorial="create-session"]',
       title: t("tutorial.createTitle"),
       content: t("tutorial.createContent"),

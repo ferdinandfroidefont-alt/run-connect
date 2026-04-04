@@ -653,36 +653,48 @@ export const ProfileDialog = ({
                   >
                     <IOSListItem
                       icon={User}
+                      iconBgColor="bg-blue-500"
+                      iconColor="text-white"
                       title="Pseudo"
                       value={profile?.username || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       icon={User}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
                       title="Nom"
                       value={profile?.display_name || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       icon={Calendar}
+                      iconBgColor="bg-pink-500"
+                      iconColor="text-white"
                       title="Âge"
                       value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       icon={Heart}
+                      iconBgColor="bg-green-500"
+                      iconColor="text-white"
                       title="Téléphone"
                       value={profile?.phone || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       icon={Footprints}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
                       title="Sport favori"
                       value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
                       showChevron={false}
                     />
                     <IOSListItem
                       icon={Globe}
+                      iconBgColor="bg-indigo-500"
+                      iconColor="text-white"
                       title="Pays"
                       value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
                       showChevron={false}
@@ -697,21 +709,29 @@ export const ProfileDialog = ({
                   >
                     <IOSListItem
                       icon={Route}
+                      iconBgColor="bg-teal-500"
+                      iconColor="text-white"
                       title="Mes séances et itinéraires"
                       onClick={() => { onOpenChange(false); navigate('/my-sessions'); }}
                     />
                     <IOSListItem
                       icon={MapPin}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
                       title="Créer un parcours"
                       onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
                     />
                     <IOSListItem
                       icon={User}
+                      iconBgColor="bg-gray-500"
+                      iconColor="text-white"
                       title="Paramètres"
                       onClick={() => setShowSettingsDialog(true)}
                     />
                     <IOSListItem
                       icon={Shield}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
                       title="Modifier mon profil"
                       onClick={() => setIsEditing(true)}
                       showSeparator={false}

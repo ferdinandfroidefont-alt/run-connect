@@ -32,6 +32,8 @@ const VISIBILITY_OPTIONS = [
     label: 'Amis uniquement',
     description: 'Visible par vos amis',
     icon: Users,
+    color: 'bg-green-500',
+    iconColor: 'text-green-500',
     recommended: true,
     premium: false,
   },
@@ -40,6 +42,8 @@ const VISIBILITY_OPTIONS = [
     label: 'Club',
     description: 'Visible par les membres du club',
     icon: Building2,
+    color: 'bg-blue-500',
+    iconColor: 'text-blue-500',
     recommended: false,
     premium: false,
   },
@@ -48,6 +52,8 @@ const VISIBILITY_OPTIONS = [
     label: 'Tout le monde',
     description: 'Visible dans Découvrir',
     icon: Globe,
+    color: 'bg-orange-500',
+    iconColor: 'text-orange-500',
     recommended: false,
     premium: true,
   },
@@ -181,8 +187,12 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
                 isSelected && "bg-primary/5"
               )}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/70 bg-muted/35">
-                <option.icon className="h-5 w-5 text-foreground" strokeWidth={2} />
+              {/* Icon */}
+              <div className={cn(
+                "w-9 h-9 rounded-lg flex items-center justify-center",
+                option.color + "/10"
+              )}>
+                <option.icon className={cn("w-5 h-5", option.iconColor)} />
               </div>
 
               {/* Content */}
@@ -195,13 +205,13 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
                     {option.label}
                   </span>
                   {option.recommended && (
-                    <Badge variant="secondary" className="border-0 bg-primary/12 px-1.5 py-0 text-[10px] text-primary">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-green-500/10 text-green-600 border-0">
                       Recommandé
                     </Badge>
                   )}
                   {option.premium && !isPremium && (
-                    <Badge variant="secondary" className="flex items-center gap-0.5 border-0 bg-muted px-1.5 py-0 text-[10px] text-muted-foreground">
-                      <Crown className="h-2.5 w-2.5 text-primary" strokeWidth={2} />
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-600 border-0 flex items-center gap-0.5">
+                      <Crown className="w-2.5 h-2.5" />
                       Premium
                     </Badge>
                   )}

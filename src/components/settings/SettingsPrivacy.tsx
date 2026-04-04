@@ -131,8 +131,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               {/* RGPD */}
               <AlertDialog>
                 <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                  <div className="ios-list-row-icon-neutral">
-                    <FileText className="h-[18px] w-[18px] text-foreground" />
+                  <div className="ios-list-row-icon bg-[#34C759]">
+                    <FileText className="h-[18px] w-[18px] text-white" />
                   </div>
                   <div className="flex-1">
                     <p className="text-[15px] font-medium">RGPD / Données personnelles</p>
@@ -173,8 +173,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               {/* Security Rules */}
               <AlertDialog>
                 <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                  <div className="ios-list-row-icon-neutral">
-                    <Shield className="h-[18px] w-[18px] text-foreground" />
+                  <div className="ios-list-row-icon bg-[#007AFF]">
+                    <Shield className="h-[18px] w-[18px] text-white" />
                   </div>
                   <div className="flex-1">
                     <p className="text-[15px] font-medium">Règles de sécurité</p>
@@ -219,8 +219,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
             </h3>
             <div className="bg-card overflow-hidden">
               <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                <div className="ios-list-row-icon-neutral">
-                  <BarChart3 className="h-[18px] w-[18px] text-foreground" />
+                <div className="ios-list-row-icon bg-[#AF52DE]">
+                  <BarChart3 className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium">Analytics</p>
@@ -261,8 +261,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                 }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon-neutral">
-                  <Scale className="h-[18px] w-[18px] text-foreground" />
+                <div className="ios-list-row-icon bg-[#FF9500]">
+                  <Scale className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">Mentions légales</p>
@@ -281,8 +281,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                 }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon-neutral">
-                  <Info className="h-[18px] w-[18px] text-foreground" />
+                <div className="ios-list-row-icon bg-[#8E8E93]">
+                  <Info className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">Politique de confidentialité</p>
@@ -303,8 +303,8 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <button className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors">
-                      <div className="ios-list-row-icon-neutral">
-                        <Shield className="h-[18px] w-[18px] text-foreground" />
+                      <div className="ios-list-row-icon bg-[#FF3B30]">
+                        <Shield className="h-[18px] w-[18px] text-white" />
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-[15px] font-medium text-destructive">Révoquer mon consentement</p>

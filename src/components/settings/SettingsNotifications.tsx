@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { PushDiagnosticPanel } from "./PushDiagnosticPanel";
+import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
@@ -105,13 +106,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const notificationItems = [
-    { key: 'notif_follow_request', icon: Users, label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
-    { key: 'notif_message', icon: MessageCircle, label: 'Messages', desc: 'Nouveaux messages reçus' },
-    { key: 'notif_session_request', icon: Play, label: 'Demandes de session', desc: 'Demandes de participation' },
-    { key: 'notif_friend_session', icon: Users, label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
-    { key: 'notif_club_invitation', icon: Users, label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
-    { key: 'notif_session_accepted', icon: CheckCircle, label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
-    { key: 'notif_presence_confirmed', icon: UserCheck, label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
+    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
+    { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
+    { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
+    { key: 'notif_friend_session', icon: Users, color: 'bg-violet-500', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
+    { key: 'notif_club_invitation', icon: Users, color: 'bg-destructive', label: 'Invitations de club', desc: 'Invitations à rejoindre un club' },
+    { key: 'notif_session_accepted', icon: CheckCircle, color: 'bg-green-500', label: 'Participants acceptés', desc: 'Quelqu\'un rejoint votre session' },
+    { key: 'notif_presence_confirmed', icon: UserCheck, color: 'bg-primary', label: 'Confirmation de présence', desc: 'L\'organisateur confirme votre présence' },
   ];
 
 
@@ -150,8 +151,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             </h3>
             <div className="bg-card overflow-hidden">
               <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                <div className="ios-list-row-icon-neutral">
-                  <Smartphone className="h-[18px] w-[18px] text-foreground" />
+                <div className="ios-list-row-icon bg-[#FF3B30]">
+                  <Smartphone className="h-[18px] w-[18px] text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium">Notifications push</p>
@@ -168,8 +169,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               {profile?.notifications_enabled === false && (
                 <>
                   <div className="h-px bg-border" />
-                  <div className="bg-primary/[0.08] px-4 py-2.5 ios-shell:px-2.5">
-                    <p className="text-[13px] font-medium text-primary">Les préférences ci-dessous sont inactives</p>
+                  <div className="px-4 ios-shell:px-2.5 py-2.5 bg-orange-500/10">
+                    <p className="text-[13px] text-orange-500">⚠️ Les préférences ci-dessous sont inactives</p>
                   </div>
                 </>
               )}
@@ -200,8 +201,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                     onClick={testNotification}
                     className="flex w-full min-w-0 items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
                   >
-                    <div className="ios-list-row-icon-neutral h-[30px] w-[30px] rounded-[8px]">
-                      <Bug className="h-[18px] w-[18px] text-foreground" strokeWidth={2} />
+                    <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
+                      <Bug className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="text-[15px] font-medium">Tester les notifications</p>
@@ -223,8 +224,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
               {notificationItems.map((item, index) => (
                 <div key={item.key}>
                   <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                    <div className="ios-list-row-icon-neutral">
-                      <item.icon className="h-[18px] w-[18px] text-foreground" strokeWidth={2} />
+                    <div className={cn("ios-list-row-icon", item.color)}>
+                      <item.icon className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

@@ -708,8 +708,8 @@ const Profile = () => {
               </AvatarFallback>
             </Avatar>
             {profile?.is_premium && (
-              <div className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-sm">
-                <span className="text-xs font-bold">✓</span>
+              <div className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-green-500 border-3 border-card flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
               </div>
             )}
             {isEditing && !isViewingOtherUser && (
@@ -751,7 +751,7 @@ const Profile = () => {
                 {profile?.display_name || profile?.username}
               </h2>
               {profile?.is_premium && (
-                <Crown className="h-4 w-4 text-primary" strokeWidth={2} />
+                <Crown className="h-4 w-4 text-yellow-500" />
               )}
             </div>
 
@@ -823,6 +823,8 @@ const Profile = () => {
           >
             <IOSListItem
               icon={Route}
+              iconBgColor="bg-teal-500"
+              iconColor="text-white"
               title={!isViewingOtherUser ? 'Mes séances et itinéraires' : 'Ses séances et itinéraires'}
               onClick={() => navigate(!isViewingOtherUser ? '/my-sessions' : `/my-sessions?user=${viewingUserId}`)}
               showSeparator={!isViewingOtherUser}
@@ -830,6 +832,8 @@ const Profile = () => {
             {!isViewingOtherUser && (
               <IOSListItem
                 icon={MapPin}
+                iconBgColor="bg-purple-500"
+                iconColor="text-white"
                 title="Créer un parcours"
                 onClick={() => navigate('/route-creation')}
                 showSeparator={false}
