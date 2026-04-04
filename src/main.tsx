@@ -1,13 +1,8 @@
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
 import './index.css'
 import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { isIosAppShell } from '@/lib/iosAppShell'
-import { LanguageProvider } from "./contexts/LanguageContext";
-import { UserProfileProvider } from "@/contexts/UserProfileContext";
-import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
-import { AuthProvider } from "@/hooks/useAuth";
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
@@ -157,14 +152,63 @@ const initializeCapacitorPlugins = async () => {
 // Lancer l'initialisation des plugins en arrière-plan
 initializeCapacitorPlugins();
 
-// ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
-const rootElement = document.getElementById("root");
-if (!rootElement) {
-  console.error("[main] Élément #root introuvable — impossible de monter React.");
-  document.body.innerHTML =
-    '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur de démarrage : interface introuvable. Réinstallez ou rechargez l’application.</p>';
-} else {
+function formatBootError(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string') return error;
   try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Erreur inconnue';
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function renderBootError(rootElement: HTMLElement, message: string) {
+  const safeMessage = escapeHtml(message);
+  rootElement.innerHTML = `
+    <div style="min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#111318;color:#f5f7ff;font-family:Inter,system-ui,sans-serif;text-align:center">
+      <div style="max-width:420px">
+        <h1 style="margin:0 0 12px;font-size:20px;font-weight:700">Impossible de lancer RunConnect</h1>
+        <p style="margin:0 0 10px;color:#c7cfdd;line-height:1.5">L'application a rencontré une erreur pendant le démarrage. Recharge la page ou vérifie la configuration web.</p>
+        <pre style="margin:0 0 18px;padding:12px;border-radius:12px;background:#1a1d24;color:#9fb2ff;white-space:pre-wrap;word-break:break-word;text-align:left;font-size:12px;line-height:1.45">${safeMessage}</pre>
+        <button type="button" onclick="window.location.reload()" style="border:0;border-radius:12px;padding:12px 16px;background:#2E68FF;color:white;font-weight:600;cursor:pointer">Recharger l'application</button>
+      </div>
+    </div>
+  `;
+}
+
+window.addEventListener('error', (event) => {
+  console.error('[main] Uncaught error before/after boot:', event.error ?? event.message);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[main] Unhandled promise rejection:', event.reason);
+});
+
+async function bootstrapApp(rootElement: HTMLElement) {
+  try {
+    const [
+      { default: App },
+      { AuthProvider },
+      { UserProfileProvider },
+      { DistanceUnitsProvider },
+      { LanguageProvider },
+    ] = await Promise.all([
+      import('./App.tsx'),
+      import('@/hooks/useAuth'),
+      import('@/contexts/UserProfileContext'),
+      import('@/contexts/DistanceUnitsContext'),
+      import('./contexts/LanguageContext'),
+    ]);
+
     createRoot(rootElement).render(
       <AuthProvider>
         <UserProfileProvider>
@@ -177,10 +221,20 @@ if (!rootElement) {
       </AuthProvider>
     );
   } catch (bootErr) {
-    console.error("[main] Échec du render initial:", bootErr);
-    rootElement.innerHTML =
-      '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur au lancement. Fermez et rouvrez l’application ou videz le cache.</p>';
+    const message = formatBootError(bootErr);
+    console.error("[main] Échec du bootstrap applicatif:", bootErr);
+    renderBootError(rootElement, message);
   }
+}
+
+// ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  console.error("[main] Élément #root introuvable — impossible de monter React.");
+  document.body.innerHTML =
+    '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur de démarrage : interface introuvable. Réinstallez ou rechargez l’application.</p>';
+} else {
+  void bootstrapApp(rootElement);
 }
 
 // ✅ NIVEAU 28: Marquer que React est chargé
