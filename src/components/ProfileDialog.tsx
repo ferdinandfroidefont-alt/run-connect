@@ -15,6 +15,8 @@ import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
+import { COUNTRY_LABELS } from "@/lib/countryLabels";
+
 interface Profile {
   username: string;
   display_name: string | null;
@@ -48,25 +50,6 @@ const SPORT_LABELS: Record<string, string> = {
   triathlon: '🏅 Triathlon',
   walking: '🚶 Marche',
   trail: '⛰️ Trail',
-};
-
-const COUNTRY_LABELS: Record<string, string> = {
-  FR: '🇫🇷 France',
-  BE: '🇧🇪 Belgique',
-  CH: '🇨🇭 Suisse',
-  CA: '🇨🇦 Canada',
-  LU: '🇱🇺 Luxembourg',
-  MA: '🇲🇦 Maroc',
-  TN: '🇹🇳 Tunisie',
-  DZ: '🇩🇿 Algérie',
-  SN: '🇸🇳 Sénégal',
-  CI: "🇨🇮 Côte d'Ivoire",
-  ES: '🇪🇸 Espagne',
-  PT: '🇵🇹 Portugal',
-  DE: '🇩🇪 Allemagne',
-  IT: '🇮🇹 Italie',
-  GB: '🇬🇧 Royaume-Uni',
-  US: '🇺🇸 États-Unis',
 };
 
 interface ProfileDialogProps {

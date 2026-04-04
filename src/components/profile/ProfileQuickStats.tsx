@@ -11,6 +11,8 @@ interface ProfileQuickStatsProps {
   /** Affiche la colonne Fiabilité (ex. profil perso), à côté des abonnés / abonnements */
   reliabilityPercent?: number | null;
   onReliabilityClick?: () => void;
+  /** Profil public / lecture seule : affiche la colonne Fiabilité (connecté), « – » si pas de donnée */
+  showReliabilityColumn?: boolean;
 }
 
 export const ProfileQuickStats = ({
@@ -21,6 +23,7 @@ export const ProfileQuickStats = ({
   onFollowingClick,
   reliabilityPercent,
   onReliabilityClick,
+  showReliabilityColumn,
 }: ProfileQuickStatsProps) => {
   const { formatKm } = useDistanceUnits();
   const [totalActivities, setTotalActivities] = useState(0);
@@ -63,7 +66,10 @@ export const ProfileQuickStats = ({
     }
   };
 
-  const showReliability = typeof onReliabilityClick === "function";
+  const showReliability =
+    showReliabilityColumn === true ||
+    typeof onReliabilityClick === "function" ||
+    (reliabilityPercent != null && !Number.isNaN(Number(reliabilityPercent)));
 
   const stats: {
     value: string | number;

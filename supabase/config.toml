@@ -2,14 +2,12 @@ project_id = "dbptgehpknjsoisirviz"
 
 [api]
 enabled = true
-port = 54321
 schemas = ["public", "storage", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [auth]
 enabled = true
-port = 54324
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 
