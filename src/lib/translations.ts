@@ -1434,8 +1434,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '欢迎来到 RunConnect！',
       mapContent: '这是互动地图，您可以在这里发现周围的体育活动。',
-      runconnectTitle: '切换到动态',
-      runconnectContent: '点击「RunConnect」切换到社区动态。',
+      runconnectTitle: '打开动态面板',
+      runconnectContent: '点击「RunConnect」在地图上方打开社区动态，无需离开地图。',
+      feedSheetScrimAria: '收起动态面板并显示地图',
       createTitle: '创建活动',
       createContent: '点击此按钮组织跑步、骑行或任何其他体育活动。',
       sessionsTitle: '我的活动',
@@ -1619,8 +1620,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'مرحباً بك في RunConnect!',
       mapContent: 'هذه هي الخريطة التفاعلية حيث يمكنك اكتشاف الجلسات الرياضية من حولك.',
-      runconnectTitle: 'التبديل إلى الخلاصة',
-      runconnectContent: 'اضغط على "RunConnect" للتبديل إلى خلاصة المجتمع.',
+      runconnectTitle: 'فتح لوحة الخلاصة',
+      runconnectContent: 'اضغط على "RunConnect" لفتح خلاصة المجتمع فوق الخريطة دون مغادرة الخريطة.',
+      feedSheetScrimAria: 'طيّ لوحة الخلاصة وإظهار الخريطة',
       createTitle: 'إنشاء جلسة',
       createContent: 'اضغط على هذا الزر لتنظيم نشاط الجري أو ركوب الدراجات أو أي نشاط رياضي آخر.',
       sessionsTitle: 'جلساتي',

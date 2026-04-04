@@ -162,7 +162,8 @@ export function HomeFeedBottomSheet() {
       <motion.button
         type="button"
         tabIndex={-1}
-        aria-label={t("tutorial.feedSheetScrimAria")}
+        aria-hidden={snap === 0}
+        aria-label={snap === 0 ? undefined : t("tutorial.feedSheetScrimAria")}
         className={cn(
           "absolute inset-x-0 top-0 border-0 p-0 bg-black/25 dark:bg-black/35",
           snap === 0 ? "pointer-events-none" : "pointer-events-auto cursor-default",
