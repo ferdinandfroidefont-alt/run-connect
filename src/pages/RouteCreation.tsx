@@ -807,15 +807,6 @@ export const RouteCreation = () => {
             </Button>
           </div>
         </div>
-        <div className="flex justify-end border-t border-border/20 px-ios-3 py-1.5">
-          <button
-            type="button"
-            onClick={() => navigate('/itinerary/my-routes')}
-            className="text-[13px] font-medium text-primary active:opacity-70"
-          >
-            Mes itinéraires
-          </button>
-        </div>
       </div>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -845,30 +836,42 @@ export const RouteCreation = () => {
         </div>
       )}
 
-      <div className="absolute left-ios-4 top-ios-4 z-10">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex gap-ios-1">
+      <div className="absolute left-ios-4 right-ios-4 top-ios-4 z-10 flex flex-row items-start justify-between gap-ios-3 pr-14 sm:pr-16">
+        <div className="min-w-0 flex flex-col items-start">
+          <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex gap-ios-1">
+            <Button
+              size="sm"
+              variant={!isManualMode ? 'default' : 'ghost'}
+              onClick={() => (!isManualMode ? null : handleModeToggle())}
+              className={`gap-2 ${!isManualMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'text-muted-foreground'}`}
+            >
+              <Route className="w-4 h-4" />
+              Guidé
+            </Button>
+            <Button
+              size="sm"
+              variant={isManualMode ? 'default' : 'ghost'}
+              onClick={() => (isManualMode ? null : handleModeToggle())}
+              className={`gap-2 ${isManualMode ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-muted-foreground'}`}
+            >
+              <MapPin className="w-4 h-4" />
+              Manuel
+            </Button>
+          </div>
+          <p className="text-ios-footnote text-muted-foreground mt-ios-1 max-w-[min(100%,14rem)] text-left">
+            {isManualMode ? '🛤️ Tracé libre hors-piste' : '🚶 Suit les chemins'}
+          </p>
+        </div>
+        <div className="shrink-0 bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg">
           <Button
             size="sm"
-            variant={!isManualMode ? 'default' : 'ghost'}
-            onClick={() => (!isManualMode ? null : handleModeToggle())}
-            className={`gap-2 ${!isManualMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'text-muted-foreground'}`}
+            variant="ghost"
+            className="gap-2 text-primary font-medium active:opacity-70"
+            onClick={() => navigate('/itinerary/my-routes')}
           >
-            <Route className="w-4 h-4" />
-            Guidé
-          </Button>
-          <Button
-            size="sm"
-            variant={isManualMode ? 'default' : 'ghost'}
-            onClick={() => (isManualMode ? null : handleModeToggle())}
-            className={`gap-2 ${isManualMode ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-muted-foreground'}`}
-          >
-            <MapPin className="w-4 h-4" />
-            Manuel
+            Mes itinéraires
           </Button>
         </div>
-        <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
-          {isManualMode ? '🛤️ Tracé libre hors-piste' : '🚶 Suit les chemins'}
-        </p>
       </div>
 
       <div className="absolute right-ios-4 top-ios-4 flex flex-col gap-ios-2 z-10">
