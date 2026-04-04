@@ -221,9 +221,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bienvenue sur RunConnect !',
       mapContent: 'Voici la carte interactive où vous pouvez découvrir les séances sportives autour de vous.',
-      runconnectTitle: 'Ouvrir le panneau Feed',
+      runconnectTitle: 'Le panneau Feed',
       runconnectContent:
-        'Appuyez sur « RunConnect » pour ouvrir le fil d’actualités par-dessus la carte, sans quitter la carte.',
+        'En bas de l’écran, touchez la barre « Feed » ou faites-la glisser vers le haut : le fil s’ouvre au-dessus de la carte.',
       feedSheetScrimAria: 'Réduire le panneau Feed et afficher la carte',
       createTitle: 'Créer une séance',
       createContent: 'Appuyez sur ce bouton pour organiser une sortie running, vélo ou toute autre activité sportive.',
@@ -570,9 +570,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Welcome to RunConnect!',
       mapContent: 'This is the interactive map where you can discover sports sessions around you.',
-      runconnectTitle: 'Open the feed panel',
+      runconnectTitle: 'The feed panel',
       runconnectContent:
-        'Tap "RunConnect" to open the community feed as a panel over the map — you stay on the map.',
+        'At the bottom of the screen, tap the "Feed" bar or drag it up — the feed opens over the map.',
       feedSheetScrimAria: 'Collapse the feed panel and show the map',
       createTitle: 'Create a Session',
       createContent: 'Tap this button to organize a running, cycling or any other sports activity.',
@@ -873,9 +873,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '¡Bienvenido a RunConnect!',
       mapContent: 'Este es el mapa interactivo donde puedes descubrir sesiones deportivas a tu alrededor.',
-      runconnectTitle: 'Abrir el panel del feed',
+      runconnectTitle: 'El panel del feed',
       runconnectContent:
-        'Toca "RunConnect" para abrir el feed de la comunidad sobre el mapa, sin salir de la vista del mapa.',
+        'Abajo de la pantalla, toca la barra "Feed" o arrástrala hacia arriba: el feed se abre sobre el mapa.',
       feedSheetScrimAria: 'Contraer el panel del feed y mostrar el mapa',
       createTitle: 'Crear una sesión',
       createContent: 'Toca este botón para organizar una salida de running, ciclismo o cualquier otra actividad deportiva.',
@@ -1060,9 +1060,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bem-vindo ao RunConnect!',
       mapContent: 'Este é o mapa interativo onde você pode descobrir sessões esportivas ao seu redor.',
-      runconnectTitle: 'Abrir o painel do feed',
+      runconnectTitle: 'O painel do feed',
       runconnectContent:
-        'Toque em "RunConnect" para abrir o feed da comunidade sobre o mapa, sem sair do mapa.',
+        'Na parte inferior, toque na barra "Feed" ou arraste para cima: o feed abre sobre o mapa.',
       feedSheetScrimAria: 'Recolher o painel do feed e mostrar o mapa',
       createTitle: 'Criar uma sessão',
       createContent: 'Toque neste botão para organizar uma corrida, ciclismo ou qualquer outra atividade esportiva.',
@@ -1247,9 +1247,9 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Willkommen bei RunConnect!',
       mapContent: 'Dies ist die interaktive Karte, auf der Sie Sportveranstaltungen in Ihrer Nähe entdecken können.',
-      runconnectTitle: 'Feed-Panel öffnen',
+      runconnectTitle: 'Das Feed-Panel',
       runconnectContent:
-        'Tippen Sie auf „RunConnect“, um den Community-Feed als Panel über der Karte zu öffnen — Sie bleiben auf der Karte.',
+        'Unten auf dem Bildschirm auf die Leiste „Feed“ tippen oder nach oben ziehen — der Feed öffnet sich über der Karte.',
       feedSheetScrimAria: 'Feed-Panel einklappen und Karte anzeigen',
       createTitle: 'Sitzung erstellen',
       createContent: 'Tippen Sie auf diese Schaltfläche, um einen Lauf, eine Radtour oder eine andere sportliche Aktivität zu organisieren.',
@@ -1434,8 +1434,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '欢迎来到 RunConnect！',
       mapContent: '这是互动地图，您可以在这里发现周围的体育活动。',
-      runconnectTitle: '打开动态面板',
-      runconnectContent: '点击「RunConnect」在地图上方打开社区动态，无需离开地图。',
+      runconnectTitle: '动态面板',
+      runconnectContent: '在屏幕底部点击「Feed」条或向上拖动，即可在地图上方打开社区动态。',
       feedSheetScrimAria: '收起动态面板并显示地图',
       createTitle: '创建活动',
       createContent: '点击此按钮组织跑步、骑行或任何其他体育活动。',
@@ -1620,8 +1620,8 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'مرحباً بك في RunConnect!',
       mapContent: 'هذه هي الخريطة التفاعلية حيث يمكنك اكتشاف الجلسات الرياضية من حولك.',
-      runconnectTitle: 'فتح لوحة الخلاصة',
-      runconnectContent: 'اضغط على "RunConnect" لفتح خلاصة المجتمع فوق الخريطة دون مغادرة الخريطة.',
+      runconnectTitle: 'لوحة الخلاصة',
+      runconnectContent: 'في أسفل الشاشة، المس شريط "Feed" أو اسحبه لأعلى لفتح الخلاصة فوق الخريطة.',
       feedSheetScrimAria: 'طيّ لوحة الخلاصة وإظهار الخريطة',
       createTitle: 'إنشاء جلسة',
       createContent: 'اضغط على هذا الزر لتنظيم نشاط الجري أو ركوب الدراجات أو أي نشاط رياضي آخر.',

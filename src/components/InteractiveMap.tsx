@@ -290,7 +290,7 @@ export const InteractiveMap = ({
     setRefreshSessions,
     setOpenCreateSession,
     setOpenCreateRoute,
-    requestHomeFeedSheetSnap,
+    setHomeMapImmersive,
   } = useAppContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -355,6 +355,11 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  useEffect(() => {
+    setHomeMapImmersive(isActive && isImmersiveMode);
+    return () => setHomeMapImmersive(false);
+  }, [isActive, isImmersiveMode, setHomeMapImmersive]);
 
   useEffect(() => {
     const openSettings = () => setShowSettingsDialog(true);
@@ -1703,14 +1708,9 @@ export const InteractiveMap = ({
             {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
               <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
-                <button
-                  type="button"
-                  onClick={() => requestHomeFeedSheetSnap(1)}
-                  className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
-                  data-tutorial="runconnect-toggle"
-                >
+                <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
                   RunConnect
-                </button>
+                </span>
 
                 {userProfile && (
                   <div

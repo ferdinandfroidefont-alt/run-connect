@@ -11,10 +11,11 @@ export function getDefaultOnboardingSteps(t: (key: string) => string): TutorialS
       disableBeacon: true,
     },
     {
-      target: '[data-tutorial="runconnect-toggle"]',
+      target: '[data-tutorial="home-feed-sheet-handle"]',
       title: t("tutorial.runconnectTitle"),
       content: t("tutorial.runconnectContent"),
-      placement: "bottom",
+      placement: "top",
+      disableBeacon: true,
     },
     {
       target: '[data-tutorial="create-session"]',

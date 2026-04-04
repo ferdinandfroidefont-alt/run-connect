@@ -15,6 +15,9 @@ interface AppContextType {
   requestHomeFeedSheetSnap: (snap: HomeFeedSheetSnap) => void;
   homeFeedSheetRequest: { snap: HomeFeedSheetSnap; id: number } | null;
   clearHomeFeedSheetRequest: () => void;
+  /** Carte accueil en plein écran (immersif) : masque le panneau Feed et le FAB création. */
+  homeMapImmersive: boolean;
+  setHomeMapImmersive: (value: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -40,6 +43,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     snap: HomeFeedSheetSnap;
     id: number;
   } | null>(null);
+  const [homeMapImmersive, setHomeMapImmersive] = useState(false);
 
   const requestHomeFeedSheetSnap = useCallback((snap: HomeFeedSheetSnap) => {
     setHomeFeedSheetRequest({ snap, id: Date.now() });
@@ -74,6 +78,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       homeFeedSheetRequest,
       clearHomeFeedSheetRequest,
       requestHomeFeedSheetSnap,
+      homeMapImmersive,
+      setHomeMapImmersive,
     }}>
       {children}
     </AppContext.Provider>

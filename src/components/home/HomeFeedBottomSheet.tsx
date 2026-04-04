@@ -6,7 +6,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
-const PEEK_HEIGHT_PX = 76;
+/** Aligné sur le FAB « Programmer une séance » (~h-11 / 2.75rem). */
+const PEEK_HEIGHT_PX = 44;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -196,30 +197,64 @@ export function HomeFeedBottomSheet() {
         }
       >
         <div className="shrink-0">
-          <button
-            type="button"
-            className="flex w-full flex-col items-center gap-1.5 pb-1 pt-2 touch-manipulation outline-none"
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onClick={peekActivate}
-            aria-expanded={snap >= 1}
-          >
-            <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
-            <div className="flex w-full items-center justify-between gap-3 px-4 pb-1">
-              <span className="min-w-0 truncate text-left text-[15px] font-semibold tracking-tight text-foreground">
-                {t("navigation.feed")}
-              </span>
-              {snap === 0 ? (
-                <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              ) : snap === 2 ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/80" aria-hidden />
-              ) : (
-                <span className="h-4 w-4 shrink-0" aria-hidden />
-              )}
+          {snap === 0 ? (
+            <div
+              className="flex h-11 min-h-11 w-full items-center gap-1.5 px-2"
+              data-tutorial="home-feed-sheet-handle"
+            >
+              <button
+                type="button"
+                className="flex min-h-0 min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1 text-left outline-none touch-manipulation active:opacity-80"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onClick={peekActivate}
+                aria-expanded={false}
+                aria-label={t("navigation.feed")}
+              >
+                <span className="h-1 w-7 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
+                <span className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-foreground">
+                  {t("navigation.feed")}
+                </span>
+              </button>
+              <ChevronUp className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             </div>
-          </button>
+          ) : (
+            <div
+              className="flex w-full items-stretch border-b border-border/40"
+              data-tutorial="home-feed-sheet-handle"
+            >
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 flex-col items-center gap-1.5 pb-2 pt-2 text-left outline-none touch-manipulation active:opacity-90"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onClick={peekActivate}
+                aria-expanded
+                aria-label={t("navigation.feed")}
+              >
+                <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
+                <span className="w-full truncate px-4 text-center text-[15px] font-semibold tracking-tight text-foreground">
+                  {t("navigation.feed")}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="flex shrink-0 touch-manipulation items-start justify-center px-2 pb-2 pt-2.5 outline-none active:opacity-70"
+                aria-label={t("tutorial.feedSheetScrimAria")}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSnap(0);
+                }}
+              >
+                <ChevronDown className="h-5 w-5 text-muted-foreground" aria-hidden />
+              </button>
+            </div>
+          )}
         </div>
 
         {snap > 0 && (

@@ -20,7 +20,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
-  const { hideBottomNav } = useAppContext();
+  const { hideBottomNav, homeMapImmersive } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -186,7 +186,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </main>
-      {isHome && <HomeFeedBottomSheet />}
+      {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
         FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
