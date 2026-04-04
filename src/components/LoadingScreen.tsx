@@ -28,8 +28,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       await restoreChromeAfterRuconnectSplash();
     };
 
-    const exitTimer = setTimeout(() => setExiting(true), 1800);
-    const completeTimer = setTimeout(onLoadingComplete, 2200);
+    const exitTimer = setTimeout(() => setExiting(true), 650);
+    const completeTimer = setTimeout(onLoadingComplete, 950);
 
     return () => {
       clearTimeout(exitTimer);

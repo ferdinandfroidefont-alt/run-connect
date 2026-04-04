@@ -41,7 +41,7 @@ html, body {
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     /* Bandeau Feed replié : garder la même valeur que PEEK_HEIGHT_PX dans HomeFeedBottomSheet.tsx */
-    --home-feed-sheet-peek: 76px;
+    --home-feed-sheet-peek: 52px;
     /* Colonne carte (itinéraire, style, GPS, plein écran) : au-dessus du FAB et du peek Feed */
     --home-map-controls-stack-bottom: max(3.5rem, calc(var(--home-feed-sheet-peek) + 0.5rem));
     --ios-motion-duration-fast: 140ms;

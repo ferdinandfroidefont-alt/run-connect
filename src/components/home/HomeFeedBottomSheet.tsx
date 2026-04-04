@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAppContext, type HomeFeedSheetSnap } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
-const PEEK_HEIGHT_PX = 76;
+const PEEK_HEIGHT_PX = 52;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -66,7 +66,7 @@ export function HomeFeedBottomSheet() {
   const reduceMotion = useReducedMotion();
   const ih = useInnerHeight();
   const safeTop = useSafeAreaTopPx();
-  const { homeFeedSheetRequest, clearHomeFeedSheetRequest } = useAppContext();
+  const { homeFeedSheetRequest, clearHomeFeedSheetRequest, setHomeFeedSheetSnap } = useAppContext();
 
   const heights = useMemo(() => {
     const full = Math.max(PEEK_HEIGHT_PX + 120, ih - safeTop - 10);
@@ -97,6 +97,11 @@ export function HomeFeedBottomSheet() {
     setSnap(homeFeedSheetRequest.snap);
     clearHomeFeedSheetRequest();
   }, [homeFeedSheetRequest, clearHomeFeedSheetRequest]);
+
+  useEffect(() => {
+    setHomeFeedSheetSnap(snap);
+    return () => setHomeFeedSheetSnap(0);
+  }, [snap, setHomeFeedSheetSnap]);
 
   const targetH = dragging ? dragH : heights[snap];
 
@@ -180,7 +185,7 @@ export function HomeFeedBottomSheet() {
       />
 
       <motion.div
-        role="dialog"
+        role={snap >= 1 ? "dialog" : "region"}
         aria-modal={snap >= 1}
         aria-label={t("navigation.feed")}
         className={cn(
@@ -196,37 +201,31 @@ export function HomeFeedBottomSheet() {
             : SPRING
         }
       >
-        <div className="shrink-0">
-          {snap === 0 ? (
-            <div data-tutorial="home-feed-sheet-handle">
-              <button
-                type="button"
-                className="flex w-full flex-col items-center gap-1.5 pb-1 pt-2 text-left outline-none touch-manipulation active:opacity-90"
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                onClick={peekActivate}
-                aria-expanded={false}
-                aria-label={t("navigation.feed")}
-              >
-                <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
-                <div className="flex w-full items-center justify-between gap-3 px-4 pb-1">
-                  <span className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-foreground">
-                    {t("navigation.feed")}
-                  </span>
-                  <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                </div>
-              </button>
-            </div>
-          ) : (
+        {snap === 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col" data-tutorial="home-feed-sheet-handle">
+            <button
+              type="button"
+              className="flex h-full min-h-0 w-full flex-col items-center justify-center outline-none touch-manipulation active:opacity-80"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onClick={peekActivate}
+              aria-expanded={false}
+              aria-label={t("navigation.feed")}
+            >
+              <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
+            </button>
+          </div>
+        ) : (
+          <>
             <div
-              className="flex w-full items-stretch border-b border-border/40"
+              className="relative flex shrink-0 justify-center bg-transparent pt-2"
               data-tutorial="home-feed-sheet-handle"
             >
               <button
                 type="button"
-                className="flex min-w-0 flex-1 flex-col items-center gap-1.5 pb-2 pt-2 text-left outline-none touch-manipulation active:opacity-90"
+                className="flex w-full flex-col items-center justify-center py-2 outline-none touch-manipulation active:opacity-80"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -236,13 +235,10 @@ export function HomeFeedBottomSheet() {
                 aria-label={t("navigation.feed")}
               >
                 <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
-                <span className="w-full truncate px-4 text-center text-[15px] font-semibold tracking-tight text-foreground">
-                  {t("navigation.feed")}
-                </span>
               </button>
               <button
                 type="button"
-                className="flex shrink-0 touch-manipulation items-start justify-center px-2 pb-2 pt-2.5 outline-none active:opacity-70"
+                className="absolute right-3 top-2 flex touch-manipulation items-center justify-center rounded-lg p-2 outline-none active:opacity-70"
                 aria-label={t("tutorial.feedSheetScrimAria")}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -253,17 +249,15 @@ export function HomeFeedBottomSheet() {
                 <ChevronDown className="h-5 w-5 text-muted-foreground" aria-hidden />
               </button>
             </div>
-          )}
-        </div>
 
-        {snap > 0 && (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <HomeFeedSheetContent
-              sheetSnap={sheetSnapForContent}
-              onBrandClick={() => setSnap(0)}
-              scrollClassName="pb-2"
-            />
-          </div>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <HomeFeedSheetContent
+                sheetSnap={sheetSnapForContent}
+                onBrandClick={() => setSnap(0)}
+                scrollClassName="pb-2"
+              />
+            </div>
+          </>
         )}
       </motion.div>
     </div>

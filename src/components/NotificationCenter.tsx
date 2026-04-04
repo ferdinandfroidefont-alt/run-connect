@@ -3,9 +3,18 @@ import { cn } from "@/lib/utils";
 import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppContext } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendNotification } from "@/hooks/useSendNotification";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
-import { Bell, Check, X, User, UserPlus, UserCheck, Trash2 } from "lucide-react";
+import { Bell, Check, X, User, UserPlus, UserCheck, Trash2, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,6 +41,7 @@ interface NotificationCenterProps {
 export const NotificationCenter = ({
   onSessionUpdated
 }: NotificationCenterProps) => {
+  const { setHideBottomNav } = useAppContext();
   const {
     user
   } = useAuth();
@@ -117,6 +127,12 @@ export const NotificationCenter = ({
       };
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (isOpen) setHideBottomNav(true);
+    else setHideBottomNav(false);
+    return () => setHideBottomNav(false);
+  }, [isOpen, setHideBottomNav]);
 
   // Check actual follow status for all follow_request notifications (source of truth)
   const [followStatuses, setFollowStatuses] = useState<Map<string, string>>(new Map());
@@ -607,7 +623,7 @@ export const NotificationCenter = ({
   })();
 
   const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
-  const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
+  const badgeLabel = String(unreadCount);
   const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -625,9 +641,9 @@ export const NotificationCenter = ({
           {unreadCount > 0 && (
             <span
               className={cn(
-                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1.5",
+                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1",
                 "text-center text-[10px] font-semibold leading-[18px] tracking-tight text-white shadow-sm",
-                badgeLabel.length > 1 ? "min-w-[26px]" : "min-w-[18px]"
+                badgeLabel.length <= 1 ? "min-w-[18px]" : badgeLabel.length <= 2 ? "min-w-[22px] px-1.5" : "min-w-[28px] px-1"
               )}
             >
               {badgeLabel}
@@ -637,11 +653,7 @@ export const NotificationCenter = ({
       </SheetTrigger>
       <SheetContent
         side="top"
-        closeButtonClassName={
-          isIosPhone
-            ? "right-5 top-[calc(env(safe-area-inset-top,0px)+0.375rem)]"
-            : undefined
-        }
+        showCloseButton={false}
         className={cn(
           "box-border w-full max-w-full min-w-0 h-full min-h-screen border-0 overflow-x-hidden",
           isIosPhone
@@ -656,11 +668,24 @@ export const NotificationCenter = ({
             : "p-6"
         )}
       >
+        <SheetClose asChild>
+          <button
+            type="button"
+            className={cn(
+              "absolute z-[2] flex touch-manipulation items-center gap-1 rounded-lg py-1.5 text-[15px] font-medium text-primary outline-none transition-opacity active:opacity-70",
+              isIosPhone
+                ? "right-[max(1.25rem,env(safe-area-inset-right,0px))] top-[calc(env(safe-area-inset-top,0px)+0.375rem)] pl-2 pr-1"
+                : "right-6 top-6 px-2",
+            )}
+          >
+            Retour
+            <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+          </button>
+        </SheetClose>
         {isIosPhone ? (
           <div className="relative w-full min-w-0 space-y-1.5 px-0">
             {/*
               Centrage visuel type iOS : le titre ne doit pas suivre le flex du SheetHeader (sinon décalé par le X).
-              Le bouton fermer reste géré par SheetContent (absolute right).
             */}
             <div className="relative min-h-[1.75rem] w-full">
               <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center">

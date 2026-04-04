@@ -11,10 +11,11 @@ import { cn } from "@/lib/utils";
 export function FloatingCreateSessionButton() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { openCreateSession, hideBottomNav, homeMapImmersive } = useAppContext();
+  const { openCreateSession, hideBottomNav, homeMapImmersive, homeFeedSheetSnap } = useAppContext();
   const { t } = useLanguage();
 
-  if (hideBottomNav || homeMapImmersive || location.pathname !== "/") return null;
+  if (hideBottomNav || homeMapImmersive || homeFeedSheetSnap > 0 || location.pathname !== "/")
+    return null;
 
   const handleClick = () => {
     if (location.pathname === "/") {
