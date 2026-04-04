@@ -3,8 +3,6 @@ import { cn } from "@/lib/utils";
 
 interface IOSListItemProps {
   icon?: LucideIcon;
-  iconBgColor?: string;
-  iconColor?: string;
   title: string;
   subtitle?: string;
   value?: string;
@@ -17,8 +15,6 @@ interface IOSListItemProps {
 
 export const IOSListItem = ({
   icon: Icon,
-  iconBgColor = "bg-primary",
-  iconColor = "text-white",
   title,
   subtitle,
   value,
@@ -38,10 +34,9 @@ export const IOSListItem = ({
         )}
         style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
       >
-        {/* Icon in colored rounded square */}
         {Icon && (
-          <div className={cn("ios-list-row-icon shrink-0", iconBgColor)}>
-            <Icon className={cn("h-[18px] w-[18px]", iconColor)} />
+          <div className="ios-list-row-icon-neutral shrink-0">
+            <Icon className="h-[18px] w-[18px] text-foreground" strokeWidth={2} />
           </div>
         )}
         
@@ -69,7 +64,12 @@ export const IOSListItem = ({
       
       {/* iOS-style inset separator */}
       {showSeparator && (
-        <div className="absolute bottom-0 left-[38px] right-0 h-px bg-border" />
+        <div
+          className={cn(
+            "absolute bottom-0 right-0 h-px bg-border",
+            Icon ? "left-[42px] ios-shell:left-[42px]" : "left-ios-4 ios-shell:left-2.5",
+          )}
+        />
       )}
     </div>
   );

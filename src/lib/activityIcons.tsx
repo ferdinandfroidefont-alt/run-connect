@@ -1,13 +1,13 @@
-import { 
-  Bike, 
-  Footprints, 
-  PersonStanding, 
-  Waves, 
-  Target, 
+import {
+  Bike,
+  Footprints,
+  PersonStanding,
+  Waves,
+  Target,
   Circle,
   Dumbbell,
   Mountain,
-  type LucideIcon
+  type LucideIcon,
 } from "lucide-react";
 
 interface ActivityIconConfig {
@@ -17,91 +17,25 @@ interface ActivityIconConfig {
   label: string;
 }
 
+/** Icônes d’activité : fond neutre chaud + picto sombre (identité premium, pas d’arc-en-ciel). */
+const NEUTRAL_BG = "bg-muted/70 border border-border/60";
+const NEUTRAL_ICON = "text-foreground";
+
 const activityConfig: Record<string, ActivityIconConfig> = {
-  course: {
-    icon: Footprints,
-    bgColor: "bg-red-500",
-    iconColor: "text-white",
-    label: "Course"
-  },
-  running: {
-    icon: Footprints,
-    bgColor: "bg-red-500",
-    iconColor: "text-white",
-    label: "Course"
-  },
-  velo: {
-    icon: Bike,
-    bgColor: "bg-blue-500",
-    iconColor: "text-white",
-    label: "Vélo"
-  },
-  cycling: {
-    icon: Bike,
-    bgColor: "bg-blue-500",
-    iconColor: "text-white",
-    label: "Vélo"
-  },
-  marche: {
-    icon: PersonStanding,
-    bgColor: "bg-green-500",
-    iconColor: "text-white",
-    label: "Marche"
-  },
-  walking: {
-    icon: PersonStanding,
-    bgColor: "bg-green-500",
-    iconColor: "text-white",
-    label: "Marche"
-  },
-  natation: {
-    icon: Waves,
-    bgColor: "bg-cyan-500",
-    iconColor: "text-white",
-    label: "Natation"
-  },
-  swimming: {
-    icon: Waves,
-    bgColor: "bg-cyan-500",
-    iconColor: "text-white",
-    label: "Natation"
-  },
-  basketball: {
-    icon: Circle,
-    bgColor: "bg-orange-500",
-    iconColor: "text-white",
-    label: "Basketball"
-  },
-  football: {
-    icon: Circle,
-    bgColor: "bg-emerald-600",
-    iconColor: "text-white",
-    label: "Football"
-  },
-  petanque: {
-    icon: Target,
-    bgColor: "bg-amber-700",
-    iconColor: "text-white",
-    label: "Pétanque"
-  },
-  tennis: {
-    icon: Circle,
-    bgColor: "bg-yellow-500",
-    iconColor: "text-white",
-    label: "Tennis"
-  },
-  musculation: {
-    icon: Dumbbell,
-    bgColor: "bg-purple-500",
-    iconColor: "text-white",
-    label: "Musculation"
-  },
-  randonnee: {
-    icon: Mountain,
-    bgColor: "bg-teal-600",
-    iconColor: "text-white",
-    label: "Randonnée"
-  }
+  course: { icon: Footprints, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Course" },
+  running: { icon: Footprints, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Course" },
+  velo: { icon: Bike, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Vélo" },
+  cycling: { icon: Bike, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Vélo" },
+  marche: { icon: PersonStanding, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Marche" },
+  walking: { icon: PersonStanding, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Marche" },
+  natation: { icon: Waves, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Natation" },
+  swimming: { icon: Waves, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Natation" },
+  basketball: { icon: Circle, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Basketball" },
+  football: { icon: Circle, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Football" },
+  petanque: { icon: Target, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Pétanque" },
+  tennis: { icon: Circle, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Tennis" },
+  musculation: { icon: Dumbbell, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Musculation" },
+  randonnee: { icon: Mountain, bgColor: NEUTRAL_BG, iconColor: NEUTRAL_ICON, label: "Randonnée" },
 };
 
 interface ActivityIconProps {
@@ -113,22 +47,24 @@ interface ActivityIconProps {
 export const ActivityIcon = ({ activityType, size = "md", className = "" }: ActivityIconProps) => {
   const config = activityConfig[activityType] || activityConfig.course;
   const Icon = config.icon;
-  
+
   const sizeClasses = {
     sm: "h-8 w-8 rounded-md",
     md: "h-10 w-10 rounded-[10px]",
-    lg: "h-12 w-12 rounded-xl"
+    lg: "h-12 w-12 rounded-xl",
   };
-  
+
   const iconSizes = {
     sm: "h-4 w-4",
     md: "h-5 w-5",
-    lg: "h-6 w-6"
+    lg: "h-6 w-6",
   };
-  
+
   return (
-    <div className={`${sizeClasses[size]} ${config.bgColor} flex items-center justify-center flex-shrink-0 ${className}`}>
-      <Icon className={`${iconSizes[size]} ${config.iconColor}`} />
+    <div
+      className={`${sizeClasses[size]} ${config.bgColor} flex flex-shrink-0 items-center justify-center ${className}`}
+    >
+      <Icon className={`${iconSizes[size]} ${config.iconColor}`} strokeWidth={2} />
     </div>
   );
 };

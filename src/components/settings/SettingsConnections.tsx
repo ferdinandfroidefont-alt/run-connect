@@ -128,8 +128,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
             <div className="bg-card overflow-hidden">
               {/* Friend Suggestions */}
               <div className="flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                <div className="ios-list-row-icon bg-[#007AFF]">
-                  <Users className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Users className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="flex-1">
                   <p className="text-[15px] font-medium">Suggestions d'amis</p>
@@ -165,8 +165,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 }}
                 className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 transition-colors active:bg-secondary/50"
               >
-                <div className="ios-list-row-icon bg-[#FF3B30]">
-                  <Share2 className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Share2 className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Partager mon profil</p>
@@ -189,8 +189,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 onClick={() => setShowReferralDialog(true)}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#FF9500]">
-                  <Gift className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Gift className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">Parrainage</p>
@@ -206,8 +206,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 onClick={onNavigateToSubscription}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#FFCC00]">
-                  <Gift className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Gift className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">Soutenir l'application</p>

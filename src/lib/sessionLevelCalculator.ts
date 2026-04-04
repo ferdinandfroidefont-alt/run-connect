@@ -9,13 +9,14 @@ export interface LevelConfig {
   textClass: string;
 }
 
+/** Échelle monochrome chaude → corail : une seule famille de couleur (premium sport). */
 export const LEVEL_CONFIG: Record<SessionLevel, LevelConfig> = {
-  1: { label: 'Débutant', color: '#22c55e', bgClass: 'bg-green-500', textClass: 'text-green-500' },
-  2: { label: 'Loisir', color: '#16a34a', bgClass: 'bg-green-600', textClass: 'text-green-600' },
-  3: { label: 'Intermédiaire', color: '#eab308', bgClass: 'bg-yellow-500', textClass: 'text-yellow-500' },
-  4: { label: 'Avancé', color: '#f97316', bgClass: 'bg-orange-500', textClass: 'text-orange-500' },
-  5: { label: 'Performance', color: '#ef4444', bgClass: 'bg-red-500', textClass: 'text-red-500' },
-  6: { label: 'Élite', color: '#8b5cf6', bgClass: 'bg-violet-500', textClass: 'text-violet-500' },
+  1: { label: 'Débutant', color: '#9E9A92', bgClass: 'bg-[#9E9A92]', textClass: 'text-[#9E9A92]' },
+  2: { label: 'Loisir', color: '#8A8680', bgClass: 'bg-[#8A8680]', textClass: 'text-[#8A8680]' },
+  3: { label: 'Intermédiaire', color: '#76726E', bgClass: 'bg-[#76726E]', textClass: 'text-[#76726E]' },
+  4: { label: 'Avancé', color: '#FF8F78', bgClass: 'bg-[#FF8F78]', textClass: 'text-[#FF8F78]' },
+  5: { label: 'Performance', color: '#FF7458', bgClass: 'bg-[#FF7458]', textClass: 'text-[#FF7458]' },
+  6: { label: 'Élite', color: '#FF5A3C', bgClass: 'bg-primary', textClass: 'text-primary' },
 };
 
 // Sports où le calcul automatique s'applique (endurance)

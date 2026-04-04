@@ -13,36 +13,33 @@ export type MapIosFabTone =
   | "pink"
   | "indigo";
 
-/** Même teintes que les carrés `ios-list-row-icon` du hub Paramètres (`SettingsDialog` / sous-pages). */
+/**
+ * Contrôles carte : palette resserrée — gris neutre, olive outdoor (#6B7A1F), corail pour l’emphase (clubs / actif).
+ * Les noms historiques (blue, green, …) sont mappés vers ces trois familles pour ne pas casser les call sites.
+ */
 const TONE_CLASS: Record<MapIosFabTone, string> = {
-  blue: "bg-[#007AFF]",
-  green: "bg-[#34C759]",
-  orange: "bg-[#FF9500]",
-  purple: "bg-[#5856D6]",
-  red: "bg-[#FF3B30]",
-  teal: "bg-[#30B0C7]",
-  /** Classement : comme « Aide & Support » (#FF9500), pas le jaune vif #FFCC00 */
-  yellow: "bg-[#FF9500]",
-  gray: "bg-[#8E8E93]",
-  pink: "bg-[#AF52DE]",
-  indigo: "bg-[#5E5CE6]",
+  gray: "bg-[#6B6B6B]",
+  blue: "bg-outdoor",
+  green: "bg-outdoor",
+  teal: "bg-outdoor",
+  indigo: "bg-outdoor",
+  purple: "bg-outdoor",
+  pink: "bg-outdoor",
+  orange: "bg-primary",
+  yellow: "bg-outdoor",
+  red: "bg-primary",
 };
 
 export type MapIosColoredFabProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   tone: MapIosFabTone;
-  /** Anneau type « sélectionné » (filtre actif, etc.) */
   active?: boolean;
-  /** Pastille compteur (ex. nombre de filtres) */
   badgeCount?: number;
 };
 
-/**
- * Bouton flottant carré façon icônes colorées iOS (Réglages / Profil), sans la rangée liste complète.
- */
 export const MapIosColoredFab = React.forwardRef<HTMLButtonElement, MapIosColoredFabProps>(
   function MapIosColoredFab(
     { tone, active, badgeCount, className, children, disabled, type = "button", ...props },
-    ref
+    ref,
   ) {
     const showBadge = typeof badgeCount === "number" && badgeCount > 0;
 
@@ -57,7 +54,7 @@ export const MapIosColoredFab = React.forwardRef<HTMLButtonElement, MapIosColore
           TONE_CLASS[tone],
           active && "ring-2 ring-white/90 ring-offset-2 ring-offset-background",
           disabled && "cursor-not-allowed opacity-50",
-          className
+          className,
         )}
         {...props}
       >
@@ -66,7 +63,7 @@ export const MapIosColoredFab = React.forwardRef<HTMLButtonElement, MapIosColore
         </span>
         {showBadge && (
           <span
-            className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-[#5856D6] shadow-md dark:bg-[#111111] dark:text-primary dark:ring-1 dark:ring-[#1f1f1f]"
+            className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-card px-1 text-[10px] font-bold leading-none text-foreground shadow-md ring-1 ring-border dark:bg-card dark:text-foreground"
             aria-hidden
           >
             {badgeCount! > 9 ? "9+" : badgeCount}
@@ -74,5 +71,5 @@ export const MapIosColoredFab = React.forwardRef<HTMLButtonElement, MapIosColore
         )}
       </button>
     );
-  }
+  },
 );

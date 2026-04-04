@@ -77,35 +77,30 @@ const settingsCategories = [
     title: 'Général',
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
-    color: 'bg-[#8E8E93]',
   },
   {
     id: 'notifications' as const,
     title: 'Notifications',
     description: 'Push, alertes, préférences',
     icon: Bell,
-    color: 'bg-[#FF3B30]',
   },
   {
     id: 'connections' as const,
     title: 'Connexions',
     description: 'Strava, Instagram, partage',
     icon: Link2,
-    color: 'bg-[#007AFF]',
   },
   {
     id: 'privacy' as const,
     title: 'Confidentialité',
     description: 'RGPD, sécurité, données',
     icon: Shield,
-    color: 'bg-[#34C759]',
   },
   {
     id: 'support' as const,
     title: 'Aide & Support',
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
-    color: 'bg-[#FF9500]',
   },
 ];
 
@@ -210,8 +205,8 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
           width: 240,
           margin: 2,
           color: {
-            dark: '#1a1f3a',
-            light: '#6EC6FF'
+            dark: '#1C1C1C',
+            light: '#FBFAF6'
           },
           errorCorrectionLevel: 'M'
         });
@@ -343,8 +338,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
       if (!ctx) return;
 
       const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
-      gradient.addColorStop(0, 'hsl(217, 91%, 65%)');
-      gradient.addColorStop(1, 'hsl(217, 91%, 45%)');
+      gradient.addColorStop(0, 'hsl(9, 85%, 52%)');
+      gradient.addColorStop(1, 'hsl(9, 90%, 38%)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 1080, 1920);
 
@@ -498,7 +493,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
-        className="fixed inset-0 left-0 right-0 top-0 z-[116] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
+        className="fixed inset-0 left-0 right-0 top-0 z-[116] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-background p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border"
       >
         <AnimatePresence mode="wait">
           {currentPage === 'hub' ? (
@@ -514,9 +509,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 className="min-h-0 flex-1"
                 headerWrapperClassName="shrink-0"
                 contentScroll
-                scrollClassName="min-h-0 bg-secondary"
+                scrollClassName="min-h-0 bg-background"
                 header={
-                  <div className="min-w-0 max-w-full border-b border-border bg-card/95">
+                  <div className="min-w-0 max-w-full border-b border-border/80 bg-card">
                     <IosPageHeaderBar
                       left={
                         <button
@@ -524,13 +519,13 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           onClick={() => handleOpenChange(false)}
                           className="flex min-w-0 max-w-full items-center gap-1 text-primary"
                         >
-                          <ArrowLeft className="h-5 w-5 shrink-0" />
-                          <span className="truncate text-[17px]">Retour</span>
+                          <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={2} />
+                          <span className="truncate font-display text-[17px] font-semibold tracking-tight">Retour</span>
                         </button>
                       }
                       title="Paramètres"
                     />
-                    <div className="min-w-0 px-4 pb-2.5 ios-shell:px-2.5">
+                    <div className="min-w-0 px-4 pb-3 pt-0.5 ios-shell:px-2.5">
                       <div className="relative min-w-0 max-w-full">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
@@ -545,9 +540,11 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                 }
               >
               <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-                <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-                  {/* iOS grouped list style — px sur le wrapper pour éviter w-full + mx = débordement iOS */}
+                <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
                   <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                    <p className="mb-2 px-1 text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Compte
+                    </p>
                     <div className="ios-card w-full min-w-0 overflow-hidden">
                     {filteredCategories.map((category, index) => (
                       <div key={category.id}>
@@ -556,18 +553,21 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           onClick={() => {
                             setCurrentPage(category.id);
                           }}
-                          className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
+                          className="flex w-full min-w-0 max-w-full items-center gap-3 px-4 py-3.5 transition-colors active:bg-secondary/80 ios-shell:px-3"
                         >
-                          {/* iOS colored icon square */}
-                          <div className={`ios-list-row-icon ${category.color}`}>
-                            <category.icon className="h-4 w-4 text-white" />
+                          <div className="ios-list-row-icon-neutral">
+                            <category.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
                           </div>
                           <div className="min-w-0 flex-1 text-left">
-                            <span className="truncate text-[17px]">{category.title}</span>
+                            <span className="block truncate font-display text-[17px] font-semibold tracking-tight text-foreground">
+                              {category.title}
+                            </span>
+                            <span className="mt-0.5 block truncate text-[14px] text-muted-foreground">
+                              {category.description}
+                            </span>
                           </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/80" strokeWidth={2} />
                         </button>
-                        {/* Separator - iOS style (inset) */}
                         {index < filteredCategories.length - 1 && (
                           <div className="ios-list-row-inset-sep" />
                         )}
@@ -586,36 +586,32 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                   {profile && (
                     <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4 ios-shell:px-2">
                       <div className="w-full min-w-0 max-w-md">
-                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3 ios-shell:p-2.5">
-                          <h3 className="text-center text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
+                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-5 overflow-hidden rounded-ios-md p-5 ios-shell:p-4">
+                          <h3 className="text-center font-display text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                             Partager mon profil
                           </h3>
 
                           <div className="flex w-full min-w-0 flex-col items-center">
-                            <div className="relative isolate mx-auto max-w-full overflow-hidden rounded-full p-1">
-                              <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-gradient-to-br from-primary to-cyan-400 opacity-40 blur-md" />
-                              <div className="relative rounded-full bg-gradient-to-br from-primary via-primary/70 to-cyan-400 p-[3px]">
-                                <Avatar className="h-16 w-16 border-2 border-background shadow-xl">
+                            <div className="relative mx-auto max-w-full rounded-full p-[3px] ring-1 ring-border/80">
+                                <Avatar className="h-[4.5rem] w-[4.5rem] border-2 border-card shadow-sm">
                                   <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
-                                  <AvatarFallback className="text-lg font-bold bg-primary/20 text-primary">
+                                  <AvatarFallback className="text-lg font-bold bg-muted text-foreground">
                                     {(profile.display_name || profile.username)?.charAt(0).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
-                              </div>
                             </div>
-                            <h4 className="mt-2 w-full min-w-0 max-w-full truncate px-2 text-center text-sm font-semibold">
+                            <h4 className="mt-3 w-full min-w-0 max-w-full truncate px-2 text-center font-display text-lg font-semibold tracking-tight">
                               {profile.display_name || profile.username}
                             </h4>
-                            <p className="text-xs text-muted-foreground">Scannez pour m&apos;ajouter</p>
+                            <p className="text-sm text-muted-foreground">Scannez pour m&apos;ajouter</p>
                           </div>
 
                           <div className="mx-auto w-full min-w-0 max-w-[min(13rem,calc(100%-0.5rem))]">
                             <div className="relative overflow-hidden rounded-2xl">
-                              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/25 to-cyan-400/25 opacity-60 blur-2xl" />
-                              <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg sm:p-3">
+                              <div className="relative rounded-2xl border border-border/80 bg-card p-2 shadow-sm sm:p-3">
                                 {qrLoading ? (
                                   <div className="flex aspect-square w-full items-center justify-center">
-                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
                                   </div>
                                 ) : qrImageUrl ? (
                                   <img
@@ -633,10 +629,10 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           </div>
 
                           {profile.referral_code && (
-                            <div className="ios-card w-full min-w-0 overflow-hidden bg-primary/[0.06] p-ios-3 ring-1 ring-primary/15">
+                            <div className="w-full min-w-0 overflow-hidden rounded-ios-md border border-border/80 bg-muted/30 p-4">
                               <div className="flex min-w-0 items-center justify-between gap-2">
-                                <span className="shrink-0 text-xs text-muted-foreground">Code parrainage</span>
-                                <span className="min-w-0 truncate font-mono text-sm font-bold tracking-wider text-primary">
+                                <span className="shrink-0 text-xs font-medium text-muted-foreground">Code parrainage</span>
+                                <span className="min-w-0 truncate font-mono text-sm font-bold tracking-wider text-foreground">
                                   {profile.referral_code}
                                 </span>
                               </div>
@@ -647,23 +643,23 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                             {getProfileUrl()}
                           </p>
 
-                          <div className="flex w-full min-w-0 max-w-full flex-col gap-2">
+                          <div className="flex w-full min-w-0 max-w-full flex-col gap-2.5">
                             <Button
                               variant="default"
                               size="default"
                               onClick={copyUrl}
-                              className="h-11 w-full min-w-0 justify-center bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-primary"
+                              className="h-12 w-full min-w-0 justify-center shadow-md shadow-primary/15"
                             >
-                              <Copy className="mr-2 h-4 w-4 shrink-0" />
+                              <Copy className="mr-2 h-4 w-4 shrink-0" strokeWidth={2} />
                               <span className="min-w-0 truncate">Copier le lien</span>
                             </Button>
                             <Button
                               variant="outline"
                               size="default"
                               onClick={handleShare}
-                              className="h-11 w-full min-w-0 justify-center border-primary/30 hover:border-primary/50 hover:bg-primary/10"
+                              className="h-12 w-full min-w-0 justify-center border-border bg-card hover:bg-secondary/80"
                             >
-                              <Share2 className="mr-2 h-4 w-4 shrink-0" />
+                              <Share2 className="mr-2 h-4 w-4 shrink-0 text-foreground" strokeWidth={2} />
                               <span className="min-w-0 truncate">Partager</span>
                             </Button>
                             <Button
@@ -671,9 +667,9 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                               size="default"
                               onClick={generateInstagramStoryImage}
                               disabled={!qrImageUrl}
-                              className="h-11 w-full min-w-0 justify-center border-pink-500/30 hover:border-pink-500/50 hover:bg-pink-500/10 disabled:opacity-50"
+                              className="h-12 w-full min-w-0 justify-center border-border bg-card hover:bg-secondary/80 disabled:opacity-50"
                             >
-                              <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
+                              <Instagram className="mr-2 h-4 w-4 shrink-0 text-foreground" strokeWidth={2} />
                               <span className="min-w-0 truncate">Story Instagram</span>
                             </Button>
                           </div>

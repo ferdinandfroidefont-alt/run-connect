@@ -62,8 +62,8 @@ export const SettingsTutorialCatalog = ({ onBack, onReplay }: SettingsTutorialCa
                       onClick={() => onReplay(id)}
                       className="flex w-full min-w-0 max-w-full items-center gap-2.5 px-4 py-2.5 transition-colors active:bg-secondary ios-shell:px-2.5"
                     >
-                      <div className="ios-list-row-icon bg-[#5856D6]">
-                        <GraduationCap className="h-4 w-4 text-white" aria-hidden />
+                      <div className="ios-list-row-icon-neutral">
+                        <GraduationCap className="h-4 w-4 text-foreground" aria-hidden />
                       </div>
                       <div className="min-w-0 flex-1 text-left">
                         <span className="truncate text-[17px]">{t(`tutorial.replayMenu.items.${id}`)}</span>

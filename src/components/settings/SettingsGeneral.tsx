@@ -228,8 +228,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
 
               <div className="space-y-2.5 px-4 ios-shell:px-2.5 py-2.5" data-tutorial="settings-general-units">
                 <div className="flex items-center gap-2.5">
-                  <div className="ios-list-row-icon bg-[#5E5CE6]">
-                    <Ruler className="h-[18px] w-[18px] text-white" />
+                  <div className="ios-list-row-icon-neutral">
+                    <Ruler className="h-[18px] w-[18px] text-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] font-medium">{t("settings.distanceUnit")}</p>
@@ -289,11 +289,11 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                 disabled={isChangingPassword}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors disabled:opacity-50"
               >
-                <div className="ios-list-row-icon bg-[#FF9500]">
+                <div className="ios-list-row-icon-neutral">
                   {isChangingPassword ? (
-                    <Loader2 className="h-[18px] w-[18px] text-white animate-spin" />
+                    <Loader2 className="h-[18px] w-[18px] text-foreground animate-spin" />
                   ) : (
-                    <Key className="h-[18px] w-[18px] text-white" />
+                    <Key className="h-[18px] w-[18px] text-foreground" />
                   )}
                 </div>
                 <div className="flex-1 text-left">
@@ -313,8 +313,8 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
             <div className="bg-card overflow-hidden">
               {/* Long Press to Create Session */}
               <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                <div className="ios-list-row-icon bg-[#34C759]">
-                  <MapPin className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <MapPin className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-medium">{t('settings.longPress')}</p>

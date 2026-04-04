@@ -28,36 +28,28 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
 
   const getIntensityColor = (intensity: string | null) => {
     switch (intensity?.toLowerCase()) {
-      case 'faible': return 'bg-green-100 text-green-800';
-      case 'modere': case 'modérée': return 'bg-yellow-100 text-yellow-800';
-      case 'elevee': case 'élevée': return 'bg-red-100 text-red-800';
-      default: return 'bg-secondary text-muted-foreground';
+      case "faible":
+        return "border border-border/70 bg-muted/50 text-muted-foreground";
+      case "modere":
+      case "modérée":
+        return "border border-border/70 bg-muted/35 text-foreground";
+      case "elevee":
+      case "élevée":
+        return "border border-primary/25 bg-primary/[0.08] text-primary";
+      default:
+        return "bg-secondary text-muted-foreground";
     }
   };
 
-  /** Bordure gauche type accent (carte unifiée comme Mes séances) */
-  const getActivityAccentBorder = (activityType: string) => {
-    switch (activityType) {
-      case 'running': return 'border-l-orange-400';
-      case 'trail': return 'border-l-emerald-500';
-      case 'cycling': return 'border-l-sky-500';
-      case 'mtb': return 'border-l-indigo-500';
-      case 'walking': return 'border-l-amber-500';
-      case 'football': return 'border-l-green-600';
-      case 'basketball': return 'border-l-orange-500';
-      case 'swimming': return 'border-l-cyan-500';
-      case 'tennis': return 'border-l-violet-500';
-      case 'petanque': return 'border-l-pink-500';
-      default: return 'border-l-primary';
-    }
-  };
+  /** Accent discret, identique pour toutes les activités (pas d’arc-en-ciel). */
+  const getActivityAccentBorder = () => "border-l-primary/50";
 
   return (
     <>
       <div 
         className={cn(
           "ios-card overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary transition-colors",
-          getActivityAccentBorder(session.activity_type)
+          getActivityAccentBorder()
         )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
         onClick={() => onCardClick?.(session)}

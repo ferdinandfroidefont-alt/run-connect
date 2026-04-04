@@ -62,14 +62,14 @@ export const FeedActions = ({
                 transition={{ duration: 0.8, delay: i * 0.05 }}
                 className="absolute bottom-full left-0 pointer-events-none"
               >
-                <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                <Heart className="h-4 w-4 fill-primary text-primary" />
               </motion.div>
             ))}
           </>
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between border-t border-border/60 px-5 py-4">
         <div className="flex items-center gap-1">
           {/* Like Button */}
           <motion.button
@@ -83,11 +83,14 @@ export const FeedActions = ({
             >
               <Heart
                 className={`h-5 w-5 transition-colors ${
-                  isLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground hover:text-red-400'
+                  isLiked
+                    ? "fill-primary stroke-primary text-primary"
+                    : "fill-transparent text-muted-foreground hover:stroke-primary/60 hover:text-primary/80"
                 }`}
+                strokeWidth={2}
               />
             </motion.div>
-            <span className={`text-sm font-medium ${isLiked ? 'text-red-500' : 'text-muted-foreground'}`}>
+            <span className={`text-sm font-medium ${isLiked ? "text-primary" : "text-muted-foreground"}`}>
               {likesCount > 0 ? likesCount : ''}
             </span>
           </motion.button>

@@ -1114,7 +1114,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 <Plus className="h-7 w-7 text-primary" />
               </div>
               <p className="text-[17px] font-semibold text-foreground">Ajouter une séance</p>
-              <p className="text-[14px] text-muted-foreground mt-1">Appuyez sur <strong>+</strong> dans le calendrier<br />ou utilisez le bouton bleu</p>
+              <p className="text-[14px] text-muted-foreground mt-1">Appuyez sur <strong>+</strong> dans le calendrier<br />ou le bouton d’action principal</p>
             </div>
           )}
 
@@ -1126,7 +1126,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               {hasDraft && (
                 <IOSListItem
                   icon={FileText}
-                  iconBgColor="bg-purple-500"
                   title="Reprendre le brouillon"
                   subtitle="Un brouillon non envoyé existe"
                   onClick={loadDraft}
@@ -1135,7 +1134,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               )}
               <IOSListItem
                 icon={History}
-                iconBgColor="bg-amber-500"
                 title="Dupliquer semaine précédente"
                 subtitle="Charger les séances de S-1"
                 onClick={loadPreviousWeek}
@@ -1144,7 +1142,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               {templates.length > 0 && (
                 <IOSListItem
                   icon={FolderOpen}
-                  iconBgColor="bg-blue-500"
                   title="Charger semaine type"
                   subtitle={`${templates.length} template${templates.length > 1 ? "s" : ""} disponible${templates.length > 1 ? "s" : ""}`}
                   onClick={() => setShowTemplateList(!showTemplateList)}
@@ -1173,7 +1170,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 <>
                   <IOSListItem
                     icon={Copy}
-                    iconBgColor="bg-green-500"
                     title="Dupliquer vers un groupe"
                     subtitle={`${sessions.length} séance${sessions.length > 1 ? "s" : ""} à copier`}
                     onClick={() => setShowDupDropdown(!showDupDropdown)}
@@ -1197,7 +1193,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               {sessions.length > 0 && (
                 <IOSListItem
                   icon={Save}
-                  iconBgColor="bg-orange-500"
                   title="Sauver comme semaine type"
                   onClick={() => setShowSaveTemplate(true)}
                   showChevron
@@ -1206,7 +1201,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               )}
               <IOSListItem
                 icon={TrendingUp}
-                iconBgColor="bg-indigo-500"
                 title="Vue mesocycle (8 sem.)"
                 subtitle="Progression volume et intensité"
                 onClick={() => setShowMesocycle(!showMesocycle)}

@@ -279,9 +279,43 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+<<<<<<< HEAD
     const auth = await authenticatePushRequest(req, supabaseClient, corsHeaders);
     if (!auth.ok) {
       return auth.response;
+=======
+    const internalSecret = Deno.env.get('INTERNAL_PUSH_INVOKE_SECRET');
+    const providedInternal = req.headers.get('x-internal-push-secret');
+    const internalOk = !!internalSecret && !!providedInternal && providedInternal === internalSecret;
+
+    if (!interna10k) {
+      return new Response("Unauthorize", {status: 401});
+    }
+
+    const authHeader = req.headers.get('Authorization');
+    let callerUserId: string | null = null;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
+        if (authUser && !authError) {
+          callerUserId = authUser.id;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (internalSecret) {
+      if (!internalOk && !callerUserId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else if (!callerUserId) {
+      console.warn('⚠️ [AUTH] INTERNAL_PUSH_INVOKE_SECRET non défini — appels sans JWT utilisateur acceptés (à corriger en prod)');
+>>>>>>> 17f5296f5a06834bd2a3f7a6bef754ea244a0caa
     }
 
     const { user_id, title, body, data, type }: NotificationPayload = await req.json();

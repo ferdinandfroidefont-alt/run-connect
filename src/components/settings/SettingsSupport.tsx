@@ -117,8 +117,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={() => { onClose(); navigate('/about'); }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#007AFF]">
-                  <Info className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Info className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">À propos</p>
@@ -135,8 +135,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#FF9500]">
-                  <Scale className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Scale className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Mentions légales</p>
@@ -150,8 +150,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={() => { onClose(); navigate('/terms'); }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#5856D6]">
-                  <FileText className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <FileText className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Conditions d'utilisation</p>
@@ -165,8 +165,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={() => { onClose(); navigate('/privacy'); }}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#34C759]">
-                  <Shield className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Shield className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Politique de confidentialité</p>
@@ -187,8 +187,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={onOpenTutorialCatalog}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#5856D6]">
-                  <BookOpen className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <BookOpen className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">{t("tutorial.catalogEntry")}</p>
@@ -202,8 +202,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={handleRestartTutorial}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#FF9500]">
-                  <GraduationCap className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <GraduationCap className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">{t('tutorial.restartTutorial')}</p>
@@ -218,8 +218,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 href={getSupportMailtoHref()}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#007AFF]">
-                  <Mail className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <Mail className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Contacter le support</p>
@@ -242,8 +242,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-secondary/50 transition-colors"
               >
-                <div className="ios-list-row-icon bg-[#FF9500]">
-                  <LogOut className="h-[18px] w-[18px] text-white" />
+                <div className="ios-list-row-icon-neutral">
+                  <LogOut className="h-[18px] w-[18px] text-foreground" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Se déconnecter</p>
@@ -259,8 +259,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                     onClick={() => setShowAdminPremium(true)}
                     className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/5 active:bg-primary/10 transition-colors"
                   >
-                    <div className="ios-list-row-icon bg-[#5856D6]">
-                      <Settings className="h-[18px] w-[18px] text-white" />
+                    <div className="ios-list-row-icon-neutral">
+                      <Settings className="h-[18px] w-[18px] text-foreground" />
                     </div>
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-[15px] font-medium text-primary">Support créateur</p>
@@ -283,8 +283,8 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <button className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 active:bg-destructive/5 transition-colors">
-                    <div className="ios-list-row-icon bg-[#FF3B30]">
-                      <Trash2 className="h-[18px] w-[18px] text-white" />
+                    <div className="ios-list-row-icon-neutral">
+                      <Trash2 className="h-[18px] w-[18px] text-foreground" />
                     </div>
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-[15px] font-medium text-destructive">Supprimer mon compte</p>

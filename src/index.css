@@ -1,5 +1,6 @@
-/* Polices optionnelles — la priorité reste la stack système (SF Pro sur Apple) */
+/* Polices — Inter + DM Sans (titres) ; stack système en priorité sur Apple */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,600&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap");
 @tailwind base;
 @tailwind components;
@@ -12,8 +13,8 @@ html, body {
   touch-action: manipulation;
 }
 
-/* iOS Native Design System - Ultra Clean
-   Pure Apple-style design with opaque colors
+/* RunConnect — design system premium sport (piste / mouvement)
+   Primaire corail #FF5A3C, fond chaud #F7F5EF, surfaces #FBFAF6
 */
 
 @layer base {
@@ -28,9 +29,9 @@ html, body {
     --space-6: 1.5rem;
 
     /* Rayons type iOS (coins continus, un peu plus généreux) */
-    --radius-sm: 0.625rem;
-    --radius-md: 0.875rem;
-    --radius-lg: 1.125rem;
+    --radius-sm: 0.6875rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.25rem;
     /* Tab bar : un peu moins haute que l’ancien 4.25rem pour réduire la marge vide sous les libellés (icônes quasi inchangées). */
     --nav-height: 4rem;
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
@@ -45,44 +46,41 @@ html, body {
     --ios-motion-duration-slow: 320ms;
     --ios-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
 
-    /* iOS System Colors - Pure Light Mode */
-    --background: 0 0% 100%;              /* #F5F5F5 - iOS light */
-    --foreground: 221 39% 11%;             /* #000000 - Pure black */
+    /* RunConnect light — fond chaud, texte #1C1C1C / secondaire #6B6B6B */
+    --background: 43 33% 95%;              /* #F7F5EF */
+    --foreground: 0 0% 11%;                /* #1C1C1C */
 
-    --card: 0 0% 100%;                   /* Pure white cards */
-    --card-foreground: 215 28% 17%;
+    --card: 40 33% 98.5%;                  /* #FBFAF6 */
+    --card-foreground: 0 0% 11%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 221 39% 11%;
+    --popover: 40 33% 99%;
+    --popover-foreground: 0 0% 11%;
 
-    /* RunConnect primary blue */
-    --primary: 212 100% 50%;           /* #007AFF */
+    /* Primaire corail athlétique #FF5A3C — réservé CTA, actifs, accents forts */
+    --primary: 9 100% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 12%;
+    --secondary: 43 18% 91%;
+    --secondary-foreground: 0 0% 11%;
 
-    /* iOS Muted Grays */
-    --muted: 218 11% 65%;               /* #F2F2F7 */
-    --muted-foreground: 220 9% 46%;    /* #8E8E93 */
+    --muted: 43 14% 90%;
+    --muted-foreground: 0 0% 42%;          /* #6B6B6B */
 
-    /* Accent complementary */
-    --accent: 142 70% 45%;              /* green accent */
-    --accent-foreground: 266 4% 20.8%;
+    /* Accent UI discret (surfaces hover) — pas une 2e couleur forte */
+    --accent: 43 20% 88%;
+    --accent-foreground: 0 0% 11%;
 
-    /* iOS System Red */
-    --destructive: 0 84% 60%;         /* #FF3B30 */
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    /* iOS System Green */
-    --success: 142 76% 36%;            /* #34C759 */
+    --success: 72 45% 32%;                 /* olive assourdie pour états positifs discrets */
 
-    --border: 240 5% 90%;
-    --input: 240 5% 94%;
-    --ring: 221 83% 53%;
+    --border: 43 12% 88%;
+    --input: 43 14% 92%;
+    --ring: 9 100% 62%;
 
-    --shadow-card: 0 1px 2px hsl(240 6% 10% / 0.04), 0 4px 12px hsl(240 6% 10% / 0.06);
-    --shadow-sm: 0 1px 3px hsl(240 6% 10% / 0.06), 0 6px 16px hsl(240 6% 10% / 0.05);
+    --shadow-card: 0 1px 2px hsl(43 25% 10% / 0.035), 0 6px 20px hsl(43 20% 10% / 0.045);
+    --shadow-sm: 0 1px 2px hsl(43 25% 10% / 0.04), 0 4px 14px hsl(43 20% 10% / 0.05);
 
     /* Default component radius */
     --radius: var(--radius-md);
@@ -96,95 +94,96 @@ html, body {
     --sidebar-accent-foreground: 266 4% 20.8%;
     --sidebar-border: 256 1.3% 92.9%;
     --sidebar-ring: 257 4% 70.4%;
-    --chart-1: 221 83% 53%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 25 95% 53%;
-    --chart-4: 271 91% 65%;
-    --chart-5: 0 84% 60%;
-    /* Aligné avec le thème sombre profond (onglets inactifs) — évite une ref CSS vide hors .dark */
-    --tab-icon-inactive: 220 9% 46%;
+    --chart-1: 9 100% 62%;
+    --chart-2: 69 59% 30%;
+    --chart-3: 0 0% 45%;
+    --chart-4: 43 18% 70%;
+    --chart-5: 0 0% 28%;
+    --tab-icon-inactive: 0 0% 52%;
+    /* Olive outdoor / carte — utiliser avec parcimonie (contrôles carte, nature) */
+    --brand-outdoor: 69 59% 30%;
     --sidebar: 248 0.3% 98.4%;
     --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow: 0px 6px 16px 0px hsla(0, 0%, 0%, 0.078);
-    --shadow-md: 0px 6px 24px 0px hsla(0, 0%, 0%, 0.078);
-    --shadow-lg: 0px 6px 40px 0px hsla(0, 0%, 0%, 0.078);
+    --shadow: 0px 4px 20px 0px hsl(43 20% 10% / 0.06);
+    --shadow-md: 0px 8px 28px 0px hsl(43 20% 10% / 0.07);
+    --shadow-lg: 0px 12px 40px 0px hsl(43 20% 10% / 0.08);
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
 
     /* Carte / effets (utilisés par Tailwind étendu) */
-    --primary-glow: 212 100% 50%;
-    --accent-glow: 142 70% 45%;
-    --shadow-glow: 0 0 24px hsl(212 100% 50% / 0.18);
+    --primary-glow: 9 100% 62%;
+    --accent-glow: 69 59% 30%;
+    --shadow-glow: 0 0 28px hsl(9 100% 62% / 0.2);
     --shadow-map-control: 0 2px 14px hsl(0 0% 0% / 0.1);
     --shadow-map-panel: 0 6px 24px hsl(0 0% 0% / 0.12);
-    --map-control-bg: 0 0% 100%;
-    --map-control-border: 220 13% 91%;
-    --map-control-hover: 240 14% 96%;
-    --map-control-active: 240 14% 92%;
-    --gradient-map: linear-gradient(180deg, hsl(0 0% 100% / 0.95) 0%, hsl(0 0% 98% / 0.9) 100%);
-    --gradient-control: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 14% 98%) 100%);
+    --map-control-bg: 40 33% 99%;
+    --map-control-border: 43 12% 88%;
+    --map-control-hover: 43 18% 94%;
+    --map-control-active: 43 14% 90%;
+    --gradient-map: linear-gradient(180deg, hsl(43 33% 97% / 0.96) 0%, hsl(43 30% 95% / 0.92) 100%);
+    --gradient-control: linear-gradient(180deg, hsl(40 33% 99%) 0%, hsl(43 22% 96%) 100%);
     --transition-map: transform, opacity, box-shadow;
   }
 
-  /* ─── Mode sombre profond (ChatGPT / GitHub) : couches #000 / #0A0A0A / #111 / #1F1F1F ─── */
+  /* ─── Mode sombre — même ADN corail, couches neutres profondes ─── */
   .dark {
     color-scheme: dark;
 
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    --background: 0 0% 4%;
+    --foreground: 43 20% 96%;
 
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 100%;
+    --card: 0 0% 8%;
+    --card-foreground: 43 20% 96%;
 
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 43 20% 96%;
 
-    --primary: 211 100% 55%;
+    --primary: 9 100% 60%;
     --primary-foreground: 0 0% 100%;
 
-    /* Surfaces inactives (chips, filtres, boutons secondaires) */
-    --secondary: 0 0% 6.7%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 43 20% 96%;
 
-    --muted: 0 0% 6.7%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 43 8% 58%;
 
-    --accent: 142 50% 46%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 0% 14%;
+    --accent-foreground: 43 20% 96%;
 
-    --destructive: 0 72% 52%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 55% 48%;
+    --success: 72 40% 40%;
 
-    --border: 0 0% 12.2%;
-    --input: 0 0% 6.7%;
-    --ring: 211 100% 55%;
+    --border: 0 0% 16%;
+    --input: 0 0% 12%;
+    --ring: 9 100% 60%;
 
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 211 100% 55%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 43 20% 96%;
+    --sidebar-primary: 9 100% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 6.7%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 12.2%;
-    --sidebar-ring: 211 100% 55%;
-    --sidebar: 0 0% 3.9%;
+    --sidebar-accent: 0 0% 11%;
+    --sidebar-accent-foreground: 43 20% 96%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 9 100% 60%;
+    --sidebar: 0 0% 8%;
 
-    --chart-1: 211 100% 55%;
-    --chart-2: 142 55% 48%;
-    --chart-3: 28 92% 55%;
-    --chart-4: 271 75% 62%;
-    --chart-5: 0 72% 52%;
+    --chart-1: 9 100% 60%;
+    --chart-2: 69 50% 42%;
+    --chart-3: 43 8% 55%;
+    --chart-4: 0 0% 40%;
+    --chart-5: 0 65% 50%;
 
-    /* Tab bar : icônes inactives */
-    --tab-icon-inactive: 220 9% 46%;
+    --tab-icon-inactive: 43 6% 48%;
+    --brand-outdoor: 69 50% 42%;
 
     --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.04), 0 8px 24px hsl(0 0% 0% / 0.55);
     --shadow-sm: 0 2px 8px hsl(0 0% 0% / 0.5);
@@ -196,9 +195,9 @@ html, body {
     --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.4);
     --shadow-xs: 0 1px 4px hsl(0 0% 0% / 0.45);
 
-    --primary-glow: 211 100% 55%;
-    --accent-glow: 142 50% 50%;
-    --shadow-glow: 0 0 28px hsl(211 100% 55% / 0.2);
+    --primary-glow: 9 100% 60%;
+    --accent-glow: 69 50% 42%;
+    --shadow-glow: 0 0 32px hsl(9 100% 55% / 0.22);
     --shadow-map-control: 0 4px 24px hsl(0 0% 0% / 0.6);
     --shadow-map-panel: 0 10px 36px hsl(0 0% 0% / 0.65);
 
@@ -276,8 +275,17 @@ html, body {
     @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px];
   }
 
+  /** Icônes liste paramètres — monochrome / premium (pas de carrés multicolores) */
+  .ios-list-row-icon-neutral {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-border/70 bg-muted/35 text-foreground;
+  }
+
+  .dark .ios-list-row-icon-neutral {
+    @apply border-border bg-muted/50;
+  }
+
   .ios-list-row-inset-sep {
-    @apply ml-[38px] h-px bg-border;
+    @apply ml-[42px] h-px bg-border/80;
   }
 
   /* iOS Typography System */
@@ -338,9 +346,9 @@ html, body {
     @apply bg-secondary;
   }
 
-  /* iOS Card */
+  /* Carte premium — surface uniforme, ombre très légère */
   .ios-card {
-    @apply bg-card rounded-ios-md border border-border;
+    @apply bg-card rounded-ios-md border border-border/80;
     box-shadow: var(--shadow-card);
   }
 
@@ -365,7 +373,7 @@ html, body {
 
   /* Rangée de liste type « Mes séances » (carte + padding + feedback tactile) */
   .ios-list-row {
-    @apply bg-card rounded-ios-md p-ios-3 cursor-pointer transition-colors active:bg-secondary;
+    @apply bg-card rounded-ios-md p-ios-4 cursor-pointer transition-colors active:bg-secondary;
     box-shadow: var(--shadow-card);
   }
 
@@ -385,10 +393,10 @@ html, body {
    * taille tactile 40×40, ombre type FAB iOS.
    */
   .map-ios-colored-fab {
-    @apply flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-white/20 text-white shadow-lg outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[10px] border border-white/15 text-white shadow-md outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     box-shadow:
-      0 4px 14px -3px rgb(0 0 0 / 0.32),
-      0 2px 8px -4px rgb(0 0 0 / 0.18);
+      0 3px 12px -2px rgb(0 0 0 / 0.22),
+      0 1px 4px -2px rgb(0 0 0 / 0.12);
   }
 
   .map-ios-colored-fab:active:not(:disabled) {
@@ -403,17 +411,17 @@ html, body {
     height: 44px;
     min-height: 44px;
     max-height: 44px;
-    background: rgba(250, 250, 250, 0.52);
-    border: 1px solid rgba(0, 0, 0, 0.045);
-    backdrop-filter: blur(14px) saturate(1.08);
-    -webkit-backdrop-filter: blur(14px) saturate(1.08);
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.035);
+    background: rgba(251, 250, 246, 0.78);
+    border: 1px solid rgba(28, 28, 28, 0.06);
+    backdrop-filter: blur(14px) saturate(1.06);
+    -webkit-backdrop-filter: blur(14px) saturate(1.06);
+    box-shadow: 0 1px 2px rgba(28, 28, 28, 0.04);
   }
 
   .home-map-search-glass:focus-within {
-    border-color: rgba(0, 0, 0, 0.065);
-    background: rgba(252, 252, 252, 0.72);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.045);
+    border-color: hsl(9 100% 62% / 0.35);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 1px 3px rgba(28, 28, 28, 0.06);
   }
 
   .dark .home-map-search-glass {
@@ -432,14 +440,13 @@ html, body {
   .home-map-filter-chip {
     @apply flex h-9 shrink-0 items-center justify-center gap-1.5 px-3.5 text-[12px] font-semibold tracking-tight text-foreground transition-[transform,box-shadow] duration-200 active:scale-[0.98] motion-reduce:transition-none;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.98);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    backdrop-filter: blur(14px) saturate(1.12);
-    -webkit-backdrop-filter: blur(14px) saturate(1.12);
+    background: rgba(251, 250, 246, 0.95);
+    border: 1px solid rgba(28, 28, 28, 0.07);
+    backdrop-filter: blur(12px) saturate(1.05);
+    -webkit-backdrop-filter: blur(12px) saturate(1.05);
     box-shadow:
-      0 2px 8px -4px rgba(0, 0, 0, 0.06),
-      0 6px 20px -10px rgba(0, 0, 0, 0.1),
-      0 1px 3px -1px rgba(0, 0, 0, 0.05);
+      0 2px 8px -4px rgba(28, 28, 28, 0.06),
+      0 1px 3px -1px rgba(28, 28, 28, 0.04);
   }
 
   .home-map-filter-chip-active {
@@ -505,9 +512,8 @@ html, body {
     -webkit-backdrop-filter: none;
   }
 
-  /* Contenu principal : léger dégradé façon iOS */
   .ios-app-canvas {
-    @apply bg-gradient-to-b from-background from-0% via-background via-40% to-secondary/50 to-100%;
+    @apply bg-gradient-to-b from-background from-0% via-background via-50% to-secondary/80 to-100%;
   }
 
   /* Mode sombre : fond plat = même teinte partout (html/body/#root/--background).
@@ -516,42 +522,52 @@ html, body {
     @apply bg-background;
   }
 
-  /* iOS Pastel Card Backgrounds */
-  .ios-pastel-blue { background: hsl(211 95% 95%); }
-  .ios-pastel-green { background: hsl(152 60% 92%); }
-  .ios-pastel-orange { background: hsl(28 100% 93%); }
-  .ios-pastel-red { background: hsl(0 85% 94%); }
-  .ios-pastel-purple { background: hsl(270 70% 94%); }
-  .ios-pastel-cyan { background: hsl(190 80% 92%); }
-  .ios-pastel-yellow { background: hsl(45 95% 92%); }
-  .ios-pastel-pink { background: hsl(340 80% 94%); }
-  .ios-pastel-indigo { background: hsl(235 70% 94%); }
+  /* Pastels — neutres chauds unifiés (plus d’arc-en-ciel par activité) */
+  .ios-pastel-blue,
+  .ios-pastel-green,
+  .ios-pastel-orange,
+  .ios-pastel-red,
+  .ios-pastel-purple,
+  .ios-pastel-cyan,
+  .ios-pastel-yellow,
+  .ios-pastel-pink,
+  .ios-pastel-indigo {
+    background: hsl(43 22% 94%);
+  }
 
-  .dark .ios-pastel-blue { background: hsl(211 35% 18%); }
-  .dark .ios-pastel-green { background: hsl(152 28% 16%); }
-  .dark .ios-pastel-orange { background: hsl(28 40% 16%); }
-  .dark .ios-pastel-red { background: hsl(0 35% 17%); }
-  .dark .ios-pastel-purple { background: hsl(270 30% 17%); }
-  .dark .ios-pastel-cyan { background: hsl(190 32% 16%); }
-  .dark .ios-pastel-yellow { background: hsl(45 38% 16%); }
-  .dark .ios-pastel-pink { background: hsl(340 32% 17%); }
-  .dark .ios-pastel-indigo { background: hsl(235 32% 17%); }
+  .dark .ios-pastel-blue,
+  .dark .ios-pastel-green,
+  .dark .ios-pastel-orange,
+  .dark .ios-pastel-red,
+  .dark .ios-pastel-purple,
+  .dark .ios-pastel-cyan,
+  .dark .ios-pastel-yellow,
+  .dark .ios-pastel-pink,
+  .dark .ios-pastel-indigo {
+    background: hsl(0 0% 12%);
+  }
 
-  /* iOS Tinted Utilities */
-  .ios-tinted-blue { background: hsl(211 100% 50% / 0.12); color: hsl(211 100% 50%); }
-  .ios-tinted-green { background: hsl(142 76% 36% / 0.12); color: hsl(142 76% 36%); }
-  .ios-tinted-red { background: hsl(0 100% 59% / 0.12); color: hsl(0 100% 59%); }
-  .ios-tinted-orange { background: hsl(28 100% 50% / 0.12); color: hsl(28 100% 50%); }
-  .ios-tinted-purple { background: hsl(270 70% 50% / 0.12); color: hsl(270 70% 50%); }
+  .ios-tinted-blue,
+  .ios-tinted-green,
+  .ios-tinted-red,
+  .ios-tinted-orange,
+  .ios-tinted-purple {
+    background: hsl(9 100% 62% / 0.1);
+    color: hsl(9 100% 45%);
+  }
 
-  .dark .ios-tinted-blue { background: hsl(211 100% 55% / 0.18); color: hsl(211 100% 70%); }
-  .dark .ios-tinted-green { background: hsl(142 55% 45% / 0.2); color: hsl(142 50% 58%); }
-  .dark .ios-tinted-red { background: hsl(0 72% 50% / 0.2); color: hsl(0 85% 65%); }
-  .dark .ios-tinted-orange { background: hsl(28 90% 50% / 0.18); color: hsl(28 95% 62%); }
-  .dark .ios-tinted-purple { background: hsl(270 55% 50% / 0.18); color: hsl(270 60% 68%); }
+  .dark .ios-tinted-blue,
+  .dark .ios-tinted-green,
+  .dark .ios-tinted-red,
+  .dark .ios-tinted-orange,
+  .dark .ios-tinted-purple {
+    background: hsl(9 100% 60% / 0.15);
+    color: hsl(9 100% 68%);
+  }
 
-  /* iOS Gradient Button */
-  .ios-gradient-btn { background: linear-gradient(180deg, hsl(211 100% 55%) 0%, hsl(211 100% 45%) 100%); }
+  .ios-gradient-btn {
+    background: linear-gradient(180deg, hsl(9 100% 64%) 0%, hsl(9 95% 52%) 100%);
+  }
 
   /* iOS Section Header */
   .ios-section-header {

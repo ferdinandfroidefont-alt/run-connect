@@ -570,7 +570,7 @@ export default function MySessions() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {isViewingJoinedSession ? (
-                        <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                        <Badge className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Rejoint</Badge>
                       ) : (
                         <Badge variant={isUpcoming ? "default" : "secondary"} className="text-xs">
                           {isUpcoming ? "À venir" : "Terminée"}
@@ -659,7 +659,6 @@ export default function MySessions() {
             <IOSListGroup header="INFORMATIONS">
               <IOSListItem
                 icon={Calendar}
-                iconBgColor="bg-red-500"
                 title="Date"
                 value={format(new Date(selectedSession.scheduled_at), 'dd MMM yyyy', { locale: fr })}
                 showChevron={false}
@@ -667,7 +666,6 @@ export default function MySessions() {
               />
               <IOSListItem
                 icon={Clock}
-                iconBgColor="bg-orange-500"
                 title="Heure"
                 value={format(new Date(selectedSession.scheduled_at), 'HH:mm', { locale: fr })}
                 showChevron={false}
@@ -675,7 +673,6 @@ export default function MySessions() {
               />
               <IOSListItem
                 icon={MapPin}
-                iconBgColor="bg-green-500"
                 title="Lieu"
                 subtitle={selectedSession.location_name}
                 showChevron={false}
@@ -1073,7 +1070,7 @@ export default function MySessions() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 {sessionSource === 'joined' ? (
-                                  <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                                  <Badge className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">Rejoint</Badge>
                                 ) : (
                                   <Badge 
                                     variant={isUpcoming ? "default" : "secondary"}

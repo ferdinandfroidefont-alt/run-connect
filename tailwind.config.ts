@@ -45,10 +45,10 @@ export default {
     				'Noto Color Emoji'
     			],
     			display: [
+    				'DM Sans',
     				'-apple-system',
     				'BlinkMacSystemFont',
     				'"SF Pro Display"',
-    				'Sora',
     				'Inter',
     				'sans-serif'
     			],
@@ -82,6 +82,9 @@ export default {
     				DEFAULT: 'hsl(var(--primary))',
     				glow: 'hsl(var(--primary-glow))',
     				foreground: 'hsl(var(--primary-foreground))'
+    			},
+    			outdoor: {
+    				DEFAULT: 'hsl(var(--brand-outdoor))',
     			},
     			secondary: {
     				DEFAULT: 'hsl(var(--secondary))',

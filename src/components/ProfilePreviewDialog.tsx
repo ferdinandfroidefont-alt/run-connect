@@ -467,21 +467,18 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       <IOSListGroup>
                         <IOSListItem
                           icon={CalendarDays}
-                          iconBgColor="bg-primary"
                           title="Séances créées"
                           value={statsLoading ? '…' : String(stats.sessionsCreated)}
                           showChevron={false}
                         />
                         <IOSListItem
                           icon={Route}
-                          iconBgColor="bg-emerald-500"
                           title="Itinéraires créés"
                           value={statsLoading ? '…' : String(stats.routesCreated)}
                           showChevron={false}
                         />
                         <IOSListItem
                           icon={MapPin}
-                          iconBgColor="bg-orange-500"
                           title="Séances rejointes"
                           value={statsLoading ? '…' : String(stats.sessionsJoined)}
                           showChevron={false}
@@ -495,13 +492,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       <IOSListGroup>
                         <IOSListItem
                           icon={Trophy}
-                          iconBgColor="bg-yellow-500"
                           title="Records sport"
                           onClick={() => setShowRecordsSheet(true)}
                         />
                         <IOSListItem
                           icon={CalendarDays}
-                          iconBgColor="bg-blue-500"
                           title="Séances récentes"
                           onClick={() => setShowActivitiesSheet(true)}
                           showSeparator={false}
