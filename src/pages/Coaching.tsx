@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 import { cn } from "@/lib/utils";
-import { IosAppStoreScrollLayout } from "@/components/layout/IosAppStoreScrollLayout";
 import { CoachingSessionDetail } from "@/components/coaching/CoachingSessionDetail";
 import { WeeklyPlanDialog } from "@/components/coaching/WeeklyPlanDialog";
 import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog";
@@ -293,7 +292,7 @@ export default function Coaching() {
   const showPageLoader = authLoading || loading || waitAthleteWhenNoClub;
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-hidden bg-secondary">
+    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
       {showPageLoader ? (
         <div
           className="flex flex-1 flex-col items-center justify-center px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]"
@@ -341,67 +340,47 @@ export default function Coaching() {
         </>
       ) : (
         <>
-          <IosAppStoreScrollLayout
-            className="min-h-0 flex-1"
-            titleLarge={
-              <>
-                <h1 className="text-ios-largetitle font-bold tracking-tight text-foreground">Coaching</h1>
-                <p className="mt-1 text-ios-subheadline text-muted-foreground">Expérience claire, actions rapides</p>
-              </>
-            }
-            titleCompact="Coaching"
-            belowLargeTitle={
-              <>
-                <div className="border-b border-border/25 bg-secondary px-4 pb-3">
-                  <div className="ios-card border border-border/60 px-ios-4 py-ios-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
-                          <Dumbbell className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 text-sm text-muted-foreground">
-                          Espace club, plan et outils
-                        </div>
-                      </div>
-                      {selectedClub && (
-                        <div
-                          className={cn(
-                            "shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold",
-                            isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {isCoach ? "Mode coach" : "Mode athlete"}
-                        </div>
-                      )}
-                    </div>
+          {/*
+            fixed-fill-with-bottom-nav + tab bar : pas de safe-area-bottom dans le scroll (déjà sur la nav).
+          */}
+          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
+            <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
+                    <Dumbbell className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
+                    <p className="text-sm text-muted-foreground">Expérience claire, actions rapides</p>
                   </div>
                 </div>
-
-                <section className="border-b border-border/25 bg-secondary px-4 pb-4">
-                  <div className="ios-card border border-border/60 p-2">
-                    <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-                      {displayClubs.map((club) => (
-                        <button
-                          key={club.id}
-                          type="button"
-                          onClick={() => setSelectedClubId(club.id)}
-                          className={cn(
-                            "shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors",
-                            selectedClubId === club.id
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-foreground"
-                          )}
-                        >
-                          {club.name}
-                        </button>
-                      ))}
-                    </div>
+                {selectedClub && (
+                  <div className={cn("rounded-full px-3 py-1 text-[11px] font-semibold", isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground")}>
+                    {isCoach ? "Mode coach" : "Mode athlete"}
                   </div>
-                </section>
-              </>
-            }
-          >
-            <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-6 pt-2" data-tutorial="tutorial-coaching">
+                )}
+              </div>
+            </header>
+
+            <section className="ios-card border border-border/60 p-2">
+              <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+                {displayClubs.map((club) => (
+                  <button
+                    key={club.id}
+                    type="button"
+                    onClick={() => setSelectedClubId(club.id)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors",
+                      selectedClubId === club.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                    )}
+                  >
+                    {club.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+
             {clubs.length > 0 && athleteClubs.length > 0 && (
               <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
                 <h2 className="text-[16px] font-semibold text-foreground">Mon plan coaching</h2>
@@ -561,8 +540,7 @@ export default function Coaching() {
             )}
           </>
         )}
-            </div>
-          </IosAppStoreScrollLayout>
+          </div>
 
           {selectedClub && (
             <>

@@ -19,8 +19,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosAppStoreScrollLayout } from "@/components/layout/IosAppStoreScrollLayout";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -164,7 +162,6 @@ const Messages = () => {
   const { user, subscriptionInfo } = useAuth();
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
-  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -2559,22 +2556,22 @@ const Messages = () => {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
-        <IosAppStoreScrollLayout
+        <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          fixedToolbarPx={44}
-          fixedOverlayBodyPx={56}
-          fixedOverlay={
-            isSelectionMode ? (
-              <div className="relative flex min-h-[52px] items-center justify-center px-ios-4 py-ios-3">
+          headerWrapperClassName="z-50 border-b border-border bg-card"
+          header={
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
+            {isSelectionMode ? (
+              <>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={exitSelectionMode}
-                  className="absolute left-ios-4 h-auto p-0 font-normal text-primary"
+                  className="text-primary p-0 h-auto font-normal absolute left-ios-4"
                 >
                   Annuler
                 </Button>
-                <h1 className="text-center text-[17px] font-semibold">
+                <h1 className="text-[17px] font-semibold text-center">
                   {selectedConversations.size} sélectionné(s)
                 </h1>
                 <Button
@@ -2582,30 +2579,27 @@ const Messages = () => {
                   size="sm"
                   variant="ghost"
                   disabled={selectedConversations.size === 0}
-                  className="absolute right-ios-4 h-auto p-0 font-normal text-destructive"
+                  className="text-destructive p-0 h-auto font-normal absolute right-ios-4"
                 >
                   Supprimer
                 </Button>
-              </div>
-            ) : undefined
-          }
-          titleLarge={
-            <h1 className="text-center text-ios-largetitle font-bold tracking-tight text-foreground">
-              {t("navigation.messages")}
-            </h1>
-          }
-          titleCompact={t("navigation.messages")}
-          trailing={
-            !isSelectionMode ? (
-              <Button
-                onClick={() => setShowNewConversation(true)}
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 shrink-0"
-              >
-                <Plus className="h-6 w-6 text-primary" />
-              </Button>
-            ) : undefined
+              </>
+            ) : (
+              <>
+                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <div className="absolute right-ios-4 flex items-center gap-ios-2">
+                  <Button
+                    onClick={() => setShowNewConversation(true)}
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9"
+                  >
+                    <Plus className="h-6 w-6 text-primary" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
           }
         >
         <div className="space-y-ios-3 pb-ios-2">
@@ -2879,7 +2873,7 @@ const Messages = () => {
             )}
           </div>
         </div>
-        </IosAppStoreScrollLayout>
+        </IosFixedPageHeaderShell>
 
         {/* Create Club Dialog */}
         <Suspense fallback={null}>

@@ -133,7 +133,8 @@ export const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden">
       {/*
-        Tab bar fixe (capsule flottante) : spacer = --bottom-nav-offset pour que le contenu ne passe pas dessous.
+        La tab bar est dans le flux (plus en fixed) : le <main> a une hauteur réelle = viewport − barre.
+        Le scroll ne s’étend plus derrière les onglets (plus besoin de ios-nav-padding sur le scroll).
       */}
       {/*
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
@@ -185,15 +186,8 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </main>
       <TutorialReplayHost />
-      {showBottomNav && (
-        <div
-          className="shrink-0 bg-transparent"
-          style={{ height: "var(--bottom-nav-offset)" }}
-          aria-hidden
-        />
-      )}
       {/*
-        FAB création : rendu par BottomNavigation sur l’accueil ; --layout-bottom-inset inclut déjà la safe-area.
+        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
       */}
       {showBottomNav && <BottomNavigation />}
     </div>

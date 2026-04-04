@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -72,8 +72,6 @@ const queryClient = new QueryClient({
 const App = () => {
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
-  /** Réf stable : évite de réinitialiser les timers du splash à chaque re-render (Auth, profil…). */
-  const handleSplashComplete = useCallback(() => setIsAppLoaded(true), []);
 
   // 🍎 Global deep link listener for iOS OAuth callback
   useEffect(() => {
@@ -184,7 +182,7 @@ const App = () => {
 
   /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */
   if (!isAppLoaded) {
-    return <LoadingScreen onLoadingComplete={handleSplashComplete} />;
+    return <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />;
   }
 
   return (

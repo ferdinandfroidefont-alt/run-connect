@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Map, Calendar, MessageCircle, LayoutList, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, Trophy, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,7 +17,7 @@ type NavItem = {
   showUnreadBadge?: boolean;
 };
 
-const ITEM_GAP_PX = 10;
+const ITEM_GAP_PX = 12;
 /** Nombre de cases visibles ; l’index central = actif (2 à gauche, 2 à droite). */
 const VISIBLE_SLOTS = 5;
 const CENTER_SLOT = 2;
@@ -40,13 +40,7 @@ export const BottomNavigation = () => {
 
   const navItems = useMemo<NavItem[]>(
     () => [
-      {
-        path: "/",
-        icon: Map,
-        label: t("navigation.map"),
-        tutorialId: "nav-map",
-        isActive: (p) => p === "/",
-      },
+      { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
       {
         path: "/my-sessions",
         icon: Calendar,
@@ -63,11 +57,11 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/feed",
-        icon: LayoutList,
-        label: t("navigation.feed"),
-        tutorialId: "nav-feed",
-        isActive: (p) => p === "/feed" || p.startsWith("/feed/"),
+        path: "/leaderboard",
+        icon: Trophy,
+        label: t("navigation.leaderboard") || "Classement",
+        tutorialId: "nav-leaderboard",
+        isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
       },
       {
         path: "/coaching",
@@ -152,86 +146,80 @@ export const BottomNavigation = () => {
   if (hideBottomNav) return null;
 
   return (
-    <>
+    <nav
+      className={cn(
+        "relative z-[100] w-full shrink-0 border-t border-border bg-background",
+        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
+        "pointer-events-auto"
+      )}
+      role="navigation"
+      aria-label="Navigation principale"
+      style={{
+        /* Safe area home indicator, légèrement resserrée pour éviter l’air “double” sous les onglets. */
+        paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+      }}
+    >
+      {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
-      {/*
-        Host fixe sans fond ni bordure : une seule couche visible (capsule blur).
-        Le spacer dans Layout applique --bottom-nav-offset (inclut safe-area).
-      */}
-      <nav
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[100] border-0 bg-transparent shadow-none"
-        role="navigation"
-        aria-label="Navigation principale"
-      >
+      <div className="ios-nav-shell relative min-h-[var(--nav-height)] w-full max-w-full overflow-hidden pt-0.5 pb-0">
         <div
-          className="pointer-events-auto box-border w-full max-w-[100vw] px-3 pb-[var(--bottom-nav-float-gap)]"
+          className="mx-auto flex max-w-full items-stretch justify-center"
+          style={{
+            gap: ITEM_GAP_PX,
+            paddingLeft: "0.5rem",
+            paddingRight: "0.5rem",
+          }}
         >
-          <div
-            className={cn(
-              "ios-tab-bar-pill mx-auto w-full max-w-lg overflow-hidden",
-              "pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] pl-0.5 pr-0.5"
-            )}
-          >
-            <div
-              className="mx-auto flex min-h-[var(--nav-height)] max-w-full items-center justify-center"
-              style={{
-                gap: ITEM_GAP_PX,
-                paddingLeft: "0.25rem",
-                paddingRight: "0.25rem",
-              }}
-            >
-              {visibleRow.map(({ slot, item }) => {
-                const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-                const isCenter = slot === CENTER_SLOT;
-                const isActive = item.isActive(pathname);
-                const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
+          {visibleRow.map(({ slot, item }) => {
+            const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
+            const isCenter = slot === CENTER_SLOT;
+            const isActive = item.isActive(pathname);
+            const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
 
-                return (
-                  <button
-                    key={`slot-${slot}`}
-                    type="button"
-                    onClick={() => navigate(item.path)}
-                    data-tutorial={tutorialId}
-                    aria-current={isActive ? "page" : undefined}
+            return (
+              <button
+                key={`slot-${slot}`}
+                type="button"
+                onClick={() => navigate(item.path)}
+                data-tutorial={tutorialId}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
+                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]",
+                  !isCenter && "opacity-[0.92]"
+                )}
+              >
+                <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
+                  <Icon
+                    size={26}
                     className={cn(
-                      "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-2xl",
-                      "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]",
-                      !isCenter && "opacity-[0.92]"
+                      "transition-colors duration-300 ease-ios",
+                      isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
                     )}
-                  >
-                    <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
-                      <Icon
-                        size={26}
-                        className={cn(
-                          "transition-colors duration-300 ease-ios",
-                          isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
-                        )}
-                        strokeWidth={isActive ? 2.4 : 1.65}
-                        aria-hidden
-                      />
-                      {showBadge && (
-                        <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
-                          {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        "w-full truncate text-center text-[10px] leading-none tracking-tight transition-colors duration-300 ease-ios",
-                        isActive
-                          ? "font-semibold text-primary"
-                          : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
-                      )}
-                    >
-                      {label}
+                    strokeWidth={isActive ? 2.4 : 1.65}
+                    aria-hidden
+                  />
+                  {showBadge && (
+                    <span className="absolute -right-2 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-destructive px-1 text-[10px] font-bold text-destructive-foreground shadow-sm">
+                      {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
+                    isActive
+                      ? "font-semibold text-primary"
+                      : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
+                  )}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   RUCONNECT_SPLASH_BLUE,
@@ -15,9 +15,6 @@ interface LoadingScreenProps {
 
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
-  /** Toujours la dernière callback sans relancer l’effet (re-renders Auth / providers). */
-  const completeRef = useRef(onLoadingComplete);
-  completeRef.current = onLoadingComplete;
 
   useEffect(() => {
     primeHomeMapDuringSplash();
@@ -31,29 +28,19 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       await restoreChromeAfterRuconnectSplash();
     };
 
-    let completed = false;
-    const runComplete = () => {
-      if (completed) return;
-      completed = true;
-      completeRef.current();
-    };
-
     const exitTimer = setTimeout(() => setExiting(true), 1800);
-    const completeTimer = setTimeout(runComplete, 2200);
-    /** Si un bug bloque la navigation, ne pas laisser un écran vide indéfiniment. */
-    const failSafeTimer = setTimeout(runComplete, 8000);
+    const completeTimer = setTimeout(onLoadingComplete, 2200);
 
     return () => {
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
-      clearTimeout(failSafeTimer);
       /**
        * Ne pas retirer les fonds avant la restauration : course avec `ThemeProvider` au premier rendu
        * (flash / bande basse non bleue). `restoreChromeAfterRuconnectSplash` réapplique html/body/#root.
        */
       void restoreAfterSplash();
     };
-  }, []);
+  }, [onLoadingComplete]);
 
   const splashLayerStyle: CSSProperties = {
     backgroundColor: RUCONNECT_SPLASH_BLUE,

@@ -9,15 +9,14 @@ export function requireSupabaseUrl(): string {
 }
 
 export function requireSupabaseAnonKey(): string {
-  /**
-   * Supabase expose désormais la clé publique sous le nom "publishable key".
-   * On accepte les deux variantes pour rester compatible avec les anciens et nouveaux `.env`.
-   */
-  const key =
-    import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ||
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+  const key = (
+    import.meta.env.VITE_SUPABASE_ANON_KEY ??
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  )?.trim();
   if (!key) {
-    throw new Error("Missing VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY. Copy .env.example to .env and set the public Supabase key from Supabase -> Settings -> API.");
+    throw new Error(
+      "Missing VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY). Copy .env.example to .env and set the anon/publishable key from Supabase → Settings → API.",
+    );
   }
   return key;
 }

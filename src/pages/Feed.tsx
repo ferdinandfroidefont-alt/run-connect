@@ -2,14 +2,7 @@ import { useEffect, useRef, useCallback, useState, lazy, Suspense } from 'react'
 import { useFeed } from '@/hooks/useFeed';
 import { useDiscoverFeed } from '@/hooks/useDiscoverFeed';
 import { FeedCard } from '@/components/feed/FeedCard';
-import {
-  FeedHeaderHero,
-  FeedHeaderTrailing,
-  FeedModeSwitcher,
-  type FeedMode,
-} from '@/components/feed/FeedHeader';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { IosAppStoreScrollLayout } from '@/components/layout/IosAppStoreScrollLayout';
+import { FeedHeader, FeedMode } from '@/components/feed/FeedHeader';
 import { FeedEmptyState } from '@/components/feed/FeedEmptyState';
 import { DiscoverFilters } from '@/components/feed/DiscoverFilters';
 import { DiscoverCard } from '@/components/feed/DiscoverCard';
@@ -19,6 +12,7 @@ import { SessionDetailsDialog } from '@/components/SessionDetailsDialog';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoverSession } from '@/hooks/useDiscoverFeed';
+import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -30,7 +24,6 @@ const SettingsDialog = lazy(() =>
 export default function Feed() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
   const [mode, setMode] = useState<FeedMode>('friends');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
@@ -135,31 +128,19 @@ export default function Feed() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-feed">
-      <IosAppStoreScrollLayout
+      <IosFixedPageHeaderShell
         className="min-h-0 flex-1"
-        scrollRef={scrollContainerRef}
-        scrollClassName="ios-scroll-region"
-        scrollProps={{
-          onTouchStart: handleTouchStart,
-          onTouchMove: handleTouchMove,
-          onTouchEnd: handleTouchEnd,
-        }}
-        titleLarge={
+        headerWrapperClassName="z-20 bg-secondary"
+        header={
           <>
-            <h1 className="pb-3 text-ios-largetitle font-bold tracking-tight text-foreground">
-              {t("navigation.feed")}
-            </h1>
-            <FeedHeaderHero onProfileClick={() => setShowProfileDialog(true)} />
-          </>
-        }
-        titleCompact={t("navigation.feed")}
-        trailing={
-          <FeedHeaderTrailing onSettingsClick={() => setShowSettingsDialog(true)} />
-        }
-        belowLargeTitle={
-          <>
-            <FeedModeSwitcher mode={mode} onModeChange={setMode} />
-            {mode === "discover" && (
+            <FeedHeader
+              onProfileClick={() => setShowProfileDialog(true)}
+              onSettingsClick={() => setShowSettingsDialog(true)}
+              mode={mode}
+              onModeChange={setMode}
+            />
+            
+            {mode === 'discover' && (
               <DiscoverFilters
                 maxDistance={maxDistance}
                 setMaxDistance={setMaxDistance}
@@ -168,9 +149,16 @@ export default function Feed() {
                 toggleAllActivities={toggleAllActivities}
               />
             )}
-            {mode === "friends" && <div className="h-px shrink-0 bg-border" />}
+            {mode === 'friends' && <div className="h-px shrink-0 bg-border" />}
           </>
         }
+        scrollRef={scrollContainerRef}
+        scrollClassName="ios-scroll-region"
+        scrollProps={{
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd,
+        }}
       >
         {(pullDistance > 0 || isRefreshing) && (
           <div className="flex justify-center overflow-hidden transition-all" style={{ height: isRefreshing ? 40 : pullDistance * 0.5 }}>
@@ -283,7 +271,7 @@ export default function Feed() {
           </>
         )}
         </div>
-      </IosAppStoreScrollLayout>
+      </IosFixedPageHeaderShell>
 
       <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 

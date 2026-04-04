@@ -18,8 +18,6 @@ import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
-import { IosAppStoreScrollLayout } from '@/components/layout/IosAppStoreScrollLayout';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import ConfirmPresence from '@/pages/ConfirmPresence';
@@ -93,9 +91,7 @@ export default function MySessions() {
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
   const [forcedConfirmSessionId, setForcedConfirmSessionId] = useState<string | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
-  const { t } = useLanguage();
   const SESSIONS_PER_PAGE = 3;
-  const embeddedConfirm = focusColumn === 'finished' && finishedSub === 'confirm';
 
 
   // Live tracking participant states
@@ -828,217 +824,125 @@ export default function MySessions() {
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-my-sessions">
-        {embeddedConfirm ? (
-          <>
-            <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-              <div className="relative flex items-center justify-center px-ios-4 py-ios-3">
-                <h1 className="text-center text-ios-largetitle font-bold tracking-tight">Mes Séances</h1>
-              </div>
-              <div className="px-ios-4 pb-ios-2">
-                <div className="flex gap-ios-1">
-                  <div className="w-1/2 min-w-0">
-                    <div className="rounded-t-ios-md bg-secondary p-ios-1 pb-ios-1">
-                      <div className="w-full rounded-ios-sm bg-card py-ios-2 text-center text-ios-footnote font-semibold text-foreground shadow-sm">
-                        Programmées
-                      </div>
-                    </div>
-                    <div className="rounded-b-ios-md bg-secondary px-ios-1 pb-ios-1">
-                      <div className="flex gap-ios-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('programmed');
-                            setSessionSource('created');
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'programmed' && sessionSource === 'created'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Créées
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('programmed');
-                            setSessionSource('joined');
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'programmed' && sessionSource === 'joined'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Rejointes
-                        </button>
-                      </div>
-                    </div>
+        {/* iOS Header */}
+        <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
+            <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
+          </div>
+          
+          {/* iOS Segmented Control - Two columns layout */}
+          <div className="px-ios-4 pb-ios-2">
+            <div className="flex gap-ios-1">
+              {/* Programmées : Créées / Rejointes */}
+              <div className="w-1/2 min-w-0">
+                <div className="bg-secondary rounded-t-ios-md p-ios-1 pb-ios-1">
+                  <div className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center">
+                    Programmées
                   </div>
-                  <div className="w-1/2 min-w-0">
-                    <div className="rounded-t-ios-md bg-secondary p-ios-1 pb-ios-1">
-                      <div className="w-full rounded-ios-sm bg-card py-ios-2 text-center text-ios-footnote font-semibold text-foreground shadow-sm">
-                        Terminées
-                      </div>
-                    </div>
-                    <div className="rounded-b-ios-md bg-secondary px-ios-1 pb-ios-1">
-                      <div className="flex gap-ios-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('finished');
-                            setFinishedSub('activities');
-                            setForcedConfirmSessionId(null);
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'finished' && finishedSub === 'activities'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Activités
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('finished');
-                            setFinishedSub('confirm');
-                            setForcedConfirmSessionId(null);
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'finished' && finishedSub === 'confirm'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Confirmer
-                        </button>
-                      </div>
-                    </div>
+                </div>
+                <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
+                  <div className="flex gap-ios-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusColumn('programmed');
+                        setSessionSource('created');
+                        setSessionPage(0);
+                      }}
+                      className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        focusColumn === 'programmed' && sessionSource === 'created'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      Créées
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusColumn('programmed');
+                        setSessionSource('joined');
+                        setSessionPage(0);
+                      }}
+                      className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        focusColumn === 'programmed' && sessionSource === 'joined'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      Rejointes
+                    </button>
                   </div>
                 </div>
               </div>
-              <div className="h-px bg-border" />
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <ConfirmPresence
-                embedded
-                forcedSessionId={forcedConfirmSessionId}
-                onForcedSessionConsumed={() => setForcedConfirmSessionId(null)}
-                onEmbeddedBack={() => {
-                  setForcedConfirmSessionId(null);
-                  setFinishedSub("activities");
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          <IosAppStoreScrollLayout
-            className="min-h-0 flex-1"
-            scrollClassName="ios-scroll-region pt-ios-2 pb-ios-6"
-            titleLarge={
-              <h1 className="w-full text-center text-ios-largetitle font-bold tracking-tight text-foreground">
-                {t("navigation.mySessions")}
-              </h1>
-            }
-            titleCompact={t("navigation.mySessions")}
-            belowLargeTitle={
-              <div className="border-b border-border/30 bg-secondary px-ios-4 pb-ios-2">
-                <div className="flex gap-ios-1">
-                  <div className="w-1/2 min-w-0">
-                    <div className="rounded-t-ios-md bg-muted/40 p-ios-1 pb-ios-1 dark:bg-muted/20">
-                      <div className="w-full rounded-ios-sm bg-card py-ios-2 text-center text-ios-footnote font-semibold text-foreground shadow-sm">
-                        Programmées
-                      </div>
-                    </div>
-                    <div className="rounded-b-ios-md bg-muted/40 px-ios-1 pb-ios-1 dark:bg-muted/20">
-                      <div className="flex gap-ios-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('programmed');
-                            setSessionSource('created');
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'programmed' && sessionSource === 'created'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Créées
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('programmed');
-                            setSessionSource('joined');
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'programmed' && sessionSource === 'joined'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Rejointes
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="w-1/2 min-w-0">
-                    <div className="rounded-t-ios-md bg-muted/40 p-ios-1 pb-ios-1 dark:bg-muted/20">
-                      <div className="w-full rounded-ios-sm bg-card py-ios-2 text-center text-ios-footnote font-semibold text-foreground shadow-sm">
-                        Terminées
-                      </div>
-                    </div>
-                    <div className="rounded-b-ios-md bg-muted/40 px-ios-1 pb-ios-1 dark:bg-muted/20">
-                      <div className="flex gap-ios-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('finished');
-                            setFinishedSub('activities');
-                            setForcedConfirmSessionId(null);
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'finished' && finishedSub === 'activities'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Activités
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFocusColumn('finished');
-                            setFinishedSub('confirm');
-                            setForcedConfirmSessionId(null);
-                            setSessionPage(0);
-                          }}
-                          className={`min-w-0 flex-1 rounded-ios-sm py-ios-1 text-[11px] font-semibold transition-colors ${
-                            focusColumn === 'finished' && finishedSub === 'confirm'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          Confirmer
-                        </button>
-                      </div>
-                    </div>
+
+              {/* Terminées : Activités / Confirmer */}
+              <div className="w-1/2 min-w-0">
+                <div className="bg-secondary rounded-t-ios-md p-ios-1 pb-ios-1">
+                  <div className="w-full py-ios-2 text-ios-footnote font-semibold rounded-ios-sm bg-card text-foreground shadow-sm text-center">
+                    Terminées
                   </div>
                 </div>
-                <div className="mt-ios-2 h-px bg-border" />
+                <div className="bg-secondary rounded-b-ios-md px-ios-1 pb-ios-1">
+                  <div className="flex gap-ios-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusColumn('finished');
+                        setFinishedSub('activities');
+                        setForcedConfirmSessionId(null);
+                        setSessionPage(0);
+                      }}
+                      className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        focusColumn === 'finished' && finishedSub === 'activities'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      Activités
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusColumn('finished');
+                        setFinishedSub('confirm');
+                        setForcedConfirmSessionId(null);
+                        setSessionPage(0);
+                      }}
+                      className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                        focusColumn === 'finished' && finishedSub === 'confirm'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      Confirmer
+                    </button>
+                  </div>
+                </div>
               </div>
-            }
-          >
-          {focusColumn === "finished" && finishedSub === "activities" ? (
+            </div>
+          </div>
+          <div className="h-px bg-border" />
+        </div>
+
+        <div
+          className={
+            focusColumn === "finished" && finishedSub === "confirm"
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+              : "ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6"
+          }
+        >
+          {focusColumn === "finished" && finishedSub === "confirm" ? (
+            <ConfirmPresence
+              embedded
+              forcedSessionId={forcedConfirmSessionId}
+              onForcedSessionConsumed={() => setForcedConfirmSessionId(null)}
+              onEmbeddedBack={() => {
+                setForcedConfirmSessionId(null);
+                setFinishedSub("activities");
+              }}
+            />
+          ) : focusColumn === "finished" && finishedSub === "activities" ? (
             <StravaActivitiesPanel
               userId={user?.id}
               enabled={!!user}
@@ -1246,8 +1150,7 @@ export default function MySessions() {
               )}
             </>
           )}
-          </IosAppStoreScrollLayout>
-        )}
+        </div>
       </div>
 
       <Suspense fallback={null}>
