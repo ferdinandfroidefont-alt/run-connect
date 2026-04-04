@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -807,15 +807,6 @@ export const RouteCreation = () => {
             </Button>
           </div>
         </div>
-        <div className="flex justify-end border-t border-border/20 px-ios-3 py-1.5">
-          <button
-            type="button"
-            onClick={() => navigate('/itinerary/my-routes')}
-            className="text-[13px] font-medium text-primary active:opacity-70"
-          >
-            Mes itinéraires
-          </button>
-        </div>
       </div>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -845,8 +836,8 @@ export const RouteCreation = () => {
         </div>
       )}
 
-      <div className="absolute left-ios-4 top-ios-4 z-10">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex gap-ios-1">
+      <div className="absolute left-ios-4 top-ios-4 z-10 max-w-[calc(100vw-2rem)] min-w-0">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-wrap items-center gap-ios-1">
           <Button
             size="sm"
             variant={!isManualMode ? 'default' : 'ghost'}
@@ -864,6 +855,20 @@ export const RouteCreation = () => {
           >
             <MapPin className="w-4 h-4" />
             Manuel
+          </Button>
+          <div
+            className="mx-2 h-5 w-px shrink-0 bg-border/70"
+            aria-hidden
+            role="presentation"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate('/itinerary/my-routes')}
+            className="gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
+          >
+            <Layers className="h-4 w-4" />
+            Mes itinéraires
           </Button>
         </div>
         <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">

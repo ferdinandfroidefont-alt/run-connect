@@ -2167,17 +2167,17 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — bloc vertical droit au-dessus du FAB "+" (offset serré : ~12px entre bas colonne et haut du +) */}
+      {/* Contrôles carte — colonne compacte au-dessus du bouton « Programmer une séance » (centré) */}
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+4.75rem)]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+3.5rem)]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
         <div
           className={cn(
-            "pointer-events-auto flex flex-col items-center overflow-hidden rounded-[20px] border",
+            "pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
             "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
             "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
           )}
@@ -2187,35 +2187,35 @@ export const InteractiveMap = ({
             title="Créer un itinéraire"
             aria-label="Créer un itinéraire"
             onClick={() => navigate("/route-create")}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
-            <PenLine className="h-[18px] w-[18px]" strokeWidth={2} />
+            <PenLine className="h-[15px] w-[15px]" strokeWidth={2} />
           </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
-          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+          <div className="mx-1.5 h-px w-6 bg-border/90 dark:bg-[#1f1f1f]" />
+          <div className="flex h-9 w-9 items-center justify-center [&_.map-ios-colored-fab]:h-9 [&_.map-ios-colored-fab]:w-9 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <div className="mx-1.5 h-px w-6 bg-border/90 dark:bg-[#1f1f1f]" />
           <button
             type="button"
             title="Me localiser"
             onClick={handleLocateMe}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
-            <MapPin className="h-[18px] w-[18px]" strokeWidth={2} />
+            <MapPin className="h-[15px] w-[15px]" strokeWidth={2} />
           </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <div className="mx-1.5 h-px w-6 bg-border/90 dark:bg-[#1f1f1f]" />
           <button
             type="button"
             title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
             aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
             onClick={toggleImmersiveMode}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+            className="flex h-9 w-9 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             {isImmersiveMode ? (
-              <Minimize2 className="h-[18px] w-[18px]" strokeWidth={2} />
+              <Minimize2 className="h-[15px] w-[15px]" strokeWidth={2} />
             ) : (
-              <Expand className="h-[18px] w-[18px]" strokeWidth={2} />
+              <Expand className="h-[15px] w-[15px]" strokeWidth={2} />
             )}
           </button>
         </div>

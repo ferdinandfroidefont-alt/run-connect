@@ -1,12 +1,12 @@
-import { Plus } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 /**
- * Accueil : FAB création de séance seul (cloche / réglages / itinéraire : header + colonne carte).
- * Aligné à droite comme la colonne GPS / plein écran (`InteractiveMap`).
+ * Accueil : bouton centré « Programmer une séance » au-dessus de la barre d’onglets.
+ * Colonne carte (itinéraire, style, GPS, plein écran) reste à droite.
  */
 export function FloatingCreateSessionButton() {
   const location = useLocation();
@@ -16,7 +16,7 @@ export function FloatingCreateSessionButton() {
 
   if (hideBottomNav || location.pathname !== "/") return null;
 
-  const handlePlusClick = () => {
+  const handleClick = () => {
     if (location.pathname === "/") {
       openCreateSession();
     } else {
@@ -25,22 +25,25 @@ export function FloatingCreateSessionButton() {
     }
   };
 
+  const label = t("navigation.scheduleSession");
+
   return (
     <button
       type="button"
-      onClick={handlePlusClick}
+      onClick={handleClick}
       className={cn(
-        "pointer-events-auto fixed z-[105] flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
-        "bg-primary text-primary-foreground shadow-[0_8px_28px_-6px_hsl(var(--primary)/0.45),0_4px_14px_-8px_rgb(0_0_0/0.2)]",
-        "ring-[3px] ring-background transition-transform duration-200 ease-ios",
-        "active:scale-[0.94] touch-manipulation dark:ring-background",
+        "pointer-events-auto fixed z-[105] flex max-w-[min(22rem,calc(100vw-2rem))] items-center justify-center gap-2 rounded-full",
+        "border border-primary/20 bg-primary px-4 py-2.5 text-primary-foreground shadow-lg",
+        "text-sm font-semibold leading-tight ring-[3px] ring-background transition-transform duration-200 ease-ios",
+        "active:scale-[0.97] touch-manipulation dark:ring-background",
         "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+0.5rem)]",
-        "right-[max(1rem,env(safe-area-inset-right,0px))]"
+        "left-1/2 -translate-x-1/2"
       )}
       data-tutorial="create-session"
-      aria-label={t("navigation.createSession")}
+      aria-label={label}
     >
-      <Plus className="h-6 w-6" strokeWidth={2.35} aria-hidden />
+      <CalendarClock className="h-4 w-4 shrink-0" strokeWidth={2.25} aria-hidden />
+      <span className="truncate">{label}</span>
     </button>
   );
 }
