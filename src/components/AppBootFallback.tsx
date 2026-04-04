@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import {
   RUCONNECT_SPLASH_BLUE,
+  RUCONNECT_SPLASH_ICON_URL,
 } from '@/lib/ruconnectSplashChrome';
 import { useRuconnectSplashScreenChrome } from '@/hooks/useRuconnectSplashScreenChrome';
-import { RunConnectBrandMark } from '@/components/branding/RunConnectBrandMark';
 
 type AppBootFallbackProps = {
   /** Phase affichée dans les logs / accessibilité */
@@ -73,10 +73,13 @@ export function AppBootFallback({ phase = 'auth', showSlowHintAfterMs = 8000 }: 
               transform: 'translateY(calc(-1 * min(2.4dvh, 1.1rem)))',
           }}
         >
-          <div className="relative" style={logoBoxStyle}>
-            <div className="absolute inset-0 rounded-[22%] bg-white/14 blur-2xl" aria-hidden />
-            <RunConnectBrandMark className="block h-full w-full shrink-0" />
-          </div>
+          <img
+            src={RUCONNECT_SPLASH_ICON_URL}
+            alt=""
+            draggable={false}
+            className="block shrink-0 select-none object-contain"
+            style={logoBoxStyle}
+          />
           <p className="font-semibold text-white" style={titleStyle}>
             RunConnect
           </p>

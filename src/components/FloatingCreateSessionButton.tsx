@@ -44,6 +44,6 @@ export function FloatingCreateSessionButton() {
     >
       <CalendarClock className="h-4 w-4 shrink-0" strokeWidth={2.25} aria-hidden />
       <span className="truncate">{label}</span>
-    </button>
+      </button>
   );
 }
