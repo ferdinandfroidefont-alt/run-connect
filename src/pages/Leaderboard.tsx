@@ -10,6 +10,7 @@ import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { LeaderboardSkeleton } from "@/components/ui/skeleton-loader";
 import { RulesSheet } from "@/components/leaderboard/RulesSheet";
 import { cn } from "@/lib/utils";
+import { IosAppStoreScrollLayout } from "@/components/layout/IosAppStoreScrollLayout";
 
 type PointsMode = "season" | "total";
 
@@ -400,100 +401,102 @@ const Leaderboard = () => {
 
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
-      <header className="z-20 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
-        <div className="relative flex min-h-[52px] items-center px-4 pb-2 pt-2">
+      <IosAppStoreScrollLayout
+        className="min-h-0 flex-1"
+        scrollRef={listScrollRef}
+        scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        fixedToolbarPx={44}
+        leading={
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="z-10 flex shrink-0 items-center gap-1 text-primary"
+            className="flex max-w-[42vw] shrink-0 items-center gap-1 text-primary"
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px] font-medium">Retour</span>
+            <ArrowLeft className="h-5 w-5 shrink-0" />
+            <span className="truncate text-[15px] font-medium">Retour</span>
           </button>
-          <h1 className="pointer-events-none absolute inset-x-10 top-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold text-foreground">
-            Classement
-          </h1>
+        }
+        trailing={
           <button
             type="button"
             onClick={() => setShowRules(true)}
-            className="z-10 ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card text-primary"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-secondary/80 text-primary dark:bg-[#1a1a1a]"
             aria-label="Règles du classement"
           >
             <BookOpen className="h-4 w-4" />
           </button>
-        </div>
-
-        <div
-          className="scrollbar-none flex gap-2 overflow-x-auto px-4 pb-3 [-webkit-overflow-scrolling:touch]"
-          data-tutorial="tutorial-leaderboard"
-        >
-          {(["season", "total"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setPointsMode(m)}
-              className={cn(
-                "shrink-0 rounded-[16px] px-5 py-2.5 text-[15px] font-semibold transition-all",
-                pointsMode === m
-                  ? "bg-foreground text-background shadow-md"
-                  : "border border-border/80 bg-card text-foreground active:bg-secondary/80"
-              )}
+        }
+        titleLarge={
+          <h1 className="text-ios-largetitle font-bold tracking-tight text-foreground">Classement</h1>
+        }
+        titleCompact="Classement"
+        belowLargeTitle={
+          <>
+            <div
+              className="scrollbar-none flex gap-2 overflow-x-auto border-b border-border/30 bg-secondary px-4 pb-3 [-webkit-overflow-scrolling:touch]"
+              data-tutorial="tutorial-leaderboard"
             >
-              {modeLabels[m]}
-            </button>
-          ))}
-        </div>
+              {(["season", "total"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPointsMode(m)}
+                  className={cn(
+                    "shrink-0 rounded-[16px] px-5 py-2.5 text-[15px] font-semibold transition-all",
+                    pointsMode === m
+                      ? "bg-foreground text-background shadow-md"
+                      : "border border-border/80 bg-card text-foreground active:bg-secondary/80"
+                  )}
+                >
+                  {modeLabels[m]}
+                </button>
+              ))}
+            </div>
 
-        <p className="px-4 pb-2 text-center text-[12px] text-muted-foreground">
-          {totalUsers.toLocaleString()} participant{totalUsers !== 1 ? "s" : ""}
-        </p>
-      </header>
+            <p className="bg-secondary px-4 pb-2 pt-1 text-center text-[12px] text-muted-foreground">
+              {totalUsers.toLocaleString()} participant{totalUsers !== 1 ? "s" : ""}
+            </p>
 
-      <div className="shrink-0 border-b border-border/60 bg-secondary px-4 pb-2 pt-1">
-        <div className="mx-auto flex w-full max-w-md items-end justify-center gap-1.5">
-          <PodiumBlock
-            rank={2}
-            user={u2}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[32%]"
-            avatarSize="md"
-            onProfile={() => u2 && navigateToProfile(u2.user_id)}
-          />
-          <PodiumBlock
-            rank={1}
-            user={u1}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[36%]"
-            avatarSize="lg"
-            onProfile={() => u1 && navigateToProfile(u1.user_id)}
-          />
-          <PodiumBlock
-            rank={3}
-            user={u3}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[32%]"
-            avatarSize="md"
-            onProfile={() => u3 && navigateToProfile(u3.user_id)}
-          />
-        </div>
-      </div>
-
-      <div
-        ref={listScrollRef}
-        className={cn(
-          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pt-3",
-          hideBottomMe || !mySnapshot ? "pb-4" : "pb-2"
-        )}
+            <div className="border-b border-border/60 bg-secondary px-4 pb-2 pt-1">
+              <div className="mx-auto flex w-full max-w-md items-end justify-center gap-1.5">
+                <PodiumBlock
+                  rank={2}
+                  user={u2}
+                  pointsMode={pointsMode}
+                  maxWidthClass="max-w-[32%]"
+                  avatarSize="md"
+                  onProfile={() => u2 && navigateToProfile(u2.user_id)}
+                />
+                <PodiumBlock
+                  rank={1}
+                  user={u1}
+                  pointsMode={pointsMode}
+                  maxWidthClass="max-w-[36%]"
+                  avatarSize="lg"
+                  onProfile={() => u1 && navigateToProfile(u1.user_id)}
+                />
+                <PodiumBlock
+                  rank={3}
+                  user={u3}
+                  pointsMode={pointsMode}
+                  maxWidthClass="max-w-[32%]"
+                  avatarSize="md"
+                  onProfile={() => u3 && navigateToProfile(u3.user_id)}
+                />
+              </div>
+            </div>
+          </>
+        }
       >
         <motion.div
-          className="mx-auto w-full max-w-lg"
+          className={cn("mx-auto w-full max-w-lg px-3 pt-3", hideBottomMe || !mySnapshot ? "pb-4" : "pb-2")}
           initial={{ opacity: 0.88, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         >
           {listBody}
         </motion.div>
-      </div>
+      </IosAppStoreScrollLayout>
 
       {mySnapshot && !hideBottomMe ? (
         <motion.div
