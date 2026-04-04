@@ -2168,11 +2168,11 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — colonne compacte au-dessus du bouton « Programmer une séance » (centré) */}
+      {/* Contrôles carte — au-dessus du FAB et du bandeau Feed replié (--home-map-controls-stack-bottom) */}
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+3.5rem)]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+var(--home-map-controls-stack-bottom))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >

@@ -6,8 +6,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
-/** Aligné sur le FAB « Programmer une séance » (~h-11 / 2.75rem). */
-const PEEK_HEIGHT_PX = 44;
+/** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
+const PEEK_HEIGHT_PX = 76;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -198,13 +198,10 @@ export function HomeFeedBottomSheet() {
       >
         <div className="shrink-0">
           {snap === 0 ? (
-            <div
-              className="flex h-11 min-h-11 w-full items-center gap-1.5 px-2"
-              data-tutorial="home-feed-sheet-handle"
-            >
+            <div data-tutorial="home-feed-sheet-handle">
               <button
                 type="button"
-                className="flex min-h-0 min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1 text-left outline-none touch-manipulation active:opacity-80"
+                className="flex w-full flex-col items-center gap-1.5 pb-1 pt-2 text-left outline-none touch-manipulation active:opacity-90"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -213,12 +210,14 @@ export function HomeFeedBottomSheet() {
                 aria-expanded={false}
                 aria-label={t("navigation.feed")}
               >
-                <span className="h-1 w-7 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
-                <span className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-foreground">
-                  {t("navigation.feed")}
-                </span>
+                <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
+                <div className="flex w-full items-center justify-between gap-3 px-4 pb-1">
+                  <span className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-foreground">
+                    {t("navigation.feed")}
+                  </span>
+                  <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </div>
               </button>
-              <ChevronUp className="mr-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             </div>
           ) : (
             <div
