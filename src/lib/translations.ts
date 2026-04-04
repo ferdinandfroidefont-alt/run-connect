@@ -221,8 +221,10 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bienvenue sur RunConnect !',
       mapContent: 'Voici la carte interactive où vous pouvez découvrir les séances sportives autour de vous.',
-      runconnectTitle: 'Basculer vers le Feed',
-      runconnectContent: 'Appuyez sur « RunConnect » pour passer au fil d\'actualités de la communauté.',
+      runconnectTitle: 'Ouvrir le panneau Feed',
+      runconnectContent:
+        'Appuyez sur « RunConnect » pour ouvrir le fil d’actualités par-dessus la carte, sans quitter la carte.',
+      feedSheetScrimAria: 'Réduire le panneau Feed et afficher la carte',
       createTitle: 'Créer une séance',
       createContent: 'Appuyez sur ce bouton pour organiser une sortie running, vélo ou toute autre activité sportive.',
       sessionsTitle: 'Mes séances',
@@ -568,8 +570,10 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Welcome to RunConnect!',
       mapContent: 'This is the interactive map where you can discover sports sessions around you.',
-      runconnectTitle: 'Switch to Feed',
-      runconnectContent: 'Tap "RunConnect" to switch to the community news feed.',
+      runconnectTitle: 'Open the feed panel',
+      runconnectContent:
+        'Tap "RunConnect" to open the community feed as a panel over the map — you stay on the map.',
+      feedSheetScrimAria: 'Collapse the feed panel and show the map',
       createTitle: 'Create a Session',
       createContent: 'Tap this button to organize a running, cycling or any other sports activity.',
       sessionsTitle: 'My Sessions',
@@ -869,8 +873,10 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: '¡Bienvenido a RunConnect!',
       mapContent: 'Este es el mapa interactivo donde puedes descubrir sesiones deportivas a tu alrededor.',
-      runconnectTitle: 'Cambiar al Feed',
-      runconnectContent: 'Toca "RunConnect" para cambiar al feed de la comunidad.',
+      runconnectTitle: 'Abrir el panel del feed',
+      runconnectContent:
+        'Toca "RunConnect" para abrir el feed de la comunidad sobre el mapa, sin salir de la vista del mapa.',
+      feedSheetScrimAria: 'Contraer el panel del feed y mostrar el mapa',
       createTitle: 'Crear una sesión',
       createContent: 'Toca este botón para organizar una salida de running, ciclismo o cualquier otra actividad deportiva.',
       sessionsTitle: 'Mis sesiones',
@@ -1054,8 +1060,10 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Bem-vindo ao RunConnect!',
       mapContent: 'Este é o mapa interativo onde você pode descobrir sessões esportivas ao seu redor.',
-      runconnectTitle: 'Mudar para o Feed',
-      runconnectContent: 'Toque em "RunConnect" para mudar para o feed da comunidade.',
+      runconnectTitle: 'Abrir o painel do feed',
+      runconnectContent:
+        'Toque em "RunConnect" para abrir o feed da comunidade sobre o mapa, sem sair do mapa.',
+      feedSheetScrimAria: 'Recolher o painel do feed e mostrar o mapa',
       createTitle: 'Criar uma sessão',
       createContent: 'Toque neste botão para organizar uma corrida, ciclismo ou qualquer outra atividade esportiva.',
       sessionsTitle: 'Minhas sessões',
@@ -1239,8 +1247,10 @@ const _translationBundles: Record<string, any> = {
     tutorial: {
       mapTitle: 'Willkommen bei RunConnect!',
       mapContent: 'Dies ist die interaktive Karte, auf der Sie Sportveranstaltungen in Ihrer Nähe entdecken können.',
-      runconnectTitle: 'Zum Feed wechseln',
-      runconnectContent: 'Tippen Sie auf „RunConnect", um zum Community-Feed zu wechseln.',
+      runconnectTitle: 'Feed-Panel öffnen',
+      runconnectContent:
+        'Tippen Sie auf „RunConnect“, um den Community-Feed als Panel über der Karte zu öffnen — Sie bleiben auf der Karte.',
+      feedSheetScrimAria: 'Feed-Panel einklappen und Karte anzeigen',
       createTitle: 'Sitzung erstellen',
       createContent: 'Tippen Sie auf diese Schaltfläche, um einen Lauf, eine Radtour oder eine andere sportliche Aktivität zu organisieren.',
       sessionsTitle: 'Meine Sitzungen',

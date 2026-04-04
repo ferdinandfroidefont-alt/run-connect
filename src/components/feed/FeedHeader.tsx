@@ -18,6 +18,12 @@ interface FeedHeaderProps {
   onSettingsClick?: () => void;
   mode: FeedMode;
   onModeChange: (mode: FeedMode) => void;
+  /** Bottom sheet accueil : padding / avatar compacts, marque replie la sheet. */
+  layoutVariant?: "page" | "sheet";
+  /** Si layout sheet : 1 = demi, 2 = quasi plein (safe area haut). */
+  sheetSnap?: 1 | 2;
+  /** Remplace navigation vers / quand défini (ex. replier la sheet). */
+  onBrandClick?: () => void;
 }
 
 export const FeedHeader = ({
@@ -25,6 +31,9 @@ export const FeedHeader = ({
   onSettingsClick,
   mode,
   onModeChange,
+  layoutVariant = "page",
+  sheetSnap = 2,
+  onBrandClick,
 }: FeedHeaderProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -50,14 +59,29 @@ export const FeedHeader = ({
     fetchProfile();
   }, [user]);
 
+  const isSheet = layoutVariant === "sheet";
+  const sheetFullBleed = isSheet && sheetSnap === 2;
+
   return (
-    <header className="shrink-0 bg-white dark:bg-black pt-[var(--safe-area-top)]">
+    <header
+      className={cn(
+        "shrink-0 bg-white dark:bg-black",
+        isSheet
+          ? cn(sheetFullBleed ? "pt-[var(--safe-area-top)]" : "pt-2")
+          : "pt-[var(--safe-area-top)]",
+      )}
+    >
       {/* Top row: RunConnect + centered avatar + bell + settings */}
-      <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-3 pt-2">
+      <div
+        className={cn(
+          "relative flex items-center justify-between gap-2 px-4 pb-3",
+          isSheet ? "min-h-[2.75rem] pt-1" : "min-h-[3rem] pt-2",
+        )}
+      >
         <button
           type="button"
-          onClick={() => navigate('/')}
-          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary active:opacity-70 transition-opacity touch-manipulation"
+          onClick={() => (onBrandClick ? onBrandClick() : navigate("/"))}
+          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary transition-opacity touch-manipulation active:opacity-70"
         >
           RunConnect
         </button>
@@ -77,7 +101,12 @@ export const FeedHeader = ({
               }}
               className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
             >
-              <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+              <Avatar
+                className={cn(
+                  "map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35",
+                  isSheet ? "h-11 w-11" : "h-14 w-14",
+                )}
+              >
                 <AvatarImage
                   src={profile.avatar_url || undefined}
                   alt={profile.username || profile.display_name || 'Profile'}

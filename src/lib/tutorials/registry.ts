@@ -112,8 +112,9 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
   feed: {
     id: "feed",
-    path: "/feed",
+    path: "/",
     startDelayMs: 380,
+    waitForTargetExtraMs: 900,
     getSteps: (t) => [
       introStep('[data-tutorial="tutorial-feed"]', t, "tutorial.replayPages.feed", "bottom"),
     ],

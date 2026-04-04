@@ -9,6 +9,7 @@ import {
   pathMatchesTutorial,
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
+import { useAppContext } from "@/contexts/AppContext";
 
 const InteractiveTutorial = lazy(() =>
   import("@/components/InteractiveTutorial").then((m) => ({ default: m.InteractiveTutorial }))
@@ -45,6 +46,7 @@ const TUTORIAL_REPLAY_EVENT = "runconnect-tutorial-replay";
  */
 export function TutorialReplayHost() {
   const { t } = useLanguage();
+  const { requestHomeFeedSheetSnap } = useAppContext();
   const location = useLocation();
   const [replay, setReplay] = useState<{ id: TutorialReplayId; steps: TutorialStep[]; key: number } | null>(
     null
@@ -70,6 +72,10 @@ export function TutorialReplayHost() {
     cancelledRef.current = false;
     timerRef.current = window.setTimeout(() => {
       void (async () => {
+        if (def.id === "feed") {
+          requestHomeFeedSheetSnap(1);
+          await new Promise((r) => window.setTimeout(r, 120));
+        }
         const steps = def.getSteps(t);
         const first = steps[0]?.target;
         if (first) {
@@ -81,7 +87,7 @@ export function TutorialReplayHost() {
         setReplay({ id: pending, steps, key: keyRef.current });
       })();
     }, def.startDelayMs);
-  }, [location.pathname, t]);
+  }, [location.pathname, requestHomeFeedSheetSnap, t]);
 
   useEffect(() => {
     tryStartPending();

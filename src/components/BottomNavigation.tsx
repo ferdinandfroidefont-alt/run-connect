@@ -148,7 +148,7 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[100] w-full shrink-0 border-t border-border bg-background",
+        "relative z-[110] w-full shrink-0 border-t border-border bg-background",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}

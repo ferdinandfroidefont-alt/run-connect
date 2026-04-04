@@ -9,6 +9,7 @@ import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
+import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -185,6 +186,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </main>
+      {isHome && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
         FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
