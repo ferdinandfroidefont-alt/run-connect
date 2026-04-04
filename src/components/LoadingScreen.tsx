@@ -2,12 +2,12 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   RUCONNECT_SPLASH_BLUE,
-  RUCONNECT_SPLASH_ICON_URL,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
 } from '@/lib/ruconnectSplashChrome';
 import { primeHomeMapDuringSplash } from '@/lib/homeMapPrefetch';
+import { RunConnectBrandMark } from '@/components/branding/RunConnectBrandMark';
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -104,13 +104,27 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
                   transform: 'translateY(calc(-1 * min(2.85dvh, 1.2rem)))',
                 }}
               >
-                <img
-                  src={RUCONNECT_SPLASH_ICON_URL}
-                  alt=""
-                  draggable={false}
-                  className="block shrink-0 select-none object-contain"
+                <motion.div
+                  className="relative"
                   style={logoBoxStyle}
-                />
+                  animate={{
+                    y: [0, -2, 0],
+                    scale: [1, 1.018, 1],
+                  }}
+                  transition={{
+                    duration: 0.95,
+                    delay: 0.62,
+                    ease: [0.32, 0.72, 0, 1],
+                  }}
+                >
+                  <motion.div
+                    className="absolute inset-0 rounded-[22%] bg-white/18 blur-2xl"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 0.34, 0.12] }}
+                    transition={{ duration: 0.7, delay: 0.22 }}
+                  />
+                  <RunConnectBrandMark className="block h-full w-full shrink-0" animated={true} />
+                </motion.div>
                 <motion.p
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
