@@ -32,17 +32,18 @@ export function ActivityPolylineMap({ coords, fallbackLat, fallbackLng, classNam
 
   useEffect(() => {
     if (!containerRef.current || !getMapboxAccessToken()) return;
-    if (!coords || coords.length < 2) return;
+    const path = normalizeCoords(coords as unknown[]);
+    if (path.length < 2) return;
 
     const map = createEmbeddedMapboxMap(containerRef.current, {
-      center: coords[0],
+      center: path[0],
       zoom: 12,
       interactive: false,
     });
 
     const apply = () => {
-      setOrUpdateLineLayer(map, SRC, LAYER, coords, { color: "#3b82f6", width: 3 });
-      fitMapToCoords(map, coords, 24);
+      setOrUpdateLineLayer(map, SRC, LAYER, path, { color: "#3b82f6", width: 3 });
+      fitMapToCoords(map, path, 24);
     };
     if (map.isStyleLoaded()) apply();
     else map.once("load", apply);
