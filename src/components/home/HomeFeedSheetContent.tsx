@@ -267,7 +267,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       </Suspense>
 
       <SessionDetailsDialog
-        session={selectedDiscoverSession}
+        session={selectedDiscoverSession as any}
         onClose={() => setSelectedDiscoverSession(null)}
         onSessionUpdated={() => refreshDiscover()}
       />

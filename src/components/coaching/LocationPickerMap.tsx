@@ -38,7 +38,7 @@ export const LocationPickerMap = ({
     });
     mapInstanceRef.current = map;
 
-    let pressTimer: ReturnType<typeof setTimeout> | null = null;
+    let pressTimer: number | null = null;
     let pressPos: { lat: number; lng: number } | null = null;
 
     const placeAt = (lat: number, lng: number) => {

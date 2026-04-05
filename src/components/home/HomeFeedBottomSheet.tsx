@@ -133,7 +133,7 @@ export function HomeFeedBottomSheet() {
       if (Math.abs(e.clientY - startY) > 6) dragMovedRef.current = true;
       const dy = e.clientY - startY;
       const next = Math.round(startH - dy);
-      const clamped = Math.max(heights[0], Math.min(heights[2], next));
+      const clamped = Math.max(heights[0] as number, Math.min(heights[2] as number, next));
       liveHeightRef.current = clamped;
       setDragH(clamped);
     },

@@ -52,7 +52,7 @@ export function TutorialReplayHost() {
     null
   );
   const keyRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const timerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
   const tryStartPending = useCallback(() => {

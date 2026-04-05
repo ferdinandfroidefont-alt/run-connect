@@ -68,8 +68,8 @@ export function ProfileRecordsDisplay({
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase
-          .from("profile_sport_records")
+        const { data, error } = await (supabase
+          .from("profile_sport_records") as any)
           .select("id, sport_key, event_label, record_value, sort_order")
           .eq("user_id", userId)
           .order("sort_order", { ascending: true })
