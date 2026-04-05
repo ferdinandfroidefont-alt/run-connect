@@ -1,53 +1,110 @@
 
 
-## Diagnostic
+# Refonte complète de la page Profil Utilisateur (ProfilePreviewDialog)
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+## Portée
+Refonte purement UI/UX du composant `ProfilePreviewDialog.tsx` (~600 lignes). Aucune modification de la logique metier, navigation, tab bar ou safe area. Le composant reste un Dialog plein ecran mobile / modal desktop.
 
-Deux problemes distincts :
+## Structure cible (ordre des sections)
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
-
-## Solution en 2 parties
-
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
-
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+┌─────────────────────────────────┐
+│  Header : ← Retour  |  Nom  | ⋯│
+├─────────────────────────────────┤
+│  Avatar  │  Nom + @user         │
+│  80x80   │  🇫🇷 France · 24 ans │
+│          │  [Online dot]        │
+├─────────────────────────────────┤
+│  [ Suivre ]  [ Message ]        │
+├─────────────────────────────────┤
+│  Abonnements │ Abonnés │ Fiabilité│
+│     12       │   34    │   94%   │
+├─────────────────────────────────┤
+│  Bio (si présente)              │
+├─────────────────────────────────┤
+│  ▸ Séances créées         12    │
+│  ▸ Itinéraires créés       3    │
+│  ▸ Séances rejointes      28    │
+│  ▸ Records sport            >   │
+│  ▸ Séances récentes         >   │
+├─────────────────────────────────┤
+│ OU  🔒 Profil privé            │
+│     Suivez pour voir            │
+└─────────────────────────────────┘
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+## Fichiers modifies
 
-### Partie 2 : Securiser la page bridge
+### 1. `src/components/ProfilePreviewDialog.tsx` — refonte complete du JSX
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+**Header** (inchange dans la logique, ajustement style)
+- Fond `bg-card`, bordure fine, safe-area top
+- Grille 3 colonnes : bouton Retour | titre tronque | menu ⋯
+- Deja en place, ajustements mineurs de padding
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+**Bloc Identite** (refonte majeure)
+- Layout horizontal : Avatar 72px a gauche, infos a droite
+- Ligne 1 : display_name (bold, truncate, 1 ligne) + Crown si premium
+- Ligne 2 : @username (truncate, muted)
+- Ligne 3 : Pays + Age sur une ligne (`🇫🇷 France · 24 ans`) en utilisant `getCountryLabel` et `profile.age`
+- OnlineStatus reste positionne sur l'avatar
+- Tous les flex children ont `min-w-0`
+- Pas de carte flottante — fond transparent, juste du padding
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+**Boutons d'action** (sous l'identite, hors carte)
+- Deux boutons cote a cote, meme hauteur `h-10`
+- Suivre/Abonne = flex-1, Message = flex-1 (visible des que isFollowing)
+- `rounded-xl`, style iOS
+- Si pas encore suivi : Suivre prend toute la largeur
 
-### Fichiers modifies
+**Bloc Stats** (3 colonnes egales)
+- Remplace le bloc actuel 2 colonnes (Suivis/Abonnes)
+- 3 colonnes : Abonnements | Abonnes | Fiabilite
+- Separateurs verticaux fins (`w-px bg-border`)
+- Chiffre bold en haut, label petit dessous
+- Fiabilite cliquable → ouvre `ReliabilityDetailsDialog` existant
+- Necessite fetch de `reliability_rate` depuis `user_stats` (ajouter au useEffect existant)
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
+**Bio** (inchange, juste nettoyage style)
+- Texte avec `break-words`, pas de carte lourde, juste un fond `bg-card` subtil avec border fine
 
-### Apres le deploy
+**Filtre periode** (conserve tel quel — segmented control iOS)
 
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+**Bloc Activite** (IOSListGroup)
+- Conserve les IOSListItem existants (Seances creees, Itineraires, Seances rejointes, Records, Seances recentes)
+- Aucun changement fonctionnel
+
+**Bloc Profil prive** (si !canViewContent)
+- Icone Lock (Lucide) au lieu de emoji 🔒
+- Texte centre, compact
+- Fond `bg-card` avec border fine, `rounded-xl`
+
+### 2. Ajout fetch fiabilite dans ProfilePreviewDialog
+
+- Dans le `fetchProfile` ou un useEffect separe, fetcher `user_stats.reliability_rate` pour le userId
+- Stocker dans un state `reliabilityRate`
+- Utiliser dans le bloc stats
+
+### 3. Corrections build existantes (en parallele)
+
+Les erreurs de build listees seront corrigees :
+- `cleanup-live-tracking/index.ts:47` — cast `(error as Error).message`
+- `firebase-auth/index.ts:214-220` — null checks sur `signInData.user` et `.session`
+- `process-referral-signup` et `process-referral` — cast supabase client avec `as any`
+- `update-streaks/index.ts:41` — cast `(error as Error).message`
+- `QRShareDialog.tsx` — importer/declarer `isIosPhone`
+- `HomeFeedBottomSheet.tsx` — corriger le type literal `52` en `number`
+- `IosFixedPageHeaderShell.tsx` — cast ref avec `as MutableRefObject`
+- `WeeklyTrackingView.tsx` — importer/definir `WeekSession`
+- `UserProfileContext.tsx` — corriger le type de la query
+- Autres erreurs TS listees
+
+## Details techniques
+
+- **Aucun nouveau composant** : tout reste dans `ProfilePreviewDialog.tsx`
+- **Imports ajoutes** : `Lock` de lucide-react, `getCountryLabel` de `@/lib/countryLabels`
+- **Import existant reutilise** : `ReliabilityDetailsDialog`
+- **Pas de modification de** : navigation, Dialog open/close, follow logic, block logic, report logic, sheets records/activities
+- **Ellipsis systematique** : tous les textes dans des flex children avec `min-w-0 truncate`
+- **Extensibilite** : la structure en sections sequentielles permet d'ajouter facilement avis, historique, stats avancees plus tard
 
