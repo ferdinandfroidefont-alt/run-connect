@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
+import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
+import { getCountryLabel } from "@/lib/countryLabels";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,6 +69,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
   const [showRecordsSheet, setShowRecordsSheet] = useState(false);
   const [showActivitiesSheet, setShowActivitiesSheet] = useState(false);
+  const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
+  const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
+  const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
 
   const isOwnProfile = userId === user?.id;
 
@@ -74,6 +79,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (userId) {
       fetchProfile();
       fetchFollowCounts();
+      fetchReliability();
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
@@ -104,6 +110,27 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       onClose();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReliability = async () => {
+    if (!userId) return;
+    try {
+      const { data } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) {
+        setReliabilityRate(data.reliability_rate);
+        setReliabilityStats({
+          created: 0,
+          joined: data.total_sessions_joined || 0,
+          completed: data.total_sessions_completed || 0,
+        });
+      }
+    } catch {
+      console.error('Error fetching reliability');
     }
   };
 
@@ -248,7 +275,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const handleMessage = async () => {
     if (!user || !userId) return;
     try {
-      // Check for existing conversation
       const { data: existing } = await supabase
         .from('conversations')
         .select('id')
@@ -277,7 +303,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   if (!userId) return null;
 
   const canViewContent = isFollowing || isOwnProfile;
-
   const headerTitleText = profile?.display_name?.trim() || profile?.username?.trim() || "Profil";
 
   const periodTabs: { key: PeriodFilter; label: string }[] = [
@@ -286,12 +311,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     { key: '7d', label: '7 jours' },
   ];
 
+  // Build meta line: country + age
+  const countryLabel = profile ? getCountryLabel(profile.country) : null;
+  const ageLine = profile?.age ? `${profile.age} ans` : null;
+  const metaParts = [countryLabel, ageLine].filter(Boolean);
+
   return (
     <>
       <Dialog open={!!userId} onOpenChange={() => onClose()}>
         <DialogContent className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border">
 
-          {/* Header : 3 zones (retour | titre tronqué | actions) — même principe que les écrans Itinéraire / Paramètres */}
+          {/* ── Header ── */}
           <div className="min-w-0 shrink-0 border-b border-border/50 bg-card pt-[max(env(safe-area-inset-top),12px)]">
             <div className="grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 pb-2.5 ios-shell:px-2.5">
               <button
@@ -315,7 +345,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       <button
                         type="button"
                         className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
-                        aria-label="Plus d’actions"
+                        aria-label="Plus d'actions"
                       >
                         <MoreVertical className="h-5 w-5 text-muted-foreground" />
                       </button>
@@ -351,92 +381,96 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-1">
                 <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-3 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] ios-shell:px-2.5 sm:max-w-2xl">
 
-                {/* ── Identity Card ── */}
-                <div className="pt-3">
-                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
-                    <div className="flex min-w-0 items-start gap-4">
-                      <div className="relative shrink-0">
-                        <Avatar className="h-20 w-20">
-                          <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-2xl font-bold text-primary-foreground">
-                            {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        {!isOwnProfile && areFriends && (
-                          <OnlineStatus userId={profile.user_id} />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <p
-                            className="min-w-0 flex-1 truncate text-[18px] font-bold text-foreground"
-                            title={profile.display_name || profile.username}
-                          >
-                            {profile.display_name || profile.username}
-                          </p>
-                          {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
-                        </div>
-                        <p
-                          className="min-w-0 truncate text-[14px] text-muted-foreground"
-                          title={`@${profile.username}`}
-                        >
-                          @{profile.username}
-                        </p>
-                      </div>
+                {/* ── Identity ── */}
+                <div className="flex min-w-0 items-start gap-3.5 pt-4 pb-1">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-[72px] w-[72px] ring-2 ring-border/30">
+                      <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-xl font-bold text-primary-foreground">
+                        {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!isOwnProfile && areFriends && (
+                      <OnlineStatus userId={profile.user_id} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden pt-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="min-w-0 flex-1 truncate text-[18px] font-bold leading-tight text-foreground" title={profile.display_name || profile.username}>
+                        {profile.display_name || profile.username}
+                      </p>
+                      {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
                     </div>
-
-                    {/* Action Buttons */}
-                    {!isOwnProfile && (
-                      <div className="mt-4 flex min-w-0 gap-2.5">
-                        <Button
-                          onClick={handleFollowToggle}
-                          disabled={actionLoading}
-                          variant={isFollowing ? "outline" : "default"}
-                          className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
-                            followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
-                          }`}
-                        >
-                          {actionLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
-                            <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
-                          )}
-                        </Button>
-                        {isFollowing && (
-                          <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-4 border-border">
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+                    <p className="min-w-0 truncate text-[14px] text-muted-foreground" title={`@${profile.username}`}>
+                      @{profile.username}
+                    </p>
+                    {metaParts.length > 0 && (
+                      <p className="mt-0.5 min-w-0 truncate text-[13px] text-muted-foreground/80">
+                        {metaParts.join(" · ")}
+                      </p>
                     )}
                   </div>
                 </div>
 
-                {/* ── Follow Stats ── */}
-                <div>
-                  <div className="ios-card flex min-w-0 overflow-hidden border border-border/60">
+                {/* ── Action Buttons ── */}
+                {!isOwnProfile && (
+                  <div className="flex min-w-0 gap-2.5">
+                    <Button
+                      onClick={handleFollowToggle}
+                      disabled={actionLoading}
+                      variant={isFollowing ? "outline" : "default"}
+                      className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
+                        followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
+                      }`}
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
+                        <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
+                      )}
+                    </Button>
+                    {isFollowing && (
+                      <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-5 border-border">
+                        <MessageCircle className="h-4 w-4 mr-1.5" />
+                        <span className="text-[14px]">Message</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Stats: Abonnements | Abonnés | Fiabilité ── */}
+                <div className="ios-card min-w-0 overflow-hidden border border-border/60">
+                  <div className="grid min-w-0 grid-cols-3">
                     <button
                       onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
-                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-l-[10px]"
+                      className="min-h-[52px] min-w-0 py-3 text-center transition-colors active:bg-secondary/60"
                     >
-                      <p className="text-[18px] font-bold text-foreground">{followingCount}</p>
-                      <p className="text-[12px] text-muted-foreground">Suivis</p>
+                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">{followingCount}</p>
+                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abonnements</p>
                     </button>
-                    <div className="w-px bg-border my-2" />
                     <button
                       onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
-                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-r-[10px]"
+                      className="min-h-[52px] min-w-0 border-x border-border/50 py-3 text-center transition-colors active:bg-secondary/60"
                     >
-                      <p className="text-[18px] font-bold text-foreground">{followerCount}</p>
-                      <p className="text-[12px] text-muted-foreground">Abonnés</p>
+                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">{followerCount}</p>
+                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abonnés</p>
+                    </button>
+                    <button
+                      onClick={() => setShowReliabilityDialog(true)}
+                      className="min-h-[52px] min-w-0 py-3 text-center transition-colors active:bg-secondary/60"
+                    >
+                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">
+                        {reliabilityRate != null ? `${Math.round(reliabilityRate)}%` : "–"}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Fiabilité</p>
                     </button>
                   </div>
                 </div>
 
                 {/* ── Bio ── */}
                 {profile.bio && (
-                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
-                      <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
+                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 px-4 py-3">
+                    <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
                   </div>
                 )}
 
@@ -462,7 +496,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     </div>
 
-                    {/* Stats */}
+                    {/* Activity Stats */}
                     <div className="min-w-0">
                       <IOSListGroup>
                         <IOSListItem
@@ -518,10 +552,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                   </>
                 ) : !isOwnProfile ? (
                   <div className="pt-2">
-                    <div className="ios-card border border-border/60 p-6 text-center">
-                      <div className="text-4xl mb-3">🔒</div>
-                      <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
-                      <p className="text-[13px] text-muted-foreground mt-1">
+                    <div className="ios-card flex flex-col items-center border border-border/60 px-6 py-6">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <Lock className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-3 text-[15px] font-semibold text-foreground">Profil privé</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground text-center">
                         Suivez cette personne pour voir ses activités
                       </p>
                     </div>
@@ -549,6 +585,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           targetUserId={userId}
         />
       )}
+
+      {/* Reliability Dialog */}
+      <ReliabilityDetailsDialog
+        open={showReliabilityDialog}
+        onOpenChange={setShowReliabilityDialog}
+        reliabilityRate={reliabilityRate ?? 0}
+        totalSessionsCreated={reliabilityStats.created}
+        totalSessionsJoined={reliabilityStats.joined}
+        totalSessionsCompleted={reliabilityStats.completed}
+      />
 
       {/* Records Sheet */}
       <Sheet open={showRecordsSheet} onOpenChange={setShowRecordsSheet}>

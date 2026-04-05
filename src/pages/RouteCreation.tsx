@@ -760,7 +760,7 @@ export const RouteCreation = () => {
     setRouteSaving(false);
 
     if (!result.ok) {
-      toast.error(result.message);
+      toast.error((result as any).message);
       return;
     }
 

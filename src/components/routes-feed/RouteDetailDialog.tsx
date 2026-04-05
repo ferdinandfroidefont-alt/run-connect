@@ -210,7 +210,7 @@ export const RouteDetailDialog = ({
   useEffect(() => {
     if (!open || !mapContainer.current || !route?.coordinates?.length || !getMapboxAccessToken()) return;
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timer: number | null = null;
     let map: mapboxgl.Map | null = null;
 
     timer = window.setTimeout(() => {

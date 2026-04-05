@@ -48,12 +48,12 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('notifications_enabled, notif_boost_nearby, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium')
+        .select('notifications_enabled, notif_boost_nearby, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium' as any)
         .eq('user_id', user?.id)
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data);
+      setProfile(data as any);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {

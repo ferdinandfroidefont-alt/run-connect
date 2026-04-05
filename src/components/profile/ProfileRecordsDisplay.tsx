@@ -68,7 +68,7 @@ export function ProfileRecordsDisplay({
     let cancelled = false;
     (async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("profile_sport_records")
           .select("id, sport_key, event_label, record_value, sort_order")
           .eq("user_id", userId)

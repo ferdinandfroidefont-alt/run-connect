@@ -198,7 +198,7 @@ function MapStylePickerContent({
                             isActive ? 'bg-primary/12 text-primary' : 'bg-muted/80 text-muted-foreground'
                           )}
                         >
-                          <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+                          <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0 flex-1 pb-0.5">
                           <span className="block text-[15px] font-semibold leading-tight text-foreground">
