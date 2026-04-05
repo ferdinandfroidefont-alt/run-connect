@@ -205,7 +205,7 @@ export function HomeFeedBottomSheet() {
           <div className="flex min-h-0 flex-1 flex-col" data-tutorial="home-feed-sheet-handle">
             <button
               type="button"
-              className="flex h-full min-h-0 w-full flex-col items-center justify-center outline-none touch-manipulation active:opacity-80"
+              className="flex h-full min-h-0 w-full items-center justify-start gap-3 px-4 outline-none touch-manipulation active:opacity-80"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -214,6 +214,7 @@ export function HomeFeedBottomSheet() {
               aria-expanded={false}
               aria-label={t("navigation.feed")}
             >
+              <span className="text-[14px] font-semibold text-foreground/80">Feed</span>
               <span className="h-1 w-10 shrink-0 rounded-full bg-muted-foreground/35 dark:bg-white/25" />
             </button>
           </div>

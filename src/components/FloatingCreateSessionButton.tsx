@@ -37,7 +37,7 @@ export function FloatingCreateSessionButton() {
         "border border-primary/20 bg-primary px-4 py-2.5 text-primary-foreground shadow-lg",
         "text-sm font-semibold leading-tight ring-[3px] ring-background transition-transform duration-200 ease-ios",
         "active:scale-[0.97] touch-manipulation dark:ring-background",
-        "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+0.5rem)]",
+        "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+1.4rem)]",
         "left-1/2 -translate-x-1/2"
       )}
       data-tutorial="create-session"

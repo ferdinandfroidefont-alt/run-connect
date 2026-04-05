@@ -91,7 +91,7 @@ export default function MySessions() {
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
   const [forcedConfirmSessionId, setForcedConfirmSessionId] = useState<string | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
-  const SESSIONS_PER_PAGE = 3;
+  const SESSIONS_PER_PAGE = 4;
 
 
   // Live tracking participant states
