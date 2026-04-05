@@ -169,7 +169,7 @@ export default function Coaching() {
     ]);
 
     setMemberCount(memberRows?.length || 0);
-    setSessions((sessionRows || []) as CoachingSession[]);
+    setSessions((sessionRows || []) as unknown as CoachingSession[]);
   };
 
   useEffect(() => {

@@ -114,7 +114,7 @@ export default function ProfileSportRecordsEdit() {
     if (!user?.id) return;
     setSaving(true);
     try {
-      const { error } = await (supabase.from("profile_sport_records") as any).delete().eq("id", id).eq("user_id", user.id);
+      const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast({ title: "Record supprimé" });

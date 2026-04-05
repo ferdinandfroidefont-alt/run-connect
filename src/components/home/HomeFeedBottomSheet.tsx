@@ -81,7 +81,7 @@ export function HomeFeedBottomSheet() {
   const [dragging, setDragging] = useState(false);
   const [dragH, setDragH] = useState<number>(heights[0]);
   const dragRef = useRef<DragRef | null>(null);
-  const liveHeightRef = useRef(heights[0]);
+  const liveHeightRef = useRef<number>(heights[0] as number);
   const dragMovedRef = useRef(false);
 
   useEffect(() => {
