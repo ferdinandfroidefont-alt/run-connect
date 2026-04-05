@@ -4,10 +4,24 @@ import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from "@
 import { getMapboxAccessToken } from "@/lib/mapboxConfig";
 
 interface ActivityPolylineMapProps {
-  coords: MapCoord[];
+  coords: MapCoord[] | [number, number][] | unknown[];
   fallbackLat?: number;
   fallbackLng?: number;
   className?: string;
+}
+
+function normalizeCoords(raw: unknown[]): MapCoord[] {
+  return raw
+    .map((c): MapCoord | null => {
+      if (c && typeof c === "object" && "lat" in (c as any) && "lng" in (c as any)) {
+        return { lat: Number((c as any).lat), lng: Number((c as any).lng) };
+      }
+      if (Array.isArray(c) && c.length >= 2) {
+        return { lat: Number(c[0]), lng: Number(c[1]) };
+      }
+      return null;
+    })
+    .filter((c): c is MapCoord => c !== null);
 }
 
 const SRC = "activity-polyline";
