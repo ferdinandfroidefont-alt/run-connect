@@ -967,6 +967,9 @@ export type Database = {
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
+          last_known_lat: number | null
+          last_known_lng: number | null
+          last_known_location_at: string | null
           last_seen: string | null
           notif_club_invitation: boolean | null
           notif_follow_request: boolean | null
@@ -1025,6 +1028,9 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
+          last_known_lat?: number | null
+          last_known_lng?: number | null
+          last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
@@ -1083,6 +1089,9 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
+          last_known_lat?: number | null
+          last_known_lng?: number | null
+          last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null

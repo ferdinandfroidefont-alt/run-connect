@@ -16,6 +16,7 @@
   "dependencies": {
     "@awesome-cordova-plugins/core": "^8.1.0",
     "@awesome-cordova-plugins/in-app-browser": "^8.1.0",
+    "@capacitor-community/admob": "^8.0.0",
     "@capacitor-community/contacts": "^7.0.0",
     "@capacitor/android": "^8.0.0-alpha.1",
     "@capacitor/app": "^7.1.0",

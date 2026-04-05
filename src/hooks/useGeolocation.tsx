@@ -3,6 +3,7 @@ import { Position } from '@/types/permissions';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { HOME_MAP_GEO_CACHE_MAX_AGE_MS } from '@/lib/homeMapPrefetch';
+import { supabase } from '@/integrations/supabase/client';
 
 /** `fast` : cache OS / pas de haute précision, sans délais artificiels — carte d’accueil & premier centrage. */
 export type GetCurrentPositionOptions = { mode?: 'default' | 'fast' };
@@ -10,6 +11,29 @@ export type GetCurrentPositionOptions = { mode?: 'default' | 'fast' };
 export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
+
+  const persistProfileLocation = useCallback(async (pos: Position) => {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const userId = auth.user?.id;
+      if (!userId) return;
+      const storageKey = `lastKnownLocationSync:${userId}`;
+      const lastSyncedAt = Number(localStorage.getItem(storageKey) || 0);
+      const now = Date.now();
+      if (now - lastSyncedAt < 5 * 60 * 1000) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          last_known_lat: pos.lat,
+          last_known_lng: pos.lng,
+          last_known_location_at: new Date(now).toISOString(),
+        })
+        .eq('user_id', userId);
+      if (!error) localStorage.setItem(storageKey, String(now));
+    } catch {
+      // Silent by design: this is only a best-effort server snapshot for local targeting.
+    }
+  }, []);
 
   // Détection du fabricant et de la version Android
   const getDeviceInfo = useCallback(() => {
@@ -366,6 +390,7 @@ export const useGeolocation = () => {
           
           console.log('✅ Position Capacitor obtenue en', Date.now() - capacitorStartTime, 'ms:', pos);
           setPosition(pos);
+          void persistProfileLocation(pos);
           return pos;
           
         } catch (capacitorError) {
@@ -403,6 +428,7 @@ export const useGeolocation = () => {
                 };
                 console.log('✅ Position Navigator fallback obtenue en', Date.now() - navigatorStartTime, 'ms:', pos);
                 setPosition(pos);
+                void persistProfileLocation(pos);
                 resolve(pos);
               },
               (navError) => {
@@ -455,6 +481,7 @@ export const useGeolocation = () => {
             };
             console.log('✅ Position Web obtenue en', Date.now() - navigatorStartTime, 'ms:', pos);
             setPosition(pos);
+            void persistProfileLocation(pos);
             resolve(pos);
           },
           (error) => {
@@ -505,7 +532,7 @@ export const useGeolocation = () => {
     } finally {
       setLoading(false);
     }
-  }, [isNative, getDeviceInfo]);
+  }, [isNative, getDeviceInfo, persistProfileLocation]);
 
   // Écouter les changements de permissions Android
   useEffect(() => {
