@@ -8,7 +8,7 @@ import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
-import { PersonalRecords } from "@/components/PersonalRecords";
+import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -497,7 +497,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                           icon={Trophy}
                           iconBgColor="bg-yellow-500"
                           title="Records sport"
-                          onClick={() => setShowRecordsSheet(true)}
+                          onClick={() => {
+                            if (isOwnProfile) {
+                              navigate("/profile/records");
+                              onClose();
+                            } else {
+                              setShowRecordsSheet(true);
+                            }
+                          }}
                         />
                         <IOSListItem
                           icon={CalendarDays}
@@ -550,14 +557,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             <SheetTitle className="text-[17px]">Records sport</SheetTitle>
           </SheetHeader>
           <ScrollArea className="h-full pb-8">
-            {profile && (
-              <PersonalRecords records={{
-                running_records: profile.running_records,
-                cycling_records: profile.cycling_records,
-                swimming_records: profile.swimming_records,
-                triathlon_records: profile.triathlon_records,
-                walking_records: profile.walking_records,
-              }} />
+            {profile && userId && (
+              <ProfileRecordsDisplay
+                userId={userId}
+                legacy={{
+                  running_records: profile.running_records,
+                  cycling_records: profile.cycling_records,
+                  swimming_records: profile.swimming_records,
+                  triathlon_records: profile.triathlon_records,
+                  walking_records: profile.walking_records,
+                }}
+              />
             )}
           </ScrollArea>
         </SheetContent>

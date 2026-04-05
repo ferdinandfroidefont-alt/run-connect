@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, Trophy } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -22,7 +21,7 @@ import { PushNotificationButton } from "@/components/PushNotificationButton";
 import { StravaConnect } from "@/components/StravaConnect";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
-import { PersonalRecords } from "@/components/PersonalRecords";
+import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
@@ -742,9 +741,9 @@ const Profile = () => {
 
       {/* Colonne cartes : pleine largeur puis max-w-2xl centré sans w-full+mx sur le même nœud (cf. SettingsDialog). */}
       <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-h-0 min-w-0 max-w-full space-y-4 sm:mx-auto sm:max-w-2xl">
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+        <div className="box-border min-h-0 min-w-0 max-w-full space-y-0 sm:mx-auto sm:max-w-2xl">
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
+          <div className="w-full min-w-0 overflow-hidden">
             <div className="flex flex-col items-center px-4 py-3 pb-ios-1 pt-ios-1 ios-shell:px-2.5 ios-shell:py-2.5">
             <div className="mb-0.5 flex max-w-full items-center justify-center gap-ios-2">
               <h2 className="max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
@@ -776,8 +775,8 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <div className="ios-card w-full min-w-0 overflow-hidden border border-border/60">
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
+          <div className="w-full min-w-0 overflow-hidden">
             <ProfileQuickStats
               userId={viewingUserId || user?.id || ''}
               followerCount={followerCount}
@@ -798,7 +797,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card px-4 py-1 ios-shell:px-2">
           <ProfileSportsCard
             favoriteSport={profile?.favorite_sport}
             isOwnProfile={!isViewingOtherUser}
@@ -811,16 +810,13 @@ const Profile = () => {
 
 
         {!isViewingOtherUser && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+          <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
             <PersonalGoals />
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <IOSListGroup
-            header="RACCOURCIS"
-            className="ios-card mb-0 w-full min-w-0 border border-border/60 shadow-[var(--shadow-card)]"
-          >
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
+          <IOSListGroup header="RACCOURCIS" flush className="mb-0 w-full min-w-0">
             <IOSListItem
               icon={Route}
               iconBgColor="bg-teal-500"
@@ -842,17 +838,21 @@ const Profile = () => {
           </IOSListGroup>
         </div>
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-          <Collapsible className="ios-card mb-0 w-full min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
-            <CollapsibleTrigger className="group flex w-full min-w-0 items-center justify-between px-ios-4 py-ios-3 ios-shell:px-2.5">
-              <p className="text-ios-footnote uppercase tracking-wide text-muted-foreground">
-                Succès & Records
-              </p>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="border-t border-border/60">
-              <PersonalRecords
-                records={{
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
+          <IOSListGroup header="RECORDS" flush className="mb-0 w-full min-w-0">
+            <IOSListItem
+              icon={Trophy}
+              iconBgColor="bg-amber-500"
+              iconColor="text-white"
+              title="Records sport"
+              subtitle="Renseigner tes perfs"
+              onClick={() => navigate("/profile/records")}
+              showSeparator
+            />
+            <div className="border-t border-border/60">
+              <ProfileRecordsDisplay
+                userId={viewingUserId || user?.id || ""}
+                legacy={{
                   running_records: profile?.running_records,
                   cycling_records: profile?.cycling_records,
                   swimming_records: profile?.swimming_records,
@@ -860,13 +860,13 @@ const Profile = () => {
                   walking_records: profile?.walking_records,
                 }}
               />
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          </IOSListGroup>
         </div>
 
         {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
-            <div className="ios-card overflow-hidden border border-border/60">
+          <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
+            <div className="overflow-hidden">
             <div className="space-y-ios-3 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
                 <div>
                   <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
@@ -948,7 +948,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+        <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card px-4 py-3 ios-shell:px-2.5">
           <StravaConnect profile={profile} isOwnProfile={!isViewingOtherUser} onProfileUpdate={fetchProfile} />
         </div>
 

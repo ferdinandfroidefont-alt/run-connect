@@ -944,6 +944,36 @@ export type Database = {
           },
         ]
       }
+      profile_sport_records: {
+        Row: {
+          created_at: string
+          event_label: string
+          id: string
+          record_value: string
+          sort_order: number
+          sport_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_label: string
+          id?: string
+          record_value: string
+          sort_order?: number
+          sport_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_label?: string
+          id?: string
+          record_value?: string
+          sort_order?: number
+          sport_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null

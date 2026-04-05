@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
+import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { ProfileSportChips } from "@/components/profile/ProfileSportsCard";
 import { parseProfileSports } from "@/lib/profileSports";
@@ -328,6 +329,20 @@ const PublicProfile = () => {
               showReliabilityColumn={!!user}
             />
           </div>
+
+          <ProfileRecordsDisplay
+            userId={profile.user_id}
+            hideIfEmpty
+            sectionTitle="Records sport"
+            legacy={{
+              running_records: profile.running_records,
+              cycling_records: profile.cycling_records,
+              swimming_records: profile.swimming_records,
+              triathlon_records: profile.triathlon_records,
+              walking_records: profile.walking_records,
+            }}
+            className="min-w-0"
+          />
 
           <div className="min-w-0">
             <p className="mb-2 px-0.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">

@@ -1142,9 +1142,7 @@ export default function MySessions() {
               {sessionSource === "created" && (
                 <div className="mt-ios-3 pb-ios-6">
                   <Suspense fallback={null}>
-                    <div className="px-ios-4">
-                      <OrganizerStatsCard />
-                    </div>
+                    <OrganizerStatsCard />
                   </Suspense>
                 </div>
               )}
