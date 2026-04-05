@@ -178,8 +178,8 @@ export const CoachingSessionDetail = ({
         setAthleteNote("");
       }
 
-      const { data: cRows } = await supabase
-        .from("coaching_session_comments")
+      const { data: cRows } = await (supabase
+        .from("coaching_session_comments") as any)
         .select("id, user_id, message, created_at")
         .eq("coaching_session_id", session.id)
         .order("created_at", { ascending: true });
