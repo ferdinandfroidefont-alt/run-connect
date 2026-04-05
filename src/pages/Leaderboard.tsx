@@ -54,20 +54,34 @@ const getUserRank = (points: number): string => {
   return "novice";
 };
 
+function looksLikeEmail(s: string): boolean {
+  const t = s.trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+}
+
+/** Titre principal : jamais un email ; préfère display_name propre sinon username */
+function leaderboardPrimaryName(profile: { display_name?: string | null; username?: string | null }): string {
+  const un = (profile.username?.trim() || "?").slice(0, 200);
+  const dn = profile.display_name?.trim();
+  if (!dn) return un;
+  if (looksLikeEmail(dn)) return un;
+  return dn;
+}
+
 const getRankRing = (rank: string) => {
   switch (rank) {
     case "diamant":
-      return "ring-2 ring-cyan-400";
+      return "ring-[1.5px] ring-cyan-400/90";
     case "platine":
-      return "ring-2 ring-purple-500";
+      return "ring-[1.5px] ring-purple-500/85";
     case "or":
-      return "ring-2 ring-yellow-500";
+      return "ring-[1.5px] ring-amber-400/90";
     case "argent":
-      return "ring-2 ring-gray-400";
+      return "ring-[1.5px] ring-slate-400/90";
     case "bronze":
-      return "ring-2 ring-amber-600";
+      return "ring-[1.5px] ring-amber-700/70";
     default:
-      return "ring-1 ring-border";
+      return "ring-1 ring-border/80";
   }
 };
 
@@ -75,79 +89,120 @@ function PodiumBlock({
   rank,
   user,
   pointsMode,
-  maxWidthClass,
-  avatarSize,
   onProfile,
 }: {
-  rank: number;
+  rank: 1 | 2 | 3;
   user: LeaderboardUser | undefined;
   pointsMode: PointsMode;
-  maxWidthClass: string;
-  avatarSize: "lg" | "md" | "sm";
   onProfile: () => void;
 }) {
   const empty = !user;
   const pts = user ? pointsForMode(user, pointsMode) : 0;
-  const av = avatarSize === "lg" ? "h-[60px] w-[60px]" : avatarSize === "md" ? "h-12 w-12" : "h-11 w-11";
-  const podiumH = rank === 1 ? "h-[72px]" : rank === 2 ? "h-[52px]" : "h-[44px]";
+  const primary = user ? leaderboardPrimaryName(user.profile) : "—";
+
+  const avatarClass =
+    rank === 1 ? "h-[4.5rem] w-[4.5rem] sm:h-[5rem] sm:w-[5rem]" : "h-[3.25rem] w-[3.25rem] sm:h-14 sm:w-14";
+  const pedestalH = rank === 1 ? "h-[4.25rem] sm:h-20" : "h-[2.75rem] sm:h-12";
+
+  const tone =
+    rank === 1
+      ? {
+          ring: "ring-2 ring-amber-200/90 dark:ring-amber-500/35",
+          badge: "border border-amber-200/80 bg-amber-50 text-amber-900 shadow-sm dark:border-amber-500/30 dark:bg-amber-950/50 dark:text-amber-100",
+          pedestal:
+            "bg-gradient-to-b from-amber-100/95 via-amber-50/80 to-amber-100/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:from-amber-950/50 dark:via-amber-950/25 dark:to-amber-950/40",
+          glow: "shadow-[0_12px_40px_-12px_rgba(217,119,6,0.35)]",
+        }
+      : rank === 2
+        ? {
+            ring: "ring-2 ring-slate-200/95 dark:ring-slate-500/35",
+            badge: "border border-slate-200/90 bg-slate-50 text-slate-800 shadow-sm dark:border-slate-600/50 dark:bg-slate-900/60 dark:text-slate-100",
+            pedestal:
+              "bg-gradient-to-b from-slate-100/95 via-slate-50/75 to-slate-200/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] dark:from-slate-800/55 dark:via-slate-900/35 dark:to-slate-950/50",
+            glow: "shadow-[0_8px_28px_-10px_rgba(100,116,139,0.35)]",
+          }
+        : {
+            ring: "ring-2 ring-orange-200/90 dark:ring-orange-600/35",
+            badge: "border border-orange-200/80 bg-orange-50 text-orange-950 shadow-sm dark:border-orange-700/40 dark:bg-orange-950/45 dark:text-orange-100",
+            pedestal:
+              "bg-gradient-to-b from-orange-100/90 via-amber-50/70 to-orange-100/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] dark:from-orange-950/45 dark:via-orange-950/20 dark:to-orange-950/40",
+            glow: "shadow-[0_8px_28px_-10px_rgba(234,88,12,0.28)]",
+          };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: rank === 1 ? 0.05 : rank === 2 ? 0 : 0.1 }}
-      className={cn("flex min-w-0 flex-1 flex-col items-center", maxWidthClass)}
+      transition={{ duration: 0.38, delay: rank === 1 ? 0.06 : rank === 2 ? 0 : 0.12 }}
+      className={cn(
+        "flex min-w-0 flex-1 flex-col items-stretch justify-end",
+        rank === 1 ? "max-w-[38%] sm:max-w-[9.5rem]" : "max-w-[31%] sm:max-w-[7.5rem]"
+      )}
     >
       <button
         type="button"
         disabled={empty}
         onClick={onProfile}
         className={cn(
-          "flex min-w-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 pt-2 transition-opacity",
-          empty ? "opacity-40" : "active:opacity-85"
+          "group flex min-w-0 flex-col items-center rounded-2xl px-0.5 pb-1 pt-2 transition-opacity",
+          empty ? "cursor-default opacity-45" : "active:opacity-90"
         )}
       >
-        <div
-          className={cn(
-            "relative flex items-center justify-center rounded-full bg-gradient-to-br shadow-lg",
-            rank === 1 && "from-amber-400/90 to-amber-600/80 p-[3px]",
-            rank === 2 && "from-slate-300/90 to-slate-500/80 p-[2.5px]",
-            rank === 3 && "from-amber-700/70 to-orange-800/75 p-[2.5px]"
-          )}
-        >
-          <Avatar className={cn(av, "border-2 border-card shadow-md ring-2 ring-background/80")}>
-            <AvatarImage src={user?.profile?.avatar_url} className="object-cover" />
-            <AvatarFallback className="text-sm font-bold bg-secondary">
-              {user?.profile?.username?.[0]?.toUpperCase() || "—"}
-            </AvatarFallback>
-          </Avatar>
+        <div className={cn("relative mb-2 flex justify-center", tone.glow)}>
+          <div
+            className={cn(
+              "relative rounded-full bg-gradient-to-b p-[2px] shadow-sm",
+              rank === 1 ? "from-amber-200/60 to-amber-400/30" : rank === 2 ? "from-slate-200/70 to-slate-400/25" : "from-orange-200/60 to-orange-400/28"
+            )}
+          >
+            <Avatar className={cn(avatarClass, "border-2 border-background", tone.ring)}>
+              <AvatarImage src={user?.profile?.avatar_url} className="object-cover" />
+              <AvatarFallback className="bg-secondary text-sm font-semibold">
+                {user?.profile?.username?.[0]?.toUpperCase() || "—"}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <span
             className={cn(
-              "absolute -bottom-0.5 -right-0.5 flex h-6 min-w-[24px] items-center justify-center rounded-full border-2 border-card px-1.5 text-[11px] font-bold tabular-nums shadow-sm",
-              rank === 1 && "bg-amber-500 text-white",
-              rank === 2 && "bg-slate-500 text-white",
-              rank === 3 && "bg-orange-700 text-white"
+              "absolute -bottom-0.5 left-1/2 flex h-6 min-w-[1.5rem] -translate-x-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
+              tone.badge
             )}
           >
             {rank}
           </span>
         </div>
-        <p className="max-w-full truncate px-0.5 text-center text-[13px] font-semibold leading-tight text-foreground">
-          {empty ? "—" : user.profile?.display_name || user.profile?.username}
-        </p>
-        <p className="text-center text-[14px] font-bold tabular-nums text-primary">
-          {empty ? "—" : pts.toLocaleString()} <span className="text-[11px] font-semibold text-muted-foreground">pts</span>
-        </p>
+
+        <div className="flex w-full min-w-0 flex-col items-center gap-0.5 px-0.5">
+          <p
+            className="w-full min-w-0 max-w-full truncate text-center text-[13px] font-semibold leading-tight text-foreground sm:text-[14px]"
+            title={empty ? undefined : primary}
+          >
+            {empty ? "—" : primary}
+          </p>
+          {!empty && user.profile?.username ? (
+            <p
+              className="w-full min-w-0 max-w-full truncate text-center text-[11px] font-medium leading-tight text-muted-foreground"
+              title={`@${user.profile.username}`}
+            >
+              @{user.profile.username}
+            </p>
+          ) : null}
+          <p className="mt-0.5 truncate text-center text-[15px] font-bold tabular-nums tracking-tight text-primary sm:text-[16px]">
+            {empty ? "—" : pts.toLocaleString()}
+            {!empty ? <span className="ml-1 text-[11px] font-semibold text-muted-foreground">pts</span> : null}
+          </p>
+        </div>
       </button>
-      <div
-        className={cn(
-          "mt-2 w-full rounded-t-xl bg-gradient-to-b shadow-inner",
-          rank === 1 && "from-amber-500/25 to-amber-600/10",
-          rank === 2 && "from-slate-400/25 to-slate-600/10",
-          rank === 3 && "from-orange-600/20 to-orange-800/10",
-          podiumH
-        )}
-      />
+
+      <div className="mt-3 flex w-full min-w-0 flex-col items-center">
+        <div
+          className={cn(
+            "w-full min-w-0 rounded-t-[10px] border-x border-t border-black/[0.06] dark:border-white/[0.08]",
+            pedestalH,
+            tone.pedestal
+          )}
+        />
+      </div>
     </motion.div>
   );
 }
@@ -164,35 +219,48 @@ function LeaderboardListRow({
   onClick: () => void;
 }) {
   const pts = pointsForMode(u, pointsMode);
+  const primary = leaderboardPrimaryName(u.profile);
+  const un = u.profile?.username?.trim() || "";
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "ios-card flex w-full min-w-0 items-center gap-3 rounded-[14px] border border-border/60 px-3 py-2.5 text-left transition-colors active:bg-secondary/70",
-        isMe && "ring-1 ring-primary/35 bg-primary/[0.07]"
+        "flex w-full min-w-0 items-center gap-3 rounded-[13px] border border-border/55 bg-card px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-colors active:bg-secondary/60",
+        isMe && "border-primary/25 bg-primary/[0.06] ring-1 ring-primary/20"
       )}
     >
-        <span className="w-8 shrink-0 text-center text-[13px] font-bold tabular-nums text-muted-foreground">#{u.rank}</span>
-        <Avatar className={cn("h-10 w-10 shrink-0 shadow-sm", getRankRing(u.user_rank))}>
-          <AvatarImage src={u.profile?.avatar_url} className="object-cover" />
-          <AvatarFallback className="bg-secondary text-xs font-bold">
-            {u.profile?.username?.[0]?.toUpperCase() || "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className={cn("truncate text-[15px] font-semibold leading-tight", isMe && "text-primary")}>
-            {u.profile?.display_name || u.profile?.username}
+      <span className="w-9 shrink-0 text-center text-[13px] font-bold tabular-nums text-muted-foreground">
+        {u.rank}
+      </span>
+      <Avatar className={cn("h-11 w-11 shrink-0", getRankRing(u.user_rank))}>
+        <AvatarImage src={u.profile?.avatar_url} className="object-cover" />
+        <AvatarFallback className="bg-secondary text-xs font-bold">
+          {u.profile?.username?.[0]?.toUpperCase() || "?"}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <p
+          className={cn(
+            "min-w-0 truncate text-[15px] font-semibold leading-snug text-foreground",
+            isMe && "text-primary"
+          )}
+          title={primary}
+        >
+          {primary}
+        </p>
+        {un ? (
+          <p className="min-w-0 truncate text-[12px] leading-snug text-muted-foreground" title={`@${un}`}>
+            @{un}
           </p>
-          {u.profile?.username ? (
-            <p className="truncate text-[12px] text-muted-foreground">@{u.profile.username}</p>
-          ) : null}
-        </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[15px] font-bold tabular-nums text-foreground">{pts.toLocaleString()}</p>
-          <p className="text-[11px] font-medium text-muted-foreground">pts</p>
-        </div>
-      </button>
+        ) : null}
+      </div>
+      <div className="min-w-0 shrink-0 text-right">
+        <p className="text-[15px] font-bold tabular-nums text-foreground">{pts.toLocaleString()}</p>
+        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">pts</p>
+      </div>
+    </button>
   );
 }
 
@@ -366,17 +434,19 @@ const Leaderboard = () => {
 
   const listBody =
     loading && leaderboard.length === 0 ? (
-      <div className="px-1 py-2">
+      <div className="px-0.5 py-2">
         <LeaderboardSkeleton />
       </div>
     ) : leaderboard.length === 0 ? (
-      <div className="flex flex-col items-center px-6 py-12 text-center">
-        <Trophy className="mb-2 h-10 w-10 text-muted-foreground/50" />
-        <p className="text-[16px] font-semibold text-foreground">Aucun participant</p>
-        <p className="mt-1 text-[14px] text-muted-foreground">Reviens plus tard pour voir le classement.</p>
+      <div className="flex flex-col items-center px-6 py-14 text-center">
+        <Trophy className="mb-3 h-11 w-11 text-muted-foreground/45" />
+        <p className="text-ios-headline font-semibold text-foreground">Aucun participant</p>
+        <p className="mt-1.5 max-w-xs text-ios-subheadline text-muted-foreground">
+          Reviens plus tard pour voir le classement.
+        </p>
       </div>
     ) : (
-      <div className="flex flex-col gap-2 px-1 pb-2">
+      <div className="flex flex-col gap-2.5 px-0.5 pb-3">
         {listFromRank4.map((u) => {
           const isMe = u.user_id === user?.id;
           return (
@@ -391,8 +461,10 @@ const Leaderboard = () => {
           );
         })}
         {hasMoreUsers && (
-          <div ref={sentinelRef} className="flex justify-center py-5">
-            {loadingMore && <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
+          <div ref={sentinelRef} className="flex justify-center py-6">
+            {loadingMore && (
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            )}
           </div>
         )}
       </div>
@@ -400,96 +472,79 @@ const Leaderboard = () => {
 
   return (
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
-      <header className="z-20 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
+      <header className="z-20 shrink-0 border-b border-border/80 bg-card/95 pt-[var(--safe-area-top)] backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
         <div className="relative flex min-h-[52px] items-center px-4 pb-2 pt-2">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="z-10 flex shrink-0 items-center gap-1 text-primary"
+            className="z-10 flex min-w-0 shrink-0 items-center gap-1 text-primary"
           >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-[15px] font-medium">Retour</span>
+            <ArrowLeft className="h-5 w-5 shrink-0" />
+            <span className="min-w-0 truncate text-[15px] font-medium">Retour</span>
           </button>
-          <h1 className="pointer-events-none absolute inset-x-10 top-1/2 -translate-y-1/2 truncate text-center text-[17px] font-semibold text-foreground">
+          <h1 className="pointer-events-none absolute inset-x-12 top-1/2 min-w-0 -translate-y-1/2 truncate text-center text-[17px] font-semibold tracking-tight text-foreground">
             Classement
           </h1>
           <button
             type="button"
             onClick={() => setShowRules(true)}
-            className="z-10 ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card text-primary"
+            className="z-10 ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] border border-border/70 bg-secondary/50 text-primary shadow-sm active:bg-secondary"
             aria-label="Règles du classement"
           >
             <BookOpen className="h-4 w-4" />
           </button>
         </div>
 
-        <div
-          className="scrollbar-none flex gap-2 overflow-x-auto px-4 pb-3 [-webkit-overflow-scrolling:touch]"
-          data-tutorial="tutorial-leaderboard"
-        >
-          {(["season", "total"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setPointsMode(m)}
-              className={cn(
-                "shrink-0 rounded-[16px] px-5 py-2.5 text-[15px] font-semibold transition-all",
-                pointsMode === m
-                  ? "bg-foreground text-background shadow-md"
-                  : "border border-border/80 bg-card text-foreground active:bg-secondary/80"
-              )}
-            >
-              {modeLabels[m]}
-            </button>
-          ))}
+        <div className="px-4 pb-2" data-tutorial="tutorial-leaderboard">
+          <div className="mx-auto flex max-w-sm rounded-full border border-border/50 bg-muted/40 p-1 shadow-inner dark:bg-muted/25">
+            {(["season", "total"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setPointsMode(m)}
+                className={cn(
+                  "min-w-0 flex-1 rounded-full px-4 py-2 text-[14px] font-semibold tracking-tight transition-all",
+                  pointsMode === m
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground active:bg-background/60"
+                )}
+              >
+                {modeLabels[m]}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <p className="px-4 pb-2 text-center text-[12px] text-muted-foreground">
+        <p className="px-4 pb-3 text-center text-[12px] font-medium text-muted-foreground">
           {totalUsers.toLocaleString()} participant{totalUsers !== 1 ? "s" : ""}
         </p>
       </header>
 
-      <div className="shrink-0 border-b border-border/60 bg-secondary px-4 pb-2 pt-1">
-        <div className="mx-auto flex w-full max-w-md items-end justify-center gap-1.5">
-          <PodiumBlock
-            rank={2}
-            user={u2}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[32%]"
-            avatarSize="md"
-            onProfile={() => u2 && navigateToProfile(u2.user_id)}
-          />
-          <PodiumBlock
-            rank={1}
-            user={u1}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[36%]"
-            avatarSize="lg"
-            onProfile={() => u1 && navigateToProfile(u1.user_id)}
-          />
-          <PodiumBlock
-            rank={3}
-            user={u3}
-            pointsMode={pointsMode}
-            maxWidthClass="max-w-[32%]"
-            avatarSize="md"
-            onProfile={() => u3 && navigateToProfile(u3.user_id)}
-          />
+      <div className="shrink-0 border-b border-border/50 bg-secondary px-3 pb-4 pt-2">
+        <div className="mx-auto w-full max-w-md rounded-[1.35rem] border border-border/45 bg-muted/25 px-3 pb-3 pt-4 shadow-[var(--shadow-card)] dark:bg-muted/15">
+          <p className="mb-4 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Podium
+          </p>
+          <div className="flex min-w-0 items-end justify-center gap-1.5 sm:gap-3">
+            <PodiumBlock rank={2} user={u2} pointsMode={pointsMode} onProfile={() => u2 && navigateToProfile(u2.user_id)} />
+            <PodiumBlock rank={1} user={u1} pointsMode={pointsMode} onProfile={() => u1 && navigateToProfile(u1.user_id)} />
+            <PodiumBlock rank={3} user={u3} pointsMode={pointsMode} onProfile={() => u3 && navigateToProfile(u3.user_id)} />
+          </div>
         </div>
       </div>
 
       <div
         ref={listScrollRef}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pt-3",
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] px-3 pt-4",
           hideBottomMe || !mySnapshot ? "pb-4" : "pb-2"
         )}
       >
         <motion.div
           className="mx-auto w-full max-w-lg"
-          initial={{ opacity: 0.88, y: 6 }}
+          initial={{ opacity: 0.92, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
           {listBody}
         </motion.div>
@@ -499,25 +554,25 @@ const Leaderboard = () => {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="shrink-0 border-t border-border bg-card/95 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.12)] backdrop-blur-md supports-[backdrop-filter]:bg-card/85"
+          className="shrink-0 border-t border-border/80 bg-card/95 px-4 py-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_28px_-10px_rgba(0,0,0,0.1)] backdrop-blur-md supports-[backdrop-filter]:bg-card/88"
         >
-          <div className="mx-auto flex max-w-lg items-center gap-3">
-            <span className="shrink-0 text-[13px] font-bold tabular-nums text-primary">#{mySnapshot.rank}</span>
-            <Avatar className="h-10 w-10 shrink-0 shadow-sm ring-1 ring-border">
+          <div className="mx-auto flex min-w-0 max-w-lg items-center gap-3">
+            <span className="w-9 shrink-0 text-center text-[13px] font-bold tabular-nums text-primary">#{mySnapshot.rank}</span>
+            <Avatar className="h-10 w-10 shrink-0 ring-1 ring-border/80">
               <AvatarImage src={mySnapshot.avatar_url || ""} className="object-cover" />
               <AvatarFallback className="bg-secondary text-sm font-bold">
                 {mySnapshot.username?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-[14px] font-semibold text-foreground">Toi</p>
-              <p className="truncate text-[12px] text-muted-foreground">
+              <p className="truncate text-[12px] text-muted-foreground" title={`@${mySnapshot.username}`}>
                 @{mySnapshot.username}
               </p>
             </div>
-            <div className="shrink-0 text-right">
+            <div className="min-w-0 shrink-0 text-right">
               <p className="text-[16px] font-bold tabular-nums text-foreground">{mySnapshot.points.toLocaleString()}</p>
-              <p className="text-[11px] font-medium text-muted-foreground">pts</p>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">pts</p>
             </div>
           </div>
         </motion.div>
