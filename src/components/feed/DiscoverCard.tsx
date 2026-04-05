@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { DiscoverSession, ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import { getVisibilityBadgeLabel } from '@/lib/sessionVisibility';
 
 interface DiscoverCardProps {
   session: DiscoverSession;
@@ -25,6 +26,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
   const { formatKm } = useDistanceUnits();
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const visibilityBadge = getVisibilityBadgeLabel(session);
 
   const getIntensityColor = (intensity: string | null) => {
     switch (intensity?.toLowerCase()) {
@@ -57,6 +59,8 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
       <div 
         className={cn(
           "ios-card overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary transition-colors",
+          session.visibility_state === 'boosted' && "ring-2 ring-primary/25 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_12px_30px_rgba(37,99,235,0.14)]",
+          session.visibility_state === 'premium' && "shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
           getActivityAccentBorder(session.activity_type)
         )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
@@ -110,6 +114,18 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
             {session.friends_only && (
               <Badge variant="secondary" className="text-[11px] rounded-full">
                 Amis uniquement
+              </Badge>
+            )}
+            {visibilityBadge && (
+              <Badge
+                className={cn(
+                  "text-[11px] rounded-full border-0",
+                  session.visibility_state === 'boosted'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                )}
+              >
+                {visibilityBadge}
               </Badge>
             )}
           </div>

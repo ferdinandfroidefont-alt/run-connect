@@ -59,6 +59,12 @@ import {
 } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
+import {
+  canSessionBeDiscovered,
+  getSessionPriorityScore,
+  getSessionVisualState,
+  type SessionVisibilityVisualState,
+} from '@/lib/sessionVisibility';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -127,6 +133,12 @@ interface Session {
   club_id?: string | null;
   image_url?: string;
   calculated_level?: number;
+  visibility_tier?: string | null;
+  visibility_radius_km?: number | null;
+  boost_expires_at?: string | null;
+  discovery_score?: number | null;
+  visibility_state?: SessionVisibilityVisualState;
+  distance_km?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -140,6 +152,18 @@ interface Session {
     total_elevation_gain: number;
   } | null;
 }
+
+const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 interface Filter {
   activity_types: string[];
   session_types: string[];
@@ -703,8 +727,13 @@ export const InteractiveMap = ({
       const sessionsWithProfiles = visibleSessions.map(session => {
         const profile = profilesMap.get(session.organizer_id);
         const route = session.route_id ? routesMap.get(session.route_id) || null : null;
+        const distanceKm = userLocation
+          ? calculateDistanceKm(userLocation.lat, userLocation.lng, Number(session.location_lat), Number(session.location_lng))
+          : undefined;
         return {
           ...session,
+          distance_km: distanceKm,
+          visibility_state: getSessionVisualState(session),
           profiles: profile || {
             username: 'Utilisateur',
             display_name: 'Utilisateur',
@@ -723,7 +752,19 @@ export const InteractiveMap = ({
         has_avatar: !!s.profiles?.avatar_url,
         avatar_url: s.profiles?.avatar_url
       })));
-      setSessions(sessionsWithProfiles);
+      const discoverableSessions = sessionsWithProfiles
+        .filter((session) => {
+          if (session.organizer_id === user?.id) return true;
+          if (session.club_id || session.friends_only) return true;
+          if (session.distance_km == null) return true;
+          return canSessionBeDiscovered(session, session.distance_km);
+        })
+        .sort((a, b) => {
+          const aDistance = typeof a.distance_km === 'number' ? a.distance_km : 999999;
+          const bDistance = typeof b.distance_km === 'number' ? b.distance_km : 999999;
+          return getSessionPriorityScore(b, bDistance) - getSessionPriorityScore(a, aDistance);
+        });
+      setSessions(discoverableSessions);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast.error('Erreur lors du chargement des séances');
@@ -810,15 +851,38 @@ export const InteractiveMap = ({
         const lat = Number(session.location_lat);
         const wrap = document.createElement('div');
         wrap.style.cursor = 'pointer';
+        wrap.style.position = 'relative';
         const img = document.createElement('img');
         img.src = markerIcon;
         img.alt = '';
-        img.style.width = '48px';
-        img.style.height = '60px';
+        const isBoosted = session.visibility_state === 'boosted';
+        const isPremium = session.visibility_state === 'premium';
+        img.style.width = isBoosted ? '62px' : isPremium ? '52px' : '48px';
+        img.style.height = isBoosted ? '78px' : isPremium ? '66px' : '60px';
         img.style.display = 'block';
         img.draggable = false;
         if (isNewSession) img.className = 'pulse-marker-animation';
         else if (isImminent) img.className = 'imminent-marker-animation';
+        if (isBoosted) {
+          const halo = document.createElement('div');
+          halo.style.position = 'absolute';
+          halo.style.left = '50%';
+          halo.style.top = '50%';
+          halo.style.transform = 'translate(-50%, -58%)';
+          halo.style.width = '54px';
+          halo.style.height = '54px';
+          halo.style.borderRadius = '999px';
+          halo.style.background = 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(59,130,246,0.08) 55%, rgba(59,130,246,0) 75%)';
+          halo.style.pointerEvents = 'none';
+          halo.animate(
+            [
+              { transform: 'translate(-50%, -58%) scale(0.9)', opacity: 0.7 },
+              { transform: 'translate(-50%, -58%) scale(1.15)', opacity: 0.2 },
+            ],
+            { duration: 1600, iterations: Infinity, easing: 'ease-out' },
+          );
+          wrap.appendChild(halo);
+        }
         wrap.appendChild(img);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -827,6 +891,7 @@ export const InteractiveMap = ({
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
+        if (isBoosted) marker.setOffset([0, -4]);
         return marker;
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
@@ -838,8 +903,8 @@ export const InteractiveMap = ({
           const img = document.createElement('img');
           img.src = getFallbackIcon(session.activity_type);
           img.alt = '';
-          img.style.width = '40px';
-          img.style.height = '40px';
+          img.style.width = session.visibility_state === 'boosted' ? '48px' : '40px';
+          img.style.height = session.visibility_state === 'boosted' ? '48px' : '40px';
           wrap.appendChild(img);
           wrap.addEventListener('click', (ev) => {
             ev.stopPropagation();

@@ -1590,12 +1590,16 @@ export type Database = {
       sessions: {
         Row: {
           activity_type: string
+          boost_consumed_at: string | null
+          boost_expires_at: string | null
+          boost_notification_sent_at: string | null
           calculated_level: number | null
           club_id: string | null
           coaching_session_id: string | null
           created_at: string
           current_participants: number | null
           description: string | null
+          discovery_score: number
           distance_km: number | null
           friends_only: boolean | null
           hidden_from_users: string[] | null
@@ -1625,16 +1629,22 @@ export type Database = {
           session_type: string
           title: string
           updated_at: string
+          visibility_radius_km: number
+          visibility_tier: string
           visibility_type: string | null
         }
         Insert: {
           activity_type: string
+          boost_consumed_at?: string | null
+          boost_expires_at?: string | null
+          boost_notification_sent_at?: string | null
           calculated_level?: number | null
           club_id?: string | null
           coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          discovery_score?: number
           distance_km?: number | null
           friends_only?: boolean | null
           hidden_from_users?: string[] | null
@@ -1664,16 +1674,22 @@ export type Database = {
           session_type: string
           title: string
           updated_at?: string
+          visibility_radius_km?: number
+          visibility_tier?: string
           visibility_type?: string | null
         }
         Update: {
           activity_type?: string
+          boost_consumed_at?: string | null
+          boost_expires_at?: string | null
+          boost_notification_sent_at?: string | null
           calculated_level?: number | null
           club_id?: string | null
           coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
+          discovery_score?: number
           distance_km?: number | null
           friends_only?: boolean | null
           hidden_from_users?: string[] | null
@@ -1703,6 +1719,8 @@ export type Database = {
           session_type?: string
           title?: string
           updated_at?: string
+          visibility_radius_km?: number
+          visibility_tier?: string
           visibility_type?: string | null
         }
         Relationships: [

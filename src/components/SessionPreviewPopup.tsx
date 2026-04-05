@@ -9,6 +9,7 @@ import { getActivityConfig } from "@/lib/activityIcons";
 import { SessionLevelBadge } from "./SessionLevelBadge";
 import type { SessionLevel } from "@/lib/sessionLevelCalculator";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import { getVisibilityBadgeLabel } from "@/lib/sessionVisibility";
 
 interface Session {
   id: string;
@@ -39,6 +40,9 @@ interface Session {
     total_distance: number;
     total_elevation_gain: number;
   } | null;
+  visibility_tier?: string | null;
+  visibility_radius_km?: number | null;
+  boost_expires_at?: string | null;
 }
 
 interface SessionPreviewPopupProps {
@@ -93,6 +97,7 @@ export const SessionPreviewPopup = ({
 
   const activityConfig = getActivityConfig(session.activity_type);
   const ActivityIconComponent = activityConfig.icon;
+  const visibilityBadge = getVisibilityBadgeLabel(session);
 
   return (
     <AnimatePresence>
@@ -201,6 +206,17 @@ export const SessionPreviewPopup = ({
                   {session.routes && (
                     <Badge variant="outline" className="text-xs">
                       📍 {formatMeters(session.routes.total_distance)}
+                    </Badge>
+                  )}
+                  {visibilityBadge && (
+                    <Badge
+                      className={
+                        visibilityBadge === "Boost"
+                          ? "text-xs bg-primary text-primary-foreground"
+                          : "text-xs bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                      }
+                    >
+                      {visibilityBadge}
                     </Badge>
                   )}
                 </div>

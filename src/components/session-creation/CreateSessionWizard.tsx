@@ -22,6 +22,8 @@ import { ActivityStep } from './steps/ActivityStep';
 import { DateTimeStep } from './steps/DateTimeStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { ConfirmStep } from './steps/ConfirmStep';
+import { BoostSessionDialog } from '@/components/sessions/BoostSessionDialog';
+import { FREE_VISIBILITY_RADIUS_KM, PREMIUM_VISIBILITY_RADIUS_KM } from '@/lib/sessionVisibility';
 
 declare global {
   interface Window {
@@ -61,12 +63,14 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   onCoachingScheduled,
 }) => {
   const { user, subscriptionInfo } = useAuth();
-  const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
+  const { showAdAfterSessionCreation, showRewardedBoostAd } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { sendPushNotification } = useSendNotification();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [boostDialogOpen, setBoostDialogOpen] = useState(false);
+  const [boostingSessionId, setBoostingSessionId] = useState<string | null>(null);
 
   const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode, coachingSession });
   const lastAppliedPresetRouteRef = useRef<string | null>(null);
@@ -159,16 +163,14 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     if (!user || !wizard.selectedLocation) return;
 
     const { formData, selectedLocation, selectedImage, selectedRoute, routeMode } = wizard;
-
-    // Check premium for public sessions
-    if (formData.visibility_type === 'public' && !subscriptionInfo?.subscribed) {
-      toast({
-        title: "Abonnement requis",
-        description: "Les séances publiques nécessitent un abonnement premium",
-        variant: "destructive"
-      });
-      return;
-    }
+    const isPremiumUser = !!subscriptionInfo?.subscribed;
+    const isPublicSession = formData.visibility_type === 'public';
+    const visibilityTier = isPublicSession ? (isPremiumUser ? 'premium' : 'free') : 'free';
+    const visibilityRadiusKm =
+      !isPublicSession ? FREE_VISIBILITY_RADIUS_KM :
+      isPremiumUser ? PREMIUM_VISIBILITY_RADIUS_KM :
+      FREE_VISIBILITY_RADIUS_KM;
+    const discoveryScore = isPublicSession ? (isPremiumUser ? 300 : 0) : 0;
 
     setLoading(true);
     try {
@@ -210,6 +212,12 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         hidden_from_users: formData.hidden_from_users || [],
         intensity: formData.intensity || null,
         coaching_session_id: coachingSession?.id || null,
+        visibility_tier: visibilityTier,
+        visibility_radius_km: Number.isFinite(visibilityRadiusKm) ? visibilityRadiusKm : 999999,
+        boost_expires_at: null,
+        boost_consumed_at: null,
+        boost_notification_sent_at: null,
+        discovery_score: discoveryScore,
       };
 
       let sessionData;
@@ -275,6 +283,10 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           toast({ title: "Séance créée avec succès ! 🎉" });
         }
         showAdAfterSessionCreation();
+        if (sessionData?.id && isPublicSession && !isPremiumUser) {
+          setBoostingSessionId(sessionData.id);
+          setBoostDialogOpen(true);
+        }
       }
 
       if (!sessionData) throw new Error("Session data not returned");
@@ -400,6 +412,30 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
     }
   };
 
+  const handleBoostWatchVideo = async () => {
+    if (!boostingSessionId) return;
+    const adResult = await showRewardedBoostAd();
+    if (adResult !== 'completed') {
+      toast({ title: "Boost annulé", description: "Aucune vidéo validée", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await supabase.functions.invoke('activate-session-boost', {
+        body: {
+          session_id: boostingSessionId,
+          reward_satisfied: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "Boost activé", description: "Ta séance est mise en avant pendant 1h" });
+      setBoostDialogOpen(false);
+      onSessionCreated(boostingSessionId);
+      setBoostingSessionId(null);
+    } catch (error: any) {
+      toast({ title: "Boost impossible", description: error?.message || "Réessayez plus tard", variant: "destructive" });
+    }
+  };
+
   const renderStep = () => {
     switch (wizard.currentStep) {
       case 'location':
@@ -465,40 +501,51 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border">
-        <IosFixedPageHeaderShell
-          className="min-h-0 flex-1"
-          headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
-          header={
-            <>
-              <IosPageHeaderBar
-                className="py-3"
-                left={
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex min-w-0 items-center gap-1 text-primary"
-                  >
-                    <X className="h-5 w-5 shrink-0" />
-                    <span className="truncate text-[17px]">Fermer</span>
-                  </button>
-                }
-                title={
-                  isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
-                }
-              />
-              <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
-            </>
-          }
-          scrollClassName="bg-secondary"
-        >
-          <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-4">
-            <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
-          </div>
-        </IosFixedPageHeaderShell>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="flex h-full max-h-full w-full max-w-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[90vh] sm:max-w-md sm:rounded-lg sm:border">
+          <IosFixedPageHeaderShell
+            className="min-h-0 flex-1"
+            headerWrapperClassName="z-40 shrink-0 border-b border-border bg-card"
+            header={
+              <>
+                <IosPageHeaderBar
+                  className="py-3"
+                  left={
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="flex min-w-0 items-center gap-1 text-primary"
+                    >
+                      <X className="h-5 w-5 shrink-0" />
+                      <span className="truncate text-[17px]">Fermer</span>
+                    </button>
+                  }
+                  title={
+                    isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
+                  }
+                />
+                <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
+              </>
+            }
+            scrollClassName="bg-secondary"
+          >
+            <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-4">
+              <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
+            </div>
+          </IosFixedPageHeaderShell>
+        </DialogContent>
+      </Dialog>
+      <BoostSessionDialog
+        open={boostDialogOpen}
+        onClose={() => {
+          setBoostDialogOpen(false);
+          setBoostingSessionId(null);
+        }}
+        onWatchVideo={() => void handleBoostWatchVideo()}
+        loading={loading}
+      />
+    </>
   );
 };
 
