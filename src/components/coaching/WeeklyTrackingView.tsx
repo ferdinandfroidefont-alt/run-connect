@@ -177,7 +177,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        supabase.from("coaching_sessions")
+        (supabase.from("coaching_sessions") as any)
           .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
