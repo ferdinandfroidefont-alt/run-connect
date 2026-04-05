@@ -11,6 +11,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 
+const isIosPhone = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent);
+
 interface QRShareDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

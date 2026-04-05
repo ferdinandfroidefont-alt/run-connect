@@ -1571,7 +1571,7 @@ export const InteractiveMap = ({
     });
 
     if (!result.ok) {
-      toast.error(result.message);
+      toast.error((result as any).message);
       return false;
     }
     pendingRouteStatsRef.current = null;

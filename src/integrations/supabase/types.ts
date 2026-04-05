@@ -288,43 +288,10 @@ export type Database = {
           },
         ]
       }
-      coaching_session_comments: {
-        Row: {
-          coaching_session_id: string
-          created_at: string
-          id: string
-          message: string
-          user_id: string
-        }
-        Insert: {
-          coaching_session_id: string
-          created_at?: string
-          id?: string
-          message: string
-          user_id: string
-        }
-        Update: {
-          coaching_session_id?: string
-          created_at?: string
-          id?: string
-          message?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "coaching_session_comments_coaching_session_id_fkey"
-            columns: ["coaching_session_id"]
-            isOneToOne: false
-            referencedRelation: "coaching_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       coaching_participations: {
         Row: {
           athlete_note: string | null
           athlete_overrides: Json | null
-          athlete_rpe_felt: Json | null
           coaching_session_id: string
           completed_at: string | null
           created_at: string
@@ -344,7 +311,6 @@ export type Database = {
         Insert: {
           athlete_note?: string | null
           athlete_overrides?: Json | null
-          athlete_rpe_felt?: Json | null
           coaching_session_id: string
           completed_at?: string | null
           created_at?: string
@@ -364,7 +330,6 @@ export type Database = {
         Update: {
           athlete_note?: string | null
           athlete_overrides?: Json | null
-          athlete_rpe_felt?: Json | null
           coaching_session_id?: string
           completed_at?: string | null
           created_at?: string
@@ -408,7 +373,6 @@ export type Database = {
           pace_target: string | null
           rcc_code: string | null
           rpe: number | null
-          rpe_phases: Json | null
           scheduled_at: string
           send_mode: string | null
           session_blocks: Json | null
@@ -433,7 +397,6 @@ export type Database = {
           pace_target?: string | null
           rcc_code?: string | null
           rpe?: number | null
-          rpe_phases?: Json | null
           scheduled_at: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -458,7 +421,6 @@ export type Database = {
           pace_target?: string | null
           rcc_code?: string | null
           rpe?: number | null
-          rpe_phases?: Json | null
           scheduled_at?: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -944,36 +906,6 @@ export type Database = {
           },
         ]
       }
-      profile_sport_records: {
-        Row: {
-          created_at: string
-          event_label: string
-          id: string
-          record_value: string
-          sort_order: number
-          sport_key: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          event_label: string
-          id?: string
-          record_value: string
-          sort_order?: number
-          sport_key: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          event_label?: string
-          id?: string
-          record_value?: string
-          sort_order?: number
-          sport_key?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           age: number | null
@@ -997,12 +929,8 @@ export type Database = {
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
-          last_known_lat: number | null
-          last_known_lng: number | null
-          last_known_location_at: string | null
           last_seen: string | null
           notif_club_invitation: boolean | null
-          notif_boost_nearby: boolean | null
           notif_follow_request: boolean | null
           notif_friend_session: boolean | null
           notif_message: boolean | null
@@ -1059,12 +987,8 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          last_known_lat?: number | null
-          last_known_lng?: number | null
-          last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
-          notif_boost_nearby?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
@@ -1121,12 +1045,8 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          last_known_lat?: number | null
-          last_known_lng?: number | null
-          last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
-          notif_boost_nearby?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
@@ -1632,16 +1552,12 @@ export type Database = {
       sessions: {
         Row: {
           activity_type: string
-          boost_consumed_at: string | null
-          boost_expires_at: string | null
-          boost_notification_sent_at: string | null
           calculated_level: number | null
           club_id: string | null
           coaching_session_id: string | null
           created_at: string
           current_participants: number | null
           description: string | null
-          discovery_score: number
           distance_km: number | null
           friends_only: boolean | null
           hidden_from_users: string[] | null
@@ -1671,22 +1587,16 @@ export type Database = {
           session_type: string
           title: string
           updated_at: string
-          visibility_radius_km: number
-          visibility_tier: string
           visibility_type: string | null
         }
         Insert: {
           activity_type: string
-          boost_consumed_at?: string | null
-          boost_expires_at?: string | null
-          boost_notification_sent_at?: string | null
           calculated_level?: number | null
           club_id?: string | null
           coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
-          discovery_score?: number
           distance_km?: number | null
           friends_only?: boolean | null
           hidden_from_users?: string[] | null
@@ -1716,22 +1626,16 @@ export type Database = {
           session_type: string
           title: string
           updated_at?: string
-          visibility_radius_km?: number
-          visibility_tier?: string
           visibility_type?: string | null
         }
         Update: {
           activity_type?: string
-          boost_consumed_at?: string | null
-          boost_expires_at?: string | null
-          boost_notification_sent_at?: string | null
           calculated_level?: number | null
           club_id?: string | null
           coaching_session_id?: string | null
           created_at?: string
           current_participants?: number | null
           description?: string | null
-          discovery_score?: number
           distance_km?: number | null
           friends_only?: boolean | null
           hidden_from_users?: string[] | null
@@ -1761,8 +1665,6 @@ export type Database = {
           session_type?: string
           title?: string
           updated_at?: string
-          visibility_radius_km?: number
-          visibility_tier?: string
           visibility_type?: string | null
         }
         Relationships: [

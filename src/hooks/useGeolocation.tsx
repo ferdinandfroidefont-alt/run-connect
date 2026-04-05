@@ -27,7 +27,7 @@ export const useGeolocation = () => {
           last_known_lat: pos.lat,
           last_known_lng: pos.lng,
           last_known_location_at: new Date(now).toISOString(),
-        })
+        } as any)
         .eq('user_id', userId);
       if (!error) localStorage.setItem(storageKey, String(now));
     } catch {

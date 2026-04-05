@@ -39,7 +39,7 @@ export default function ProfileSportRecordsEdit() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("profile_sport_records")
         .select("id, sport_key, event_label, record_value, sort_order")
         .eq("user_id", user.id)
@@ -82,7 +82,7 @@ export default function ProfileSportRecordsEdit() {
     setSaving(true);
     try {
       const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("profile_sport_records")
         .insert({
           user_id: user.id,
@@ -114,7 +114,7 @@ export default function ProfileSportRecordsEdit() {
     if (!user?.id) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
+      const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
       toast({ title: "Record supprimé" });

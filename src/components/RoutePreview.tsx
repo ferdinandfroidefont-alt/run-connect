@@ -13,6 +13,7 @@ const PREVIEW_LAYER = 'route-preview-line-layer';
 
 export const RoutePreview = ({ coordinates, activityType }: RoutePreviewProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
 
   const getActivityColor = (type: string) => {
     const colors: Record<string, string> = {

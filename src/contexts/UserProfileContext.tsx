@@ -68,8 +68,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       let data: any = null;
       let fetchError: any = null;
       try {
-        const res = await withTimeout(
-          supabase.from('profiles').select('*').eq('user_id', user.id).single(),
+        const res: any = await withTimeout(
+          supabase.from('profiles').select('*').eq('user_id', user.id).single() as any,
           PROFILE_FETCH_MS,
           'profile_fetch'
         );

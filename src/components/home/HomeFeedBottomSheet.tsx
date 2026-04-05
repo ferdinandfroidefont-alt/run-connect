@@ -45,7 +45,7 @@ function useSafeAreaTopPx() {
 function nearestSnapIndex(height: number, heights: readonly [number, number, number]): HomeFeedSheetSnap {
   let best: HomeFeedSheetSnap = 0;
   let bestD = Infinity;
-  (heights as number[]).forEach((h, i) => {
+  ([...heights] as number[]).forEach((h, i) => {
     const d = Math.abs(height - h);
     if (d < bestD) {
       bestD = d;
@@ -79,9 +79,9 @@ export function HomeFeedBottomSheet() {
 
   const [snap, setSnap] = useState<HomeFeedSheetSnap>(0);
   const [dragging, setDragging] = useState(false);
-  const [dragH, setDragH] = useState(heights[0]);
+  const [dragH, setDragH] = useState<number>(heights[0]);
   const dragRef = useRef<DragRef | null>(null);
-  const liveHeightRef = useRef(heights[0]);
+  const liveHeightRef = useRef<number>(heights[0] as number);
   const dragMovedRef = useRef(false);
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export function HomeFeedBottomSheet() {
   }, [heights, snap, dragging]);
 
   useEffect(() => {
-    liveHeightRef.current = heights[snap];
+    liveHeightRef.current = heights[snap] as number;
   }, [heights, snap]);
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export function HomeFeedBottomSheet() {
       e.preventDefault();
       dragMovedRef.current = false;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      const startH = heights[snap];
+      const startH = heights[snap] as number;
       dragRef.current = { startY: e.clientY, startH, pointerId: e.pointerId };
       liveHeightRef.current = startH;
       setDragging(true);
@@ -133,7 +133,7 @@ export function HomeFeedBottomSheet() {
       if (Math.abs(e.clientY - startY) > 6) dragMovedRef.current = true;
       const dy = e.clientY - startY;
       const next = Math.round(startH - dy);
-      const clamped = Math.max(heights[0], Math.min(heights[2], next));
+      const clamped = Math.max(heights[0] as number, Math.min(heights[2] as number, next));
       liveHeightRef.current = clamped;
       setDragH(clamped);
     },

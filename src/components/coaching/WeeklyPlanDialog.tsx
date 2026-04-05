@@ -729,7 +729,7 @@ export const WeeklyPlanDialog = ({
               rcc_code: session.rccCode || null,
               objective: session.objective || null,
               coach_notes: session.coachNotes || null,
-              session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
+              session_blocks: (sessionBlocks as any[]).length > 0 ? sessionBlocks : null,
               default_location_name: session.locationName || null,
               send_mode: sendMode,
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],

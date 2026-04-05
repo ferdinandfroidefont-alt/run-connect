@@ -178,13 +178,13 @@ export const CoachingSessionDetail = ({
         setAthleteNote("");
       }
 
-      const { data: cRows } = await supabase
+      const { data: cRows } = await (supabase as any)
         .from("coaching_session_comments")
         .select("id, user_id, message, created_at")
         .eq("coaching_session_id", session.id)
         .order("created_at", { ascending: true });
       if (cRows?.length) {
-        const cUserIds = [...new Set(cRows.map((c) => c.user_id))];
+        const cUserIds = [...new Set((cRows as any[]).map((c: any) => c.user_id))] as string[];
         const { data: cProfiles } = await supabase
           .from("profiles")
           .select("user_id, username, display_name")
@@ -253,7 +253,7 @@ export const CoachingSessionDetail = ({
     if (!session || !user || !commentDraft.trim()) return;
     setSendingComment(true);
     try {
-      const { error } = await supabase.from("coaching_session_comments").insert({
+      const { error } = await (supabase as any).from("coaching_session_comments").insert({
         coaching_session_id: session.id,
         user_id: user.id,
         message: commentDraft.trim(),
