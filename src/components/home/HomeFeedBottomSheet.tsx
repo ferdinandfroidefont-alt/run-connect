@@ -45,7 +45,7 @@ function useSafeAreaTopPx() {
 function nearestSnapIndex(height: number, heights: readonly [number, number, number]): HomeFeedSheetSnap {
   let best: HomeFeedSheetSnap = 0;
   let bestD = Infinity;
-  (heights as number[]).forEach((h, i) => {
+  ([...heights] as number[]).forEach((h, i) => {
     const d = Math.abs(height - h);
     if (d < bestD) {
       bestD = d;
