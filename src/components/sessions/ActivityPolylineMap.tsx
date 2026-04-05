@@ -7,6 +7,7 @@ interface ActivityPolylineMapProps {
   coords: MapCoord[] | [number, number][] | unknown[];
   fallbackLat?: number;
   fallbackLng?: number;
+  onOpenFullMap?: () => void;
   className?: string;
 }
 
