@@ -117,7 +117,7 @@ export function HomeFeedBottomSheet() {
       e.preventDefault();
       dragMovedRef.current = false;
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      const startH = heights[snap];
+      const startH = heights[snap] as number;
       dragRef.current = { startY: e.clientY, startH, pointerId: e.pointerId };
       liveHeightRef.current = startH;
       setDragging(true);
