@@ -39,8 +39,8 @@ export default function ProfileSportRecordsEdit() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("profile_sport_records")
+      const { data, error } = await (supabase
+        .from("profile_sport_records") as any)
         .select("id, sport_key, event_label, record_value, sort_order")
         .eq("user_id", user.id)
         .order("sort_order", { ascending: true })
