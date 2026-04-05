@@ -71,8 +71,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     setLoading(true);
     try {
       // First fetch participations for this user in this club's sessions for the week
-      const { data: allClubSessions } = await supabase.
-      from("coaching_sessions").
+      const { data: allClubSessions } = await (supabase.
+      from("coaching_sessions") as any).
       select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, rpe_phases, session_blocks").
       eq("club_id", clubId).
       gte("scheduled_at", weekStart.toISOString()).
