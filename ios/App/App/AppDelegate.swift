@@ -1,5 +1,9 @@
 import UIKit
 import Capacitor
+import FirebaseCore
+import FirebaseMessaging
+
+// RUNCONNECT_IOS_PUSH_COMPLETE — FCM + pont WebView `fcmTokenReady` (voir usePushNotifications.tsx)
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,43 +11,166 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+            }
+            Messaging.messaging().delegate = self
+            print("[PUSH][IOS] Firebase configured, MessagingDelegate set")
+        } else {
+            print("[PUSH][IOS] Missing GoogleService-Info.plist — add from Firebase Console (bundle com.ferdi.runconnect)")
+        }
         return true
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
-        // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
-        // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links.
-        // Feel free to add additional processing here, but if you want the App API to support
-        // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    // MARK: - APNs → Capacitor + Firebase Messaging
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
+        print("[PUSH][IOS] didRegisterForRemoteNotifications traceId=\(traceId)")
+
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+
+        guard FirebaseApp.app() != nil else { return }
+
+        Messaging.messaging().apnsToken = deviceToken
+
+        Messaging.messaging().token { [weak self] token, error in
+            if let error = error {
+                print("[PUSH][IOS] FCM token fetch error: \(error.localizedDescription)")
+                return
+            }
+            guard let token = token, !token.isEmpty else {
+                print("[PUSH][IOS] FCM token fetch returned empty")
+                return
+            }
+            print("[PUSH][IOS] FCM token OK length=\(token.count) traceId=\(traceId)")
+            UserDefaults.standard.set(token, forKey: "fcm_token")
+            self?.injectFCMTokenIntoWebView(token, traceId: traceId)
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("[PUSH][IOS] didFailToRegisterForRemoteNotifications: \(error.localizedDescription)")
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    // MARK: - WebView bridge
+
+    private func keyWindowRootVC() -> UIViewController? {
+        if #available(iOS 13.0, *) {
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            let keyWindow = scenes.flatMap { $0.windows }.first { $0.isKeyWindow }
+            return keyWindow?.rootViewController
+        }
+        return UIApplication.shared.windows.first?.rootViewController
+    }
+
+    private func findBridge(from vc: UIViewController?) -> CAPBridgeViewController? {
+        guard let vc = vc else { return nil }
+        if let bridge = vc as? CAPBridgeViewController { return bridge }
+        if let presented = vc.presentedViewController, let found = findBridge(from: presented) { return found }
+        for child in vc.children {
+            if let found = findBridge(from: child) { return found }
+        }
+        return nil
+    }
+
+    private func injectFCMTokenIntoWebView(_ token: String, traceId: String) {
+        let detail: [String: String] = [
+            "token": token,
+            "platform": "ios",
+            "traceId": traceId,
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: detail, options: []),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            print("[PUSH][IOS] injectFCMTokenIntoWebView: JSON encode failed")
+            return
+        }
+
+        let js = """
+        (function(){
+          try {
+            var d = \(jsonString);
+            window.fcmToken = d.token;
+            window.__fcmTraceId = d.traceId;
+            window.__fcmTokenBuffer = d.token;
+            window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: d }));
+            console.log('[PUSH][IOS-BRIDGE] fcmTokenReady len=' + (d.token && d.token.length) + ' traceId=' + d.traceId);
+          } catch (e) { console.error('[PUSH][IOS-BRIDGE]', e); }
+        })();
+        """
+
+        func inject(attempt: Int) {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                guard let rootVC = self.keyWindowRootVC() else {
+                    if attempt < 8 {
+                        let delay = min(Double(attempt), 4.0)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            inject(attempt: attempt + 1)
+                        }
+                    } else {
+                        print("[PUSH][IOS] inject: no rootViewController after retries (token in UserDefaults)")
+                    }
+                    return
+                }
+                guard let bridge = self.findBridge(from: rootVC) else {
+                    if attempt < 8 {
+                        let delay = min(Double(attempt), 4.0)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            inject(attempt: attempt + 1)
+                        }
+                    } else {
+                        print("[PUSH][IOS] inject: CAPBridgeViewController not found after retries")
+                    }
+                    return
+                }
+                bridge.webView?.evaluateJavaScript(js) { _, error in
+                    if let error = error {
+                        print("[PUSH][IOS] evaluateJavaScript error (attempt \(attempt)): \(error.localizedDescription)")
+                    } else {
+                        print("[PUSH][IOS] WebView fcmTokenReady OK attempt=\(attempt) traceId=\(traceId)")
+                    }
+                }
+            }
+        }
+
+        inject(attempt: 1)
+    }
+}
+
+// MARK: - MessagingDelegate
+
+extension AppDelegate: MessagingDelegate {
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken = fcmToken, !fcmToken.isEmpty else { return }
+        let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
+        print("[PUSH][IOS] didReceiveRegistrationToken length=\(fcmToken.count) traceId=\(traceId)")
+        UserDefaults.standard.set(fcmToken, forKey: "fcm_token")
+        injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
+    }
 }

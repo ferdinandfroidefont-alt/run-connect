@@ -98,22 +98,27 @@ jobs:
       - name: 🔥 Add Firebase Messaging pod
         run: |
           cd ios/App
-          if ! grep -q "Firebase/Messaging" Podfile; then
+          if grep -qE "Firebase(Messaging|Core)|Firebase/Messaging" Podfile; then
+            echo "ℹ️ Firebase pods already in Podfile (Messaging / Core)"
+          else
             sed -i '' '/target .App. do/a\
               pod '\''Firebase\/Messaging'\''
             ' Podfile
-            echo "✅ Firebase/Messaging pod added"
-          else
-            echo "ℹ️ Firebase/Messaging pod already present"
+            echo "✅ Firebase/Messaging pod added (legacy Podfile)"
           fi
 
       - name: 🔥 Configure AppDelegate for Firebase + APNs + FCM WebView bridge
-        run: bash scripts/configure_ios_push.sh
+        run: |
+          if grep -q 'RUNCONNECT_IOS_PUSH_COMPLETE' ios/App/App/AppDelegate.swift; then
+            echo "ℹ️ AppDelegate already includes FCM → WebView bridge (RUNCONNECT_IOS_PUSH_COMPLETE) — skipping configure_ios_push.sh"
+          else
+            bash scripts/configure_ios_push.sh
+          fi
 
       - name: 📋 Verify AppDelegate injection (CI proof)
         run: |
           echo "=== AppDelegate.swift push methods ==="
-          grep -n 'PUSH\|fcmToken\|apnsToken\|injectFCM\|didRegister\|MessagingDelegate\|traceId' ios/App/App/AppDelegate.swift || echo "⚠️ No push markers found"
+          grep -n 'RUNCONNECT_IOS_PUSH_COMPLETE\|PUSH\]\[IOS\]\|apnsToken\|injectFCMTokenIntoWebView\|fcmTokenReady\|MessagingDelegate' ios/App/App/AppDelegate.swift || echo "⚠️ No push markers found"
           echo "=== end ==="
 
       - name: 🔥 Enable Firebase APNs proxy in Info.plist

@@ -27,7 +27,9 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # FCM (token iOS → même pipeline Edge send-push que Android)
+  pod 'FirebaseCore', '~> 11.0'
+  pod 'FirebaseMessaging', '~> 11.0'
 end
 
 post_install do |installer|

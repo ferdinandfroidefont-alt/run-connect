@@ -54,26 +54,19 @@ npx cap sync ios
 
 ---
 
-## 📋 Étape 3 : Ajouter GoogleService-Info.plist dans Xcode
+## 📋 Étape 3 : GoogleService-Info.plist (obligatoire pour FCM iOS)
 
-1. Ouvrir le projet dans Xcode :
-   ```bash
-   npx cap open ios
-   ```
+Le projet Xcode référence déjà **`GoogleService-Info.plist`** (Copy Bundle Resources). Le fichier n’est **pas** versionné (secret / `.gitignore`) : il faut le placer **à la racine du groupe App**, même chemin que `AppDelegate.swift` :
 
-2. Dans le navigateur de fichiers Xcode (panneau de gauche), faire **clic droit sur le dossier `App`**
+- Chemin disque : `ios/App/App/GoogleService-Info.plist`
+- Contenu : fichier téléchargé depuis Firebase Console (étape 2.2), bundle `com.ferdi.runconnect`
 
-3. Sélectionner **"Add Files to App..."**
+Ensuite :
 
-4. Choisir le fichier **`GoogleService-Info.plist`** téléchargé précédemment
+1. `cd ios/App && pod install`
+2. `npx cap open ios` puis build (**Run**)
 
-5. **⚠️ IMPORTANT :** Cocher :
-   - ✅ **"Copy items if needed"**
-   - ✅ **"Add to targets: App"**
-
-6. Cliquer sur **"Add"**
-
-**✅ Vérification :** Le fichier `GoogleService-Info.plist` doit apparaître dans le dossier `App` dans Xcode
+Si le fichier est absent, Xcode signale une erreur du type *Build input file cannot be found: GoogleService-Info.plist*.
 
 ---
 
