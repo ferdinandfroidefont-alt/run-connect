@@ -972,6 +972,7 @@ export type Database = {
           last_known_location_at: string | null
           last_seen: string | null
           notif_club_invitation: boolean | null
+          notif_boost_nearby: boolean | null
           notif_follow_request: boolean | null
           notif_friend_session: boolean | null
           notif_message: boolean | null
@@ -1033,6 +1034,7 @@ export type Database = {
           last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
+          notif_boost_nearby?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null
@@ -1094,6 +1096,7 @@ export type Database = {
           last_known_location_at?: string | null
           last_seen?: string | null
           notif_club_invitation?: boolean | null
+          notif_boost_nearby?: boolean | null
           notif_follow_request?: boolean | null
           notif_friend_session?: boolean | null
           notif_message?: boolean | null

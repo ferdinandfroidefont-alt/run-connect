@@ -321,7 +321,7 @@ serve(async (req) => {
     // 2. Get profile
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
+      .select('push_token, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
       .eq('user_id', user_id)
       .single();
 
@@ -343,6 +343,7 @@ serve(async (req) => {
     // 4. Check per-type preferences
     const prefMap: Record<string, boolean | null> = {
       message: profile.notif_message,
+      boost_nearby: profile.notif_boost_nearby,
       session_request: profile.notif_session_request,
       follow_request: profile.notif_follow_request,
       friend_session: profile.notif_friend_session,
