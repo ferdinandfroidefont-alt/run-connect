@@ -89,8 +89,8 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       }
 
       const allSessionIds = allClubSessions.map((s) => s.id);
-      const { data } = await supabase.
-      from("coaching_participations").
+      const { data } = await (supabase.
+      from("coaching_participations") as any).
       select("id, coaching_session_id, status, athlete_note, completed_at, athlete_rpe_felt").
       eq("user_id", user.id).
       in("coaching_session_id", allSessionIds);

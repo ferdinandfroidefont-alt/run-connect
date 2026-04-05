@@ -20,6 +20,7 @@ import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderS
 interface SettingsSupportProps {
   onBack: () => void;
   onClose: () => void;
+  onOpenTutorialCatalog?: () => void;
 }
 
 export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: SettingsSupportProps) => {

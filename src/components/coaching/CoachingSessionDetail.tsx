@@ -253,7 +253,7 @@ export const CoachingSessionDetail = ({
     if (!session || !user || !commentDraft.trim()) return;
     setSendingComment(true);
     try {
-      const { error } = await supabase.from("coaching_session_comments").insert({
+      const { error } = await (supabase.from("coaching_session_comments") as any).insert({
         coaching_session_id: session.id,
         user_id: user.id,
         message: commentDraft.trim(),

@@ -211,8 +211,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await supabase
-          .from("coaching_participations")
+        const { data: participations } = await (supabase
+          .from("coaching_participations") as any)
           .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);
 
