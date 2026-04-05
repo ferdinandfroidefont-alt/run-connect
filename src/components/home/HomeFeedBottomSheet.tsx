@@ -89,7 +89,7 @@ export function HomeFeedBottomSheet() {
   }, [heights, snap, dragging]);
 
   useEffect(() => {
-    liveHeightRef.current = heights[snap];
+    liveHeightRef.current = heights[snap] as number;
   }, [heights, snap]);
 
   useEffect(() => {
