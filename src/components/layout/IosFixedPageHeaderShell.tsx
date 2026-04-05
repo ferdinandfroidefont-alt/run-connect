@@ -49,10 +49,10 @@ export function IosFixedPageHeaderShell({
 
   useLayoutEffect(() => {
     if (!contentScroll && scrollRef && localScrollRef.current) {
-      scrollRef.current = localScrollRef.current;
+      (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = localScrollRef.current;
     }
     return () => {
-      if (!contentScroll && scrollRef) scrollRef.current = null;
+      if (!contentScroll && scrollRef) (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = null;
     };
   }, [scrollRef, contentScroll]);
 

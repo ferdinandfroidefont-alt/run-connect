@@ -79,7 +79,7 @@ export function HomeFeedBottomSheet() {
 
   const [snap, setSnap] = useState<HomeFeedSheetSnap>(0);
   const [dragging, setDragging] = useState(false);
-  const [dragH, setDragH] = useState(heights[0]);
+  const [dragH, setDragH] = useState<number>(heights[0]);
   const dragRef = useRef<DragRef | null>(null);
   const liveHeightRef = useRef(heights[0]);
   const dragMovedRef = useRef(false);

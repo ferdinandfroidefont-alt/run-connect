@@ -12,6 +12,7 @@ import { fr } from "date-fns/locale";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { toast } from "sonner";
 import { coachingRowToWeekSession } from "@/lib/coachingWeekSessionImport";
+import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
 import { parseSessionRpePhases, rpeChipColor, parseAthleteRpeFelt } from "@/lib/sessionBlockRpe";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
