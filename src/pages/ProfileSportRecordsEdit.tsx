@@ -82,8 +82,8 @@ export default function ProfileSportRecordsEdit() {
     setSaving(true);
     try {
       const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
-      const { data, error } = await supabase
-        .from("profile_sport_records")
+      const { data, error } = await (supabase
+        .from("profile_sport_records") as any)
         .insert({
           user_id: user.id,
           sport_key: sportKey,
