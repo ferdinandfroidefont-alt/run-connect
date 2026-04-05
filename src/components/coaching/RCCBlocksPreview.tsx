@@ -2,61 +2,98 @@ import { Ruler, Clock } from "lucide-react";
 import type { ParsedBlock } from "@/lib/rccParser";
 import { computeRCCSummary, formatParsedBlockSummary } from "@/lib/rccParser";
 import { useMemo } from "react";
-import { aggregateRpeFromParsedBlocks, rpeChipColor } from "@/lib/sessionBlockRpe";
-import { RpeSessionSlider } from "./RpeSessionSlider";
+import {
+  aggregateRpeFromParsedBlocks,
+  averageFromRpePhases,
+  normalizeSessionRpePhases,
+  parseSessionRpePhases,
+  rpeChipColor,
+  type SessionRpePhases,
+} from "@/lib/sessionBlockRpe";
+import { RpePhaseStrip } from "./RpePhaseStrip";
 
 export interface RCCBlocksPreviewProps {
   blocks: ParsedBlock[];
-  /** Édition : un seul RPE pour toute la séance */
-  sessionRpe?: number;
-  onSessionRpeChange?: (value: number) => void;
-  /** Lecture seule : RPE global (ex. coaching_sessions.rpe) ; sinon repli sur blocs historiques */
+  /** Édition : RPE par phase */
+  sessionRpePhases?: SessionRpePhases;
+  onSessionRpePhasesChange?: (value: SessionRpePhases) => void;
+  /** Lecture seule : phases en JSON ou moyenne via rpe global */
+  sessionRpePhasesDisplay?: unknown;
   sessionRpeDisplay?: number | null;
 }
 
 export const RCCBlocksPreview = ({
   blocks,
-  sessionRpe,
-  onSessionRpeChange,
+  sessionRpePhases,
+  onSessionRpePhasesChange,
+  sessionRpePhasesDisplay,
   sessionRpeDisplay,
 }: RCCBlocksPreviewProps) => {
   const summary = useMemo(() => computeRCCSummary(blocks), [blocks]);
 
-  const readOnlyRpe = useMemo(() => {
-    if (!onSessionRpeChange) {
-      if (typeof sessionRpeDisplay === "number" && sessionRpeDisplay >= 1 && sessionRpeDisplay <= 10) {
-        return Math.round(sessionRpeDisplay);
-      }
-      return aggregateRpeFromParsedBlocks(blocks);
+  const readOnlyPhases = useMemo((): SessionRpePhases | null => {
+    if (onSessionRpePhasesChange) return null;
+    const parsed = parseSessionRpePhases(sessionRpePhasesDisplay);
+    if (parsed && (parsed.warmup != null || parsed.main != null || parsed.cooldown != null)) {
+      return normalizeSessionRpePhases(parsed);
     }
     return null;
-  }, [blocks, onSessionRpeChange, sessionRpeDisplay]);
+  }, [onSessionRpePhasesChange, sessionRpePhasesDisplay]);
+
+  const readOnlyAvg = useMemo(() => {
+    if (onSessionRpePhasesChange) return null;
+    if (readOnlyPhases) return averageFromRpePhases(readOnlyPhases);
+    if (typeof sessionRpeDisplay === "number" && sessionRpeDisplay >= 1 && sessionRpeDisplay <= 10) {
+      return Math.round(sessionRpeDisplay);
+    }
+    return aggregateRpeFromParsedBlocks(blocks);
+  }, [blocks, onSessionRpePhasesChange, readOnlyPhases, sessionRpeDisplay]);
 
   if (!blocks?.length) return null;
 
-  const editing = typeof onSessionRpeChange === "function";
-  const sliderValue = typeof sessionRpe === "number" ? Math.min(10, Math.max(1, sessionRpe)) : 5;
+  const editing = typeof onSessionRpePhasesChange === "function" && sessionRpePhases;
 
   return (
     <div className="space-y-ios-2">
       {editing ? (
         <div className="rounded-ios-lg border border-border bg-card p-ios-3">
-          <p className="text-ios-subheadline font-semibold text-foreground">RPE global</p>
-          <p className="mt-ios-1 text-ios-footnote leading-snug text-muted-foreground">
-            Un niveau pour toute la séance (1 = très facile, 10 = maximal).
+          <p className="mb-ios-2 text-ios-footnote font-semibold uppercase tracking-wide text-muted-foreground">
+            RPE
           </p>
-          <div className="mt-ios-3">
-            <RpeSessionSlider value={sliderValue} onChange={onSessionRpeChange} />
-          </div>
+          <RpePhaseStrip value={sessionRpePhases} onChange={onSessionRpePhasesChange} />
         </div>
-      ) : readOnlyRpe != null ? (
+      ) : readOnlyPhases ? (
         <div className="flex flex-wrap items-center gap-ios-2">
-          <span className="text-ios-footnote font-medium text-muted-foreground">RPE prévu</span>
+          <span className="text-ios-footnote font-medium text-muted-foreground">RPE</span>
           <span
             className="rounded-ios-sm px-ios-2 py-0.5 text-ios-caption1 font-bold tabular-nums text-white"
-            style={{ backgroundColor: rpeChipColor(readOnlyRpe) }}
+            style={{ backgroundColor: rpeChipColor(readOnlyPhases.warmup) }}
           >
-            {readOnlyRpe}
+            {readOnlyPhases.warmup}
+          </span>
+          <span className="text-muted-foreground">·</span>
+          <span
+            className="rounded-ios-sm px-ios-2 py-0.5 text-ios-caption1 font-bold tabular-nums text-white"
+            style={{ backgroundColor: rpeChipColor(readOnlyPhases.main) }}
+          >
+            {readOnlyPhases.main}
+          </span>
+          <span className="text-muted-foreground">·</span>
+          <span
+            className="rounded-ios-sm px-ios-2 py-0.5 text-ios-caption1 font-bold tabular-nums text-white"
+            style={{ backgroundColor: rpeChipColor(readOnlyPhases.cooldown) }}
+          >
+            {readOnlyPhases.cooldown}
+          </span>
+        </div>
+      ) : readOnlyAvg != null ? (
+        <div className="flex flex-wrap items-center gap-ios-2">
+          <span className="text-ios-footnote font-medium text-muted-foreground">RPE</span>
+          <span
+            className="rounded-ios-sm px-ios-2 py-0.5 text-ios-caption1 font-bold tabular-nums text-white"
+            style={{ backgroundColor: rpeChipColor(readOnlyAvg) }}
+          >
+            {readOnlyAvg}
           </span>
         </div>
       ) : null}

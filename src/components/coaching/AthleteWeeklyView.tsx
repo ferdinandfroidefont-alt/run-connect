@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,14 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { WeeklyBarChart } from "./WeeklyBarChart";
 import { WeeklyPlanCard } from "./WeeklyPlanCard";
+import { RpePhaseStrip } from "./RpePhaseStrip";
+import {
+  athleteRpeFeltToJson,
+  normalizeSessionRpePhases,
+  parseAthleteRpeFelt,
+  rpePhasesFromCoachingRow,
+  type SessionRpePhases,
+} from "@/lib/sessionBlockRpe";
 
 interface CoachingSession {
   id: string;
@@ -24,6 +32,7 @@ interface CoachingSession {
   objective?: string | null;
   rcc_code?: string | null;
   rpe?: number | null;
+  rpe_phases?: unknown;
   session_blocks?: unknown;
 }
 
@@ -33,6 +42,7 @@ interface Participation {
   status: string;
   athlete_note: string | null;
   completed_at: string | null;
+  athlete_rpe_felt?: unknown;
 }
 
 interface AthleteWeeklyViewProps {
@@ -48,6 +58,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   const [participations, setParticipations] = useState<Record<string, Participation>>({});
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const [noteValues, setNoteValues] = useState<Record<string, string>>({});
+  const [feltRpeBySession, setFeltRpeBySession] = useState<Record<string, SessionRpePhases>>({});
   const [loading, setLoading] = useState(true);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -62,7 +73,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       // First fetch participations for this user in this club's sessions for the week
       const { data: allClubSessions } = await supabase.
       from("coaching_sessions").
-      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks").
+      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, rpe_phases, session_blocks").
       eq("club_id", clubId).
       gte("scheduled_at", weekStart.toISOString()).
       lte("scheduled_at", weekEnd.toISOString()).
@@ -72,6 +83,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         setSessions([]);
         setParticipations({});
         setNoteValues({});
+        setFeltRpeBySession({});
         setLoading(false);
         return;
       }
@@ -79,7 +91,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       const allSessionIds = allClubSessions.map((s) => s.id);
       const { data } = await supabase.
       from("coaching_participations").
-      select("id, coaching_session_id, status, athlete_note, completed_at").
+      select("id, coaching_session_id, status, athlete_note, completed_at, athlete_rpe_felt").
       eq("user_id", user.id).
       in("coaching_session_id", allSessionIds);
 
@@ -90,12 +102,22 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       const map: Record<string, Participation> = {};
       const notes: Record<string, string> = {};
+      const felt: Record<string, SessionRpePhases> = {};
       (data || []).forEach((p) => {
-        map[p.coaching_session_id] = p;
+        map[p.coaching_session_id] = p as Participation;
         notes[p.coaching_session_id] = p.athlete_note || "";
+        const sess = sessionList.find((s) => s.id === p.coaching_session_id);
+        if (sess) {
+          const raw = parseAthleteRpeFelt((p as Participation).athlete_rpe_felt);
+          felt[sess.id] =
+            raw && Object.keys(raw).length > 0
+              ? normalizeSessionRpePhases(raw)
+              : rpePhasesFromCoachingRow(sess);
+        }
       });
       setParticipations(map);
       setNoteValues(notes);
+      setFeltRpeBySession(felt);
     } catch (e) {
       console.error("Error loading week:", e);
     } finally {
@@ -147,17 +169,28 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
     const isCompleting = participation.status !== "completed";
     const newStatus = isCompleting ? "completed" : "sent";
+    const felt = feltRpeBySession[session.id] ?? rpePhasesFromCoachingRow(session);
+    const rpePayload = isCompleting ? athleteRpeFeltToJson(felt) : null;
 
     const { error } = await supabase.
     from("coaching_participations").
-    update({ status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }).
+    update({
+      status: newStatus,
+      completed_at: isCompleting ? new Date().toISOString() : null,
+      athlete_rpe_felt: rpePayload,
+    }).
     eq("id", participation.id);
 
     if (error) {toast.error("Erreur lors de la mise à jour");return;}
 
     setParticipations((prev) => ({
       ...prev,
-      [session.id]: { ...prev[session.id], status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }
+      [session.id]: {
+        ...prev[session.id],
+        status: newStatus,
+        completed_at: isCompleting ? new Date().toISOString() : null,
+        athlete_rpe_felt: rpePayload,
+      },
     }));
 
     if (isCompleting) toast.success("Séance marquée comme faite ✅");
@@ -322,6 +355,15 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                   noteValue={participation?.athlete_note || ""}
                   showCheckbox={true}
                 />
+                {!isDone && (
+                  <div className="bg-card px-6 pb-3 border-t border-border/40">
+                    <p className="text-[11px] font-semibold text-muted-foreground mb-2">RPE ressenti</p>
+                    <RpePhaseStrip
+                      value={feltRpeBySession[session.id] ?? rpePhasesFromCoachingRow(session)}
+                      onChange={(v) => setFeltRpeBySession((prev) => ({ ...prev, [session.id]: v }))}
+                    />
+                  </div>
+                )}
                 {isExpanded && (
                   <div className="bg-card px-6 pb-4">
                     <Textarea

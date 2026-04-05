@@ -163,7 +163,7 @@ export default function Coaching() {
       supabase.from("group_members").select("id", { count: "exact" }).eq("conversation_id", selectedClubId),
       supabase
         .from("coaching_sessions")
-        .select("id, title, description, scheduled_at, activity_type, distance_km, pace_target, status, coach_id, club_id, objective, session_blocks, coach_notes")
+        .select("id, title, description, scheduled_at, activity_type, distance_km, pace_target, status, coach_id, club_id, objective, session_blocks, coach_notes, rpe, rpe_phases")
         .eq("club_id", selectedClubId)
         .order("scheduled_at", { ascending: true }),
     ]);

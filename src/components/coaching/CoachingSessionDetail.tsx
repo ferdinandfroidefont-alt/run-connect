@@ -13,6 +13,16 @@ import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { CreateSessionWizard } from "@/components/session-creation/CreateSessionWizard";
 import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
+import { RpePhaseStrip } from "./RpePhaseStrip";
+import {
+  athleteRpeFeltToJson,
+  normalizeSessionRpePhases,
+  parseAthleteRpeFelt,
+  parseSessionRpePhases,
+  rpeChipColor,
+  rpePhasesFromCoachingRow,
+  type SessionRpePhases,
+} from "@/lib/sessionBlockRpe";
 import {
   Calendar,
   Users,
@@ -22,6 +32,7 @@ import {
   Clock,
   ChevronLeft,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,6 +50,8 @@ interface CoachingSession {
   club_id: string;
   session_blocks?: any;
   coach_notes?: string | null;
+  rpe?: number | null;
+  rpe_phases?: unknown;
 }
 
 interface Participation {
@@ -53,6 +66,7 @@ interface Participation {
   suggested_date: string | null;
   custom_pace: string | null;
   custom_notes: string | null;
+  athlete_rpe_felt?: unknown;
   profile?: {
     username: string;
     display_name: string;
@@ -75,6 +89,14 @@ const STATUS_CONFIG: Record<string, { label: string; emoji: string; color: strin
   missed: { label: "Non effectuée", emoji: "❌", color: "destructive" },
 };
 
+interface SessionCommentRow {
+  id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+  profile?: { display_name: string | null; username: string | null };
+}
+
 export const CoachingSessionDetail = ({
   isOpen,
   onClose,
@@ -92,14 +114,35 @@ export const CoachingSessionDetail = ({
   const [showSchedule, setShowSchedule] = useState(false);
   const [batchFeedback, setBatchFeedback] = useState("");
   const [sendingBatch, setSendingBatch] = useState(false);
+  const [sessionComments, setSessionComments] = useState<SessionCommentRow[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [sendingComment, setSendingComment] = useState(false);
+  const [feltRpeMy, setFeltRpeMy] = useState<SessionRpePhases>(() => ({
+    warmup: 5,
+    main: 5,
+    cooldown: 5,
+  }));
 
   useEffect(() => {
     if (isOpen && session) {
       setFeedbackMap({});
       setBatchFeedback("");
+      setCommentDraft("");
+      setFeltRpeMy(rpePhasesFromCoachingRow(session));
+      setMyParticipation(null);
       loadParticipations();
     }
   }, [isOpen, session?.id]);
+
+  useEffect(() => {
+    if (!session || !isOpen || !myParticipation) return;
+    const felt = parseAthleteRpeFelt(myParticipation.athlete_rpe_felt);
+    if (felt && Object.keys(felt).length > 0) {
+      setFeltRpeMy(normalizeSessionRpePhases(felt));
+    } else {
+      setFeltRpeMy(rpePhasesFromCoachingRow(session));
+    }
+  }, [session?.id, isOpen, myParticipation?.id, myParticipation?.athlete_rpe_felt]);
 
   const loadParticipations = async () => {
     if (!session) return;
@@ -134,6 +177,27 @@ export const CoachingSessionDetail = ({
         setMyParticipation(null);
         setAthleteNote("");
       }
+
+      const { data: cRows } = await supabase
+        .from("coaching_session_comments")
+        .select("id, user_id, message, created_at")
+        .eq("coaching_session_id", session.id)
+        .order("created_at", { ascending: true });
+      if (cRows?.length) {
+        const cUserIds = [...new Set(cRows.map((c) => c.user_id))];
+        const { data: cProfiles } = await supabase
+          .from("profiles")
+          .select("user_id, username, display_name")
+          .in("user_id", cUserIds);
+        setSessionComments(
+          cRows.map((c) => ({
+            ...c,
+            profile: cProfiles?.find((pr) => pr.user_id === c.user_id),
+          })),
+        );
+      } else {
+        setSessionComments([]);
+      }
     } catch (error: any) {
       console.error("Error loading participations:", error);
       toast({
@@ -144,6 +208,7 @@ export const CoachingSessionDetail = ({
       setParticipations([]);
       setMyParticipation(null);
       setAthleteNote("");
+      setSessionComments([]);
     } finally {
       setLoading(false);
     }
@@ -158,6 +223,7 @@ export const CoachingSessionDetail = ({
           status: "completed",
           completed_at: new Date().toISOString(),
           athlete_note: athleteNote.trim() || null,
+          athlete_rpe_felt: athleteRpeFeltToJson(feltRpeMy),
         })
         .eq("id", myParticipation.id);
       if (error) throw error;
@@ -180,6 +246,26 @@ export const CoachingSessionDetail = ({
       loadParticipations();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!session || !user || !commentDraft.trim()) return;
+    setSendingComment(true);
+    try {
+      const { error } = await supabase.from("coaching_session_comments").insert({
+        coaching_session_id: session.id,
+        user_id: user.id,
+        message: commentDraft.trim(),
+      });
+      if (error) throw error;
+      setCommentDraft("");
+      toast({ title: "Message envoyé" });
+      loadParticipations();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message || "Réessayez", variant: "destructive" });
+    } finally {
+      setSendingComment(false);
     }
   };
 
@@ -307,6 +393,48 @@ export const CoachingSessionDetail = ({
               <CoachingBlocksPreview blocks={session.session_blocks} />
             )}
 
+            <div className="ios-card rounded-ios-lg border border-border p-ios-4 space-y-ios-3 shadow-sm">
+              <h4 className="text-ios-footnote font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-ios-2">
+                <MessageSquare className="h-4 w-4 shrink-0" />
+                Fil de la séance
+              </h4>
+              <div className="max-h-44 overflow-y-auto space-y-ios-2 pr-0.5">
+                {sessionComments.length === 0 ? (
+                  <p className="text-ios-caption1 text-muted-foreground">Aucun message pour l’instant</p>
+                ) : (
+                  sessionComments.map((c) => (
+                    <div key={c.id} className="rounded-ios-md bg-secondary/50 px-ios-3 py-ios-2 border border-border/50">
+                      <p className="text-ios-caption2 text-muted-foreground">
+                        {(c.profile?.display_name || c.profile?.username || "Membre") +
+                          " · " +
+                          format(new Date(c.created_at), "d MMM HH:mm", { locale: fr })}
+                      </p>
+                      <p className="text-ios-footnote text-foreground mt-0.5 leading-snug">{c.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-ios-2 items-end">
+                <Textarea
+                  placeholder="Message coach / athlète…"
+                  value={commentDraft}
+                  onChange={(e) => setCommentDraft(e.target.value)}
+                  rows={2}
+                  className="rounded-ios-lg text-ios-footnote border-border bg-background flex-1 min-h-[72px]"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  className="shrink-0 rounded-full h-10 w-10"
+                  disabled={!commentDraft.trim() || sendingComment}
+                  onClick={() => void handlePostComment()}
+                  aria-label="Envoyer"
+                >
+                  {sendingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
             {/* Athlete actions */}
             {!isCoach && (
               <div className="space-y-ios-3">
@@ -355,6 +483,8 @@ export const CoachingSessionDetail = ({
 
                     {myParticipation.status === "scheduled" && (
                       <div className="space-y-ios-2 pt-ios-1 border-t border-border/60">
+                        <p className="text-ios-caption2 font-medium text-muted-foreground">RPE ressenti</p>
+                        <RpePhaseStrip value={feltRpeMy} onChange={setFeltRpeMy} />
                         <Textarea
                           placeholder="Comment ça s'est passé ? (optionnel)"
                           value={athleteNote}
@@ -471,6 +601,70 @@ export const CoachingSessionDetail = ({
                           {p.athlete_note && (
                             <p className="text-ios-caption1 mt-ios-1 leading-snug">{p.athlete_note}</p>
                           )}
+                          {isCoach &&
+                            p.status === "completed" &&
+                            (() => {
+                              const planned = parseSessionRpePhases(session.rpe_phases);
+                              const pk = (["warmup", "main", "cooldown"] as const).filter(
+                                (k) => planned && typeof planned[k] === "number",
+                              );
+                              const felt = parseAthleteRpeFelt(p.athlete_rpe_felt);
+                              const fk = felt
+                                ? (["warmup", "main", "cooldown"] as const).filter((k) => typeof felt[k] === "number")
+                                : [];
+                              const legacy =
+                                typeof session.rpe === "number" && session.rpe >= 1 && session.rpe <= 10
+                                  ? session.rpe
+                                  : null;
+                              if (pk.length === 0 && legacy == null && fk.length === 0) return null;
+                              return (
+                                <div className="mt-ios-1 flex flex-wrap gap-x-3 gap-y-1 text-ios-caption1">
+                                  {(pk.length > 0 || legacy != null) && (
+                                    <span className="flex flex-wrap items-center gap-1">
+                                      <span className="text-muted-foreground">Prévu</span>
+                                      {pk.length > 0
+                                        ? pk.map((k) => {
+                                            const n = planned![k] as number;
+                                            return (
+                                              <span
+                                                key={k}
+                                                className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                                style={{ backgroundColor: rpeChipColor(n) }}
+                                              >
+                                                {n}
+                                              </span>
+                                            );
+                                          })
+                                        : legacy != null && (
+                                            <span
+                                              className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                              style={{ backgroundColor: rpeChipColor(legacy) }}
+                                            >
+                                              {legacy}
+                                            </span>
+                                          )}
+                                    </span>
+                                  )}
+                                  {fk.length > 0 && (
+                                    <span className="flex flex-wrap items-center gap-1">
+                                      <span className="text-muted-foreground">Ressenti</span>
+                                      {fk.map((k) => {
+                                        const n = felt![k] as number;
+                                        return (
+                                          <span
+                                            key={k}
+                                            className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                            style={{ backgroundColor: rpeChipColor(n) }}
+                                          >
+                                            {n}
+                                          </span>
+                                        );
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           {p.custom_notes && (
                             <p className="text-ios-caption1 mt-ios-1 italic leading-snug">{p.custom_notes}</p>
                           )}

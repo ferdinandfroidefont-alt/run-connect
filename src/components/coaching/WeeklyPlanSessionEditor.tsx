@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { geocodeSearchMapbox } from "@/lib/mapboxGeocode";
 import { mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
+import type { SessionRpePhases } from "@/lib/sessionBlockRpe";
 
 const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -80,7 +81,9 @@ export interface WeekSession {
   locationLat?: number;
   locationLng?: number;
   athleteOverrides: Record<string, AthleteOverride>;
+  /** @deprecated rétrocompat templates — préférer rpePhases */
   rpe?: number;
+  rpePhases: SessionRpePhases;
 }
 
 interface ClubMember {
@@ -314,8 +317,8 @@ export const WeeklyPlanSessionEditor = ({
             <div className="mt-4">
               <RCCBlocksPreview
                 blocks={session.parsedBlocks}
-                sessionRpe={session.rpe ?? 5}
-                onSessionRpeChange={(v) => update("rpe", v)}
+                sessionRpePhases={session.rpePhases}
+                onSessionRpePhasesChange={(p) => onChange({ ...session, rpePhases: p })}
               />
             </div>
           )}

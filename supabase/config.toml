@@ -73,5 +73,9 @@ verify_jwt = false
 [functions.coaching-reminder]
 verify_jwt = false
 
+# Récap hebdo coach : appeler via pg_cron / Dashboard avec en-tête x-cron-secret (CRON_SECRET).
+[functions.coaching-weekly-recap]
+verify_jwt = false
+
 [functions.ios-auth-callback]
 verify_jwt = false

@@ -4,6 +4,7 @@ import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { WeeklyTrackingView } from "./WeeklyTrackingView";
 import { WeeklyPlanDialog } from "./WeeklyPlanDialog";
+import type { WeekSession } from "./WeeklyPlanSessionEditor";
 
 interface WeeklyTrackingDialogProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
   const [planAthleteId, setPlanAthleteId] = useState<string | undefined>();
   const [planGroupId, setPlanGroupId] = useState<string | undefined>();
   const [planWeekDate, setPlanWeekDate] = useState<Date | undefined>();
+  const [planSeedSessions, setPlanSeedSessions] = useState<WeekSession[] | undefined>();
 
   const handleBack = () => {
     if (selectedAthleteId) {
@@ -32,11 +34,18 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
     onClose();
   };
 
-  const handleOpenPlanForAthlete = (athleteId: string, athleteName: string, groupId?: string, weekDate?: Date) => {
+  const handleOpenPlanForAthlete = (
+    athleteId: string,
+    athleteName: string,
+    groupId?: string,
+    weekDate?: Date,
+    seedSessions?: WeekSession[],
+  ) => {
     setPlanAthleteId(athleteId);
     setPlanAthleteName(athleteName);
     setPlanGroupId(groupId);
     setPlanWeekDate(weekDate);
+    setPlanSeedSessions(seedSessions);
     setShowPlan(true);
   };
 
@@ -68,12 +77,16 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
 
       <WeeklyPlanDialog
         isOpen={showPlan}
-        onClose={() => setShowPlan(false)}
+        onClose={() => {
+          setShowPlan(false);
+          setPlanSeedSessions(undefined);
+        }}
         clubId={clubId}
         initialGroupId={planGroupId}
         initialAthleteName={planAthleteName}
         initialAthleteId={planAthleteId}
         initialWeek={planWeekDate}
+        initialSeedSessions={planSeedSessions}
       />
     </>
   );

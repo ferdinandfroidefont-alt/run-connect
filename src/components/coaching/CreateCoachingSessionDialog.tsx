@@ -24,7 +24,13 @@ import {
   type RCCResult,
   type ParsedBlock,
 } from "@/lib/rccParser";
-import { resolveSessionRpeForInsert, stripPerBlockRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import {
+  DEFAULT_SESSION_RPE_PHASES,
+  resolveSessionRpeForInsert,
+  rpePhasesToJson,
+  stripPerBlockRpeFromSessionBlocks,
+  type SessionRpePhases,
+} from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -61,7 +67,7 @@ export const CreateCoachingSessionDialog = ({
   const [rccCode, setRccCode] = useState("");
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
-  const [sessionRpe, setSessionRpe] = useState(5);
+  const [sessionRpePhases, setSessionRpePhases] = useState<SessionRpePhases>(DEFAULT_SESSION_RPE_PHASES);
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
   // Recipients
@@ -165,7 +171,7 @@ export const CreateCoachingSessionDialog = ({
       const rawBlocks = parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : null;
       const sessionBlocks = rawBlocks ? stripPerBlockRpeFromSessionBlocks(rawBlocks) : null;
       const title = `${objective.trim()}`;
-      const resolvedRpe = resolveSessionRpeForInsert(sessionRpe, rawBlocks);
+      const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, sessionRpePhases);
 
       const { data: session, error } = await supabase
         .from("coaching_sessions")
@@ -185,6 +191,7 @@ export const CreateCoachingSessionDialog = ({
           objective: objective.trim(),
           default_location_name: locationName.trim() || null,
           rpe: resolvedRpe,
+          rpe_phases: rpePhasesToJson(sessionRpePhases),
         } as any)
         .select("id")
         .single();
@@ -242,7 +249,7 @@ export const CreateCoachingSessionDialog = ({
     setRccCode("");
     setParsedResult({ blocks: [], errors: [] });
     setParsedBlocks([]);
-    setSessionRpe(5);
+    setSessionRpePhases(DEFAULT_SESSION_RPE_PHASES);
     setCoachNotes("");
     setLocationName("");
     setSendMode("club");
@@ -349,8 +356,8 @@ export const CreateCoachingSessionDialog = ({
                 {parsedBlocks.length > 0 && (
                   <RCCBlocksPreview
                     blocks={parsedBlocks}
-                    sessionRpe={sessionRpe}
-                    onSessionRpeChange={setSessionRpe}
+                    sessionRpePhases={sessionRpePhases}
+                    onSessionRpePhasesChange={setSessionRpePhases}
                   />
                 )}
               </div>

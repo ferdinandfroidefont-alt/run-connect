@@ -288,10 +288,43 @@ export type Database = {
           },
         ]
       }
+      coaching_session_comments: {
+        Row: {
+          coaching_session_id: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          coaching_session_id: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          coaching_session_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_session_comments_coaching_session_id_fkey"
+            columns: ["coaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "coaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaching_participations: {
         Row: {
           athlete_note: string | null
           athlete_overrides: Json | null
+          athlete_rpe_felt: Json | null
           coaching_session_id: string
           completed_at: string | null
           created_at: string
@@ -311,6 +344,7 @@ export type Database = {
         Insert: {
           athlete_note?: string | null
           athlete_overrides?: Json | null
+          athlete_rpe_felt?: Json | null
           coaching_session_id: string
           completed_at?: string | null
           created_at?: string
@@ -330,6 +364,7 @@ export type Database = {
         Update: {
           athlete_note?: string | null
           athlete_overrides?: Json | null
+          athlete_rpe_felt?: Json | null
           coaching_session_id?: string
           completed_at?: string | null
           created_at?: string
@@ -373,6 +408,7 @@ export type Database = {
           pace_target: string | null
           rcc_code: string | null
           rpe: number | null
+          rpe_phases: Json | null
           scheduled_at: string
           send_mode: string | null
           session_blocks: Json | null
@@ -397,6 +433,7 @@ export type Database = {
           pace_target?: string | null
           rcc_code?: string | null
           rpe?: number | null
+          rpe_phases?: Json | null
           scheduled_at: string
           send_mode?: string | null
           session_blocks?: Json | null
@@ -421,6 +458,7 @@ export type Database = {
           pace_target?: string | null
           rcc_code?: string | null
           rpe?: number | null
+          rpe_phases?: Json | null
           scheduled_at?: string
           send_mode?: string | null
           session_blocks?: Json | null

@@ -13,6 +13,8 @@ import { CoachingDraftsList } from "./CoachingDraftsList";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+import { parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+
 function countSegmentFromRpe(r: number | undefined, volume: { v: number }, intensity: { v: number }, recovery: { v: number }) {
   if (r == null || r < 1) return;
   if (r <= 3) recovery.v++;
@@ -35,7 +37,27 @@ interface CoachingSession {
   objective?: string | null;
   rcc_code?: string | null;
   rpe?: number | null;
+  rpe_phases?: unknown;
   session_blocks?: unknown;
+}
+
+function countPhasesFromRow(
+  s: CoachingSession,
+  V: { v: number },
+  I: { v: number },
+  R: { v: number },
+): boolean {
+  const raw = parseSessionRpePhases(s.rpe_phases);
+  if (!raw) return false;
+  let any = false;
+  for (const k of ["warmup", "main", "cooldown"] as const) {
+    const n = raw[k];
+    if (typeof n === "number" && n >= 1) {
+      countSegmentFromRpe(n, V, I, R);
+      any = true;
+    }
+  }
+  return any;
 }
 
 interface CoachingTabProps {
@@ -92,7 +114,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     try {
       const { data: weekSessions } = await supabase
         .from("coaching_sessions")
-        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks")
+        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, rpe_phases, session_blocks")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString())
@@ -190,24 +212,27 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
             countSegmentFromRpe(bl.recoveryRpe, V, I, R);
           }
         });
-        if (!anyBlockRpe && s.rpe) {
-          countSegmentFromRpe(s.rpe, V, I, R);
+        if (!anyBlockRpe) {
+          if (!countPhasesFromRow(s, V, I, R)) {
+            if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
+            else {
+              const obj = (s.objective || "").toLowerCase();
+              const title = (s.title || "").toLowerCase();
+              if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
+              else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
+              else V.v++;
+            }
+          }
         }
-        if (!anyBlockRpe && !s.rpe) {
+      } else if (!countPhasesFromRow(s, V, I, R)) {
+        if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
+        else {
           const obj = (s.objective || "").toLowerCase();
           const title = (s.title || "").toLowerCase();
           if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
           else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
           else V.v++;
         }
-      } else if (s.rpe) {
-        countSegmentFromRpe(s.rpe, V, I, R);
-      } else {
-        const obj = (s.objective || "").toLowerCase();
-        const title = (s.title || "").toLowerCase();
-        if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
-        else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
-        else V.v++;
       }
     });
     volume = V.v;
