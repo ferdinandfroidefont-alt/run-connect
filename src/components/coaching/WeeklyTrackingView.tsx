@@ -13,7 +13,8 @@ import { ActivityIcon } from "@/lib/activityIcons";
 import { toast } from "sonner";
 import { coachingRowToWeekSession } from "@/lib/coachingWeekSessionImport";
 import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
-import { parseSessionRpePhases, rpeChipColor, parseAthleteRpeFelt } from "@/lib/sessionBlockRpe";
+import { parseBlockRpeFromStorage, parseAthleteBlockRpeFelt, rpeChipColor, parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -461,8 +462,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   return (
     <div className="space-y-4">
-      {/* Profile hero */}
-      <div className="bg-card p-4 flex flex-col items-center text-center">
+      {/* Profile hero — marge sous le header (safe area / top bar) */}
+      <div className="bg-card px-4 pb-4 pt-8 flex flex-col items-center text-center mt-1">
         <div className="h-[72px] w-[72px] rounded-full bg-secondary flex items-center justify-center overflow-hidden mb-3">
           {selectedAthlete.avatarUrl ? (
             <img src={selectedAthlete.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -640,62 +641,82 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                           <p className="text-[12px] font-mono text-muted-foreground mt-1">{dayData.session.rcc_code}</p>
                         ) : null}
                         {(() => {
-                          const planned = parseSessionRpePhases(dayData.session.rpe_phases);
-                          const phaseKeys = (["warmup", "main", "cooldown"] as const).filter(
-                            (k) => planned && typeof planned[k] === "number",
-                          );
-                          const felt = parseAthleteRpeFelt(dayData.athleteRpeFelt);
-                          const feltKeys = felt
-                            ? (["warmup", "main", "cooldown"] as const).filter((k) => typeof felt[k] === "number")
+                          const nBlocks = dayData.session.rcc_code
+                            ? parseRCC(dayData.session.rcc_code).blocks.length
+                            : 0;
+                          const plannedBlocks =
+                            nBlocks > 0
+                              ? parseBlockRpeFromStorage(dayData.session.rpe_phases, nBlocks)
+                              : [];
+                          const feltBlocks = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, nBlocks);
+                          const legacyPhases = parseSessionRpePhases(dayData.session.rpe_phases);
+                          const legacyPk = legacyPhases
+                            ? (["warmup", "main", "cooldown"] as const).filter(
+                                (k) => legacyPhases && typeof legacyPhases[k] === "number",
+                              )
                             : [];
                           const legacyRpe =
                             typeof dayData.session.rpe === "number" && dayData.session.rpe >= 1 && dayData.session.rpe <= 10
                               ? dayData.session.rpe
                               : null;
-                          if (phaseKeys.length === 0 && legacyRpe == null && feltKeys.length === 0) return null;
+                          const showPlanned =
+                            plannedBlocks.length > 0 || legacyPk.length > 0 || legacyRpe != null;
+                          const showFelt = feltBlocks.length > 0;
+                          if (!showPlanned && !showFelt) return null;
                           return (
                             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                              {(phaseKeys.length > 0 || legacyRpe != null) && (
+                              {showPlanned && (
                                 <div className="flex flex-wrap items-center gap-1">
                                   <span className="text-[10px] font-medium text-muted-foreground">Prévu</span>
-                                  {phaseKeys.length > 0
-                                    ? phaseKeys.map((k) => {
-                                        const n = planned![k] as number;
-                                        return (
-                                          <span
-                                            key={k}
-                                            className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                            style={{ backgroundColor: rpeChipColor(n) }}
-                                          >
-                                            {n}
-                                          </span>
-                                        );
-                                      })
-                                    : legacyRpe != null && (
+                                  {plannedBlocks.length > 0
+                                    ? plannedBlocks.map((n, i) => (
                                         <span
+                                          key={i}
                                           className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                          style={{ backgroundColor: rpeChipColor(legacyRpe) }}
+                                          style={{
+                                            backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
+                                          }}
                                         >
-                                          {legacyRpe}
+                                          {n}
                                         </span>
-                                      )}
+                                      ))
+                                    : legacyPk.length > 0
+                                      ? legacyPk.map((k) => {
+                                          const n = legacyPhases![k] as number;
+                                          return (
+                                            <span
+                                              key={k}
+                                              className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                              style={{ backgroundColor: rpeChipColor(n) }}
+                                            >
+                                              {n}
+                                            </span>
+                                          );
+                                        })
+                                      : legacyRpe != null && (
+                                          <span
+                                            className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                            style={{ backgroundColor: rpeChipColor(legacyRpe) }}
+                                          >
+                                            {legacyRpe}
+                                          </span>
+                                        )}
                                 </div>
                               )}
-                              {feltKeys.length > 0 && (
+                              {showFelt && (
                                 <div className="flex flex-wrap items-center gap-1">
                                   <span className="text-[10px] font-medium text-muted-foreground">Ressenti</span>
-                                  {feltKeys.map((k) => {
-                                    const n = felt[k] as number;
-                                    return (
-                                      <span
-                                        key={k}
-                                        className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                        style={{ backgroundColor: rpeChipColor(n) }}
-                                      >
-                                        {n}
-                                      </span>
-                                    );
-                                  })}
+                                  {feltBlocks.map((n, i) => (
+                                    <span
+                                      key={i}
+                                      className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                      style={{
+                                        backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
+                                      }}
+                                    >
+                                      {n}
+                                    </span>
+                                  ))}
                                 </div>
                               )}
                             </div>

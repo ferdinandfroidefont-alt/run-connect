@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { geocodeSearchMapbox } from "@/lib/mapboxGeocode";
 import { mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
-import type { SessionRpePhases } from "@/lib/sessionBlockRpe";
+import { normalizeBlockRpeLength } from "@/lib/sessionBlockRpe";
 
 const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -81,9 +81,10 @@ export interface WeekSession {
   locationLat?: number;
   locationLng?: number;
   athleteOverrides: Record<string, AthleteOverride>;
-  /** @deprecated rétrocompat templates — préférer rpePhases */
+  /** @deprecated rétrocompat templates */
   rpe?: number;
-  rpePhases: SessionRpePhases;
+  /** RPE 0–10 par bloc RCC (même ordre que parsedBlocks). */
+  blockRpe: number[];
 }
 
 interface ClubMember {
@@ -156,7 +157,8 @@ export const WeeklyPlanSessionEditor = ({
 
   const handleParsedChange = (result: RCCResult) => {
     const merged = mergeParsedBlocksByIndex(result.blocks, session.parsedBlocks || []);
-    update("parsedBlocks", merged);
+    const nextBlockRpe = normalizeBlockRpeLength(session.blockRpe, merged.length);
+    onChange({ ...session, parsedBlocks: merged, blockRpe: nextBlockRpe });
   };
 
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
@@ -317,8 +319,8 @@ export const WeeklyPlanSessionEditor = ({
             <div className="mt-4">
               <RCCBlocksPreview
                 blocks={session.parsedBlocks}
-                sessionRpePhases={session.rpePhases}
-                onSessionRpePhasesChange={(p) => onChange({ ...session, rpePhases: p })}
+                blockRpe={session.blockRpe}
+                onBlockRpeChange={(blockRpe) => onChange({ ...session, blockRpe })}
               />
             </div>
           )}

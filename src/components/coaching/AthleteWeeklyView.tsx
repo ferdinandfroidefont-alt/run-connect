@@ -9,14 +9,14 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { WeeklyBarChart } from "./WeeklyBarChart";
 import { WeeklyPlanCard } from "./WeeklyPlanCard";
-import { RpePhaseStrip } from "./RpePhaseStrip";
+import { AthleteBlockRpeSliders } from "./AthleteBlockRpeSliders";
 import {
-  athleteRpeFeltToJson,
-  normalizeSessionRpePhases,
-  parseAthleteRpeFelt,
-  rpePhasesFromCoachingRow,
-  type SessionRpePhases,
+  athleteBlockRpeFeltToJson,
+  blockRpeFromCoachingRow,
+  normalizeBlockRpeLength,
+  parseAthleteBlockRpeFelt,
 } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 
 interface CoachingSession {
   id: string;
@@ -58,7 +58,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   const [participations, setParticipations] = useState<Record<string, Participation>>({});
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const [noteValues, setNoteValues] = useState<Record<string, string>>({});
-  const [feltRpeBySession, setFeltRpeBySession] = useState<Record<string, SessionRpePhases>>({});
+  const [feltRpeBySession, setFeltRpeBySession] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState(true);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -102,17 +102,17 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       const map: Record<string, Participation> = {};
       const notes: Record<string, string> = {};
-      const felt: Record<string, SessionRpePhases> = {};
+      const felt: Record<string, number[]> = {};
       (data || []).forEach((p) => {
         map[p.coaching_session_id] = p as Participation;
         notes[p.coaching_session_id] = p.athlete_note || "";
         const sess = sessionList.find((s) => s.id === p.coaching_session_id);
         if (sess) {
-          const raw = parseAthleteRpeFelt((p as Participation).athlete_rpe_felt);
-          felt[sess.id] =
-            raw && Object.keys(raw).length > 0
-              ? normalizeSessionRpePhases(raw)
-              : rpePhasesFromCoachingRow(sess);
+          const n = sess.rcc_code ? parseRCC(sess.rcc_code).blocks.length : 0;
+          const rawFelt = parseAthleteBlockRpeFelt((p as Participation).athlete_rpe_felt, n);
+          const hasSaved = (p as Participation).athlete_rpe_felt != null;
+          const fromPlan = blockRpeFromCoachingRow(sess, n);
+          felt[sess.id] = hasSaved ? normalizeBlockRpeLength(rawFelt, n) : fromPlan;
         }
       });
       setParticipations(map);
@@ -169,8 +169,12 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
     const isCompleting = participation.status !== "completed";
     const newStatus = isCompleting ? "completed" : "sent";
-    const felt = feltRpeBySession[session.id] ?? rpePhasesFromCoachingRow(session);
-    const rpePayload = isCompleting ? athleteRpeFeltToJson(felt) : null;
+    const n = session.rcc_code ? parseRCC(session.rcc_code).blocks.length : 0;
+    const felt = normalizeBlockRpeLength(
+      feltRpeBySession[session.id] ?? blockRpeFromCoachingRow(session, n),
+      n,
+    );
+    const rpePayload = isCompleting ? athleteBlockRpeFeltToJson(felt) : null;
 
     const { error } = await supabase.
     from("coaching_participations").
@@ -358,8 +362,9 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                 {!isDone && (
                   <div className="bg-card px-6 pb-3 border-t border-border/40">
                     <p className="text-[11px] font-semibold text-muted-foreground mb-2">RPE ressenti</p>
-                    <RpePhaseStrip
-                      value={feltRpeBySession[session.id] ?? rpePhasesFromCoachingRow(session)}
+                    <AthleteBlockRpeSliders
+                      rccCode={session.rcc_code}
+                      values={feltRpeBySession[session.id] ?? blockRpeFromCoachingRow(session, parseRCC(session.rcc_code || "").blocks.length)}
                       onChange={(v) => setFeltRpeBySession((prev) => ({ ...prev, [session.id]: v }))}
                     />
                   </div>

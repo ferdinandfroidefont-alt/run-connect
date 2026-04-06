@@ -25,11 +25,10 @@ import {
   type ParsedBlock,
 } from "@/lib/rccParser";
 import {
-  DEFAULT_SESSION_RPE_PHASES,
+  blockRpeToJson,
+  normalizeBlockRpeLength,
   resolveSessionRpeForInsert,
-  rpePhasesToJson,
   stripPerBlockRpeFromSessionBlocks,
-  type SessionRpePhases,
 } from "@/lib/sessionBlockRpe";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -67,7 +66,7 @@ export const CreateCoachingSessionDialog = ({
   const [rccCode, setRccCode] = useState("");
   const [parsedResult, setParsedResult] = useState<RCCResult>({ blocks: [], errors: [] });
   const [parsedBlocks, setParsedBlocks] = useState<ParsedBlock[]>([]);
-  const [sessionRpePhases, setSessionRpePhases] = useState<SessionRpePhases>(DEFAULT_SESSION_RPE_PHASES);
+  const [blockRpe, setBlockRpe] = useState<number[]>([]);
   const [coachNotes, setCoachNotes] = useState("");
   const [locationName, setLocationName] = useState("");
   // Recipients
@@ -171,7 +170,8 @@ export const CreateCoachingSessionDialog = ({
       const rawBlocks = parsedBlocks.length > 0 ? rccToSessionBlocks(parsedBlocks) : null;
       const sessionBlocks = rawBlocks ? stripPerBlockRpeFromSessionBlocks(rawBlocks) : null;
       const title = `${objective.trim()}`;
-      const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, sessionRpePhases);
+      const effectiveBlockRpe = normalizeBlockRpeLength(blockRpe, parsedBlocks.length);
+      const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, effectiveBlockRpe);
 
       const { data: session, error } = await supabase
         .from("coaching_sessions")
@@ -191,7 +191,7 @@ export const CreateCoachingSessionDialog = ({
           objective: objective.trim(),
           default_location_name: locationName.trim() || null,
           rpe: resolvedRpe,
-          rpe_phases: rpePhasesToJson(sessionRpePhases),
+          rpe_phases: blockRpeToJson(effectiveBlockRpe),
         } as any)
         .select("id")
         .single();
@@ -249,7 +249,7 @@ export const CreateCoachingSessionDialog = ({
     setRccCode("");
     setParsedResult({ blocks: [], errors: [] });
     setParsedBlocks([]);
-    setSessionRpePhases(DEFAULT_SESSION_RPE_PHASES);
+    setBlockRpe([]);
     setCoachNotes("");
     setLocationName("");
     setSendMode("club");
@@ -264,7 +264,11 @@ export const CreateCoachingSessionDialog = ({
 
   const handleParsedChange = (result: RCCResult) => {
     setParsedResult(result);
-    setParsedBlocks((prev) => mergeParsedBlocksByIndex(result.blocks, prev));
+    setParsedBlocks((prev) => {
+      const merged = mergeParsedBlocksByIndex(result.blocks, prev);
+      setBlockRpe((br) => normalizeBlockRpeLength(br, merged.length));
+      return merged;
+    });
   };
 
   const canSubmit =
@@ -356,8 +360,8 @@ export const CreateCoachingSessionDialog = ({
                 {parsedBlocks.length > 0 && (
                   <RCCBlocksPreview
                     blocks={parsedBlocks}
-                    sessionRpePhases={sessionRpePhases}
-                    onSessionRpePhasesChange={setSessionRpePhases}
+                    blockRpe={blockRpe}
+                    onBlockRpeChange={setBlockRpe}
                   />
                 )}
               </div>

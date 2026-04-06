@@ -13,16 +13,17 @@ import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 import { CreateSessionWizard } from "@/components/session-creation/CreateSessionWizard";
 import type { CoachingSessionPrefill } from "@/components/session-creation/useSessionWizard";
 import { CoachingBlocksPreview } from "./CoachingBlocksPreview";
-import { RpePhaseStrip } from "./RpePhaseStrip";
+import { AthleteBlockRpeSliders } from "./AthleteBlockRpeSliders";
 import {
-  athleteRpeFeltToJson,
-  normalizeSessionRpePhases,
-  parseAthleteRpeFelt,
+  athleteBlockRpeFeltToJson,
+  blockRpeFromCoachingRow,
+  normalizeBlockRpeLength,
+  parseAthleteBlockRpeFelt,
+  parseBlockRpeFromStorage,
   parseSessionRpePhases,
   rpeChipColor,
-  rpePhasesFromCoachingRow,
-  type SessionRpePhases,
 } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 import {
   Calendar,
   Users,
@@ -52,6 +53,7 @@ interface CoachingSession {
   coach_notes?: string | null;
   rpe?: number | null;
   rpe_phases?: unknown;
+  rcc_code?: string | null;
 }
 
 interface Participation {
@@ -117,18 +119,19 @@ export const CoachingSessionDetail = ({
   const [sessionComments, setSessionComments] = useState<SessionCommentRow[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
-  const [feltRpeMy, setFeltRpeMy] = useState<SessionRpePhases>(() => ({
-    warmup: 5,
-    main: 5,
-    cooldown: 5,
-  }));
+  const [feltRpeMy, setFeltRpeMy] = useState<number[]>([]);
 
   useEffect(() => {
     if (isOpen && session) {
       setFeedbackMap({});
       setBatchFeedback("");
       setCommentDraft("");
-      setFeltRpeMy(rpePhasesFromCoachingRow(session));
+      setFeltRpeMy(
+        normalizeBlockRpeLength(
+          [],
+          session.rcc_code ? parseRCC(session.rcc_code).blocks.length : 0,
+        ),
+      );
       setMyParticipation(null);
       loadParticipations();
     }
@@ -136,11 +139,12 @@ export const CoachingSessionDetail = ({
 
   useEffect(() => {
     if (!session || !isOpen || !myParticipation) return;
-    const felt = parseAthleteRpeFelt(myParticipation.athlete_rpe_felt);
-    if (felt && Object.keys(felt).length > 0) {
-      setFeltRpeMy(normalizeSessionRpePhases(felt));
+    const n = session.rcc_code ? parseRCC(session.rcc_code).blocks.length : 0;
+    const felt = parseAthleteBlockRpeFelt(myParticipation.athlete_rpe_felt, n);
+    if (myParticipation.athlete_rpe_felt != null && felt.length > 0) {
+      setFeltRpeMy(normalizeBlockRpeLength(felt, n));
     } else {
-      setFeltRpeMy(rpePhasesFromCoachingRow(session));
+      setFeltRpeMy(blockRpeFromCoachingRow(session, n));
     }
   }, [session?.id, isOpen, myParticipation?.id, myParticipation?.athlete_rpe_felt]);
 
@@ -223,7 +227,7 @@ export const CoachingSessionDetail = ({
           status: "completed",
           completed_at: new Date().toISOString(),
           athlete_note: athleteNote.trim() || null,
-          athlete_rpe_felt: athleteRpeFeltToJson(feltRpeMy),
+          athlete_rpe_felt: athleteBlockRpeFeltToJson(feltRpeMy),
         })
         .eq("id", myParticipation.id);
       if (error) throw error;
@@ -484,7 +488,11 @@ export const CoachingSessionDetail = ({
                     {myParticipation.status === "scheduled" && (
                       <div className="space-y-ios-2 pt-ios-1 border-t border-border/60">
                         <p className="text-ios-caption2 font-medium text-muted-foreground">RPE ressenti</p>
-                        <RpePhaseStrip value={feltRpeMy} onChange={setFeltRpeMy} />
+                        <AthleteBlockRpeSliders
+                          rccCode={session.rcc_code}
+                          values={feltRpeMy}
+                          onChange={setFeltRpeMy}
+                        />
                         <Textarea
                           placeholder="Comment ça s'est passé ? (optionnel)"
                           value={athleteNote}
@@ -604,62 +612,86 @@ export const CoachingSessionDetail = ({
                           {isCoach &&
                             p.status === "completed" &&
                             (() => {
-                              const planned = parseSessionRpePhases(session.rpe_phases);
-                              const pk = (["warmup", "main", "cooldown"] as const).filter(
-                                (k) => planned && typeof planned[k] === "number",
-                              );
-                              const felt = parseAthleteRpeFelt(p.athlete_rpe_felt);
-                              const fk = felt
-                                ? (["warmup", "main", "cooldown"] as const).filter((k) => typeof felt[k] === "number")
+                              const nBlocks = session.rcc_code ? parseRCC(session.rcc_code).blocks.length : 0;
+                              const plannedBlocks =
+                                nBlocks > 0
+                                  ? parseBlockRpeFromStorage(session.rpe_phases, nBlocks)
+                                  : [];
+                              const feltBlocks = parseAthleteBlockRpeFelt(p.athlete_rpe_felt, nBlocks);
+                              const legacyPhases = parseSessionRpePhases(session.rpe_phases);
+                              const legacyPk = legacyPhases
+                                ? (["warmup", "main", "cooldown"] as const).filter(
+                                    (k) => legacyPhases && typeof legacyPhases[k] === "number",
+                                  )
                                 : [];
                               const legacy =
                                 typeof session.rpe === "number" && session.rpe >= 1 && session.rpe <= 10
                                   ? session.rpe
                                   : null;
-                              if (pk.length === 0 && legacy == null && fk.length === 0) return null;
+                              const showPlanned =
+                                plannedBlocks.length > 0 ||
+                                legacyPk.length > 0 ||
+                                legacy != null;
+                              const showFelt = feltBlocks.length > 0;
+                              if (!showPlanned && !showFelt) return null;
                               return (
                                 <div className="mt-ios-1 flex flex-wrap gap-x-3 gap-y-1 text-ios-caption1">
-                                  {(pk.length > 0 || legacy != null) && (
+                                  {showPlanned && (
                                     <span className="flex flex-wrap items-center gap-1">
                                       <span className="text-muted-foreground">Prévu</span>
-                                      {pk.length > 0
-                                        ? pk.map((k) => {
-                                            const n = planned![k] as number;
-                                            return (
-                                              <span
-                                                key={k}
-                                                className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                                style={{ backgroundColor: rpeChipColor(n) }}
-                                              >
-                                                {n}
-                                              </span>
-                                            );
-                                          })
-                                        : legacy != null && (
+                                      {plannedBlocks.length > 0
+                                        ? plannedBlocks.map((num, i) => (
                                             <span
+                                              key={i}
                                               className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                              style={{ backgroundColor: rpeChipColor(legacy) }}
+                                              style={{
+                                                backgroundColor: rpeChipColor(
+                                                  Math.max(0, Math.min(10, num)),
+                                                ),
+                                              }}
                                             >
-                                              {legacy}
+                                              {num}
                                             </span>
-                                          )}
+                                          ))
+                                        : legacyPk.length > 0
+                                          ? legacyPk.map((k) => {
+                                              const num = legacyPhases![k] as number;
+                                              return (
+                                                <span
+                                                  key={k}
+                                                  className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                                  style={{ backgroundColor: rpeChipColor(num) }}
+                                                >
+                                                  {num}
+                                                </span>
+                                              );
+                                            })
+                                          : legacy != null && (
+                                              <span
+                                                className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                                style={{ backgroundColor: rpeChipColor(legacy) }}
+                                              >
+                                                {legacy}
+                                              </span>
+                                            )}
                                     </span>
                                   )}
-                                  {fk.length > 0 && (
+                                  {showFelt && (
                                     <span className="flex flex-wrap items-center gap-1">
                                       <span className="text-muted-foreground">Ressenti</span>
-                                      {fk.map((k) => {
-                                        const n = felt![k] as number;
-                                        return (
-                                          <span
-                                            key={k}
-                                            className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                            style={{ backgroundColor: rpeChipColor(n) }}
-                                          >
-                                            {n}
-                                          </span>
-                                        );
-                                      })}
+                                      {feltBlocks.map((num, i) => (
+                                        <span
+                                          key={i}
+                                          className="font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                          style={{
+                                            backgroundColor: rpeChipColor(
+                                              Math.max(0, Math.min(10, num)),
+                                            ),
+                                          }}
+                                        >
+                                          {num}
+                                        </span>
+                                      ))}
                                     </span>
                                   )}
                                 </div>

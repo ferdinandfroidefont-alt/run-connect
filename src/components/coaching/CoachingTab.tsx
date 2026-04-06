@@ -13,7 +13,8 @@ import { CoachingDraftsList } from "./CoachingDraftsList";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
-import { parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+import { blockRpeFromCoachingRow, parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 
 function countSegmentFromRpe(r: number | undefined, volume: { v: number }, intensity: { v: number }, recovery: { v: number }) {
   if (r == null || r < 1) return;
@@ -58,6 +59,21 @@ function countPhasesFromRow(
     }
   }
   return any;
+}
+
+function countBlockRpeFromRcc(s: CoachingSession, V: { v: number }, I: { v: number }, R: { v: number }): boolean {
+  if (!s.rcc_code) return false;
+  const n = parseRCC(s.rcc_code).blocks.length;
+  if (n === 0) return false;
+  const raw = s.rpe_phases;
+  const hasV2 =
+    raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).v === 2;
+  const hasLegacy = parseSessionRpePhases(raw) != null;
+  const hasGlobal = raw == null && typeof s.rpe === "number" && s.rpe >= 1 && s.rpe <= 10;
+  if (!hasV2 && !hasLegacy && !hasGlobal) return false;
+  const arr = blockRpeFromCoachingRow(s, n);
+  arr.forEach((r) => countSegmentFromRpe(Math.max(1, Math.min(10, r)), V, I, R));
+  return true;
 }
 
 interface CoachingTabProps {
@@ -213,7 +229,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           }
         });
         if (!anyBlockRpe) {
-          if (!countPhasesFromRow(s, V, I, R)) {
+          if (!countBlockRpeFromRcc(s, V, I, R) && !countPhasesFromRow(s, V, I, R)) {
             if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
             else {
               const obj = (s.objective || "").toLowerCase();
@@ -224,7 +240,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
             }
           }
         }
-      } else if (!countPhasesFromRow(s, V, I, R)) {
+      } else if (!countBlockRpeFromRcc(s, V, I, R) && !countPhasesFromRow(s, V, I, R)) {
         if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
         else {
           const obj = (s.objective || "").toLowerCase();

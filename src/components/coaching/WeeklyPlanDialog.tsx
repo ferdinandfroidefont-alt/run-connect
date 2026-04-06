@@ -18,13 +18,21 @@ import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { fr } from "date-fns/locale";
-import { parseRCC, rccToSessionBlocks, computeRCCSummary, mergeParsedBlocksByIndex, mergeStoredSessionBlocksIntoParsed } from "@/lib/rccParser";
 import {
-  DEFAULT_SESSION_RPE_PHASES,
+  parseRCC,
+  rccToSessionBlocks,
+  computeRCCSummary,
+  mergeParsedBlocksByIndex,
+  mergeStoredSessionBlocksIntoParsed,
+  type ParsedBlock,
+} from "@/lib/rccParser";
+import {
+  blockRpeFromCoachingRow,
+  blockRpeToJson,
+  migrateLegacyPhasesToBlockRpe,
+  normalizeBlockRpeLength,
   normalizeSessionRpePhases,
   resolveSessionRpeForInsert,
-  rpePhasesFromCoachingRow,
-  rpePhasesToJson,
   stripPerBlockRpeFromSessionBlocks,
   type SessionRpePhases,
 } from "@/lib/sessionBlockRpe";
@@ -71,6 +79,27 @@ interface WeeklyPlanDialogProps {
 
 type GroupPlans = Record<string, WeekSession[]>;
 
+function restoreWeekSessionFromDraftOrTemplate(s: Record<string, unknown>): WeekSession {
+  const parsedBlocks = (s.parsedBlocks as ParsedBlock[] | undefined) || [];
+  let blockRpe: number[];
+  if (Array.isArray(s.blockRpe)) {
+    blockRpe = normalizeBlockRpeLength(s.blockRpe as number[], parsedBlocks.length);
+  } else if (s.rpePhases && typeof s.rpePhases === "object") {
+    blockRpe = migrateLegacyPhasesToBlockRpe(
+      normalizeSessionRpePhases(s.rpePhases as Partial<SessionRpePhases>),
+      parsedBlocks.length,
+    );
+  } else {
+    blockRpe = normalizeBlockRpeLength([], parsedBlocks.length);
+  }
+  return {
+    ...(s as unknown as WeekSession),
+    parsedBlocks,
+    athleteOverrides: (s.athleteOverrides as WeekSession["athleteOverrides"]) || {},
+    blockRpe,
+  };
+}
+
 const createEmptySession = (dayIndex: number): WeekSession => ({
   dayIndex,
   activityType: "running",
@@ -80,7 +109,7 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   coachNotes: "",
   locationName: "",
   athleteOverrides: {},
-  rpePhases: { ...DEFAULT_SESSION_RPE_PHASES },
+  blockRpe: [],
 });
 
 export const WeeklyPlanDialog = ({
@@ -260,16 +289,19 @@ export const WeeklyPlanDialog = ({
             const scheduledDate = new Date(cs.scheduled_at);
             const dayOfWeek = scheduledDate.getDay();
             const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            const parsedBlocks = cs.rcc_code
+              ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+              : [];
             return {
               dayIndex,
               activityType: cs.activity_type || "running",
               objective: cs.objective || cs.title || "",
               rccCode: cs.rcc_code || "",
-              parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+              parsedBlocks,
               coachNotes: cs.coach_notes || "",
               locationName: cs.default_location_name || "",
               athleteOverrides: {},
-              rpePhases: rpePhasesFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }),
+              blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
             };
           });
           setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
@@ -304,16 +336,19 @@ export const WeeklyPlanDialog = ({
           const scheduledDate = new Date(cs.scheduled_at);
           const dayOfWeek = scheduledDate.getDay();
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          const parsedBlocks = cs.rcc_code
+            ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+            : [];
           return {
             dayIndex,
             activityType: cs.activity_type || "running",
             objective: cs.objective || cs.title || "",
             rccCode: cs.rcc_code || "",
-            parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+            parsedBlocks,
             coachNotes: cs.coach_notes || "",
             locationName: cs.default_location_name || "",
             athleteOverrides: {},
-            rpePhases: rpePhasesFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }),
+            blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
           };
         });
         setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
@@ -386,14 +421,7 @@ export const WeeklyPlanDialog = ({
       .maybeSingle();
     if (data) {
       const draft = data as any;
-      const restored = (draft.sessions || []).map((s: any) => ({
-        ...s,
-        parsedBlocks: s.parsedBlocks || [],
-        athleteOverrides: s.athleteOverrides || {},
-        rpePhases: s.rpePhases
-          ? normalizeSessionRpePhases(s.rpePhases as Partial<SessionRpePhases>)
-          : { ...DEFAULT_SESSION_RPE_PHASES },
-      }));
+      const restored = (draft.sessions || []).map((s: any) => restoreWeekSessionFromDraftOrTemplate(s));
       setGroupPlans(prev => ({ ...prev, [activeGroupId]: restored }));
       setTargetAthletes(draft.target_athletes || []);
       setSentAt(draft.sent_at || null);
@@ -561,16 +589,7 @@ export const WeeklyPlanDialog = ({
   };
 
   const loadTemplate = (template: WeekTemplate) => {
-    const restored: WeekSession[] = template.sessions.map((s: any) => ({
-      ...s,
-      parsedBlocks: s.parsedBlocks || [],
-      athleteOverrides: s.athleteOverrides || {},
-      rpePhases: s.rpePhases
-        ? normalizeSessionRpePhases(s.rpePhases as Partial<SessionRpePhases>)
-        : typeof s.rpe === "number" && s.rpe >= 1 && s.rpe <= 10
-          ? { warmup: s.rpe, main: s.rpe, cooldown: s.rpe }
-          : { ...DEFAULT_SESSION_RPE_PHASES },
-    }));
+    const restored: WeekSession[] = template.sessions.map((s: any) => restoreWeekSessionFromDraftOrTemplate(s));
     setSessions(() => restored);
     setSelectedIndex(null);
     toast({ title: `"${template.name}" chargé`, description: `${restored.length} séances` });
@@ -673,16 +692,19 @@ export const WeeklyPlanDialog = ({
         const scheduledDate = new Date(cs.scheduled_at);
         const dayOfWeek = scheduledDate.getDay();
         const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const parsedBlocks = cs.rcc_code
+          ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+          : [];
         return {
           dayIndex,
           activityType: cs.activity_type || "running",
           objective: cs.objective || cs.title || "",
           rccCode: cs.rcc_code || "",
-          parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+          parsedBlocks,
           coachNotes: cs.coach_notes || "",
           locationName: cs.default_location_name || "",
           athleteOverrides: {},
-          rpePhases: rpePhasesFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }),
+          blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
         };
       });
 
@@ -714,7 +736,7 @@ export const WeeklyPlanDialog = ({
           const { blocks: freshBlocks } = parseRCC(session.rccCode);
           const mergedBlocks = mergeParsedBlocksByIndex(freshBlocks, session.parsedBlocks || []);
           const rawBlocks = rccToSessionBlocks(mergedBlocks);
-          const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, session.rpePhases);
+          const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, session.blockRpe);
           const sessionBlocks = stripPerBlockRpeFromSessionBlocks(rawBlocks);
 
           const { data: created, error } = await supabase
@@ -735,7 +757,7 @@ export const WeeklyPlanDialog = ({
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
               rpe: resolvedRpe,
-              rpe_phases: rpePhasesToJson(session.rpePhases),
+              rpe_phases: blockRpeToJson(session.blockRpe),
             } as any)
             .select("id")
             .single();
