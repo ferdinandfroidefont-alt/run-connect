@@ -304,8 +304,8 @@ export default function Coaching() {
         </div>
       ) : displayClubs.length === 0 ? (
         <>
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
-            <div className="ios-card overflow-hidden border border-border/60">
+          <div className="flex w-full flex-1 flex-col justify-center pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
+            <div className="overflow-hidden border-b border-border/60 bg-card">
               <div className={emptyStateSx.shell}>
                 <div className={emptyStateSx.iconCircle}>
                   <Dumbbell className="h-12 w-12 text-muted-foreground" aria-hidden />
@@ -343,8 +343,8 @@ export default function Coaching() {
           {/*
             fixed-fill-with-bottom-nav + tab bar : pas de safe-area-bottom dans le scroll (déjà sur la nav).
           */}
-          <div className="mx-auto w-full max-w-2xl space-y-4 px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
-            <header className="ios-card border border-border/60 px-ios-4 py-ios-4" data-tutorial="tutorial-coaching">
+          <div className="w-full space-y-0 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
+            <header className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none" data-tutorial="tutorial-coaching">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
@@ -363,7 +363,7 @@ export default function Coaching() {
               </div>
             </header>
 
-            <section className="ios-card border border-border/60 p-2">
+            <section className="border-b border-border/60 bg-card p-2 shadow-none">
               <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                 {displayClubs.map((club) => (
                   <button
@@ -382,7 +382,7 @@ export default function Coaching() {
             </section>
 
             {clubs.length > 0 && athleteClubs.length > 0 && (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
                 <h2 className="text-[16px] font-semibold text-foreground">Mon plan coaching</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Tes clubs avec une planification active — touche une ligne pour afficher le club.
@@ -430,7 +430,7 @@ export default function Coaching() {
 
             {selectedClub && (
           <>
-            <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+            <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
               <p className="text-[12px] uppercase tracking-wide text-muted-foreground">Semaine active</p>
               <div className="mt-2 flex items-end justify-between gap-3">
                 <div>
@@ -459,7 +459,7 @@ export default function Coaching() {
             </section>
 
             {isCoach ? (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
                 <h2 className="text-[16px] font-semibold text-foreground">Outils coaching</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowWeeklyPlan(true)}>
@@ -483,7 +483,7 @@ export default function Coaching() {
             ) : null}
 
             {isCoach && (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary">
                     <Building2 className="h-5 w-5 text-primary" aria-hidden />
@@ -502,7 +502,7 @@ export default function Coaching() {
             )}
 
             {!isCoach ? (
-              <section className="ios-card border border-border/60 px-ios-2 py-ios-2">
+              <section className="border-b border-border/60 bg-card px-ios-2 py-ios-2 shadow-none">
                 <div className="px-2 pb-2 pt-1">
                   <h2 className="text-[16px] font-semibold text-foreground">Mon plan de la semaine</h2>
                   <p className="text-sm text-muted-foreground">Vue claire, validation des seances, notes et progression.</p>
@@ -512,7 +512,7 @@ export default function Coaching() {
             ) : null}
 
             {isCoach && (
-              <section className="ios-card border border-border/60 px-ios-4 py-ios-4">
+              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
                 <h2 className="text-[16px] font-semibold text-foreground">Prochaines seances</h2>
                 <div className="mt-3 space-y-2">
                   {upcomingSessions.length === 0 ? (

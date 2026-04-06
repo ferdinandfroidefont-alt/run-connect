@@ -741,8 +741,8 @@ const Profile = () => {
       )}
 
       {/* Colonne cartes : pleine largeur puis max-w-2xl centré sans w-full+mx sur le même nœud (cf. SettingsDialog). */}
-      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden py-5 pb-[calc(2rem+var(--safe-area-bottom))]">
-        <div className="box-border min-h-0 min-w-0 max-w-full space-y-0 sm:mx-auto sm:max-w-2xl">
+      <div className="box-border min-h-0 w-full min-w-0 max-w-full overflow-x-hidden pb-[calc(2rem+var(--safe-area-bottom))] pt-0">
+        <div className="box-border min-h-0 min-w-0 w-full max-w-full space-y-0">
         <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
           <div className="w-full min-w-0 overflow-hidden">
             <div className="flex flex-col items-center px-4 py-3 pb-ios-1 pt-ios-1 ios-shell:px-2.5 ios-shell:py-2.5">

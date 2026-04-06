@@ -411,68 +411,69 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             </div>
           ) : profile ? (
             <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-              <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-1">
-                <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-3 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] ios-shell:px-2.5 sm:max-w-2xl">
+              <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-0">
+                <div className="box-border min-w-0 w-full max-w-full space-y-0 pb-[max(2rem,env(safe-area-inset-bottom))]">
 
                 {/* ── Identity ── */}
-                <div className="flex min-w-0 items-start gap-3.5 pt-4 pb-1">
-                  <div className="relative shrink-0">
-                    <Avatar className="h-[72px] w-[72px] ring-2 ring-border/30">
-                      <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-xl font-bold text-primary-foreground">
-                        {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {!isOwnProfile && areFriends && (
-                      <OnlineStatus userId={profile.user_id} />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="min-w-0 flex-1 truncate text-[18px] font-bold leading-tight text-foreground" title={profile.display_name || profile.username}>
-                        {profile.display_name || profile.username}
-                      </p>
-                      {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+                <div className="border-b border-border/60 bg-card px-4 py-4">
+                  <div className="flex min-w-0 items-start gap-3.5">
+                    <div className="relative shrink-0">
+                      <Avatar className="h-[72px] w-[72px] ring-2 ring-border/30">
+                        <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-xl font-bold text-primary-foreground">
+                          {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {!isOwnProfile && areFriends && (
+                        <OnlineStatus userId={profile.user_id} />
+                      )}
                     </div>
-                    <p className="min-w-0 truncate text-[14px] text-muted-foreground" title={`@${profile.username}`}>
-                      @{profile.username}
-                    </p>
-                    {metaParts.length > 0 && (
-                      <p className="mt-0.5 min-w-0 truncate text-[13px] text-muted-foreground/80">
-                        {metaParts.join(" · ")}
+                    <div className="min-w-0 flex-1 overflow-hidden pt-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="min-w-0 flex-1 truncate text-[18px] font-bold leading-tight text-foreground" title={profile.display_name || profile.username}>
+                          {profile.display_name || profile.username}
+                        </p>
+                        {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+                      </div>
+                      <p className="min-w-0 truncate text-[14px] text-muted-foreground" title={`@${profile.username}`}>
+                        @{profile.username}
                       </p>
-                    )}
+                      {metaParts.length > 0 && (
+                        <p className="mt-0.5 min-w-0 truncate text-[13px] text-muted-foreground/80">
+                          {metaParts.join(" · ")}
+                        </p>
+                      )}
+                    </div>
                   </div>
+
+                  {!isOwnProfile && (
+                    <div className="mt-4 flex min-w-0 gap-2.5">
+                      <Button
+                        onClick={handleFollowToggle}
+                        disabled={actionLoading}
+                        variant={isFollowing ? "outline" : "default"}
+                        className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
+                          followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
+                        }`}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
+                          <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
+                        )}
+                      </Button>
+                      {isFollowing && (
+                        <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-5 border-border">
+                          <MessageCircle className="h-4 w-4 mr-1.5" />
+                          <span className="text-[14px]">Message</span>
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* ── Action Buttons ── */}
-                {!isOwnProfile && (
-                  <div className="flex min-w-0 gap-2.5">
-                    <Button
-                      onClick={handleFollowToggle}
-                      disabled={actionLoading}
-                      variant={isFollowing ? "outline" : "default"}
-                      className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
-                        followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
-                      }`}
-                    >
-                      {actionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
-                        <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
-                      )}
-                    </Button>
-                    {isFollowing && (
-                      <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-5 border-border">
-                        <MessageCircle className="h-4 w-4 mr-1.5" />
-                        <span className="text-[14px]">Message</span>
-                      </Button>
-                    )}
-                  </div>
-                )}
-
                 {/* ── Stats: Abonnements | Abonnés | Fiabilité ── */}
-                <div className="ios-card min-w-0 overflow-hidden border border-border/60">
+                <div className="min-w-0 overflow-hidden border-b border-border/60 bg-card">
                   <div className="grid min-w-0 grid-cols-3">
                     <button
                       onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
@@ -502,7 +503,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
                 {/* ── Bio ── */}
                 {profile.bio && (
-                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 px-4 py-3">
+                  <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
                     <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
                   </div>
                 )}
@@ -511,7 +512,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 {canViewContent ? (
                   <>
                     {/* Period Filter */}
-                    <div>
+                    <div className="border-b border-border/60 bg-card px-4 py-3">
                       <div className="flex min-w-0 rounded-[8px] bg-muted p-0.5">
                         {periodTabs.map(tab => (
                           <button
@@ -530,8 +531,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Activity Stats */}
-                    <div className="min-w-0">
-                      <IOSListGroup>
+                    <div className="min-w-0 border-b border-border/60 bg-card">
+                      <IOSListGroup flush className="!mb-0">
                         <IOSListItem
                           icon={CalendarDays}
                           iconBgColor="bg-primary"
@@ -558,8 +559,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Records & Recent */}
-                    <div className="min-w-0">
-                      <IOSListGroup>
+                    <div className="min-w-0 border-b border-border/60 bg-card">
+                      <IOSListGroup flush className="!mb-0">
                         <IOSListItem
                           icon={Trophy}
                           iconBgColor="bg-yellow-500"
@@ -584,8 +585,8 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
                   </>
                 ) : !isOwnProfile ? (
-                  <div className="pt-2">
-                    <div className="ios-card flex flex-col items-center border border-border/60 px-6 py-6">
+                  <div className="border-b border-border/60 bg-card">
+                    <div className="flex flex-col items-center px-6 py-8">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                         <Lock className="h-5 w-5 text-muted-foreground" />
                       </div>

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { CalendarDays, BookOpen, BarChart3, Users, FileText, Sparkles } from "lucide-react";
@@ -267,7 +266,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
   if (loading) {
     return (
-      <div className="bg-secondary min-h-[300px] px-ios-4 py-ios-4 space-y-ios-3">
+      <div className="min-h-[300px] space-y-0 bg-secondary px-0 py-ios-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-14 ios-card rounded-ios-lg border border-border animate-pulse" />
         ))}
@@ -283,17 +282,17 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   ];
 
   return (
-    <div className="bg-secondary -mx-4 -mb-4 pt-ios-2 pb-ios-8 min-h-[400px] overflow-x-hidden px-ios-4">
+    <div className="min-h-[400px] overflow-x-hidden bg-secondary pb-ios-8 pt-ios-2">
       {/* Week label */}
-      <p className="text-ios-footnote text-muted-foreground text-center mb-ios-3">
+      <p className="mb-ios-3 px-ios-4 text-center text-ios-footnote text-muted-foreground">
         Semaine du {weekLabel}
       </p>
 
       {/* === COACH VIEW === */}
       {isCoach && (
         <>
-          {/* Hero Card */}
-          <Card className="ios-card mb-5 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+          {/* Hero — pleine largeur (pas de Card : ombre inline) */}
+          <div className="mb-0 overflow-hidden border-b border-border/60 bg-card">
             <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5">
               {stats.totalSessions === 0 ? (
                 /* Engaging empty state */
@@ -366,10 +365,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
                 </>
               )}
             </div>
-          </Card>
+          </div>
 
           {/* Tools Grid 2x2 */}
-          <div className="mb-5 grid grid-cols-2 gap-3 px-4">
+          <div className="mb-ios-4 grid grid-cols-2 gap-3 px-ios-4">
             {tools.map((tool) => (
               <button
                 key={tool.label}
@@ -385,7 +384,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </div>
 
           {/* Templates shortcut */}
-          <IOSListGroup className="ios-card mb-0 border border-border/60 shadow-[var(--shadow-card)]">
+          <IOSListGroup flush className="!mb-0 border-b border-border/60 bg-card shadow-none">
             <IOSListItem
               icon={BookOpen}
               iconBgColor="bg-purple-500"
@@ -399,7 +398,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
-        <IOSListGroup header="Prochaines séances" className="mb-ios-4">
+        <IOSListGroup header="Prochaines séances" flush className="!mb-0 border-b border-border/60 bg-card">
           {upcomingSessions.map((s, i) => (
             <IOSListItem
               key={s.id}

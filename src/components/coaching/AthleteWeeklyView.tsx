@@ -221,16 +221,16 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
   if (loading) {
     return (
-      <div className="space-y-3 p-4">
-        {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-card rounded-none animate-pulse" />)}
+      <div className="space-y-0">
+        {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse border-b border-border/40 bg-card" />)}
       </div>);
 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {/* Week navigation — hero style */}
-      <div className="ios-card mx-4 overflow-hidden border border-border/60 px-4 py-5 shadow-[var(--shadow-card)]">
+      <div className="overflow-hidden border-b border-border/60 bg-card px-4 py-5 shadow-none">
         {/* Week switcher */}
         <div className="flex items-center justify-between mb-5">
           <button
@@ -324,7 +324,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Bar chart */}
       {sessions.length > 0 && (
-        <div className="ios-card mx-4 border border-border/60 px-4 py-4 shadow-[var(--shadow-card)]">
+        <div className="border-b border-border/60 bg-card px-4 py-4 shadow-none">
           <WeeklyBarChart
             sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km, title: s.title, objective: s.objective }))}
             weekDays={weekDays}
@@ -334,7 +334,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Session list */}
       {sessions.length === 0 ? (
-        <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
+        <div className="border-b border-border/60 bg-card p-8 text-center shadow-none">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12">
             <CalendarDays className="h-6 w-6 text-primary" />
           </div>
