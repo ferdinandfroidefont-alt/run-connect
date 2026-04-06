@@ -731,7 +731,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* About Sheet */}
       <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">À propos de ce compte</SheetTitle>
           </SheetHeader>
