@@ -6,9 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { IosCollapsibleLargeTitleLayout } from "@/components/layout/IosCollapsibleLargeTitleLayout";
 import {
   Select,
   SelectContent,
@@ -131,27 +129,19 @@ export default function ProfileSportRecordsEdit() {
   };
 
   return (
-    <IosFixedPageHeaderShell
-      className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
-      headerWrapperClassName="shrink-0"
-      contentScroll
-      scrollClassName="min-h-0 bg-secondary"
-      header={
-        <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-          <IosPageHeaderBar
-            left={
-              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            }
-            title="Records sport"
-          />
-        </div>
+    <IosCollapsibleLargeTitleLayout
+      className="h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+      scrollClassName="bg-secondary"
+      title="Records sport"
+      largeTitle="Records sport"
+      left={
+        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
       }
     >
-      <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
-        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-          <p className="px-4 text-ios-subheadline text-muted-foreground ios-shell:px-2.5">
+      <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden px-4 pb-[max(2rem,env(safe-area-inset-bottom))] ios-shell:px-2.5">
+          <p className="text-ios-subheadline text-muted-foreground">
             Choisis un sport, nomme ton épreuve (ex. semi-marathon, 5 km piscine) et indique ta perf. Visible sur ton
             profil.
           </p>
@@ -240,7 +230,6 @@ export default function ProfileSportRecordsEdit() {
             </div>
           </div>
         </div>
-      </ScrollArea>
-    </IosFixedPageHeaderShell>
+    </IosCollapsibleLargeTitleLayout>
   );
 }

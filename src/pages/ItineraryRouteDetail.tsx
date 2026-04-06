@@ -30,9 +30,7 @@ import {
 } from '@/components/route-creation/RouteElevationPanel';
 import { exportToGPX, shareOrDownloadGPX, type GPXTrackPoint } from '@/lib/gpxExport';
 import { ElevationProfile3DDialog } from '@/components/ElevationProfile3DDialog';
-import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
-import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { IosCollapsibleLargeTitleLayout } from '@/components/layout/IosCollapsibleLargeTitleLayout';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -236,32 +234,26 @@ export default function ItineraryRouteDetail() {
     'inline-flex min-h-[40px] shrink-0 items-center justify-center gap-2 rounded-full border border-border/70 bg-secondary/80 px-3.5 text-[13px] font-semibold active:scale-[0.98]'
   );
 
+  const routeTitle = route?.name || 'Itinéraire';
+
   return (
     <>
-      <IosFixedPageHeaderShell
-        className="flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
-        headerWrapperClassName="shrink-0"
-        contentScroll
-        scrollClassName="min-h-0 bg-secondary"
-        header={
-          <div className="min-w-0 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
-            <IosPageHeaderBar
-              left={
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="flex min-w-0 items-center gap-1 text-primary"
-                >
-                  <ArrowLeft className="h-5 w-5 shrink-0" />
-                  <span className="truncate text-[17px] font-medium">Retour</span>
-                </button>
-              }
-              title={route?.name || 'Itinéraire'}
-            />
-          </div>
+      <IosCollapsibleLargeTitleLayout
+        className="h-full min-h-0 min-w-0 max-w-full flex-col overflow-x-hidden bg-secondary"
+        scrollClassName="bg-secondary"
+        title={routeTitle}
+        largeTitle={routeTitle}
+        left={
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex min-w-0 items-center gap-1 text-primary"
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" />
+            <span className="truncate text-[17px] font-medium">Retour</span>
+          </button>
         }
       >
-        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
           <div className="min-w-0 max-w-full pb-24 pt-2">
             {!user ? (
               <p className="px-4 py-8 text-center text-ios-subheadline text-muted-foreground">
@@ -354,8 +346,7 @@ export default function ItineraryRouteDetail() {
               </div>
             )}
           </div>
-        </ScrollArea>
-      </IosFixedPageHeaderShell>
+      </IosCollapsibleLargeTitleLayout>
 
       {route && (
         <ElevationProfile3DDialog
