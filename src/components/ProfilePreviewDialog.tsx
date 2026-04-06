@@ -630,7 +630,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Records Sheet */}
       <Sheet open={showRecordsSheet} onOpenChange={setShowRecordsSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">Records sport</SheetTitle>
           </SheetHeader>
@@ -653,7 +653,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Recent Activities Sheet */}
       <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
           </SheetHeader>
@@ -677,7 +677,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Action Sheet (iOS style) */}
       {showActionSheet && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
+        <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]" onClick={(e) => e.stopPropagation()}>
             {/* Main actions group */}
@@ -731,7 +731,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* About Sheet */}
       <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">À propos de ce compte</SheetTitle>
           </SheetHeader>
