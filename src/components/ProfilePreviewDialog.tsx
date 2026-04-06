@@ -677,7 +677,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Action Sheet (iOS style) */}
       {showActionSheet && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
+        <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]" onClick={(e) => e.stopPropagation()}>
             {/* Main actions group */}
