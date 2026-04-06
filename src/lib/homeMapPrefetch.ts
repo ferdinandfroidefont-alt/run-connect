@@ -120,9 +120,22 @@ export function primeHomeMapDuringSplash(): void {
   }
 }
 
+/**
+ * Reporte le prefetch géoloc après le premier rendu (idle) pour ne pas concurrencer
+ * l’animation / la lecture session au tout début du splash.
+ */
+export function scheduleHomeMapPrefetch(): void {
+  const run = () => primeHomeMapDuringSplash();
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(() => run(), { timeout: 2000 });
+  } else {
+    window.setTimeout(run, 280);
+  }
+}
+
 /** Dès le chargement du bundle — avant React — pour maximiser le chevauchement avec le splash / le routeur. */
 export function primeHomeMapAtAppEntry(): void {
-  primeHomeMapDuringSplash();
+  scheduleHomeMapPrefetch();
 }
 
 /**

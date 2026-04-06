@@ -2,9 +2,8 @@ import { lazy, Suspense } from "react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { RoutePageFallback } from '@/components/RoutePageFallback';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -23,7 +22,6 @@ const InteractiveTutorial = lazy(() =>
 
 const Index = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const { 
     needsOnboarding, 
     needsProfileSetup,
@@ -72,9 +70,8 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-background px-6">
-        <Loader2 className="h-9 w-9 animate-spin text-primary" aria-hidden />
-        <p className="text-sm text-muted-foreground text-center">{t('common.loading')}</p>
+      <div className="pointer-events-auto flex min-h-0 flex-1 flex-col bg-background">
+        <RoutePageFallback variant="index" />
       </div>
     );
   }

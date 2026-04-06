@@ -108,12 +108,8 @@ export const Layout = ({ children }: LayoutProps) => {
     refreshProfile();
   };
 
-  if (loading) {
-    return <AppBootFallback phase="auth" />;
-  }
-
-  if (profileLoading) {
-    return <AppBootFallback phase="profile" />;
+  if (loading || profileLoading) {
+    return <AppBootFallback phase={loading ? "auth" : "profile"} />;
   }
 
   if (!user) {
