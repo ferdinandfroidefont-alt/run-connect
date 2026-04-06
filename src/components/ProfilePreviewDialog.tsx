@@ -90,6 +90,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
+        checkRestrictedStatus();
       }
     }
   }, [userId, user, isOwnProfile]);
