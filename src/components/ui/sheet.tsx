@@ -54,14 +54,16 @@ interface SheetContentProps
   closeButtonClassName?: string;
   /** Affiche le bouton « X » par défaut de Radix ; désactiver pour un bouton personnalisé (ex. Retour). */
   showCloseButton?: boolean;
+  /** Classes additionnelles sur l'overlay (ex. z-index supérieur quand ouvert depuis un dialog). */
+  overlayClassName?: string;
 }
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, closeButtonClassName, showCloseButton = true, ...props }, ref) => (
+>(({ side = "right", className, children, closeButtonClassName, showCloseButton = true, overlayClassName, ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay />
+    <SheetOverlay className={overlayClassName} />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
