@@ -15,7 +15,7 @@ serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const auth = await requireUserJwtCors(req, supabase, corsHeaders);
+  const auth = await requireUserJwtCors(req, supabase as any, corsHeaders);
   if (auth instanceof Response) return auth;
 
   try {
