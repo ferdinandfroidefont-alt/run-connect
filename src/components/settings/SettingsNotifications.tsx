@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft, ChevronRight } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -36,6 +35,8 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   const { isRegistered, requestPermissions, isNative, testNotification, checkPermissionStatus, pushDebug, refreshDebugFromBackend, permissionStatus } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Évite double-appui pendant la demande système (sinon sensation de bouton « gelé »). */
+  const pushPermissionInFlight = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -74,10 +75,19 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       toast({ title: "Paramètres mis à jour", description: "Vos préférences de notifications ont été sauvegardées." });
 
       if (field === "notifications_enabled" && value && isNative) {
-        const granted = await requestPermissions();
-        if (granted) {
-          await checkPermissionStatus();
-        }
+        /* Ne pas await ici : la modale iOS/Android + le Switch Radix sur le même tick = UI bloquée / clics ignorés. */
+        window.setTimeout(() => {
+          if (pushPermissionInFlight.current) return;
+          pushPermissionInFlight.current = true;
+          void (async () => {
+            try {
+              const granted = await requestPermissions();
+              if (granted) await checkPermissionStatus();
+            } finally {
+              pushPermissionInFlight.current = false;
+            }
+          })();
+        }, 0);
       }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -85,31 +95,45 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const handleNotificationToggle = async () => {
-    if (!isRegistered) {
-      const granted = await requestPermissions();
-      if (granted && user) {
-        await checkPermissionStatus();
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('push_token')
-          .eq('user_id', user.id)
-          .single();
+    if (pushPermissionInFlight.current) return;
+    pushPermissionInFlight.current = true;
+    try {
+      if (!isRegistered) {
+        const granted = await requestPermissions();
+        if (granted && user) {
+          await checkPermissionStatus();
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("push_token")
+            .eq("user_id", user.id)
+            .single();
 
-        if (!profileData?.push_token) {
-          toast({ title: "⚠️ Token manquant", description: "Permissions OK mais token non reçu. Relancez l'app.", variant: "destructive" });
-        } else {
-          toast({ title: "✅ Notifications activées", description: "Vous recevrez les alertes de RunConnect" });
+          if (!profileData?.push_token) {
+            toast({
+              title: "⚠️ Token manquant",
+              description: "Permissions OK mais token non reçu. Relancez l'app.",
+              variant: "destructive",
+            });
+          } else {
+            toast({ title: "✅ Notifications activées", description: "Vous recevrez les alertes de RunConnect" });
+          }
+        } else if (!granted) {
+          toast({ title: "Permission refusée", description: "Ouvrez les paramètres pour activer", variant: "destructive" });
         }
       } else {
-        toast({ title: "Permission refusée", description: "Ouvrez les paramètres pour activer", variant: "destructive" });
+        if (isNative && typeof (window as any).AndroidBridge?.openSettings === "function") {
+          (window as any).AndroidBridge.openSettings();
+        } else {
+          toast({
+            title: "Paramètres système",
+            description: "Réglages → RunConnect → Notifications",
+            variant: "destructive",
+          });
+        }
       }
-    } else {
-      if (isNative && typeof (window as any).AndroidBridge?.openSettings === 'function') {
-        (window as any).AndroidBridge.openSettings();
-      } else {
-        toast({ title: "Paramètres Android", description: "Allez dans Paramètres > Apps > RunConnect > Notifications", variant: "destructive" });
-      }
+    } finally {
+      pushPermissionInFlight.current = false;
     }
   };
 
@@ -151,7 +175,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
           </div>
         }
       >
-        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
+        <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
         <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden py-6">
           {/* Main Toggle */}
           <div className="space-y-2" data-tutorial="settings-notifications-push">
@@ -188,8 +212,9 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                 <>
                   <div className="h-px bg-border" />
                   <button
-                    onClick={handleNotificationToggle}
-                    className="flex w-full items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
+                    type="button"
+                    onClick={() => void handleNotificationToggle()}
+                    className="relative z-10 flex w-full touch-manipulation items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 bg-primary/10 transition-colors active:bg-primary/20"
                   >
                     <div className="ios-list-row-icon bg-primary">
                       <Bell className="h-[18px] w-[18px] text-primary-foreground" />
@@ -207,8 +232,9 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                 <>
                   <div className="h-px bg-border ml-[54px]" />
                   <button
-                    onClick={testNotification}
-                    className="flex w-full min-w-0 items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
+                    type="button"
+                    onClick={() => void testNotification()}
+                    className="relative z-10 flex w-full min-w-0 touch-manipulation items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
                   >
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
                       <Bug className="h-[18px] w-[18px] text-white" />
@@ -271,7 +297,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
             />
           )}
         </div>
-      </ScrollArea>
+      </div>
       </IosFixedPageHeaderShell>
     </motion.div>
   );
