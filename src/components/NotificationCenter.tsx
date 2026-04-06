@@ -672,23 +672,24 @@ export const NotificationCenter = ({
           <button
             type="button"
             className={cn(
-              "absolute z-[2] flex touch-manipulation items-center gap-1 rounded-lg py-1.5 text-[15px] font-medium text-primary outline-none transition-opacity active:opacity-70",
+              "absolute z-[2] flex touch-manipulation flex-row items-center gap-1 rounded-lg py-1.5 text-[15px] font-medium text-primary outline-none transition-opacity active:opacity-70",
               isIosPhone
-                ? "right-[max(1.25rem,env(safe-area-inset-right,0px))] top-[calc(env(safe-area-inset-top,0px)+0.375rem)] pl-2 pr-1"
-                : "right-6 top-6 px-2",
+                ? "left-[max(1.25rem,env(safe-area-inset-left,0px))] top-[calc(env(safe-area-inset-top,0px)+0.375rem)] pl-1 pr-2"
+                : "left-6 top-6 px-2",
             )}
           >
-            Retour
             <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+            Retour
           </button>
         </SheetClose>
-        {isIosPhone ? (
-          <div className="relative w-full min-w-0 space-y-1.5 px-0">
-            {/*
-              Centrage visuel type iOS : le titre ne doit pas suivre le flex du SheetHeader (sinon décalé par le X).
-            */}
+        <SheetHeader className="space-y-1.5 px-0">
+          {/*
+            Titre centré dans la largeur ; marge latérale pour ne pas chevaucher « Retour » (gauche).
+            Même logique iOS / bureau.
+          */}
+          <div className="relative w-full min-w-0">
             <div className="relative min-h-[1.75rem] w-full">
-              <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center">
+              <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center text-[17px] font-semibold leading-snug">
                 Notifications
               </SheetTitle>
             </div>
@@ -698,16 +699,7 @@ export const NotificationCenter = ({
                 : 'Aucune nouvelle notification'}
             </SheetDescription>
           </div>
-        ) : (
-          <SheetHeader className="space-y-1.5 px-0 text-left">
-            <SheetTitle>Notifications</SheetTitle>
-            <SheetDescription>
-              {unreadCount > 0
-                ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}`
-                : 'Aucune nouvelle notification'}
-            </SheetDescription>
-          </SheetHeader>
-        )}
+        </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100vh-7.25rem)] w-full min-w-0 max-w-full overflow-x-hidden">
           <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
