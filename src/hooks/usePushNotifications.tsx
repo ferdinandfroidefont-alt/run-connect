@@ -5,7 +5,8 @@ import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
-import { isReallyNative } from '@/lib/nativeDetection';
+import { isReallyNative, getPlatform as getNativePlatform } from '@/lib/nativeDetection';
+import { androidPermissions } from '@/lib/androidPermissions';
 import { requireSupabaseUrl } from '@/lib/supabaseEnv';
 
 const log = (...args: any[]) => console.log('[PUSH]', ...args);
@@ -446,12 +447,20 @@ export const usePushNotifications = () => {
       return false;
     }
 
-    const platform = Capacitor.getPlatform();
-    updateDebug({ permissionRequested: true });
+    const capPlatform = Capacitor.getPlatform();
+    const nativePlatform = getNativePlatform();
+    /** Capacitor peut renvoyer "web" dans le WKWebView alors que l’app est iOS native. */
+    const isIosEnv =
+      capPlatform === 'ios' ||
+      nativePlatform === 'ios' ||
+      (isNative && !androidPermissions.isAndroid() && /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-    if (platform === 'ios') {
+    updateDebug({ permissionRequested: true });
+    log('[PERM] capPlatform=', capPlatform, 'nativePlatform=', nativePlatform, 'isIosEnv=', isIosEnv);
+
+    if (isIosEnv) {
       try {
-        log('[PERM] 🍎 Requesting iOS permissions...');
+        log('[PERM] 🍎 Requesting iOS permissions (Capacitor PushNotifications)...');
         const result = await PushNotifications.requestPermissions();
         log('[PERM] 🍎 iOS permission result:', result.receive);
         updateDebug({ permissionResult: result.receive });
@@ -464,24 +473,104 @@ export const usePushNotifications = () => {
           setPermissionStatus({ granted: true, denied: false, prompt: false });
           setIsRegistered(true);
         } else {
-          setPermissionStatus({ granted: false, denied: true, prompt: false });
-          toast({ title: "Notifications désactivées", description: "Activez les notifications dans les réglages iOS", variant: "destructive" });
+          const denied = result.receive === 'denied';
+          setPermissionStatus({
+            granted: false,
+            denied,
+            prompt: !denied && result.receive === 'prompt',
+          });
+          toast({
+            title: "Notifications désactivées",
+            description: denied
+              ? "Réglages iOS → RunConnect → Notifications"
+              : "Répondez à la demande système ou activez les notifications dans les réglages iOS.",
+            variant: "destructive",
+          });
         }
         return granted;
       } catch (e: any) {
         logError('[PERM] iOS error:', e);
         updateDebug({ lastError: 'permission error: ' + e.message });
+        toast({
+          title: "Erreur notifications",
+          description: e?.message || "Impossible de demander les notifications sur iOS.",
+          variant: "destructive",
+        });
         return false;
       }
     }
 
-    const androidState = (window as any).androidPermissions?.notifications;
-    if (androidState === 'granted') {
+    const androidBridgeState = (window as any).androidPermissions?.notifications;
+    if (androidBridgeState === 'granted') {
       await checkPermissionStatus();
+      try {
+        await PushNotifications.register();
+      } catch (e) {
+        logError('[ANDROID] register() after bridge granted:', e);
+      }
       return true;
     }
 
-    toast({ title: "Permission manquante", description: "Les notifications sont demandées au démarrage de l'app.", variant: "destructive" });
+    const isAndroidEnv =
+      capPlatform === 'android' ||
+      nativePlatform === 'android' ||
+      androidPermissions.isAndroid();
+
+    if (isAndroidEnv) {
+      try {
+        log('[PERM] 🤖 Requesting Android push permissions (Capacitor PushNotifications)...');
+        const result = await PushNotifications.requestPermissions();
+        log('[PERM] 🤖 Capacitor result:', result.receive);
+        updateDebug({ permissionResult: result.receive });
+        let granted = result.receive === 'granted';
+
+        if (!granted && typeof window !== 'undefined' && window.PermissionsPlugin?.requestNotificationPermissions) {
+          log('[PERM] 🤖 Capacitor not granted, trying PermissionsPlugin...');
+          const pluginResult = await androidPermissions.requestNotificationPermissions();
+          if (pluginResult.granted) {
+            granted = true;
+          } else if (pluginResult.advice) {
+            toast({ title: "Notifications", description: pluginResult.advice, variant: "destructive" });
+          }
+        }
+
+        if (granted) {
+          log('[REGISTER] Android PushNotifications.register()...');
+          updateDebug({ registerCalled: true });
+          await PushNotifications.register();
+          setPermissionStatus({ granted: true, denied: false, prompt: false });
+          setIsRegistered(true);
+          return true;
+        }
+
+        setPermissionStatus({
+          granted: false,
+          denied: result.receive === 'denied',
+          prompt: result.receive === 'prompt',
+        });
+        toast({
+          title: "Notifications désactivées",
+          description: "Autorisez les notifications dans les paramètres Android (RunConnect → Notifications).",
+          variant: "destructive",
+        });
+        return false;
+      } catch (e: any) {
+        logError('[PERM] Android error:', e);
+        updateDebug({ lastError: 'permission error: ' + (e?.message || String(e)) });
+        toast({
+          title: "Erreur",
+          description: e?.message || "Impossible de demander les notifications.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    toast({
+      title: "Environnement non reconnu",
+      description: "Ouvrez les paramètres système pour activer les notifications RunConnect.",
+      variant: "destructive",
+    });
     return false;
   };
 

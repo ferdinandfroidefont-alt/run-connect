@@ -72,6 +72,13 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       if (error) throw error;
       setProfile(prev => prev ? { ...prev, [field]: value } : null);
       toast({ title: "Paramètres mis à jour", description: "Vos préférences de notifications ont été sauvegardées." });
+
+      if (field === "notifications_enabled" && value && isNative) {
+        const granted = await requestPermissions();
+        if (granted) {
+          await checkPermissionStatus();
+        }
+      }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     }
