@@ -2,11 +2,11 @@ import { lazy, Suspense } from "react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from 'react';
+import { useEffect } from "react";
 import { RoutePageFallback } from '@/components/RoutePageFallback';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from '@/lib/authFlags';
 
@@ -36,10 +36,7 @@ const Index = () => {
     completeTutorial,
     skipTutorial,
   } = useTutorial();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  const [nativeStatus, setNativeStatus] = useState<boolean | null>(null);
 
   // Activer les notifications de dépassement au classement
   useLeaderboardNotifications();
@@ -51,21 +48,13 @@ const Index = () => {
       const timer = setTimeout(() => {
         localStorage.removeItem('profileCreatedSuccessfully');
         localStorage.removeItem('profileCreatedAt');
-        console.log('🧹 [Index] Cleaned up profile creation flags');
       }, 5000);
       return () => clearTimeout(timer);
     }
   }, []);
 
-
   useEffect(() => {
-    const checkNativeStatus = async () => {
-      const isNative = await nativeManager.ensureNativeStatus();
-      setNativeStatus(isNative);
-      console.log('🏠 Index - Statut natif confirmé:', isNative);
-    };
-    
-    checkNativeStatus();
+    void nativeManager.ensureNativeStatus();
   }, []);
 
   if (loading) {

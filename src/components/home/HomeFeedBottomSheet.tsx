@@ -153,9 +153,10 @@ export function HomeFeedBottomSheet() {
     [endDrag],
   );
 
+  /** Tap poignée / flèche : ouvrir tout de suite en quasi plein écran (pas seulement mi-hauteur). */
   const peekActivate = useCallback(() => {
     if (dragMovedRef.current) return;
-    if (snap === 0) setSnap(1);
+    if (snap === 0 || snap === 1) setSnap(2);
   }, [snap]);
 
   const sheetSnapForContent: 1 | 2 = snap >= 2 ? 2 : 1;
@@ -219,7 +220,7 @@ export function HomeFeedBottomSheet() {
               aria-label={t("navigation.feed")}
             >
               <span className="text-[15px] font-semibold leading-none tracking-tight text-foreground/90">
-                Feed
+                {t("navigation.feed")}
               </span>
               <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground/85" aria-hidden />
             </button>
