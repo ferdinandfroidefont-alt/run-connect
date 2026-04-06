@@ -9,13 +9,6 @@ CREATE TABLE IF NOT EXISTS public.session_presence_reminder_sent (
 
 ALTER TABLE public.session_presence_reminder_sent ENABLE ROW LEVEL SECURITY;
 
--- Lecture réservée au service / RPC ; pas d'accès direct client nécessaire
-CREATE POLICY "session_presence_reminder_no_select"
-  ON public.session_presence_reminder_sent
-  FOR SELECT
-  TO authenticated
-  USING (false);
-
 CREATE OR REPLACE FUNCTION public.request_session_presence_reminder(p_session_id uuid)
 RETURNS void
 LANGUAGE plpgsql

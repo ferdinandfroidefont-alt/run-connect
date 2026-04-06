@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type Ref } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -149,19 +149,12 @@ function PodiumBlock({
         )}
       >
         <div className={cn("relative mb-2 flex justify-center", tone.glow)}>
-          <div
-            className={cn(
-              "relative rounded-full bg-gradient-to-b p-[2px] shadow-sm",
-              rank === 1 ? "from-amber-200/60 to-amber-400/30" : rank === 2 ? "from-slate-200/70 to-slate-400/25" : "from-orange-200/60 to-orange-400/28"
-            )}
-          >
-            <Avatar className={cn(avatarClass, "border-2 border-background", tone.ring)}>
-              <AvatarImage src={user?.profile?.avatar_url} className="object-cover" />
-              <AvatarFallback className="bg-secondary text-sm font-semibold">
-                {user?.profile?.username?.[0]?.toUpperCase() || "—"}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+          <Avatar className={cn(avatarClass, tone.ring)}>
+            <AvatarImage src={user?.profile?.avatar_url} className="object-cover" />
+            <AvatarFallback className="bg-secondary text-sm font-semibold">
+              {user?.profile?.username?.[0]?.toUpperCase() || "—"}
+            </AvatarFallback>
+          </Avatar>
           <span
             className={cn(
               "absolute -bottom-0.5 left-1/2 flex h-6 min-w-[1.5rem] -translate-x-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
@@ -212,11 +205,13 @@ function LeaderboardListRow({
   isMe,
   pointsMode,
   onClick,
+  rowRef,
 }: {
   u: LeaderboardUser;
   isMe: boolean;
   pointsMode: PointsMode;
   onClick: () => void;
+  rowRef?: Ref<HTMLButtonElement>;
 }) {
   const pts = pointsForMode(u, pointsMode);
   const primary = leaderboardPrimaryName(u.profile);
@@ -224,17 +219,18 @@ function LeaderboardListRow({
 
   return (
     <button
+      ref={rowRef}
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full min-w-0 items-center gap-3 rounded-[13px] border border-border/55 bg-card px-3 py-2.5 text-left shadow-[var(--shadow-card)] transition-colors active:bg-secondary/60",
-        isMe && "border-primary/25 bg-primary/[0.06] ring-1 ring-primary/20"
+        "ios-list-row flex w-full min-w-0 items-center gap-ios-3 rounded-none text-left shadow-none first:rounded-t-ios-md last:rounded-b-ios-md only:rounded-ios-md",
+        isMe && "bg-primary/[0.06]"
       )}
     >
       <span className="w-9 shrink-0 text-center text-[13px] font-bold tabular-nums text-muted-foreground">
         {u.rank}
       </span>
-      <Avatar className={cn("h-11 w-11 shrink-0", getRankRing(u.user_rank))}>
+      <Avatar className={cn("h-[52px] w-[52px] shrink-0", getRankRing(u.user_rank))}>
         <AvatarImage src={u.profile?.avatar_url} className="object-cover" />
         <AvatarFallback className="bg-secondary text-xs font-bold">
           {u.profile?.username?.[0]?.toUpperCase() || "?"}
@@ -280,7 +276,7 @@ const Leaderboard = () => {
 
   const listScrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const meRowRef = useRef<HTMLDivElement>(null);
+  const meRowRef = useRef<HTMLButtonElement>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
@@ -446,20 +442,22 @@ const Leaderboard = () => {
         </p>
       </div>
     ) : (
-      <div className="flex flex-col gap-2.5 px-0.5 pb-3">
-        {listFromRank4.map((u) => {
-          const isMe = u.user_id === user?.id;
-          return (
-            <div key={u.user_id} ref={isMe ? meRowRef : undefined}>
+      <div className="px-0.5 pb-3">
+        <div className="ios-list-stack overflow-hidden rounded-ios-md">
+          {listFromRank4.map((u) => {
+            const isMe = u.user_id === user?.id;
+            return (
               <LeaderboardListRow
+                key={u.user_id}
+                rowRef={isMe ? meRowRef : undefined}
                 u={u}
                 isMe={isMe}
                 pointsMode={pointsMode}
                 onClick={() => navigateToProfile(u.user_id)}
               />
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
         {hasMoreUsers && (
           <div ref={sentinelRef} className="flex justify-center py-6">
             {loadingMore && (

@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, Copy, Check, Filter, ChevronsUpDown, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "react-router-dom";
+import { Users, UserPlus, Copy, Check, Filter, ChevronsUpDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Club {
   id: string;
@@ -25,28 +24,106 @@ interface Club {
   is_member?: boolean;
 }
 
-// Liste des départements français
 const departments = [
-  "01 - Ain", "02 - Aisne", "03 - Allier", "04 - Alpes-de-Haute-Provence", "05 - Hautes-Alpes",
-  "06 - Alpes-Maritimes", "07 - Ardèche", "08 - Ardennes", "09 - Ariège", "10 - Aube",
-  "11 - Aude", "12 - Aveyron", "13 - Bouches-du-Rhône", "14 - Calvados", "15 - Cantal",
-  "16 - Charente", "17 - Charente-Maritime", "18 - Cher", "19 - Corrèze", "21 - Côte-d'Or",
-  "22 - Côtes-d'Armor", "23 - Creuse", "24 - Dordogne", "25 - Doubs", "26 - Drôme",
-  "27 - Eure", "28 - Eure-et-Loir", "29 - Finistère", "30 - Gard", "31 - Haute-Garonne",
-  "32 - Gers", "33 - Gironde", "34 - Hérault", "35 - Ille-et-Vilaine", "36 - Indre",
-  "37 - Indre-et-Loire", "38 - Isère", "39 - Jura", "40 - Landes", "41 - Loir-et-Cher",
-  "42 - Loire", "43 - Haute-Loire", "44 - Loire-Atlantique", "45 - Loiret", "46 - Lot",
-  "47 - Lot-et-Garonne", "48 - Lozère", "49 - Maine-et-Loire", "50 - Manche", "51 - Marne",
-  "52 - Haute-Marne", "53 - Mayenne", "54 - Meurthe-et-Moselle", "55 - Meuse", "56 - Morbihan",
-  "57 - Moselle", "58 - Nièvre", "59 - Nord", "60 - Oise", "61 - Orne", "62 - Pas-de-Calais",
-  "63 - Puy-de-Dôme", "64 - Pyrénées-Atlantiques", "65 - Hautes-Pyrénées", "66 - Pyrénées-Orientales",
-  "67 - Bas-Rhin", "68 - Haut-Rhin", "69 - Rhône", "70 - Haute-Saône", "71 - Saône-et-Loire",
-  "72 - Sarthe", "73 - Savoie", "74 - Haute-Savoie", "75 - Paris", "76 - Seine-Maritime",
-  "77 - Seine-et-Marne", "78 - Yvelines", "79 - Deux-Sèvres", "80 - Somme", "81 - Tarn",
-  "82 - Tarn-et-Garonne", "83 - Var", "84 - Vaucluse", "85 - Vendée", "86 - Vienne",
-  "87 - Haute-Vienne", "88 - Vosges", "89 - Yonne", "90 - Territoire de Belfort", "91 - Essonne",
-  "92 - Hauts-de-Seine", "93 - Seine-Saint-Denis", "94 - Val-de-Marne", "95 - Val-d'Oise",
-  "971 - Guadeloupe", "972 - Martinique", "973 - Guyane", "974 - La Réunion", "976 - Mayotte"
+  "01 - Ain",
+  "02 - Aisne",
+  "03 - Allier",
+  "04 - Alpes-de-Haute-Provence",
+  "05 - Hautes-Alpes",
+  "06 - Alpes-Maritimes",
+  "07 - Ardèche",
+  "08 - Ardennes",
+  "09 - Ariège",
+  "10 - Aube",
+  "11 - Aude",
+  "12 - Aveyron",
+  "13 - Bouches-du-Rhône",
+  "14 - Calvados",
+  "15 - Cantal",
+  "16 - Charente",
+  "17 - Charente-Maritime",
+  "18 - Cher",
+  "19 - Corrèze",
+  "21 - Côte-d'Or",
+  "22 - Côtes-d'Armor",
+  "23 - Creuse",
+  "24 - Dordogne",
+  "25 - Doubs",
+  "26 - Drôme",
+  "27 - Eure",
+  "28 - Eure-et-Loir",
+  "29 - Finistère",
+  "30 - Gard",
+  "31 - Haute-Garonne",
+  "32 - Gers",
+  "33 - Gironde",
+  "34 - Hérault",
+  "35 - Ille-et-Vilaine",
+  "36 - Indre",
+  "37 - Indre-et-Loire",
+  "38 - Isère",
+  "39 - Jura",
+  "40 - Landes",
+  "41 - Loir-et-Cher",
+  "42 - Loire",
+  "43 - Haute-Loire",
+  "44 - Loire-Atlantique",
+  "45 - Loiret",
+  "46 - Lot",
+  "47 - Lot-et-Garonne",
+  "48 - Lozère",
+  "49 - Maine-et-Loire",
+  "50 - Manche",
+  "51 - Marne",
+  "52 - Haute-Marne",
+  "53 - Mayenne",
+  "54 - Meurthe-et-Moselle",
+  "55 - Meuse",
+  "56 - Morbihan",
+  "57 - Moselle",
+  "58 - Nièvre",
+  "59 - Nord",
+  "60 - Oise",
+  "61 - Orne",
+  "62 - Pas-de-Calais",
+  "63 - Puy-de-Dôme",
+  "64 - Pyrénées-Atlantiques",
+  "65 - Hautes-Pyrénées",
+  "66 - Pyrénées-Orientales",
+  "67 - Bas-Rhin",
+  "68 - Haut-Rhin",
+  "69 - Rhône",
+  "70 - Haute-Saône",
+  "71 - Saône-et-Loire",
+  "72 - Sarthe",
+  "73 - Savoie",
+  "74 - Haute-Savoie",
+  "75 - Paris",
+  "76 - Seine-Maritime",
+  "77 - Seine-et-Marne",
+  "78 - Yvelines",
+  "79 - Deux-Sèvres",
+  "80 - Somme",
+  "81 - Tarn",
+  "82 - Tarn-et-Garonne",
+  "83 - Var",
+  "84 - Vaucluse",
+  "85 - Vendée",
+  "86 - Vienne",
+  "87 - Haute-Vienne",
+  "88 - Vosges",
+  "89 - Yonne",
+  "90 - Territoire de Belfort",
+  "91 - Essonne",
+  "92 - Hauts-de-Seine",
+  "93 - Seine-Saint-Denis",
+  "94 - Val-de-Marne",
+  "95 - Val-d'Oise",
+  "971 - Guadeloupe",
+  "972 - Martinique",
+  "973 - Guyane",
+  "974 - La Réunion",
+  "976 - Mayotte",
 ];
 
 export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
@@ -56,160 +133,172 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
   const [clubs, setClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [departmentSearchOpen, setDepartmentSearchOpen] = useState(false);
 
-  useEffect(() => {
-    setLocalSearchQuery(searchQuery);
-  }, [searchQuery]);
+  const codeQuery = searchQuery.trim().toUpperCase();
 
-  useEffect(() => {
-    if (localSearchQuery.trim()) {
-      searchClubsByCode();
-    } else {
-      loadPublicClubs();
+  const searchClubsByCode = useCallback(async () => {
+    if (!codeQuery) {
+      setClubs([]);
+      return;
     }
-  }, [localSearchQuery, selectedDepartment]);
-
-  const searchClubsByCode = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('conversations')
-        .select('id, group_name, group_description, group_avatar_url, club_code, created_by, location')
-        .eq('is_group', true)
-        .eq('club_code', localSearchQuery.toUpperCase())
-        .limit(1);
+        .from("conversations")
+        .select("id, group_name, group_description, group_avatar_url, club_code, created_by, location")
+        .eq("is_group", true)
+        .eq("club_code", codeQuery)
+        .limit(5);
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
+      if (!data?.length) {
+        setClubs([]);
+        return;
+      }
+
+      const clubsWithStats = await Promise.all(
+        data.map(async (club) => {
+          const { count: memberCount } = await supabase
+            .from("group_members")
+            .select("*", { count: "exact", head: true })
+            .eq("conversation_id", club.id);
+
+          let isMember = false;
+          if (user?.id) {
+            const { data: memberData } = await supabase
+              .from("group_members")
+              .select("id")
+              .eq("conversation_id", club.id)
+              .eq("user_id", user.id)
+              .maybeSingle();
+            isMember = !!memberData;
+          }
+
+          return {
+            ...club,
+            member_count: memberCount || 0,
+            is_member: isMember,
+          };
+        })
+      );
+
+      setClubs(clubsWithStats);
+    } catch (error) {
+      console.error("Error searching clubs:", error);
+      setClubs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [codeQuery, user?.id]);
+
+  const loadPublicClubs = useCallback(async () => {
+    if (codeQuery) {
+      return;
+    }
+    try {
+      setLoading(true);
+
+      let excludedClubIds: string[] = [];
+      if (user?.id) {
+        const { data: memberClubIds } = await supabase
+          .from("group_members")
+          .select("conversation_id")
+          .eq("user_id", user.id);
+        excludedClubIds = memberClubIds?.map((item) => item.conversation_id) || [];
+      }
+
+      let query = supabase
+        .from("conversations")
+        .select("id, group_name, group_description, group_avatar_url, club_code, created_by, location")
+        .eq("is_group", true)
+        .eq("is_private", false)
+        .order("created_at", { ascending: false });
+
+      if (excludedClubIds.length > 0) {
+        query = query.not("id", "in", `(${excludedClubIds.join(",")})`);
+      }
+
+      if (selectedDepartment && selectedDepartment.trim() !== "") {
+        const deptNum = selectedDepartment.split(" - ")[0]?.trim() ?? "";
+        if (deptNum) {
+          query = query.ilike("location", `%${deptNum}%`);
+        }
+      }
+
+      const { data, error } = await query.limit(40);
+
+      if (error) throw error;
+
+      if (data?.length) {
         const clubsWithStats = await Promise.all(
           data.map(async (club) => {
             const { count: memberCount } = await supabase
-              .from('group_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', club.id);
-
-            const { data: memberData } = await supabase
-              .from('group_members')
-              .select('id')
-              .eq('conversation_id', club.id)
-              .eq('user_id', user?.id)
-              .single();
+              .from("group_members")
+              .select("*", { count: "exact", head: true })
+              .eq("conversation_id", club.id);
 
             return {
               ...club,
               member_count: memberCount || 0,
-              is_member: !!memberData
+              is_member: false,
             };
           })
         );
-
         setClubs(clubsWithStats);
       } else {
         setClubs([]);
       }
     } catch (error) {
-      console.error('Error searching clubs:', error);
+      console.error("Error loading public clubs:", error);
       setClubs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [codeQuery, user?.id, selectedDepartment]);
 
-  const loadPublicClubs = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      const { data: memberClubIds } = await supabase
-        .from('group_members')
-        .select('conversation_id')
-        .eq('user_id', user.id);
-
-      const excludedClubIds = memberClubIds?.map(item => item.conversation_id) || [];
-
-      let query = supabase
-        .from('conversations')
-        .select('id, group_name, group_description, group_avatar_url, club_code, created_by, location')
-        .eq('is_group', true)
-        .eq('is_private', false)
-        .not('id', 'in', `(${excludedClubIds.length > 0 ? excludedClubIds.join(',') : 'null'})`)
-        .order('created_at', { ascending: false });
-
-      // Apply department filter if selected
-      if (selectedDepartment && selectedDepartment.trim() !== "") {
-        const departmentNumber = selectedDepartment.split(" - ")[0];
-        const departmentName = selectedDepartment.split(" - ")[1];
-        query = query.or(`location.ilike.%${departmentNumber}%,location.ilike.%${departmentName}%`);
-      }
-
-      const { data, error } = await query.limit(10);
-
-      if (error) throw error;
-
-      if (data) {
-        const clubsWithStats = await Promise.all(
-          data.map(async (club) => {
-            const { count: memberCount } = await supabase
-              .from('group_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('conversation_id', club.id);
-
-            return {
-              ...club,
-              member_count: memberCount || 0,
-              is_member: false
-            };
-          })
-        );
-
-        setClubs(clubsWithStats);
-      }
-    } catch (error) {
-      console.error('Error loading public clubs:', error);
-      setClubs([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (codeQuery) {
+      void searchClubsByCode();
+    } else {
+      void loadPublicClubs();
     }
-  };
+  }, [codeQuery, loadPublicClubs, searchClubsByCode]);
 
   const handleJoinClub = async (club: Club) => {
     if (!user || club.is_member) return;
 
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .insert([{
+      const { error } = await supabase.from("group_members").insert([
+        {
           conversation_id: club.id,
           user_id: user.id,
-          is_admin: false
-        }]);
+          is_admin: false,
+        },
+      ]);
 
       if (error) throw error;
 
-      setClubs(prev => 
-        prev.map(c => 
-          c.id === club.id 
-            ? { ...c, is_member: true, member_count: (c.member_count || 0) + 1 }
-            : c
+      setClubs((prev) =>
+        prev.map((c) =>
+          c.id === club.id ? { ...c, is_member: true, member_count: (c.member_count || 0) + 1 } : c
         )
       );
 
       toast({
         title: "Succès !",
-        description: `Vous avez rejoint le club "${club.group_name}"`
+        description: `Vous avez rejoint le club "${club.group_name}"`,
       });
 
       navigate(`/messages?conversation=${club.id}`);
     } catch (error) {
-      console.error('Error joining club:', error);
+      console.error("Error joining club:", error);
       toast({
         title: "Erreur",
         description: "Impossible de rejoindre le club",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -221,29 +310,29 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
       setTimeout(() => setCopiedCode(null), 2000);
       toast({
         title: "Code copié !",
-        description: "Le code du club a été copié dans le presse-papiers"
+        description: "Le code du club a été copié dans le presse-papiers",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Erreur",
         description: "Impossible de copier le code",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  if (loading) {
+  if (loading && clubs.length === 0) {
     return (
       <div className="p-ios-3 space-y-ios-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="ios-card p-ios-4">
-              <div className="flex items-center gap-ios-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
+            <div className="flex items-center gap-ios-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
               </div>
+            </div>
           </div>
         ))}
       </div>
@@ -252,23 +341,10 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
 
   return (
     <div className="p-ios-3 space-y-ios-3">
-      {/* Search and filters */}
       <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Code exact du club ou laissez vide..."
-            value={localSearchQuery}
-            onChange={(e) => setLocalSearchQuery(e.target.value.toUpperCase())}
-            className="pl-10 font-mono ios-surface rounded-ios-md border-0"
-            maxLength={8}
-          />
-        </div>
-        
-        {/* Department filter - only show when no search query */}
-        {!localSearchQuery && (
+        {!codeQuery && (
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Popover open={departmentSearchOpen} onOpenChange={setDepartmentSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -277,17 +353,19 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                   aria-expanded={departmentSearchOpen}
                   className="w-full justify-between ios-surface rounded-ios-md"
                 >
-                  {selectedDepartment || "Sélectionner un département..."}
+                  <span className="truncate text-left">
+                    {selectedDepartment || "Filtrer par département (optionnel)"}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[calc(100vw-2rem)] p-0 ios-card z-[70]" align="start">
+              <PopoverContent className="ios-card z-[70] w-[calc(100vw-2rem)] p-0" align="start">
                 <Command>
                   <CommandList>
                     <ScrollArea className="h-[300px]">
                       <CommandGroup>
                         <CommandItem
-                          value=""
+                          value="all"
                           onSelect={() => {
                             setSelectedDepartment("");
                             setDepartmentSearchOpen(false);
@@ -302,8 +380,8 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                           <CommandItem
                             key={dept}
                             value={dept}
-                            onSelect={(currentValue) => {
-                              setSelectedDepartment(currentValue === selectedDepartment ? "" : currentValue);
+                            onSelect={() => {
+                              setSelectedDepartment(dept);
                               setDepartmentSearchOpen(false);
                             }}
                           >
@@ -323,49 +401,42 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
         )}
       </div>
 
-      {!localSearchQuery && clubs.length > 0 && (
+      {!codeQuery && clubs.length > 0 && (
         <div className="ios-card p-ios-3">
           <p className="text-sm text-muted-foreground">
-            💡 Clubs publics suggérés{selectedDepartment && ` - ${selectedDepartment}`}
+            Clubs publics
+            {selectedDepartment ? ` · ${selectedDepartment.split(" - ")[0]}` : ""}
           </p>
         </div>
       )}
 
-      {loading && (
-        <div className="space-y-ios-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="ios-card p-ios-4">
-                <div className="flex items-center gap-ios-3">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                </div>
-            </div>
-          ))}
+      {codeQuery && (
+        <div className="ios-card p-ios-3">
+          <p className="text-sm text-muted-foreground">
+            Recherche par code exact : <span className="font-mono font-semibold text-foreground">{codeQuery}</span>
+          </p>
         </div>
       )}
 
       {!loading && clubs.length === 0 && (
         <div className="flex flex-col items-center justify-center p-8 text-center">
-          <Users className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            {localSearchQuery.trim() ? 'Aucun club trouvé' : 'Aucun club public disponible'}
+          <Users className="mb-4 h-16 w-16 text-muted-foreground" />
+          <h3 className="mb-2 text-lg font-semibold">
+            {codeQuery ? "Aucun club trouvé" : "Aucun club public disponible"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {localSearchQuery.trim() 
-              ? `Aucun club avec le code "${localSearchQuery}"`
-              : selectedDepartment && selectedDepartment.trim() !== ""
-                ? `Aucun club public dans ${selectedDepartment}`
-                : 'Entrez un code de club exact pour rejoindre un club privé'
-            }
+            {codeQuery
+              ? `Aucun club avec le code « ${codeQuery} ». Vérifie le code ou demande un code à l’organisateur.`
+              : selectedDepartment
+                ? `Aucun club public ne correspond au département sélectionné (${selectedDepartment.split(" - ")[0]}).`
+                : "Utilise la barre de recherche en haut pour un code de club, ou choisis un département."}
           </p>
         </div>
       )}
-      
-      {!loading && clubs.map((club) => (
-        <div key={club.id} className="ios-card p-ios-4">
+
+      {!loading &&
+        clubs.map((club) => (
+          <div key={club.id} className="ios-card p-ios-4">
             <div className="flex items-start gap-ios-3">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={club.group_avatar_url || undefined} />
@@ -373,18 +444,16 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                   <Users className="h-6 w-6" />
                 </AvatarFallback>
               </Avatar>
-              
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold truncate">{club.group_name}</h4>
+
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate font-semibold">{club.group_name}</h4>
                 {club.group_description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                    {club.group_description}
-                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{club.group_description}</p>
                 )}
                 {club.location && (
-                  <p className="text-xs text-muted-foreground mt-1">📍 {club.location}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">📍 {club.location}</p>
                 )}
-                <div className="flex items-center gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" className="text-xs">
                     {club.member_count || 0} membres
                   </Badge>
@@ -395,31 +464,30 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
                     className="h-7 px-2"
                   >
                     {copiedCode === club.club_code ? (
-                      <Check className="h-3 w-3 mr-1" />
+                      <Check className="mr-1 h-3 w-3" />
                     ) : (
-                      <Copy className="h-3 w-3 mr-1" />
+                      <Copy className="mr-1 h-3 w-3" />
                     )}
-                    <span className="text-xs font-mono">{club.club_code}</span>
+                    <span className="font-mono text-xs">{club.club_code}</span>
                   </Button>
                 </div>
               </div>
 
-              {!club.is_member && (
-                <Button
-                  size="sm"
-                  onClick={() => handleJoinClub(club)}
-                  className="shrink-0"
-                >
-                  <UserPlus className="h-4 w-4 mr-1" />
+              {!club.is_member && user && (
+                <Button size="sm" onClick={() => handleJoinClub(club)} className="shrink-0">
+                  <UserPlus className="mr-1 h-4 w-4" />
                   Rejoindre
                 </Button>
               )}
-              {club.is_member && (
-                <Badge variant="default" className="shrink-0">Membre</Badge>
+              {club.is_member && <Badge className="shrink-0">Membre</Badge>}
+              {!user && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  Connecte-toi pour rejoindre
+                </Badge>
               )}
             </div>
-        </div>
-      ))}
+          </div>
+        ))}
     </div>
   );
 };

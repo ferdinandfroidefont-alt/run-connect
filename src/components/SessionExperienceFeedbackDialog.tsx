@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, CircleHelp, MapPin, Link2 } from "lucide-react";
 
 export interface SessionFeedbackTarget {
   sessionId: string;
@@ -19,22 +20,77 @@ interface SessionExperienceFeedbackDialogProps {
   onSubmitted: () => void;
 }
 
+function isPresenceConfirmed(row: {
+  confirmed_by_gps: boolean | null;
+  confirmed_by_creator: boolean | null;
+}): boolean {
+  return row.confirmed_by_gps === true || row.confirmed_by_creator === true;
+}
+
 export function SessionExperienceFeedbackDialog({
   open,
   session,
   onDismiss,
   onSubmitted,
 }: SessionExperienceFeedbackDialogProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [wentWell, setWentWell] = useState<boolean | null>(null);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const submittedRef = useRef(false);
 
+  const [presenceLoading, setPresenceLoading] = useState(true);
+  const [presenceConfirmed, setPresenceConfirmed] = useState<boolean | null>(null);
+  const [reminderLoading, setReminderLoading] = useState(false);
+
   const reset = () => {
     setWentWell(null);
     setComment("");
+    setPresenceConfirmed(null);
+    setPresenceLoading(true);
   };
+
+  useEffect(() => {
+    if (!open || !session) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setPresenceLoading(true);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) {
+          if (!cancelled) setPresenceConfirmed(null);
+          return;
+        }
+
+        const { data: row, error } = await supabase
+          .from("session_participants")
+          .select("confirmed_by_gps, confirmed_by_creator")
+          .eq("session_id", session.sessionId)
+          .eq("user_id", uid)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (error || !row) {
+          setPresenceConfirmed(null);
+        } else {
+          setPresenceConfirmed(isPresenceConfirmed(row));
+        }
+      } catch {
+        if (!cancelled) setPresenceConfirmed(null);
+      } finally {
+        if (!cancelled) setPresenceLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, session?.sessionId]);
 
   const handleLater = () => {
     onDismiss();
@@ -77,6 +133,41 @@ export function SessionExperienceFeedbackDialog({
     }
   };
 
+  const handleReminderOrganizer = async () => {
+    if (!session) return;
+    setReminderLoading(true);
+    try {
+      const { error } = await supabase.rpc("request_session_presence_reminder", {
+        p_session_id: session.sessionId,
+      });
+
+      if (error) {
+        if (error.message?.includes("already_sent") || error.code === "P0001") {
+          toast({
+            title: "Rappel déjà envoyé",
+            description: "Tu as déjà demandé un rappel pour cette séance.",
+          });
+          return;
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Rappel envoyé",
+        description: "L’organisateur a reçu une notification.",
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Envoi impossible", description: msg, variant: "destructive" });
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const openHelp = () => {
+    navigate("/confirm-presence/help");
+  };
+
   return (
     <Dialog
       open={open && !!session}
@@ -90,7 +181,7 @@ export function SessionExperienceFeedbackDialog({
         }
       }}
     >
-      <DialogContent className="max-w-md gap-0 overflow-hidden rounded-2xl p-0 sm:rounded-2xl">
+      <DialogContent className="max-h-[90vh] max-w-md gap-0 overflow-y-auto overflow-x-hidden rounded-2xl p-0 sm:rounded-2xl">
         <DialogHeader className="border-b border-border/60 px-5 pb-4 pt-5 text-left">
           <DialogTitle className="text-[17px] font-semibold leading-snug">
             Votre séance
@@ -99,13 +190,93 @@ export function SessionExperienceFeedbackDialog({
             {session?.title ? (
               <span className="line-clamp-2 font-medium text-foreground/90">{session.title}</span>
             ) : null}
-            <span className="mt-2 block">
-              Tout s&apos;est bien passé côté organisation et déroulement ?
-            </span>
           </DialogDescription>
         </DialogHeader>
 
+        <div className="space-y-3 border-b border-border/60 px-5 py-4">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Présence
+            </p>
+            <button
+              type="button"
+              onClick={openHelp}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-muted"
+              aria-label="Comment confirmer ma présence ?"
+            >
+              <CircleHelp className="h-5 w-5" />
+            </button>
+          </div>
+
+          {presenceLoading ? (
+            <div className="flex items-center gap-2 py-2 text-[14px] text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+              Vérification…
+            </div>
+          ) : presenceConfirmed === true ? (
+            <div className="flex items-start gap-3 rounded-xl border border-[#34C759]/40 bg-[#34C759]/10 px-3 py-2.5">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#34C759]" aria-hidden />
+              <p className="text-[14px] font-medium leading-snug text-[#1a7f3a]">
+                Présence confirmée
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden />
+                <p className="text-[14px] font-medium leading-snug text-foreground">
+                  Pas encore confirmée
+                </p>
+              </div>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                Pour faire reconnaître ta sortie : associe ta séance <strong className="text-foreground">Strava</strong>{" "}
+                dans <strong className="text-foreground">Mes séances</strong>, ou demande à l&apos;organisateur de
+                confirmer ta présence depuis sa liste de participants.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 flex-1 gap-1.5 text-[13px]"
+                  onClick={() => navigate("/my-sessions")}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Mes séances / Strava
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 flex-1 gap-1.5 text-[13px]"
+                  onClick={() => navigate("/confirm-presence")}
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Confirmer (GPS)
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 w-full border border-border text-[13px]"
+                onClick={handleReminderOrganizer}
+                disabled={reminderLoading}
+              >
+                {reminderLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Rappeler l’organisateur"
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-4 px-5 py-4">
+          <p className="text-[14px] text-muted-foreground">
+            Tout s&apos;est bien passé côté organisation et déroulement ?
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"

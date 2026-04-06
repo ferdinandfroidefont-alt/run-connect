@@ -336,10 +336,18 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
         }]);
       }
 
-      toast({
-        title: "Succès",
-        description: "Club créé avec succès!"
-      });
+      const code = (conversation as { club_code?: string | null }).club_code?.trim();
+      if (isPrivate && code) {
+        toast({
+          title: "Club privé créé",
+          description: `Code du club : ${code}. Conserve-le ou partage-le pour inviter des membres.`,
+        });
+      } else {
+        toast({
+          title: "Succès",
+          description: "Club créé avec succès !",
+        });
+      }
 
       onGroupCreated(conversation.id);
       onClose();
@@ -504,10 +512,9 @@ export const CreateClubDialog = ({ isOpen, onClose, onGroupCreated }: CreateClub
                       {isPrivate ? "Club privé" : "Club public"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {isPrivate 
-                        ? "Seuls les membres invités peuvent rejoindre" 
-                        : "Tout le monde peut découvrir et rejoindre ce club"
-                      }
+                      {isPrivate
+                        ? "Un code est généré : partage-le pour inviter. Sinon, recherche par code dans l’onglet Clubs."
+                        : "Tout le monde peut découvrir et rejoindre ce club depuis la recherche."}
                     </p>
                   </div>
                 </div>

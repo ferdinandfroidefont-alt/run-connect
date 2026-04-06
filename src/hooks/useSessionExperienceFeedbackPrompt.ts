@@ -69,7 +69,6 @@ export function useSessionExperienceFeedbackPrompt(enabled: boolean, userId: str
         sessionId: s.id,
         title: s.title,
         scheduledAt: s.scheduled_at,
-        organizerId: s.organizer_id,
       });
       return;
     }

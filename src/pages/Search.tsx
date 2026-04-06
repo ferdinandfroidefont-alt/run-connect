@@ -107,7 +107,10 @@ export default function Search() {
                   <Input
                     ref={inputRef}
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setSearchQuery(activeTab === "clubs" ? v.toUpperCase() : v);
+                    }}
                     placeholder={getPlaceholder()}
                     className="h-[44px] rounded-ios-md border-0 bg-secondary pl-ios-6 text-ios-subheadline"
                   />

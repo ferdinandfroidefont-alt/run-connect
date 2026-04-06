@@ -46,6 +46,7 @@ const Terms = lazy(() => import("./pages/Terms"));
 const About = lazy(() => import("./pages/About"));
 const LegalNotice = lazy(() => import("./pages/LegalNotice"));
 const ConfirmPresence = lazy(() => import("./pages/ConfirmPresence"));
+const ConfirmPresenceHelp = lazy(() => import("./pages/ConfirmPresenceHelp"));
 const TrainingMode = lazy(() => import("./pages/TrainingMode"));
 const SessionTracking = lazy(() => import("./pages/SessionTracking"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
@@ -230,6 +231,7 @@ const App = () => {
                   <Route path="/terms" element={<PageTransition><PageSuspense><Terms /></PageSuspense></PageTransition>} />
                   <Route path="/about" element={<PageTransition><PageSuspense><About /></PageSuspense></PageTransition>} />
                   <Route path="/confirm-presence" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/confirm-presence/help" element={<Layout><PageTransition><PageSuspense><ConfirmPresenceHelp /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   {/* /security route removed for production security */}
                   <Route path="/training/route/:routeId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
