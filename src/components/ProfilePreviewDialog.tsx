@@ -279,6 +279,48 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const checkRestrictedStatus = async () => {
+    if (!user || !userId || isOwnProfile) return;
+    const { data } = await supabase
+      .from('restricted_users')
+      .select('id')
+      .eq('restricter_id', user.id)
+      .eq('restricted_id', userId)
+      .maybeSingle();
+    setIsRestricted(!!data);
+  };
+
+  const handleRestrictToggle = async () => {
+    if (!user || !userId) return;
+    setActionLoading(true);
+    try {
+      if (isRestricted) {
+        await supabase.from('restricted_users').delete().eq('restricter_id', user.id).eq('restricted_id', userId);
+        setIsRestricted(false);
+        toast({ title: "Restriction levée" });
+      } else {
+        await supabase.from('restricted_users').insert({ restricter_id: user.id, restricted_id: userId });
+        setIsRestricted(true);
+        toast({ title: "Utilisateur restreint", description: "Vos séances seront automatiquement masquées pour cette personne" });
+      }
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+      setShowActionSheet(false);
+    }
+  };
+
+  const handleShareProfile = () => {
+    if (!profile) return;
+    setShowActionSheet(false);
+    shareProfile({
+      username: profile.username,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url,
+    });
+  };
+
   const handleMessage = async () => {
     if (!user || !userId) return;
     try {
