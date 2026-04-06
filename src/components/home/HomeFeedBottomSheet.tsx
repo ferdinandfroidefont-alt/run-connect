@@ -185,6 +185,7 @@ export function HomeFeedBottomSheet() {
       />
 
       <motion.div
+        data-home-feed-sheet
         role={snap >= 1 ? "dialog" : "region"}
         aria-modal={snap >= 1}
         aria-label={t("navigation.feed")}

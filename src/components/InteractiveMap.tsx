@@ -1,5 +1,5 @@
 import { RouteDialog } from './RouteDialog';
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RUNCONNECT_OPEN_HOME_SETTINGS_EVENT } from '@/lib/homeMapEvents';
 import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
@@ -9,6 +9,8 @@ import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
+import { OffscreenSessionIndicators } from '@/components/map/OffscreenSessionIndicators';
+import { useOffscreenSessionIndicators } from '@/hooks/useOffscreenSessionIndicators';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -315,6 +317,7 @@ export const InteractiveMap = ({
     setOpenCreateSession,
     setOpenCreateRoute,
     setHomeMapImmersive,
+    homeFeedSheetSnap,
   } = useAppContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -492,6 +495,72 @@ export const InteractiveMap = ({
 
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
+
+  /** Même filtre que les marqueurs — utilisé pour les indicateurs hors écran. */
+  const filteredSessionsForMap = useMemo(() => {
+    const q = (filters.search_query ?? '').trim().toLowerCase();
+    return sessions.filter((session) => {
+      const matchesActivity =
+        filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
+      const matchesType =
+        filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
+      const matchesSearch =
+        !q ||
+        (session.title ?? '').toLowerCase().includes(q) ||
+        (session.location_name ?? '').toLowerCase().includes(q) ||
+        (session.description ?? '').toLowerCase().includes(q);
+
+      let matchesTimeSlot = true;
+      if (filters.time_slot) {
+        const slot = TIME_SLOTS.find((s) => s.id === filters.time_slot);
+        if (slot) {
+          const sessionHour = new Date(session.scheduled_at).getHours();
+          if (slot.id === 'night') {
+            matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
+          } else {
+            matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+          }
+        }
+      }
+
+      const matchesLevel =
+        !filters.level || (session.calculated_level || 3) >= filters.level;
+
+      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
+    });
+  }, [sessions, filters]);
+
+  const offscreenSessionIndicators = useOffscreenSessionIndicators({
+    map: mapboxMap,
+    isMapLoaded,
+    isActive,
+    immersive: isImmersiveMode,
+    sessions: filteredSessionsForMap,
+    mapContainerRef: mapContainer,
+    topStackRef: homeMapTopStackRef,
+    feedSnap: homeFeedSheetSnap,
+  });
+
+  const handleOffscreenIndicatorFlyTo = useCallback(
+    (lng: number, lat: number) => {
+      const m = map.current;
+      if (!m) return;
+      requestAnimationFrame(() => {
+        const padding = computeHomeMapViewportPadding({
+          immersive: isImmersiveMode,
+          topStackEl: homeMapTopStackRef.current,
+        });
+        m.easeTo({
+          center: [lng, lat],
+          zoom: Math.max(m.getZoom(), 13.5),
+          padding,
+          duration: 780,
+          essential: true,
+        });
+      });
+    },
+    [isImmersiveMode],
+  );
 
   const routeCoordinates = useRef<MapCoord[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
@@ -781,39 +850,7 @@ export const InteractiveMap = ({
     sessionPolylines.current = [];
     markers.current = [];
 
-    const q = (filters.search_query ?? '').trim().toLowerCase();
-
-    // Filter sessions based on current filters
-    const filteredSessions = sessions.filter(session => {
-      const matchesActivity = filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
-      const matchesType = filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
-      const matchesSearch =
-        !q ||
-        (session.title ?? '').toLowerCase().includes(q) ||
-        (session.location_name ?? '').toLowerCase().includes(q) ||
-        (session.description ?? '').toLowerCase().includes(q);
-      
-      // Time slot filter
-      let matchesTimeSlot = true;
-      if (filters.time_slot) {
-        const slot = TIME_SLOTS.find(s => s.id === filters.time_slot);
-        if (slot) {
-          const sessionHour = new Date(session.scheduled_at).getHours();
-          if (slot.id === 'night') {
-            matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
-          } else {
-            matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
-          }
-        }
-      }
-
-      // Level filter - show sessions at selected level or higher (minimum level)
-      const matchesLevel = !filters.level || (
-        (session.calculated_level || 3) >= filters.level
-      );
-      
-      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
-    });
+    const filteredSessions = filteredSessionsForMap;
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
     console.log('Sessions with profiles:', filteredSessions.map(s => ({
       id: s.id,
@@ -1734,6 +1771,10 @@ export const InteractiveMap = ({
             isMapLoaded ? 'opacity-0' : 'opacity-100'
           )}
           aria-hidden
+        />
+        <OffscreenSessionIndicators
+          items={offscreenSessionIndicators}
+          onFlyToSession={handleOffscreenIndicatorFlyTo}
         />
       </div>
       
