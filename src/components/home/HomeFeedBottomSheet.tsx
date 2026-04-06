@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
-const PEEK_HEIGHT_PX = 52;
+const PEEK_HEIGHT_PX = 68;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -202,10 +202,13 @@ export function HomeFeedBottomSheet() {
         }
       >
         {snap === 0 ? (
-          <div className="flex min-h-0 flex-1 flex-col" data-tutorial="home-feed-sheet-handle">
+          <div
+            className="flex min-h-0 flex-1 flex-col justify-start pt-1.5"
+            data-tutorial="home-feed-sheet-handle"
+          >
             <button
               type="button"
-              className="flex h-full min-h-0 w-full items-center justify-between gap-3 px-4 outline-none touch-manipulation active:opacity-80"
+              className="flex min-h-[44px] w-full items-center justify-between gap-3 px-4 pb-1 outline-none touch-manipulation active:opacity-80"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -214,8 +217,10 @@ export function HomeFeedBottomSheet() {
               aria-expanded={false}
               aria-label={t("navigation.feed")}
             >
-              <span className="text-[14px] font-semibold text-foreground/80">Feed</span>
-              <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground/80" aria-hidden />
+              <span className="text-[15px] font-semibold leading-none tracking-tight text-foreground/90">
+                Feed
+              </span>
+              <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground/85" aria-hidden />
             </button>
           </div>
         ) : (

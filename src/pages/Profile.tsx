@@ -826,14 +826,25 @@ const Profile = () => {
               showSeparator={!isViewingOtherUser}
             />
             {!isViewingOtherUser && (
-              <IOSListItem
-                icon={MapPin}
-                iconBgColor="bg-purple-500"
-                iconColor="text-white"
-                title="Créer un parcours"
-                onClick={() => navigate('/route-creation')}
-                showSeparator={false}
-              />
+              <>
+                <IOSListItem
+                  icon={MapPin}
+                  iconBgColor="bg-purple-500"
+                  iconColor="text-white"
+                  title="Créer un parcours"
+                  onClick={() => navigate('/route-creation')}
+                  showSeparator
+                />
+                <IOSListItem
+                  icon={Trophy}
+                  iconBgColor="bg-amber-500"
+                  iconColor="text-white"
+                  title="Records sport"
+                  subtitle="Renseigner tes perfs"
+                  onClick={() => navigate('/profile/records')}
+                  showSeparator={false}
+                />
+              </>
             )}
           </IOSListGroup>
         </div>

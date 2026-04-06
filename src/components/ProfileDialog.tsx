@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -703,6 +703,17 @@ export const ProfileDialog = ({
                       iconColor="text-white"
                       title="Créer un parcours"
                       onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
+                    />
+                    <IOSListItem
+                      icon={Trophy}
+                      iconBgColor="bg-amber-500"
+                      iconColor="text-white"
+                      title="Records sport"
+                      subtitle="Renseigner tes perfs"
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate("/profile/records");
+                      }}
                     />
                     <IOSListItem
                       icon={User}
