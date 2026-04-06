@@ -64,6 +64,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [areFriends, setAreFriends] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isRestricted, setIsRestricted] = useState(false);
   const [period, setPeriod] = useState<PeriodFilter>('total');
   const [stats, setStats] = useState({ sessionsCreated: 0, routesCreated: 0, sessionsJoined: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
@@ -74,6 +75,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
   const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [showAboutSheet, setShowAboutSheet] = useState(false);
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
 
   const isOwnProfile = userId === user?.id;
 
