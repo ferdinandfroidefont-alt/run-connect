@@ -8,17 +8,19 @@ import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { getCountryLabel } from "@/lib/countryLabels";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { FollowDialog } from "./FollowDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useShareProfile } from "@/hooks/useShareProfile";
+import { QRShareDialog } from "./QRShareDialog";
+import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 
 interface Profile {
   user_id: string;
@@ -62,6 +64,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [areFriends, setAreFriends] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isRestricted, setIsRestricted] = useState(false);
   const [period, setPeriod] = useState<PeriodFilter>('total');
   const [stats, setStats] = useState({ sessionsCreated: 0, routesCreated: 0, sessionsJoined: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
@@ -72,6 +75,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
   const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [showAboutSheet, setShowAboutSheet] = useState(false);
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
 
   const isOwnProfile = userId === user?.id;
 
@@ -84,6 +90,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
+        checkRestrictedStatus();
       }
     }
   }, [userId, user, isOwnProfile]);
@@ -272,6 +279,48 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const checkRestrictedStatus = async () => {
+    if (!user || !userId || isOwnProfile) return;
+    const { data } = await supabase
+      .from('restricted_users')
+      .select('id')
+      .eq('restricter_id', user.id)
+      .eq('restricted_id', userId)
+      .maybeSingle();
+    setIsRestricted(!!data);
+  };
+
+  const handleRestrictToggle = async () => {
+    if (!user || !userId) return;
+    setActionLoading(true);
+    try {
+      if (isRestricted) {
+        await supabase.from('restricted_users').delete().eq('restricter_id', user.id).eq('restricted_id', userId);
+        setIsRestricted(false);
+        toast({ title: "Restriction levée" });
+      } else {
+        await supabase.from('restricted_users').insert({ restricter_id: user.id, restricted_id: userId });
+        setIsRestricted(true);
+        toast({ title: "Utilisateur restreint", description: "Vos séances seront automatiquement masquées pour cette personne" });
+      }
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+      setShowActionSheet(false);
+    }
+  };
+
+  const handleShareProfile = () => {
+    if (!profile) return;
+    setShowActionSheet(false);
+    shareProfile({
+      username: profile.username,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url,
+    });
+  };
+
   const handleMessage = async () => {
     if (!user || !userId) return;
     try {
@@ -340,31 +389,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </h1>
               <div className="flex w-10 shrink-0 justify-end">
                 {!isOwnProfile ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
-                        aria-label="Plus d'actions"
-                      >
-                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="z-50 rounded-xl border-border bg-background shadow-lg">
-                      {isBlocked ? (
-                        <DropdownMenuItem onClick={handleUnblockUser} className="cursor-pointer text-emerald-600">
-                          <UserPlus className="mr-2 h-4 w-4" /> Débloquer
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
-                          <UserMinus className="mr-2 h-4 w-4" /> Bloquer
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="cursor-pointer text-destructive">
-                        <Flag className="mr-2 h-4 w-4" /> Signaler
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <button
+                    type="button"
+                    onClick={() => setShowActionSheet(true)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
+                    aria-label="Plus d'actions"
+                  >
+                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                  </button>
                 ) : (
                   <span className="inline-block w-9" aria-hidden />
                 )}
@@ -640,6 +672,94 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           onClose={() => setShowReportDialog(false)}
           reportedUserId={profile.user_id}
           reportedUsername={profile.username}
+        />
+      )}
+
+      {/* Action Sheet (iOS style) */}
+      {showActionSheet && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]" onClick={(e) => e.stopPropagation()}>
+            {/* Main actions group */}
+            <div className="mb-2 overflow-hidden rounded-2xl bg-card">
+              <button
+                onClick={() => { setShowActionSheet(false); isBlocked ? handleUnblockUser() : handleBlockUser(); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <UserMinus className="h-5 w-5 shrink-0" />
+                {isBlocked ? "Débloquer" : "Bloquer"}
+              </button>
+              <button
+                onClick={handleRestrictToggle}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <ShieldBan className="h-5 w-5 shrink-0 text-muted-foreground" />
+                {isRestricted ? "Lever la restriction" : "Restreindre"}
+              </button>
+              <button
+                onClick={() => { setShowActionSheet(false); setShowReportDialog(true); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <Flag className="h-5 w-5 shrink-0" />
+                Signaler
+              </button>
+              <button
+                onClick={handleShareProfile}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <Share2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+                Partager
+              </button>
+              <button
+                onClick={() => { setShowActionSheet(false); setShowAboutSheet(true); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+              >
+                <Info className="h-5 w-5 shrink-0 text-muted-foreground" />
+                À propos de ce compte
+              </button>
+            </div>
+            {/* Cancel button */}
+            <button
+              onClick={() => setShowActionSheet(false)}
+              className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary transition-colors active:bg-secondary/60"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* About Sheet */}
+      <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-[17px]">À propos de ce compte</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 py-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Date de création</span>
+              <span className="text-[14px] font-medium text-foreground">
+                {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) : '–'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Nom d'utilisateur</span>
+              <span className="text-[14px] font-medium text-foreground">@{profile?.username || '–'}</span>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
         />
       )}
     </>
