@@ -377,14 +377,14 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
-  /** Même gabarit que SettingsDialog : évite le débordement horizontal iOS (100vw + translate). */
+  /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
   const profileDialogShellClassName =
-    "fixed inset-0 left-0 right-0 top-0 z-[116] mx-auto w-full min-w-0 max-w-full translate-x-0 translate-y-0 box-border flex h-[100dvh] max-h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:inset-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:z-[115] sm:mx-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100%-2rem)] sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:overflow-y-auto sm:rounded-lg sm:border";
+    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideCloseButton className={profileDialogShellClassName}>
+        <DialogContent hideCloseButton fullScreen className={profileDialogShellClassName}>
           <div className="flex flex-1 items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -394,7 +394,7 @@ export const ProfileDialog = ({
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideCloseButton className={profileDialogShellClassName}>
+        <DialogContent hideCloseButton fullScreen className={profileDialogShellClassName}>
           {/* iOS Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
