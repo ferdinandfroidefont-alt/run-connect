@@ -653,7 +653,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Recent Activities Sheet */}
       <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
           </SheetHeader>
