@@ -2246,9 +2246,16 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-           {/* iMessage Style Input */}
-          <div 
-             className="shrink-0 w-full px-ios-2 py-ios-1 bg-card border-t border-border/50 z-40 keyboard-input-container"
+           {/* iMessage Style Input — barre basse alignée sur BottomNavigation (bordure + fond + safe area) */}
+          <div
+            className={cn(
+              "keyboard-input-container z-40 w-full shrink-0 border-t border-border bg-background px-ios-2 py-ios-1",
+              "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
+            )}
+            style={{
+              /* Même logique que BottomNavigation : zone home indicator légèrement resserrée */
+              paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+            }}
           >
             {/* Reply Preview */}
             {replyTo && (
