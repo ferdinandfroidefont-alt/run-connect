@@ -674,6 +674,94 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           reportedUsername={profile.username}
         />
       )}
+
+      {/* Action Sheet (iOS style) */}
+      {showActionSheet && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={() => setShowActionSheet(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]" onClick={(e) => e.stopPropagation()}>
+            {/* Main actions group */}
+            <div className="mb-2 overflow-hidden rounded-2xl bg-card">
+              <button
+                onClick={() => { setShowActionSheet(false); isBlocked ? handleUnblockUser() : handleBlockUser(); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <UserMinus className="h-5 w-5 shrink-0" />
+                {isBlocked ? "Débloquer" : "Bloquer"}
+              </button>
+              <button
+                onClick={handleRestrictToggle}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <ShieldBan className="h-5 w-5 shrink-0 text-muted-foreground" />
+                {isRestricted ? "Lever la restriction" : "Restreindre"}
+              </button>
+              <button
+                onClick={() => { setShowActionSheet(false); setShowReportDialog(true); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <Flag className="h-5 w-5 shrink-0" />
+                Signaler
+              </button>
+              <button
+                onClick={handleShareProfile}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60 border-b border-border/40"
+              >
+                <Share2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+                Partager
+              </button>
+              <button
+                onClick={() => { setShowActionSheet(false); setShowAboutSheet(true); }}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+              >
+                <Info className="h-5 w-5 shrink-0 text-muted-foreground" />
+                À propos de ce compte
+              </button>
+            </div>
+            {/* Cancel button */}
+            <button
+              onClick={() => setShowActionSheet(false)}
+              className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary transition-colors active:bg-secondary/60"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* About Sheet */}
+      <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-[17px]">À propos de ce compte</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 py-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Date de création</span>
+              <span className="text-[14px] font-medium text-foreground">
+                {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) : '–'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Nom d'utilisateur</span>
+              <span className="text-[14px] font-medium text-foreground">@{profile?.username || '–'}</span>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
+        />
+      )}
     </>
   );
 };
