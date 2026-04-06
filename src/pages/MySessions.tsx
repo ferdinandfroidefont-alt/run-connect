@@ -15,7 +15,8 @@ import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
-import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
+import { ActivityIcon, getActivityBorderLeftClass, getActivityLabel } from '@/lib/activityIcons';
+import { cn } from '@/lib/utils';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1066,7 +1067,10 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="ios-list-row"
+                          className={cn(
+                            'ios-list-row border-l-4',
+                            getActivityBorderLeftClass(session.activity_type)
+                          )}
                         >
                           <div className="flex items-start gap-ios-2">
                             <ActivityIcon activityType={session.activity_type} size="md" />

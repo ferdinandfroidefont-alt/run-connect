@@ -61,6 +61,125 @@ const activityConfig: Record<string, ActivityIconConfig> = {
   surf: { icon: Waves, bgColor: `bg-blue-400 ${chipRing}`, iconColor: "text-white", label: "Surf" },
 };
 
+/** Variantes API / anciennes valeurs → clé `activityConfig` */
+const ACTIVITY_TYPE_ALIASES: Record<string, string> = {
+  mtb: "vtt",
+  run: "course",
+  jogging: "course",
+  cyclisme: "velo",
+  bike: "velo",
+  natation_libre: "natation",
+};
+
+function normalizeActivityKey(raw: string): string {
+  const k = raw.toLowerCase().trim().replace(/-/g, "_");
+  if (!k) return "course";
+  if (activityConfig[k]) return k;
+  const aliased = ACTIVITY_TYPE_ALIASES[k];
+  if (aliased && activityConfig[aliased]) return aliased;
+  return "course";
+}
+
+/**
+ * Classes Tailwind en littéraux (scanner) — mêmes teintes que les pastilles `activityConfig`.
+ * Cartes (bordure gauche) + fonds ponctuels (popup, etc.)
+ */
+const ACTIVITY_BORDER_LEFT: Record<string, string> = {
+  course: "border-l-red-500",
+  running: "border-l-red-500",
+  trail: "border-l-orange-500",
+  velo: "border-l-blue-500",
+  cycling: "border-l-blue-500",
+  vtt: "border-l-emerald-600",
+  bmx: "border-l-violet-600",
+  gravel: "border-l-amber-600",
+  marche: "border-l-green-500",
+  walking: "border-l-green-500",
+  natation: "border-l-teal-500",
+  swimming: "border-l-teal-500",
+  football: "border-l-green-600",
+  basket: "border-l-orange-600",
+  basketball: "border-l-orange-600",
+  volley: "border-l-yellow-500",
+  badminton: "border-l-lime-600",
+  pingpong: "border-l-pink-500",
+  tennis: "border-l-lime-500",
+  escalade: "border-l-stone-600",
+  petanque: "border-l-yellow-600",
+  rugby: "border-l-green-800",
+  handball: "border-l-blue-600",
+  fitness: "border-l-fuchsia-600",
+  yoga: "border-l-indigo-500",
+  musculation: "border-l-slate-700",
+  crossfit: "border-l-red-600",
+  boxe: "border-l-rose-700",
+  arts_martiaux: "border-l-neutral-800",
+  golf: "border-l-emerald-700",
+  ski: "border-l-sky-500",
+  snowboard: "border-l-cyan-600",
+  randonnee: "border-l-green-700",
+  kayak: "border-l-cyan-500",
+  surf: "border-l-blue-400",
+};
+
+const ACTIVITY_SOLID_BG: Record<string, string> = {
+  course: "bg-red-500",
+  running: "bg-red-500",
+  trail: "bg-orange-500",
+  velo: "bg-blue-500",
+  cycling: "bg-blue-500",
+  vtt: "bg-emerald-600",
+  bmx: "bg-violet-600",
+  gravel: "bg-amber-600",
+  marche: "bg-green-500",
+  walking: "bg-green-500",
+  natation: "bg-teal-500",
+  swimming: "bg-teal-500",
+  football: "bg-green-600",
+  basket: "bg-orange-600",
+  basketball: "bg-orange-600",
+  volley: "bg-yellow-500",
+  badminton: "bg-lime-600",
+  pingpong: "bg-pink-500",
+  tennis: "bg-lime-500",
+  escalade: "bg-stone-600",
+  petanque: "bg-yellow-600",
+  rugby: "bg-green-800",
+  handball: "bg-blue-600",
+  fitness: "bg-fuchsia-600",
+  yoga: "bg-indigo-500",
+  musculation: "bg-slate-700",
+  crossfit: "bg-red-600",
+  boxe: "bg-rose-700",
+  arts_martiaux: "bg-neutral-800",
+  golf: "bg-emerald-700",
+  ski: "bg-sky-500",
+  snowboard: "bg-cyan-600",
+  randonnee: "bg-green-700",
+  kayak: "bg-cyan-500",
+  surf: "bg-blue-400",
+};
+
+/** Bordure gauche carte : alignée sur ActivityIcon / carousel filtres Découvrir */
+export function getActivityBorderLeftClass(activityType: string): string {
+  const key = normalizeActivityKey(activityType);
+  return ACTIVITY_BORDER_LEFT[key] ?? ACTIVITY_BORDER_LEFT.course;
+}
+
+export function getActivitySolidBgClass(activityType: string): string {
+  const key = normalizeActivityKey(activityType);
+  return ACTIVITY_SOLID_BG[key] ?? ACTIVITY_SOLID_BG.course;
+}
+
+export const getActivityConfig = (activityType: string): ActivityIconConfig => {
+  const key = normalizeActivityKey(activityType);
+  return activityConfig[key] || activityConfig.course;
+};
+
+export const getActivityLabel = (activityType: string): string => {
+  return getActivityConfig(activityType).label;
+};
+
 interface ActivityIconProps {
   activityType: string;
   size?: "sm" | "md" | "lg";
@@ -68,7 +187,7 @@ interface ActivityIconProps {
 }
 
 export const ActivityIcon = ({ activityType, size = "md", className = "" }: ActivityIconProps) => {
-  const config = activityConfig[activityType] || activityConfig.course;
+  const config = getActivityConfig(activityType);
   const Icon = config.icon;
 
   const sizeClasses = {
@@ -90,12 +209,4 @@ export const ActivityIcon = ({ activityType, size = "md", className = "" }: Acti
       <Icon className={`${iconSizes[size]} ${config.iconColor}`} strokeWidth={2} />
     </div>
   );
-};
-
-export const getActivityLabel = (activityType: string): string => {
-  return activityConfig[activityType]?.label || "Activité";
-};
-
-export const getActivityConfig = (activityType: string): ActivityIconConfig => {
-  return activityConfig[activityType] || activityConfig.course;
 };
