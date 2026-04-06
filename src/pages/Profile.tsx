@@ -405,15 +405,11 @@ const Profile = () => {
   };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
-      const compressed = await compressImageFileToJpeg(file, {
-        maxEdge: 1024,
-        maxBytes: 900_000,
-      });
       const fileName = `${user?.id}-${Math.random()}.jpg`;
       const filePath = `${user?.id}/${fileName}`;
       const {
         error: uploadError
-      } = await supabase.storage.from('avatars').upload(filePath, compressed, {
+      } = await supabase.storage.from('avatars').upload(filePath, file, {
         contentType: "image/jpeg",
       });
       if (uploadError) {
