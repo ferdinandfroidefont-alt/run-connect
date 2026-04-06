@@ -389,31 +389,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </h1>
               <div className="flex w-10 shrink-0 justify-end">
                 {!isOwnProfile ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
-                        aria-label="Plus d'actions"
-                      >
-                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="z-50 rounded-xl border-border bg-background shadow-lg">
-                      {isBlocked ? (
-                        <DropdownMenuItem onClick={handleUnblockUser} className="cursor-pointer text-emerald-600">
-                          <UserPlus className="mr-2 h-4 w-4" /> Débloquer
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
-                          <UserMinus className="mr-2 h-4 w-4" /> Bloquer
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="cursor-pointer text-destructive">
-                        <Flag className="mr-2 h-4 w-4" /> Signaler
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <button
+                    type="button"
+                    onClick={() => setShowActionSheet(true)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
+                    aria-label="Plus d'actions"
+                  >
+                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                  </button>
                 ) : (
                   <span className="inline-block w-9" aria-hidden />
                 )}
