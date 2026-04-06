@@ -15,7 +15,7 @@ serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  const auth = await requireUserJwtCors(req, supabaseClient, corsHeaders);
+  const auth = await requireUserJwtCors(req, supabaseClient as any, corsHeaders);
   if (auth instanceof Response) return auth;
 
   let body: { referralCode?: string };

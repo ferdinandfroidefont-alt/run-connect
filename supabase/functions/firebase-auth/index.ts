@@ -211,13 +211,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         user: {
-          id: signInData.user.id,
-          email: signInData.user.email,
-          user_metadata: signInData.user.user_metadata
+          id: signInData.user!.id,
+          email: signInData.user!.email,
+          user_metadata: signInData.user!.user_metadata
         },
         session: {
-          access_token: signInData.session.access_token,
-          refresh_token: signInData.session.refresh_token,
+          access_token: signInData.session!.access_token,
+          refresh_token: signInData.session!.refresh_token,
         },
       }),
       { 
