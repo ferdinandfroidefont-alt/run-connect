@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
 import { getCountryLabel } from "@/lib/countryLabels";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type CommonClubRow = {
   club_id: string;
@@ -88,8 +89,11 @@ const PublicProfile = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const [isNative, setIsNative] = useState(false);
   const [showProfilePreview, setShowProfilePreview] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -118,6 +122,8 @@ const PublicProfile = () => {
   useEffect(() => {
     const fetchPublicProfile = async () => {
       if (!username) return;
+      setLoading(true);
+      setLoadError(false);
       try {
         if (user) {
           const { data: ownProfile } = await supabase
@@ -191,15 +197,15 @@ const PublicProfile = () => {
         } else {
           setReliabilityRate(null);
         }
-      } catch (error) {
-        console.error("Error fetching public profile:", error);
+      } catch {
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPublicProfile();
-  }, [username, user, navigate, toast]);
+    void fetchPublicProfile();
+  }, [username, user, navigate, toast, retryToken]);
 
   useEffect(() => {
     if (!profile || !user) {
@@ -319,6 +325,17 @@ const PublicProfile = () => {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-secondary">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!profile && loadError) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-secondary px-6 text-center">
+        <p className="text-ios-body text-muted-foreground">{t("profilePage.publicLoadError")}</p>
+        <Button type="button" onClick={() => setRetryToken((n) => n + 1)}>
+          {t("profilePage.publicRetry")}
+        </Button>
       </div>
     );
   }

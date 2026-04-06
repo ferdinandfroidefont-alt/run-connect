@@ -56,7 +56,7 @@ const SettingsTutorialCatalog = lazy(() =>
   import("./settings/SettingsTutorialCatalog").then((m) => ({ default: m.SettingsTutorialCatalog }))
 );
 
-type SettingsPage =
+export type SettingsDialogPage =
   | "hub"
   | "general"
   | "notifications"
@@ -69,6 +69,8 @@ interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSearch?: string;
+  /** Ouvre directement une sous-page (ex. confidentialité depuis le profil). */
+  initialPage?: SettingsDialogPage;
 }
 
 const settingsCategories = [
@@ -109,11 +111,11 @@ const settingsCategories = [
   },
 ];
 
-export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
+export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
+  const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
 
@@ -145,6 +147,12 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
       setSearchQuery(initialSearch);
     }
   }, [initialSearch]);
+
+  useEffect(() => {
+    if (open && initialPage && initialPage !== "hub") {
+      setCurrentPage(initialPage);
+    }
+  }, [open, initialPage]);
 
   // Reset to hub when dialog closes
   const handleOpenChange = (next: boolean) => {

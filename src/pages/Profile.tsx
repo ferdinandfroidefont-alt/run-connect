@@ -1,10 +1,14 @@
 import { lazy, Suspense, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useProfileMetrics } from "@/hooks/useProfileMetrics";
+import { compressImageFileToJpeg } from "@/lib/imageCompression";
+import type { Profile, UserRoute, CommonClubRow, AuditConnectionRow } from "@/types/profile";
+import type { SettingsDialogPage } from "@/components/SettingsDialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 
@@ -28,46 +32,13 @@ import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { ProfileSportsCard } from "@/components/profile/ProfileSportsCard";
+import { ProfileCompletenessBanner } from "@/components/profile/ProfileCompletenessBanner";
+import { ProfileEditCard } from "@/components/profile/ProfileEditCard";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
 );
-interface Profile {
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  cover_image_url?: string | null;
-  age: number | null;
-  bio: string | null;
-  phone: string | null;
-  favorite_sport?: string | null;
-  country?: string | null;
-  is_premium: boolean;
-  is_admin?: boolean;
-  notifications_enabled?: boolean;
-  rgpd_accepted?: boolean;
-  security_rules_accepted?: boolean;
-  running_records?: any;
-  cycling_records?: any;
-  swimming_records?: any;
-  triathlon_records?: any;
-  walking_records?: any;
-  strava_connected?: boolean;
-  strava_verified_at?: string;
-  strava_user_id?: string;
-  instagram_connected?: boolean;
-  instagram_verified_at?: string;
-  instagram_username?: string;
-}
-interface UserRoute {
-  id: string;
-  name: string;
-  description: string | null;
-  total_distance: number | null;
-  total_elevation_gain: number | null;
-  created_at: string;
-}
 const Profile = () => {
   const {
     user,
@@ -79,8 +50,18 @@ const Profile = () => {
 
   const {
     userProfile: globalProfile,
-    refreshProfile: refreshGlobalProfile
+    refreshProfile: refreshGlobalProfile,
+    loading: profileCtxLoading,
+    error: profileCtxError,
   } = useUserProfile();
+  const queryClient = useQueryClient();
+  const metricsQuery = useProfileMetrics(user?.id);
+  const followerCount = metricsQuery.data?.followerCount ?? 0;
+  const followingCount = metricsQuery.data?.followingCount ?? 0;
+  const reliabilityRate = metricsQuery.data?.reliabilityRate ?? null;
+  const totalSessionsCreated = metricsQuery.data?.totalSessionsCreated ?? 0;
+  const totalSessionsJoined = metricsQuery.data?.totalSessionsJoined ?? 0;
+  const totalSessionsCompleted = metricsQuery.data?.totalSessionsCompleted ?? 0;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const {
@@ -101,24 +82,20 @@ const Profile = () => {
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
-  const [followerCount, setFollowerCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
+  const [profileFetchError, setProfileFetchError] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
   const [userRoutes, setUserRoutes] = useState<UserRoute[]>([]);
   const [routesLoading, setRoutesLoading] = useState(false);
-  const [commonClubs, setCommonClubs] = useState<any[]>([]);
+  const [commonClubs, setCommonClubs] = useState<CommonClubRow[]>([]);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [settingsFocus, setSettingsFocus] = useState<string>("");
+  const [settingsInitialPage, setSettingsInitialPage] = useState<SettingsDialogPage | undefined>(undefined);
   const [showReportDialog, setShowReportDialog] = useState(false);
-  const [connectionHistory, setConnectionHistory] = useState<any[]>([]);
+  const [connectionHistory, setConnectionHistory] = useState<AuditConnectionRow[]>([]);
   const [coverPreview, setCoverPreview] = useState<string>("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
-  const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
-  const [totalSessionsJoined, setTotalSessionsJoined] = useState(0);
-  const [totalSessionsCompleted, setTotalSessionsCompleted] = useState(0);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const {
     toast
@@ -171,82 +148,27 @@ const Profile = () => {
   }, [searchParams, navigate, isViewingOtherUser]);
   useEffect(() => {
     if (user) {
-      // Si on regarde son propre profil, utiliser le profil global
       if (!isViewingOtherUser && globalProfile) {
-        console.log('✅ [Profile] Using global profile:', globalProfile.username);
-        setProfile(globalProfile);
-        setFormData(globalProfile);
+        setProfile(globalProfile as Profile);
+        setFormData(globalProfile as Profile);
         setLoading(false);
+        setProfileFetchError(false);
       } else {
-        // Sinon charger le profil spécifique
-        fetchProfile();
+        void fetchProfile();
       }
-      fetchFollowCounts();
       if (!isViewingOtherUser) {
-        fetchReliabilityStats();
-        fetchUserRoutes();
+        void fetchUserRoutes();
       } else {
-        fetchCommonClubs();
-        // Fetch connection history only for creator
+        void fetchCommonClubs();
         if (hasCreatorSupportAccess(user?.email, globalProfile?.username)) {
-          fetchConnectionHistory();
+          void fetchConnectionHistory();
         }
       }
     }
-    // Check notification permission
-    if ('Notification' in window) {
+    if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
     }
   }, [user, viewingUserId, isViewingOtherUser, globalProfile]);
-  const fetchReliabilityStats = async () => {
-    if (!user?.id) return;
-    try {
-      const { data: statsData } = await supabase
-        .from("user_stats")
-        .select("reliability_rate, total_sessions_joined, total_sessions_completed")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (statsData) {
-        setReliabilityRate(Number(statsData.reliability_rate) || 100);
-        setTotalSessionsJoined(statsData.total_sessions_joined || 0);
-        setTotalSessionsCompleted(statsData.total_sessions_completed || 0);
-      } else {
-        setReliabilityRate(100);
-      }
-      const { count: createdCount } = await supabase
-        .from("sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("organizer_id", user.id);
-      setTotalSessionsCreated(createdCount || 0);
-    } catch (e) {
-      console.error("Error fetching reliability stats:", e);
-      setReliabilityRate(100);
-    }
-  };
-
-  const fetchFollowCounts = async () => {
-    const targetUserId = viewingUserId || user?.id;
-    if (!targetUserId) return;
-    try {
-      // Get follower count
-      const {
-        data: followerData
-      } = await supabase.rpc('get_follower_count', {
-        profile_user_id: targetUserId
-      });
-
-      // Get following count
-      const {
-        data: followingData
-      } = await supabase.rpc('get_following_count', {
-        profile_user_id: targetUserId
-      });
-      setFollowerCount(followerData || 0);
-      setFollowingCount(followingData || 0);
-    } catch (error) {
-      console.error('Error fetching follow counts:', error);
-    }
-  };
   const fetchCommonClubs = async () => {
     if (!user || !viewingUserId) return;
     try {
@@ -350,11 +272,8 @@ const Profile = () => {
     try {
       const targetUserId = viewingUserId || user?.id;
       if (!targetUserId) return;
-      console.log(`🔍 [Profile] Fetching profile (attempt ${retryCount + 1}/3)`);
-      console.log(`🔍 [Profile] Target User ID:`, targetUserId);
-      console.log(`🔍 [Profile] Is viewing other user:`, isViewingOtherUser);
+      setProfileFetchError(false);
       if (isViewingOtherUser) {
-        // Viewing another user's profile - use public profile function
         const {
           data,
           error
@@ -363,40 +282,33 @@ const Profile = () => {
         });
         if (error) throw error;
         if (data && data.length > 0) {
-          // Pour les profils publics, on ajoute des valeurs par défaut pour les champs manquants
           const publicProfile = {
             ...data[0],
             phone: null,
-            // Les profils publics ne montrent pas le téléphone
             notifications_enabled: false,
             rgpd_accepted: false,
             security_rules_accepted: false
-          };
-          console.log(`✅ [Profile] Public profile loaded:`, publicProfile.username);
+          } as Profile;
           setProfile(publicProfile);
           setFormData(publicProfile);
         }
       } else {
-        // Viewing own profile - get full profile
         const {
           data,
           error
         } = await supabase.from('profiles').select('*').eq('user_id', targetUserId).single();
         if (error) {
-          // Si l'erreur est liée à l'authentification, retry
           if (error.message.includes('JWT') && retryCount < 2) {
-            console.warn(`⚠️ Auth error, retrying in 1s... (${retryCount + 1}/3)`);
             await new Promise(resolve => setTimeout(resolve, 1000));
             return fetchProfile(retryCount + 1);
           }
           throw error;
         }
-        console.log(`✅ [Profile] Own profile loaded:`, data?.username);
-        setProfile(data);
-        setFormData(data);
+        setProfile(data as Profile);
+        setFormData(data as Profile);
       }
-    } catch (error: any) {
-      console.error(`❌ [Profile] Fetch profile error:`, error);
+    } catch (_error: unknown) {
+      setProfileFetchError(true);
       toast({
         title: "Erreur",
         description: "Impossible de charger le profil. Reconnectez-vous si le problème persiste.",
@@ -437,15 +349,17 @@ const Profile = () => {
       reader.readAsDataURL(file);
     }
   };
-  const handleCropComplete = (croppedImageBlob: Blob) => {
-    // Créer un fichier à partir du blob croppé
-    const croppedFile = new File([croppedImageBlob], 'avatar.jpg', {
-      type: 'image/jpeg'
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    const baseFile = new File([croppedImageBlob], "avatar.jpg", {
+      type: "image/jpeg",
     });
-    setAvatarFile(croppedFile);
-
-    // Créer l'URL de prévisualisation
-    const previewUrl = URL.createObjectURL(croppedImageBlob);
+    const compressed = await compressImageFileToJpeg(baseFile, {
+      maxEdge: 1024,
+      maxBytes: 900_000,
+    });
+    const finalFile = new File([compressed], "avatar.jpg", { type: "image/jpeg" });
+    setAvatarFile(finalFile);
+    const previewUrl = URL.createObjectURL(compressed);
     setAvatarPreview(previewUrl);
     setShowCropEditor(false);
   };
@@ -459,14 +373,24 @@ const Profile = () => {
     }
     setCoverUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const compressed = await compressImageFileToJpeg(file, {
+        maxEdge: 1920,
+        maxBytes: 1_200_000,
+      });
+      const uploadBlob = compressed;
+      const fileExt = "jpg";
       const fileName = `cover-${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, uploadBlob, { contentType: "image/jpeg", upsert: false });
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const coverUrl = data.publicUrl;
-      const { error: updateError } = await supabase.from('profiles').update({ cover_image_url: coverUrl } as any).eq('user_id', user.id);
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ cover_image_url: coverUrl })
+        .eq("user_id", user.id);
       if (updateError) throw updateError;
       setProfile(prev => prev ? { ...prev, cover_image_url: coverUrl } : null);
       setCoverPreview(coverUrl);
@@ -481,12 +405,17 @@ const Profile = () => {
   };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Math.random()}.${fileExt}`;
+      const compressed = await compressImageFileToJpeg(file, {
+        maxEdge: 1024,
+        maxBytes: 900_000,
+      });
+      const fileName = `${user?.id}-${Math.random()}.jpg`;
       const filePath = `${user?.id}/${fileName}`;
       const {
         error: uploadError
-      } = await supabase.storage.from('avatars').upload(filePath, file);
+      } = await supabase.storage.from('avatars').upload(filePath, compressed, {
+        contentType: "image/jpeg",
+      });
       if (uploadError) {
         throw uploadError;
       }
@@ -537,6 +466,7 @@ const Profile = () => {
 
       // Rafraîchir le profil global
       await refreshGlobalProfile();
+      await queryClient.invalidateQueries({ queryKey: ["profile-metrics"] });
       toast({
         title: "Profil mis à jour !",
         description: "Vos modifications ont été sauvegardées."
@@ -640,11 +570,46 @@ const Profile = () => {
     );
   }
 
-  if (loading) {
-    return <div className="flex h-full min-h-0 items-center justify-center bg-secondary">
+  const stillLoading =
+    !!user &&
+    !profile &&
+    !profileFetchError &&
+    (profileCtxLoading || loading);
+
+  if (stillLoading) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-secondary">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>;
+      </div>
+    );
   }
+
+  if (user && !profile && (profileFetchError || !!profileCtxError)) {
+    return (
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 bg-secondary px-6 text-center">
+        <p className="text-ios-body text-muted-foreground">{t("profilePage.loadError")}</p>
+        <Button
+          type="button"
+          onClick={() => {
+            setProfileFetchError(false);
+            void refreshGlobalProfile();
+            void fetchProfile();
+          }}
+        >
+          {t("profilePage.retry")}
+        </Button>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-secondary">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-secondary"
@@ -657,10 +622,10 @@ const Profile = () => {
         {/* Cover Photo */}
         <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-primary/30 to-primary/10">
           {(coverPreview || profile?.cover_image_url) ? (
-            <img 
-              src={coverPreview || profile?.cover_image_url || ''} 
-              alt="Couverture" 
-              className="w-full h-full object-cover"
+            <img
+              src={coverPreview || profile?.cover_image_url || ""}
+              alt={t("profilePage.coverAlt")}
+              className="h-full w-full object-cover"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20" />
@@ -679,11 +644,30 @@ const Profile = () => {
             <div className="flex items-center gap-ios-2">
               {!isViewingOtherUser && (
                 <>
-                  <label className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center cursor-pointer active:bg-black/60 transition-colors">
+                  <label className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors active:bg-black/60">
                     <Camera className="h-4 w-4 text-white" />
                     <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
                   </label>
-                  <button onClick={() => setShowSettingsDialog(true)} className="h-8 w-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                  <button
+                    type="button"
+                    aria-label={t("profilePage.privacySettings")}
+                    onClick={() => {
+                      setSettingsInitialPage("privacy");
+                      setShowSettingsDialog(true);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  >
+                    <Shield className="h-4 w-4 text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("navigation.settings")}
+                    onClick={() => {
+                      setSettingsInitialPage(undefined);
+                      setShowSettingsDialog(true);
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm"
+                  >
                     <Settings className="h-4 w-4 text-white" />
                   </button>
                 </>
@@ -759,6 +743,18 @@ const Profile = () => {
               @{profile?.username}
             </p>
 
+            {!isViewingOtherUser && !isEditing && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-ios-2 h-8 gap-ios-2 text-ios-footnote"
+                onClick={() => setIsEditing(true)}
+              >
+                {t("profilePage.editProfile")}
+              </Button>
+            )}
+
             {!isViewingOtherUser && !subscriptionInfo?.subscribed && (
               <Button onClick={() => navigate('/subscription')} variant="outline" size="sm" className="mt-ios-2 gap-ios-2 h-8 text-ios-footnote">
                 <Crown className="h-3.5 w-3.5" />
@@ -798,6 +794,10 @@ const Profile = () => {
           </div>
         </div>
 
+        {!isViewingOtherUser && profile ? (
+          <ProfileCompletenessBanner profile={profile} onEditProfile={() => setIsEditing(true)} />
+        ) : null}
+
         <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card px-4 py-1 ios-shell:px-2">
           <ProfileSportsCard
             favoriteSport={profile?.favorite_sport}
@@ -836,25 +836,14 @@ const Profile = () => {
               showSeparator={!isViewingOtherUser}
             />
             {!isViewingOtherUser && (
-              <>
-                <IOSListItem
-                  icon={MapPin}
-                  iconBgColor="bg-purple-500"
-                  iconColor="text-white"
-                  title="Créer un parcours"
-                  onClick={() => navigate('/route-creation')}
-                  showSeparator
-                />
-                <IOSListItem
-                  icon={Trophy}
-                  iconBgColor="bg-amber-500"
-                  iconColor="text-white"
-                  title="Records sport"
-                  subtitle="Renseigner tes perfs"
-                  onClick={() => navigate('/profile/records')}
-                  showSeparator={false}
-                />
-              </>
+              <IOSListItem
+                icon={MapPin}
+                iconBgColor="bg-purple-500"
+                iconColor="text-white"
+                title="Créer un parcours"
+                onClick={() => navigate('/route-creation')}
+                showSeparator={false}
+              />
             )}
           </IOSListGroup>
         </div>
@@ -886,87 +875,18 @@ const Profile = () => {
         </div>
 
         {!isViewingOtherUser && isEditing && (
-          <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
-            <div className="overflow-hidden">
-            <div className="space-y-ios-3 px-4 py-3 ios-shell:px-2.5 ios-shell:py-2.5">
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pseudo</label>
-                  <Input value={formData.username || ''} onChange={e => setFormData({
-              ...formData,
-              username: e.target.value
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Nom d'affichage</label>
-                  <Input value={formData.display_name || ''} onChange={e => setFormData({
-              ...formData,
-              display_name: e.target.value
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Âge</label>
-                  <Input type="number" value={formData.age || ''} onChange={e => setFormData({
-              ...formData,
-              age: parseInt(e.target.value) || null
-            })} className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Téléphone</label>
-                  <Input value={formData.phone || ''} onChange={e => setFormData({
-              ...formData,
-              phone: e.target.value
-            })} placeholder="06 12 34 56 78" className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Bio</label>
-                  <Input value={formData.bio || ''} onChange={e => setFormData({
-              ...formData,
-              bio: e.target.value
-            })} placeholder="Décrivez vos records, vos objectifs..." className="h-11 rounded-ios-sm" />
-                </div>
-                <div>
-                  <label className="text-ios-footnote text-muted-foreground mb-ios-1 block">Pays</label>
-                  <select
-                    value={formData.country || ''}
-                    onChange={e => setFormData({ ...formData, country: e.target.value || null })}
-                    className="h-11 w-full rounded-ios-sm border border-input bg-background px-3 text-ios-subheadline"
-                  >
-                    <option value="">Non spécifié</option>
-                    <option value="FR">🇫🇷 France</option>
-                    <option value="BE">🇧🇪 Belgique</option>
-                    <option value="CH">🇨🇭 Suisse</option>
-                    <option value="CA">🇨🇦 Canada</option>
-                    <option value="LU">🇱🇺 Luxembourg</option>
-                    <option value="MA">🇲🇦 Maroc</option>
-                    <option value="TN">🇹🇳 Tunisie</option>
-                    <option value="DZ">🇩🇿 Algérie</option>
-                    <option value="SN">🇸🇳 Sénégal</option>
-                    <option value="CI">🇨🇮 Côte d'Ivoire</option>
-                    <option value="ES">🇪🇸 Espagne</option>
-                    <option value="PT">🇵🇹 Portugal</option>
-                    <option value="DE">🇩🇪 Allemagne</option>
-                    <option value="IT">🇮🇹 Italie</option>
-                    <option value="GB">🇬🇧 Royaume-Uni</option>
-                    <option value="US">🇺🇸 États-Unis</option>
-                  </select>
-                </div>
-                <div className="flex gap-ios-2 pt-ios-2">
-                  <Button onClick={updateProfile} disabled={loading} className="flex-1 h-11 rounded-ios-sm">
-                    {loading && <Loader2 className="mr-ios-2 h-4 w-4 animate-spin" />}
-                    Sauvegarder
-                  </Button>
-                  <Button variant="outline" onClick={() => {
+          <ProfileEditCard
+            formData={formData}
+            setFormData={setFormData}
+            onSave={updateProfile}
+            onCancel={() => {
               setIsEditing(false);
               setAvatarFile(null);
               setAvatarPreview("");
               setFormData(profile || {});
-            }} className="flex-1 h-11 rounded-ios-sm">
-                    Annuler
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+            }}
+            saving={loading}
+          />
         )}
 
         <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card px-4 py-3 ios-shell:px-2.5">
@@ -989,14 +909,29 @@ const Profile = () => {
 
         {/* Settings Dialog */}
         <Suspense fallback={null}>
-          <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} initialSearch={settingsFocus} />
+          <SettingsDialog
+            open={showSettingsDialog}
+            onOpenChange={(open) => {
+              setShowSettingsDialog(open);
+              if (!open) setSettingsInitialPage(undefined);
+            }}
+            initialSearch={settingsFocus}
+            initialPage={settingsInitialPage}
+          />
         </Suspense>
 
         {/* Report User Dialog */}
         <ReportUserDialog isOpen={showReportDialog} onClose={() => setShowReportDialog(false)} reportedUserId={viewingUserId || ""} reportedUsername={profile?.username || ""} />
 
         {/* Image Crop Editor */}
-        <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+        <ImageCropEditor
+          open={showCropEditor}
+          onClose={() => setShowCropEditor(false)}
+          imageSrc={originalImageSrc}
+          onCropComplete={(blob) => {
+            void handleCropComplete(blob);
+          }}
+        />
 
         </div>
       </div>
