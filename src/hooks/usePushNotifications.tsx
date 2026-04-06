@@ -331,10 +331,14 @@ export const usePushNotifications = () => {
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
   const handleNotificationTap = useCallback((data: any) => {
-    const actionData = data?.actionData || data?.data || {};
-    switch (actionData.type) {
+    const raw = data?.actionData ?? data?.data ?? data ?? {};
+    const actionData: Record<string, string | undefined> =
+      raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, string | undefined>) : {};
+    const type = actionData.type;
+    const conversationId = actionData.conversation_id;
+    switch (type) {
       case 'message':
-        navigate(actionData.conversation_id ? `/messages?conversation=${actionData.conversation_id}` : '/messages');
+        navigate(conversationId ? `/messages?conversation=${conversationId}` : '/messages');
         break;
       case 'follow_request':
         navigate('/profile');

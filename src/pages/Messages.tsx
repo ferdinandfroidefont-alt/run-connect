@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
@@ -194,6 +194,12 @@ const Messages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  /** Canal `typing-*` déjà souscrit (obligatoire pour que `broadcast` parte) */
+  const typingBroadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingBroadcastReadyRef = useRef(false);
+  const lastTypingSentAtRef = useRef(0);
+  const typingDisplayNameRef = useRef("");
+  const TYPING_THROTTLE_MS = 750;
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { isRecording, recordingDuration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { selectFromGallery, takePicture, loading: cameraLoading } = useCamera();
@@ -220,7 +226,61 @@ const Messages = () => {
     const saved = localStorage.getItem('pinnedConversations');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+  /** Recherche locale dans le fil de messages ouvert */
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearch, setThreadSearch] = useState("");
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+
+  const conversationParam = searchParams.get("conversation");
+
+  const visibleMessages = useMemo(() => {
+    const q = threadSearch.trim().toLowerCase();
+    if (!q) return messages;
+    return messages.filter((m) => {
+      const text = (m.content || "").toLowerCase();
+      const sender = (m.sender?.username || m.sender?.display_name || "").toLowerCase();
+      return text.includes(q) || sender.includes(q);
+    });
+  }, [messages, threadSearch]);
+
+  const broadcastStopTyping = useCallback(() => {
+    const ch = typingBroadcastChannelRef.current;
+    if (!ch || !typingBroadcastReadyRef.current || !user) return;
+    void ch.send({
+      type: "broadcast",
+      event: "stop_typing",
+      payload: { user_id: user.id },
+    });
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          const dn = data.display_name?.trim();
+          const un = data.username?.trim();
+          typingDisplayNameRef.current =
+            dn && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dn) ? dn : un || "";
+        }
+      });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      broadcastStopTyping();
+      setThreadSearchOpen(false);
+      setThreadSearch("");
+    }
+  }, [selectedConversation, broadcastStopTyping]);
 
   const isLoading = loading || cameraLoading;
 
@@ -794,6 +854,8 @@ const Messages = () => {
 
     const messageContent = newMessage.trim();
     const currentReplyTo = replyTo;
+
+    broadcastStopTyping();
     
     // ✅ FIX: Clear input immediately for responsive UX
     setNewMessage("");
@@ -954,6 +1016,7 @@ const Messages = () => {
     const filePath = `${user.id}/${fileName}`;
 
     try {
+      broadcastStopTyping();
       setLoading(true);
       setUploadProgress(`Upload de ${fileToUpload.name}...`);
       
@@ -1091,6 +1154,7 @@ const Messages = () => {
     const filePath = `${user.id}/${fileName}`;
 
     try {
+      broadcastStopTyping();
       setLoading(true);
       
       // Upload to message-files bucket
@@ -1198,37 +1262,38 @@ const Messages = () => {
     }
   };
 
-  // Handle typing indicator
+  // Indicateur « en train d’écrire » — même canal que l’écoute realtime + throttle
   const handleTyping = () => {
     if (!selectedConversation || !user) return;
+    if (!typingBroadcastReadyRef.current || !typingBroadcastChannelRef.current) return;
 
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
+    const now = Date.now();
+    if (now - lastTypingSentAtRef.current < TYPING_THROTTLE_MS) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => broadcastStopTyping(), 2800);
+      return;
     }
+    lastTypingSentAtRef.current = now;
 
-    // Send typing event via Supabase realtime
-    const channel = supabase.channel(`typing-${selectedConversation.id}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'typing',
+    const ch = typingBroadcastChannelRef.current;
+    const username =
+      typingDisplayNameRef.current ||
+      (user.user_metadata?.username as string | undefined) ||
+      user.email?.split("@")[0] ||
+      "Utilisateur";
+
+    void ch.send({
+      type: "broadcast",
+      event: "typing",
       payload: {
         user_id: user.id,
-        username: user.user_metadata?.username || user.email?.split('@')[0] || 'Utilisateur',
-        timestamp: Date.now()
-      }
+        username,
+        timestamp: now,
+      },
     });
 
-    // Set timeout to stop typing indicator
-    typingTimeoutRef.current = setTimeout(() => {
-      channel.send({
-        type: 'broadcast',
-        event: 'stop_typing',
-        payload: {
-          user_id: user.id
-        }
-      });
-    }, 3000);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => broadcastStopTyping(), 2800);
   };
 
   // Handle emoji selection
@@ -1552,6 +1617,8 @@ const Messages = () => {
   useEffect(() => {
     if (!selectedConversation) return;
 
+    setTypingUsers({});
+
     console.log('🔄 Setting up real-time channels for conversation:', selectedConversation.id);
 
     const messagesChannel = supabase
@@ -1671,10 +1738,19 @@ const Messages = () => {
       })
       .subscribe((status) => {
         console.log('⌨️ Typing channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          typingBroadcastChannelRef.current = typingChannel;
+          typingBroadcastReadyRef.current = true;
+        } else {
+          typingBroadcastReadyRef.current = false;
+        }
       });
 
     return () => {
       console.log('🔌 Cleaning up realtime channels');
+      typingBroadcastChannelRef.current = null;
+      typingBroadcastReadyRef.current = false;
+      lastTypingSentAtRef.current = 0;
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(typingChannel);
     };
@@ -1698,6 +1774,54 @@ const Messages = () => {
       setSearchParams({});
     }
   }, [searchParams, user, selectedConversation]);
+
+  // Deep link : /messages?conversation=<uuid> (push, partage, recherche club)
+  useEffect(() => {
+    if (!conversationParam || !user) return;
+    if (selectedConversation?.id === conversationParam) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("conversation");
+          return next;
+        },
+        { replace: true }
+      );
+      return;
+    }
+    const conv = conversations.find((c) => c.id === conversationParam);
+    if (!conv) return;
+    setSelectedConversation(conv);
+    void loadMessages(conv.id);
+    void markMessagesAsReadOnOpen(conv.id);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("conversation");
+        return next;
+      },
+      { replace: true }
+    );
+  }, [conversationParam, user, conversations, selectedConversation?.id, setSearchParams]);
+
+  useEffect(() => {
+    if (!conversationParam || !user) return;
+    if (conversations.length === 0) return;
+    if (conversations.some((c) => c.id === conversationParam)) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("conversation");
+        return next;
+      },
+      { replace: true }
+    );
+    toast({
+      title: "Conversation introuvable",
+      description: "Elle n’est pas dans ta liste ou tu n’y as pas accès.",
+      variant: "destructive",
+    });
+  }, [conversationParam, conversations, user, setSearchParams]);
 
   if (showNewConversation) {
     return (
@@ -1792,7 +1916,21 @@ const Messages = () => {
                 )}
               </div>
 
-              {/* Right - Info button */}
+              {/* Right - search + menu */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  className={cn("p-ios-2 text-primary", threadSearchOpen && "bg-secondary rounded-ios-md")}
+                  aria-label="Rechercher dans la conversation"
+                  onClick={() => {
+                    setThreadSearchOpen((o) => {
+                      if (o) setThreadSearch("");
+                      return !o;
+                    });
+                  }}
+                >
+                  <Search className="h-5 w-5" />
+                </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="p-ios-2 text-primary shrink-0">
@@ -1861,6 +1999,14 @@ const Messages = () => {
                       {selectedConversation && pinnedConversations.has(selectedConversation.id) ? "Oui" : "Non"}
                     </span>
                   </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => setThreadSearchOpen(true)}
+                    className="py-ios-3"
+                  >
+                    <Search className="h-4 w-4 mr-ios-3 text-primary" />
+                    Rechercher dans la conversation
+                  </DropdownMenuItem>
                   
                   <DropdownMenuItem 
                     onClick={() => confirmDeleteConversation()}
@@ -1874,17 +2020,48 @@ const Messages = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
             }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
           >
+            {threadSearchOpen && (
+              <div className="shrink-0 border-b border-border/50 bg-card px-ios-3 py-ios-2">
+                <div className="flex items-center gap-ios-2">
+                  <Input
+                    value={threadSearch}
+                    onChange={(e) => setThreadSearch(e.target.value)}
+                    placeholder="Rechercher dans la conversation…"
+                    className="h-9 flex-1 rounded-ios-md border-border/60 bg-secondary text-ios-subheadline"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => {
+                      setThreadSearch("");
+                      setThreadSearchOpen(false);
+                    }}
+                    aria-label="Fermer la recherche"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {threadSearch.trim() && (
+                  <p className="mt-ios-2 text-ios-caption1 text-muted-foreground">
+                    {visibleMessages.length} message{visibleMessages.length !== 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
-              {messages.map((message, index) => {
+              {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
-                const previousMessage = index > 0 ? messages[index - 1] : null;
+                const previousMessage = index > 0 ? visibleMessages[index - 1] : null;
                 const showHeader = shouldShowSectionHeader(message, previousMessage);
                 const showIndividualTime = visibleTimestamps.has(message.id);
-                const isDirectMessage = !selectedConversation.is_group;
                 
                 // Check if this is a consecutive message from same sender
                 const isSameSender = previousMessage && previousMessage.sender_id === message.sender_id;

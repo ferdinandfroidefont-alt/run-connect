@@ -630,6 +630,15 @@ public class MainActivity extends AppCompatActivity {
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
+
+        // Après création WebView : ré-appliquer l’intent (ex. tap notif message avec data URI) — au 1er onCreate handleIntent() est trop tôt
+        webView.postDelayed(() -> {
+            try {
+                handleIntent(getIntent());
+            } catch (Exception e) {
+                Log.w(TAG, "⚠️ handleIntent différé: " + e.getMessage());
+            }
+        }, 900);
         
         // 🔥 NOUVEAU: Vérifier la version WebView installée
         checkWebViewVersion();
