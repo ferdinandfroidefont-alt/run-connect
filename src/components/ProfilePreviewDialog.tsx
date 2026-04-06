@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -254,6 +253,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       await supabase.from('blocked_users').insert({ blocker_id: user.id, blocked_id: userId });
       await supabase.from('user_follows').delete()
         .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
+      setIsBlocked(true);
       toast({ title: "Utilisateur bloqué" });
       setIsFollowing(false);
       setFollowRequestSent(false);
@@ -604,6 +604,83 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               <p className="text-muted-foreground">Profil non trouvé</p>
             </div>
           )}
+
+          {/* Action sheet : doit être *dans* DialogContent (Radix modal bloque les clics hors layer si portail body) */}
+          {showActionSheet && !isOwnProfile && (
+            <div
+              className="pointer-events-auto fixed inset-0 z-[250] flex items-end justify-center"
+              role="presentation"
+              onClick={() => setShowActionSheet(false)}
+            >
+              <div className="absolute inset-0 bg-black/40" aria-hidden />
+              <div
+                className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Actions sur le profil"
+              >
+                <div className="mb-2 overflow-hidden rounded-2xl bg-card shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      isBlocked ? handleUnblockUser() : handleBlockUser();
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                  >
+                    <UserMinus className="h-5 w-5 shrink-0" />
+                    {isBlocked ? "Débloquer" : "Bloquer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRestrictToggle}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <ShieldBan className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    {isRestricted ? "Lever la restriction" : "Restreindre"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      setShowReportDialog(true);
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                  >
+                    <Flag className="h-5 w-5 shrink-0" />
+                    Signaler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareProfile}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <Share2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    Partager
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      setShowAboutSheet(true);
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <Info className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    À propos de ce compte
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowActionSheet(false)}
+                  className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary shadow-lg transition-colors active:bg-secondary/60"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -660,7 +737,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </SheetHeader>
           <ScrollArea className="h-full pb-8">
             <div className="p-4">
-              {userId && <RecentActivities userId={userId} limit={20} />}
+              {userId && (
+                <RecentActivities userId={userId} viewerUserId={user?.id ?? null} limit={20} />
+              )}
             </div>
           </ScrollArea>
         </SheetContent>
@@ -675,86 +754,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           reportedUsername={profile.username}
         />
       )}
-
-      {/* Action Sheet (iOS style) — portail body pour rester au-dessus du Dialog profil (z-index) */}
-      {showActionSheet &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[250] flex items-end justify-center"
-            role="presentation"
-            onClick={() => setShowActionSheet(false)}
-          >
-            <div className="absolute inset-0 bg-black/40" aria-hidden />
-            <div
-              className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]"
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-            >
-              {/* Main actions group */}
-              <div className="mb-2 overflow-hidden rounded-2xl bg-card shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowActionSheet(false);
-                    isBlocked ? handleUnblockUser() : handleBlockUser();
-                  }}
-                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
-                >
-                  <UserMinus className="h-5 w-5 shrink-0" />
-                  {isBlocked ? "Débloquer" : "Bloquer"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRestrictToggle}
-                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
-                >
-                  <ShieldBan className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  {isRestricted ? "Lever la restriction" : "Restreindre"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowActionSheet(false);
-                    setShowReportDialog(true);
-                  }}
-                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
-                >
-                  <Flag className="h-5 w-5 shrink-0" />
-                  Signaler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShareProfile}
-                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
-                >
-                  <Share2 className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  Partager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowActionSheet(false);
-                    setShowAboutSheet(true);
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
-                >
-                  <Info className="h-5 w-5 shrink-0 text-muted-foreground" />
-                  À propos de ce compte
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowActionSheet(false)}
-                className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary shadow-lg transition-colors active:bg-secondary/60"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
 
       {/* About Sheet */}
       <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>

@@ -62,6 +62,10 @@ export default function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>votre adresse e-mail et votre pseudonyme pour la création du compte ;</li>
                 <li>vos performances sportives (séances, parcours, chronos) ;</li>
+                <li>
+                  après une séance à laquelle vous participez, un retour optionnel (satisfaction, commentaire)
+                  visible par l&apos;organisateur de cette séance ;
+                </li>
                 <li>vos préférences (notifications, langue, paramètres de profil) ;</li>
                 <li>vos données de localisation uniquement pendant l'utilisation des fonctions de carte.</li>
               </ul>

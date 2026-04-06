@@ -22,6 +22,7 @@ import { StravaConnect } from "@/components/StravaConnect";
 import { ReportUserDialog } from "@/components/ReportUserDialog";
 
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
+import { RecentActivities } from "@/components/profile/RecentActivities";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PersonalGoals } from "@/components/profile/PersonalGoals";
 import { ProfileQuickStats } from "@/components/profile/ProfileQuickStats";
@@ -814,6 +815,15 @@ const Profile = () => {
             <PersonalGoals />
           </div>
         )}
+
+        {!isViewingOtherUser && user?.id ? (
+          <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card px-4 py-3 ios-shell:px-2.5">
+            <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+              Activités récentes
+            </p>
+            <RecentActivities userId={user.id} viewerUserId={user.id} limit={5} />
+          </div>
+        ) : null}
 
         <div className="box-border min-w-0 w-full max-w-full border-b border-border/60 bg-card">
           <IOSListGroup header="RACCOURCIS" flush className="mb-0 w-full min-w-0">

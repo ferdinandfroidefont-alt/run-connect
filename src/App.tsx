@@ -18,6 +18,7 @@ import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { RoutePageFallback } from "@/components/RoutePageFallback";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
+import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -200,6 +201,7 @@ const App = () => {
                 <RouteAnalytics />
                 <AnalyticsConsentBanner />
                 <NetworkStatusBanner />
+                <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
                 <AnimatePresence mode="wait">
                   <Routes>

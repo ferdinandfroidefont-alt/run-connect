@@ -14,6 +14,8 @@ import {
   MapPin,
   Cake,
   Star,
+  MessageCircle,
+  Users,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
@@ -27,6 +29,15 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
 import { getCountryLabel } from "@/lib/countryLabels";
+
+type CommonClubRow = {
+  club_id: string;
+  club_name: string;
+  club_description: string | null;
+  club_avatar_url: string | null;
+  club_code: string;
+  created_by: string;
+};
 
 interface PublicProfileData {
   user_id: string;
@@ -84,6 +95,11 @@ const PublicProfile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followRequestSent, setFollowRequestSent] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [commonFollows, setCommonFollows] = useState<number | null>(null);
+  const [commonClubs, setCommonClubs] = useState<CommonClubRow[]>([]);
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
@@ -185,13 +201,110 @@ const PublicProfile = () => {
     fetchPublicProfile();
   }, [username, user, navigate, toast]);
 
-  const handleSubscribe = () => {
-    if (!user) {
-      if (username) sessionStorage.setItem("targetProfileUsername", username);
-      navigate("/auth");
+  useEffect(() => {
+    if (!profile || !user) {
+      setCommonFollows(null);
+      setCommonClubs([]);
+      setIsFollowing(false);
+      setFollowRequestSent(false);
       return;
     }
-    setShowProfilePreview(true);
+
+    const loadSocial = async () => {
+      const { data: followRow } = await supabase
+        .from("user_follows")
+        .select("status")
+        .eq("follower_id", user.id)
+        .eq("following_id", profile.user_id)
+        .maybeSingle();
+
+      if (followRow) {
+        setIsFollowing(followRow.status === "accepted");
+        setFollowRequestSent(followRow.status === "pending");
+      } else {
+        setIsFollowing(false);
+        setFollowRequestSent(false);
+      }
+
+      const [{ data: cc }, { data: clubs }] = await Promise.all([
+        supabase.rpc("count_common_follows", { user_a: user.id, user_b: profile.user_id }),
+        supabase.rpc("get_common_clubs", { user_1_id: user.id, user_2_id: profile.user_id }),
+      ]);
+
+      setCommonFollows(typeof cc === "number" ? cc : 0);
+      setCommonClubs((clubs || []) as CommonClubRow[]);
+    };
+
+    void loadSocial();
+  }, [profile, user]);
+
+  const handleSubscribeGuest = () => {
+    if (username) sessionStorage.setItem("targetProfileUsername", username);
+    navigate("/auth");
+  };
+
+  const handleFollowToggle = async () => {
+    if (!user || !profile) return;
+    setActionLoading(true);
+    try {
+      if (isFollowing || followRequestSent) {
+        await supabase.from("user_follows").delete().eq("follower_id", user.id).eq("following_id", profile.user_id);
+        if (isFollowing) {
+          setFollowerCount((c) => Math.max(0, c - 1));
+          toast({ title: "Vous ne suivez plus cette personne" });
+        } else {
+          toast({ title: "Demande annulée" });
+        }
+        setIsFollowing(false);
+        setFollowRequestSent(false);
+      } else {
+        const { error } = await supabase
+          .from("user_follows")
+          .insert({ follower_id: user.id, following_id: profile.user_id, status: "pending" });
+        if (error) {
+          if (error.code === "23505") {
+            toast({ title: "Demande déjà envoyée" });
+            return;
+          }
+          throw error;
+        }
+        setFollowRequestSent(true);
+        toast({ title: "Demande de suivi envoyée" });
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!user || !profile) return;
+    try {
+      const { data: existing } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(
+          `and(participant_1.eq.${user.id},participant_2.eq.${profile.user_id}),and(participant_1.eq.${profile.user_id},participant_2.eq.${user.id})`
+        )
+        .eq("is_group", false)
+        .maybeSingle();
+
+      if (existing) {
+        navigate(`/messages?conversation=${existing.id}`);
+      } else {
+        const { data: newConv, error } = await supabase
+          .from("conversations")
+          .insert({ participant_1: user.id, participant_2: profile.user_id })
+          .select("id")
+          .single();
+        if (error) throw error;
+        navigate(`/messages?conversation=${newConv.id}`);
+      }
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'ouvrir la conversation", variant: "destructive" });
+    }
   };
 
   const handleOpenInApp = () => {
@@ -268,12 +381,102 @@ const PublicProfile = () => {
                 <p className="truncate text-ios-subheadline text-muted-foreground">
                   @{profile.username}
                 </p>
+                {(countryLine !== "—" || ageLine !== "—") && (
+                  <p className="mt-1 line-clamp-2 text-[13px] text-muted-foreground/90">
+                    {[countryLine !== "—" ? countryLine : null, ageLine !== "—" ? ageLine : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         <div className="mt-4 min-w-0 space-y-4 px-4 ios-shell:px-3">
+          {user &&
+            ((commonFollows !== null && commonFollows > 0) || commonClubs.length > 0) && (
+            <p className="text-[13px] leading-snug text-muted-foreground">
+              {[
+                commonFollows != null && commonFollows > 0
+                  ? `${commonFollows} abonnement${commonFollows > 1 ? "s" : ""} en commun`
+                  : null,
+                commonClubs.length > 0
+                  ? `${commonClubs.length} club${commonClubs.length > 1 ? "s" : ""} en commun`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
+            {!user ? (
+              <Button
+                onClick={handleSubscribeGuest}
+                className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
+              >
+                <UserPlus className="mr-2 h-5 w-5 shrink-0" />
+                S&apos;abonner
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={handleFollowToggle}
+                  disabled={actionLoading}
+                  variant={isFollowing ? "outline" : "default"}
+                  className={`h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold ${
+                    followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
+                  }`}
+                >
+                  {actionLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : isFollowing ? (
+                    "Abonné ✓"
+                  ) : followRequestSent ? (
+                    "En attente"
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-5 w-5 shrink-0" />
+                      Suivre
+                    </>
+                  )}
+                </Button>
+                {isFollowing && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleMessage}
+                    className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
+                  >
+                    <MessageCircle className="mr-2 h-5 w-5 shrink-0" />
+                    Message
+                  </Button>
+                )}
+              </>
+            )}
+            {!isNative ? (
+              <Button
+                variant="secondary"
+                onClick={handleOpenInApp}
+                className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
+              >
+                <Download className="mr-2 h-5 w-5 shrink-0" />
+                App
+              </Button>
+            ) : null}
+          </div>
+
+          {user && (
+            <button
+              type="button"
+              onClick={() => setShowProfilePreview(true)}
+              className="w-full rounded-2xl border border-border/60 bg-card px-4 py-2.5 text-center text-[14px] font-medium text-primary transition-colors active:bg-muted"
+            >
+              Voir le profil détaillé
+            </button>
+          )}
+
           {profile.bio ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <p className="whitespace-pre-wrap text-ios-body text-muted-foreground">{profile.bio}</p>
@@ -300,25 +503,36 @@ const PublicProfile = () => {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
-            <Button
-              onClick={handleSubscribe}
-              className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
-            >
-              <UserPlus className="mr-2 h-5 w-5 shrink-0" />
-              S&apos;abonner
-            </Button>
-            {!isNative ? (
-              <Button
-                variant="secondary"
-                onClick={handleOpenInApp}
-                className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
-              >
-                <Download className="mr-2 h-5 w-5 shrink-0" />
-                App
-              </Button>
-            ) : null}
-          </div>
+          {user && commonClubs.length > 0 ? (
+            <div className="ios-card min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+              <p className="border-b border-border/50 px-4 py-2.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                Clubs en commun
+              </p>
+              <div className="divide-y divide-border/50">
+                {commonClubs.slice(0, 6).map((club) => (
+                  <div key={club.club_id} className="flex min-w-0 items-center gap-3 px-4 py-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted">
+                      {club.club_avatar_url ? (
+                        <img
+                          src={club.club_avatar_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium text-foreground">{club.club_name}</p>
+                      {club.club_code ? (
+                        <p className="truncate text-[12px] text-muted-foreground">#{club.club_code}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="ios-card min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <ProfileQuickStats
@@ -349,7 +563,7 @@ const PublicProfile = () => {
               Activités récentes
             </p>
             <div className="ios-card min-w-0 border border-border/60 p-3 shadow-[var(--shadow-card)] sm:p-4">
-              <RecentActivities userId={profile.user_id} limit={3} />
+              <RecentActivities userId={profile.user_id} viewerUserId={user?.id ?? null} limit={3} />
             </div>
           </div>
 
