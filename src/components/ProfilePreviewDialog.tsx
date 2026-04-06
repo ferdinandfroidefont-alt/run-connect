@@ -8,17 +8,19 @@ import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock } from "lucide-react";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { getCountryLabel } from "@/lib/countryLabels";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { FollowDialog } from "./FollowDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useShareProfile } from "@/hooks/useShareProfile";
+import { QRShareDialog } from "./QRShareDialog";
+import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 
 interface Profile {
   user_id: string;
