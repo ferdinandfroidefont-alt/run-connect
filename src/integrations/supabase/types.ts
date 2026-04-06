@@ -1158,6 +1158,27 @@ export type Database = {
         }
         Relationships: []
       }
+      restricted_users: {
+        Row: {
+          created_at: string
+          id: string
+          restricted_id: string
+          restricter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restricted_id: string
+          restricter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restricted_id?: string
+          restricter_id?: string
+        }
+        Relationships: []
+      }
       route_photos: {
         Row: {
           caption: string | null
