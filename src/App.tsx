@@ -27,7 +27,8 @@ const MySessions = lazy(() => import("./pages/MySessions"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Coaching = lazy(() => import("./pages/Coaching"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Profile = lazy(() => import("./pages/Profile"));
+const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
+const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const Subscription = lazy(() => import("./pages/Subscription"));
@@ -214,9 +215,9 @@ const App = () => {
                   <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Coaching /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
                   <Route path="/itinerary" element={<Layout><PageTransition><PageSuspense><ItineraryHub /></PageSuspense></PageTransition></Layout>} />

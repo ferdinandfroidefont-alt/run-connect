@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useFeed } from "@/hooks/useFeed";
 import { useDiscoverFeed } from "@/hooks/useDiscoverFeed";
@@ -29,10 +29,12 @@ type Props = {
  */
 export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<FeedMode>("friends");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [settingsDialogFocus, setSettingsDialogFocus] = useState("");
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<Record<string, unknown> | null>(
     null,
   );
@@ -66,6 +68,21 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   } = useDiscoverFeed();
 
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const st = location.state as {
+      openProfileDialog?: boolean;
+      openSettingsDialog?: boolean;
+      settingsFocus?: string;
+    } | null;
+    if (!st?.openProfileDialog && !st?.openSettingsDialog) return;
+    if (st.openProfileDialog) setShowProfileDialog(true);
+    if (st.openSettingsDialog) {
+      setShowSettingsDialog(true);
+      setSettingsDialogFocus(st.settingsFocus || "");
+    }
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+  }, [location.state, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     if (mode !== "friends") return;
@@ -263,7 +280,14 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
 
       <Suspense fallback={null}>
-        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+        <SettingsDialog
+          open={showSettingsDialog}
+          onOpenChange={(open) => {
+            setShowSettingsDialog(open);
+            if (!open) setSettingsDialogFocus("");
+          }}
+          initialSearch={settingsDialogFocus}
+        />
       </Suspense>
 
       <SessionDetailsDialog

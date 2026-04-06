@@ -384,7 +384,12 @@ export const ProfileDialog = ({
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideCloseButton fullScreen className={profileDialogShellClassName}>
+        <DialogContent
+          data-tutorial="tutorial-profile-page"
+          hideCloseButton
+          fullScreen
+          className={profileDialogShellClassName}
+        >
           <div className="flex flex-1 items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -394,7 +399,12 @@ export const ProfileDialog = ({
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent hideCloseButton fullScreen className={profileDialogShellClassName}>
+        <DialogContent
+          data-tutorial="tutorial-profile-page"
+          hideCloseButton
+          fullScreen
+          className={profileDialogShellClassName}
+        >
           {/* iOS Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
@@ -410,7 +420,7 @@ export const ProfileDialog = ({
               <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
             </div>
           </div>
-
+          
           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
             <div className="box-border min-w-0 max-w-full space-y-4 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               {/* Profile Header - Centered */}

@@ -30,7 +30,7 @@ export type TutorialReplayDefinition = {
 export function pathMatchesTutorial(pathname: string, def: TutorialReplayDefinition): boolean {
   if (pathname === def.path) return true;
   if (def.id === "profile") {
-    return pathname === "/profile" || pathname.startsWith("/profile/");
+    return pathname === "/" || pathname === "/profile" || pathname.startsWith("/profile/");
   }
   if (def.id === "routes") {
     return (
@@ -121,7 +121,7 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
   profile: {
     id: "profile",
-    path: "/profile",
+    path: "/",
     startDelayMs: 480,
     getSteps: (t) => [
       introStep('[data-tutorial="tutorial-profile-page"]', t, "tutorial.replayPages.profile", "bottom"),
