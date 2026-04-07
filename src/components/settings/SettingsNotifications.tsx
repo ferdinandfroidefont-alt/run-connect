@@ -138,7 +138,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const notificationItems = [
-    { key: 'notif_boost_nearby', icon: Bell, color: 'bg-amber-500', label: 'Boosts proches', desc: 'Séances boostées qui démarrent bientôt autour de vous' },
+    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
     { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
