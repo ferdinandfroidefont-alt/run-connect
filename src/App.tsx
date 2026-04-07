@@ -15,7 +15,6 @@ import { PageTransition } from "@/components/PageTransition";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
 import { RouteAnalytics } from "@/components/RouteAnalytics";
-import { RoutePageFallback } from "@/components/RoutePageFallback";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
@@ -54,7 +53,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<RoutePageFallback />}>{children}</Suspense>;
+  return <Suspense fallback={null}>{children}</Suspense>;
 }
 
 const queryClient = new QueryClient({

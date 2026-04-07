@@ -30,6 +30,7 @@ import { fr } from "date-fns/locale";
 import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
 import { getCountryLabel } from "@/lib/countryLabels";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 type CommonClubRow = {
   club_id: string;
@@ -104,6 +105,9 @@ const PublicProfile = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [commonFollows, setCommonFollows] = useState<number | null>(null);
   const [commonClubs, setCommonClubs] = useState<CommonClubRow[]>([]);
+  const [showStoryDialog, setShowStoryDialog] = useState(false);
+  const [profileHighlights, setProfileHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
+  const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
@@ -244,6 +248,18 @@ const PublicProfile = () => {
     void loadSocial();
   }, [profile, user]);
 
+  useEffect(() => {
+    if (!profile?.user_id) return;
+    void (async () => {
+      const { data } = await (supabase as any)
+        .from("profile_story_highlights")
+        .select("id, story_id, title, position")
+        .eq("owner_id", profile.user_id)
+        .order("position", { ascending: true });
+      setProfileHighlights((data ?? []) as Array<{ id: string; story_id: string; title: string }>);
+    })();
+  }, [profile?.user_id]);
+
   const handleSubscribeGuest = () => {
     if (username) sessionStorage.setItem("targetProfileUsername", username);
     navigate("/auth");
@@ -380,12 +396,14 @@ const PublicProfile = () => {
 
           <div className="box-border min-w-0 px-4 pt-0 ios-shell:px-3">
             <div className="-mt-11 flex min-w-0 items-end gap-3 sm:-mt-12">
-              <Avatar className="h-20 w-20 shrink-0 border-2 border-background shadow-md sm:h-[5.5rem] sm:w-[5.5rem]">
-                <AvatarImage src={profile.avatar_url || undefined} alt="" />
-                <AvatarFallback className="bg-muted text-lg font-semibold text-muted-foreground sm:text-xl">
-                  {profile.username?.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <button type="button" onClick={() => setShowStoryDialog(true)}>
+                <Avatar className="h-20 w-20 shrink-0 border-2 border-background shadow-md sm:h-[5.5rem] sm:w-[5.5rem]">
+                  <AvatarImage src={profile.avatar_url || undefined} alt="" />
+                  <AvatarFallback className="bg-muted text-lg font-semibold text-muted-foreground sm:text-xl">
+                    {profile.username?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
               <div className="min-w-0 flex-1 pb-1 pt-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <h1 className="min-w-0 truncate text-ios-title2 font-bold text-foreground">
@@ -500,6 +518,29 @@ const PublicProfile = () => {
             </div>
           ) : null}
 
+          {profileHighlights.length > 0 ? (
+            <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
+              <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                Stories a la une
+              </p>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {profileHighlights.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedHighlightStoryId(item.story_id)}
+                    className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+                  >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                      {item.title.slice(0, 2).toUpperCase()}
+                    </div>
+                    <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {profileSports.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
@@ -608,6 +649,21 @@ const PublicProfile = () => {
           onClose={() => setShowProfilePreview(false)}
         />
       ) : null}
+      <SessionStoryDialog
+        open={showStoryDialog}
+        onOpenChange={setShowStoryDialog}
+        authorId={profile.user_id}
+        viewerUserId={user?.id ?? null}
+      />
+      <SessionStoryDialog
+        open={!!selectedHighlightStoryId}
+        onOpenChange={(open) => {
+          if (!open) setSelectedHighlightStoryId(null);
+        }}
+        authorId={profile.user_id}
+        viewerUserId={user?.id ?? null}
+        storyId={selectedHighlightStoryId}
+      />
     </div>
   );
 };

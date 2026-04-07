@@ -20,6 +20,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
+import { FeedCard } from "@/components/feed/FeedCard";
+import { useFeed } from "@/hooks/useFeed";
+import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SwipeableConversationItem } from "@/components/SwipeableConversationItem";
@@ -188,6 +192,10 @@ const Messages = () => {
   const [typingUsers, setTypingUsers] = useState<{[userId: string]: {username: string, lastSeen: number}}>({});
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
+  const [messagesHomeTab, setMessagesHomeTab] = useState<"inbox" | "publications">("inbox");
+  const [showCreateStoryDialog, setShowCreateStoryDialog] = useState(false);
+  const [scheduledSessions, setScheduledSessions] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
+  const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
   const [isContactsLoading, setIsContactsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -230,6 +238,16 @@ const Messages = () => {
   const [threadSearchOpen, setThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
+  const {
+    feedItems,
+    loading: feedLoading,
+    hasMore: feedHasMore,
+    loadMore: loadMoreFeed,
+    refresh: refreshFeed,
+    likeSession,
+    unlikeSession,
+    addComment,
+  } = useFeed();
 
   const conversationParam = searchParams.get("conversation");
 
@@ -1823,6 +1841,44 @@ const Messages = () => {
     });
   }, [conversationParam, conversations, user, setSearchParams]);
 
+  const handleJoinFeedSession = useCallback(
+    (sessionId: string) => {
+      navigate(`/training/${sessionId}`);
+    },
+    [navigate]
+  );
+
+  const loadSchedulableSessions = useCallback(async () => {
+    if (!user?.id) return;
+    const now = new Date().toISOString();
+    const { data } = await supabase
+      .from("sessions")
+      .select("id, title, scheduled_at, location_name")
+      .eq("organizer_id", user.id)
+      .gt("scheduled_at", now)
+      .order("scheduled_at", { ascending: true })
+      .limit(30);
+    setScheduledSessions((data ?? []) as Array<{ id: string; title: string; scheduled_at: string; location_name: string }>);
+  }, [user?.id]);
+
+  const publishSessionStory = useCallback(
+    async (sessionId: string) => {
+      if (!user?.id) return;
+      const { error } = await (supabase as any).from("session_stories").insert({
+        author_id: user.id,
+        session_id: sessionId,
+      });
+      if (error) {
+        toast({ title: "Erreur", description: "Impossible de publier la story", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Story publiee", description: "Ta seance est visible pendant 24h." });
+      setShowCreateStoryDialog(false);
+      setStoryAuthorId(user.id);
+    },
+    [user?.id, toast]
+  );
+
   if (showNewConversation) {
     return (
       <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
@@ -2787,6 +2843,33 @@ const Messages = () => {
           }
         >
         <div className="space-y-ios-3 pb-ios-2">
+          <div className="ios-card p-1">
+            <div className="grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setMessagesHomeTab("inbox")}
+                className={cn(
+                  "min-h-[40px] rounded-ios-md text-[13px] font-semibold transition-colors",
+                  messagesHomeTab === "inbox" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                Discussions
+              </button>
+              <button
+                type="button"
+                onClick={() => setMessagesHomeTab("publications")}
+                className={cn(
+                  "min-h-[40px] rounded-ios-md text-[13px] font-semibold transition-colors",
+                  messagesHomeTab === "publications" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                Publications
+              </button>
+            </div>
+          </div>
+
+          {messagesHomeTab === "inbox" ? (
+            <>
           {/* Quick Search Buttons */}
           <div className="ios-card p-ios-3">
             <div className="grid grid-cols-5 gap-ios-2">
@@ -3056,6 +3139,78 @@ const Messages = () => {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <>
+              <div className="ios-card overflow-hidden border border-border/60">
+                <div className="flex items-center justify-between px-4 pt-3">
+                  <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Stories
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void refreshFeed();
+                      void loadSchedulableSessions();
+                    }}
+                    className="text-[12px] font-medium text-primary"
+                  >
+                    Actualiser
+                  </button>
+                </div>
+                <SessionStoriesStrip
+                  currentUserId={user?.id ?? null}
+                  onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                  onCreateStory={() => {
+                    void loadSchedulableSessions();
+                    setShowCreateStoryDialog(true);
+                  }}
+                />
+              </div>
+
+              <div className="space-y-3 px-0.5">
+                {feedLoading && feedItems.length === 0 ? (
+                  <div className="ios-card px-4 py-8 text-center text-[14px] text-muted-foreground">
+                    Chargement des publications...
+                  </div>
+                ) : feedItems.length === 0 ? (
+                  <div className="ios-card px-4 py-8 text-center">
+                    <p className="text-[15px] font-medium text-foreground">Aucune publication pour le moment</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">
+                      Suis des membres pour voir leurs activites ici.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {feedItems.map((session, index) => (
+                      <FeedCard
+                        key={session.id}
+                        session={session}
+                        index={index}
+                        onLike={likeSession}
+                        onUnlike={unlikeSession}
+                        onAddComment={addComment}
+                        onJoinSession={handleJoinFeedSession}
+                      />
+                    ))}
+                    {feedHasMore && (
+                      <div className="px-1 pb-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => void loadMoreFeed()}
+                          disabled={feedLoading}
+                        >
+                          {feedLoading ? "Chargement..." : "Voir plus"}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
         </IosFixedPageHeaderShell>
 
@@ -3173,6 +3328,42 @@ const Messages = () => {
             username={selectedAvatarData?.username || "Utilisateur"}
           />
         </Suspense>
+
+        <Dialog open={showCreateStoryDialog} onOpenChange={setShowCreateStoryDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Partager une seance en story</DialogTitle>
+              <DialogDescription>Selectionne une seance programmee. La story reste active 24h.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-80 space-y-2 overflow-auto">
+              {scheduledSessions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => void publishSessionStory(s.id)}
+                  className="w-full rounded-ios-md border px-3 py-2 text-left transition-colors hover:bg-secondary"
+                >
+                  <p className="text-sm font-semibold">{s.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(s.scheduled_at), "EEEE d MMMM 'a' HH:mm", { locale: fr })} - {s.location_name}
+                  </p>
+                </button>
+              ))}
+              {scheduledSessions.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">Aucune seance programmee a partager.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <SessionStoryDialog
+          open={!!storyAuthorId}
+          onOpenChange={(open) => {
+            if (!open) setStoryAuthorId(null);
+          }}
+          authorId={storyAuthorId}
+          viewerUserId={user?.id ?? null}
+        />
       </div>
 
     </>

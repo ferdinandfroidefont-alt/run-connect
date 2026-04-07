@@ -8,11 +8,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Grid3X3, PlaySquare, Tags, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useShareProfile } from "@/hooks/useShareProfile";
+import { QRShareDialog } from "@/components/QRShareDialog";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
@@ -79,6 +82,13 @@ export const ProfileDialog = ({
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [activeContentTab, setActiveContentTab] = useState<"grid" | "videos" | "tagged">("grid");
+  const [showOwnStory, setShowOwnStory] = useState(false);
+  const [showHighlightsManager, setShowHighlightsManager] = useState(false);
+  const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
+  const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
+  const [highlightStoryId, setHighlightStoryId] = useState<string | null>(null);
+  const [newHighlightTitle, setNewHighlightTitle] = useState("");
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -118,6 +128,7 @@ export const ProfileDialog = ({
   const {
     toast
   } = useToast();
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const {
     selectFromGallery,
     loading: cameraLoading
@@ -127,8 +138,49 @@ export const ProfileDialog = ({
       fetchProfile();
       fetchFollowCounts();
       fetchReliabilityStats();
+      void fetchStoriesAndHighlights();
     }
   }, [user, open]);
+  const fetchStoriesAndHighlights = async () => {
+    if (!user) return;
+    const [{ data: stories }, { data: highlights }] = await Promise.all([
+      (supabase as any)
+        .from("session_stories")
+        .select("id, created_at, expires_at")
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(80),
+      (supabase as any)
+        .from("profile_story_highlights")
+        .select("id, story_id, title, position")
+        .eq("owner_id", user.id)
+        .order("position", { ascending: true }),
+    ]);
+    setOwnStories((stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>);
+    setStoryHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
+  };
+  const addStoryToHighlights = async (storyId: string) => {
+    if (!user) return;
+    const title = (newHighlightTitle || "A la une").trim();
+    const position = storyHighlights.length;
+    const { error } = await (supabase as any).from("profile_story_highlights").insert({
+      owner_id: user.id,
+      story_id: storyId,
+      title,
+      position,
+    });
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible d'ajouter cette story a la une", variant: "destructive" });
+      return;
+    }
+    setNewHighlightTitle("");
+    await fetchStoriesAndHighlights();
+  };
+  const removeHighlight = async (highlightId: string) => {
+    const { error } = await (supabase as any).from("profile_story_highlights").delete().eq("id", highlightId);
+    if (error) return;
+    await fetchStoriesAndHighlights();
+  };
   const fetchFollowCounts = async () => {
     if (!user) return;
     try {
@@ -381,6 +433,15 @@ export const ProfileDialog = ({
   const profileDialogShellClassName =
     "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
+  const socialPostsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
+  const socialHighlights = [
+    profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] ?? "Sport" : null,
+    profile?.country ? COUNTRY_LABELS[profile.country] ?? profile.country : null,
+    (profile?.strava_connected && profile?.strava_verified_at) ? "Strava" : null,
+    (profile?.instagram_connected && profile?.instagram_verified_at) ? "Instagram" : null,
+    (profile?.is_premium || subscriptionInfo?.subscribed) ? "Premium" : null,
+  ].filter(Boolean) as string[];
+
   if (loading && open) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -423,81 +484,99 @@ export const ProfileDialog = ({
           
           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
             <div className="box-border min-w-0 max-w-full space-y-4 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              {/* Profile Header - Centered */}
-              <div className="flex flex-col items-center pt-4 pb-2">
-                <div className="relative mb-3">
-                  <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
-                    <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                    <AvatarFallback className="text-2xl bg-secondary">
-                      {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEditing && (
-                    <button 
-                      type="button" 
-                      onClick={async () => {
-                        try {
-                          const file = await selectFromGallery();
-                          if (file) {
-                            handleAvatarChange({ target: { files: [file] } } as any);
+              {/* Profile Header - Social */}
+              <div className="ios-card border border-border/60 px-4 py-4 shadow-[var(--shadow-card)]">
+                <div className="flex min-w-0 items-start gap-3">
+                  <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                    <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
+                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="text-2xl bg-secondary">
+                        {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const file = await selectFromGallery();
+                            if (file) {
+                              handleAvatarChange({ target: { files: [file] } } as any);
+                            }
+                          } catch (error) {
+                            console.error('Error selecting from gallery:', error);
+                            toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
                           }
-                        } catch (error) {
-                          console.error('Error selecting from gallery:', error);
-                          toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                        }
-                      }} 
-                      disabled={cameraLoading} 
-                      className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                        }}
+                        disabled={cameraLoading}
+                        className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <h2 className="truncate text-[22px] font-bold text-foreground leading-tight">
+                        {profile?.display_name || profile?.username || "Utilisateur"}
+                      </h2>
+                      {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                        <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
+                      )}
+                    </div>
+                    <p className="truncate text-[14px] text-muted-foreground mt-0.5">
+                      @{profile?.username}
+                    </p>
+                    {profile?.bio && (
+                      <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground line-clamp-3">
+                        {profile.bio}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {socialHighlights.slice(0, 5).map((highlight) => (
+                    <span
+                      key={highlight}
+                      className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
                     >
-                      <Camera className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                      {highlight}
+                    </span>
+                  ))}
                 </div>
-                
-                <h2 className="text-[22px] font-bold text-foreground leading-tight">
-                  {profile?.display_name || profile?.username || "Utilisateur"}
-                </h2>
-                <p className="text-[14px] text-muted-foreground mt-0.5">
-                  @{profile?.username}
-                </p>
-                
-                {/* Status Badges */}
-                <div className="mt-2 flex max-w-full flex-wrap items-center justify-center gap-1.5 px-1">
-                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <div className="flex items-center gap-1 bg-primary/12 text-primary px-2 py-0.5 rounded-full">
-                      <Crown className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Premium</span>
-                    </div>
-                  )}
-                  {profile?.is_admin && (
-                    <div className="flex items-center gap-1 bg-destructive/12 text-destructive px-2 py-0.5 rounded-full">
-                      <Shield className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Admin</span>
-                    </div>
-                  )}
-                  {profile?.strava_connected && profile?.strava_verified_at && (
-                    <div className="flex items-center gap-1 bg-orange-500/12 text-orange-600 px-2 py-0.5 rounded-full">
-                      <Zap className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Strava</span>
-                    </div>
-                  )}
-                  {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <div className="flex items-center gap-1 bg-pink-500/12 text-pink-600 px-2 py-0.5 rounded-full">
-                      <Instagram className="h-3 w-3" />
-                    </div>
-                  )}
+
+                <div className="mt-3 flex gap-2">
+                  <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
+                    Modifier le profil
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={() => {
+                      if (!profile?.username) return;
+                      void shareProfile({
+                        username: profile.username,
+                        displayName: profile.display_name,
+                        bio: profile.bio,
+                        avatarUrl: profile.avatar_url,
+                      });
+                    }}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Partager
+                  </Button>
                 </div>
-                
-                {profile?.bio && (
-                  <p className="text-center text-muted-foreground text-[14px] max-w-[280px] mt-3 line-clamp-2">
-                    {profile.bio}
-                  </p>
-                )}
               </div>
 
-              {/* Social Stats - iOS Segmented */}
+              {/* Stats socials */}
               <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
                 <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
+                  <div className="min-h-[44px] flex-1 py-3 text-center">
+                    <p className="text-[20px] font-bold text-foreground">{socialPostsCount}</p>
+                    <p className="text-[12px] text-muted-foreground">Posts</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
@@ -521,16 +600,78 @@ export const ProfileDialog = ({
                     <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
                     <p className="text-[12px] text-muted-foreground">Abonnements</p>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowReliabilityDialog(true)}
-                    className="min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
-                  >
-                    <p className="text-[20px] font-bold text-foreground">{reliabilityRate}%</p>
-                    <p className="text-[12px] text-muted-foreground">Fiabilité</p>
-                  </button>
                 </div>
               </IOSListGroup>
+
+              {/* Highlights */}
+              <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
+                <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {socialHighlights.length > 0 ? socialHighlights.map((highlight) => (
+                    <div key={`highlight-${highlight}`} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                        {highlight.slice(0, 2).toUpperCase()}
+                      </div>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{highlight}</p>
+                    </div>
+                  )) : (
+                    <p className="text-[13px] text-muted-foreground">Ajoute une bio et un sport favori pour afficher tes highlights.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Content Tabs */}
+              <div className="ios-card border border-border/60 p-1 shadow-[var(--shadow-card)]">
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveContentTab("grid")}
+                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "grid" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                    Grille
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveContentTab("videos")}
+                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "videos" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    <PlaySquare className="h-4 w-4" />
+                    Videos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveContentTab("tagged")}
+                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "tagged" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    <Tags className="h-4 w-4" />
+                    Tage
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab content */}
+              {activeContentTab === "grid" && (
+                <div className="ios-card border border-border/60 p-2 shadow-[var(--shadow-card)]">
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from({ length: 9 }).map((_, idx) => (
+                      <div key={`profile-grid-${idx}`} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card" />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {activeContentTab === "videos" && (
+                <div className="ios-card border border-border/60 px-4 py-6 text-center shadow-[var(--shadow-card)]">
+                  <PlaySquare className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-2 text-[14px] text-muted-foreground">Aucune video pour le moment.</p>
+                </div>
+              )}
+              {activeContentTab === "tagged" && (
+                <div className="ios-card border border-border/60 px-4 py-6 text-center shadow-[var(--shadow-card)]">
+                  <Tags className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-2 text-[14px] text-muted-foreground">Tu n'es pas encore tague dans des posts.</p>
+                </div>
+              )}
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
@@ -639,6 +780,28 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
+                  <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setShowHighlightsManager(true)}>
+                        Modifier
+                      </Button>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {storyHighlights.map((item) => (
+                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                            {item.title.slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                        </button>
+                      ))}
+                      {storyHighlights.length === 0 && (
+                        <p className="text-[13px] text-muted-foreground">Aucune story epinglee.</p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Personal Info */}
                   <IOSListGroup
                     header="INFORMATIONS"
@@ -736,8 +899,9 @@ export const ProfileDialog = ({
                       icon={Shield}
                       iconBgColor="bg-orange-500"
                       iconColor="text-white"
-                      title="Modifier mon profil"
-                      onClick={() => setIsEditing(true)}
+                      title="Fiabilite"
+                      value={`${reliabilityRate}%`}
+                      onClick={() => setShowReliabilityDialog(true)}
                       showSeparator={false}
                     />
                    </IOSListGroup>
@@ -759,5 +923,75 @@ export const ProfileDialog = ({
 
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
+        />
+      )}
+      <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
+        <DialogContent className="max-w-md">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold">Modifier les stories a la une</h3>
+            <Input
+              value={newHighlightTitle}
+              onChange={(e) => setNewHighlightTitle(e.target.value)}
+              placeholder="Titre (ex: Courses, PR...)"
+            />
+            <div className="max-h-64 space-y-2 overflow-auto">
+              {ownStories.map((story) => {
+                const already = storyHighlights.some((h) => h.story_id === story.id);
+                return (
+                  <div key={story.id} className="flex items-center justify-between rounded-ios-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">
+                      Story {new Date(story.created_at).toLocaleDateString()}
+                    </p>
+                    {already ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          const h = storyHighlights.find((x) => x.story_id === story.id);
+                          if (h) void removeHighlight(h.id);
+                        }}
+                      >
+                        Retirer
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => void addStoryToHighlights(story.id)}>
+                        Mettre a la une
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+              {ownStories.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">Aucune story disponible.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <SessionStoryDialog
+        open={showOwnStory}
+        onOpenChange={setShowOwnStory}
+        authorId={user?.id ?? null}
+        viewerUserId={user?.id ?? null}
+      />
+      <SessionStoryDialog
+        open={!!highlightStoryId}
+        onOpenChange={(open) => {
+          if (!open) setHighlightStoryId(null);
+        }}
+        authorId={user?.id ?? null}
+        viewerUserId={user?.id ?? null}
+        storyId={highlightStoryId}
+      />
     </>;
 };

@@ -5,7 +5,6 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
@@ -109,7 +108,7 @@ export const Layout = ({ children }: LayoutProps) => {
   };
 
   if (loading || profileLoading) {
-    return <AppBootFallback phase={loading ? "auth" : "profile"} />;
+    return null;
   }
 
   if (!user) {

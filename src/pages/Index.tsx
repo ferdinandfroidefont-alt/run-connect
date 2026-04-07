@@ -3,7 +3,6 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { useTutorial } from "@/hooks/useTutorial";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
-import { RoutePageFallback } from '@/components/RoutePageFallback';
 import { nativeManager } from '@/lib/nativeInit';
 import { useLeaderboardNotifications } from '@/hooks/useLeaderboardNotifications';
 import { useNavigate } from 'react-router-dom';
@@ -58,11 +57,7 @@ const Index = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="pointer-events-auto flex min-h-0 flex-1 flex-col bg-background">
-        <RoutePageFallback variant="index" />
-      </div>
-    );
+    return null;
   }
 
   return (

@@ -15,8 +15,8 @@ interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
-const MIN_SPLASH_MS = 480;
-const MAX_WAIT_SESSION_MS = 3200;
+const MIN_SPLASH_MS = 220;
+const MAX_WAIT_SESSION_MS = 1500;
 
 function waitMs(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -66,7 +66,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       completeTimerRef.current = window.setTimeout(() => {
         if (!cancelled) onCompleteRef.current();
         completeTimerRef.current = null;
-      }, 420);
+      }, 180);
     })();
 
     return () => {
@@ -109,7 +109,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
           style={splashLayerStyle}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
         >
           <span className="sr-only">{t("loading.splashAria")}</span>
           <div
@@ -176,7 +176,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           style={{ backgroundColor: RUCONNECT_SPLASH_BLUE }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
         />
       )}
     </AnimatePresence>
