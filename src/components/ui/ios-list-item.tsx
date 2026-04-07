@@ -91,7 +91,7 @@ export const IOSListGroup = ({ children, header, footer, className, flush }: IOS
           {header}
         </p>
       )}
-      <div className={cn("bg-card overflow-hidden", flush ? "rounded-none border-y border-border" : "rounded-ios-md")}>
+      <div className={cn("bg-card overflow-hidden", flush ? "rounded-none border-b border-border" : "rounded-ios-md")}>
         {children}
       </div>
       {footer && (

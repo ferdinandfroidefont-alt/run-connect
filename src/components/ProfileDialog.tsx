@@ -603,7 +603,7 @@ export const ProfileDialog = ({
               </IOSListGroup>
 
               {/* Highlights */}
-                 <div className="bg-card border-y border-border px-4 py-3">
+                 <div className="bg-card border-b border-border px-4 py-3">
                 <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {socialHighlights.length > 0 ? socialHighlights.map((highlight) => (
