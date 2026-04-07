@@ -77,6 +77,76 @@ const App = () => {
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
 
+  // Max-aggressive warmup: start at boot, then retry on focus/online.
+  useEffect(() => {
+    const preload = () => {
+      void Promise.allSettled([
+        import("./pages/Index"),
+        import("./pages/Auth"),
+        import("./pages/Feed"),
+        import("./pages/MySessions"),
+        import("./pages/Messages"),
+        import("./pages/Coaching"),
+        import("./pages/Leaderboard"),
+        import("./pages/ProfileEntry"),
+        import("./pages/ProfileByUserIdPage"),
+        import("./pages/ProfileSportRecordsEdit"),
+        import("./pages/PublicProfile"),
+        import("./pages/Subscription"),
+        import("./pages/DonationSuccess"),
+        import("./pages/DonationCanceled"),
+        import("./pages/NotFound"),
+        import("./pages/Search"),
+        import("./pages/RouteCreation"),
+        import("./pages/ItineraryHub"),
+        import("./pages/ItineraryMyRoutes"),
+        import("./pages/ItineraryRouteDetail"),
+        import("./pages/Itinerary3D"),
+        import("./pages/ItineraryTraining"),
+        import("./pages/Privacy"),
+        import("./pages/Terms"),
+        import("./pages/About"),
+        import("./pages/LegalNotice"),
+        import("./pages/ConfirmPresence"),
+        import("./pages/ConfirmPresenceHelp"),
+        import("./pages/TrainingMode"),
+        import("./pages/SessionTracking"),
+        import("./pages/AuthCallback"),
+        import("./pages/StoryCreate"),
+      ]);
+    };
+
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+
+    if (ric) {
+      const id = ric(preload, { timeout: 600 });
+      const onFocus = () => preload();
+      const onOnline = () => preload();
+      window.addEventListener("focus", onFocus);
+      window.addEventListener("online", onOnline);
+      return () => {
+        const cic = (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback;
+        cic?.(id);
+        window.removeEventListener("focus", onFocus);
+        window.removeEventListener("online", onOnline);
+      };
+    }
+
+    const timer = window.setTimeout(preload, 0);
+    const onFocus = () => preload();
+    const onOnline = () => preload();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
   // 🍎 Global deep link listener for iOS OAuth callback
   useEffect(() => {
     const isNative = !!(window as any).CapacitorForceNative || !!(window as any).Capacitor;
@@ -205,7 +275,7 @@ const App = () => {
                 <NetworkStatusBanner />
                 <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="sync">
                   <Routes>
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />

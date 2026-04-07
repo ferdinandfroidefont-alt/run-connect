@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
 interface PageTransitionProps {
@@ -12,19 +12,19 @@ const iosEase = [0.32, 0.72, 0, 1] as [number, number, number, number];
 /* Pas de translateY : un transform sur l’ancêtre casse sticky/fixed et le comportement iOS clavier. */
 const pageVariants = {
   initial: {
-    opacity: 0,
+    opacity: 0.98,
   },
   enter: {
     opacity: 1,
     transition: {
-      duration: 0.28,
+      duration: 0.08,
       ease: iosEase,
     },
   },
   exit: {
-    opacity: 0,
+    opacity: 0.995,
     transition: {
-      duration: 0.18,
+      duration: 0.04,
       ease: iosEase,
     },
   },
@@ -32,17 +32,16 @@ const pageVariants = {
 
 export const PageTransition = ({ children }: PageTransitionProps) => {
   const location = useLocation();
-  const reduceMotion = useReducedMotion();
   const isHome = location.pathname === '/';
 
   return (
     <motion.div
       key={location.pathname}
       variants={pageVariants}
-      initial={reduceMotion ? false : "initial"}
+      initial={false}
       animate="enter"
-      exit={reduceMotion ? undefined : "exit"}
-      transition={reduceMotion ? { duration: 0 } : undefined}
+      exit="exit"
+      transition={{ duration: 0 }}
       className={
         isHome
           ? 'flex min-h-0 w-full flex-1 flex-col pointer-events-none'
