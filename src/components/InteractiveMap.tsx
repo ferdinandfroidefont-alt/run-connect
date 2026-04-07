@@ -336,7 +336,7 @@ export const InteractiveMap = ({
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
 
   // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef<Map<string, string>>(new Map());
+  const markerCache = useRef(new window.Map<string, string>());
 
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -799,8 +799,8 @@ export const InteractiveMap = ({
           : Promise.resolve({ data: [] }),
       ]);
 
-      const profilesMap = new Map((profilesResult.data || []).map(p => [p.user_id, p]));
-      const routesMap = new Map((routesResult.data || []).map(r => [r.id, r]));
+      const profilesMap = new window.Map((profilesResult.data || []).map((p: any) => [p.user_id, p]));
+      const routesMap = new window.Map((routesResult.data || []).map((r: any) => [r.id, r]));
 
       const sessionsWithProfiles = visibleSessions.map(session => {
         const profile = profilesMap.get(session.organizer_id);
