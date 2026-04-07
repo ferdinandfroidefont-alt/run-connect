@@ -336,7 +336,7 @@ export const InteractiveMap = ({
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
 
   // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef<Map<string, string>>(new Map());
+  const markerCache = useRef(new window.Map<string, string>());
 
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
