@@ -107,7 +107,7 @@ export function SessionExperienceFeedbackDialog({
       const uid = userData.user?.id;
       if (!uid) throw new Error("Non connecté");
 
-      const { error } = await supabase.from("session_participant_feedback").insert({
+      const { error } = await (supabase as any).from("session_participant_feedback").insert({
         session_id: session.sessionId,
         participant_user_id: uid,
         went_well: wentWell,
