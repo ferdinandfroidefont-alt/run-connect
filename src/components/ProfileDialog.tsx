@@ -813,10 +813,11 @@ export const ProfileDialog = ({
                   </IOSListGroup>
 
                   {/* Actions */}
-                  <IOSListGroup
-                    header="RACCOURCIS"
-                    className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
+                   <IOSListGroup
+                     header="RACCOURCIS"
+                     flush
+                     className="mb-0"
+                   >
                     <IOSListItem
                       icon={Route}
                       iconBgColor="bg-teal-500"
