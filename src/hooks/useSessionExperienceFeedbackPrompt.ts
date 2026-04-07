@@ -51,7 +51,7 @@ export function useSessionExperienceFeedbackPrompt(enabled: boolean, userId: str
       return;
     }
 
-    const { data: existing } = await supabase
+    const { data: existing } = await (supabase as any)
       .from("session_participant_feedback")
       .select("session_id")
       .eq("participant_user_id", userId)
