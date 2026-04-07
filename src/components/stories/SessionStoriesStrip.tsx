@@ -17,12 +17,15 @@ interface SessionStoriesStripProps {
   currentUserId: string | null;
   onOpenStory: (authorId: string) => void;
   onCreateStory: () => void;
+  /** Incremente pour forcer un rechargement (ex: apres creation story). */
+  refreshToken?: number;
 }
 
 export function SessionStoriesStrip({
   currentUserId,
   onOpenStory,
   onCreateStory,
+  refreshToken = 0,
 }: SessionStoriesStripProps) {
   const [authors, setAuthors] = useState<StoryAuthor[]>([]);
 
@@ -85,7 +88,7 @@ export function SessionStoriesStrip({
       });
       setAuthors(result);
     })();
-  }, [currentUserId]);
+  }, [currentUserId, refreshToken]);
 
   const hasMyStory = useMemo(() => authors.some((a) => a.author_id === currentUserId), [authors, currentUserId]);
 
@@ -131,7 +134,7 @@ export function SessionStoriesStrip({
       </div>
       {!authors.length && (
         <div className="mt-3 rounded-ios-md border p-3 text-center text-xs text-muted-foreground">
-          Pas de stories pour le moment. Partage ta seance pour lancer la section.
+          Pas de stories pour le moment. Cree une story depuis le bouton +.
         </div>
       )}
     </div>

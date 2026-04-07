@@ -13,13 +13,7 @@ import { ProfileDialog } from "@/components/ProfileDialog";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const SettingsDialog = lazy(() =>
@@ -38,7 +32,6 @@ type Props = {
  */
 export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName }: Props) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState<FeedMode>("friends");
@@ -50,9 +43,8 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
     null,
   );
   const [pullDistance, setPullDistance] = useState(0);
-  const [showCreateStoryDialog, setShowCreateStoryDialog] = useState(false);
-  const [scheduledSessions, setScheduledSessions] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
   const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
+  const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
   const touchStartY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -88,8 +80,12 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
       openProfileDialog?: boolean;
       openSettingsDialog?: boolean;
       settingsFocus?: string;
+      refreshStories?: boolean;
     } | null;
-    if (!st?.openProfileDialog && !st?.openSettingsDialog) return;
+    if (st?.refreshStories) {
+      setStoriesRefreshToken((t) => t + 1);
+    }
+    if (!st?.openProfileDialog && !st?.openSettingsDialog && !st?.refreshStories) return;
     if (st.openProfileDialog) setShowProfileDialog(true);
     if (st.openSettingsDialog) {
       setShowSettingsDialog(true);
@@ -148,37 +144,6 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   const handleJoinSession = (sessionId: string) => {
     navigate("/", { state: { openSessionId: sessionId } });
   };
-
-  const loadSchedulableSessions = useCallback(async () => {
-    if (!user?.id) return;
-    const now = new Date().toISOString();
-    const { data } = await supabase
-      .from("sessions")
-      .select("id, title, scheduled_at, location_name")
-      .eq("organizer_id", user.id)
-      .gt("scheduled_at", now)
-      .order("scheduled_at", { ascending: true })
-      .limit(30);
-    setScheduledSessions((data ?? []) as Array<{ id: string; title: string; scheduled_at: string; location_name: string }>);
-  }, [user?.id]);
-
-  const publishSessionStory = useCallback(
-    async (sessionId: string) => {
-      if (!user?.id) return;
-      const { error } = await (supabase as any).from("session_stories").insert({
-        author_id: user.id,
-        session_id: sessionId,
-      });
-      if (error) {
-        toast({ title: "Erreur", description: "Impossible de publier la story", variant: "destructive" });
-        return;
-      }
-      toast({ title: "Story publiee", description: "Ta seance est visible pendant 24h." });
-      setShowCreateStoryDialog(false);
-      setStoryAuthorId(user.id);
-    },
-    [user?.id, toast]
-  );
 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
@@ -243,7 +208,8 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                     <button
                       type="button"
                       onClick={() => {
-                        void loadSchedulableSessions();
+                        void refreshFriends();
+                        setStoriesRefreshToken((t) => t + 1);
                       }}
                       className="text-[12px] font-medium text-primary"
                     >
@@ -252,11 +218,9 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                   </div>
                   <SessionStoriesStrip
                     currentUserId={user?.id ?? null}
+                    refreshToken={storiesRefreshToken}
                     onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-                    onCreateStory={() => {
-                      void loadSchedulableSessions();
-                      setShowCreateStoryDialog(true);
-                    }}
+                    onCreateStory={() => navigate("/stories/create")}
                   />
                 </div>
               </div>
@@ -367,33 +331,6 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         onClose={() => setSelectedDiscoverSession(null)}
         onSessionUpdated={() => refreshDiscover()}
       />
-
-      <Dialog open={showCreateStoryDialog} onOpenChange={setShowCreateStoryDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Partager une seance en story</DialogTitle>
-            <DialogDescription>Selectionne une seance programmee. La story reste active 24h.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-80 space-y-2 overflow-auto">
-            {scheduledSessions.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => void publishSessionStory(s.id)}
-                className="w-full rounded-ios-md border px-3 py-2 text-left transition-colors hover:bg-secondary"
-              >
-                <p className="text-sm font-semibold">{s.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(s.scheduled_at), "EEEE d MMMM 'a' HH:mm", { locale: fr })} - {s.location_name}
-                </p>
-              </button>
-            ))}
-            {scheduledSessions.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">Aucune seance programmee a partager.</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <SessionStoryDialog
         open={!!storyAuthorId}

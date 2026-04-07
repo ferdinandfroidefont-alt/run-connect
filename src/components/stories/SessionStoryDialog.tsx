@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 type StoryItem = {
   id: string;
   author_id: string;
-  session_id: string;
+  session_id: string | null;
   created_at: string;
   expires_at: string;
   session?: {
@@ -20,6 +20,10 @@ type StoryItem = {
     activity_type: string;
     location_name: string;
     scheduled_at: string;
+  } | null;
+  media?: {
+    media_url: string;
+    media_type: "image" | "video" | "boomerang";
   } | null;
 };
 
@@ -82,17 +86,32 @@ export function SessionStoryDialog({
         return;
       }
 
-      const sessionIds = storiesData.map((s) => s.session_id);
-      const { data: sessions } = await supabase
-        .from("sessions")
-        .select("id, title, activity_type, location_name, scheduled_at")
-        .in("id", sessionIds);
+      const sessionIds = storiesData.map((s) => s.session_id).filter((id): id is string => !!id);
+      const [{ data: sessions }, { data: medias }] = await Promise.all([
+        sessionIds.length
+          ? supabase
+              .from("sessions")
+              .select("id, title, activity_type, location_name, scheduled_at")
+              .in("id", sessionIds)
+          : Promise.resolve({ data: [] as { id: string; title: string; activity_type: string; location_name: string; scheduled_at: string }[] }),
+        (supabase as any)
+          .from("story_media")
+          .select("story_id, media_url, media_type")
+          .in("story_id", storiesData.map((s) => s.id)),
+      ]);
 
       const byId = new Map((sessions ?? []).map((s) => [s.id, s]));
+      const mediaByStoryId = new Map(
+        ((medias ?? []) as Array<{ story_id: string; media_url: string; media_type: "image" | "video" | "boomerang" }>).map((m) => [
+          m.story_id,
+          { media_url: m.media_url, media_type: m.media_type },
+        ])
+      );
       setStories(
         storiesData.map((s) => ({
           ...s,
-          session: (byId.get(s.session_id) as StoryItem["session"]) ?? null,
+          session: s.session_id ? ((byId.get(s.session_id) as StoryItem["session"]) ?? null) : null,
+          media: mediaByStoryId.get(s.id) ?? null,
         }))
       );
       setIndex(0);
@@ -252,7 +271,7 @@ export function SessionStoryDialog({
       sender_id: viewerUserId,
       content: message,
       message_type: "text",
-      session_id: current.session_id,
+      ...(current.session_id ? { session_id: current.session_id } : {}),
     });
     if (msgError) {
       toast({ title: "Erreur", description: "Envoi du message impossible.", variant: "destructive" });
@@ -291,19 +310,32 @@ export function SessionStoryDialog({
               ))}
             </div>
             <div className="flex items-center justify-between border-b px-4 py-2">
-              <p className="text-sm font-semibold">Story seance</p>
+              <p className="text-sm font-semibold">Story</p>
               <p className="text-xs text-muted-foreground">{progressText}</p>
             </div>
             <div className="space-y-3 p-4">
               <div className="rounded-ios-lg border p-4">
-                <p className="text-base font-semibold">{current.session?.title ?? "Seance"}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{current.session?.location_name ?? "Lieu non defini"}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {current.session?.scheduled_at
-                    ? format(new Date(current.session.scheduled_at), "EEEE d MMMM 'a' HH:mm", { locale: fr })
-                    : ""}
-                </p>
-                {onOpenFeed && current.session_id && (
+                {current.media ? (
+                  current.media.media_type === "image" ? (
+                    <img src={current.media.media_url} alt="" className="mb-3 h-48 w-full rounded-ios-md object-cover" />
+                  ) : (
+                    <video src={current.media.media_url} className="mb-3 h-48 w-full rounded-ios-md object-cover" controls playsInline />
+                  )
+                ) : null}
+                <p className="text-base font-semibold">{current.session?.title ?? "Story"}</p>
+                {current.session ? (
+                  <>
+                    <p className="mt-1 text-sm text-muted-foreground">{current.session.location_name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {current.session.scheduled_at
+                        ? format(new Date(current.session.scheduled_at), "EEEE d MMMM 'a' HH:mm", { locale: fr })
+                        : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">Story sans seance associee.</p>
+                )}
+                {onOpenFeed && current.session_id && current.session && (
                   <Button
                     type="button"
                     size="sm"
