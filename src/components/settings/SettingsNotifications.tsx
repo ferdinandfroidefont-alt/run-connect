@@ -14,7 +14,7 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 interface Profile {
   notifications_enabled?: boolean;
-  notif_boost_nearby?: boolean;
+  
   notif_follow_request?: boolean;
   notif_message?: boolean;
   notif_session_request?: boolean;

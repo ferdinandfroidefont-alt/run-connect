@@ -799,8 +799,8 @@ export const InteractiveMap = ({
           : Promise.resolve({ data: [] }),
       ]);
 
-      const profilesMap = new Map((profilesResult.data || []).map(p => [p.user_id, p]));
-      const routesMap = new Map((routesResult.data || []).map(r => [r.id, r]));
+      const profilesMap = new window.Map((profilesResult.data || []).map((p: any) => [p.user_id, p]));
+      const routesMap = new window.Map((routesResult.data || []).map((r: any) => [r.id, r]));
 
       const sessionsWithProfiles = visibleSessions.map(session => {
         const profile = profilesMap.get(session.organizer_id);
