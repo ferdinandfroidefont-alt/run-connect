@@ -707,6 +707,10 @@ const PublicProfile = () => {
         onOpenChange={setShowStoryDialog}
         authorId={profile.user_id}
         viewerUserId={user?.id ?? null}
+        onOpenFeed={() => {
+          setShowStoryDialog(false);
+          navigate("/feed");
+        }}
       />
       <SessionStoryDialog
         open={!!selectedHighlightStoryId}
@@ -716,6 +720,10 @@ const PublicProfile = () => {
         authorId={profile.user_id}
         viewerUserId={user?.id ?? null}
         storyId={selectedHighlightStoryId}
+        onOpenFeed={() => {
+          setSelectedHighlightStoryId(null);
+          navigate("/feed");
+        }}
       />
 
       <Dialog open={showAllPublications} onOpenChange={setShowAllPublications}>

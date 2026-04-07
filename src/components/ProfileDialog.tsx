@@ -1038,6 +1038,11 @@ export const ProfileDialog = ({
         onOpenChange={setShowOwnStory}
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
+        onOpenFeed={() => {
+          setShowOwnStory(false);
+          onOpenChange(false);
+          navigate("/feed");
+        }}
       />
       <SessionStoryDialog
         open={!!highlightStoryId}
@@ -1047,6 +1052,11 @@ export const ProfileDialog = ({
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
         storyId={highlightStoryId}
+        onOpenFeed={() => {
+          setHighlightStoryId(null);
+          onOpenChange(false);
+          navigate("/feed");
+        }}
       />
     </>;
 };

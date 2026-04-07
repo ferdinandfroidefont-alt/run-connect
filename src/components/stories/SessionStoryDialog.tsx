@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Heart, Send } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 type StoryItem = {
   id: string;
@@ -37,6 +39,7 @@ interface SessionStoryDialogProps {
   authorId: string | null;
   viewerUserId: string | null;
   storyId?: string | null;
+  onOpenFeed?: (sessionId: string) => void;
 }
 
 export function SessionStoryDialog({
@@ -45,12 +48,17 @@ export function SessionStoryDialog({
   authorId,
   viewerUserId,
   storyId = null,
+  onOpenFeed,
 }: SessionStoryDialogProps) {
+  const { toast } = useToast();
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [index, setIndex] = useState(0);
   const [viewers, setViewers] = useState<ViewerItem[]>([]);
   const [storyProgress, setStoryProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [likedByMe, setLikedByMe] = useState(false);
+  const [replyText, setReplyText] = useState("");
 
   const current = stories[index];
   const isOwnStory = !!current && current.author_id === viewerUserId;
@@ -154,10 +162,106 @@ export function SessionStoryDialog({
     })();
   }, [open, current?.id, isOwnStory]);
 
+  useEffect(() => {
+    if (!open || !current?.id || !viewerUserId) return;
+    void (async () => {
+      const [{ count }, { data: mine }] = await Promise.all([
+        (supabase as any)
+          .from("session_story_likes")
+          .select("*", { count: "exact", head: true })
+          .eq("story_id", current.id),
+        (supabase as any)
+          .from("session_story_likes")
+          .select("id")
+          .eq("story_id", current.id)
+          .eq("user_id", viewerUserId)
+          .maybeSingle(),
+      ]);
+      setLikesCount(count ?? 0);
+      setLikedByMe(!!mine);
+    })();
+  }, [open, current?.id, viewerUserId]);
+
   const progressText = useMemo(() => {
     if (!stories.length) return "";
     return `${index + 1}/${stories.length}`;
   }, [stories.length, index]);
+
+  const toggleLike = async () => {
+    if (!current?.id || !viewerUserId) return;
+    if (likedByMe) {
+      await (supabase as any)
+        .from("session_story_likes")
+        .delete()
+        .eq("story_id", current.id)
+        .eq("user_id", viewerUserId);
+      setLikedByMe(false);
+      setLikesCount((c) => Math.max(0, c - 1));
+    } else {
+      await (supabase as any).from("session_story_likes").insert({
+        story_id: current.id,
+        user_id: viewerUserId,
+      });
+      setLikedByMe(true);
+      setLikesCount((c) => c + 1);
+    }
+  };
+
+  const sendReplyAsMessage = async () => {
+    if (!current || !viewerUserId || !replyText.trim() || viewerUserId === current.author_id) return;
+    const text = replyText.trim();
+    const { data: areFriends } = await supabase.rpc("are_users_friends", {
+      user1_id: viewerUserId,
+      user2_id: current.author_id,
+    });
+    if (!areFriends) {
+      toast({
+        title: "Impossible d'envoyer",
+        description: "Vous devez etre amis pour repondre en message prive.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data: existing } = await supabase
+      .from("conversations")
+      .select("id")
+      .or(
+        `and(participant_1.eq.${viewerUserId},participant_2.eq.${current.author_id}),and(participant_1.eq.${current.author_id},participant_2.eq.${viewerUserId})`
+      )
+      .eq("is_group", false)
+      .maybeSingle();
+
+    let conversationId = existing?.id;
+    if (!conversationId) {
+      const { data: newConv, error: convError } = await supabase
+        .from("conversations")
+        .insert({ participant_1: viewerUserId, participant_2: current.author_id })
+        .select("id")
+        .single();
+      if (convError || !newConv) {
+        toast({ title: "Erreur", description: "Impossible de creer la conversation.", variant: "destructive" });
+        return;
+      }
+      conversationId = newConv.id;
+    }
+
+    const message = `Reponse a ta story: ${text}`;
+    const { error: msgError } = await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: viewerUserId,
+      content: message,
+      message_type: "text",
+      session_id: current.session_id,
+    });
+    if (msgError) {
+      toast({ title: "Erreur", description: "Envoi du message impossible.", variant: "destructive" });
+      return;
+    }
+    await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+    setReplyText("");
+    toast({ title: "Envoye", description: "Reponse envoyee en conversation." });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,6 +303,17 @@ export function SessionStoryDialog({
                     ? format(new Date(current.session.scheduled_at), "EEEE d MMMM 'a' HH:mm", { locale: fr })
                     : ""}
                 </p>
+                {onOpenFeed && current.session_id && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => onOpenFeed(current.session_id)}
+                  >
+                    Voir dans le feed
+                  </Button>
+                )}
               </div>
               <div className="flex items-center justify-between">
                 <Button variant="outline" size="sm" disabled={index <= 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
@@ -235,6 +350,31 @@ export function SessionStoryDialog({
                   </div>
                 </div>
               )}
+              <div className="rounded-ios-lg border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => void toggleLike()}
+                    className="inline-flex items-center gap-2 text-sm font-medium"
+                  >
+                    <Heart className={`h-4 w-4 ${likedByMe ? "fill-current text-red-500" : ""}`} />
+                    J'aime
+                  </button>
+                  <p className="text-xs text-muted-foreground">{likesCount} like(s)</p>
+                </div>
+                {!isOwnStory && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Repondre a la story..."
+                    />
+                    <Button size="icon" onClick={() => void sendReplyAsMessage()} disabled={!replyText.trim()}>
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

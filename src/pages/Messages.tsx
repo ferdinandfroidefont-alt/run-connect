@@ -3400,6 +3400,10 @@ const Messages = () => {
           }}
           authorId={storyAuthorId}
           viewerUserId={user?.id ?? null}
+          onOpenFeed={() => {
+            setStoryAuthorId(null);
+            navigate("/feed");
+          }}
         />
       </div>
 
