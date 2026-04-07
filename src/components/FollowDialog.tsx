@@ -518,7 +518,7 @@ export const FollowDialog = ({
         hideCloseButton
         fullScreen
         stackNested
-        className="flex flex-col gap-0 overflow-hidden bg-secondary p-0"
+        className="z-[160] flex flex-col gap-0 overflow-hidden bg-secondary p-0"
       >
         {/* iOS Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3 pt-[max(12px,env(safe-area-inset-top,0px))]">
