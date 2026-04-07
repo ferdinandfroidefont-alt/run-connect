@@ -757,10 +757,10 @@ export const ProfileDialog = ({
                   </div>
 
                   {/* Personal Info */}
-                  <IOSListGroup
-                    header="INFORMATIONS"
-                    className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
+                   <IOSListGroup
+                     header="INFORMATIONS"
+                     flush
+                   >
                     <IOSListItem
                       icon={User}
                       iconBgColor="bg-blue-500"
