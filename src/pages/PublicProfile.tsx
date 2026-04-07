@@ -239,8 +239,8 @@ const PublicProfile = () => {
       }
 
       const [{ data: cc }, { data: clubs }] = await Promise.all([
-        supabase.rpc("count_common_follows", { user_a: user.id, user_b: profile.user_id }),
-        supabase.rpc("get_common_clubs", { user_1_id: user.id, user_2_id: profile.user_id }),
+        (supabase as any).rpc("count_common_follows", { user_a: user.id, user_b: profile.user_id }),
+        (supabase as any).rpc("get_common_clubs", { user_1_id: user.id, user_2_id: profile.user_id }),
       ]);
 
       setCommonFollows(typeof cc === "number" ? cc : 0);

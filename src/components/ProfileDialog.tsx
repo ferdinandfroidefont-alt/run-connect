@@ -481,10 +481,10 @@ export const ProfileDialog = ({
             </div>
           </div>
           
-          <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-            <div className="box-border min-w-0 max-w-full space-y-4 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              {/* Profile Header - Social */}
-              <div className="ios-card border border-border/60 px-4 py-4 shadow-[var(--shadow-card)]">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+             <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+               {/* Profile Header - Social */}
+               <div className="bg-card border-b border-border px-4 py-4">
                 <div className="flex min-w-0 items-start gap-3">
                   <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
                     <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
@@ -570,7 +570,7 @@ export const ProfileDialog = ({
               </div>
 
               {/* Stats socials */}
-              <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
+              <IOSListGroup flush className="mb-0">
                 <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
                   <div className="min-h-[44px] flex-1 py-3 text-center">
                     <p className="text-[20px] font-bold text-foreground">{socialSessionsCount}</p>
@@ -603,7 +603,7 @@ export const ProfileDialog = ({
               </IOSListGroup>
 
               {/* Highlights */}
-              <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
+                 <div className="bg-card border-b border-border px-4 py-3">
                 <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {socialHighlights.length > 0 ? socialHighlights.map((highlight) => (
@@ -621,10 +621,10 @@ export const ProfileDialog = ({
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
-                <IOSListGroup
-                  header="MODIFIER MES INFORMATIONS"
-                  className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                >
+                 <IOSListGroup
+                   header="MODIFIER MES INFORMATIONS"
+                   flush
+                 >
                   <div className="p-4 space-y-4">
                     <div className="space-y-3">
                       <div>
@@ -726,7 +726,7 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-                  <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
+                  <div className="bg-card border-b border-border px-4 py-3">
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
@@ -757,10 +757,10 @@ export const ProfileDialog = ({
                   </div>
 
                   {/* Personal Info */}
-                  <IOSListGroup
-                    header="INFORMATIONS"
-                    className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
+                   <IOSListGroup
+                     header="INFORMATIONS"
+                     flush
+                   >
                     <IOSListItem
                       icon={User}
                       iconBgColor="bg-blue-500"
@@ -813,10 +813,11 @@ export const ProfileDialog = ({
                   </IOSListGroup>
 
                   {/* Actions */}
-                  <IOSListGroup
-                    header="RACCOURCIS"
-                    className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
+                   <IOSListGroup
+                     header="RACCOURCIS"
+                     flush
+                     className="mb-0"
+                   >
                     <IOSListItem
                       icon={Route}
                       iconBgColor="bg-teal-500"
