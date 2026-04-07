@@ -41,9 +41,8 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
     <>
       <div 
         className={cn(
-          "ios-card overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary transition-colors",
-          session.visibility_state === 'boosted' && "ring-2 ring-primary/25 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_12px_30px_rgba(37,99,235,0.14)]",
-          session.visibility_state === 'premium' && "shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
+          "bg-card border-y border-border overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary/80 transition-colors",
+          session.visibility_state === 'boosted' && "ring-2 ring-primary/25",
           getActivityBorderLeftClass(session.activity_type)
         )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}

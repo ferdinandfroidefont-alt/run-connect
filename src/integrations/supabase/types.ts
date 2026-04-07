@@ -1499,44 +1499,6 @@ export type Database = {
           },
         ]
       }
-      session_participant_feedback: {
-        Row: {
-          comment: string | null
-          created_at: string
-          id: string
-          participant_user_id: string
-          session_id: string
-          updated_at: string
-          went_well: boolean
-        }
-        Insert: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          participant_user_id: string
-          session_id: string
-          updated_at?: string
-          went_well: boolean
-        }
-        Update: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          participant_user_id?: string
-          session_id?: string
-          updated_at?: string
-          went_well?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_participant_feedback_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       session_ratings: {
         Row: {
           comment: string | null
@@ -2148,10 +2110,6 @@ export type Database = {
         Args: { p_user_challenge_id: string }
         Returns: undefined
       }
-      count_common_follows: {
-        Args: { user_a: string; user_b: string }
-        Returns: number
-      }
       decline_club_invitation: {
         Args: { invitation_id: string }
         Returns: boolean
@@ -2388,10 +2346,6 @@ export type Database = {
         Returns: boolean
       }
       record_weekly_score_snapshot: { Args: never; Returns: undefined }
-      request_session_presence_reminder: {
-        Args: { p_session_id: string }
-        Returns: undefined
-      }
       remove_user_points:
         | {
             Args: { points_to_remove: number; user_id_param: string }
