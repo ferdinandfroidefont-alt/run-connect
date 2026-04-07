@@ -89,6 +89,7 @@ export const ProfileDialog = ({
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [highlightStoryId, setHighlightStoryId] = useState<string | null>(null);
   const [newHighlightTitle, setNewHighlightTitle] = useState("");
+  const [ownPublications, setOwnPublications] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -139,8 +140,19 @@ export const ProfileDialog = ({
       fetchFollowCounts();
       fetchReliabilityStats();
       void fetchStoriesAndHighlights();
+      void fetchOwnPublications();
     }
   }, [user, open]);
+  const fetchOwnPublications = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("sessions")
+      .select("id, title, scheduled_at, location_name")
+      .eq("organizer_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    setOwnPublications((data ?? []) as Array<{ id: string; title: string; scheduled_at: string; location_name: string }>);
+  };
   const fetchStoriesAndHighlights = async () => {
     if (!user) return;
     const [{ data: stories }, { data: highlights }] = await Promise.all([
@@ -653,11 +665,46 @@ export const ProfileDialog = ({
               {/* Tab content */}
               {activeContentTab === "grid" && (
                 <div className="ios-card border border-border/60 p-2 shadow-[var(--shadow-card)]">
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: 9 }).map((_, idx) => (
-                      <div key={`profile-grid-${idx}`} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card" />
-                    ))}
-                  </div>
+                  {ownPublications.length === 0 ? (
+                    <div className="px-3 py-6 text-center">
+                      <p className="text-[14px] font-medium text-foreground">Aucune publication creee</p>
+                      <Button
+                        className="mt-3"
+                        onClick={() => {
+                          onOpenChange(false);
+                          navigate("/messages?tab=publications");
+                        }}
+                      >
+                        Creer une publication
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        {ownPublications.slice(0, 3).map((pub) => (
+                          <div key={pub.id} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card p-2">
+                            <p className="line-clamp-2 text-[11px] font-medium text-foreground">{pub.title}</p>
+                            <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{pub.location_name}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {ownPublications.length > 3 && (
+                        <div className="pt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => {
+                              onOpenChange(false);
+                              navigate("/messages?tab=publications");
+                            }}
+                          >
+                            Plus
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               {activeContentTab === "videos" && (
@@ -782,10 +829,18 @@ export const ProfileDialog = ({
                 <>
                   <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
-                      <Button type="button" size="sm" variant="outline" onClick={() => setShowHighlightsManager(true)}>
-                        Modifier
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
+                        <button
+                          type="button"
+                          onClick={() => setShowHighlightsManager(true)}
+                          className="text-sm"
+                          aria-label="Modifier stories a la une"
+                          title="Modifier stories a la une"
+                        >
+                          ✏️
+                        </button>
+                      </div>
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-1">
                       {storyHighlights.map((item) => (

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import type { FeedSession } from '@/hooks/useFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 import { buildPreferredSessionShareLink } from '@/lib/appLinks';
+import { Link } from 'react-router-dom';
 
 interface FeedCardProps {
   session: FeedSession;
@@ -44,6 +45,28 @@ export const FeedCard = ({
   index = 0
 }: FeedCardProps) => {
   const [showComments, setShowComments] = useState(false);
+  const renderSocialText = (text: string) => {
+    const tokens = text.split(/(\s+)/);
+    return tokens.map((token, i) => {
+      if (token.startsWith('@') && token.length > 1) {
+        const username = token.slice(1).replace(/[^\w.-]/g, '');
+        return (
+          <Link key={`${token}-${i}`} to={`/p/${username}`} className="font-medium text-primary">
+            {token}
+          </Link>
+        );
+      }
+      if (token.startsWith('#') && token.length > 1) {
+        const hashtag = token.slice(1).replace(/[^\w-]/g, '');
+        return (
+          <span key={`${token}-${i}`} className="font-medium text-primary/90">
+            #{hashtag}
+          </span>
+        );
+      }
+      return <span key={`${token}-${i}`}>{token}</span>;
+    });
+  };
   
   const handleLike = () => {
     if (session.is_liked) {
@@ -151,9 +174,25 @@ export const FeedCard = ({
         {/* Description */}
         {session.description && (
           <p className="text-[15px] text-muted-foreground line-clamp-2">
-            {session.description}
+            {renderSocialText(session.description)}
           </p>
         )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[12px] text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            {session.location_name}
+          </span>
+          {session.location_name
+            .split(/[,\s]+/)
+            .filter((part) => part.length >= 3)
+            .slice(0, 2)
+            .map((part) => (
+              <span key={`loc-${part}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                #{part.replace(/[^\w-]/g, '')}
+              </span>
+            ))}
+        </div>
 
         {/* Info Row */}
         <div className="flex items-center gap-4 text-[13px] text-muted-foreground">

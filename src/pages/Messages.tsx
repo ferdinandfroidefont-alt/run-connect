@@ -194,6 +194,7 @@ const Messages = () => {
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [messagesHomeTab, setMessagesHomeTab] = useState<"inbox" | "publications">("inbox");
   const [showCreateStoryDialog, setShowCreateStoryDialog] = useState(false);
+  const [showCreatePublicationModal, setShowCreatePublicationModal] = useState(false);
   const [scheduledSessions, setScheduledSessions] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
   const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
   const [isContactsLoading, setIsContactsLoading] = useState(false);
@@ -250,6 +251,7 @@ const Messages = () => {
   } = useFeed();
 
   const conversationParam = searchParams.get("conversation");
+  const tabParam = searchParams.get("tab");
 
   const visibleMessages = useMemo(() => {
     const q = threadSearch.trim().toLowerCase();
@@ -1841,6 +1843,12 @@ const Messages = () => {
     });
   }, [conversationParam, conversations, user, setSearchParams]);
 
+  useEffect(() => {
+    if (tabParam === "publications") {
+      setMessagesHomeTab("publications");
+    }
+  }, [tabParam]);
+
   const handleJoinFeedSession = useCallback(
     (sessionId: string) => {
       navigate(`/training/${sessionId}`);
@@ -3175,10 +3183,13 @@ const Messages = () => {
                   </div>
                 ) : feedItems.length === 0 ? (
                   <div className="ios-card px-4 py-8 text-center">
-                    <p className="text-[15px] font-medium text-foreground">Aucune publication pour le moment</p>
+                    <p className="text-[15px] font-medium text-foreground">Aucune publication creee</p>
                     <p className="mt-1 text-[13px] text-muted-foreground">
-                      Suis des membres pour voir leurs activites ici.
+                      Cree une publication pour apparaitre dans le fil.
                     </p>
+                    <Button className="mt-4" onClick={() => setShowCreatePublicationModal(true)}>
+                      Creer une publication
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -3352,6 +3363,32 @@ const Messages = () => {
               {scheduledSessions.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">Aucune seance programmee a partager.</p>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCreatePublicationModal} onOpenChange={setShowCreatePublicationModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Creer une publication</DialogTitle>
+              <DialogDescription>
+                Partage une seance programmee dans tes stories/publications.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  void loadSchedulableSessions();
+                  setShowCreatePublicationModal(false);
+                  setShowCreateStoryDialog(true);
+                }}
+              >
+                Continuer
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowCreatePublicationModal(false)}>
+                Annuler
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

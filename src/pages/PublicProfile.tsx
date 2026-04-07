@@ -31,6 +31,7 @@ import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
 import { getCountryLabel } from "@/lib/countryLabels";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type CommonClubRow = {
   club_id: string;
@@ -108,6 +109,9 @@ const PublicProfile = () => {
   const [showStoryDialog, setShowStoryDialog] = useState(false);
   const [profileHighlights, setProfileHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
+  const [publications, setPublications] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
+  const [showAllPublications, setShowAllPublications] = useState(false);
+  const [showAllHighlights, setShowAllHighlights] = useState(false);
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
@@ -251,12 +255,21 @@ const PublicProfile = () => {
   useEffect(() => {
     if (!profile?.user_id) return;
     void (async () => {
-      const { data } = await (supabase as any)
-        .from("profile_story_highlights")
-        .select("id, story_id, title, position")
-        .eq("owner_id", profile.user_id)
-        .order("position", { ascending: true });
-      setProfileHighlights((data ?? []) as Array<{ id: string; story_id: string; title: string }>);
+      const [{ data: highlights }, { data: sessions }] = await Promise.all([
+        (supabase as any)
+          .from("profile_story_highlights")
+          .select("id, story_id, title, position")
+          .eq("owner_id", profile.user_id)
+          .order("position", { ascending: true }),
+        supabase
+          .from("sessions")
+          .select("id, title, scheduled_at, location_name")
+          .eq("organizer_id", profile.user_id)
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
+      setProfileHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
+      setPublications((sessions ?? []) as Array<{ id: string; title: string; scheduled_at: string; location_name: string }>);
     })();
   }, [profile?.user_id]);
 
@@ -520,11 +533,22 @@ const PublicProfile = () => {
 
           {profileHighlights.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
-              <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
-                Stories a la une
-              </p>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                  Stories a la une
+                </p>
+                {profileHighlights.length > 6 && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary"
+                    onClick={() => setShowAllHighlights(true)}
+                  >
+                    Plus
+                  </button>
+                )}
+              </div>
               <div className="flex gap-3 overflow-x-auto pb-1">
-                {profileHighlights.map((item) => (
+                {profileHighlights.slice(0, 6).map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -540,6 +564,35 @@ const PublicProfile = () => {
               </div>
             </div>
           ) : null}
+
+          <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
+                Publications
+              </p>
+              {publications.length > 3 && (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-primary"
+                  onClick={() => setShowAllPublications(true)}
+                >
+                  Plus
+                </button>
+              )}
+            </div>
+            {publications.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune publication creee</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {publications.slice(0, 3).map((pub) => (
+                  <div key={pub.id} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card p-2">
+                    <p className="line-clamp-2 text-[11px] font-medium text-foreground">{pub.title}</p>
+                    <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{pub.location_name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {profileSports.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
@@ -664,6 +717,45 @@ const PublicProfile = () => {
         viewerUserId={user?.id ?? null}
         storyId={selectedHighlightStoryId}
       />
+
+      <Dialog open={showAllPublications} onOpenChange={setShowAllPublications}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Publications</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-80 space-y-2 overflow-auto">
+            {publications.map((pub) => (
+              <div key={pub.id} className="rounded-ios-md border px-3 py-2">
+                <p className="text-sm font-semibold">{pub.title}</p>
+                <p className="text-xs text-muted-foreground">{pub.location_name}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAllHighlights} onOpenChange={setShowAllHighlights}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stories a la une</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-80 space-y-2 overflow-auto">
+            {profileHighlights.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="w-full rounded-ios-md border px-3 py-2 text-left"
+                onClick={() => {
+                  setShowAllHighlights(false);
+                  setSelectedHighlightStoryId(item.story_id);
+                }}
+              >
+                <p className="text-sm font-semibold">{item.title}</p>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
