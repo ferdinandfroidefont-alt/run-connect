@@ -192,9 +192,8 @@ const Messages = () => {
   const [typingUsers, setTypingUsers] = useState<{[userId: string]: {username: string, lastSeen: number}}>({});
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
-  const [messagesHomeTab, setMessagesHomeTab] = useState<"inbox" | "publications">("inbox");
+  const [messagesHomeTab, setMessagesHomeTab] = useState<"inbox" | "feed">("inbox");
   const [showCreateStoryDialog, setShowCreateStoryDialog] = useState(false);
-  const [showCreatePublicationModal, setShowCreatePublicationModal] = useState(false);
   const [scheduledSessions, setScheduledSessions] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
   const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
   const [isContactsLoading, setIsContactsLoading] = useState(false);
@@ -1844,8 +1843,8 @@ const Messages = () => {
   }, [conversationParam, conversations, user, setSearchParams]);
 
   useEffect(() => {
-    if (tabParam === "publications") {
-      setMessagesHomeTab("publications");
+    if (tabParam === "feed") {
+      setMessagesHomeTab("feed");
     }
   }, [tabParam]);
 
@@ -2865,13 +2864,13 @@ const Messages = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setMessagesHomeTab("publications")}
+                onClick={() => setMessagesHomeTab("feed")}
                 className={cn(
                   "min-h-[40px] rounded-ios-md text-[13px] font-semibold transition-colors",
-                  messagesHomeTab === "publications" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  messagesHomeTab === "feed" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 )}
               >
-                Publications
+                Feed
               </button>
             </div>
           </div>
@@ -3183,13 +3182,10 @@ const Messages = () => {
                   </div>
                 ) : feedItems.length === 0 ? (
                   <div className="ios-card px-4 py-8 text-center">
-                    <p className="text-[15px] font-medium text-foreground">Aucune publication creee</p>
+                    <p className="text-[15px] font-medium text-foreground">Aucune activite dans le feed</p>
                     <p className="mt-1 text-[13px] text-muted-foreground">
-                      Cree une publication pour apparaitre dans le fil.
+                      Suis des membres pour voir leurs seances ici.
                     </p>
-                    <Button className="mt-4" onClick={() => setShowCreatePublicationModal(true)}>
-                      Creer une publication
-                    </Button>
                   </div>
                 ) : (
                   <>
@@ -3363,32 +3359,6 @@ const Messages = () => {
               {scheduledSessions.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">Aucune seance programmee a partager.</p>
               )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showCreatePublicationModal} onOpenChange={setShowCreatePublicationModal}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Creer une publication</DialogTitle>
-              <DialogDescription>
-                Partage une seance programmee dans tes stories/publications.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-2">
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  void loadSchedulableSessions();
-                  setShowCreatePublicationModal(false);
-                  setShowCreateStoryDialog(true);
-                }}
-              >
-                Continuer
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={() => setShowCreatePublicationModal(false)}>
-                Annuler
-              </Button>
             </div>
           </DialogContent>
         </Dialog>

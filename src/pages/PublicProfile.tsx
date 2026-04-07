@@ -109,8 +109,6 @@ const PublicProfile = () => {
   const [showStoryDialog, setShowStoryDialog] = useState(false);
   const [profileHighlights, setProfileHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
-  const [publications, setPublications] = useState<Array<{ id: string; title: string; scheduled_at: string; location_name: string }>>([]);
-  const [showAllPublications, setShowAllPublications] = useState(false);
   const [showAllHighlights, setShowAllHighlights] = useState(false);
 
   useEffect(() => {
@@ -255,21 +253,12 @@ const PublicProfile = () => {
   useEffect(() => {
     if (!profile?.user_id) return;
     void (async () => {
-      const [{ data: highlights }, { data: sessions }] = await Promise.all([
-        (supabase as any)
-          .from("profile_story_highlights")
-          .select("id, story_id, title, position")
-          .eq("owner_id", profile.user_id)
-          .order("position", { ascending: true }),
-        supabase
-          .from("sessions")
-          .select("id, title, scheduled_at, location_name")
-          .eq("organizer_id", profile.user_id)
-          .order("created_at", { ascending: false })
-          .limit(30),
-      ]);
+      const { data: highlights } = await (supabase as any)
+        .from("profile_story_highlights")
+        .select("id, story_id, title, position")
+        .eq("owner_id", profile.user_id)
+        .order("position", { ascending: true });
       setProfileHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
-      setPublications((sessions ?? []) as Array<{ id: string; title: string; scheduled_at: string; location_name: string }>);
     })();
   }, [profile?.user_id]);
 
@@ -565,35 +554,6 @@ const PublicProfile = () => {
             </div>
           ) : null}
 
-          <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
-                Publications
-              </p>
-              {publications.length > 3 && (
-                <button
-                  type="button"
-                  className="text-xs font-medium text-primary"
-                  onClick={() => setShowAllPublications(true)}
-                >
-                  Plus
-                </button>
-              )}
-            </div>
-            {publications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune publication creee</p>
-            ) : (
-              <div className="grid grid-cols-3 gap-2">
-                {publications.slice(0, 3).map((pub) => (
-                  <div key={pub.id} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card p-2">
-                    <p className="line-clamp-2 text-[11px] font-medium text-foreground">{pub.title}</p>
-                    <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{pub.location_name}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           {profileSports.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
@@ -725,22 +685,6 @@ const PublicProfile = () => {
           navigate("/feed");
         }}
       />
-
-      <Dialog open={showAllPublications} onOpenChange={setShowAllPublications}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Publications</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-80 space-y-2 overflow-auto">
-            {publications.map((pub) => (
-              <div key={pub.id} className="rounded-ios-md border px-3 py-2">
-                <p className="text-sm font-semibold">{pub.title}</p>
-                <p className="text-xs text-muted-foreground">{pub.location_name}</p>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showAllHighlights} onOpenChange={setShowAllHighlights}>
         <DialogContent className="max-w-md">
