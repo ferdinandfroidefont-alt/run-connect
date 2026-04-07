@@ -97,7 +97,7 @@ export const RecentActivities = ({ userId, viewerUserId, limit = 5 }: RecentActi
             .select("session_id, went_well, comment, participant_user_id")
             .in("session_id", createdIds);
 
-          const participantIds = [...new Set((feedbackRows || []).map((r) => r.participant_user_id))];
+          const participantIds = [...new Set((feedbackRows || []).map((r: any) => r.participant_user_id as string))];
           let profileMap = new Map<string, { username: string; display_name: string | null }>();
           if (participantIds.length > 0) {
             const { data: profs } = await supabase
