@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import mapboxgl from 'mapbox-gl';
+import type { Map as MapboxMap, Marker } from 'mapbox-gl';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import {
   ArrowLeft,
   Box,
@@ -58,8 +59,8 @@ export default function ItineraryRouteDetail() {
   const { user } = useAuth();
   const { formatKm, formatMeters, unit } = useDistanceUnits();
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const scrubMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
+  const scrubMarkerRef = useRef<Marker | null>(null);
 
   const [route, setRoute] = useState<MyRouteRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,27 +108,36 @@ export default function ItineraryRouteDetail() {
     scrubMarkerRef.current?.remove();
     scrubMarkerRef.current = null;
 
-    const m = createEmbeddedMapboxMap(mapContainerRef.current, {
-      center: points[0]!,
-      zoom: 12,
-      interactive: true,
-    });
-    mapRef.current = m;
+    let cancelled = false;
 
-    const apply = () => {
-      setOrUpdateLineLayer(m, DETAIL_LINE_SRC, DETAIL_LINE_LAYER, points, {
-        color: '#5B7CFF',
-        width: 5,
+    void (async () => {
+      const m = await createEmbeddedMapboxMap(mapContainerRef.current!, {
+        center: points[0]!,
+        zoom: 12,
+        interactive: true,
       });
-      fitMapToCoords(m, points, 48);
-    };
-    if (m.isStyleLoaded()) apply();
-    else m.once('load', apply);
+      if (cancelled) {
+        m.remove();
+        return;
+      }
+      mapRef.current = m;
+
+      const apply = async () => {
+        setOrUpdateLineLayer(m, DETAIL_LINE_SRC, DETAIL_LINE_LAYER, points, {
+          color: '#5B7CFF',
+          width: 5,
+        });
+        await fitMapToCoords(m, points, 48);
+      };
+      if (m.isStyleLoaded()) void apply();
+      else m.once('load', () => void apply());
+    })();
 
     return () => {
+      cancelled = true;
       scrubMarkerRef.current?.remove();
       scrubMarkerRef.current = null;
-      m.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [points]);
@@ -145,16 +155,21 @@ export default function ItineraryRouteDetail() {
       return;
     }
     if (!scrubMarkerRef.current) {
-      const el = document.createElement('div');
-      el.style.width = '14px';
-      el.style.height = '14px';
-      el.style.borderRadius = '9999px';
-      el.style.background = '#2563eb';
-      el.style.border = '2px solid white';
-      el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
-      scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([meta.lng, meta.lat])
-        .addTo(m);
+      void (async () => {
+        const mapboxgl = await loadMapboxGl();
+        const mapInst = mapRef.current;
+        if (!mapInst || !meta) return;
+        const el = document.createElement('div');
+        el.style.width = '14px';
+        el.style.height = '14px';
+        el.style.borderRadius = '9999px';
+        el.style.background = '#2563eb';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
+        scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([meta.lng, meta.lat])
+          .addTo(mapInst);
+      })();
     } else {
       scrubMarkerRef.current.setLngLat([meta.lng, meta.lat]);
     }

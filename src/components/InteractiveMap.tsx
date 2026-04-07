@@ -1,7 +1,16 @@
 import { RouteDialog } from './RouteDialog';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RUNCONNECT_OPEN_HOME_SETTINGS_EVENT } from '@/lib/homeMapEvents';
-import mapboxgl from 'mapbox-gl';
+import type {
+  GeoJSONSource,
+  LngLat,
+  Map,
+  MapMouseEvent,
+  MapTouchEvent,
+  Marker,
+  PaddingOptions,
+} from 'mapbox-gl';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
@@ -94,7 +103,7 @@ const PARIS_FALLBACK: { lng: number; lat: number } = { lng: 2.3522, lat: 48.8566
 function computeHomeMapViewportPadding(opts: {
   immersive: boolean;
   topStackEl: HTMLElement | null;
-}): mapboxgl.PaddingOptions {
+}): PaddingOptions {
   if (opts.immersive) {
     return { top: 80, bottom: 120, left: 14, right: 14 };
   }
@@ -266,7 +275,7 @@ const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
   geometry: { type: 'LineString', coordinates: [] },
 };
 
-function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
+function ensureInteractiveRouteLayer(map: Map) {
   if (map.getSource(ROUTE_LINE_SOURCE)) return;
   map.addSource(ROUTE_LINE_SOURCE, {
     type: 'geojson',
@@ -285,12 +294,12 @@ function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
   });
 }
 
-function setInteractiveRouteLine(map: mapboxgl.Map | null, points: MapCoord[]) {
+function setInteractiveRouteLine(map: Map | null, points: MapCoord[]) {
   if (!map) return;
   const apply = () => {
     if (!map.isStyleLoaded()) return;
     ensureInteractiveRouteLayer(map);
-    const src = map.getSource(ROUTE_LINE_SOURCE) as mapboxgl.GeoJSONSource;
+    const src = map.getSource(ROUTE_LINE_SOURCE) as GeoJSONSource;
     if (points.length >= 2) {
       src.setData(coordsToLineString(points));
     } else {
@@ -339,10 +348,10 @@ export const InteractiveMap = ({
     getCurrentPosition
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const map = useRef<Map | null>(null);
+  const markers = useRef<Marker[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
-  const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -364,7 +373,7 @@ export const InteractiveMap = ({
     time_slot: null,
     level: null
   });
-  const [mapboxMap, setMapboxMap] = useState<mapboxgl.Map | null>(null);
+  const [mapboxMap, setMapboxMap] = useState<Map | null>(null);
   const [userProfile, setUserProfile] = useState<{
     username: string;
     display_name: string;
@@ -843,6 +852,7 @@ export const InteractiveMap = ({
   // Create map markers for sessions
   const createMarkers = async () => {
     if (!map.current) return;
+    const mapboxgl = await loadMapboxGl();
     const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
@@ -1176,12 +1186,13 @@ export const InteractiveMap = ({
       return;
     }
 
-    mapboxgl.accessToken = token;
     let cancelled = false;
 
-    const boot = () => {
+    const boot = (mapboxgl: Awaited<ReturnType<typeof loadMapboxGl>>) => {
       try {
         if (!mapContainer.current || cancelled) return;
+
+        mapboxgl.accessToken = token;
 
         const prefImmediate = takePrefetchedHomeMapPositionIfReady();
         const persistedHint = getPersistedHomeMapPosition();
@@ -1347,7 +1358,16 @@ export const InteractiveMap = ({
       }
     };
 
-    boot();
+    void (async () => {
+      try {
+        const mapboxgl = await loadMapboxGl();
+        if (cancelled) return;
+        boot(mapboxgl);
+      } catch (error) {
+        console.error('Erreur chargement Mapbox GL:', error);
+        toast.error('Erreur lors du chargement de la carte');
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -1377,8 +1397,19 @@ export const InteractiveMap = ({
       return;
     }
 
-    const marker = createUserLocationMapboxMarker(userLocation.lng, userLocation.lat).addTo(map.current);
-    userLocationMarker.current = marker;
+    let cancelled = false;
+    void (async () => {
+      const marker = await createUserLocationMapboxMarker(userLocation.lng, userLocation.lat);
+      if (cancelled || !map.current) {
+        marker.remove();
+        return;
+      }
+      marker.addTo(map.current);
+      userLocationMarker.current = marker;
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
     clearMapStyleThemeRollback();
@@ -1695,7 +1726,7 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-  const handleCreateSessionAtLocation = (latLng: mapboxgl.LngLat | null) => {
+  const handleCreateSessionAtLocation = (latLng: LngLat | null) => {
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
@@ -1719,7 +1750,7 @@ export const InteractiveMap = ({
       }
     };
 
-    const armLongPress = (lngLat: mapboxgl.LngLat | null | undefined) => {
+    const armLongPress = (lngLat: LngLat | null | undefined) => {
       if (!lngLat) return;
       if (localStorage.getItem('enableLongPressCreate') !== 'true') return;
       clearTimer();
@@ -1729,11 +1760,11 @@ export const InteractiveMap = ({
       }, 600);
     };
 
-    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+    const onMouseDown = (e: MapMouseEvent) => {
       if (e.originalEvent instanceof MouseEvent && e.originalEvent.button !== 0) return;
       armLongPress(e.lngLat ?? null);
     };
-    const onTouchStart = (e: mapboxgl.MapTouchEvent) => {
+    const onTouchStart = (e: MapTouchEvent) => {
       armLongPress(e.lngLat ?? null);
     };
     const cancelPress = () => clearTimer();
