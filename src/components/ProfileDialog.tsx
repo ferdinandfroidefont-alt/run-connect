@@ -570,7 +570,7 @@ export const ProfileDialog = ({
               </div>
 
               {/* Stats socials */}
-              <IOSListGroup flush className="mb-0">
+              <IOSListGroup flush className="mb-0 [&>div]:border-y-0 [&>div]:border-b [&>div]:border-border">
                 <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
                   <div className="min-h-[44px] flex-1 py-3 text-center">
                     <p className="text-[20px] font-bold text-foreground">{socialSessionsCount}</p>
