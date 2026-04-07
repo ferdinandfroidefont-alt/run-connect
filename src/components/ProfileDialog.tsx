@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Grid3X3, PlaySquare, Tags, Share2 } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -82,7 +82,6 @@ export const ProfileDialog = ({
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
-  const [activeContentTab, setActiveContentTab] = useState<"grid" | "videos" | "tagged">("grid");
   const [showOwnStory, setShowOwnStory] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
   const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
@@ -433,7 +432,7 @@ export const ProfileDialog = ({
   const profileDialogShellClassName =
     "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
-  const socialPostsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
+  const socialSessionsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
   const socialHighlights = [
     profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] ?? "Sport" : null,
     profile?.country ? COUNTRY_LABELS[profile.country] ?? profile.country : null,
@@ -574,8 +573,8 @@ export const ProfileDialog = ({
               <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
                 <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
                   <div className="min-h-[44px] flex-1 py-3 text-center">
-                    <p className="text-[20px] font-bold text-foreground">{socialPostsCount}</p>
-                    <p className="text-[12px] text-muted-foreground">Posts</p>
+                    <p className="text-[20px] font-bold text-foreground">{socialSessionsCount}</p>
+                    <p className="text-[12px] text-muted-foreground">Seances</p>
                   </div>
                   <button
                     type="button"
@@ -619,59 +618,6 @@ export const ProfileDialog = ({
                   )}
                 </div>
               </div>
-
-              {/* Content Tabs */}
-              <div className="ios-card border border-border/60 p-1 shadow-[var(--shadow-card)]">
-                <div className="grid grid-cols-3 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveContentTab("grid")}
-                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "grid" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                    Grille
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveContentTab("videos")}
-                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "videos" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    <PlaySquare className="h-4 w-4" />
-                    Videos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveContentTab("tagged")}
-                    className={`flex min-h-[40px] items-center justify-center gap-1 rounded-ios-md text-[12px] font-semibold ${activeContentTab === "tagged" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    <Tags className="h-4 w-4" />
-                    Tage
-                  </button>
-                </div>
-              </div>
-
-              {/* Tab content */}
-              {activeContentTab === "grid" && (
-                <div className="ios-card border border-border/60 p-2 shadow-[var(--shadow-card)]">
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: 9 }).map((_, idx) => (
-                      <div key={`profile-grid-${idx}`} className="aspect-square rounded-ios-md border border-border/60 bg-gradient-to-br from-primary/15 via-muted to-card" />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {activeContentTab === "videos" && (
-                <div className="ios-card border border-border/60 px-4 py-6 text-center shadow-[var(--shadow-card)]">
-                  <PlaySquare className="mx-auto h-6 w-6 text-muted-foreground" />
-                  <p className="mt-2 text-[14px] text-muted-foreground">Aucune video pour le moment.</p>
-                </div>
-              )}
-              {activeContentTab === "tagged" && (
-                <div className="ios-card border border-border/60 px-4 py-6 text-center shadow-[var(--shadow-card)]">
-                  <Tags className="mx-auto h-6 w-6 text-muted-foreground" />
-                  <p className="mt-2 text-[14px] text-muted-foreground">Tu n'es pas encore tague dans des posts.</p>
-                </div>
-              )}
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
