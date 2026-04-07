@@ -482,7 +482,7 @@ export const ProfileDialog = ({
           </div>
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-             <div className="box-border min-w-0 max-w-full space-y-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+             <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
                {/* Profile Header - Social */}
                <div className="bg-card border-y border-border px-4 py-4">
                 <div className="flex min-w-0 items-start gap-3">
