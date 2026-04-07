@@ -137,7 +137,7 @@ export function SessionExperienceFeedbackDialog({
     if (!session) return;
     setReminderLoading(true);
     try {
-      const { error } = await supabase.rpc("request_session_presence_reminder", {
+      const { error } = await (supabase as any).rpc("request_session_presence_reminder", {
         p_session_id: session.sessionId,
       });
 

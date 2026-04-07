@@ -92,7 +92,7 @@ export const RecentActivities = ({ userId, viewerUserId, limit = 5 }: RecentActi
       if (showOrganizerFeedback) {
         const createdIds = sliced.filter((a) => a.type === "created").map((a) => a.id);
         if (createdIds.length > 0) {
-          const { data: feedbackRows } = await supabase
+          const { data: feedbackRows } = await (supabase as any)
             .from("session_participant_feedback")
             .select("session_id, went_well, comment, participant_user_id")
             .in("session_id", createdIds);

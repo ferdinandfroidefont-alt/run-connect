@@ -63,7 +63,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
       if (cancelled) return;
       setExiting(true);
-      completeTimerRef.current = window.setTimeout(() => {
+      completeTimerRef.current = setTimeout(() => {
         if (!cancelled) onCompleteRef.current();
         completeTimerRef.current = null;
       }, 180);
