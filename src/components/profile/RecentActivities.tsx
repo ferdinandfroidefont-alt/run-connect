@@ -103,7 +103,7 @@ export const RecentActivities = ({ userId, viewerUserId, limit = 5 }: RecentActi
             const { data: profs } = await supabase
               .from("profiles")
               .select("user_id, username, display_name")
-              .in("user_id", participantIds);
+              .in("user_id", participantIds as string[]);
             profileMap = new Map(
               (profs || []).map((p) => [
                 p.user_id,
