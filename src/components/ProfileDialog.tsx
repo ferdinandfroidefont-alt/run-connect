@@ -726,7 +726,7 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-                  <div className="ios-card border border-border/60 px-3 py-3 shadow-[var(--shadow-card)]">
+                  <div className="bg-card border-y border-border px-4 py-3">
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
