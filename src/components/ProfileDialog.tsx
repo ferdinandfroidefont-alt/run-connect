@@ -621,10 +621,10 @@ export const ProfileDialog = ({
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
-                <IOSListGroup
-                  header="MODIFIER MES INFORMATIONS"
-                  className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                >
+                 <IOSListGroup
+                   header="MODIFIER MES INFORMATIONS"
+                   flush
+                 >
                   <div className="p-4 space-y-4">
                     <div className="space-y-3">
                       <div>
