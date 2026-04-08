@@ -14,7 +14,7 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 
 interface Profile {
   notifications_enabled?: boolean;
-  notif_boost_nearby?: boolean;
+  
   notif_follow_request?: boolean;
   notif_message?: boolean;
   notif_session_request?: boolean;
@@ -49,7 +49,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('notifications_enabled, notif_boost_nearby, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium' as any)
+        .select('notifications_enabled, notif_follow_request, notif_message, notif_session_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed, is_premium' as any)
         .eq('user_id', user?.id)
         .maybeSingle();
 
@@ -138,7 +138,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   };
 
   const notificationItems = [
-    { key: 'notif_boost_nearby', icon: Bell, color: 'bg-amber-500', label: 'Boosts proches', desc: 'Séances boostées qui démarrent bientôt autour de vous' },
+    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
     { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
