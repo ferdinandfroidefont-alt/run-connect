@@ -10,6 +10,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
+import { BootErrorBoundary } from "@/components/BootErrorBoundary";
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
@@ -168,15 +169,17 @@ if (!rootElement) {
 } else {
   try {
     createRoot(rootElement).render(
-      <AuthProvider>
-        <UserProfileProvider>
-          <DistanceUnitsProvider>
-            <LanguageProvider>
-              <App />
-            </LanguageProvider>
-          </DistanceUnitsProvider>
-        </UserProfileProvider>
-      </AuthProvider>
+      <BootErrorBoundary>
+        <AuthProvider>
+          <UserProfileProvider>
+            <DistanceUnitsProvider>
+              <LanguageProvider>
+                <App />
+              </LanguageProvider>
+            </DistanceUnitsProvider>
+          </UserProfileProvider>
+        </AuthProvider>
+      </BootErrorBoundary>
     );
   } catch (bootErr) {
     console.error("[main] Échec du render initial:", bootErr);

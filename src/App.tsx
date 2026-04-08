@@ -55,7 +55,15 @@ const StoryCreate = lazy(() => import("./pages/StoryCreate"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
-  return <Suspense fallback={null}>{children}</Suspense>;
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[50dvh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
 }
 
 const queryClient = new QueryClient({

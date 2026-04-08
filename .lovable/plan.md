@@ -1,110 +1,64 @@
 
 
-# Refonte complète de la page Profil Utilisateur (ProfilePreviewDialog)
+# Refonte design "Mon Profil" — style Instagram/Strava premium
 
-## Portée
-Refonte purement UI/UX du composant `ProfilePreviewDialog.tsx` (~600 lignes). Aucune modification de la logique metier, navigation, tab bar ou safe area. Le composant reste un Dialog plein ecran mobile / modal desktop.
+## Probleme actuel
+La page profil a trop de blocs empiles avec des designs differents : grille d'infos personnelles redondante (pseudo et nom deja affiches en haut), raccourcis en pilules basiques, et une densite visuelle trop forte. Ca fait amateur.
 
-## Structure cible (ordre des sections)
+## Inspiration Instagram / Strava
+- **Instagram** : Header compact (avatar + stats sur la meme ligne), bio en dessous, stories highlights, puis onglets de contenu (grille/reels/tags)
+- **Strava** : Stats integrees dans le header, actions directes, contenu en sections propres
+
+## Structure cible
 
 ```text
-┌─────────────────────────────────┐
-│  Header : ← Retour  |  Nom  | ⋯│
-├─────────────────────────────────┤
-│  Avatar  │  Nom + @user         │
-│  80x80   │  🇫🇷 France · 24 ans │
-│          │  [Online dot]        │
-├─────────────────────────────────┤
-│  [ Suivre ]  [ Message ]        │
-├─────────────────────────────────┤
-│  Abonnements │ Abonnés │ Fiabilité│
-│     12       │   34    │   94%   │
-├─────────────────────────────────┤
-│  Bio (si présente)              │
-├─────────────────────────────────┤
-│  ▸ Séances créées         12    │
-│  ▸ Itinéraires créés       3    │
-│  ▸ Séances rejointes      28    │
-│  ▸ Records sport            >   │
-│  ▸ Séances récentes         >   │
-├─────────────────────────────────┤
-│ OU  🔒 Profil privé            │
-│     Suivez pour voir            │
-└─────────────────────────────────┘
+┌───────────────────────────────────┐
+│  ← Retour     Mon Profil     ⚙️  │  (⚙️ remplace le vide a droite)
+├───────────────────────────────────┤
+│  [Avatar]   Séances  Abonnés  Abts│  (stats a cote de l'avatar
+│   96x96       12       34     28  │   comme Instagram)
+│                                   │
+│  Nom complet 👑                   │
+│  @username                        │
+│  🇫🇷 France · 24 ans · 🏃 Course │  (1 ligne meta, plus de chips)
+│                                   │
+│  Bio texte ici si presente...     │
+│                                   │
+│  [ Modifier le profil ] [Partager]│
+├───────────────────────────────────┤
+│  ○ Story1  ○ Story2  ⊕ Ajouter   │  (stories inchange)
+├───────────────────────────────────┤
+│  🏆 Records    🛡️ Fiabilité 94%  │  (grille 2x2 d'acces rapides
+│  🗺️ Parcours   📍 Séances        │   icones + labels, style propre)
+└───────────────────────────────────┘
 ```
 
-## Fichiers modifies
+## Changements concrets dans `ProfileDialog.tsx`
 
-### 1. `src/components/ProfilePreviewDialog.tsx` — refonte complete du JSX
+### 1. Header : ajouter bouton Parametres a droite
+- Remplacer le `div` vide par un bouton engrenage (`Settings` icon) qui ouvre `setShowSettingsDialog(true)`
+- Retire "Parametres" des raccourcis en bas
 
-**Header** (inchange dans la logique, ajustement style)
-- Fond `bg-card`, bordure fine, safe-area top
-- Grille 3 colonnes : bouton Retour | titre tronque | menu ⋯
-- Deja en place, ajustements mineurs de padding
+### 2. Bloc identite : layout Instagram (avatar + stats cote a cote)
+- **Ligne du haut** : Avatar 80px a gauche, 3 colonnes de stats a droite (Seances | Abonnes | Abonnements) — exactement comme Instagram
+- **En dessous** : Nom + crown, @username, ligne meta condensee (`🇫🇷 France · 24 ans · 🏃 Course`) — remplace les chips
+- **Bio** sous la ligne meta
+- **Boutons** Modifier / Partager en dessous, `h-9 rounded-lg` plus fins
 
-**Bloc Identite** (refonte majeure)
-- Layout horizontal : Avatar 72px a gauche, infos a droite
-- Ligne 1 : display_name (bold, truncate, 1 ligne) + Crown si premium
-- Ligne 2 : @username (truncate, muted)
-- Ligne 3 : Pays + Age sur une ligne (`🇫🇷 France · 24 ans`) en utilisant `getCountryLabel` et `profile.age`
-- OnlineStatus reste positionne sur l'avatar
-- Tous les flex children ont `min-w-0`
-- Pas de carte flottante — fond transparent, juste du padding
+### 3. Supprimer la grille "Personal Info"
+- Les infos (pseudo, nom, age, pays, sport, tel) sont redondantes : deja dans le header et la ligne meta
+- Suppression complete de ce bloc
 
-**Boutons d'action** (sous l'identite, hors carte)
-- Deux boutons cote a cote, meme hauteur `h-10`
-- Suivre/Abonne = flex-1, Message = flex-1 (visible des que isFollowing)
-- `rounded-xl`, style iOS
-- Si pas encore suivi : Suivre prend toute la largeur
+### 4. Raccourcis : grille 2x2 d'icones au lieu de pilules scrollables
+- 4 raccourcis : Records, Fiabilite, Parcours, Seances
+- Chaque case : icone centree + label en dessous, fond `bg-secondary/40`, `rounded-xl`
+- Tap = navigation ou dialog
+- Plus compact et plus pro que des pilules horizontales
 
-**Bloc Stats** (3 colonnes egales)
-- Remplace le bloc actuel 2 colonnes (Suivis/Abonnes)
-- 3 colonnes : Abonnements | Abonnes | Fiabilite
-- Separateurs verticaux fins (`w-px bg-border`)
-- Chiffre bold en haut, label petit dessous
-- Fiabilite cliquable → ouvre `ReliabilityDetailsDialog` existant
-- Necessite fetch de `reliability_rate` depuis `user_stats` (ajouter au useEffect existant)
+### 5. Supprimer les chips sport/pays
+- Remplacees par la ligne meta sous le @username
+- Plus propre, moins encombre
 
-**Bio** (inchange, juste nettoyage style)
-- Texte avec `break-words`, pas de carte lourde, juste un fond `bg-card` subtil avec border fine
-
-**Filtre periode** (conserve tel quel — segmented control iOS)
-
-**Bloc Activite** (IOSListGroup)
-- Conserve les IOSListItem existants (Seances creees, Itineraires, Seances rejointes, Records, Seances recentes)
-- Aucun changement fonctionnel
-
-**Bloc Profil prive** (si !canViewContent)
-- Icone Lock (Lucide) au lieu de emoji 🔒
-- Texte centre, compact
-- Fond `bg-card` avec border fine, `rounded-xl`
-
-### 2. Ajout fetch fiabilite dans ProfilePreviewDialog
-
-- Dans le `fetchProfile` ou un useEffect separe, fetcher `user_stats.reliability_rate` pour le userId
-- Stocker dans un state `reliabilityRate`
-- Utiliser dans le bloc stats
-
-### 3. Corrections build existantes (en parallele)
-
-Les erreurs de build listees seront corrigees :
-- `cleanup-live-tracking/index.ts:47` — cast `(error as Error).message`
-- `firebase-auth/index.ts:214-220` — null checks sur `signInData.user` et `.session`
-- `process-referral-signup` et `process-referral` — cast supabase client avec `as any`
-- `update-streaks/index.ts:41` — cast `(error as Error).message`
-- `QRShareDialog.tsx` — importer/declarer `isIosPhone`
-- `HomeFeedBottomSheet.tsx` — corriger le type literal `52` en `number`
-- `IosFixedPageHeaderShell.tsx` — cast ref avec `as MutableRefObject`
-- `WeeklyTrackingView.tsx` — importer/definir `WeekSession`
-- `UserProfileContext.tsx` — corriger le type de la query
-- Autres erreurs TS listees
-
-## Details techniques
-
-- **Aucun nouveau composant** : tout reste dans `ProfilePreviewDialog.tsx`
-- **Imports ajoutes** : `Lock` de lucide-react, `getCountryLabel` de `@/lib/countryLabels`
-- **Import existant reutilise** : `ReliabilityDetailsDialog`
-- **Pas de modification de** : navigation, Dialog open/close, follow logic, block logic, report logic, sheets records/activities
-- **Ellipsis systematique** : tous les textes dans des flex children avec `min-w-0 truncate`
-- **Extensibilite** : la structure en sections sequentielles permet d'ajouter facilement avis, historique, stats avancees plus tard
+## Fichier modifie
+- `src/components/ProfileDialog.tsx` uniquement
 
