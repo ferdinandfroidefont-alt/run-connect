@@ -19,6 +19,7 @@ import {
 import {
   PROFILE_SPORT_RECORD_KEYS,
   PROFILE_SPORT_RECORD_LABELS,
+  SPORT_DISTANCES,
   isProfileSportRecordKey,
   type ProfileSportRecordKey,
 } from "@/lib/profileSportRecords";
@@ -160,7 +161,7 @@ export default function ProfileSportRecordsEdit() {
             <div className="space-y-3 px-4 py-4 ios-shell:px-2.5">
               <div className="space-y-1.5">
                 <label className="text-ios-footnote text-muted-foreground">Sport</label>
-                <Select value={sportKey} onValueChange={(v) => setSportKey(v as ProfileSportRecordKey)}>
+                <Select value={sportKey} onValueChange={(v) => { setSportKey(v as ProfileSportRecordKey); setEventLabel(""); }}>
                   <SelectTrigger className="h-11 rounded-ios-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -174,13 +175,37 @@ export default function ProfileSportRecordsEdit() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-ios-footnote text-muted-foreground">Épreuve</label>
-                <Input
-                  value={eventLabel}
-                  onChange={(e) => setEventLabel(e.target.value)}
-                  placeholder="Ex. Marathon de Paris"
-                  className="h-11 rounded-ios-sm"
-                />
+                <label className="text-ios-footnote text-muted-foreground">Distance / Épreuve</label>
+                {SPORT_DISTANCES[sportKey].length > 0 ? (
+                  <Select
+                    value={SPORT_DISTANCES[sportKey].includes(eventLabel) ? eventLabel : eventLabel ? "__custom" : ""}
+                    onValueChange={(v) => {
+                      if (v === "__custom") {
+                        setEventLabel("");
+                      } else {
+                        setEventLabel(v);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-11 rounded-ios-sm">
+                      <SelectValue placeholder="Choisir une distance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPORT_DISTANCES[sportKey].map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom">Autre (personnalisé)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                {(SPORT_DISTANCES[sportKey].length === 0 || (!SPORT_DISTANCES[sportKey].includes(eventLabel) && eventLabel !== "")) && (
+                  <Input
+                    value={eventLabel}
+                    onChange={(e) => setEventLabel(e.target.value)}
+                    placeholder="Ex. Marathon de Paris"
+                    className="h-11 rounded-ios-sm mt-1.5"
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-ios-footnote text-muted-foreground">Record</label>
