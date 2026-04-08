@@ -587,6 +587,30 @@ export const ProfileDialog = ({
                 </div>
               </IOSListGroup>
 
+              {/* Boutons Modifier / Partager */}
+              <div className="bg-card border-b border-border px-4 py-3 flex gap-2">
+                <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
+                  Modifier le profil
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    if (!profile?.username) return;
+                    void shareProfile({
+                      username: profile.username,
+                      displayName: profile.display_name,
+                      bio: profile.bio,
+                      avatarUrl: profile.avatar_url,
+                    });
+                  }}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Partager
+                </Button>
+              </div>
+
               {/* Highlights */}
                  <div className="bg-card border-b border-border px-4 py-3">
                 <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
