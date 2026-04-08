@@ -18,6 +18,7 @@ import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
+import { OnScreenDebugLog } from "@/components/OnScreenDebugLog";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -256,7 +257,12 @@ const App = () => {
 
   /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */
   if (!isAppLoaded) {
-    return <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />;
+    return (
+      <>
+        <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
+        <OnScreenDebugLog />
+      </>
+    );
   }
 
   return (
@@ -324,6 +330,7 @@ const App = () => {
         </ThemeProvider>
       </AppErrorBoundary>
     </QueryClientProvider>
+    <OnScreenDebugLog />
     </div>
   );
 };

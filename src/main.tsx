@@ -2,6 +2,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
+import { installOnScreenLogCapture } from '@/lib/onScreenLogCapture'
+
+installOnScreenLogCapture()
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
