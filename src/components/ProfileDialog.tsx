@@ -477,7 +477,13 @@ export const ProfileDialog = ({
                 <span className="truncate text-[17px]">Retour</span>
               </button>
               <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
-              <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
+              <button
+                type="button"
+                onClick={() => setShowSettingsDialog(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
             </div>
           </div>
           
