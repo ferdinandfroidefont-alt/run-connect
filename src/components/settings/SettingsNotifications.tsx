@@ -139,7 +139,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
 
   const notificationItems = [
     { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
-    { key: 'notif_follow_request', icon: Users, color: 'bg-primary', label: 'Demandes de suivi', desc: 'Quand quelqu\'un vous suit' },
     { key: 'notif_message', icon: MessageCircle, color: 'bg-green-500', label: 'Messages', desc: 'Nouveaux messages reçus' },
     { key: 'notif_session_request', icon: Play, color: 'bg-orange-500', label: 'Demandes de session', desc: 'Demandes de participation' },
     { key: 'notif_friend_session', icon: Users, color: 'bg-violet-500', label: 'Sessions d\'amis', desc: 'Vos amis créent une session', premium: true },
