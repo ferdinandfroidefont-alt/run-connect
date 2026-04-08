@@ -804,9 +804,9 @@ export const ProfileDialog = ({
         />
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogTitle className="text-base font-semibold">Modifier les stories à la une</DialogTitle>
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Modifier les stories a la une</h3>
             <Input
               value={newHighlightTitle}
               onChange={(e) => setNewHighlightTitle(e.target.value)}
