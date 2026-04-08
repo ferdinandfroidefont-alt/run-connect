@@ -8,10 +8,22 @@ let mapboxPromise: Promise<MapboxGL> | null = null;
 export function loadMapboxGl(): Promise<MapboxGL> {
   if (!mapboxPromise) {
     mapboxPromise = (async () => {
-      await import("mapbox-gl/dist/mapbox-gl.css");
+      // Sur certains WebView mobiles, le chunk CSS dynamique peut échouer.
+      // On n'empêche pas le chargement JS de Mapbox dans ce cas.
+      try {
+        await import("mapbox-gl/dist/mapbox-gl.css");
+      } catch (error) {
+        console.warn("[mapboxLazy] CSS mapbox-gl non chargee", error);
+      }
+
       const mod = await import("mapbox-gl");
       return mod.default;
     })();
+
+    // Evite de garder une promesse rejettee en cache (permet un retry ulterieur).
+    mapboxPromise.catch(() => {
+      mapboxPromise = null;
+    });
   }
   return mapboxPromise;
 }
