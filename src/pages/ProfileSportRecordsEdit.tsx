@@ -19,6 +19,7 @@ import {
 import {
   PROFILE_SPORT_RECORD_KEYS,
   PROFILE_SPORT_RECORD_LABELS,
+  SPORT_DISTANCES,
   isProfileSportRecordKey,
   type ProfileSportRecordKey,
 } from "@/lib/profileSportRecords";
