@@ -611,20 +611,28 @@ export const ProfileDialog = ({
                 </Button>
               </div>
 
-              {/* Highlights */}
-                 <div className="bg-card border-b border-border px-4 py-3">
-                <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
+              {/* Stories à la une - cercles style Instagram */}
+              <div className="bg-card border-b border-border px-4 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
-                  {socialHighlights.length > 0 ? socialHighlights.map((highlight) => (
-                    <div key={`highlight-${highlight}`} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                  {storyHighlights.map((item) => (
+                    <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
                       <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                        {highlight.slice(0, 2).toUpperCase()}
+                        {item.title.slice(0, 2).toUpperCase()}
                       </div>
-                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{highlight}</p>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                    </button>
+                  ))}
+                  {/* Bouton ajouter */}
+                  <button
+                    type="button"
+                    className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+                    onClick={() => setShowHighlightsManager(true)}
+                  >
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40 bg-secondary/50 text-muted-foreground">
+                      <span className="text-xl leading-none">+</span>
                     </div>
-                  )) : (
-                    <p className="text-[13px] text-muted-foreground">Ajoute une bio et un sport favori pour afficher tes highlights.</p>
-                  )}
+                    <p className="w-full truncate text-center text-[11px] text-muted-foreground">Ajouter</p>
+                  </button>
                 </div>
               </div>
 
@@ -735,35 +743,6 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-                  <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
-                        <button
-                          type="button"
-                          onClick={() => setShowHighlightsManager(true)}
-                          className="text-sm"
-                          aria-label="Modifier stories a la une"
-                          title="Modifier stories a la une"
-                        >
-                          ✏️
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1">
-                      {storyHighlights.map((item) => (
-                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
-                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                            {item.title.slice(0, 2).toUpperCase()}
-                          </div>
-                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
-                        </button>
-                      ))}
-                      {storyHighlights.length === 0 && (
-                        <p className="text-[13px] text-muted-foreground">Aucune story epinglee.</p>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Personal Info */}
                    <IOSListGroup
