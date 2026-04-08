@@ -544,7 +544,7 @@ export const ProfileDialog = ({
                       {socialHighlights.slice(0, 5).map((highlight) => (
                         <span
                           key={highlight}
-                          className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                          className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
                         >
                           {highlight}
                         </span>
