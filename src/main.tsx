@@ -166,15 +166,17 @@ if (!rootElement) {
 } else {
   try {
     createRoot(rootElement).render(
-      <AuthProvider>
-        <UserProfileProvider>
-          <DistanceUnitsProvider>
-            <LanguageProvider>
-              <App />
-            </LanguageProvider>
-          </DistanceUnitsProvider>
-        </UserProfileProvider>
-      </AuthProvider>
+      <BootErrorBoundary>
+        <AuthProvider>
+          <UserProfileProvider>
+            <DistanceUnitsProvider>
+              <LanguageProvider>
+                <App />
+              </LanguageProvider>
+            </DistanceUnitsProvider>
+          </UserProfileProvider>
+        </AuthProvider>
+      </BootErrorBoundary>
     );
   } catch (bootErr) {
     console.error("[main] Échec du render initial:", bootErr);
