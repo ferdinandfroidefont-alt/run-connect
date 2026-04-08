@@ -161,7 +161,7 @@ export default function ProfileSportRecordsEdit() {
             <div className="space-y-3 px-4 py-4 ios-shell:px-2.5">
               <div className="space-y-1.5">
                 <label className="text-ios-footnote text-muted-foreground">Sport</label>
-                <Select value={sportKey} onValueChange={(v) => setSportKey(v as ProfileSportRecordKey)}>
+                <Select value={sportKey} onValueChange={(v) => { setSportKey(v as ProfileSportRecordKey); setEventLabel(""); }}>
                   <SelectTrigger className="h-11 rounded-ios-sm">
                     <SelectValue />
                   </SelectTrigger>
