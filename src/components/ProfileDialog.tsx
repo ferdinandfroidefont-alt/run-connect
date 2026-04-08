@@ -12,7 +12,7 @@ import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield,
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
