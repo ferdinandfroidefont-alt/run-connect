@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2 } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -477,20 +477,26 @@ export const ProfileDialog = ({
                 <span className="truncate text-[17px]">Retour</span>
               </button>
               <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
-              <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
+              <button
+                type="button"
+                onClick={() => setShowSettingsDialog(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
             </div>
           </div>
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
              <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
-                {/* Profile Header - Centered Avatar */}
+                {/* Profile Header - Instagram layout: avatar + stats side by side */}
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
-                  {/* Avatar centré */}
-                  <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-5">
+                    {/* Avatar */}
                     <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
-                      <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
+                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
                         <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                        <AvatarFallback className="text-3xl bg-secondary">
+                        <AvatarFallback className="text-2xl bg-secondary">
                           {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -510,106 +516,108 @@ export const ProfileDialog = ({
                             }
                           }}
                           disabled={cameraLoading}
-                          className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                          className="absolute bottom-0 right-0 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
                         >
-                          <Camera className="h-3.5 w-3.5" />
+                          <Camera className="h-3 w-3" />
                         </button>
                       )}
                     </button>
 
-                    {/* Nom + username centrés */}
-                    <div className="mt-3 flex flex-col items-center min-w-0 max-w-full px-4">
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="truncate text-[22px] font-bold text-foreground leading-tight">
-                          {profile?.display_name || profile?.username || "Utilisateur"}
-                        </h2>
-                        {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                          <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
-                        )}
+                    {/* Stats à droite de l'avatar */}
+                    <div className="flex flex-1 min-w-0 items-center justify-around">
+                      <div className="text-center">
+                        <p className="text-[18px] font-bold text-foreground leading-none">{socialSessionsCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
                       </div>
-                      <p className="truncate text-[14px] text-muted-foreground mt-0.5">
-                        @{profile?.username}
-                      </p>
-                      {profile?.bio && (
-                        <p className="mt-2 text-center text-[14px] leading-relaxed text-muted-foreground line-clamp-3">
-                          {profile.bio}
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <div className="flex items-center justify-center gap-0.5">
+                          <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
+                          {pendingRequestsCount > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-0.5 -mt-2">
+                              {pendingRequestsCount}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nom + meta line */}
+                  <div className="mt-3 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
+                        {profile?.display_name || profile?.username || "Utilisateur"}
+                      </h2>
+                      {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                        <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
+                      )}
+                    </div>
+                    <p className="truncate text-[13px] text-muted-foreground">
+                      @{profile?.username}
+                    </p>
+                    {/* Meta line: country · age · sport */}
+                    {(() => {
+                      const parts: string[] = [];
+                      if (profile?.country) parts.push(COUNTRY_LABELS[profile.country] ?? profile.country);
+                      if (profile?.age) parts.push(`${profile.age} ans`);
+                      if (profile?.favorite_sport) parts.push(SPORT_LABELS[profile.favorite_sport] ?? profile.favorite_sport);
+                      return parts.length > 0 ? (
+                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                          {parts.join(' · ')}
                         </p>
-                      )}
-                    </div>
+                      ) : null;
+                    })()}
+                    {profile?.bio && (
+                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
+                        {profile.bio}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Chips highlights */}
-                  {socialHighlights.length > 0 && (
-                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                      {socialHighlights.slice(0, 5).map((highlight) => (
-                        <span
-                          key={highlight}
-                          className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
-                        >
-                          {highlight}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-
-              {/* Stats socials */}
-              <IOSListGroup flush className="mb-0">
-                <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
-                  <div className="min-h-[44px] flex-1 py-3 text-center">
-                    <p className="text-[20px] font-bold text-foreground">{socialSessionsCount}</p>
-                    <p className="text-[12px] text-muted-foreground">Seances</p>
+                  {/* Boutons Modifier / Partager */}
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 rounded-lg text-[13px] font-semibold"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Modifier le profil
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
+                      onClick={() => {
+                        if (!profile?.username) return;
+                        void shareProfile({
+                          username: profile.username,
+                          displayName: profile.display_name,
+                          bio: profile.bio,
+                          avatarUrl: profile.avatar_url,
+                        });
+                      }}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Partager
+                    </Button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="relative min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-                      {pendingRequestsCount > 0 && (
-                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold px-1">
-                          {pendingRequestsCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[12px] text-muted-foreground">Abonnés</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                    className="min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
-                  >
-                    <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-                    <p className="text-[12px] text-muted-foreground">Abonnements</p>
-                  </button>
                 </div>
-              </IOSListGroup>
-
-              {/* Boutons Modifier / Partager */}
-              <div className="bg-card border-b border-border px-4 py-3 flex gap-2">
-                <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
-                  Modifier le profil
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 gap-2"
-                  onClick={() => {
-                    if (!profile?.username) return;
-                    void shareProfile({
-                      username: profile.username,
-                      displayName: profile.display_name,
-                      bio: profile.bio,
-                      avatarUrl: profile.avatar_url,
-                    });
-                  }}
-                >
-                  <Share2 className="h-4 w-4" />
-                  Partager
-                </Button>
-              </div>
 
               {/* Stories à la une - cercles style Instagram */}
               <div className="bg-card border-b border-border px-4 py-3">
@@ -744,43 +752,23 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Personal Info - compact grid */}
+                  {/* Raccourcis - grille 2x2 */}
                   <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-2 gap-2.5">
                       {[
-                        { label: 'Pseudo', value: profile?.username },
-                        { label: 'Nom', value: profile?.display_name },
-                        { label: 'Âge', value: profile?.age ? `${profile.age} ans` : null },
-                        { label: 'Téléphone', value: profile?.phone },
-                        { label: 'Sport', value: profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] : null },
-                        { label: 'Pays', value: profile?.country ? COUNTRY_LABELS[profile.country] : null },
-                      ].filter(item => item.value).map((item) => (
-                        <div key={item.label} className="min-w-0">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                          <p className="truncate text-[14px] font-medium text-foreground">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Raccourcis - boutons compacts horizontaux */}
-                  <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="flex gap-2 overflow-x-auto pb-0.5">
-                      {[
-                        { icon: Route, label: 'Séances', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
-                        { icon: MapPin, label: 'Parcours', action: () => { onOpenChange(false); navigate('/route-creation'); } },
-                        { icon: Trophy, label: 'Records', action: () => { onOpenChange(false); navigate('/profile/records'); } },
-                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, action: () => setShowReliabilityDialog(true) },
-                        { icon: Zap, label: 'Paramètres', action: () => setShowSettingsDialog(true) },
+                        { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
+                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
+                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
                       ].map((item) => (
                         <button
                           key={item.label}
                           type="button"
                           onClick={item.action}
-                          className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-3 py-2 text-[13px] font-medium text-foreground transition-colors active:bg-secondary"
+                          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary"
                         >
-                          <item.icon className="h-4 w-4 shrink-0 text-primary" />
-                          <span className="whitespace-nowrap">{item.label}</span>
+                          <item.icon className={`h-6 w-6 ${item.color}`} />
+                          <span className="text-[13px] font-medium text-foreground">{item.label}</span>
                         </button>
                       ))}
                     </div>
