@@ -483,91 +483,99 @@ export const ProfileDialog = ({
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
              <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
-               {/* Profile Header - Social */}
-               <div className="bg-card border-b border-border px-4 py-4">
-                <div className="flex min-w-0 items-start gap-3">
-                  <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
-                    <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
-                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                      <AvatarFallback className="text-2xl bg-secondary">
-                        {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {isEditing && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const file = await selectFromGallery();
-                            if (file) {
-                              handleAvatarChange({ target: { files: [file] } } as any);
+                {/* Profile Header - Centered Avatar */}
+                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
+                  {/* Avatar centré */}
+                  <div className="flex flex-col items-center">
+                    <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                      <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
+                        <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                        <AvatarFallback className="text-3xl bg-secondary">
+                          {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const file = await selectFromGallery();
+                              if (file) {
+                                handleAvatarChange({ target: { files: [file] } } as any);
+                              }
+                            } catch (error) {
+                              console.error('Error selecting from gallery:', error);
+                              toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
                             }
-                          } catch (error) {
-                            console.error('Error selecting from gallery:', error);
-                            toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                          }
-                        }}
-                        disabled={cameraLoading}
-                        className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
-                      >
-                        <Camera className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <h2 className="truncate text-[22px] font-bold text-foreground leading-tight">
-                        {profile?.display_name || profile?.username || "Utilisateur"}
-                      </h2>
-                      {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                        <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
+                          }}
+                          disabled={cameraLoading}
+                          className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                        >
+                          <Camera className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </button>
+
+                    {/* Nom + username centrés */}
+                    <div className="mt-3 flex flex-col items-center min-w-0 max-w-full px-4">
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="truncate text-[22px] font-bold text-foreground leading-tight">
+                          {profile?.display_name || profile?.username || "Utilisateur"}
+                        </h2>
+                        {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                          <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
+                        )}
+                      </div>
+                      <p className="truncate text-[14px] text-muted-foreground mt-0.5">
+                        @{profile?.username}
+                      </p>
+                      {profile?.bio && (
+                        <p className="mt-2 text-center text-[14px] leading-relaxed text-muted-foreground line-clamp-3">
+                          {profile.bio}
+                        </p>
                       )}
                     </div>
-                    <p className="truncate text-[14px] text-muted-foreground mt-0.5">
-                      @{profile?.username}
-                    </p>
-                    {profile?.bio && (
-                      <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground line-clamp-3">
-                        {profile.bio}
-                      </p>
-                    )}
+                  </div>
+
+                  {/* Chips highlights */}
+                  {socialHighlights.length > 0 && (
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {socialHighlights.slice(0, 5).map((highlight) => (
+                        <span
+                          key={highlight}
+                          className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                        >
+                          {highlight}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Boutons */}
+                  <div className="mt-4 flex gap-2">
+                    <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
+                      Modifier le profil
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        if (!profile?.username) return;
+                        void shareProfile({
+                          username: profile.username,
+                          displayName: profile.display_name,
+                          bio: profile.bio,
+                          avatarUrl: profile.avatar_url,
+                        });
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Partager
+                    </Button>
                   </div>
                 </div>
-
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {socialHighlights.slice(0, 5).map((highlight) => (
-                    <span
-                      key={highlight}
-                      className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
-                    >
-                      {highlight}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
-                    Modifier le profil
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    onClick={() => {
-                      if (!profile?.username) return;
-                      void shareProfile({
-                        username: profile.username,
-                        displayName: profile.display_name,
-                        bio: profile.bio,
-                        avatarUrl: profile.avatar_url,
-                      });
-                    }}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Partager
-                  </Button>
-                </div>
-              </div>
 
               {/* Stats socials */}
               <IOSListGroup flush className="mb-0">
