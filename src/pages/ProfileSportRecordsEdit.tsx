@@ -34,6 +34,7 @@ export default function ProfileSportRecordsEdit() {
   const [saving, setSaving] = useState(false);
   const [sportKey, setSportKey] = useState<ProfileSportRecordKey>("running");
   const [eventLabel, setEventLabel] = useState("");
+  const [customMode, setCustomMode] = useState(false);
   const [recordValue, setRecordValue] = useState("");
 
   const load = useCallback(async () => {
