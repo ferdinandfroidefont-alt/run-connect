@@ -744,110 +744,47 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Personal Info */}
-                   <IOSListGroup
-                     header="INFORMATIONS"
-                     flush
-                   >
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-blue-500"
-                      iconColor="text-white"
-                      title="Pseudo"
-                      value={profile?.username || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-purple-500"
-                      iconColor="text-white"
-                      title="Nom"
-                      value={profile?.display_name || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Calendar}
-                      iconBgColor="bg-pink-500"
-                      iconColor="text-white"
-                      title="Âge"
-                      value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Heart}
-                      iconBgColor="bg-green-500"
-                      iconColor="text-white"
-                      title="Téléphone"
-                      value={profile?.phone || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Footprints}
-                      iconBgColor="bg-orange-500"
-                      iconColor="text-white"
-                      title="Sport favori"
-                      value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Globe}
-                      iconBgColor="bg-indigo-500"
-                      iconColor="text-white"
-                      title="Pays"
-                      value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
-                      showChevron={false}
-                      showSeparator={false}
-                    />
-                  </IOSListGroup>
+                  {/* Personal Info - compact grid */}
+                  <div className="bg-card border-b border-border px-4 py-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {[
+                        { label: 'Pseudo', value: profile?.username },
+                        { label: 'Nom', value: profile?.display_name },
+                        { label: 'Âge', value: profile?.age ? `${profile.age} ans` : null },
+                        { label: 'Téléphone', value: profile?.phone },
+                        { label: 'Sport', value: profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] : null },
+                        { label: 'Pays', value: profile?.country ? COUNTRY_LABELS[profile.country] : null },
+                      ].filter(item => item.value).map((item) => (
+                        <div key={item.label} className="min-w-0">
+                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                          <p className="truncate text-[14px] font-medium text-foreground">{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-                  {/* Actions */}
-                   <IOSListGroup
-                     header="RACCOURCIS"
-                     flush
-                     className="mb-0"
-                   >
-                    <IOSListItem
-                      icon={Route}
-                      iconBgColor="bg-teal-500"
-                      iconColor="text-white"
-                      title="Mes séances et itinéraires"
-                      onClick={() => { onOpenChange(false); navigate('/my-sessions'); }}
-                    />
-                    <IOSListItem
-                      icon={MapPin}
-                      iconBgColor="bg-purple-500"
-                      iconColor="text-white"
-                      title="Créer un parcours"
-                      onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
-                    />
-                    <IOSListItem
-                      icon={Trophy}
-                      iconBgColor="bg-amber-500"
-                      iconColor="text-white"
-                      title="Records sport"
-                      subtitle="Renseigner tes perfs"
-                      onClick={() => {
-                        onOpenChange(false);
-                        navigate("/profile/records");
-                      }}
-                    />
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-gray-500"
-                      iconColor="text-white"
-                      title="Paramètres"
-                      onClick={() => setShowSettingsDialog(true)}
-                    />
-                    <IOSListItem
-                      icon={Shield}
-                      iconBgColor="bg-orange-500"
-                      iconColor="text-white"
-                      title="Fiabilite"
-                      value={`${reliabilityRate}%`}
-                      onClick={() => setShowReliabilityDialog(true)}
-                      showSeparator={false}
-                    />
-                   </IOSListGroup>
+                  {/* Raccourcis - boutons compacts horizontaux */}
+                  <div className="bg-card border-b border-border px-4 py-3">
+                    <div className="flex gap-2 overflow-x-auto pb-0.5">
+                      {[
+                        { icon: Route, label: 'Séances', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
+                        { icon: MapPin, label: 'Parcours', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: Trophy, label: 'Records', action: () => { onOpenChange(false); navigate('/profile/records'); } },
+                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, action: () => setShowReliabilityDialog(true) },
+                        { icon: Zap, label: 'Paramètres', action: () => setShowSettingsDialog(true) },
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={item.action}
+                          className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-3 py-2 text-[13px] font-medium text-foreground transition-colors active:bg-secondary"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="whitespace-nowrap">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
