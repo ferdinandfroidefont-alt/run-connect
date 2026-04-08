@@ -936,6 +936,41 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_story_highlights: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          position: number
+          story_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          position?: number
+          story_id: string
+          title?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          position?: number
+          story_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_story_highlights_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "session_stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
@@ -1599,6 +1634,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      session_stories: {
+        Row: {
+          author_id: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          media_url: string | null
+          session_id: string | null
+        }
+        Insert: {
+          author_id: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_stories_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sessions: {
         Row: {

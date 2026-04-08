@@ -12,7 +12,7 @@ import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield,
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
@@ -804,9 +804,9 @@ export const ProfileDialog = ({
         />
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogTitle className="text-base font-semibold">Modifier les stories à la une</DialogTitle>
           <div className="space-y-3">
-            <h3 className="text-base font-semibold">Modifier les stories a la une</h3>
             <Input
               value={newHighlightTitle}
               onChange={(e) => setNewHighlightTitle(e.target.value)}
