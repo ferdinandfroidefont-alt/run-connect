@@ -752,43 +752,23 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Personal Info - compact grid */}
+                  {/* Raccourcis - grille 2x2 */}
                   <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="grid grid-cols-2 gap-2.5">
                       {[
-                        { label: 'Pseudo', value: profile?.username },
-                        { label: 'Nom', value: profile?.display_name },
-                        { label: 'Âge', value: profile?.age ? `${profile.age} ans` : null },
-                        { label: 'Téléphone', value: profile?.phone },
-                        { label: 'Sport', value: profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] : null },
-                        { label: 'Pays', value: profile?.country ? COUNTRY_LABELS[profile.country] : null },
-                      ].filter(item => item.value).map((item) => (
-                        <div key={item.label} className="min-w-0">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                          <p className="truncate text-[14px] font-medium text-foreground">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Raccourcis - boutons compacts horizontaux */}
-                  <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="flex gap-2 overflow-x-auto pb-0.5">
-                      {[
-                        { icon: Route, label: 'Séances', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
-                        { icon: MapPin, label: 'Parcours', action: () => { onOpenChange(false); navigate('/route-creation'); } },
-                        { icon: Trophy, label: 'Records', action: () => { onOpenChange(false); navigate('/profile/records'); } },
-                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, action: () => setShowReliabilityDialog(true) },
-                        { icon: Zap, label: 'Paramètres', action: () => setShowSettingsDialog(true) },
+                        { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
+                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
+                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
                       ].map((item) => (
                         <button
                           key={item.label}
                           type="button"
                           onClick={item.action}
-                          className="flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-3 py-2 text-[13px] font-medium text-foreground transition-colors active:bg-secondary"
+                          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary"
                         >
-                          <item.icon className="h-4 w-4 shrink-0 text-primary" />
-                          <span className="whitespace-nowrap">{item.label}</span>
+                          <item.icon className={`h-6 w-6 ${item.color}`} />
+                          <span className="text-[13px] font-medium text-foreground">{item.label}</span>
                         </button>
                       ))}
                     </div>
