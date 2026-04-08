@@ -743,7 +743,6 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-                <>
 
                   {/* Personal Info */}
                    <IOSListGroup
