@@ -16,6 +16,8 @@ import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog
 import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
+import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
+import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
 
 const ClubInfoDialog = lazy(() =>
   import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
@@ -87,7 +89,6 @@ export default function Coaching() {
   const [showClubInfo, setShowClubInfo] = useState(false);
   const [showEditClub, setShowEditClub] = useState(false);
 
-  /** Clubs où l’utilisateur est membre, ou repli sur les clubs liés au plan athlète (participations) */
   const displayClubs = useMemo((): ClubOption[] => {
     if (clubs.length > 0) return clubs;
     return athleteClubs.map((ac) => ({ id: ac.clubId, name: ac.clubName, isCoach: false }));
@@ -101,7 +102,7 @@ export default function Coaching() {
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} - ${format(weekEnd, "d MMM", { locale: fr })}`;
+  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
   const loadClubs = async () => {
     if (!user) {
@@ -287,47 +288,68 @@ export default function Coaching() {
   });
   const upcomingSessions = sessions.filter((s) => new Date(s.scheduled_at) >= new Date()).slice(0, 6);
 
-  /** Sans membres de club, on attend le chargement des participations pour savoir si un plan athlète existe */
   const waitAthleteWhenNoClub = clubs.length === 0 && athleteClubsLoading;
   const showPageLoader = authLoading || loading || waitAthleteWhenNoClub;
 
+  const coachTools = [
+    { icon: CalendarDays, label: "Planifier", subtitle: "Plan hebdomadaire", color: "bg-blue-500", onClick: () => setShowWeeklyPlan(true) },
+    { icon: ChartColumnBig, label: "Suivi", subtitle: "Progression athlètes", color: "bg-orange-500", onClick: () => setShowTracking(true) },
+    { icon: Users, label: "Groupes", subtitle: "Gérer les groupes", color: "bg-green-500", onClick: () => setShowGroups(true) },
+    { icon: FolderKanban, label: "Brouillons", subtitle: "Plans sauvegardés", color: "bg-purple-500", onClick: () => setShowDrafts(true) },
+  ];
+
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col overflow-y-auto bg-secondary">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-coaching">
+      {/* iOS Header */}
+      <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
+        <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
+          <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Coaching</h1>
+          {selectedClub && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                  isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isCoach ? "Coach" : "Athlète"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {showPageLoader ? (
-        <div
-          className="flex flex-1 flex-col items-center justify-center px-4 pb-6 pt-[max(0.9rem,var(--safe-area-top))]"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="flex flex-1 flex-col items-center justify-center" role="status" aria-live="polite">
           <Loader2 className="h-9 w-9 animate-spin text-muted-foreground" aria-hidden />
           <span className="sr-only">Chargement du coaching</span>
         </div>
       ) : displayClubs.length === 0 ? (
         <>
-          <div className="flex w-full flex-1 flex-col justify-center pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
-            <div className="overflow-hidden border-b border-border/60 bg-card">
+          <div className="ios-scroll-region flex-1 overflow-y-auto px-ios-4 pt-ios-4 pb-ios-6">
+            <IOSListGroup>
               <div className={emptyStateSx.shell}>
                 <div className={emptyStateSx.iconCircle}>
                   <Dumbbell className="h-12 w-12 text-muted-foreground" aria-hidden />
                 </div>
                 <div className={emptyStateSx.textBlock}>
-                  <h3 className="text-ios-title3 font-semibold text-foreground">Aucun espace coaching trouvé</h3>
+                  <h3 className="text-ios-title3 font-semibold text-foreground">Aucun espace coaching</h3>
                   <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed mx-auto">
                     Rejoins un club ou demande un accès coach pour voir tes plans et outils.
                   </p>
                 </div>
                 <div className="flex w-full max-w-xs flex-col gap-ios-2">
-                  <Button className="w-full" type="button" onClick={() => navigate("/search?tab=clubs")}>
+                  <Button className="w-full rounded-[10px]" type="button" onClick={() => navigate("/search?tab=clubs")}>
                     Rejoindre un club
                   </Button>
-                  <Button className="w-full" type="button" variant="outline" onClick={() => setShowCreateClub(true)}>
+                  <Button className="w-full rounded-[10px]" type="button" variant="outline" onClick={() => setShowCreateClub(true)}>
                     Créer un club
                   </Button>
                 </div>
               </div>
-            </div>
+            </IOSListGroup>
           </div>
-          {showCreateClub ? (
+          {showCreateClub && (
             <CreateClubDialogPremium
               isOpen={showCreateClub}
               onClose={() => setShowCreateClub(false)}
@@ -336,34 +358,13 @@ export default function Coaching() {
                 setShowCreateClub(false);
               }}
             />
-          ) : null}
+          )}
         </>
       ) : (
         <>
-          {/*
-            fixed-fill-with-bottom-nav + tab bar : pas de safe-area-bottom dans le scroll (déjà sur la nav).
-          */}
-          <div className="w-full space-y-0 pb-6 pt-[max(0.9rem,var(--safe-area-top))]">
-            <header className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none" data-tutorial="tutorial-coaching">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-primary/12 text-primary">
-                    <Dumbbell className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="truncate text-[20px] font-semibold text-foreground">Coaching</h1>
-                    <p className="text-sm text-muted-foreground">Expérience claire, actions rapides</p>
-                  </div>
-                </div>
-                {selectedClub && (
-                  <div className={cn("rounded-full px-3 py-1 text-[11px] font-semibold", isCoach ? "bg-primary/12 text-primary" : "bg-muted text-muted-foreground")}>
-                    {isCoach ? "Mode coach" : "Mode athlete"}
-                  </div>
-                )}
-              </div>
-            </header>
-
-            <section className="border-b border-border/60 bg-card p-2 shadow-none">
+          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
+            {/* Club selector pills */}
+            <div className="px-ios-4 pb-ios-3">
               <div className="scrollbar-hide flex gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
                 {displayClubs.map((club) => (
                   <button
@@ -372,176 +373,202 @@ export default function Coaching() {
                     onClick={() => setSelectedClubId(club.id)}
                     className={cn(
                       "shrink-0 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors",
-                      selectedClubId === club.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                      selectedClubId === club.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-card text-muted-foreground"
                     )}
                   >
                     {club.name}
                   </button>
                 ))}
               </div>
-            </section>
+            </div>
 
+            {/* Athlete plan cards (when user has both coach clubs and athlete participations) */}
             {clubs.length > 0 && athleteClubs.length > 0 && (
-              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
-                <h2 className="text-[16px] font-semibold text-foreground">Mon plan coaching</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Tes clubs avec une planification active — touche une ligne pour afficher le club.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {athleteClubs.map((club) => {
-                    const pct = club.total > 0 ? Math.round((club.completed / club.total) * 100) : 0;
-                    return (
-                      <button
-                        key={club.clubId}
-                        type="button"
+              <IOSListGroup header="MON PLAN COACHING" className="px-ios-4">
+                {athleteClubs.map((club, idx) => {
+                  const pct = club.total > 0 ? Math.round((club.completed / club.total) * 100) : 0;
+                  return (
+                    <div key={club.clubId} className="relative">
+                      <div
                         onClick={() => setSelectedClubId(club.clubId)}
                         className={cn(
-                          "flex w-full items-center justify-between gap-3 rounded-xl bg-secondary px-3 py-3 text-left transition-colors active:opacity-90",
-                          selectedClubId === club.clubId && "ring-2 ring-primary/35"
+                          "flex items-center gap-3 bg-card px-ios-4 py-3 cursor-pointer active:bg-secondary/80 transition-colors",
+                          selectedClubId === club.clubId && "bg-primary/5"
                         )}
                       >
-                        <div className="min-w-0">
-                          <p className="truncate text-[15px] font-semibold text-foreground">{club.clubName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {club.completed}/{club.total} séances validées cette semaine
+                        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] bg-blue-500">
+                          <Dumbbell className="h-[18px] w-[18px] text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[17px] leading-snug text-foreground">{club.clubName}</p>
+                          <p className="text-[13px] text-muted-foreground">
+                            {club.completed}/{club.total} séances validées
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
-                          {club.total > 0 ? (
+                          {club.total > 0 && (
                             <Badge
                               className={cn(
                                 "border-0 text-[11px] px-2 py-0.5",
-                                pct >= 80 && "bg-green-500/15 text-green-600 dark:text-green-400",
-                                pct >= 50 && pct < 80 && "bg-orange-500/15 text-orange-600 dark:text-orange-400",
-                                pct < 50 && "bg-red-500/15 text-red-600 dark:text-red-400"
+                                pct >= 80 && "bg-green-500/15 text-green-600",
+                                pct >= 50 && pct < 80 && "bg-orange-500/15 text-orange-600",
+                                pct < 50 && "bg-red-500/15 text-red-600"
                               )}
                             >
                               {pct}%
                             </Badge>
-                          ) : null}
-                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          )}
+                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+                      </div>
+                      {idx < athleteClubs.length - 1 && (
+                        <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
+                      )}
+                    </div>
+                  );
+                })}
+              </IOSListGroup>
             )}
 
             {selectedClub && (
-          <>
-            <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
-              <p className="text-[12px] uppercase tracking-wide text-muted-foreground">Semaine active</p>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-[20px] font-semibold text-foreground">{weekLabel}</p>
-                  <p className="text-sm text-muted-foreground">{selectedClub.name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[22px] font-bold text-foreground">{thisWeekSessions.length}</p>
-                  <p className="text-xs text-muted-foreground">seances</p>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2.5">
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
-                  <p className="text-[11px] text-muted-foreground">Membres</p>
-                  <p className="text-[16px] font-semibold text-foreground">{memberCount}</p>
-                </div>
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
-                  <p className="text-[11px] text-muted-foreground">A venir</p>
-                  <p className="text-[16px] font-semibold text-foreground">{upcomingSessions.length}</p>
-                </div>
-                <div className="rounded-xl bg-secondary px-3 py-2.5">
-                  <p className="text-[11px] text-muted-foreground">Profil</p>
-                  <p className="text-[16px] font-semibold text-foreground">{isCoach ? "Coach" : "Athlete"}</p>
-                </div>
-              </div>
-            </section>
-
-            {isCoach ? (
-              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
-                <h2 className="text-[16px] font-semibold text-foreground">Outils coaching</h2>
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowWeeklyPlan(true)}>
-                    <CalendarDays className="h-4 w-4" />
-                    Planifier
-                  </Button>
-                  <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowTracking(true)}>
-                    <ChartColumnBig className="h-4 w-4" />
-                    Suivi
-                  </Button>
-                  <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowGroups(true)}>
-                    <Users className="h-4 w-4" />
-                    Groupes
-                  </Button>
-                  <Button className="justify-start gap-2" variant="secondary" onClick={() => setShowDrafts(true)}>
-                    <FolderKanban className="h-4 w-4" />
-                    Brouillons
-                  </Button>
-                </div>
-              </section>
-            ) : null}
-
-            {isCoach && (
-              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary">
-                    <Building2 className="h-5 w-5 text-primary" aria-hidden />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-[16px] font-semibold text-foreground">Informations du club</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Membres, invitations, rôles coach, groupes d’entraînement et paramètres du club.
-                    </p>
-                    <Button className="mt-3" type="button" variant="secondary" onClick={() => void openClubManagement()}>
-                      Gérer le club
-                    </Button>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {!isCoach ? (
-              <section className="border-b border-border/60 bg-card px-ios-2 py-ios-2 shadow-none">
-                <div className="px-2 pb-2 pt-1">
-                  <h2 className="text-[16px] font-semibold text-foreground">Mon plan de la semaine</h2>
-                  <p className="text-sm text-muted-foreground">Vue claire, validation des seances, notes et progression.</p>
-                </div>
-                <AthleteWeeklyView clubId={selectedClub.id} sessions={thisWeekSessions} onSessionClick={(session) => setSelectedSession(session)} />
-              </section>
-            ) : null}
-
-            {isCoach && (
-              <section className="border-b border-border/60 bg-card px-ios-4 py-ios-4 shadow-none">
-                <h2 className="text-[16px] font-semibold text-foreground">Prochaines seances</h2>
-                <div className="mt-3 space-y-2">
-                  {upcomingSessions.length === 0 ? (
-                    <div className="rounded-xl bg-secondary px-3 py-4 text-sm text-muted-foreground">
-                      Aucune seance a venir. Commence par creer le plan de la semaine.
+              <>
+                {/* Week overview */}
+                <IOSListGroup header="SEMAINE ACTIVE" className="px-ios-4">
+                  <div className="bg-card px-ios-4 py-ios-4 rounded-ios-md">
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[20px] font-semibold text-foreground">{weekLabel}</p>
+                        <p className="text-[13px] text-muted-foreground mt-0.5">{selectedClub.name}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[28px] font-bold text-foreground leading-none">{thisWeekSessions.length}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">séances</p>
+                      </div>
                     </div>
-                  ) : (
-                    upcomingSessions.map((session) => (
-                      <button
-                        key={session.id}
-                        type="button"
-                        onClick={() => setSelectedSession(session)}
-                        className="flex w-full items-center justify-between rounded-xl bg-secondary px-3 py-3 text-left"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-[15px] font-semibold text-foreground">{session.title}</p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(session.scheduled_at), "EEE d MMM - HH:mm", { locale: fr })}</p>
+                  </div>
+                </IOSListGroup>
+
+                {/* Quick stats */}
+                <IOSListGroup header="STATISTIQUES" className="px-ios-4">
+                  <IOSListItem
+                    icon={Users}
+                    iconBgColor="bg-blue-500"
+                    title="Membres"
+                    value={String(memberCount)}
+                    showChevron={false}
+                    showSeparator={true}
+                  />
+                  <IOSListItem
+                    icon={CalendarDays}
+                    iconBgColor="bg-orange-500"
+                    title="À venir"
+                    value={String(upcomingSessions.length)}
+                    showChevron={false}
+                    showSeparator={true}
+                  />
+                  <IOSListItem
+                    icon={Dumbbell}
+                    iconBgColor="bg-green-500"
+                    title="Rôle"
+                    value={isCoach ? "Coach" : "Athlète"}
+                    showChevron={false}
+                    showSeparator={false}
+                  />
+                </IOSListGroup>
+
+                {/* Coach tools */}
+                {isCoach && (
+                  <IOSListGroup header="OUTILS COACHING" className="px-ios-4">
+                    {coachTools.map((tool, idx) => (
+                      <IOSListItem
+                        key={tool.label}
+                        icon={tool.icon}
+                        iconBgColor={tool.color}
+                        title={tool.label}
+                        subtitle={tool.subtitle}
+                        onClick={tool.onClick}
+                        showChevron={true}
+                        showSeparator={idx < coachTools.length - 1}
+                      />
+                    ))}
+                  </IOSListGroup>
+                )}
+
+                {/* Club management (coach only) */}
+                {isCoach && (
+                  <IOSListGroup header="CLUB" className="px-ios-4">
+                    <IOSListItem
+                      icon={Building2}
+                      iconBgColor="bg-indigo-500"
+                      title="Gérer le club"
+                      subtitle="Membres, invitations, paramètres"
+                      onClick={() => void openClubManagement()}
+                      showChevron={true}
+                      showSeparator={false}
+                    />
+                  </IOSListGroup>
+                )}
+
+                {/* Athlete weekly view */}
+                {!isCoach && (
+                  <IOSListGroup header="MON PLAN DE LA SEMAINE" className="px-ios-4">
+                    <div className="bg-card rounded-ios-md overflow-hidden">
+                      <div className="px-ios-4 py-ios-3 border-b border-border">
+                        <p className="text-[15px] text-muted-foreground">
+                          Vue claire, validation des séances, notes et progression.
+                        </p>
+                      </div>
+                      <AthleteWeeklyView
+                        clubId={selectedClub.id}
+                        sessions={thisWeekSessions}
+                        onSessionClick={(session) => setSelectedSession(session)}
+                      />
+                    </div>
+                  </IOSListGroup>
+                )}
+
+                {/* Upcoming sessions (coach) */}
+                {isCoach && (
+                  <IOSListGroup header="PROCHAINES SÉANCES" className="px-ios-4">
+                    {upcomingSessions.length === 0 ? (
+                      <div className="px-ios-4 py-ios-4 bg-card text-center rounded-ios-md">
+                        <p className="text-[15px] text-muted-foreground">
+                          Aucune séance à venir. Commence par créer le plan de la semaine.
+                        </p>
+                      </div>
+                    ) : (
+                      upcomingSessions.map((session, idx) => (
+                        <div key={session.id} className="relative">
+                          <div
+                            onClick={() => setSelectedSession(session)}
+                            className="flex items-center gap-3 bg-card px-ios-4 py-3 cursor-pointer active:bg-secondary/80 transition-colors"
+                          >
+                            <ActivityIcon activityType={session.activity_type} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[17px] leading-snug text-foreground font-medium">
+                                {session.title}
+                              </p>
+                              <p className="text-[13px] text-muted-foreground">
+                                {format(new Date(session.scheduled_at), "EEE d MMM – HH:mm", { locale: fr })}
+                              </p>
+                            </div>
+                            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                          </div>
+                          {idx < upcomingSessions.length - 1 && (
+                            <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
+                          )}
                         </div>
-                        <ClipboardCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      </button>
-                    ))
-                  )}
-                </div>
-              </section>
+                      ))
+                    )}
+                  </IOSListGroup>
+                )}
+              </>
             )}
-          </>
-        )}
           </div>
 
+          {/* Dialogs */}
           {selectedClub && (
             <>
               <WeeklyPlanDialog
