@@ -116,12 +116,11 @@ export function addBootCheckpoint(label: string) {
   const elapsed = Date.now() - BOOT_T0;
   lastCheckpoint = label;
 
-  // Also push to bootLog for the existing log panel
+  // Log to console as well (bootLog is already imported above but avoid circular issues)
   try {
-    const { bootLog } = require("@/lib/onScreenLogCapture");
-    bootLog(`[CHECKPOINT] ${label}`, { elapsed });
+    console.log(`[CHECKPOINT] ${label} +${elapsed}ms`);
   } catch {
-    /* early boot — ignore */
+    /* ignore */
   }
 
   addPill(label, elapsed);
