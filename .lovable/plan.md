@@ -1,64 +1,43 @@
 
+## Correction ciblée de l’écran blanc iOS
 
-# Refonte design "Mon Profil" — style Instagram/Strava premium
+### Cause identifiée
+Le crash vient de `src/components/Layout.tsx` :
+- un `useEffect` est déclaré **après** des retours conditionnels (`return null`, `return <Navigate />`, `return <ConsentDialog />`)
+- selon l’état (`loading`, `profileLoading`, `user`), React exécute donc un nombre différent de hooks
+- résultat : `Rendered more hooks than during the previous render.` puis écran blanc / fallback d’erreur, surtout visible sur iOS pendant le boot
 
-## Probleme actuel
-La page profil a trop de blocs empiles avec des designs differents : grille d'infos personnelles redondante (pseudo et nom deja affiches en haut), raccourcis en pilules basiques, et une densite visuelle trop forte. Ca fait amateur.
+Le build cassé est séparé :
+- `src/lib/onScreenLogCapture.ts` utilise `replaceAll`, non compatible avec la config TS actuelle (`ES2020`)
 
-## Inspiration Instagram / Strava
-- **Instagram** : Header compact (avatar + stats sur la meme ligne), bio en dessous, stories highlights, puis onglets de contenu (grille/reels/tags)
-- **Strava** : Stats integrees dans le header, actions directes, contenu en sections propres
+### Plan de correction
+1. **Stabiliser `Layout.tsx`**
+   - remonter le `useEffect` de log “ready” avant tout `return`
+   - garder la logique conditionnelle **dans** l’effet (`if (loading || profileLoading || !user) return`)
+   - vérifier qu’aucun autre hook n’est placé après un `return`
 
-## Structure cible
+2. **Supprimer les effets de bord pendant le render**
+   - déplacer les `bootLog(...)` actuellement exécutés juste avant `return null`, `Navigate` ou `ConsentDialog`
+   - les remplacer par des `useEffect` déclenchés sur changement d’état
+   - objectif : éviter les warnings React du type “update while rendering” et réduire les flashs/blancs au chargement
 
-```text
-┌───────────────────────────────────┐
-│  ← Retour     Mon Profil     ⚙️  │  (⚙️ remplace le vide a droite)
-├───────────────────────────────────┤
-│  [Avatar]   Séances  Abonnés  Abts│  (stats a cote de l'avatar
-│   96x96       12       34     28  │   comme Instagram)
-│                                   │
-│  Nom complet 👑                   │
-│  @username                        │
-│  🇫🇷 France · 24 ans · 🏃 Course │  (1 ligne meta, plus de chips)
-│                                   │
-│  Bio texte ici si presente...     │
-│                                   │
-│  [ Modifier le profil ] [Partager]│
-├───────────────────────────────────┤
-│  ○ Story1  ○ Story2  ⊕ Ajouter   │  (stories inchange)
-├───────────────────────────────────┤
-│  🏆 Records    🛡️ Fiabilité 94%  │  (grille 2x2 d'acces rapides
-│  🗺️ Parcours   📍 Séances        │   icones + labels, style propre)
-└───────────────────────────────────┘
-```
+3. **Corriger l’erreur de build TypeScript**
+   - dans `escapeHtml`, remplacer :
+     - `replaceAll("&", ...)`
+     - `replaceAll("<", ...)`
+     - `replaceAll(">", ...)`
+   - par des `replace(/.../g, ...)`
+   - c’est le correctif le plus sûr, sans élargir toute la cible TS juste pour un helper
 
-## Changements concrets dans `ProfileDialog.tsx`
+4. **Validation attendue après correction**
+   - plus d’erreur `Rendered more hooks...`
+   - plus d’écran blanc persistant sur iOS
+   - chargement normal sur web et iOS, avec fallback uniquement si une vraie erreur survient
+   - build TypeScript vert
 
-### 1. Header : ajouter bouton Parametres a droite
-- Remplacer le `div` vide par un bouton engrenage (`Settings` icon) qui ouvre `setShowSettingsDialog(true)`
-- Retire "Parametres" des raccourcis en bas
+### Fichiers à modifier
+- `src/components/Layout.tsx`
+- `src/lib/onScreenLogCapture.ts`
 
-### 2. Bloc identite : layout Instagram (avatar + stats cote a cote)
-- **Ligne du haut** : Avatar 80px a gauche, 3 colonnes de stats a droite (Seances | Abonnes | Abonnements) — exactement comme Instagram
-- **En dessous** : Nom + crown, @username, ligne meta condensee (`🇫🇷 France · 24 ans · 🏃 Course`) — remplace les chips
-- **Bio** sous la ligne meta
-- **Boutons** Modifier / Partager en dessous, `h-9 rounded-lg` plus fins
-
-### 3. Supprimer la grille "Personal Info"
-- Les infos (pseudo, nom, age, pays, sport, tel) sont redondantes : deja dans le header et la ligne meta
-- Suppression complete de ce bloc
-
-### 4. Raccourcis : grille 2x2 d'icones au lieu de pilules scrollables
-- 4 raccourcis : Records, Fiabilite, Parcours, Seances
-- Chaque case : icone centree + label en dessous, fond `bg-secondary/40`, `rounded-xl`
-- Tap = navigation ou dialog
-- Plus compact et plus pro que des pilules horizontales
-
-### 5. Supprimer les chips sport/pays
-- Remplacees par la ligne meta sous le @username
-- Plus propre, moins encombre
-
-## Fichier modifie
-- `src/components/ProfileDialog.tsx` uniquement
-
+### Détail technique
+Le problème n’est pas “spécifique iOS” au niveau code : iOS l’expose davantage car le cycle de chargement y rend les transitions `loading -> ready` plus sensibles. La vraie racine est la règle React : **les hooks doivent être appelés dans le même ordre à chaque render**.

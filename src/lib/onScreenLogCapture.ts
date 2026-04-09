@@ -191,9 +191,9 @@ function renderFallbackOverlay(): void {
 
 function escapeHtml(text: string): string {
   return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 export function bootLog(msg: string, data?: unknown): void {
