@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
+import { bootLog } from "@/lib/onScreenLogCapture";
 
 // Web-only callback page — iOS native flow now goes through the ios-auth-callback Edge Function
 
@@ -10,6 +12,14 @@ const AuthCallback = () => {
   const [status, setStatus] = useState("Connexion en cours...");
 
   useEffect(() => {
+    addBootCheckpoint("AUTH_CALLBACK");
+    bootLog("[AuthCallback] mount", {
+      href: window.location.href,
+      search: window.location.search,
+      hash: window.location.hash?.slice(0, 60),
+      params: Object.fromEntries(new URLSearchParams(window.location.search)),
+    });
+
     let timeout: NodeJS.Timeout;
 
     const handleCallback = async () => {

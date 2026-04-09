@@ -1,4 +1,7 @@
 import './bootLogInstall'
+import { addBootCheckpoint } from '@/lib/bootDebugOverlay'
+addBootCheckpoint("BUNDLE_START");
+import React, { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -107,6 +110,7 @@ const detectNativeImmediately = () => {
 
 // ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
+addBootCheckpoint("NATIVE_DETECT");
 bootLog("[main] native flag resolved", { isNative, detectedPlatform: (window as any).detectedPlatform ?? "unknown" });
 
 /** Géoloc accueil en parallèle du splash / React — cache OS + persistance locale au maximum tôt. */
@@ -192,19 +196,36 @@ if (!rootElement) {
 } else {
   try {
     bootLog("[main] createRoot:start");
+    addBootCheckpoint("CREATE_ROOT");
+
+    // Debug wrapper to log provider mount order
+    function DebugGate({ name, children }: { name: string; children: React.ReactNode }) {
+      useEffect(() => { addBootCheckpoint(`PROVIDER_${name}`); }, []);
+      return children;
+    }
+
     createRoot(rootElement).render(
       <BootErrorBoundary>
+        <DebugGate name="Auth">
         <AuthProvider>
+        <DebugGate name="UserProfile">
           <UserProfileProvider>
+          <DebugGate name="DistanceUnits">
             <DistanceUnitsProvider>
+            <DebugGate name="Language">
               <LanguageProvider>
                 <App />
               </LanguageProvider>
+            </DebugGate>
             </DistanceUnitsProvider>
+          </DebugGate>
           </UserProfileProvider>
+        </DebugGate>
         </AuthProvider>
+        </DebugGate>
       </BootErrorBoundary>
     );
+    addBootCheckpoint("RENDER_CALLED");
     bootLog("[main] createRoot:render-called");
   } catch (bootErr) {
     bootLog("[main] createRoot:error", bootErr);

@@ -20,6 +20,7 @@ import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { OnScreenDebugLog } from "@/components/OnScreenDebugLog";
 import { bootLog } from "@/lib/onScreenLogCapture";
+import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -84,6 +85,7 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  addBootCheckpoint("APP_RENDER");
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
 
@@ -93,6 +95,11 @@ const App = () => {
 
   useEffect(() => {
     bootLog("[App] splash state", { isAppLoaded });
+    if (isAppLoaded) {
+      addBootCheckpoint("APP_SPLASH_DONE");
+      // Mark ready after a tick to let Layout render
+      requestAnimationFrame(() => addBootCheckpoint("APP_READY"));
+    }
   }, [isAppLoaded]);
 
   // Max-aggressive warmup: start at boot, then retry on focus/online.
