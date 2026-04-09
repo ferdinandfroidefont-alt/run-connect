@@ -20,8 +20,10 @@ export const NotificationManager = () => {
     isNative, 
     isSupported,
     setupPushListeners,
-    checkPermissionStatus, // Nouveau : forcer le recheck
-    tokenSaving // 🔥 NIVEAU 8: État de sauvegarde du token
+    checkPermissionStatus,
+    tokenSaving,
+    pushDebug,
+    refreshDebugFromBackend,
   } = usePushNotifications();
   const { lastPushError } = useSendNotification();
   const { deviceInfo } = useDeviceDetection();
@@ -444,6 +446,27 @@ export const NotificationManager = () => {
             {diagnosticResult && (
               <div className="mt-3 p-3 bg-muted rounded-lg">
                 <p className="text-sm font-mono">{diagnosticResult}</p>
+              </div>
+            )}
+            
+            {pushDebug && (pushDebug.permissionRequested || pushDebug.lastError) && (
+              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono space-y-1">
+                <p className="font-bold text-slate-700">Push Debug State:</p>
+                <p>Permission: {pushDebug.permissionResult || 'n/a'}</p>
+                <p>Register called: {pushDebug.registerCalled ? 'YES' : 'NO'}</p>
+                <p>Registration event: {pushDebug.registrationEventReceived ? 'YES' : 'NO'}</p>
+                <p>APNs hex detected: {pushDebug.apnsHexDetected ? 'YES (blocked)' : 'NO'}</p>
+                <p>FCM token event: {pushDebug.fcmTokenEventReceived ? 'YES' : 'NO'}</p>
+                <p>FCM token length: {pushDebug.fcmTokenLength ?? 'n/a'}</p>
+                <p>Final token: {pushDebug.selectedFinalToken || 'none'}</p>
+                <p>Save attempted: {pushDebug.saveAttempted ? 'YES' : 'NO'}</p>
+                <p>Save response: {pushDebug.saveResponse ? `${pushDebug.saveResponse.status}` : 'n/a'}</p>
+                <p>DB token: {pushDebug.backendProfilePushToken ? pushDebug.backendProfilePushToken.substring(0, 20) + '...' : 'none'}</p>
+                {pushDebug.lastError && <p className="text-red-600">Error: {pushDebug.lastError}</p>}
+                <p className="text-slate-400">Updated: {pushDebug.timestamp}</p>
+                <p>window.fcmToken: {typeof (window as any).fcmToken === 'string' ? (window as any).fcmToken.substring(0, 20) + '...' : 'undefined'}</p>
+                <p>window.fcmTokenPlatform: {String((window as any).fcmTokenPlatform ?? 'undefined')}</p>
+                <Button variant="ghost" size="sm" className="mt-1" onClick={refreshDebugFromBackend}>Refresh from DB</Button>
               </div>
             )}
           </div>

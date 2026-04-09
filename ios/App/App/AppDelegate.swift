@@ -1,9 +1,8 @@
 import UIKit
+import UserNotifications
 import Capacitor
 import FirebaseCore
 import FirebaseMessaging
-
-// RUNCONNECT_IOS_PUSH_COMPLETE — FCM + pont WebView `fcmTokenReady` (voir usePushNotifications.tsx)
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -11,12 +10,42 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Set up UNUserNotificationCenter to display notifications while in foreground
+        UNUserNotificationCenter.current().delegate = self
+
         if Bundle.main.url(forResource: "GoogleService-Info", withExtension: "plist") != nil {
             if FirebaseApp.app() == nil {
                 FirebaseApp.configure()
             }
             Messaging.messaging().delegate = self
             print("[PUSH][IOS] Firebase configured, MessagingDelegate set")
+
+            // Request notification authorization directly from native (belt-and-suspenders with Capacitor)
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+                print("[PUSH][IOS] UNUserNotificationCenter auth granted=\(granted) error=\(String(describing: error))")
+                if granted {
+                    DispatchQueue.main.async {
+                        application.registerForRemoteNotifications()
+                        print("[PUSH][IOS] registerForRemoteNotifications called after authorization")
+                    }
+                }
+            }
+
+            // Also register immediately (uses existing permission if already granted)
+            application.registerForRemoteNotifications()
+            print("[PUSH][IOS] registerForRemoteNotifications called at launch")
+
+            // Try to get cached FCM token immediately
+            Messaging.messaging().token { [weak self] token, error in
+                if let error = error {
+                    print("[PUSH][IOS] Launch FCM token fetch: \(error.localizedDescription)")
+                    return
+                }
+                guard let token = token, !token.isEmpty else { return }
+                print("[PUSH][IOS] Launch FCM token OK length=\(token.count)")
+                UserDefaults.standard.set(token, forKey: "fcm_token")
+                self?.injectFCMTokenIntoWebView(token, traceId: "launch")
+            }
         } else {
             print("[PUSH][IOS] Missing GoogleService-Info.plist — add from Firebase Console (bundle com.ferdi.runconnect)")
         }
@@ -33,6 +62,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // Re-inject FCM token into WebView every time the app resumes
+        // (handles the case where injection failed on cold start because the WebView wasn't ready)
+        if let cachedToken = UserDefaults.standard.string(forKey: "fcm_token"), !cachedToken.isEmpty {
+            let traceId = String(Int(Date().timeIntervalSince1970 * 1000))
+            print("[PUSH][IOS] applicationDidBecomeActive: re-injecting cached FCM token traceId=\(traceId)")
+            injectFCMTokenIntoWebView(cachedToken, traceId: traceId)
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -173,5 +209,27 @@ extension AppDelegate: MessagingDelegate {
         print("[PUSH][IOS] didReceiveRegistrationToken length=\(fcmToken.count) traceId=\(traceId)")
         UserDefaults.standard.set(fcmToken, forKey: "fcm_token")
         injectFCMTokenIntoWebView(fcmToken, traceId: traceId)
+    }
+}
+
+// MARK: - UNUserNotificationCenterDelegate (foreground notifications)
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // Show banner + sound + badge even when the app is in foreground
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        // Let Capacitor handle the tap action
+        completionHandler()
     }
 }

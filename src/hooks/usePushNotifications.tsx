@@ -666,6 +666,11 @@ export const usePushNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
+    const isIosEnv =
+      Capacitor.getPlatform() === 'ios' ||
+      getNativePlatform() === 'ios' ||
+      /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
     const init = async () => {
       await checkPermissionStatus();
 
@@ -673,10 +678,25 @@ export const usePushNotifications = () => {
         await setupPushListeners();
         await new Promise(resolve => setTimeout(resolve, 300));
 
+        // On iOS, the AppDelegate already called registerForRemoteNotifications() at launch
+        // and may have injected a cached FCM token. Check for it first.
+        if (isIosEnv) {
+          const bridgedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+          if (bridgedToken && typeof bridgedToken === 'string' && bridgedToken.length > 50 && !isApnsHexToken(bridgedToken)) {
+            log('[INIT] 🍎 Found pre-injected FCM token from AppDelegate, length=' + bridgedToken.length);
+            setToken(bridgedToken);
+            pendingTokenRef.current = bridgedToken;
+            setIsRegistered(true);
+            updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bridgedToken.length, selectedFinalToken: bridgedToken.substring(0, 20) + '...' });
+            savePushToken(bridgedToken);
+            return;
+          }
+        }
+
         try {
           const status = await PushNotifications.checkPermissions();
           const platform = Capacitor.getPlatform();
-          log('[INIT] Permission:', status.receive, '| Platform:', platform);
+          log('[INIT] Permission:', status.receive, '| Platform:', platform, '| isIosEnv:', isIosEnv);
           updateDebug({ permissionResult: status.receive });
 
           if (status.receive === 'granted') {
@@ -706,12 +726,24 @@ export const usePushNotifications = () => {
         } catch (e: any) {
           logError('[INIT] Error:', e);
           updateDebug({ lastError: 'init: ' + e.message });
+
+          // CRITICAL: If Capacitor plugin failed, still try to register on iOS
+          // The AppDelegate handles this natively, but we force a second attempt via Capacitor
+          if (isIosEnv) {
+            log('[INIT] 🍎 Capacitor check failed, forcing register() on iOS...');
+            try {
+              updateDebug({ registerCalled: true });
+              await PushNotifications.register();
+            } catch (e2: any) {
+              logError('[INIT] iOS fallback register() also failed:', e2);
+            }
+          }
         }
       }
     };
 
     init();
-  }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug]);
+  }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug, savePushToken]);
 
   // ─── useEffect #2: PENDING TOKEN SAVE (with delayed retry) ────────────────────
 
@@ -923,39 +955,52 @@ export const usePushNotifications = () => {
     }
 
     const isIosEnv = Capacitor.getPlatform() === 'ios' || /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let iosPollingInterval: ReturnType<typeof setInterval> | null = null;
     let pageshowHandler: (() => void) | null = null;
 
     if (isIosEnv) {
-      fallbackTimer = setTimeout(async () => {
+      // Poll window.fcmToken every 2s for 60s — catches tokens injected
+      // by the AppDelegate at launch, on resume, or via MessagingDelegate
+      let pollCount = 0;
+      const maxPolls = 30; // 2s * 30 = 60s
+      iosPollingInterval = setInterval(async () => {
+        pollCount++;
         const currentToken = pendingTokenRef.current;
-        if (currentToken && !isApnsHexToken(currentToken)) return;
-
-        logError('[FALLBACK] ⚠️ No fcmTokenReady after 15s on iOS — attempting active recovery');
-        updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Attempting recovery...' });
+        if (currentToken && !isApnsHexToken(currentToken)) {
+          log('[IOS-POLL] Valid token already acquired, stopping');
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
+          return;
+        }
 
         const bufferedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         if (bufferedToken && typeof bufferedToken === 'string' && bufferedToken.length > 50 && !isApnsHexToken(bufferedToken)) {
-          log('[FALLBACK] Found buffered FCM token, saving...');
+          log('[IOS-POLL] FCM token found on window at poll #' + pollCount + ', saving...');
+          setIsNative(true);
           setToken(bufferedToken);
           pendingTokenRef.current = bufferedToken;
           setIsRegistered(true);
           updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bufferedToken.length, selectedFinalToken: bufferedToken.substring(0, 20) + '...' });
           await saveTokenDynamic(bufferedToken);
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
           return;
         }
 
-        try {
-          const status = await PushNotifications.checkPermissions();
-          if (status.receive === 'granted') {
-            log('[FALLBACK] Re-calling register() on iOS...');
-            updateDebug({ registerCalled: true });
+        // At 10s and 30s, try re-registering to trigger the native flow again
+        if (pollCount === 5 || pollCount === 15) {
+          log('[IOS-POLL] No token at poll #' + pollCount + ', re-calling register()...');
+          try {
             await PushNotifications.register();
+          } catch (e: any) {
+            logError('[IOS-POLL] register() error:', e);
           }
-        } catch (e: any) {
-          logError('[FALLBACK] register() retry error:', e);
         }
-      }, 15000);
+
+        if (pollCount >= maxPolls) {
+          logError('[IOS-POLL] No FCM token after 60s of polling');
+          updateDebug({ lastError: 'iOS: no FCM token after 60s. Check Firebase config (GoogleService-Info.plist, APNs key in Firebase Console).' });
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
+        }
+      }, 2000);
 
       pageshowHandler = () => {
         const buffered = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
@@ -973,7 +1018,7 @@ export const usePushNotifications = () => {
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
       window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (iosPollingInterval) clearInterval(iosPollingInterval);
       if (pageshowHandler) window.removeEventListener('pageshow', pageshowHandler);
     };
   }, [savePushToken, updateDebug]);
