@@ -7,6 +7,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const htmlUtf8 = (body: string) =>
+  new Response(body, {
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  })
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -32,41 +40,37 @@ Deno.serve(async (req) => {
 
     if (error || !code || !state) {
       console.error(`[strava-callback] reject oauth_error=${!!error} missing=${!code || !state}`);
-      return new Response(
-        `
-        <html>
-          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-            <h1>❌ Erreur de connexion Strava</h1>
-            <p>Une erreur s'est produite lors de la connexion à Strava.</p>
-            <p>Erreur: ${error || 'Code d\'autorisation manquant'}</p>
+      const errMsg = error || "Code d'autorisation manquant";
+      return htmlUtf8(
+        `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Strava</title></head>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h1>Erreur de connexion Strava</h1>
+            <p>Une erreur s'est produite lors de la connexion &agrave; Strava.</p>
+            <p>Erreur: ${errMsg.replace(/</g, "&lt;")}</p>
             <script>
               setTimeout(() => {
                 window.close();
               }, 3000);
             </script>
           </body>
-        </html>
-        `,
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'text/html' 
-          } 
-        }
+        </html>`,
       );
     }
 
-    // Exchange code for access token
-    const stravaTokenResponse = await fetch('https://www.strava.com/oauth/token', {
-      method: 'POST',
+    const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/strava-callback`;
+
+    // Exchange code for access token (redirect_uri must match strava-connect authorize URL)
+    const stravaTokenResponse = await fetch("https://www.strava.com/oauth/token", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        client_id: Deno.env.get('STRAVA_CLIENT_ID'),
-        client_secret: Deno.env.get('STRAVA_CLIENT_SECRET'),
+        client_id: Deno.env.get("STRAVA_CLIENT_ID"),
+        client_secret: Deno.env.get("STRAVA_CLIENT_SECRET"),
         code: code,
-        grant_type: 'authorization_code',
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
       }),
     });
 
@@ -76,15 +80,14 @@ Deno.serve(async (req) => {
       
       // Handle 403 Athlete quota exceeded
       if (stravaTokenResponse.status === 403) {
-        return new Response(
-          `
-          <html>
+        return htmlUtf8(
+          `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Strava</title></head>
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
               <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
-                <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                <div style="font-size: 48px; margin-bottom: 20px;">!</div>
                 <h1 style="margin: 0 0 20px 0;">Connexion temporairement indisponible</h1>
-                <p style="margin: 0 0 20px 0; opacity: 0.9;">Le quota d'API Strava a été atteint.</p>
-                <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez réessayer dans quelques heures.</p>
+                <p style="margin: 0 0 20px 0; opacity: 0.9;">Le quota d'API Strava a &eacute;t&eacute; atteint.</p>
+                <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez r&eacute;essayer dans quelques heures.</p>
               </div>
               <script>
                 setTimeout(() => {
@@ -95,14 +98,7 @@ Deno.serve(async (req) => {
                 }, 3000);
               </script>
             </body>
-          </html>
-          `,
-          { 
-            headers: { 
-              ...corsHeaders, 
-              'Content-Type': 'text/html' 
-            } 
-          }
+          </html>`,
         );
       }
       
@@ -155,12 +151,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For web: HTML page with postMessage
+    // For web: HTML page with postMessage (ASCII + HTML entities so proxies never mangle UTF-8)
     logStructured("strava-callback", "redirect_web", {});
-    return new Response(
-      `
-      <!DOCTYPE html>
-      <html>
+    return htmlUtf8(
+      `<!DOCTYPE html>
+      <html lang="fr">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -168,28 +163,20 @@ Deno.serve(async (req) => {
         </head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
-            <div style="font-size: 64px; margin-bottom: 20px;">✅</div>
-            <h2 style="color: #FC4C02;">Connexion Strava réussie !</h2>
-            <p>Retour à RunConnect...</p>
+            <div style="font-size: 48px; margin-bottom: 20px; color: #4ade80;">&#10003;</div>
+            <h2 style="color: #FC4C02;">Connexion Strava r&eacute;ussie !</h2>
+            <p>Retour &agrave; RunConnect...</p>
           </div>
           <script>
-            // For web - use postMessage to parent window
             if (window.opener) {
               window.opener.postMessage({ type: 'strava_auth_success' }, '*');
               setTimeout(() => window.close(), 500);
             } else {
-              window.location.href = '${webUrl}';
+              window.location.href = ${JSON.stringify(webUrl)};
             }
           </script>
         </body>
-      </html>
-      `,
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/html; charset=utf-8'
-        } 
-      }
+      </html>`,
     );
 
   } catch (error) {
@@ -197,33 +184,25 @@ Deno.serve(async (req) => {
     
     const webUrl = 'https://run-connect.lovable.app/profile';
     
-    return new Response(
-      `
-      <html>
+    return htmlUtf8(
+      `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Strava</title></head>
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
           <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto;">
-            <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+            <div style="font-size: 48px; margin-bottom: 20px;">&#10007;</div>
             <h1 style="margin: 0 0 20px 0;">Erreur de connexion Strava</h1>
             <p style="margin: 0 0 20px 0; opacity: 0.9;">Une erreur s'est produite lors de la connexion.</p>
-            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez réessayer plus tard.</p>
+            <p style="margin: 0; opacity: 0.8; font-size: 14px;">Veuillez r&eacute;essayer plus tard.</p>
           </div>
           <script>
             setTimeout(() => {
               if (window.opener) {
-                window.opener.location.href = '${webUrl}';
+                window.opener.location.href = ${JSON.stringify(webUrl)};
               }
               window.close();
             }, 3000);
           </script>
         </body>
-      </html>
-      `,
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/html' 
-        } 
-      }
+      </html>`,
     );
   }
 });
