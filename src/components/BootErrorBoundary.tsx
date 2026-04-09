@@ -1,7 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { isReallyNative } from '@/lib/nativeDetection';
-import { bootLog } from '@/lib/onScreenLogCapture';
 
 interface Props {
   children: ReactNode;
@@ -23,7 +22,6 @@ export class BootErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    bootLog('[BootErrorBoundary] componentDidCatch', {
       message: error?.message ?? 'unknown',
       stack: info.componentStack,
     });
