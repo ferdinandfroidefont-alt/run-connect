@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" href="./favicon.png" type="image/png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <title>RunConnect | Réseau social sportif</title>
@@ -53,17 +53,88 @@
         } catch (e) {}
       });
     </script>
-    <script type="module" crossorigin src="/assets/index-Bx1Gry0U.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/react-vendor-C9Ckbb75.js">
-    <link rel="modulepreload" crossorigin href="/assets/radix-gJk5Q-1i.js">
-    <link rel="modulepreload" crossorigin href="/assets/supabase-wGKtG3Rv.js">
-    <link rel="modulepreload" crossorigin href="/assets/icons-Cy5wFYAe.js">
-    <link rel="modulepreload" crossorigin href="/assets/router-on6LeVA1.js">
-    <link rel="modulepreload" crossorigin href="/assets/motion-JtH5KYFB.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-COtabIz7.css">
+    <script type="module" crossorigin src="./assets/index-BtnXNRyb.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/capacitor-5BlV1paa.js">
+    <link rel="modulepreload" crossorigin href="./assets/charts-CfV7wc8F.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-vendor-DKekVzsp.js">
+    <link rel="modulepreload" crossorigin href="./assets/radix-B-suFEd_.js">
+    <link rel="modulepreload" crossorigin href="./assets/icons-Cc49L1vK.js">
+    <link rel="modulepreload" crossorigin href="./assets/router-CJbdio-1.js">
+    <link rel="modulepreload" crossorigin href="./assets/supabase-BjmRZEQl.js">
+    <link rel="modulepreload" crossorigin href="./assets/motion-_p5OjvLk.js">
+    <link rel="modulepreload" crossorigin href="./assets/date-utils-Dz_7Lhtw.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BbgC1qij.css">
   </head>
 
-  <body style="background-color:#2c5dd9;margin:0">
+  <body style="background-color:#2E68FF;margin:0">
+    <!-- Filet avant tout bundle JS : erreurs visibles si le module principal ne charge pas -->
+    <script>
+      (function () {
+        try {
+          var p = (location.protocol || "").toLowerCase();
+          var ua = navigator.userAgent || "";
+          var isIos = /iPhone|iPad|iPod/i.test(ua);
+          var isRegularSafari = /Safari\//.test(ua) && /Version\//.test(ua);
+          var isIosWebView = isIos && /AppleWebKit/i.test(ua) && !isRegularSafari && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+          var likelyNative =
+            p === "capacitor:" ||
+            p === "ionic:" ||
+            p === "file:" ||
+            (/Android/i.test(ua) && /wv/i.test(ua)) ||
+            isIosWebView;
+          if (!likelyNative) return;
+
+          var max = 180;
+          var buf = [];
+          function line(lev, msg) {
+            try {
+              var t = new Date().toISOString();
+              buf.push("[" + t + "] " + lev + " " + String(msg));
+              if (buf.length > max) buf.splice(0, buf.length - max);
+              var el = document.getElementById("runconnect-boot-log");
+              if (el) el.textContent = buf.join("\n");
+            } catch (e) {}
+          }
+
+          function mount() {
+            if (document.getElementById("runconnect-boot-log")) return;
+            var el = document.createElement("pre");
+            el.id = "runconnect-boot-log";
+            el.setAttribute("aria-live", "polite");
+            el.style.cssText =
+              "position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;z-index:2147483646;margin:0;" +
+              "box-sizing:border-box;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));" +
+              "background:rgba(0,0,0,.9);color:#a7f3d0;font:11px/1.35 ui-monospace,monospace;" +
+              "white-space:pre-wrap;word-break:break-word;border-top:1px solid #334155;";
+            el.textContent =
+              "[RunConnect] Console boot (natif). Si écran blanc : copiez ce bloc ou faites une capture.\n";
+            document.body.appendChild(el);
+          }
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", mount);
+          } else {
+            mount();
+          }
+
+          window.addEventListener(
+            "error",
+            function (ev) {
+              line("ERR", (ev && ev.message) || "error");
+              if (ev && ev.filename) line("AT", ev.filename + ":" + (ev.lineno || 0) + ":" + (ev.colno || 0));
+            },
+            true,
+          );
+          window.addEventListener("unhandledrejection", function (ev) {
+            var r = ev && ev.reason;
+            line(
+              "REJ",
+              r && r.stack ? String(r.stack) : r != null ? String(r) : "unhandledrejection",
+            );
+          });
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     
     <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT (Fallback) -->
@@ -79,6 +150,6 @@
       });
     </script>
     
-    <!-- Pas de window.scrollTo sur focus : ça combat le scroll interne des pages et fait bouger la barre titre (voir IosFixedPageHeaderShell). -->
+    <!-- Pas de window.scrollTo sur focus : ça combat le scroll interne des pages et fait bouger la barre titre (voir IosFixedPageHeaderShell). -->
   </body>
 </html>
