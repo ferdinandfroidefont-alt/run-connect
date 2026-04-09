@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
-import type { Map as MapboxMap, Marker } from 'mapbox-gl';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
+import mapboxgl from 'mapbox-gl';
 import { ArrowLeft, Navigation, Radio, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,9 +50,9 @@ export default function SessionTracking() {
   } = useSessionTracking(sessionId);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapboxMapRef = useRef<MapboxMap | null>(null);
-  const userMarkerRef = useRef<Marker | null>(null);
-  const participantMarkersRef = useRef<Map<string, Marker>>(new Map());
+  const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const participantMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [mapReady, setMapReady] = useState(false);
   const [previewUserId, setPreviewUserId] = useState<string | null>(null);
 
@@ -62,26 +61,19 @@ export default function SessionTracking() {
     if (!getMapboxAccessToken()) return;
 
     let cancelled = false;
+    const map = createEmbeddedMapboxMap(mapContainerRef.current, {
+      center: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
+      zoom: 15,
+      interactive: true,
+    });
+    mapboxMapRef.current = map;
 
-    void (async () => {
-      const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
-        center: { lat: Number(session.location_lat), lng: Number(session.location_lng) },
-        zoom: 15,
-        interactive: true,
-      });
-      if (cancelled) {
-        map.remove();
-        return;
-      }
-      mapboxMapRef.current = map;
-
-      const boot = () => {
-        if (cancelled) return;
-        setMapReady(true);
-      };
-      if (map.isStyleLoaded()) boot();
-      else map.once('load', boot);
-    })();
+    const boot = () => {
+      if (cancelled) return;
+      setMapReady(true);
+    };
+    if (map.isStyleLoaded()) boot();
+    else map.once('load', boot);
 
     return () => {
       cancelled = true;
@@ -89,7 +81,7 @@ export default function SessionTracking() {
       userMarkerRef.current = null;
       participantMarkersRef.current.forEach((m) => m.remove());
       participantMarkersRef.current.clear();
-      mapboxMapRef.current?.remove();
+      map.remove();
       mapboxMapRef.current = null;
       setMapReady(false);
     };
@@ -100,18 +92,16 @@ export default function SessionTracking() {
     if (!map || !mapReady || !session) return;
 
     const coords: MapCoord[] = routeCoordinates.map((c) => ({ lat: c.lat, lng: c.lng }));
-    void (async () => {
-      if (coords.length > 0) {
-        setOrUpdateLineLayer(map, ROUTE_SRC, ROUTE_LAYER, coords, { color: ROUTE_COLOR, width: 5 });
-        await fitMapToCoords(map, coords, 60);
-      } else {
-        removeLineLayer(map, ROUTE_SRC, ROUTE_LAYER);
-        map.jumpTo({
-          center: [Number(session.location_lng), Number(session.location_lat)],
-          zoom: 15,
-        });
-      }
-    })();
+    if (coords.length > 0) {
+      setOrUpdateLineLayer(map, ROUTE_SRC, ROUTE_LAYER, coords, { color: ROUTE_COLOR, width: 5 });
+      fitMapToCoords(map, coords, 60);
+    } else {
+      removeLineLayer(map, ROUTE_SRC, ROUTE_LAYER);
+      map.jumpTo({
+        center: [Number(session.location_lng), Number(session.location_lat)],
+        zoom: 15,
+      });
+    }
   }, [mapReady, routeCoordinates, session]);
 
   const createBlueDotIcon = useCallback(() => {
@@ -233,8 +223,6 @@ export default function SessionTracking() {
         userMarkerRef.current.getElement().style.width = `${w}px`;
         userMarkerRef.current.getElement().style.height = `${h}px`;
       } else {
-        const mapboxgl = await loadMapboxGl();
-        if (cancelled) return;
         const el = elFromIconDataUrl(iconUrl, w, h);
         userMarkerRef.current = new mapboxgl.Marker({ element: el })
           .setLngLat([userPosition.lng, userPosition.lat])
@@ -270,8 +258,6 @@ export default function SessionTracking() {
         const iconUrl = await createPhotoMarkerIcon(avatarUrl, '#3b82f6');
         if (cancelled) return;
 
-        const mapboxgl = await loadMapboxGl();
-        if (cancelled) return;
         const el = elFromIconDataUrl(iconUrl, 52, 52);
         const marker = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
         el.style.cursor = 'pointer';

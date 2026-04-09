@@ -9,7 +9,6 @@ import type { FeedRoute } from '@/hooks/useRoutesFeed';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
-import type { Map, Marker } from 'mapbox-gl';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -33,8 +32,8 @@ const ROUTE_LAYER = 'routes-feed-mini-line-layer';
 export const RoutesFeedCard = ({ route, onClick, index = 0, mapUserPosition }: RoutesFeedCardProps) => {
   const { formatMeters, formatKm } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Map | null>(null);
-  const userLocationMarkerRef = useRef<Marker | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [miniMapReady, setMiniMapReady] = useState(false);
   const { position: hookPosition, getCurrentPosition } = useGeolocation();
   const position = mapUserPosition !== undefined ? mapUserPosition : hookPosition;
@@ -54,48 +53,40 @@ export const RoutesFeedCard = ({ route, onClick, index = 0, mapUserPosition }: R
     mapRef.current?.remove();
     mapRef.current = null;
 
-    void (async () => {
-      const path = route.coordinates
-        .map((coord: unknown) => {
-          const c = coord as Record<string, unknown> | unknown[];
-          if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
-            return { lat: Number(c.lat), lng: Number(c.lng) } as MapCoord;
-          }
-          if (Array.isArray(coord) && coord.length >= 2) {
-            return { lat: Number(coord[0]), lng: Number(coord[1]) } as MapCoord;
-          }
-          return null;
-        })
-        .filter((p): p is MapCoord => p !== null && Number.isFinite(p.lat) && Number.isFinite(p.lng));
-
-      if (path.length === 0 || !mapContainer.current) return;
-
-      try {
-        const mapInstance = await createEmbeddedMapboxMap(mapContainer.current, {
-          center: path[0],
-          zoom: 10,
-          interactive: false,
-        });
-        if (cancelled) {
-          mapInstance.remove();
-          return;
-        }
-        mapRef.current = mapInstance;
-        const afterLoad = () => {
-          if (cancelled || !mapRef.current) return;
-          setOrUpdateLineLayer(mapRef.current, ROUTE_SRC, ROUTE_LAYER, path, {
-            color: '#5B7CFF',
-            width: 3,
-          });
-          void fitMapToCoords(mapRef.current, path, 20);
-          if (!cancelled) setMiniMapReady(true);
-        };
-        if (mapInstance.isStyleLoaded()) afterLoad();
-        else mapInstance.once('load', afterLoad);
-      } catch {
-        return;
+    const path = route.coordinates.map((coord: unknown) => {
+      const c = coord as Record<string, unknown> | unknown[];
+      if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
+        return { lat: Number(c.lat), lng: Number(c.lng) } as MapCoord;
       }
-    })();
+      if (Array.isArray(coord) && coord.length >= 2) {
+        return { lat: Number(coord[0]), lng: Number(coord[1]) } as MapCoord;
+      }
+      return null;
+    }).filter((p): p is MapCoord => p !== null && Number.isFinite(p.lat) && Number.isFinite(p.lng));
+
+    if (path.length === 0) return;
+
+    try {
+      const mapInstance = createEmbeddedMapboxMap(mapContainer.current, {
+        center: path[0],
+        zoom: 10,
+        interactive: false,
+      });
+      mapRef.current = mapInstance;
+      const afterLoad = () => {
+        if (cancelled || !mapRef.current) return;
+        setOrUpdateLineLayer(mapRef.current, ROUTE_SRC, ROUTE_LAYER, path, {
+          color: '#5B7CFF',
+          width: 3,
+        });
+        fitMapToCoords(mapRef.current, path, 20);
+        if (!cancelled) setMiniMapReady(true);
+      };
+      if (mapInstance.isStyleLoaded()) afterLoad();
+      else mapInstance.once('load', afterLoad);
+    } catch {
+      return;
+    }
 
     return () => {
       cancelled = true;
@@ -115,14 +106,7 @@ export const RoutesFeedCard = ({ route, onClick, index = 0, mapUserPosition }: R
       return;
     }
     userLocationMarkerRef.current?.remove();
-    void (async () => {
-      const mk = await createUserLocationMapboxMarker(position.lng, position.lat);
-      if (!mapRef.current) {
-        mk.remove();
-        return;
-      }
-      userLocationMarkerRef.current = mk.addTo(mapRef.current);
-    })();
+    userLocationMarkerRef.current = createUserLocationMapboxMarker(position.lng, position.lat).addTo(mapRef.current);
   }, [position, miniMapReady]);
 
   const renderStars = (rating: number) => {

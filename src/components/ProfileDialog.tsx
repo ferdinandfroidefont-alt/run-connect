@@ -8,11 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2 } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
@@ -477,170 +477,145 @@ export const ProfileDialog = ({
                 <span className="truncate text-[17px]">Retour</span>
               </button>
               <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
-              <button
-                type="button"
-                onClick={() => setShowSettingsDialog(true)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
-              >
-                <Settings className="h-5 w-5" />
-              </button>
+              <div className="w-16 max-w-[42%] shrink-0" aria-hidden />
             </div>
           </div>
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
              <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
-                {/* Profile Header - Instagram layout: avatar + stats side by side */}
-                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
-                  <div className="flex items-center gap-5">
-                    {/* Avatar */}
-                    <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
-                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
-                        <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                        <AvatarFallback className="text-2xl bg-secondary">
-                          {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              const file = await selectFromGallery();
-                              if (file) {
-                                handleAvatarChange({ target: { files: [file] } } as any);
-                              }
-                            } catch (error) {
-                              console.error('Error selecting from gallery:', error);
-                              toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
+               {/* Profile Header - Social */}
+               <div className="bg-card border-b border-border px-4 py-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                    <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
+                      <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                      <AvatarFallback className="text-2xl bg-secondary">
+                        {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const file = await selectFromGallery();
+                            if (file) {
+                              handleAvatarChange({ target: { files: [file] } } as any);
                             }
-                          }}
-                          disabled={cameraLoading}
-                          className="absolute bottom-0 right-0 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
-                        >
-                          <Camera className="h-3 w-3" />
-                        </button>
-                      )}
-                    </button>
-
-                    {/* Stats à droite de l'avatar */}
-                    <div className="flex flex-1 min-w-0 items-center justify-around">
-                      <div className="text-center">
-                        <p className="text-[18px] font-bold text-foreground leading-none">{socialSessionsCount}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                          } catch (error) {
+                            console.error('Error selecting from gallery:', error);
+                            toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
+                          }
+                        }}
+                        disabled={cameraLoading}
+                        className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
                       >
-                        <div className="flex items-center justify-center gap-0.5">
-                          <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
-                          {pendingRequestsCount > 0 && (
-                            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-0.5 -mt-2">
-                              {pendingRequestsCount}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
+                        <Camera className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                        className="text-center touch-manipulation transition-colors active:opacity-70"
-                      >
-                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Nom + meta line */}
-                  <div className="mt-3 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
+                    )}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <h2 className="truncate text-[22px] font-bold text-foreground leading-tight">
                         {profile?.display_name || profile?.username || "Utilisateur"}
                       </h2>
                       {(profile?.is_premium || subscriptionInfo?.subscribed) && (
                         <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
                       )}
                     </div>
-                    <p className="truncate text-[13px] text-muted-foreground">
+                    <p className="truncate text-[14px] text-muted-foreground mt-0.5">
                       @{profile?.username}
                     </p>
-                    {/* Meta line: country · age · sport */}
-                    {(() => {
-                      const parts: string[] = [];
-                      if (profile?.country) parts.push(COUNTRY_LABELS[profile.country] ?? profile.country);
-                      if (profile?.age) parts.push(`${profile.age} ans`);
-                      if (profile?.favorite_sport) parts.push(SPORT_LABELS[profile.favorite_sport] ?? profile.favorite_sport);
-                      return parts.length > 0 ? (
-                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                          {parts.join(' · ')}
-                        </p>
-                      ) : null;
-                    })()}
                     {profile?.bio && (
-                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
+                      <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground line-clamp-3">
                         {profile.bio}
                       </p>
                     )}
                   </div>
-
-                  {/* Boutons Modifier / Partager */}
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 rounded-lg text-[13px] font-semibold"
-                      onClick={() => setIsEditing(true)}
-                    >
-                      Modifier le profil
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
-                      onClick={() => {
-                        if (!profile?.username) return;
-                        void shareProfile({
-                          username: profile.username,
-                          displayName: profile.display_name,
-                          bio: profile.bio,
-                          avatarUrl: profile.avatar_url,
-                        });
-                      }}
-                    >
-                      <Share2 className="h-3.5 w-3.5" />
-                      Partager
-                    </Button>
-                  </div>
                 </div>
 
-              {/* Stories à la une - cercles style Instagram */}
-              <div className="bg-card border-b border-border px-4 py-3">
-                <div className="flex gap-3 overflow-x-auto pb-1">
-                  {storyHighlights.map((item) => (
-                    <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                        {item.title.slice(0, 2).toUpperCase()}
-                      </div>
-                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
-                    </button>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {socialHighlights.slice(0, 5).map((highlight) => (
+                    <span
+                      key={highlight}
+                      className="rounded-full border border-border/70 bg-secondary px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                    >
+                      {highlight}
+                    </span>
                   ))}
-                  {/* Bouton ajouter */}
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <Button type="button" className="flex-1" onClick={() => setIsEditing(true)}>
+                    Modifier le profil
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={() => {
+                      if (!profile?.username) return;
+                      void shareProfile({
+                        username: profile.username,
+                        displayName: profile.display_name,
+                        bio: profile.bio,
+                        avatarUrl: profile.avatar_url,
+                      });
+                    }}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Partager
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stats socials */}
+              <IOSListGroup flush className="mb-0">
+                <div className="flex min-w-0 max-w-full items-center divide-x divide-border">
+                  <div className="min-h-[44px] flex-1 py-3 text-center">
+                    <p className="text-[20px] font-bold text-foreground">{socialSessionsCount}</p>
+                    <p className="text-[12px] text-muted-foreground">Seances</p>
+                  </div>
                   <button
                     type="button"
-                    className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-                    onClick={() => setShowHighlightsManager(true)}
+                    onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+                    className="relative min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
                   >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40 bg-secondary/50 text-muted-foreground">
-                      <span className="text-xl leading-none">+</span>
+                    <div className="flex items-center justify-center gap-1">
+                      <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
+                      {pendingRequestsCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold px-1">
+                          {pendingRequestsCount}
+                        </span>
+                      )}
                     </div>
-                    <p className="w-full truncate text-center text-[11px] text-muted-foreground">Ajouter</p>
+                    <p className="text-[12px] text-muted-foreground">Abonnés</p>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+                    className="min-h-[44px] flex-1 touch-manipulation py-3 transition-colors active:bg-secondary/50"
+                  >
+                    <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
+                    <p className="text-[12px] text-muted-foreground">Abonnements</p>
+                  </button>
+                </div>
+              </IOSListGroup>
+
+              {/* Highlights */}
+                 <div className="bg-card border-b border-border px-4 py-3">
+                <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">A la une</p>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {socialHighlights.length > 0 ? socialHighlights.map((highlight) => (
+                    <div key={`highlight-${highlight}`} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                        {highlight.slice(0, 2).toUpperCase()}
+                      </div>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{highlight}</p>
+                    </div>
+                  )) : (
+                    <p className="text-[13px] text-muted-foreground">Ajoute une bio et un sport favori pour afficher tes highlights.</p>
+                  )}
                 </div>
               </div>
 
@@ -751,28 +726,140 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-
-                  {/* Raccourcis - grille 2x2 */}
                   <div className="bg-card border-b border-border px-4 py-3">
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {[
-                        { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
-                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
-                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
-                        { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
-                      ].map((item) => (
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Stories a la une</p>
                         <button
-                          key={item.label}
                           type="button"
-                          onClick={item.action}
-                          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary"
+                          onClick={() => setShowHighlightsManager(true)}
+                          className="text-sm"
+                          aria-label="Modifier stories a la une"
+                          title="Modifier stories a la une"
                         >
-                          <item.icon className={`h-6 w-6 ${item.color}`} />
-                          <span className="text-[13px] font-medium text-foreground">{item.label}</span>
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {storyHighlights.map((item) => (
+                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                            {item.title.slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
                         </button>
                       ))}
+                      {storyHighlights.length === 0 && (
+                        <p className="text-[13px] text-muted-foreground">Aucune story epinglee.</p>
+                      )}
                     </div>
                   </div>
+
+                  {/* Personal Info */}
+                   <IOSListGroup
+                     header="INFORMATIONS"
+                     flush
+                   >
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-blue-500"
+                      iconColor="text-white"
+                      title="Pseudo"
+                      value={profile?.username || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
+                      title="Nom"
+                      value={profile?.display_name || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Calendar}
+                      iconBgColor="bg-pink-500"
+                      iconColor="text-white"
+                      title="Âge"
+                      value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Heart}
+                      iconBgColor="bg-green-500"
+                      iconColor="text-white"
+                      title="Téléphone"
+                      value={profile?.phone || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Footprints}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
+                      title="Sport favori"
+                      value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
+                      showChevron={false}
+                    />
+                    <IOSListItem
+                      icon={Globe}
+                      iconBgColor="bg-indigo-500"
+                      iconColor="text-white"
+                      title="Pays"
+                      value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
+                      showChevron={false}
+                      showSeparator={false}
+                    />
+                  </IOSListGroup>
+
+                  {/* Actions */}
+                   <IOSListGroup
+                     header="RACCOURCIS"
+                     flush
+                     className="mb-0"
+                   >
+                    <IOSListItem
+                      icon={Route}
+                      iconBgColor="bg-teal-500"
+                      iconColor="text-white"
+                      title="Mes séances et itinéraires"
+                      onClick={() => { onOpenChange(false); navigate('/my-sessions'); }}
+                    />
+                    <IOSListItem
+                      icon={MapPin}
+                      iconBgColor="bg-purple-500"
+                      iconColor="text-white"
+                      title="Créer un parcours"
+                      onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
+                    />
+                    <IOSListItem
+                      icon={Trophy}
+                      iconBgColor="bg-amber-500"
+                      iconColor="text-white"
+                      title="Records sport"
+                      subtitle="Renseigner tes perfs"
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate("/profile/records");
+                      }}
+                    />
+                    <IOSListItem
+                      icon={User}
+                      iconBgColor="bg-gray-500"
+                      iconColor="text-white"
+                      title="Paramètres"
+                      onClick={() => setShowSettingsDialog(true)}
+                    />
+                    <IOSListItem
+                      icon={Shield}
+                      iconBgColor="bg-orange-500"
+                      iconColor="text-white"
+                      title="Fiabilite"
+                      value={`${reliabilityRate}%`}
+                      onClick={() => setShowReliabilityDialog(true)}
+                      showSeparator={false}
+                    />
+                   </IOSListGroup>
                 </>
               )}
             </div>
@@ -804,79 +891,44 @@ export const ProfileDialog = ({
         />
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
-        <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
-          {/* Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex items-center justify-between px-4 py-3">
-              <button type="button" onClick={() => setShowHighlightsManager(false)} className="flex items-center gap-1 text-primary">
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
-              </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Stories à la une</h1>
-              <div className="w-16" />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Titre du highlight */}
-            <div>
-              <label className="text-[13px] font-medium text-muted-foreground mb-1 block">Titre du highlight</label>
-              <Input
-                value={newHighlightTitle}
-                onChange={(e) => setNewHighlightTitle(e.target.value)}
-                placeholder="Ex: Courses, PR, Trails..."
-                className="bg-card"
-              />
-            </div>
-
-            {/* Liste des stories */}
-            <div>
-              <p className="text-[13px] font-medium text-muted-foreground mb-2">Sélectionner une story</p>
-              <div className="space-y-2">
-                {ownStories.map((story) => {
-                  const already = storyHighlights.some((h) => h.story_id === story.id);
-                  return (
-                    <div key={story.id} className="flex items-center justify-between rounded-xl bg-card border px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Story du {new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(story.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      {already ? (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-lg"
-                          onClick={() => {
-                            const h = storyHighlights.find((x) => x.story_id === story.id);
-                            if (h) void removeHighlight(h.id);
-                          }}
-                        >
-                          Retirer
-                        </Button>
-                      ) : (
-                        <Button size="sm" className="rounded-lg" onClick={() => void addStoryToHighlights(story.id)}>
-                          Épingler
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-                {ownStories.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-                      <Heart className="h-7 w-7 text-muted-foreground" />
-                    </div>
-                    <p className="text-base font-semibold text-foreground">Aucune story</p>
-                    <p className="mt-1 text-sm text-muted-foreground max-w-[260px]">
-                      Crée ta première story pour pouvoir l'épingler à la une de ton profil.
+        <DialogContent className="max-w-md">
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold">Modifier les stories a la une</h3>
+            <Input
+              value={newHighlightTitle}
+              onChange={(e) => setNewHighlightTitle(e.target.value)}
+              placeholder="Titre (ex: Courses, PR...)"
+            />
+            <div className="max-h-64 space-y-2 overflow-auto">
+              {ownStories.map((story) => {
+                const already = storyHighlights.some((h) => h.story_id === story.id);
+                return (
+                  <div key={story.id} className="flex items-center justify-between rounded-ios-md border px-3 py-2">
+                    <p className="text-xs text-muted-foreground">
+                      Story {new Date(story.created_at).toLocaleDateString()}
                     </p>
+                    {already ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          const h = storyHighlights.find((x) => x.story_id === story.id);
+                          if (h) void removeHighlight(h.id);
+                        }}
+                      >
+                        Retirer
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => void addStoryToHighlights(story.id)}>
+                        Mettre a la une
+                      </Button>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })}
+              {ownStories.length === 0 && (
+                <p className="py-6 text-center text-sm text-muted-foreground">Aucune story disponible.</p>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -886,7 +938,6 @@ export const ProfileDialog = ({
         onOpenChange={setShowOwnStory}
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
-        stackNested
         onOpenFeed={() => {
           setShowOwnStory(false);
           onOpenChange(false);
@@ -901,7 +952,6 @@ export const ProfileDialog = ({
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
         storyId={highlightStoryId}
-        stackNested
         onOpenFeed={() => {
           setHighlightStoryId(null);
           onOpenChange(false);

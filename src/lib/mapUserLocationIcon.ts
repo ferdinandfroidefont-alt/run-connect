@@ -1,5 +1,4 @@
-import type { Marker } from "mapbox-gl";
-import { loadMapboxGl } from "@/lib/mapboxLazy";
+import mapboxgl from "mapbox-gl";
 
 /**
  * Couleur primaire runtime (variables Tailwind : `--primary` = "H S% L%" sans préfixe hsl).
@@ -62,8 +61,7 @@ export function createUserLocationMapIconDataUrl(): string {
 }
 
 /** Marqueur Mapbox « position utilisateur » (sans l’ajouter à la carte). */
-export async function createUserLocationMapboxMarker(lng: number, lat: number): Promise<Marker> {
-  const mapboxgl = await loadMapboxGl();
+export function createUserLocationMapboxMarker(lng: number, lat: number): mapboxgl.Marker {
   const el = createStableUserLocationMarkerElement();
   return new mapboxgl.Marker({ element: el, anchor: "center" }).setLngLat([lng, lat]);
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Map as MapboxMap } from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +36,7 @@ interface CreateSessionWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onSessionCreated: (sessionId?: string) => void;
-  map: MapboxMap | null;
+  map: mapboxgl.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   /** Pré-sélectionne un itinéraire enregistré (query `?presetRoute=` sur l’accueil). */
   presetRouteId?: string | null;

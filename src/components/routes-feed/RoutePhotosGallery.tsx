@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
-import type { Map, Marker } from 'mapbox-gl';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
+import mapboxgl from 'mapbox-gl';
 import { Camera, Loader2, MapPinOff, RefreshCw, Route, X } from 'lucide-react';
 import { useRoutePhotosGallery, GalleryPhoto, type GalleryMapRoutePreview } from '@/hooks/useRoutePhotosGallery';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -49,9 +48,9 @@ export const RoutePhotosGallery = ({ syncKey = 0 }: RoutePhotosGalleryProps) => 
     positionRef.current = position;
   }, [position]);
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Map | null>(null);
-  const markersRef = useRef<Marker[]>([]);
-  const userMarkerRef = useRef<Marker | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<GalleryPhoto | null>(null);
   const [mapRoutePreview, setMapRoutePreview] = useState<{
     route: GalleryMapRoutePreview;
@@ -90,34 +89,28 @@ export const RoutePhotosGallery = ({ syncKey = 0 }: RoutePhotosGalleryProps) => 
     let cancelled = false;
     setMapError(false);
 
-    void (async () => {
-      try {
-        const pos = positionRef.current;
-        const center = pos ? { lat: pos.lat, lng: pos.lng } : { lat: 46.6, lng: 2.3 };
-        const map = await createEmbeddedMapboxMap(mapContainer.current!, {
-          center,
-          zoom: pos ? 13 : 6,
-          interactive: true,
-        });
-        if (cancelled) {
-          map.remove();
-          return;
-        }
-        mapRef.current = map;
+    try {
+      const pos = positionRef.current;
+      const center = pos ? { lat: pos.lat, lng: pos.lng } : { lat: 46.6, lng: 2.3 };
+      const map = createEmbeddedMapboxMap(mapContainer.current, {
+        center,
+        zoom: pos ? 13 : 6,
+        interactive: true,
+      });
+      mapRef.current = map;
 
-        const onReady = () => {
-          if (!cancelled) {
-            setMapReady(true);
-            requestAnimationFrame(() => requestAnimationFrame(() => map.resize()));
-          }
-        };
-        if (map.isStyleLoaded()) onReady();
-        else map.once('load', onReady);
-      } catch (e) {
-        console.error('RoutePhotosGallery map init', e);
-        if (!cancelled) setMapError(true);
-      }
-    })();
+      const onReady = () => {
+        if (!cancelled) {
+          setMapReady(true);
+          requestAnimationFrame(() => requestAnimationFrame(() => map.resize()));
+        }
+      };
+      if (map.isStyleLoaded()) onReady();
+      else map.once('load', onReady);
+    } catch (e) {
+      console.error('RoutePhotosGallery map init', e);
+      if (!cancelled) setMapError(true);
+    }
 
     return () => {
       cancelled = true;
@@ -141,90 +134,79 @@ export const RoutePhotosGallery = ({ syncKey = 0 }: RoutePhotosGalleryProps) => 
   useEffect(() => {
     if (!mapRef.current || !position || !mapReady) return;
     userMarkerRef.current?.remove();
-    void (async () => {
-      const mk = await createUserLocationMapboxMarker(position.lng, position.lat);
-      if (!mapRef.current) {
-        mk.remove();
-        return;
-      }
-      userMarkerRef.current = mk.addTo(mapRef.current);
-    })();
+    userMarkerRef.current = createUserLocationMapboxMarker(position.lng, position.lat).addTo(mapRef.current);
   }, [position, mapReady]);
 
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
     const map = mapRef.current;
 
-    void (async () => {
-      const mapboxgl = await loadMapboxGl();
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    removeLineLayer(map, GALLERY_ROUTE_SRC, GALLERY_ROUTE_LAYER);
 
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      removeLineLayer(map, GALLERY_ROUTE_SRC, GALLERY_ROUTE_LAYER);
+    const geoPhotos = photos.filter((p) => p.lat && p.lng);
+    const routePath = mapRoutePreview?.route?.coordinates
+      ? coordinatesToPath(mapRoutePreview.route.coordinates)
+      : [];
 
-      const geoPhotos = photos.filter((p) => p.lat && p.lng);
-      const routePath = mapRoutePreview?.route?.coordinates
-        ? coordinatesToPath(mapRoutePreview.route.coordinates)
-        : [];
-
-      if (routePath.length >= 2) {
-        setOrUpdateLineLayer(map, GALLERY_ROUTE_SRC, GALLERY_ROUTE_LAYER, routePath, {
-          color: '#5B7CFF',
-          width: 5,
-        });
-      }
-
-      geoPhotos.forEach((photo) => {
-        const pos = { lat: photo.lat!, lng: photo.lng! };
-        const isFocus = mapRoutePreview?.contextPhoto?.id === photo.id;
-        const wrap = document.createElement('div');
-        const side = isFocus ? 56 : 48;
-        wrap.style.width = `${side}px`;
-        wrap.style.height = `${side}px`;
-        wrap.style.borderRadius = '9999px';
-        wrap.style.overflow = 'hidden';
-        wrap.style.border = '3px solid white';
-        wrap.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-        wrap.style.cursor = 'pointer';
-        const img = document.createElement('img');
-        img.src = photo.photo_url;
-        img.alt = '';
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        wrap.appendChild(img);
-        wrap.addEventListener('click', () => setSelectedPhoto(photo));
-        const marker = new mapboxgl.Marker({ element: wrap })
-          .setLngLat([pos.lng, pos.lat])
-          .addTo(map);
-        markersRef.current.push(marker);
+    if (routePath.length >= 2) {
+      setOrUpdateLineLayer(map, GALLERY_ROUTE_SRC, GALLERY_ROUTE_LAYER, routePath, {
+        color: '#5B7CFF',
+        width: 5,
       });
+    }
 
-      const bounds = new mapboxgl.LngLatBounds();
-      let hasPoint = false;
-      const extend = (pt: MapCoord) => {
-        bounds.extend([pt.lng, pt.lat]);
-        hasPoint = true;
-      };
+    geoPhotos.forEach((photo) => {
+      const pos = { lat: photo.lat!, lng: photo.lng! };
+      const isFocus = mapRoutePreview?.contextPhoto?.id === photo.id;
+      const wrap = document.createElement('div');
+      const side = isFocus ? 56 : 48;
+      wrap.style.width = `${side}px`;
+      wrap.style.height = `${side}px`;
+      wrap.style.borderRadius = '9999px';
+      wrap.style.overflow = 'hidden';
+      wrap.style.border = '3px solid white';
+      wrap.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+      wrap.style.cursor = 'pointer';
+      const img = document.createElement('img');
+      img.src = photo.photo_url;
+      img.alt = '';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      wrap.appendChild(img);
+      wrap.addEventListener('click', () => setSelectedPhoto(photo));
+      const marker = new mapboxgl.Marker({ element: wrap })
+        .setLngLat([pos.lng, pos.lat])
+        .addTo(map);
+      markersRef.current.push(marker);
+    });
 
-      if (routePath.length >= 2) routePath.forEach(extend);
-      const anchor = mapRoutePreview?.contextPhoto;
-      if (anchor?.lat != null && anchor?.lng != null) extend({ lat: anchor.lat, lng: anchor.lng });
+    const bounds = new mapboxgl.LngLatBounds();
+    let hasPoint = false;
+    const extend = (pt: MapCoord) => {
+      bounds.extend([pt.lng, pt.lat]);
+      hasPoint = true;
+    };
+
+    if (routePath.length >= 2) routePath.forEach(extend);
+    const anchor = mapRoutePreview?.contextPhoto;
+    if (anchor?.lat != null && anchor?.lng != null) extend({ lat: anchor.lat, lng: anchor.lng });
+    if (position) extend({ lat: position.lat, lng: position.lng });
+
+    if (!hasPoint && geoPhotos.length > 0) {
+      geoPhotos.forEach((p) => extend({ lat: p.lat!, lng: p.lng! }));
       if (position) extend({ lat: position.lat, lng: position.lng });
+    }
 
-      if (!hasPoint && geoPhotos.length > 0) {
-        geoPhotos.forEach((p) => extend({ lat: p.lat!, lng: p.lng! }));
-        if (position) extend({ lat: position.lat, lng: position.lng });
-      }
-
-      if (hasPoint) {
-        map.fitBounds(bounds, {
-          padding: 70,
-          duration: 0,
-          maxZoom: routePath.length >= 2 ? 17 : 16,
-        });
-      }
-    })();
+    if (hasPoint) {
+      map.fitBounds(bounds, {
+        padding: 70,
+        duration: 0,
+        maxZoom: routePath.length >= 2 ? 17 : 16,
+      });
+    }
   }, [photos, mapReady, position, mapRoutePreview]);
 
   const handleViewRouteOnMap = useCallback((route: GalleryMapRoutePreview, contextPhoto: GalleryPhoto) => {

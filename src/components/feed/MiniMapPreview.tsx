@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Map, Marker } from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 import { generateRoundProfileMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { createEmbeddedMapboxMap } from '@/lib/mapboxEmbed';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 
 interface MiniMapPreviewProps {
@@ -16,8 +15,8 @@ interface MiniMapPreviewProps {
 export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMapPreviewProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
-  const markerRef = useRef<Marker | null>(null);
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -50,7 +49,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
       try {
         if (!mapRef.current || cancelled) return;
 
-        const map = await createEmbeddedMapboxMap(mapRef.current, {
+        const map = createEmbeddedMapboxMap(mapRef.current, {
           center: { lat, lng },
           zoom: 14,
           interactive: true,
@@ -83,7 +82,6 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
           el.style.border = '3px solid white';
         }
 
-        const mapboxgl = await loadMapboxGl();
         markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
 
         map.on('click', handleMapClick);

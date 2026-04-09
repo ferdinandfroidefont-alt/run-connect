@@ -1,16 +1,7 @@
 import { RouteDialog } from './RouteDialog';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RUNCONNECT_OPEN_HOME_SETTINGS_EVENT } from '@/lib/homeMapEvents';
-import type {
-  GeoJSONSource,
-  LngLat,
-  Map,
-  MapMouseEvent,
-  MapTouchEvent,
-  Marker,
-  PaddingOptions,
-} from 'mapbox-gl';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
+import mapboxgl from 'mapbox-gl';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
@@ -103,7 +94,7 @@ const PARIS_FALLBACK: { lng: number; lat: number } = { lng: 2.3522, lat: 48.8566
 function computeHomeMapViewportPadding(opts: {
   immersive: boolean;
   topStackEl: HTMLElement | null;
-}): PaddingOptions {
+}): mapboxgl.PaddingOptions {
   if (opts.immersive) {
     return { top: 80, bottom: 120, left: 14, right: 14 };
   }
@@ -275,7 +266,7 @@ const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
   geometry: { type: 'LineString', coordinates: [] },
 };
 
-function ensureInteractiveRouteLayer(map: Map) {
+function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
   if (map.getSource(ROUTE_LINE_SOURCE)) return;
   map.addSource(ROUTE_LINE_SOURCE, {
     type: 'geojson',
@@ -294,12 +285,12 @@ function ensureInteractiveRouteLayer(map: Map) {
   });
 }
 
-function setInteractiveRouteLine(map: Map | null, points: MapCoord[]) {
+function setInteractiveRouteLine(map: mapboxgl.Map | null, points: MapCoord[]) {
   if (!map) return;
   const apply = () => {
     if (!map.isStyleLoaded()) return;
     ensureInteractiveRouteLayer(map);
-    const src = map.getSource(ROUTE_LINE_SOURCE) as GeoJSONSource;
+    const src = map.getSource(ROUTE_LINE_SOURCE) as mapboxgl.GeoJSONSource;
     if (points.length >= 2) {
       src.setData(coordsToLineString(points));
     } else {
@@ -336,7 +327,7 @@ export const InteractiveMap = ({
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
 
   // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef(new window.Map<string, string>());
+  const markerCache = useRef<Map<string, string>>(new Map());
 
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -348,10 +339,10 @@ export const InteractiveMap = ({
     getCurrentPosition
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<Map | null>(null);
-  const markers = useRef<Marker[]>([]);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
-  const userLocationMarker = useRef<Marker | null>(null);
+  const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -373,7 +364,7 @@ export const InteractiveMap = ({
     time_slot: null,
     level: null
   });
-  const [mapboxMap, setMapboxMap] = useState<Map | null>(null);
+  const [mapboxMap, setMapboxMap] = useState<mapboxgl.Map | null>(null);
   const [userProfile, setUserProfile] = useState<{
     username: string;
     display_name: string;
@@ -799,8 +790,8 @@ export const InteractiveMap = ({
           : Promise.resolve({ data: [] }),
       ]);
 
-      const profilesMap = new window.Map((profilesResult.data || []).map((p: any) => [p.user_id, p]));
-      const routesMap = new window.Map((routesResult.data || []).map((r: any) => [r.id, r]));
+      const profilesMap = new Map((profilesResult.data || []).map(p => [p.user_id, p]));
+      const routesMap = new Map((routesResult.data || []).map(r => [r.id, r]));
 
       const sessionsWithProfiles = visibleSessions.map(session => {
         const profile = profilesMap.get(session.organizer_id);
@@ -852,7 +843,6 @@ export const InteractiveMap = ({
   // Create map markers for sessions
   const createMarkers = async () => {
     if (!map.current) return;
-    const mapboxgl = await loadMapboxGl();
     const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
@@ -1186,13 +1176,12 @@ export const InteractiveMap = ({
       return;
     }
 
+    mapboxgl.accessToken = token;
     let cancelled = false;
 
-    const boot = (mapboxgl: Awaited<ReturnType<typeof loadMapboxGl>>) => {
+    const boot = () => {
       try {
         if (!mapContainer.current || cancelled) return;
-
-        mapboxgl.accessToken = token;
 
         const prefImmediate = takePrefetchedHomeMapPositionIfReady();
         const persistedHint = getPersistedHomeMapPosition();
@@ -1358,16 +1347,7 @@ export const InteractiveMap = ({
       }
     };
 
-    void (async () => {
-      try {
-        const mapboxgl = await loadMapboxGl();
-        if (cancelled) return;
-        boot(mapboxgl);
-      } catch (error) {
-        console.error('Erreur chargement Mapbox GL:', error);
-        toast.error('Erreur lors du chargement de la carte');
-      }
-    })();
+    boot();
 
     return () => {
       cancelled = true;
@@ -1397,19 +1377,8 @@ export const InteractiveMap = ({
       return;
     }
 
-    let cancelled = false;
-    void (async () => {
-      const marker = await createUserLocationMapboxMarker(userLocation.lng, userLocation.lat);
-      if (cancelled || !map.current) {
-        marker.remove();
-        return;
-      }
-      marker.addTo(map.current);
-      userLocationMarker.current = marker;
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const marker = createUserLocationMapboxMarker(userLocation.lng, userLocation.lat).addTo(map.current);
+    userLocationMarker.current = marker;
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
     clearMapStyleThemeRollback();
@@ -1726,7 +1695,7 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-  const handleCreateSessionAtLocation = (latLng: LngLat | null) => {
+  const handleCreateSessionAtLocation = (latLng: mapboxgl.LngLat | null) => {
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
@@ -1750,7 +1719,7 @@ export const InteractiveMap = ({
       }
     };
 
-    const armLongPress = (lngLat: LngLat | null | undefined) => {
+    const armLongPress = (lngLat: mapboxgl.LngLat | null | undefined) => {
       if (!lngLat) return;
       if (localStorage.getItem('enableLongPressCreate') !== 'true') return;
       clearTimer();
@@ -1760,11 +1729,11 @@ export const InteractiveMap = ({
       }, 600);
     };
 
-    const onMouseDown = (e: MapMouseEvent) => {
+    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
       if (e.originalEvent instanceof MouseEvent && e.originalEvent.button !== 0) return;
       armLongPress(e.lngLat ?? null);
     };
-    const onTouchStart = (e: MapTouchEvent) => {
+    const onTouchStart = (e: mapboxgl.MapTouchEvent) => {
       armLongPress(e.lngLat ?? null);
     };
     const cancelPress = () => clearTimer();

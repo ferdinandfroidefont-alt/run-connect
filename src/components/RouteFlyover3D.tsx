@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GeoJSONSource, Map as MapboxMap } from 'mapbox-gl';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
+import mapboxgl from 'mapbox-gl';
 import { RouteFlyoverHud } from '@/components/RouteFlyoverHud';
 import { useRouteFlyoverPlayback } from '@/hooks/useRouteFlyoverPlayback';
 import { getMapboxAccessToken, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
@@ -40,7 +39,7 @@ export function RouteFlyover3D({
   routeStats,
 }: RouteFlyover3DProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<MapboxMap | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapReadyRef = useRef(false);
   const lastCameraUpdateRef = useRef(0);
   const smoothedCenterRef = useRef<MapCoord | null>(null);
@@ -90,36 +89,27 @@ export function RouteFlyover3D({
       return;
     }
 
-    let cancelled = false;
+    mapboxgl.accessToken = token;
+    setSceneReady(false);
+    setMapError(null);
 
-    void (async () => {
-      const mapboxgl = await loadMapboxGl();
-      if (cancelled) {
-        resizeObserver.disconnect();
-        return;
-      }
+    /** Même base que le mode 3D Accueil (`standard3d` — bâtiments / rendu Mapbox Standard). */
+    const map = new mapboxgl.Map({
+      container,
+      style: MAPBOX_STYLE_BY_UI_ID.standard3d,
+      center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
+      zoom: initialFrame.zoom,
+      pitch: initialFrame.pitch,
+      bearing: initialFrame.bearing,
+      interactive: false,
+      attributionControl: false,
+      antialias: true,
+      pitchWithRotate: false,
+      renderWorldCopies: false,
+    });
+    mapRef.current = map;
 
-      mapboxgl.accessToken = token;
-      setSceneReady(false);
-      setMapError(null);
-
-      /** Même base que le mode 3D Accueil (`standard3d` — bâtiments / rendu Mapbox Standard). */
-      const map = new mapboxgl.Map({
-        container,
-        style: MAPBOX_STYLE_BY_UI_ID.standard3d,
-        center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
-        zoom: initialFrame.zoom,
-        pitch: initialFrame.pitch,
-        bearing: initialFrame.bearing,
-        interactive: false,
-        attributionControl: false,
-        antialias: true,
-        pitchWithRotate: false,
-        renderWorldCopies: false,
-      });
-      mapRef.current = map;
-
-      const scheduleResizePass = () => {
+    const scheduleResizePass = () => {
       window.requestAnimationFrame(() => map.resize());
       window.setTimeout(() => map.resize(), 100);
       window.setTimeout(() => map.resize(), 350);
@@ -295,15 +285,13 @@ export function RouteFlyover3D({
     });
 
     /** Standard (mapbox://styles/mapbox/standard) : attendre style.load, pas load seul. */
-      if (map.isStyleLoaded()) {
-        bootScene();
-      } else {
-        map.once('style.load', bootScene);
-      }
-    })();
+    if (map.isStyleLoaded()) {
+      bootScene();
+    } else {
+      map.once('style.load', bootScene);
+    }
 
     return () => {
-      cancelled = true;
       mapReadyRef.current = false;
       lastCameraUpdateRef.current = 0;
       smoothedCenterRef.current = null;
@@ -312,7 +300,7 @@ export function RouteFlyover3D({
       smoothedZoomRef.current = null;
       resizeObserver.disconnect();
       setSceneReady(false);
-      mapRef.current?.remove();
+      map.remove();
       mapRef.current = null;
     };
   }, [endpoints, initialFrame, playback.flyoverCoordinates]);
@@ -325,10 +313,10 @@ export function RouteFlyover3D({
     traveledPath.push(playback.frame.currentPosition);
 
     if (map.getSource(TRAVELED_SOURCE_ID)) {
-      (map.getSource(TRAVELED_SOURCE_ID) as GeoJSONSource).setData(lineStringFeature(traveledPath));
+      (map.getSource(TRAVELED_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(lineStringFeature(traveledPath));
     }
     if (map.getSource(POINT_SOURCE_ID)) {
-      (map.getSource(POINT_SOURCE_ID) as GeoJSONSource).setData(pointFeature(playback.frame.currentPosition));
+      (map.getSource(POINT_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(pointFeature(playback.frame.currentPosition));
     }
 
     const pulse = (Math.sin(performance.now() / 280) + 1) / 2;

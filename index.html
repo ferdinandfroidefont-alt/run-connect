@@ -62,15 +62,12 @@
         try {
           var p = (location.protocol || "").toLowerCase();
           var ua = navigator.userAgent || "";
-          var isIos = /iPhone|iPad|iPod/i.test(ua);
-          var isRegularSafari = /Safari\//.test(ua) && /Version\//.test(ua);
-          var isIosWebView = isIos && /AppleWebKit/i.test(ua) && !isRegularSafari && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
           var likelyNative =
             p === "capacitor:" ||
             p === "ionic:" ||
             p === "file:" ||
             (/Android/i.test(ua) && /wv/i.test(ua)) ||
-            isIosWebView;
+            (/iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua));
           if (!likelyNative) return;
 
           var max = 180;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Map, MapMouseEvent, Marker } from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +20,6 @@ import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { extractGpsFromImageFile } from '@/lib/exifGps';
 import { cn } from '@/lib/utils';
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer, clientXYToMapCoord } from '@/lib/mapboxEmbed';
-import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
 import { format } from 'date-fns';
@@ -85,7 +84,7 @@ export const RouteDetailDialog = ({
   }, [open, getCurrentPosition]);
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Map | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const [photos, setPhotos] = useState<RoutePhoto[]>([]);
   const [ratings, setRatings] = useState<RouteRating[]>([]);
   const [myRating, setMyRating] = useState(0);
@@ -106,8 +105,8 @@ export const RouteDetailDialog = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const longPressCleanupRef = useRef<(() => void) | null>(null);
-  const pinMarkerRef = useRef<Marker | null>(null);
-  const userLocationMarkerRef = useRef<Marker | null>(null);
+  const pinMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const photoFileRef = useRef<File | null>(null);
 
   const triggerFileInput = (input: HTMLInputElement | null) => {
@@ -211,99 +210,85 @@ export const RouteDetailDialog = ({
   useEffect(() => {
     if (!open || !mapContainer.current || !route?.coordinates?.length || !getMapboxAccessToken()) return;
 
-    let cancelled = false;
     let timer: number | null = null;
+    let map: mapboxgl.Map | null = null;
 
     timer = window.setTimeout(() => {
-      void (async () => {
-        if (!mapContainer.current || cancelled) return;
-        const path = route.coordinates
-          .map((coord: unknown): MapCoord | null => {
-            const c = coord as Record<string, unknown> | unknown[];
-            if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
-              return { lat: Number(c.lat), lng: Number(c.lng) };
-            }
-            if (Array.isArray(coord) && coord.length >= 2) {
-              return { lat: Number(coord[0]), lng: Number(coord[1]) };
-            }
-            return null;
-          })
-          .filter((p): p is MapCoord => p !== null);
-
-        if (path.length === 0) return;
-
-        const map = await createEmbeddedMapboxMap(mapContainer.current, {
-          center: path[0],
-          zoom: 10,
-          interactive: true,
-        });
-        if (cancelled) {
-          map.remove();
-          return;
-        }
-        mapRef.current = map;
-
-        const onStyleReady = async () => {
-          if (!map || cancelled) return;
-          const mapboxgl = await loadMapboxGl();
-          if (cancelled || !map) return;
-          setOrUpdateLineLayer(map, ROUTE_DETAIL_LINE_SRC, ROUTE_DETAIL_LINE_LAYER, path, {
-            color: '#5B7CFF',
-            width: 4,
-          });
-
-          photos.forEach((photo) => {
-            if (!photo.lat || !photo.lng || !map) return;
-            const wrap = document.createElement('div');
-            wrap.style.width = '40px';
-            wrap.style.height = '40px';
-            wrap.style.borderRadius = '9999px';
-            wrap.style.overflow = 'hidden';
-            wrap.style.border = '2px solid #5B7CFF';
-            wrap.style.boxShadow = '0 0 0 3px rgba(91,124,255,0.25)';
-            wrap.style.cursor = 'pointer';
-            const img = document.createElement('img');
-            img.src = photo.photo_url;
-            img.alt = '';
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
-            wrap.appendChild(img);
-            wrap.addEventListener('click', () => setSelectedPhoto(photo));
-            new mapboxgl.Marker({ element: wrap }).setLngLat([Number(photo.lng), Number(photo.lat)]).addTo(map);
-          });
-
-          const bounds = new mapboxgl.LngLatBounds();
-          path.forEach((p) => bounds.extend([p.lng, p.lat]));
-          const u = userGeoRef.current;
-          if (u) bounds.extend([u.lng, u.lat]);
-          map.fitBounds(bounds, { padding: u ? 50 : 40, duration: 0, maxZoom: 16 });
-
-          userLocationMarkerRef.current?.remove();
-          userLocationMarkerRef.current = null;
-          if (u) {
-            const m = await createUserLocationMapboxMarker(u.lng, u.lat);
-            if (cancelled || mapRef.current !== map) {
-              m.remove();
-              return;
-            }
-            userLocationMarkerRef.current = m.addTo(map);
+      if (!mapContainer.current) return;
+      const path = route.coordinates
+        .map((coord: unknown): MapCoord | null => {
+          const c = coord as Record<string, unknown> | unknown[];
+          if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
+            return { lat: Number(c.lat), lng: Number(c.lng) };
           }
-        };
+          if (Array.isArray(coord) && coord.length >= 2) {
+            return { lat: Number(coord[0]), lng: Number(coord[1]) };
+          }
+          return null;
+        })
+        .filter((p): p is MapCoord => p !== null);
 
-        if (map.isStyleLoaded()) void onStyleReady();
-        else map.once('load', () => void onStyleReady());
-      })();
+      if (path.length === 0) return;
+
+      map = createEmbeddedMapboxMap(mapContainer.current, {
+        center: path[0],
+        zoom: 10,
+        interactive: true,
+      });
+      mapRef.current = map;
+
+      const onStyleReady = () => {
+        if (!map) return;
+        setOrUpdateLineLayer(map, ROUTE_DETAIL_LINE_SRC, ROUTE_DETAIL_LINE_LAYER, path, {
+          color: '#5B7CFF',
+          width: 4,
+        });
+
+        photos.forEach((photo) => {
+          if (!photo.lat || !photo.lng || !map) return;
+          const wrap = document.createElement('div');
+          wrap.style.width = '40px';
+          wrap.style.height = '40px';
+          wrap.style.borderRadius = '9999px';
+          wrap.style.overflow = 'hidden';
+          wrap.style.border = '2px solid #5B7CFF';
+          wrap.style.boxShadow = '0 0 0 3px rgba(91,124,255,0.25)';
+          wrap.style.cursor = 'pointer';
+          const img = document.createElement('img');
+          img.src = photo.photo_url;
+          img.alt = '';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          wrap.appendChild(img);
+          wrap.addEventListener('click', () => setSelectedPhoto(photo));
+          new mapboxgl.Marker({ element: wrap }).setLngLat([Number(photo.lng), Number(photo.lat)]).addTo(map);
+        });
+
+        const bounds = new mapboxgl.LngLatBounds();
+        path.forEach((p) => bounds.extend([p.lng, p.lat]));
+        const u = userGeoRef.current;
+        if (u) bounds.extend([u.lng, u.lat]);
+        map.fitBounds(bounds, { padding: u ? 50 : 40, duration: 0, maxZoom: 16 });
+
+        userLocationMarkerRef.current?.remove();
+        userLocationMarkerRef.current = null;
+        if (u) {
+          userLocationMarkerRef.current = createUserLocationMapboxMarker(u.lng, u.lat).addTo(map);
+        }
+      };
+
+      if (map.isStyleLoaded()) onStyleReady();
+      else map.once('load', onStyleReady);
     }, 300);
 
     return () => {
-      cancelled = true;
       if (timer) clearTimeout(timer);
       pinMarkerRef.current?.remove();
       pinMarkerRef.current = null;
       userLocationMarkerRef.current?.remove();
       userLocationMarkerRef.current = null;
-      mapRef.current?.remove();
+      map?.remove();
       mapRef.current = null;
     };
   }, [open, route, photos]);
@@ -314,18 +299,10 @@ export const RouteDetailDialog = ({
     userLocationMarkerRef.current?.remove();
     userLocationMarkerRef.current = null;
     if (!userGeoPosition) return;
-    let cancelled = false;
-    void (async () => {
-      const m = await createUserLocationMapboxMarker(userGeoPosition.lng, userGeoPosition.lat);
-      if (cancelled || mapRef.current !== map) {
-        m.remove();
-        return;
-      }
-      userLocationMarkerRef.current = m.addTo(map);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    userLocationMarkerRef.current = createUserLocationMapboxMarker(
+      userGeoPosition.lng,
+      userGeoPosition.lat,
+    ).addTo(map);
   }, [open, userGeoPosition]);
 
   // Marqueur de placement : draggable pour corriger avant publication (EXIF ou manuel)
@@ -340,39 +317,25 @@ export const RouteDetailDialog = ({
     const pos = { lat: pinLocation.lat, lng: pinLocation.lng };
 
     if (!pinMarkerRef.current) {
-      let cancelled = false;
-      void (async () => {
-        const mapboxgl = await loadMapboxGl();
-        if (cancelled) return;
-        const targetMap = mapRef.current;
-        if (!targetMap) return;
-        const el = document.createElement('div');
-        el.style.width = '28px';
-        el.style.height = '28px';
-        el.style.borderRadius = '50%';
-        el.style.background = '#5B7CFF';
-        el.style.border = '3px solid #fff';
-        el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
-        const m = new mapboxgl.Marker({ element: el, draggable: true })
-          .setLngLat([pos.lng, pos.lat])
-          .addTo(targetMap);
-        m.on('dragend', () => {
-          const ll = m.getLngLat();
-          setPinLocation({ lat: ll.lat, lng: ll.lng });
-          setPhotoPlacementSource('manual');
-        });
-        if (cancelled) {
-          m.remove();
-          return;
-        }
-        pinMarkerRef.current = m;
-      })();
-      return () => {
-        cancelled = true;
-      };
+      const el = document.createElement('div');
+      el.style.width = '28px';
+      el.style.height = '28px';
+      el.style.borderRadius = '50%';
+      el.style.background = '#5B7CFF';
+      el.style.border = '3px solid #fff';
+      el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+      const m = new mapboxgl.Marker({ element: el, draggable: true })
+        .setLngLat([pos.lng, pos.lat])
+        .addTo(map);
+      m.on('dragend', () => {
+        const ll = m.getLngLat();
+        setPinLocation({ lat: ll.lat, lng: ll.lng });
+        setPhotoPlacementSource('manual');
+      });
+      pinMarkerRef.current = m;
+    } else {
+      pinMarkerRef.current.setLngLat([pos.lng, pos.lat]);
     }
-
-    pinMarkerRef.current.setLngLat([pos.lng, pos.lat]);
   }, [pinLocation, addPhotoMode, open, route?.id, photos.length]);
 
   // Appui long = placement manuel si la photo n’a pas de GPS (ou lecture en cours)
@@ -405,7 +368,7 @@ export const RouteDetailDialog = ({
       setPhotoPlacementSource('manual');
     };
 
-    const onMouseDown = (e: MapMouseEvent) => {
+    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
       mouseXY = { lat: e.lngLat.lat, lng: e.lngLat.lng };
       clearTimer();
       longTimer = setTimeout(() => {

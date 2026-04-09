@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import type { Map } from "mapbox-gl";
 import type { MapCoord } from "@/lib/geoUtils";
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
 import { getMapboxAccessToken } from "@/lib/mapboxConfig";
@@ -37,34 +36,20 @@ export function ActivityPolylineMap({ coords, fallbackLat, fallbackLng, classNam
     const path = normalizeCoords(coords as unknown[]);
     if (path.length < 2) return;
 
-    let cancelled = false;
-    let mapInst: Map | null = null;
-    void (async () => {
-      const map = await createEmbeddedMapboxMap(containerRef.current!, {
-        center: path[0],
-        zoom: 12,
-        interactive: false,
-      });
-      mapInst = map;
-      if (cancelled) {
-        map.remove();
-        mapInst = null;
-        return;
-      }
+    const map = createEmbeddedMapboxMap(containerRef.current, {
+      center: path[0],
+      zoom: 12,
+      interactive: false,
+    });
 
-      const apply = () => {
-        setOrUpdateLineLayer(map, SRC, LAYER, path, { color: "#3b82f6", width: 3 });
-        void fitMapToCoords(map, path, 24);
-      };
-      if (map.isStyleLoaded()) apply();
-      else map.once("load", apply);
-    })();
-
-    return () => {
-      cancelled = true;
-      mapInst?.remove();
-      mapInst = null;
+    const apply = () => {
+      setOrUpdateLineLayer(map, SRC, LAYER, path, { color: "#3b82f6", width: 3 });
+      fitMapToCoords(map, path, 24);
     };
+    if (map.isStyleLoaded()) apply();
+    else map.once("load", apply);
+
+    return () => { map.remove(); };
   }, [coords]);
 
   if (!coords || coords.length < 2) {

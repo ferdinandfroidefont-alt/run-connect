@@ -1,12 +1,11 @@
-import type { GeoJSONSource, Map } from "mapbox-gl";
+import mapboxgl from "mapbox-gl";
 import { getMapboxAccessToken } from "@/lib/mapboxConfig";
 import { getHomeMapboxStyleUrl } from "@/lib/mapboxMapStylePreference";
 import type { MapCoord } from "@/lib/geoUtils";
-import { loadMapboxGl, type MapboxGL } from "@/lib/mapboxLazy";
 
 let accessTokenSet = false;
 
-function ensureMapboxToken(mapboxgl: MapboxGL): string {
+function ensureMapboxToken(): string {
   const t = getMapboxAccessToken();
   if (!t) throw new Error("VITE_MAPBOX_ACCESS_TOKEN manquant");
   if (!accessTokenSet) {
@@ -17,7 +16,7 @@ function ensureMapboxToken(mapboxgl: MapboxGL): string {
 }
 
 /** lat/lng depuis coordonnées écran (clientX/Y), pour appui long hors événement carte. */
-export function clientXYToMapCoord(map: Map, clientX: number, clientY: number): MapCoord | null {
+export function clientXYToMapCoord(map: mapboxgl.Map, clientX: number, clientY: number): MapCoord | null {
   const canvas = map.getCanvasContainer();
   const rect = canvas.getBoundingClientRect();
   const x = clientX - rect.left;
@@ -31,7 +30,7 @@ export function clientXYToMapCoord(map: Map, clientX: number, clientY: number): 
  * Carte embarquée — mêmes réglages de base que la carte Accueil (antialias, pas de copies du monde).
  * Style par défaut = préférence stockée (même URL que la carte Accueil).
  */
-export async function createEmbeddedMapboxMap(
+export function createEmbeddedMapboxMap(
   container: HTMLElement,
   options: {
     interactive?: boolean;
@@ -42,9 +41,8 @@ export async function createEmbeddedMapboxMap(
     renderWorldCopies?: boolean;
     pitch?: number;
   } = {},
-): Promise<Map> {
-  const mapboxgl = await loadMapboxGl();
-  ensureMapboxToken(mapboxgl);
+): mapboxgl.Map {
+  ensureMapboxToken();
   const c = options.center ?? { lat: 48.8566, lng: 2.3522 };
   const styleUrl = options.style ?? getHomeMapboxStyleUrl();
   return new mapboxgl.Map({
@@ -62,9 +60,8 @@ export async function createEmbeddedMapboxMap(
   });
 }
 
-export async function fitMapToCoords(map: Map, coords: MapCoord[], padding = 16) {
+export function fitMapToCoords(map: mapboxgl.Map, coords: MapCoord[], padding = 16) {
   if (coords.length === 0) return;
-  const mapboxgl = await loadMapboxGl();
   const first = coords[0]!;
   const bounds = new mapboxgl.LngLatBounds([first.lng, first.lat], [first.lng, first.lat]);
   for (let i = 1; i < coords.length; i++) {
@@ -76,7 +73,7 @@ export async function fitMapToCoords(map: Map, coords: MapCoord[], padding = 16)
 
 /** Ligne GeoJSON — crée/met à jour source + couche. */
 export function setOrUpdateLineLayer(
-  map: Map,
+  map: mapboxgl.Map,
   sourceId: string,
   layerId: string,
   coords: MapCoord[],
@@ -94,7 +91,7 @@ export function setOrUpdateLineLayer(
   };
 
   const apply = () => {
-    const src = map.getSource(sourceId) as GeoJSONSource | undefined;
+    const src = map.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
     if (src) {
       src.setData(geojson);
       return;
@@ -114,7 +111,7 @@ export function setOrUpdateLineLayer(
   else map.once("style.load", apply);
 }
 
-export function removeLineLayer(map: Map, sourceId: string, layerId: string) {
+export function removeLineLayer(map: mapboxgl.Map, sourceId: string, layerId: string) {
   try {
     if (map.getLayer(layerId)) map.removeLayer(layerId);
     if (map.getSource(sourceId)) map.removeSource(sourceId);

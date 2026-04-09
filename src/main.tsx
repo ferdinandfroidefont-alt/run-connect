@@ -1,14 +1,13 @@
-import './bootLogInstall'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
-import { BootErrorBoundary } from "@/components/BootErrorBoundary";
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
@@ -167,17 +166,15 @@ if (!rootElement) {
 } else {
   try {
     createRoot(rootElement).render(
-      <BootErrorBoundary>
-        <AuthProvider>
-          <UserProfileProvider>
-            <DistanceUnitsProvider>
-              <LanguageProvider>
-                <App />
-              </LanguageProvider>
-            </DistanceUnitsProvider>
-          </UserProfileProvider>
-        </AuthProvider>
-      </BootErrorBoundary>
+      <AuthProvider>
+        <UserProfileProvider>
+          <DistanceUnitsProvider>
+            <LanguageProvider>
+              <App />
+            </LanguageProvider>
+          </DistanceUnitsProvider>
+        </UserProfileProvider>
+      </AuthProvider>
     );
   } catch (bootErr) {
     console.error("[main] Échec du render initial:", bootErr);

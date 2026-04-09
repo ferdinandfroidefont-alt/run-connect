@@ -19,8 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Clock, MapPin, Users, Crown, UserCheck, ImagePlus, X, PenTool, Route, TrendingUp } from "lucide-react";
 import { ClubSelector } from "./ClubSelector";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
-import type { Map } from "mapbox-gl";
-import { loadMapboxGl } from "@/lib/mapboxLazy";
+import mapboxgl from "mapbox-gl";
 import { geocodeSearchMapbox, reverseGeocodeMapbox } from "@/lib/mapboxGeocode";
 import { setOrUpdateLineLayer, removeLineLayer } from "@/lib/mapboxEmbed";
 import type { MapCoord } from "@/lib/geoUtils";
@@ -32,7 +31,7 @@ interface CreateSessionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSessionCreated: (sessionId?: string) => void;
-  map: Map | null;
+  map: mapboxgl.Map | null;
   presetLocation?: { lat: number; lng: number } | null;
   onCreateRoute?: () => void;
 }
@@ -151,29 +150,26 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
 
   // Fonction pour afficher l'itinéraire sélectionné sur la carte
   const displaySelectedRoute = (routeId: string) => {
-    void (async () => {
-      const route = userRoutes.find((r) => r.id === routeId);
-      if (route && map && route.coordinates) {
-        const path: MapCoord[] = route.coordinates.map((coord: { lat: number; lng: number }) => ({
-          lat: coord.lat,
-          lng: coord.lng,
-        }));
-        if (path.length === 0) return;
+    const route = userRoutes.find((r) => r.id === routeId);
+    if (route && map && route.coordinates) {
+      const path: MapCoord[] = route.coordinates.map((coord: { lat: number; lng: number }) => ({
+        lat: coord.lat,
+        lng: coord.lng,
+      }));
+      if (path.length === 0) return;
 
-        const mapboxgl = await loadMapboxGl();
-        const applyLine = () => {
-          setOrUpdateLineLayer(map, CREATE_SESSION_ROUTE_SRC, CREATE_SESSION_ROUTE_LAYER, path, {
-            color: "#3b82f6",
-            width: 3,
-          });
-          const b = new mapboxgl.LngLatBounds([path[0]!.lng, path[0]!.lat], [path[0]!.lng, path[0]!.lat]);
-          for (let i = 1; i < path.length; i++) b.extend([path[i]!.lng, path[i]!.lat]);
-          map.fitBounds(b, { padding: 48, duration: 400, maxZoom: 16 });
-        };
-        if (map.isStyleLoaded()) applyLine();
-        else map.once("load", applyLine);
-      }
-    })();
+      const applyLine = () => {
+        setOrUpdateLineLayer(map, CREATE_SESSION_ROUTE_SRC, CREATE_SESSION_ROUTE_LAYER, path, {
+          color: "#3b82f6",
+          width: 3,
+        });
+        const b = new mapboxgl.LngLatBounds([path[0]!.lng, path[0]!.lat], [path[0]!.lng, path[0]!.lat]);
+        for (let i = 1; i < path.length; i++) b.extend([path[i]!.lng, path[i]!.lat]);
+        map.fitBounds(b, { padding: 48, duration: 400, maxZoom: 16 });
+      };
+      if (map.isStyleLoaded()) applyLine();
+      else map.once("load", applyLine);
+    }
   };
 
   const formatElevation = (meters: number | null) => {
