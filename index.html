@@ -56,6 +56,74 @@
   </head>
 
   <body style="background-color:#2E68FF;margin:0">
+    <!-- Filet avant tout bundle JS : erreurs visibles si le module principal ne charge pas -->
+    <script>
+      (function () {
+        try {
+          var p = (location.protocol || "").toLowerCase();
+          var ua = navigator.userAgent || "";
+          var isIos = /iPhone|iPad|iPod/i.test(ua);
+          var isRegularSafari = /Safari\//.test(ua) && /Version\//.test(ua);
+          var isIosWebView = isIos && /AppleWebKit/i.test(ua) && !isRegularSafari && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+          var likelyNative =
+            p === "capacitor:" ||
+            p === "ionic:" ||
+            p === "file:" ||
+            (/Android/i.test(ua) && /wv/i.test(ua)) ||
+            isIosWebView;
+          if (!likelyNative) return;
+
+          var max = 180;
+          var buf = [];
+          function line(lev, msg) {
+            try {
+              var t = new Date().toISOString();
+              buf.push("[" + t + "] " + lev + " " + String(msg));
+              if (buf.length > max) buf.splice(0, buf.length - max);
+              var el = document.getElementById("runconnect-boot-log");
+              if (el) el.textContent = buf.join("\n");
+            } catch (e) {}
+          }
+
+          function mount() {
+            if (document.getElementById("runconnect-boot-log")) return;
+            var el = document.createElement("pre");
+            el.id = "runconnect-boot-log";
+            el.setAttribute("aria-live", "polite");
+            el.style.cssText =
+              "position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;z-index:2147483646;margin:0;" +
+              "box-sizing:border-box;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));" +
+              "background:rgba(0,0,0,.9);color:#a7f3d0;font:11px/1.35 ui-monospace,monospace;" +
+              "white-space:pre-wrap;word-break:break-word;border-top:1px solid #334155;";
+            el.textContent =
+              "[RunConnect] Console boot (natif). Si écran blanc : copiez ce bloc ou faites une capture.\n";
+            document.body.appendChild(el);
+          }
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", mount);
+          } else {
+            mount();
+          }
+
+          window.addEventListener(
+            "error",
+            function (ev) {
+              line("ERR", (ev && ev.message) || "error");
+              if (ev && ev.filename) line("AT", ev.filename + ":" + (ev.lineno || 0) + ":" + (ev.colno || 0));
+            },
+            true,
+          );
+          window.addEventListener("unhandledrejection", function (ev) {
+            var r = ev && ev.reason;
+            line(
+              "REJ",
+              r && r.stack ? String(r.stack) : r != null ? String(r) : "unhandledrejection",
+            );
+          });
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     
     <!-- 🔥 LISTENER GLOBAL FCM - AVANT REACT (Fallback) -->
