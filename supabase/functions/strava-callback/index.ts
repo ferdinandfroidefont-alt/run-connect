@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     logException("strava-callback", error);
     
-    const webUrl = 'https://runconnectlovable.app/profile';
+    const webUrl = 'https://run-connect.lovable.app/profile';
     
     return new Response(
       `

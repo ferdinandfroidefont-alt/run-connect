@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { StravaConnectButton, StravaPoweredBy } from '@/components/strava/StravaBrand';
 
 interface Profile {
   user_id: string;
@@ -161,13 +162,14 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
         <svg className="h-16 w-16 text-[#FC4C02] mb-4" viewBox="0 0 24 24" fill="currentColor">
           <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.171"/>
         </svg>
-        <h3 className="text-lg font-semibold mb-2">Strava non connecté</h3>
+        <h3 className="text-lg font-semibold mb-2">Strava non connecte</h3>
         <p className="text-sm text-muted-foreground mb-4">
           Connectez votre compte Strava pour voir vos amis qui utilisent RunConnect
         </p>
-        <Button onClick={handleConnectStrava}>
-          Connecter Strava
-        </Button>
+        <div className="w-full max-w-xs">
+          <StravaConnectButton onClick={handleConnectStrava} />
+        </div>
+        <StravaPoweredBy variant="logo" />
       </div>
     );
   }
@@ -182,6 +184,7 @@ export const StravaTab = ({ searchQuery, onOpenSettings }: StravaTabProps) => {
         <p className="text-sm text-muted-foreground">
           Aucun de vos amis Strava n'utilise RunConnect pour le moment
         </p>
+        <StravaPoweredBy variant="logo" />
       </div>
     );
   }
