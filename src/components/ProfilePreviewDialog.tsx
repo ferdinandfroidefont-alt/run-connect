@@ -78,6 +78,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showAboutSheet, setShowAboutSheet] = useState(false);
   const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
 
   const isOwnProfile = userId === user?.id;
 
