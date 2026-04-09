@@ -10,8 +10,6 @@ import {
   restoreChromeAfterRuconnectSplash,
 } from "@/lib/ruconnectSplashChrome";
 import { scheduleHomeMapPrefetch } from "@/lib/homeMapPrefetch";
-import { bootLog } from "@/lib/onScreenLogCapture";
-import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -33,8 +31,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   onCompleteRef.current = onLoadingComplete;
 
   useEffect(() => {
-    bootLog("[LoadingScreen] mounted");
-    addBootCheckpoint("SPLASH_MOUNT");
     scheduleHomeMapPrefetch();
     applyRuconnectSplashWebChrome();
     void applyRuconnectSplashNativeChrome();
@@ -49,20 +45,14 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     let cancelled = false;
 
     void (async () => {
-      bootLog("[LoadingScreen] boot async:start", {
-        minSplashMs: MIN_SPLASH_MS,
-        maxWaitSessionMs: MAX_WAIT_SESSION_MS,
-      });
       const minElapsed = waitMs(MIN_SPLASH_MS);
       const sessionPromise = supabase.auth
         .getSession()
         .then(() => {
-          bootLog("[LoadingScreen] getSession resolved");
-          addBootCheckpoint("SPLASH_SESSION_OK");
           if (!cancelled) setBootPhase("ready");
         })
         .catch(() => {
-          bootLog("[LoadingScreen] getSession rejected");
+          
           if (!cancelled) setBootPhase("ready");
         });
 
@@ -73,8 +63,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       await Promise.race([Promise.all([minElapsed, sessionPromise]), capped]);
 
       if (cancelled) return;
-      bootLog("[LoadingScreen] exit splash:start");
-      addBootCheckpoint("SPLASH_EXIT");
       setExiting(true);
       completeTimerRef.current = setTimeout(() => {
         bootLog("[LoadingScreen] onLoadingComplete");

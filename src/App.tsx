@@ -18,9 +18,6 @@ import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
-import { OnScreenDebugLog } from "@/components/OnScreenDebugLog";
-import { bootLog } from "@/lib/onScreenLogCapture";
-import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -88,24 +85,12 @@ const App = () => {
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
 
-  useEffect(() => {
-    addBootCheckpoint("APP_RENDER");
-    bootLog("[App] mounted");
-  }, []);
-
-  useEffect(() => {
-    bootLog("[App] splash state", { isAppLoaded });
-    if (isAppLoaded) {
-      addBootCheckpoint("APP_SPLASH_DONE");
-      requestAnimationFrame(() => addBootCheckpoint("APP_READY"));
-    }
-  }, [isAppLoaded]);
 
   // Route warmup disabled in production/native debug: it eagerly pulled heavy chart pages
   // and could crash the published boot before the auth/home UI appeared.
   useEffect(() => {
     if (!import.meta.env.DEV) {
-      bootLog("[App] route warmup skipped outside dev");
+      
       return;
     }
 
@@ -302,7 +287,6 @@ const App = () => {
     return (
       <>
         <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
-        <OnScreenDebugLog />
       </>
     );
   }
@@ -372,7 +356,6 @@ const App = () => {
         </ThemeProvider>
       </AppErrorBoundary>
     </QueryClientProvider>
-    <OnScreenDebugLog />
     </div>
   );
 };

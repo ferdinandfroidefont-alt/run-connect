@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
-import { bootLog } from "@/lib/onScreenLogCapture";
 
 // Web-only callback page — iOS native flow now goes through the ios-auth-callback Edge Function
 

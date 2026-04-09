@@ -9,8 +9,6 @@ import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
-import { bootLog } from '@/lib/onScreenLogCapture';
-import { addBootCheckpoint } from '@/lib/bootDebugOverlay';
 import { AppBootFallback } from '@/components/AppBootFallback';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
@@ -75,26 +73,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const [consentCompleted, setConsentCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => {
-    addBootCheckpoint("LAYOUT_RENDER");
-  }, []);
-
-  useEffect(() => {
-    bootLog('[Layout] render state', {
-      path: location.pathname,
-      authLoading: loading,
-      profileLoading,
-      hasUser: !!user,
-      hasProfile: !!userProfile,
-      isHome,
-    });
-
-    if (loading) {
-      addBootCheckpoint('LAYOUT_AUTH_WAIT');
-    } else if (profileLoading) {
-      addBootCheckpoint('LAYOUT_PROFILE_WAIT');
-    }
-  }, [location.pathname, loading, profileLoading, user, userProfile, isHome]);
 
   // Vérifier le cache localStorage au montage
   useEffect(() => {
@@ -137,16 +115,6 @@ export const Layout = ({ children }: LayoutProps) => {
     (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
 
   // Hook "ready" — MUST be before any conditional return
-  useEffect(() => {
-    if (loading || profileLoading || !user) return;
-    addBootCheckpoint("LAYOUT_READY");
-    bootLog('[Layout] ready', {
-      path: location.pathname,
-      showBottomNav,
-      homeMapPrimed,
-      needsConsent,
-    });
-  }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
   if (loading || profileLoading) {
     return (
