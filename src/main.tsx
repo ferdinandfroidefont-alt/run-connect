@@ -199,8 +199,7 @@ if (!rootElement) {
 
     // Debug wrapper to log provider mount order
     function DebugGate({ name, children }: { name: string; children: React.ReactNode }) {
-      const { useEffect: ue } = require('react');
-      ue(() => { addBootCheckpoint(`PROVIDER_${name}`); }, []);
+      useEffect(() => { addBootCheckpoint(`PROVIDER_${name}`); }, []);
       return children;
     }
 
