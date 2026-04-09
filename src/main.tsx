@@ -1,6 +1,7 @@
 import './bootLogInstall'
 import { addBootCheckpoint } from '@/lib/bootDebugOverlay'
 addBootCheckpoint("BUNDLE_START");
+import React, { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
