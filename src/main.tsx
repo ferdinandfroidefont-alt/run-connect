@@ -10,16 +10,15 @@ import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BootErrorBoundary } from "@/components/BootErrorBoundary";
 
-// ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
   const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
   
   const isIOSDevice = /iPhone|iPad|iPod/i.test(userAgent);
   const isCapacitorProtocol = protocol === 'capacitor:';
-  const isIOSNative = isIOSDevice && (isCapacitorProtocol || protocol === 'ionic:' || protocol === 'file:');
+  const isIOSNative = isIOSDevice && (isCapacitorProtocol || protocol === 'ionic:' || protocol === 'file:' || protocol === 'runconnect:');
   
-  const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:';
+  const isFileProtocol = protocol === 'file:' || protocol === 'capacitor:' || protocol === 'ionic:' || protocol === 'runconnect:';
   
   const isAndroid = /Android/i.test(userAgent);
   const hasWebView = /wv/.test(userAgent);
@@ -47,12 +46,6 @@ const detectNativeImmediately = () => {
   
   const isNative = criteriaCount >= 2 || hasAndroidBridge || isCapacitorIOS || isIOSNative;
   
-  console.log('🔥 DÉTECTION NATIVE:', {
-    criteriaCount: `${criteriaCount}/8`,
-    platform: detectedPlatform,
-    '🎯 RÉSULTAT': isNative ? `✅ NATIF (${detectedPlatform})` : '❌ WEB'
-  });
-  
   if (isNative) {
     (window as any).CapacitorForceNative = true;
     (window as any).nativeModeActivated = true;
@@ -66,7 +59,6 @@ const detectNativeImmediately = () => {
   return isNative;
 };
 
-// ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
 
 primeHomeMapAtAppEntry();
@@ -75,7 +67,6 @@ if (typeof document !== 'undefined' && isIosAppShell()) {
   document.documentElement.classList.add('ios-app-shell');
 }
 
-// ✅ RETRY MECHANISM pour les cas limites
 if (!isNative) {
   setTimeout(() => {
     if ((window as any).AndroidBridge && !(window as any).CapacitorForceNative) {
@@ -92,20 +83,17 @@ if (!isNative) {
   }, 500);
 }
 
-// ✅ Initialisation async en arrière-plan
 const initializeCapacitorPlugins = async () => {
   if (!isNative) return;
   
   try {
-    const { Geolocation } = await import('@capacitor/geolocation');
-    const { Camera } = await import('@capacitor/camera');
-    console.log('✅ Plugins critiques préchargés', { geolocation: !!Geolocation, camera: !!Camera });
-  } catch (pluginError) {
-    console.error('❌ Erreur chargement plugins:', pluginError);
+    await import('@capacitor/geolocation');
+    await import('@capacitor/camera');
+  } catch (_) {
+    // Plugin preload failed — non-critical
   }
   
   const detectedPlatform = (window as any).detectedPlatform || 'android';
-
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
     detail: { platform: detectedPlatform, native: true }
   }));
@@ -113,7 +101,6 @@ const initializeCapacitorPlugins = async () => {
 
 initializeCapacitorPlugins();
 
-// ✅ Render l'app
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   console.error("[main] Élément #root introuvable");

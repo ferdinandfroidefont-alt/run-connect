@@ -22,8 +22,6 @@ export const NotificationManager = () => {
     setupPushListeners,
     checkPermissionStatus,
     tokenSaving,
-    pushDebug,
-    refreshDebugFromBackend,
   } = usePushNotifications();
   const { lastPushError } = useSendNotification();
   const { deviceInfo } = useDeviceDetection();
@@ -38,36 +36,11 @@ export const NotificationManager = () => {
   // Forcer le rafraîchissement du statut
   const handleRefreshStatus = async () => {
     setRefreshing(true);
-    console.log('🔄 [REFRESH] Force refresh notification status...');
-    console.log('🔄 [REFRESH] window.androidPermissions AVANT:', JSON.stringify((window as any).androidPermissions));
-    
     try {
-      // Forcer le recheck complet
       await checkPermissionStatus();
-      
-      // Logger l'état après
-      console.log('🔄 [REFRESH] permissionStatus APRÈS:', permissionStatus);
-      console.log('🔄 [REFRESH] window.androidPermissions APRÈS:', JSON.stringify((window as any).androidPermissions));
-      
-      // Vérifier aussi via Capacitor
-      try {
-        const capacitorStatus = await PushNotifications.checkPermissions();
-        console.log('🔄 [REFRESH] Capacitor checkPermissions:', JSON.stringify(capacitorStatus));
-      } catch (e) {
-        console.error('❌ [REFRESH] Capacitor check failed:', e);
-      }
-      
-      toast({
-        title: "Statut rafraîchi",
-        description: "Consultez la console pour les détails"
-      });
-    } catch (error) {
-      console.error('❌ [REFRESH] Error:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de rafraîchir",
-        variant: "destructive"
-      });
+      toast({ title: "Statut rafraîchi" });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de rafraîchir", variant: "destructive" });
     } finally {
       setRefreshing(false);
     }
@@ -76,25 +49,15 @@ export const NotificationManager = () => {
   // Forcer la régénération du token FCM
   const forceRefreshToken = async () => {
     if (!isNative) {
-      toast({ 
-        title: "Mobile requis", 
-        description: "Disponible uniquement sur Android/iOS",
-        variant: "destructive"
-      });
+      toast({ title: "Mobile requis", description: "Disponible uniquement sur Android/iOS", variant: "destructive" });
       return;
     }
     
     setDiagnosing(true);
     try {
-      console.log('🔄 [TOKEN] Forcing PushNotifications.register()...');
       await PushNotifications.register();
+      toast({ title: "Génération en cours…", description: "Le token sera mis à jour automatiquement." });
       
-      toast({ 
-        title: "Génération en cours…", 
-        description: "Le token sera mis à jour automatiquement." 
-      });
-      
-      // Attendre 1.5s puis recharger le token
       setTimeout(async () => {
         const { data } = await supabase
           .from('profiles')
@@ -103,27 +66,20 @@ export const NotificationManager = () => {
           .single();
         
         toast({
-          title: data?.push_token ? "Token récupéré ✅" : "Token introuvable",
+          title: data?.push_token ? "Token récupéré" : "Token introuvable",
           description: data?.push_token
             ? data.push_token.slice(0, 40) + "…"
             : "Vérifie les permissions ou redémarre l'app",
           variant: data?.push_token ? "default" : "destructive"
         });
-        
         setDiagnosing(false);
       }, 1500);
-    } catch (err) {
-      console.error('❌ [TOKEN] Error forcing register:', err);
+    } catch {
       setDiagnosing(false);
-      toast({ 
-        title: "Erreur", 
-        description: "Impossible de régénérer le token", 
-        variant: "destructive" 
-      });
+      toast({ title: "Erreur", description: "Impossible de régénérer le token", variant: "destructive" });
     }
   };
 
-  // 🔥 Forcer la sauvegarde du token FCM depuis window.fcmToken
   const forceSaveToken = async () => {
     if (!user) {
       toast({ title: "Erreur", description: "Utilisateur non connecté", variant: "destructive" });
@@ -131,15 +87,8 @@ export const NotificationManager = () => {
     }
     
     const fcmToken = (window as any).fcmToken;
-    console.log('🔧 [FORCE SAVE] user.id:', user.id);
-    console.log('🔧 [FORCE SAVE] window.fcmToken:', fcmToken?.substring(0, 40));
-    
     if (!fcmToken) {
-      toast({ 
-        title: "Token absent", 
-        description: "window.fcmToken n'existe pas. Régénérez d'abord le token.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Token absent", description: "Régénérez d'abord le token.", variant: "destructive" });
       return;
     }
     
@@ -159,42 +108,26 @@ export const NotificationManager = () => {
         .eq('user_id', user.id);
       
       if (error) {
-        console.error('❌ [FORCE SAVE] Erreur Supabase:', error);
-        toast({ 
-          title: "Erreur sauvegarde", 
-          description: `${error.code}: ${error.message}`, 
-          variant: "destructive" 
-        });
+        toast({ title: "Erreur sauvegarde", description: `${error.code}: ${error.message}`, variant: "destructive" });
       } else {
-        console.log('✅ [FORCE SAVE] Token sauvegardé !');
-        toast({ 
-          title: "Token sauvegardé ✅", 
-          description: `${fcmToken.substring(0, 30)}...` 
-        });
+        toast({ title: "Token sauvegardé", description: `${fcmToken.substring(0, 30)}...` });
       }
     } catch (err: any) {
-      console.error('❌ [FORCE SAVE] Exception:', err);
       toast({ title: "Erreur", description: err?.message, variant: "destructive" });
     } finally {
       setDiagnosing(false);
     }
   };
 
-  // Diagnostic complet des notifications
   const diagnoseNotifications = async () => {
     if (!user) return;
     
     setDiagnosing(true);
     setDiagnosticResult(null);
-    console.log('🔍 [DIAGNOSTIC] Start...');
-    console.log('🔍 [DIAGNOSTIC] window.androidPermissions:', JSON.stringify((window as any).androidPermissions));
 
     try {
-      // 1. Vérifier permissions via Capacitor
       const perms = await PushNotifications.checkPermissions();
-      console.log('📱 [DIAGNOSTIC] Capacitor permissions:', JSON.stringify(perms));
       
-      // 2. Vérifier token en base
       const { data: profile } = await supabase
         .from('profiles')
         .select('push_token, notifications_enabled')
@@ -202,34 +135,19 @@ export const NotificationManager = () => {
         .single();
 
       const hasToken = !!profile?.push_token;
-      console.log('💾 [DIAGNOSTIC] Token en base:', hasToken ? 'OUI ✅' : 'NON ❌');
-      console.log('🔔 [DIAGNOSTIC] Notifications enabled:', profile?.notifications_enabled);
 
       if (hasToken) {
-        setDiagnosticResult(`✅ Token FCM enregistré: ${profile.push_token.substring(0, 30)}...`);
-        
-        toast({
-          title: "Diagnostic: OK",
-          description: "Token FCM trouvé en base de données"
-        });
+        setDiagnosticResult(`Token FCM enregistré: ${profile.push_token.substring(0, 30)}...`);
+        toast({ title: "Diagnostic: OK", description: "Token FCM trouvé en base de données" });
       } else {
-        setDiagnosticResult('❌ Aucun token FCM en base de données');
+        setDiagnosticResult('Aucun token FCM en base de données');
         
-        // 3. Si permissions OK mais pas de token, forcer réenregistrement
         if (perms.receive === 'granted') {
-          console.log('🔄 [DIAGNOSTIC] Permissions OK mais pas de token - forcer register()...');
-          
           if (isNative) {
             await setupPushListeners();
             await PushNotifications.register();
-            console.log('✅ [DIAGNOSTIC] PushNotifications.register() called');
+            toast({ title: "Réenregistrement", description: "Tentative de récupération du token FCM..." });
             
-            toast({
-              title: "Réenregistrement",
-              description: "Tentative de récupération du token FCM..."
-            });
-            
-            // Attendre et revérifier
             setTimeout(async () => {
               const { data: updatedProfile } = await supabase
                 .from('profiles')
@@ -238,33 +156,21 @@ export const NotificationManager = () => {
                 .single();
               
               if (updatedProfile?.push_token) {
-                setDiagnosticResult(`✅ Token récupéré: ${updatedProfile.push_token.substring(0, 30)}...`);
-                toast({
-                  title: "Succès",
-                  description: "Token FCM récupéré avec succès!"
-                });
+                setDiagnosticResult(`Token récupéré: ${updatedProfile.push_token.substring(0, 30)}...`);
+                toast({ title: "Succès", description: "Token FCM récupéré" });
               } else {
-                setDiagnosticResult('❌ Échec récupération token FCM - listener non déclenché');
-                toast({
-                  title: "Erreur",
-                  description: "Le listener 'registration' ne s'est pas déclenché",
-                  variant: "destructive"
-                });
+                setDiagnosticResult('Échec récupération token FCM');
+                toast({ title: "Erreur", description: "Le listener 'registration' ne s'est pas déclenché", variant: "destructive" });
               }
             }, 3000);
           }
         } else {
-          setDiagnosticResult(`⚠️ Permissions: ${perms.receive} - Activez dans les paramètres`);
+          setDiagnosticResult(`Permissions: ${perms.receive} — Activez dans les paramètres`);
         }
       }
-    } catch (error) {
-      console.error('❌ [DIAGNOSTIC] Error:', error);
-      setDiagnosticResult('❌ Erreur lors du diagnostic');
-      toast({
-        title: "Erreur diagnostic",
-        description: "Une erreur s'est produite",
-        variant: "destructive"
-      });
+    } catch {
+      setDiagnosticResult('Erreur lors du diagnostic');
+      toast({ title: "Erreur diagnostic", description: "Une erreur s'est produite", variant: "destructive" });
     } finally {
       setDiagnosing(false);
     }
@@ -330,11 +236,11 @@ export const NotificationManager = () => {
           <div className="space-y-2">
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900 font-medium mb-2">
-                📱 Demande automatique au démarrage
+                Demande automatique au démarrage
               </p>
               <p className="text-xs text-blue-700">
                 Les notifications vous sont demandées automatiquement au premier lancement de l'application. 
-                Si vous avez refusé, désinstallez et réinstallez l'app, ou activez manuellement les notifications dans les paramètres Android.
+                Si vous avez refusé, activez manuellement les notifications dans les paramètres de votre appareil.
               </p>
             </div>
             
@@ -370,8 +276,8 @@ export const NotificationManager = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-green-600">
-              ✅ Notifications activées ! Vous recevrez les alertes de RunConnect.
+              <p className="text-sm text-green-600">
+              Notifications activées ! Vous recevrez les alertes de RunConnect.
             </p>
             {permissionStatus.granted && (
               <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
@@ -449,36 +355,14 @@ export const NotificationManager = () => {
               </div>
             )}
             
-            {pushDebug && (pushDebug.permissionRequested || pushDebug.lastError) && (
-              <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono space-y-1">
-                <p className="font-bold text-slate-700">Push Debug State:</p>
-                <p>Permission: {pushDebug.permissionResult || 'n/a'}</p>
-                <p>Register called: {pushDebug.registerCalled ? 'YES' : 'NO'}</p>
-                <p>Registration event: {pushDebug.registrationEventReceived ? 'YES' : 'NO'}</p>
-                <p>APNs hex detected: {pushDebug.apnsHexDetected ? 'YES (blocked)' : 'NO'}</p>
-                <p>FCM token event: {pushDebug.fcmTokenEventReceived ? 'YES' : 'NO'}</p>
-                <p>FCM token length: {pushDebug.fcmTokenLength ?? 'n/a'}</p>
-                <p>Final token: {pushDebug.selectedFinalToken || 'none'}</p>
-                <p>Save attempted: {pushDebug.saveAttempted ? 'YES' : 'NO'}</p>
-                <p>Save response: {pushDebug.saveResponse ? `${pushDebug.saveResponse.status}` : 'n/a'}</p>
-                <p>DB token: {pushDebug.backendProfilePushToken ? pushDebug.backendProfilePushToken.substring(0, 20) + '...' : 'none'}</p>
-                {pushDebug.lastError && <p className="text-red-600">Error: {pushDebug.lastError}</p>}
-                <p className="text-slate-400">Updated: {pushDebug.timestamp}</p>
-                <p>window.fcmToken: {typeof (window as any).fcmToken === 'string' ? (window as any).fcmToken.substring(0, 20) + '...' : 'undefined'}</p>
-                <p>window.fcmTokenPlatform: {String((window as any).fcmTokenPlatform ?? 'undefined')}</p>
-                <Button variant="ghost" size="sm" className="mt-1" onClick={refreshDebugFromBackend}>Refresh from DB</Button>
-              </div>
-            )}
           </div>
         )}
 
-        
-
-        {/* Instructions générales si permissions refusées */}
+        {/* Instructions si permissions refusées */}
         {permissionStatus.denied && !isMIUIDevice && isNative && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <h4 className="font-medium text-yellow-800 mb-2">
-              📱 Activer les notifications
+              Activer les notifications
             </h4>
             <ol className="text-sm text-yellow-700 space-y-1 list-decimal list-inside">
               <li>Ouvrez les <strong>Paramètres</strong> de votre téléphone</li>
