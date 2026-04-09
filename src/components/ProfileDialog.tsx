@@ -804,7 +804,7 @@ export const ProfileDialog = ({
         />
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
-        <DialogContent className="max-w-md" aria-describedby={undefined}>
+        <DialogContent stackNested className="max-w-md" aria-describedby={undefined}>
           <DialogTitle className="text-base font-semibold">Modifier les stories à la une</DialogTitle>
           <div className="space-y-3">
             <Input
@@ -851,6 +851,7 @@ export const ProfileDialog = ({
         onOpenChange={setShowOwnStory}
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
+        stackNested
         onOpenFeed={() => {
           setShowOwnStory(false);
           onOpenChange(false);
@@ -865,6 +866,7 @@ export const ProfileDialog = ({
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
         storyId={highlightStoryId}
+        stackNested
         onOpenFeed={() => {
           setHighlightStoryId(null);
           onOpenChange(false);
