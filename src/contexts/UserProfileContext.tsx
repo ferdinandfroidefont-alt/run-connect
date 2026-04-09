@@ -109,7 +109,6 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('✅ [UserProfile] Profile loaded successfully:', {
-      console.log('✅ [UserProfile] Profile loaded successfully:', {
         username: data.username,
         display_name: data.display_name,
         avatar_url: data.avatar_url ? 'present' : 'missing',
