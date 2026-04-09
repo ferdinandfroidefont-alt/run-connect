@@ -16,6 +16,7 @@ import { getSupportEmail, getSupportMailtoHref } from "@/lib/legalMeta";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { SupportInbox } from "@/components/settings/SupportInbox";
 
 interface SettingsSupportProps {
   onBack: () => void;
@@ -228,6 +229,15 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </a>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
+              Centre de support
+            </h3>
+            <div className="px-4 ios-shell:px-2.5">
+              <SupportInbox />
             </div>
           </div>
           </div>

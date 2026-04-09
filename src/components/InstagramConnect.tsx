@@ -122,18 +122,30 @@ export const InstagramConnect = ({ profile, onProfileUpdate, isOwnProfile }: Ins
           </p>
         </div>
         
-        <div className="flex flex-col items-end gap-2">
+        {profile?.instagram_connected ? (
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-right text-xs text-muted-foreground">
+              Connecte en tant que @{profile.instagram_username || "compte inconnu"}
+            </div>
+            <Button
+              onClick={() => void handleInstagramDisconnect()}
+              disabled={loading}
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              {loading ? "Deconnexion..." : "Deconnecter Instagram"}
+            </Button>
+          </div>
+        ) : (
           <Button
-            disabled
+            onClick={() => void handleInstagramConnect()}
+            disabled={loading}
             variant="outline"
-            className="bg-gradient-to-r from-pink-500/20 to-purple-600/20 text-muted-foreground cursor-not-allowed"
+            className="bg-gradient-to-r from-pink-500/20 to-purple-600/20"
           >
-            Connecter Instagram
+            {loading ? "Connexion..." : "Connecter Instagram"}
           </Button>
-          <p className="text-xs text-muted-foreground italic">
-            Fonctionnalité à venir
-          </p>
-        </div>
+        )}
       </div>
     </div>
   );

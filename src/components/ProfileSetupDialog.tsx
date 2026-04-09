@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
+import { Camera, Loader2, User, Lock, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
@@ -46,7 +46,6 @@ interface FormState {
   username: string;
   displayName: string;
   birthDate: string;
-  phone: string;
   bio: string;
   password: string;
   favoriteSportsCsv: string;
@@ -64,7 +63,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [displayName, setDisplayName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
   const [selectedSports, setSelectedSports] = useState<ProfileSportKey[]>([]);
@@ -115,7 +113,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setUsername(formState.username || '');
             setDisplayName(formState.displayName || '');
             setBirthDate(formState.birthDate || '');
-            setPhone(formState.phone || '');
             setBio(formState.bio || '');
             setPassword(formState.password || '');
             setSelectedSports(
@@ -394,7 +391,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: t('common.error'), description: t('profileSetup.toastPhotoRequired'), variant: "destructive" });
       return;
     }
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6 || !country) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6 || !country) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
@@ -446,7 +443,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         username: username.trim(),
         display_name: displayName.trim(),
         age: calculatedAge,
-        phone: phone.trim(),
         bio: bio.trim(),
         avatar_url: uploadedUrl,
       };
@@ -478,7 +474,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // ✅ FIX: Verify actual field values, not just row existence
       const { data: verifiedProfile, error: verifyError } = await supabase
         .from('profiles')
-        .select('id, user_id, username, display_name, avatar_url, age, phone, bio')
+        .select('id, user_id, username, display_name, avatar_url, age, bio')
         .eq('user_id', userId)
         .single();
 
@@ -492,7 +488,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         verifiedProfile.display_name?.trim() &&
         verifiedProfile.avatar_url?.trim() &&
         verifiedProfile.age &&
-        verifiedProfile.phone?.trim() &&
         verifiedProfile.bio?.trim();
 
       if (!fieldsOk) {
@@ -603,7 +598,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       username,
       displayName,
       birthDate,
-      phone,
       bio,
       password,
       favoriteSportsCsv: serializeProfileSports(selectedSports) || '',
@@ -812,22 +806,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       )}
                     </div>
                   </div>
-                  <div className="ios-list-row-inset-sep" />
-
-                  {/* Phone */}
-                  <div className="flex items-center gap-2.5 px-4 py-2.5">
-                    <div className="ios-list-row-icon bg-[#FF3B30]">
-                      <Phone className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <Input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder={t('profileSetup.phonePh')}
-                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
-                      required
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -959,7 +937,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   !displayName.trim() ||
                   !birthDate ||
                   calculatedAge < 13 ||
-                  !phone.trim() ||
                   !bio.trim() ||
                   !password ||
                   password.length < 6 ||

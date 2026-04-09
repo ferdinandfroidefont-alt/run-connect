@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,9 @@ export default function ProfileSportRecordsEdit() {
   const [eventLabel, setEventLabel] = useState("");
   const [customMode, setCustomMode] = useState(false);
   const [recordValue, setRecordValue] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingEventLabel, setEditingEventLabel] = useState("");
+  const [editingRecordValue, setEditingRecordValue] = useState("");
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -127,6 +130,93 @@ export default function ProfileSportRecordsEdit() {
         description: "Impossible de supprimer.",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEditing = (row: ProfileSportRecordRow) => {
+    setEditingId(row.id);
+    setEditingEventLabel(row.event_label);
+    setEditingRecordValue(row.record_value);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingEventLabel("");
+    setEditingRecordValue("");
+  };
+
+  const saveEdit = async () => {
+    if (!user?.id || !editingId) return;
+    const ev = editingEventLabel.trim();
+    const rv = editingRecordValue.trim();
+    if (!ev || !rv) {
+      toast({
+        title: "Champs requis",
+        description: "Renseignez l’épreuve et la valeur du record.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("profile_sport_records")
+        .update({ event_label: ev, record_value: rv })
+        .eq("id", editingId)
+        .eq("user_id", user.id);
+      if (error) throw error;
+      setRows((prev) =>
+        prev.map((r) => (r.id === editingId ? { ...r, event_label: ev, record_value: rv } : r))
+      );
+      cancelEditing();
+      toast({ title: "Record modifie" });
+    } catch (e: unknown) {
+      console.error(e);
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le record.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const moveRecord = async (id: string, direction: "up" | "down") => {
+    if (!user?.id) return;
+    const currentIndex = rows.findIndex((r) => r.id === id);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= rows.length) return;
+
+    const nextRows = [...rows];
+    const current = nextRows[currentIndex];
+    const target = nextRows[targetIndex];
+    [nextRows[currentIndex], nextRows[targetIndex]] = [target, current];
+
+    setRows(nextRows.map((r, idx) => ({ ...r, sort_order: idx })));
+    setSaving(true);
+    try {
+      const updates = nextRows.map((r, idx) =>
+        (supabase as any)
+          .from("profile_sport_records")
+          .update({ sort_order: idx })
+          .eq("id", r.id)
+          .eq("user_id", user.id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((res) => res.error);
+      if (failed?.error) throw failed.error;
+    } catch (e: unknown) {
+      console.error(e);
+      toast({
+        title: "Erreur",
+        description: "Impossible de reordonner les records.",
+        variant: "destructive",
+      });
+      void load();
     } finally {
       setSaving(false);
     }
@@ -241,26 +331,67 @@ export default function ProfileSportRecordsEdit() {
                 </p>
               ) : (
                 <ul className="divide-y divide-border">
-                  {rows.map((r) => (
+                  {rows.map((r, index) => (
                     <li key={r.id} className="flex min-w-0 items-center gap-3 px-4 py-3 ios-shell:px-2.5">
                       <div className="min-w-0 flex-1">
                         <p className="text-ios-caption1 text-muted-foreground">
                           {isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}
                         </p>
-                        <p className="truncate text-ios-body font-medium text-foreground">{r.event_label}</p>
-                        <p className="font-mono text-ios-subheadline text-primary tabular-nums">{r.record_value}</p>
+                        {editingId === r.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editingEventLabel}
+                              onChange={(e) => setEditingEventLabel(e.target.value)}
+                              className="h-9 rounded-ios-sm"
+                            />
+                            <Input
+                              value={editingRecordValue}
+                              onChange={(e) => setEditingRecordValue(e.target.value)}
+                              className="h-9 rounded-ios-sm font-mono"
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <p className="truncate text-ios-body font-medium text-foreground">{r.event_label}</p>
+                            <p className="font-mono text-ios-subheadline text-primary tabular-nums">{r.record_value}</p>
+                          </>
+                        )}
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 text-destructive"
-                        onClick={() => void handleDelete(r.id)}
-                        disabled={saving}
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        {editingId === r.id ? (
+                          <>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => void saveEdit()} disabled={saving} aria-label="Valider">
+                              <Check className="h-5 w-5 text-primary" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" onClick={cancelEditing} disabled={saving} aria-label="Annuler">
+                              <X className="h-5 w-5" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => moveRecord(r.id, "up")} disabled={saving || index === 0} aria-label="Monter">
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => moveRecord(r.id, "down")} disabled={saving || index === rows.length - 1} aria-label="Descendre">
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(r)} disabled={saving} aria-label="Modifier">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => void handleDelete(r.id)}
+                              disabled={saving}
+                              aria-label="Supprimer"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
