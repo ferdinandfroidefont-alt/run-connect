@@ -63,9 +63,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const PROFILE_FETCH_MS = 18_000;
 
     try {
-        userId: user.id,
-        attempt: retryCount + 1,
-      });
+      console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
       console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
 
       let data: any = null;
@@ -110,9 +108,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-        userId: user.id,
-        username: data.username,
-      });
+      console.log('✅ [UserProfile] Profile loaded successfully:', {
       console.log('✅ [UserProfile] Profile loaded successfully:', {
         username: data.username,
         display_name: data.display_name,
@@ -152,9 +148,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       
       return () => clearTimeout(timer);
     } else {
-        hasUser: !!user,
-        hasSession: !!session,
-      });
+      console.log('🔄 [UserProfile] No user/session, clearing profile');
       console.log('🔄 [UserProfile] No user/session, clearing profile');
       setUserProfile(null);
       setLoading(false);
