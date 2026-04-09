@@ -450,6 +450,7 @@ export const ProfileDialog = ({
           fullScreen
           className={profileDialogShellClassName}
         >
+          <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
           <div className="flex flex-1 items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -805,6 +806,7 @@ export const ProfileDialog = ({
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
         <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Stories à la une</DialogTitle>
           {/* Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex items-center justify-between px-4 py-3">

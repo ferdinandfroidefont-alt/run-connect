@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 import { bootLog } from '@/lib/onScreenLogCapture';
+import { AppBootFallback } from '@/components/AppBootFallback';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -136,7 +137,7 @@ export const Layout = ({ children }: LayoutProps) => {
   }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
   if (loading || profileLoading) {
-    return null;
+    return <AppBootFallback phase={loading ? "auth" : "profile"} />;
   }
 
   if (!user) {
