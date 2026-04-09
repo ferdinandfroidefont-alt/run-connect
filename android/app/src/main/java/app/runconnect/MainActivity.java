@@ -270,8 +270,9 @@ public class MainActivity extends AppCompatActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setGeolocationEnabled(true);
         
-        // ✅ MODE CACHE : Utiliser le cache si pas de connexion
-        s.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        // ✅ Toujours préférer le shell distant le plus récent.
+        // LOAD_CACHE_ELSE_NETWORK peut conserver un ancien bundle JS cassé en WebView.
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
         
         // 🛡️ Compatibilité multi-versions Android
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -286,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
         }
         
         Log.d(TAG, "🌐 WebView configured with geolocation enabled");
-        Log.d(TAG, "💾 Cache mode enabled: LOAD_CACHE_ELSE_NETWORK");
+        Log.d(TAG, "💾 Cache mode enabled: LOAD_DEFAULT");
 
         // ✅ Géolocalisation sans blocage (Android < 12)
         String dir = this.getApplicationContext().getDir("geolocation", Context.MODE_PRIVATE).getPath();
@@ -627,6 +628,16 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "🔥 [NIVEAU 28] Injection précoce des flags AAB AVANT loadUrl");
         injectAABFlags(webView);
         
+        // 🧹 Purger le cache WebView au démarrage pour éviter de rester bloqué
+        // sur un ancien index/chunk JS après un déploiement web.
+        try {
+            webView.clearCache(true);
+            webView.clearHistory();
+            Log.d(TAG, "🧹 Startup WebView cache cleared");
+        } catch (Exception e) {
+            Log.w(TAG, "⚠️ Impossible de vider le cache WebView au démarrage: " + e.getMessage());
+        }
+
         // ✅ Charger le site
         Log.d(TAG, "🌐 Loading WebView with URL: " + START_URL);
         webView.loadUrl(START_URL);
