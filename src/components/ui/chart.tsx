@@ -1,21 +1,10 @@
 import * as React from "react"
-
-// Use namespace import BUT re-export via a local alias to avoid TDZ issues
-// in production Rollup/Vite builds (recharts has internal circular deps).
 import {
   ResponsiveContainer,
-  Tooltip,
-  Legend,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
 } from "recharts"
-import type { LegendProps, TooltipProps } from "recharts"
-
-// Rebuild the namespace locally so the rest of the shadcn code stays intact.
-const RechartsPrimitive = { ResponsiveContainer, Tooltip, Legend } as const & {
-  ResponsiveContainer: typeof ResponsiveContainer
-  Tooltip: typeof Tooltip
-  Legend: typeof Legend
-  LegendProps: LegendProps
-}
+import type { LegendProps as RechartsLegendProps } from "recharts"
 
 import { cn } from "@/lib/utils"
 
