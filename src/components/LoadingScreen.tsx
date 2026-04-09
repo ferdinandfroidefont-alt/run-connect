@@ -65,7 +65,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       if (cancelled) return;
       setExiting(true);
       completeTimerRef.current = setTimeout(() => {
-        bootLog("[LoadingScreen] onLoadingComplete");
         if (!cancelled) onCompleteRef.current();
         completeTimerRef.current = null;
       }, 180);
