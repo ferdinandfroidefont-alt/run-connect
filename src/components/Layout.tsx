@@ -137,7 +137,27 @@ export const Layout = ({ children }: LayoutProps) => {
   }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
   if (loading || profileLoading) {
-    return <AppBootFallback phase={loading ? "auth" : "profile"} />;
+    return (
+      <div
+        className="fixed inset-0 z-[99] flex items-center justify-center"
+        style={{ backgroundColor: '#2E68FF' }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <img
+            src="/brand/runconnect-splash-icon.png"
+            alt=""
+            draggable={false}
+            className="block w-[clamp(10rem,min(72vw,40dvh),19rem)] select-none object-contain"
+          />
+          <p className="text-center text-lg font-bold tracking-wide text-white">RunConnect</p>
+          <div className="mt-2 flex gap-1.5" aria-hidden>
+            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90 [animation-delay:-0.3s]" />
+            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90 [animation-delay:-0.15s]" />
+            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
