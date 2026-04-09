@@ -85,11 +85,11 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  addBootCheckpoint("APP_RENDER");
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
 
   useEffect(() => {
+    addBootCheckpoint("APP_RENDER");
     bootLog("[App] mounted");
   }, []);
 
@@ -97,13 +97,18 @@ const App = () => {
     bootLog("[App] splash state", { isAppLoaded });
     if (isAppLoaded) {
       addBootCheckpoint("APP_SPLASH_DONE");
-      // Mark ready after a tick to let Layout render
       requestAnimationFrame(() => addBootCheckpoint("APP_READY"));
     }
   }, [isAppLoaded]);
 
-  // Max-aggressive warmup: start at boot, then retry on focus/online.
+  // Route warmup disabled in production/native debug: it eagerly pulled heavy chart pages
+  // and could crash the published boot before the auth/home UI appeared.
   useEffect(() => {
+    if (!import.meta.env.DEV) {
+      bootLog("[App] route warmup skipped outside dev");
+      return;
+    }
+
     bootLog("[App] route warmup setup:start");
     const preload = () => {
       bootLog("[App] route warmup:run");
