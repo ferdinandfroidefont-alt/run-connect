@@ -22,9 +22,6 @@ export class BootErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-      message: error?.message ?? 'unknown',
-      stack: info.componentStack,
-    });
     console.error('[BootErrorBoundary] Render error:', error, info.componentStack);
   }
 

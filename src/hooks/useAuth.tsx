@@ -60,9 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const applySession = (session: Session | null) => {
       if (!mounted) return;
-        hasSession: !!session,
-        userId: session?.user?.id ?? null,
-      });
       clearTimeout(failSafe);
       setSession(session);
       setUser(session?.user ?? null);
@@ -78,10 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       try {
-          event,
-          hasSession: !!session,
-          userId: session?.user?.id ?? null,
-        });
+        applySession(session);
         applySession(session);
 
         if (event === 'SIGNED_IN' && session?.user) {
@@ -105,10 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth
       .getSession()
       .then(({ data: { session }, error }) => {
-          hasSession: !!session,
-          userId: session?.user?.id ?? null,
-          hasError: !!error,
-        });
+        if (error) console.error('[Auth] getSession error:', error);
         if (error) console.error('[Auth] getSession error:', error);
         if (!mounted) return;
         if (session) {
