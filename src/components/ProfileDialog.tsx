@@ -804,44 +804,79 @@ export const ProfileDialog = ({
         />
       )}
       <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
-        <DialogContent stackNested className="max-w-md" aria-describedby={undefined}>
-          <DialogTitle className="text-base font-semibold">Modifier les stories à la une</DialogTitle>
-          <div className="space-y-3">
-            <Input
-              value={newHighlightTitle}
-              onChange={(e) => setNewHighlightTitle(e.target.value)}
-              placeholder="Titre (ex: Courses, PR...)"
-            />
-            <div className="max-h-64 space-y-2 overflow-auto">
-              {ownStories.map((story) => {
-                const already = storyHighlights.some((h) => h.story_id === story.id);
-                return (
-                  <div key={story.id} className="flex items-center justify-between rounded-ios-md border px-3 py-2">
-                    <p className="text-xs text-muted-foreground">
-                      Story {new Date(story.created_at).toLocaleDateString()}
+        <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
+          {/* Header */}
+          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <button type="button" onClick={() => setShowHighlightsManager(false)} className="flex items-center gap-1 text-primary">
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+              <h1 className="text-[17px] font-semibold text-foreground">Stories à la une</h1>
+              <div className="w-16" />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Titre du highlight */}
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1 block">Titre du highlight</label>
+              <Input
+                value={newHighlightTitle}
+                onChange={(e) => setNewHighlightTitle(e.target.value)}
+                placeholder="Ex: Courses, PR, Trails..."
+                className="bg-card"
+              />
+            </div>
+
+            {/* Liste des stories */}
+            <div>
+              <p className="text-[13px] font-medium text-muted-foreground mb-2">Sélectionner une story</p>
+              <div className="space-y-2">
+                {ownStories.map((story) => {
+                  const already = storyHighlights.some((h) => h.story_id === story.id);
+                  return (
+                    <div key={story.id} className="flex items-center justify-between rounded-xl bg-card border px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Story du {new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(story.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      {already ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-lg"
+                          onClick={() => {
+                            const h = storyHighlights.find((x) => x.story_id === story.id);
+                            if (h) void removeHighlight(h.id);
+                          }}
+                        >
+                          Retirer
+                        </Button>
+                      ) : (
+                        <Button size="sm" className="rounded-lg" onClick={() => void addStoryToHighlights(story.id)}>
+                          Épingler
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+                {ownStories.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                      <Heart className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                    <p className="text-base font-semibold text-foreground">Aucune story</p>
+                    <p className="mt-1 text-sm text-muted-foreground max-w-[260px]">
+                      Crée ta première story pour pouvoir l'épingler à la une de ton profil.
                     </p>
-                    {already ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          const h = storyHighlights.find((x) => x.story_id === story.id);
-                          if (h) void removeHighlight(h.id);
-                        }}
-                      >
-                        Retirer
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => void addStoryToHighlights(story.id)}>
-                        Mettre a la une
-                      </Button>
-                    )}
                   </div>
-                );
-              })}
-              {ownStories.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">Aucune story disponible.</p>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </DialogContent>
