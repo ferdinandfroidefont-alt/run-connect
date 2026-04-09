@@ -79,9 +79,8 @@ export default function Coaching() {
 
   const [athleteClubs, setAthleteClubs] = useState<AthleteClubRow[]>([]);
   const [athleteClubsLoading, setAthleteClubsLoading] = useState(true);
-  const [clubInfoData, setClubInfoData] = useState<ClubInfoRow | null>(null);
-  const [showClubInfo, setShowClubInfo] = useState(false);
-  const [showEditClub, setShowEditClub] = useState(false);
+
+  const [showClubManagement, setShowClubManagement] = useState(false);
 
   const displayClubs = useMemo((): ClubOption[] => {
     if (clubs.length > 0) return clubs;
@@ -263,13 +262,7 @@ export default function Coaching() {
     setSelectedClubId((prev) => (prev && displayClubs.some((c) => c.id === prev) ? prev : displayClubs[0].id));
   }, [displayClubs]);
 
-  const openClubManagement = async () => {
-    if (!selectedClubId) return;
-    const { data, error } = await supabase.from("conversations").select("*").eq("id", selectedClubId).single();
-    if (error || !data) return;
-    setClubInfoData(data as ClubInfoRow);
-    setShowClubInfo(true);
-  };
+  // removed openClubManagement — now uses ClubManagementDialog directly
 
   const refreshCurrentClub = async () => {
     await loadClubData();
