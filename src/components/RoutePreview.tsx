@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import type { Map } from 'mapbox-gl';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -13,7 +14,7 @@ const PREVIEW_LAYER = 'route-preview-line-layer';
 
 export const RoutePreview = ({ coordinates, activityType }: RoutePreviewProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
 
   const getActivityColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -28,38 +29,47 @@ export const RoutePreview = ({ coordinates, activityType }: RoutePreviewProps) =
   useEffect(() => {
     if (!mapContainer.current || !coordinates?.length || !getMapboxAccessToken()) return;
 
-    const path = coordinates
-      .map((coord: unknown): MapCoord | null => {
-        const c = coord as Record<string, unknown> | unknown[];
-        if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
-          return { lat: Number(c.lat), lng: Number(c.lng) };
-        }
-        if (Array.isArray(coord) && coord.length >= 2) {
-          return { lat: Number(coord[0]), lng: Number(coord[1]) };
-        }
-        return null;
-      })
-      .filter((coord): coord is MapCoord => coord !== null);
+    let cancelled = false;
+    void (async () => {
+      const path = coordinates
+        .map((coord: unknown): MapCoord | null => {
+          const c = coord as Record<string, unknown> | unknown[];
+          if (c && typeof c === 'object' && !Array.isArray(c) && c.lat != null && c.lng != null) {
+            return { lat: Number(c.lat), lng: Number(c.lng) };
+          }
+          if (Array.isArray(coord) && coord.length >= 2) {
+            return { lat: Number(coord[0]), lng: Number(coord[1]) };
+          }
+          return null;
+        })
+        .filter((coord): coord is MapCoord => coord !== null);
 
-    if (path.length === 0) return;
+      if (path.length === 0 || !mapContainer.current) return;
 
-    const color = getActivityColor(activityType);
-    const m = createEmbeddedMapboxMap(mapContainer.current, {
-      center: path[0],
-      zoom: 10,
-      interactive: true,
-    });
-    mapInstanceRef.current = m;
+      const color = getActivityColor(activityType);
+      const m = await createEmbeddedMapboxMap(mapContainer.current, {
+        center: path[0],
+        zoom: 10,
+        interactive: true,
+      });
+      if (cancelled) {
+        m.remove();
+        return;
+      }
+      mapInstanceRef.current = m;
 
-    const apply = () => {
-      setOrUpdateLineLayer(m, PREVIEW_SRC, PREVIEW_LAYER, path, { color, width: 3 });
-      fitMapToCoords(m, path, 20);
-    };
-    if (m.isStyleLoaded()) apply();
-    else m.once('load', apply);
+      const apply = () => {
+        setOrUpdateLineLayer(m, PREVIEW_SRC, PREVIEW_LAYER, path, { color, width: 3 });
+        void fitMapToCoords(m, path, 20);
+      };
+      if (m.isStyleLoaded()) apply();
+      else m.once('load', apply);
+    })();
 
     return () => {
-      m.remove();
+      cancelled = true;
+      mapInstanceRef.current?.remove();
+      mapInstanceRef.current = null;
     };
   }, [coordinates, activityType]);
 

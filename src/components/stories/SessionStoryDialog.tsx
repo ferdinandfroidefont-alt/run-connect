@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,7 @@ interface SessionStoryDialogProps {
   viewerUserId: string | null;
   storyId?: string | null;
   onOpenFeed?: (sessionId: string) => void;
+  stackNested?: boolean;
 }
 
 export function SessionStoryDialog({
@@ -53,6 +54,7 @@ export function SessionStoryDialog({
   viewerUserId,
   storyId = null,
   onOpenFeed,
+  stackNested = false,
 }: SessionStoryDialogProps) {
   const { toast } = useToast();
   const [stories, setStories] = useState<StoryItem[]>([]);
@@ -284,7 +286,8 @@ export function SessionStoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 overflow-hidden">
+      <DialogContent stackNested={stackNested} className="max-w-md overflow-hidden p-0" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Story</DialogTitle>
         {!current ? (
           <div className="p-6 text-center text-sm text-muted-foreground">Aucune story active.</div>
         ) : (

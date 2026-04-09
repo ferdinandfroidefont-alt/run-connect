@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import mapboxgl from 'mapbox-gl';
+import type { Map, Marker } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
 import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ import {
 } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { cn } from '@/lib/utils';
 
 interface RouteSegment {
@@ -73,10 +74,10 @@ export const RouteCreation = () => {
   const editRouteDataRef = useRef<EditRouteData | null>(null);
 
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<Map | null>(null);
   const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
-  const waypointMarkers = useRef<mapboxgl.Marker[]>([]);
+  const waypointMarkers = useRef<Marker[]>([]);
   const segmentIdCounterRef = useRef(0);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -85,7 +86,7 @@ export const RouteCreation = () => {
   const [mapStyleId, setMapStyleId] = useState(() => getStoredMapStyleId());
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [routeSaving, setRouteSaving] = useState(false);
-  const scrubMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const scrubMarkerRef = useRef<Marker | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
@@ -99,7 +100,7 @@ export const RouteCreation = () => {
     Array<{
       waypoint: MapCoord;
       segment: RouteSegment | null;
-      marker: mapboxgl.Marker | null;
+      marker: Marker | null;
       mode: 'manual' | 'guided';
     }>
   >([]);
@@ -146,7 +147,7 @@ export const RouteCreation = () => {
         const wp = savedWaypoints[i]!;
         const latLng: MapCoord = { lat: wp.lat, lng: wp.lng };
         waypoints.current.push(latLng);
-        addWaypointMarker(latLng, i, wp.mode || 'manual');
+        await addWaypointMarker(latLng, i, wp.mode || 'manual');
 
         if (i > 0) {
           const prevWp = savedWaypoints[i - 1]!;
@@ -169,8 +170,8 @@ export const RouteCreation = () => {
 
       waypoints.current.push(latLngs[0]!, latLngs[latLngs.length - 1]!);
 
-      addWaypointMarker(latLngs[0]!, 0, 'manual');
-      addWaypointMarker(latLngs[latLngs.length - 1]!, 1, 'manual');
+      await addWaypointMarker(latLngs[0]!, 0, 'manual');
+      await addWaypointMarker(latLngs[latLngs.length - 1]!, 1, 'manual');
 
       const { layerSourceId, layerId } = allocSegmentLayer();
       setOrUpdateLineLayer(map.current, layerSourceId, layerId, latLngs, {
@@ -189,7 +190,7 @@ export const RouteCreation = () => {
     }
 
     if (waypoints.current.length > 0) {
-      fitMapToCoords(map.current, waypoints.current, 50);
+      await fitMapToCoords(map.current, waypoints.current, 50);
     }
 
     await updateElevationAndStats();
@@ -199,7 +200,10 @@ export const RouteCreation = () => {
   };
 
   useEffect(() => {
-    const initializeMap = () => {
+    let cancelled = false;
+    let roCleanup: (() => void) | undefined;
+
+    void (async () => {
       try {
         const tokenOk = !!getMapboxAccessToken();
         if (!tokenOk) {
@@ -211,18 +215,23 @@ export const RouteCreation = () => {
 
         const initialStyle =
           MAPBOX_STYLE_BY_UI_ID[mapStyleId] ?? MAPBOX_NAVIGATION_DAY_STYLE;
-        const m = createEmbeddedMapboxMap(mapContainer.current, {
+        const m = await createEmbeddedMapboxMap(mapContainer.current, {
           center: { lat: 48.8566, lng: 2.3522 },
           zoom: 13,
           interactive: true,
           style: initialStyle,
         });
+        if (cancelled) {
+          m.remove();
+          return;
+        }
         map.current = m;
 
         const ro = new ResizeObserver(() => {
           map.current?.resize();
         });
         ro.observe(mapContainer.current);
+        roCleanup = () => ro.disconnect();
 
         m.once('load', () => {
           setIsMapLoaded(true);
@@ -247,21 +256,16 @@ export const RouteCreation = () => {
         });
 
         requestAnimationFrame(() => map.current?.resize());
-
-        return () => {
-          ro.disconnect();
-        };
       } catch (error) {
         console.error('Erreur lors du chargement de la carte:', error);
         setMapError(true);
         toast.error('Erreur lors du chargement de la carte');
       }
-    };
-
-    const disposer = initializeMap();
+    })();
 
     return () => {
-      disposer?.();
+      cancelled = true;
+      roCleanup?.();
       scrubMarkerRef.current?.remove();
       scrubMarkerRef.current = null;
       map.current?.remove();
@@ -271,8 +275,10 @@ export const RouteCreation = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode]);
 
-  const addWaypointMarker = (latLng: MapCoord, index: number, mode: 'manual' | 'guided') => {
+  const addWaypointMarker = async (latLng: MapCoord, index: number, mode: 'manual' | 'guided') => {
     if (!map.current) return;
+
+    const mapboxgl = await loadMapboxGl();
 
     const wrap = document.createElement('div');
     wrap.style.display = 'flex';
@@ -360,16 +366,21 @@ export const RouteCreation = () => {
       return;
     }
     if (!scrubMarkerRef.current) {
-      const el = document.createElement('div');
-      el.style.width = '14px';
-      el.style.height = '14px';
-      el.style.borderRadius = '9999px';
-      el.style.background = '#2563eb';
-      el.style.border = '2px solid white';
-      el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
-      scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([meta.lng, meta.lat])
-        .addTo(m);
+      void (async () => {
+        const mapboxgl = await loadMapboxGl();
+        const mapInst = map.current;
+        if (!mapInst || !meta) return;
+        const el = document.createElement('div');
+        el.style.width = '14px';
+        el.style.height = '14px';
+        el.style.borderRadius = '9999px';
+        el.style.background = '#2563eb';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
+        scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([meta.lng, meta.lat])
+          .addTo(mapInst);
+      })();
     } else {
       scrubMarkerRef.current.setLngLat([meta.lng, meta.lat]);
     }
@@ -430,12 +441,12 @@ export const RouteCreation = () => {
 
     if (waypoints.current.length === 0) {
       waypoints.current.push(latLng);
-      addWaypointMarker(latLng, 0, currentMode);
+      await addWaypointMarker(latLng, 0, currentMode);
       setWaypointCount(1);
     } else {
       const lastPoint = waypoints.current[waypoints.current.length - 1]!;
       waypoints.current.push(latLng);
-      addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
+      await addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
 
       let newSegment: RouteSegment | null;
 
@@ -603,7 +614,7 @@ export const RouteCreation = () => {
     waypoints.current.push(lastUndo.waypoint);
 
     const markerIndex = waypoints.current.length - 1;
-    addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
+    await addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
 
     if (waypoints.current.length > 1) {
       const prevPoint = waypoints.current[waypoints.current.length - 2]!;
