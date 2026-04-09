@@ -49,14 +49,6 @@ type AthleteClubRow = {
   total: number;
 };
 
-type ClubInfoRow = {
-  id: string;
-  group_name: string | null;
-  group_description: string | null;
-  group_avatar_url: string | null;
-  club_code: string | null;
-  created_by: string | null;
-};
 
 export default function Coaching() {
   const { user, loading: authLoading } = useAuth();
