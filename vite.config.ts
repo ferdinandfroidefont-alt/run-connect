@@ -27,7 +27,6 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return;
           if (id.includes("mapbox-gl")) return "mapbox";
           if (id.includes("three") || id.includes("@react-three")) return "three";
-          if (id.includes("recharts")) return "charts";
           if (id.includes("date-fns")) return "date-utils";
           if (id.includes("@capacitor") || id.includes("@capacitor-community")) return "capacitor";
           if (id.includes("@supabase")) return "supabase";

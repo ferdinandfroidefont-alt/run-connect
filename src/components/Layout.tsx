@@ -20,7 +20,6 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
-  addBootCheckpoint("LAYOUT_RENDER");
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { hideBottomNav, homeMapImmersive } = useAppContext();
@@ -77,6 +76,10 @@ export const Layout = ({ children }: LayoutProps) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    addBootCheckpoint("LAYOUT_RENDER");
+  }, []);
+
+  useEffect(() => {
     bootLog('[Layout] render state', {
       path: location.pathname,
       authLoading: loading,
@@ -85,7 +88,13 @@ export const Layout = ({ children }: LayoutProps) => {
       hasProfile: !!userProfile,
       isHome,
     });
-  }, [location.pathname, loading, profileLoading, !!user, !!userProfile, isHome]);
+
+    if (loading) {
+      addBootCheckpoint('LAYOUT_AUTH_WAIT');
+    } else if (profileLoading) {
+      addBootCheckpoint('LAYOUT_PROFILE_WAIT');
+    }
+  }, [location.pathname, loading, profileLoading, user, userProfile, isHome]);
 
   // Vérifier le cache localStorage au montage
   useEffect(() => {
@@ -140,7 +149,6 @@ export const Layout = ({ children }: LayoutProps) => {
   }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
   if (loading || profileLoading) {
-    addBootCheckpoint(loading ? "LAYOUT_AUTH_WAIT" : "LAYOUT_PROFILE_WAIT");
     return (
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center"
