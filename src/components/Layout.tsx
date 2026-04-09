@@ -119,26 +119,12 @@ export const Layout = ({ children }: LayoutProps) => {
     refreshProfile();
   };
 
-  if (loading || profileLoading) {
-    bootLog('[Layout] returning null while loading', {
-      authLoading: loading,
-      profileLoading,
-      path: location.pathname,
-    });
-    return null;
-  }
-
-  if (!user) {
-    bootLog('[Layout] redirect to /auth', { path: location.pathname });
-    console.log('🚨 Layout: No user found, redirecting to auth');
-    return <Navigate to="/auth" replace />;
-  }
-
   const needsConsent = isInitialized && 
-    userProfile && 
+    !!userProfile && 
     !consentCompleted &&
     (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
 
+  // Hook "ready" — MUST be before any conditional return
   useEffect(() => {
     if (loading || profileLoading || !user) return;
     bootLog('[Layout] ready', {
@@ -149,9 +135,15 @@ export const Layout = ({ children }: LayoutProps) => {
     });
   }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
+  if (loading || profileLoading) {
+    return null;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
   if (needsConsent) {
-    bootLog('[Layout] showing consent dialog', { userId: user.id });
-    console.log('📋 [Layout] Affichage dialog consentement');
     return <ConsentDialog userId={user.id} onComplete={handleConsentComplete} />;
   }
 
