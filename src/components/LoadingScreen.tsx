@@ -11,6 +11,7 @@ import {
 } from "@/lib/ruconnectSplashChrome";
 import { scheduleHomeMapPrefetch } from "@/lib/homeMapPrefetch";
 import { bootLog } from "@/lib/onScreenLogCapture";
+import { addBootCheckpoint } from "@/lib/bootDebugOverlay";
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -33,6 +34,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
   useEffect(() => {
     bootLog("[LoadingScreen] mounted");
+    addBootCheckpoint("SPLASH_MOUNT");
     scheduleHomeMapPrefetch();
     applyRuconnectSplashWebChrome();
     void applyRuconnectSplashNativeChrome();
@@ -56,6 +58,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
         .getSession()
         .then(() => {
           bootLog("[LoadingScreen] getSession resolved");
+          addBootCheckpoint("SPLASH_SESSION_OK");
           if (!cancelled) setBootPhase("ready");
         })
         .catch(() => {
@@ -71,6 +74,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
 
       if (cancelled) return;
       bootLog("[LoadingScreen] exit splash:start");
+      addBootCheckpoint("SPLASH_EXIT");
       setExiting(true);
       completeTimerRef.current = setTimeout(() => {
         bootLog("[LoadingScreen] onLoadingComplete");

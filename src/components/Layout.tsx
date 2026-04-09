@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 import { bootLog } from '@/lib/onScreenLogCapture';
+import { addBootCheckpoint } from '@/lib/bootDebugOverlay';
 import { AppBootFallback } from '@/components/AppBootFallback';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
@@ -19,6 +20,7 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
+  addBootCheckpoint("LAYOUT_RENDER");
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
   const { hideBottomNav, homeMapImmersive } = useAppContext();
@@ -128,6 +130,7 @@ export const Layout = ({ children }: LayoutProps) => {
   // Hook "ready" — MUST be before any conditional return
   useEffect(() => {
     if (loading || profileLoading || !user) return;
+    addBootCheckpoint("LAYOUT_READY");
     bootLog('[Layout] ready', {
       path: location.pathname,
       showBottomNav,
@@ -137,6 +140,7 @@ export const Layout = ({ children }: LayoutProps) => {
   }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
 
   if (loading || profileLoading) {
+    addBootCheckpoint(loading ? "LAYOUT_AUTH_WAIT" : "LAYOUT_PROFILE_WAIT");
     return (
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center"
