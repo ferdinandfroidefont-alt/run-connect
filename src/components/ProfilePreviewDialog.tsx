@@ -87,6 +87,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       fetchProfile();
       fetchFollowCounts();
       fetchReliability();
+      fetchStoryHighlights();
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
@@ -95,6 +96,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       }
     }
   }, [userId, user, isOwnProfile]);
+
+  const fetchStoryHighlights = async () => {
+    if (!userId) return;
+    const { data } = await (supabase as any)
+      .from("profile_story_highlights")
+      .select("id, story_id, title, position")
+      .eq("owner_id", userId)
+      .order("position", { ascending: true });
+    setStoryHighlights((data ?? []) as Array<{ id: string; story_id: string; title: string }>);
+  };
 
   useEffect(() => {
     if (userId && (isFollowing || isOwnProfile)) {
