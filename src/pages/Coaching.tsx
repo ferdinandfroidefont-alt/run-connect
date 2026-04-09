@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, endOfWeek, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -16,15 +16,9 @@ import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog
 import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
+import { ClubManagementDialog } from "@/components/coaching/ClubManagementDialog";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
-
-const ClubInfoDialog = lazy(() =>
-  import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
-);
-const EditClubDialog = lazy(() =>
-  import("@/components/EditClubDialog").then((m) => ({ default: m.EditClubDialog }))
-);
 
 type ClubOption = {
   id: string;
@@ -55,14 +49,6 @@ type AthleteClubRow = {
   total: number;
 };
 
-type ClubInfoRow = {
-  id: string;
-  group_name: string | null;
-  group_description: string | null;
-  group_avatar_url: string | null;
-  club_code: string | null;
-  created_by: string | null;
-};
 
 export default function Coaching() {
   const { user, loading: authLoading } = useAuth();
@@ -85,9 +71,8 @@ export default function Coaching() {
 
   const [athleteClubs, setAthleteClubs] = useState<AthleteClubRow[]>([]);
   const [athleteClubsLoading, setAthleteClubsLoading] = useState(true);
-  const [clubInfoData, setClubInfoData] = useState<ClubInfoRow | null>(null);
-  const [showClubInfo, setShowClubInfo] = useState(false);
-  const [showEditClub, setShowEditClub] = useState(false);
+
+  const [showClubManagement, setShowClubManagement] = useState(false);
 
   const displayClubs = useMemo((): ClubOption[] => {
     if (clubs.length > 0) return clubs;
@@ -269,13 +254,7 @@ export default function Coaching() {
     setSelectedClubId((prev) => (prev && displayClubs.some((c) => c.id === prev) ? prev : displayClubs[0].id));
   }, [displayClubs]);
 
-  const openClubManagement = async () => {
-    if (!selectedClubId) return;
-    const { data, error } = await supabase.from("conversations").select("*").eq("id", selectedClubId).single();
-    if (error || !data) return;
-    setClubInfoData(data as ClubInfoRow);
-    setShowClubInfo(true);
-  };
+  // removed openClubManagement — now uses ClubManagementDialog directly
 
   const refreshCurrentClub = async () => {
     await loadClubData();
@@ -504,7 +483,7 @@ export default function Coaching() {
                       iconBgColor="bg-indigo-500"
                       title="Gérer le club"
                       subtitle="Membres, invitations, paramètres"
-                      onClick={() => void openClubManagement()}
+                      onClick={() => setShowClubManagement(true)}
                       showChevron={true}
                       showSeparator={false}
                     />
@@ -605,46 +584,20 @@ export default function Coaching() {
             </>
           )}
 
-          <Suspense fallback={null}>
-            {clubInfoData && user && (
-              <>
-                <ClubInfoDialog
-                  isOpen={showClubInfo}
-                  onClose={() => {
-                    setShowClubInfo(false);
-                    void refreshCurrentClub();
-                  }}
-                  conversationId={clubInfoData.id}
-                  groupName={clubInfoData.group_name || ""}
-                  groupDescription={clubInfoData.group_description}
-                  groupAvatarUrl={clubInfoData.group_avatar_url}
-                  isAdmin={clubInfoData.created_by === user.id}
-                  clubCode={clubInfoData.club_code || ""}
-                  createdBy={clubInfoData.created_by || ""}
-                  onEditGroup={() => {
-                    setShowClubInfo(false);
-                    setTimeout(() => setShowEditClub(true), 100);
-                  }}
-                />
-                <EditClubDialog
-                  isOpen={showEditClub}
-                  onClose={() => setShowEditClub(false)}
-                  conversationId={clubInfoData.id}
-                  groupName={clubInfoData.group_name || ""}
-                  groupDescription={clubInfoData.group_description}
-                  groupAvatarUrl={clubInfoData.group_avatar_url}
-                  clubCode={clubInfoData.club_code || ""}
-                  createdBy={clubInfoData.created_by || ""}
-                  isAdmin={clubInfoData.created_by === user.id}
-                  onGroupUpdated={() => {
-                    void loadClubs();
-                    void refreshCurrentClub();
-                    setShowEditClub(false);
-                  }}
-                />
-              </>
-            )}
-          </Suspense>
+          {selectedClubId && (
+            <ClubManagementDialog
+              isOpen={showClubManagement}
+              onClose={() => {
+                setShowClubManagement(false);
+                void refreshCurrentClub();
+              }}
+              clubId={selectedClubId}
+              onClubUpdated={() => {
+                void loadClubs();
+                void refreshCurrentClub();
+              }}
+            />
+          )}
         </>
       )}
     </div>
