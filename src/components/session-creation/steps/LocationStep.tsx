@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import mapboxgl from 'mapbox-gl';
+import type { Map as MapboxMap } from 'mapbox-gl';
 import { motion } from 'framer-motion';
 import { MapPin, Search, Navigation, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { SelectedLocation } from '../types';
 import { cn } from '@/lib/utils';
 
 interface LocationStepProps {
-  map: mapboxgl.Map | null;
+  map: MapboxMap | null;
   selectedLocation: SelectedLocation | null;
   onLocationSelect: (location: SelectedLocation) => void;
   onNext: () => void;

@@ -18,6 +18,7 @@ import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
+import { OnScreenDebugLog } from "@/components/OnScreenDebugLog";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -54,7 +55,15 @@ const StoryCreate = lazy(() => import("./pages/StoryCreate"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
-  return <Suspense fallback={null}>{children}</Suspense>;
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[50dvh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
 }
 
 const queryClient = new QueryClient({
@@ -256,7 +265,12 @@ const App = () => {
 
   /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */
   if (!isAppLoaded) {
-    return <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />;
+    return (
+      <>
+        <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
+        <OnScreenDebugLog />
+      </>
+    );
   }
 
   return (
@@ -324,6 +338,7 @@ const App = () => {
         </ThemeProvider>
       </AppErrorBoundary>
     </QueryClientProvider>
+    <OnScreenDebugLog />
     </div>
   );
 };

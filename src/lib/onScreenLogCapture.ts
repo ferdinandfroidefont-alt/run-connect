@@ -38,13 +38,18 @@ function push(level: OnScreenLogLevel, args: unknown[]) {
   listeners.forEach((fn) => fn());
 }
 
-/** Active le panneau : dev, VITE_DEBUG_ON_SCREEN=true, ou "native" sur shell natif. */
+/**
+ * Panneau logs : désactivable avec VITE_DEBUG_ON_SCREEN=false (build store).
+ * Par défaut : **activé en dev** et **sur shell natif** (sinon écran blanc sans aucune trace).
+ */
 export function isOnScreenLogsEnabled(): boolean {
   const v = import.meta.env.VITE_DEBUG_ON_SCREEN as string | undefined;
   if (v === "false" || v === "0") return false;
   if (v === "true" || v === "1") return true;
+  if (v === "web") return false;
   if (v === "native") return isReallyNative();
-  return import.meta.env.DEV;
+  if (import.meta.env.DEV) return true;
+  return isReallyNative();
 }
 
 /** À appeler une fois au boot (main.tsx), avant createRoot. */

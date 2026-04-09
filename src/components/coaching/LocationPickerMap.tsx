@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import mapboxgl from "mapbox-gl";
+import type { Map, MapMouseEvent, Marker } from "mapbox-gl";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, MapPin, Check } from "lucide-react";
 import { createEmbeddedMapboxMap } from "@/lib/mapboxEmbed";
 import { getMapboxAccessToken } from "@/lib/mapboxConfig";
+import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { reverseGeocodeMapbox } from "@/lib/mapboxGeocode";
 
 interface LocationPickerMapProps {
@@ -23,76 +24,82 @@ export const LocationPickerMap = ({
   initialLng = 2.3522,
 }: LocationPickerMapProps) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
+  const markerRef = useRef<Marker | null>(null);
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number } | null>(null);
   const [address, setAddress] = useState("");
 
   useEffect(() => {
     if (!isOpen || !mapContainerRef.current || !getMapboxAccessToken()) return;
 
-    const map = createEmbeddedMapboxMap(mapContainerRef.current, {
-      center: { lat: initialLat, lng: initialLng },
-      zoom: 14,
-      interactive: true,
-    });
-    mapInstanceRef.current = map;
-
-    let pressTimer: number | null = null;
-    let pressPos: { lat: number; lng: number } | null = null;
-
-    const placeAt = (lat: number, lng: number) => {
-      void (async () => {
-        if (!mapInstanceRef.current) return;
-        if (markerRef.current) {
-          markerRef.current.setLngLat([lng, lat]);
-        } else {
-          const el = document.createElement("div");
-          el.style.width = "14px";
-          el.style.height = "14px";
-          el.style.borderRadius = "50%";
-          el.style.background = "#5B7CFF";
-          el.style.border = "3px solid white";
-          el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.25)";
-          markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapInstanceRef.current);
-        }
-        setSelectedPos({ lat, lng });
-        const label = await reverseGeocodeMapbox(lat, lng);
-        setAddress(
-          label && label.length > 60 ? `${label.substring(0, 60)}…` : label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-        );
-      })();
-    };
-
-    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
-      pressPos = { lat: e.lngLat.lat, lng: e.lngLat.lng };
-      pressTimer = window.setTimeout(() => {
-        if (pressPos) placeAt(pressPos.lat, pressPos.lng);
-      }, 500);
-    };
-
-    const clearPress = () => {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
+    let cancelled = false;
+    void (async () => {
+      const mapboxgl = await loadMapboxGl();
+      if (cancelled || !mapContainerRef.current) return;
+      const map = await createEmbeddedMapboxMap(mapContainerRef.current, {
+        center: { lat: initialLat, lng: initialLng },
+        zoom: 14,
+        interactive: true,
+      });
+      if (cancelled) {
+        map.remove();
+        return;
       }
-    };
+      mapInstanceRef.current = map;
 
-    map.on("mousedown", onMouseDown);
-    map.on("mouseup", clearPress);
-    map.on("dragstart", clearPress);
-    map.on("click", (e: mapboxgl.MapMouseEvent) => {
-      placeAt(e.lngLat.lat, e.lngLat.lng);
-    });
+      let pressTimer: number | null = null;
+      let pressPos: { lat: number; lng: number } | null = null;
+
+      const placeAt = (lat: number, lng: number) => {
+        void (async () => {
+          if (!mapInstanceRef.current) return;
+          if (markerRef.current) {
+            markerRef.current.setLngLat([lng, lat]);
+          } else {
+            const el = document.createElement("div");
+            el.style.width = "14px";
+            el.style.height = "14px";
+            el.style.borderRadius = "50%";
+            el.style.background = "#5B7CFF";
+            el.style.border = "3px solid white";
+            el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.25)";
+            markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapInstanceRef.current);
+          }
+          setSelectedPos({ lat, lng });
+          const label = await reverseGeocodeMapbox(lat, lng);
+          setAddress(
+            label && label.length > 60 ? `${label.substring(0, 60)}…` : label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+          );
+        })();
+      };
+
+      const onMouseDown = (e: MapMouseEvent) => {
+        pressPos = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+        pressTimer = window.setTimeout(() => {
+          if (pressPos) placeAt(pressPos.lat, pressPos.lng);
+        }, 500);
+      };
+
+      const clearPress = () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      map.on("mousedown", onMouseDown);
+      map.on("mouseup", clearPress);
+      map.on("dragstart", clearPress);
+      map.on("click", (e: MapMouseEvent) => {
+        placeAt(e.lngLat.lat, e.lngLat.lng);
+      });
+    })();
 
     return () => {
-      clearPress();
-      map.off("mousedown", onMouseDown);
-      map.off("mouseup", clearPress);
-      map.off("dragstart", clearPress);
+      cancelled = true;
       markerRef.current?.remove();
       markerRef.current = null;
-      map.remove();
+      mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
   }, [isOpen, initialLat, initialLng]);
