@@ -411,16 +411,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             </div>
           ) : profile ? (
             <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-              <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-0">
+               <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-0">
                 <div className="box-border min-w-0 w-full max-w-full space-y-0 pb-[max(2rem,env(safe-area-inset-bottom))]">
 
-                {/* ── Identity ── */}
-                <div className="border-b border-border/60 bg-card px-4 py-4">
-                  <div className="flex min-w-0 items-start gap-3.5">
+                {/* ── Identity - Instagram layout: avatar + stats side by side ── */}
+                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
+                  <div className="flex items-center gap-5">
+                    {/* Avatar */}
                     <div className="relative shrink-0">
-                      <Avatar className="h-[72px] w-[72px] ring-2 ring-border/30">
+                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
                         <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-xl font-bold text-primary-foreground">
+                        <AvatarFallback className="text-2xl bg-secondary">
                           {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -428,31 +429,64 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         <OnlineStatus userId={profile.user_id} />
                       )}
                     </div>
-                    <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <p className="min-w-0 flex-1 truncate text-[18px] font-bold leading-tight text-foreground" title={profile.display_name || profile.username}>
-                          {profile.display_name || profile.username}
-                        </p>
-                        {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+
+                    {/* Stats à droite de l'avatar */}
+                    <div className="flex flex-1 min-w-0 items-center justify-around">
+                      <div className="text-center">
+                        <p className="text-[18px] font-bold text-foreground leading-none">{stats.sessionsCreated + stats.sessionsJoined}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
                       </div>
-                      <p className="min-w-0 truncate text-[14px] text-muted-foreground" title={`@${profile.username}`}>
-                        @{profile.username}
-                      </p>
-                      {metaParts.length > 0 && (
-                        <p className="mt-0.5 min-w-0 truncate text-[13px] text-muted-foreground/80">
-                          {metaParts.join(" · ")}
-                        </p>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
+                      </button>
                     </div>
                   </div>
 
+                  {/* Nom + meta line */}
+                  <div className="mt-3 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
+                        {profile.display_name || profile.username}
+                      </h2>
+                      {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+                    </div>
+                    <p className="truncate text-[13px] text-muted-foreground">
+                      @{profile.username}
+                    </p>
+                    {metaParts.length > 0 && (
+                      <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                        {metaParts.join(" · ")}
+                      </p>
+                    )}
+                    {profile.bio && (
+                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
+                        {profile.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Boutons Abonné / Message */}
                   {!isOwnProfile && (
-                    <div className="mt-4 flex min-w-0 gap-2.5">
+                    <div className="mt-3 flex gap-2">
                       <Button
                         onClick={handleFollowToggle}
                         disabled={actionLoading}
-                        variant={isFollowing ? "outline" : "default"}
-                        className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
+                        variant={isFollowing ? "secondary" : "default"}
+                        size="sm"
+                        className={`flex-1 rounded-lg text-[13px] font-semibold ${
                           followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
                         }`}
                       >
@@ -463,50 +497,42 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         )}
                       </Button>
                       {isFollowing && (
-                        <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-5 border-border">
-                          <MessageCircle className="h-4 w-4 mr-1.5" />
-                          <span className="text-[14px]">Message</span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
+                          onClick={handleMessage}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Message
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* ── Stats: Abonnements | Abonnés | Fiabilité ── */}
-                <div className="min-w-0 overflow-hidden border-b border-border/60 bg-card">
-                  <div className="grid min-w-0 grid-cols-3">
-                    <button
-                      onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
-                      className="min-h-[52px] min-w-0 py-3 text-center transition-colors active:bg-secondary/60"
-                    >
-                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">{followingCount}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abonnements</p>
-                    </button>
-                    <button
-                      onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
-                      className="min-h-[52px] min-w-0 border-x border-border/50 py-3 text-center transition-colors active:bg-secondary/60"
-                    >
-                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">{followerCount}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Abonnés</p>
-                    </button>
-                    <button
-                      onClick={() => setShowReliabilityDialog(true)}
-                      className="min-h-[52px] min-w-0 py-3 text-center transition-colors active:bg-secondary/60"
-                    >
-                      <p className="truncate text-[17px] font-bold tabular-nums text-foreground">
-                        {reliabilityRate != null ? `${Math.round(reliabilityRate)}%` : "–"}
-                      </p>
-                      <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Fiabilité</p>
-                    </button>
+                {/* ── Stories à la une ── */}
+                <div className="bg-card border-b border-border px-4 py-3">
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    {storyHighlights.length > 0 ? (
+                      storyHighlights.map((item) => (
+                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                            {item.title.slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 bg-secondary/30">
+                          <span className="text-[10px] text-muted-foreground/50">∅</span>
+                        </div>
+                        <p className="w-full truncate text-center text-[10px] text-muted-foreground/60">Aucune</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* ── Bio ── */}
-                {profile.bio && (
-                  <div className="min-w-0 border-b border-border/60 bg-card px-4 py-3">
-                    <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
-                  </div>
-                )}
 
                 {/* ── Content (visible if following or own) ── */}
                 {canViewContent ? (
