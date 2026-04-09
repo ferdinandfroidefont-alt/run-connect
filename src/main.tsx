@@ -9,9 +9,14 @@ import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BootErrorBoundary } from "@/components/BootErrorBoundary";
+import { bootLog } from "@/lib/onScreenLogCapture";
 
 // ✅ NIVEAU 29: DÉTECTION NATIVE MULTI-PLATEFORME (Android + iOS)
 const detectNativeImmediately = () => {
+  bootLog("[main] detectNativeImmediately:start", {
+    protocol: window.location.protocol,
+    ua: navigator.userAgent.slice(0, 120),
+  });
   const userAgent = navigator.userAgent;
   const protocol = window.location.protocol.toLowerCase();
   
@@ -90,18 +95,29 @@ const detectNativeImmediately = () => {
     console.log('ℹ️ MODE WEB DÉTECTÉ - Fallback OAuth web');
   }
   
+  bootLog("[main] detectNativeImmediately:done", {
+    isNative,
+    detectedPlatform,
+    hasCapacitor,
+    hasAndroidBridge,
+    isIOSNative,
+  });
   return isNative;
 };
 
 // ✅ EXÉCUTER LA DÉTECTION **AVANT** LE RENDER
 const isNative = detectNativeImmediately();
+bootLog("[main] native flag resolved", { isNative, detectedPlatform: (window as any).detectedPlatform ?? "unknown" });
 
 /** Géoloc accueil en parallèle du splash / React — cache OS + persistance locale au maximum tôt. */
+bootLog("[main] primeHomeMapAtAppEntry:start");
 primeHomeMapAtAppEntry();
+bootLog("[main] primeHomeMapAtAppEntry:done");
 
 // 🍎 Marges « Réglages » resserrées : variante Tailwind `ios-shell:` (évite de toucher au navigateur desktop étroit)
 if (typeof document !== 'undefined' && isIosAppShell()) {
   document.documentElement.classList.add('ios-app-shell');
+  bootLog("[main] ios-app-shell class applied");
 }
 
 // ✅ NIVEAU 28: RETRY MECHANISM pour les cas limites
@@ -133,16 +149,22 @@ if (!isNative) {
 const initializeCapacitorPlugins = async () => {
   if (!isNative) return;
   
+  bootLog("[main] initializeCapacitorPlugins:start");
   console.log('🚀 Préchargement plugins Capacitor...');
   
   try {
     const { Geolocation } = await import('@capacitor/geolocation');
     const { Camera } = await import('@capacitor/camera');
+    bootLog("[main] initializeCapacitorPlugins:imports-ok", {
+      geolocation: !!Geolocation,
+      camera: !!Camera,
+    });
     console.log('✅ Plugins critiques préchargés');
     
     console.log('✅ Plugins préchargés - permissions seront demandées à l\'usage');
     
   } catch (pluginError) {
+    bootLog("[main] initializeCapacitorPlugins:error", pluginError);
     console.error('❌ Erreur chargement plugins:', pluginError);
   }
   
@@ -153,19 +175,23 @@ const initializeCapacitorPlugins = async () => {
   window.dispatchEvent(new CustomEvent('capacitorReady', { 
     detail: { platform: detectedPlatform, native: true }
   }));
+  bootLog("[main] capacitorReady dispatched", { platform: detectedPlatform });
 };
 
 // Lancer l'initialisation des plugins en arrière-plan
 initializeCapacitorPlugins();
+bootLog("[main] initializeCapacitorPlugins:scheduled");
 
 // ✅ Render l'app (maintenant window.CapacitorForceNative est DÉJÀ défini)
 const rootElement = document.getElementById("root");
 if (!rootElement) {
+  bootLog("[main] root element missing");
   console.error("[main] Élément #root introuvable — impossible de monter React.");
   document.body.innerHTML =
     '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur de démarrage : interface introuvable. Réinstallez ou rechargez l’application.</p>';
 } else {
   try {
+    bootLog("[main] createRoot:start");
     createRoot(rootElement).render(
       <BootErrorBoundary>
         <AuthProvider>
@@ -179,7 +205,9 @@ if (!rootElement) {
         </AuthProvider>
       </BootErrorBoundary>
     );
+    bootLog("[main] createRoot:render-called");
   } catch (bootErr) {
+    bootLog("[main] createRoot:error", bootErr);
     console.error("[main] Échec du render initial:", bootErr);
     rootElement.innerHTML =
       '<p style="font-family:system-ui,sans-serif;padding:24px;text-align:center">Erreur au lancement. Fermez et rouvrez l’application ou videz le cache.</p>';
@@ -189,3 +217,4 @@ if (!rootElement) {
 // ✅ NIVEAU 28: Marquer que React est chargé
 (window as any).reactAlreadyLoaded = true;
 console.log('✅ React chargé - reactAlreadyLoaded défini');
+bootLog("[main] reactAlreadyLoaded=true");

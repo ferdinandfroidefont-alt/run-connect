@@ -9,6 +9,7 @@ import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
+import { bootLog } from '@/lib/onScreenLogCapture';
 
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -72,6 +73,17 @@ export const Layout = ({ children }: LayoutProps) => {
   const [consentCompleted, setConsentCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  useEffect(() => {
+    bootLog('[Layout] render state', {
+      path: location.pathname,
+      authLoading: loading,
+      profileLoading,
+      hasUser: !!user,
+      hasProfile: !!userProfile,
+      isHome,
+    });
+  }, [location.pathname, loading, profileLoading, !!user, !!userProfile, isHome]);
+
   // Vérifier le cache localStorage au montage
   useEffect(() => {
     if (user?.id) {
@@ -108,10 +120,16 @@ export const Layout = ({ children }: LayoutProps) => {
   };
 
   if (loading || profileLoading) {
+    bootLog('[Layout] returning null while loading', {
+      authLoading: loading,
+      profileLoading,
+      path: location.pathname,
+    });
     return null;
   }
 
   if (!user) {
+    bootLog('[Layout] redirect to /auth', { path: location.pathname });
     console.log('🚨 Layout: No user found, redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
@@ -121,7 +139,18 @@ export const Layout = ({ children }: LayoutProps) => {
     !consentCompleted &&
     (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
 
+  useEffect(() => {
+    if (loading || profileLoading || !user) return;
+    bootLog('[Layout] ready', {
+      path: location.pathname,
+      showBottomNav,
+      homeMapPrimed,
+      needsConsent,
+    });
+  }, [location.pathname, loading, profileLoading, !!user, showBottomNav, homeMapPrimed, needsConsent]);
+
   if (needsConsent) {
+    bootLog('[Layout] showing consent dialog', { userId: user.id });
     console.log('📋 [Layout] Affichage dialog consentement');
     return <ConsentDialog userId={user.id} onComplete={handleConsentComplete} />;
   }

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/promiseUtils';
+import { bootLog } from '@/lib/onScreenLogCapture';
 
 export interface UserProfile {
   id: string;
@@ -54,6 +55,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
   const loadProfile = async (retryCount = 0): Promise<void> => {
     if (!user?.id) {
+      bootLog('[UserProfile] skip loadProfile: no user id');
       console.log('🔍 [UserProfile] No user ID, skipping profile load');
       setUserProfile(null);
       setLoading(false);
@@ -63,6 +65,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
     const PROFILE_FETCH_MS = 18_000;
 
     try {
+      bootLog('[UserProfile] loadProfile:start', {
+        userId: user.id,
+        attempt: retryCount + 1,
+      });
       console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
 
       let data: any = null;
@@ -78,6 +84,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       } catch (timeoutErr: unknown) {
         const msg = timeoutErr instanceof Error ? timeoutErr.message : String(timeoutErr);
         if (msg.includes('TIMEOUT')) {
+          bootLog('[UserProfile] loadProfile:timeout', { userId: user.id });
           console.error('❌ [UserProfile] Timeout chargement profil (réseau lent)');
           setError('Connexion trop lente — impossible de charger le profil pour le moment');
           setUserProfile(null);
@@ -89,11 +96,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       if (fetchError) {
         // Retry on JWT/auth errors
         if (fetchError.message.includes('JWT') && retryCount < 2) {
+          bootLog('[UserProfile] loadProfile:jwt-retry', { retryCount: retryCount + 1 });
           console.warn(`⚠️ [UserProfile] Auth error, retrying in 1s... (${retryCount + 1}/3)`);
           await new Promise(resolve => setTimeout(resolve, 1000));
           return loadProfile(retryCount + 1);
         }
         
+        bootLog('[UserProfile] loadProfile:fetch-error', fetchError);
         console.error('❌ [UserProfile] Error loading profile:', fetchError);
         setError('Impossible de charger le profil');
         setUserProfile(null);
@@ -101,12 +110,17 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (!data) {
+        bootLog('[UserProfile] loadProfile:no-data', { userId: user.id });
         console.error('❌ [UserProfile] No profile data found');
         setError('Profil non trouvé');
         setUserProfile(null);
         return;
       }
 
+      bootLog('[UserProfile] loadProfile:success', {
+        userId: user.id,
+        username: data.username,
+      });
       console.log('✅ [UserProfile] Profile loaded successfully:', {
         username: data.username,
         display_name: data.display_name,
@@ -119,6 +133,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       setUserProfile(data as UserProfile);
       setError(null);
     } catch (err: any) {
+      bootLog('[UserProfile] loadProfile:unexpected-error', err);
       console.error('❌ [UserProfile] Unexpected error:', err);
       setError(err.message || 'Erreur inconnue');
       setUserProfile(null);
@@ -137,6 +152,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   // Load profile when user changes or session is established
   useEffect(() => {
     if (user && session) {
+      bootLog('[UserProfile] effect: user+session ready', { userId: user.id });
       console.log('🔄 [UserProfile] User or session changed, loading profile...');
       setLoading(true);
       // Small delay to ensure auth is fully established
@@ -146,6 +162,10 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       
       return () => clearTimeout(timer);
     } else {
+      bootLog('[UserProfile] effect: clear profile', {
+        hasUser: !!user,
+        hasSession: !!session,
+      });
       console.log('🔄 [UserProfile] No user/session, clearing profile');
       setUserProfile(null);
       setLoading(false);
@@ -157,6 +177,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user?.id) return;
 
+    bootLog('[UserProfile] realtime subscription:start', { userId: user.id });
     console.log('👂 [UserProfile] Setting up real-time subscription');
     
     const channel = supabase
@@ -170,6 +191,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          bootLog('[UserProfile] realtime event', { eventType: payload.eventType });
           console.log('🔄 [UserProfile] Profile updated via real-time:', payload);
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const incoming = payload.new as UserProfile;
@@ -194,6 +216,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       .subscribe();
 
     return () => {
+      bootLog('[UserProfile] realtime subscription:cleanup', { userId: user.id });
       console.log('👋 [UserProfile] Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };

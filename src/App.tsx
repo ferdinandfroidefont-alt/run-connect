@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { OnScreenDebugLog } from "@/components/OnScreenDebugLog";
+import { bootLog } from "@/lib/onScreenLogCapture";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -86,9 +87,19 @@ const App = () => {
   // Show loading screen on all platforms
   const [isAppLoaded, setIsAppLoaded] = useState(false);
 
+  useEffect(() => {
+    bootLog("[App] mounted");
+  }, []);
+
+  useEffect(() => {
+    bootLog("[App] splash state", { isAppLoaded });
+  }, [isAppLoaded]);
+
   // Max-aggressive warmup: start at boot, then retry on focus/online.
   useEffect(() => {
+    bootLog("[App] route warmup setup:start");
     const preload = () => {
+      bootLog("[App] route warmup:run");
       void Promise.allSettled([
         import("./pages/Index"),
         import("./pages/Auth"),
@@ -137,6 +148,7 @@ const App = () => {
       window.addEventListener("focus", onFocus);
       window.addEventListener("online", onOnline);
       return () => {
+        bootLog("[App] route warmup cleanup");
         const cic = (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback;
         cic?.(id);
         window.removeEventListener("focus", onFocus);
@@ -150,6 +162,7 @@ const App = () => {
     window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
     return () => {
+      bootLog("[App] route warmup cleanup");
       window.clearTimeout(timer);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
@@ -159,16 +172,20 @@ const App = () => {
   // 🍎 Global deep link listener for iOS OAuth callback
   useEffect(() => {
     const isNative = !!(window as any).CapacitorForceNative || !!(window as any).Capacitor;
+    bootLog("[App] deep link listener effect", { isNative });
     if (!isNative) return;
 
     let removed = false;
 
     const setupListener = async () => {
       try {
+        bootLog("[App] setupListener:start");
         const { App: CapApp } = await import('@capacitor/app');
         const { Browser } = await import('@capacitor/browser');
+        bootLog("[App] setupListener:plugins-loaded");
 
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
+          bootLog("[App] appUrlOpen", { url });
           if (import.meta.env.DEV) {
             console.log('🍎 [GLOBAL] appUrlOpen:', url);
           } else {
@@ -229,6 +246,7 @@ const App = () => {
           }
         };
       } catch (e) {
+        bootLog("[App] setupListener:error", e);
         console.warn('🍎 [GLOBAL] Could not set up appUrlOpen listener:', e);
       }
     };
@@ -242,13 +260,16 @@ const App = () => {
   // Handle cold start links (app opened directly from deep/universal link).
   useEffect(() => {
     const isNative = !!(window as any).CapacitorForceNative || !!(window as any).Capacitor;
+    bootLog("[App] cold start launch url effect", { isNative });
     if (!isNative) return;
 
     const handleLaunchUrl = async () => {
       try {
+        bootLog("[App] getLaunchUrl:start");
         const { App: CapApp } = await import('@capacitor/app');
         const launchData = await CapApp.getLaunchUrl();
         const incomingUrl = launchData?.url;
+        bootLog("[App] getLaunchUrl:result", { incomingUrl: incomingUrl ?? null });
         if (!incomingUrl) return;
         const targetRoute = resolveIncomingAppUrl(incomingUrl);
         if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
@@ -256,6 +277,7 @@ const App = () => {
           window.location.href = targetRoute;
         }
       } catch (e) {
+        bootLog("[App] getLaunchUrl:error", e);
         console.warn('🍎 [GLOBAL] Could not resolve launch URL:', e);
       }
     };

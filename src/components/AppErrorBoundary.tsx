@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { bootLog } from '@/lib/onScreenLogCapture';
 
 type Props = { children: ReactNode };
 type State = { hasError: boolean; message: string | null };
@@ -16,6 +17,10 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    bootLog('[AppErrorBoundary] componentDidCatch', {
+      message: error?.message ?? 'unknown',
+      stack: info.componentStack,
+    });
     console.error('[AppErrorBoundary]', error, info.componentStack);
   }
 
