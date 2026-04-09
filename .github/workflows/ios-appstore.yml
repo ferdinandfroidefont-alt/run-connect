@@ -25,7 +25,7 @@ jobs:
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       # sharp (@capacitor/assets) tente par défaut de télécharger libvips depuis GitHub → 502 fréquent côté CI.
@@ -59,7 +59,11 @@ jobs:
 
       - name: 📱 Add iOS platform
         run: |
-          npx cap add ios || true
+          if [ -d "ios/App" ]; then
+            echo "ℹ️ iOS platform already present — skipping cap add ios"
+          else
+            npx cap add ios
+          fi
           npx cap sync ios
 
       - name: 🔥 Add GoogleService-Info.plist for Firebase
