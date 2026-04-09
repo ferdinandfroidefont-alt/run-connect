@@ -120,8 +120,9 @@ export const usePushNotifications = () => {
     const capPlatform = Capacitor.getPlatform();
     if (capPlatform === 'ios') return 'ios';
     if (capPlatform === 'android') return 'android';
-    if ((window as any).AndroidBridge || (window as any).fcmToken) return 'android';
     if (typeof (window as any).fcmTokenPlatform === 'string') return (window as any).fcmTokenPlatform;
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'ios';
+    if ((window as any).AndroidBridge) return 'android';
     return capPlatform;
   }, []);
 
@@ -799,8 +800,8 @@ export const usePushNotifications = () => {
 
   useEffect(() => {
     if (!user || !isNative) return;
-    const platform = Capacitor.getPlatform();
-    if (platform !== 'ios') return;
+    const isIosEnv = Capacitor.getPlatform() === 'ios' || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isIosEnv) return;
 
     const maxRetries = 3;
     const retryInterval = 8000;
@@ -840,12 +841,13 @@ export const usePushNotifications = () => {
   }, [user, isNative, token, updateDebug]);
 
   // ─── useEffect #5: fcmTokenReady + userAuthenticatedWithFCMToken listeners ────
+  // IMPORTANT: This effect has NO dependency on `user` so the listener is always active,
+  // even before auth resolves. Tokens are buffered and saved as soon as a userId is available.
 
   useEffect(() => {
     /** Save FCM token with dynamic user resolution (bypasses stale closure) */
     const saveTokenDynamic = async (fcmToken: string, knownUserId?: string) => {
-      // Try known userId first, then React state, then fresh session
-      let userId = knownUserId || user?.id || null;
+      let userId = knownUserId || null;
       if (!userId) {
         try {
           const { data: sess } = await supabase.auth.getSession();
@@ -878,11 +880,6 @@ export const usePushNotifications = () => {
           return;
         }
 
-        if (t === token && isRegistered) {
-          log('[EVENT] fcmTokenReady same as current token, skipping');
-          return;
-        }
-
         log('[EVENT] fcmTokenReady — ✅ VALID FCM token, saving as final token');
         setIsNative(true);
         setToken(t);
@@ -894,7 +891,6 @@ export const usePushNotifications = () => {
       }
     };
 
-    // 🔥 FIX: Listen for userAuthenticatedWithFCMToken (dispatched by useAuth after SIGNED_IN)
     const handleAuthWithToken = async (event: Event) => {
       const customEvent = event as CustomEvent<{ token: string; userId: string }>;
       const { token: fcmToken, userId } = customEvent.detail || {};
@@ -926,19 +922,18 @@ export const usePushNotifications = () => {
       saveTokenDynamic(existingToken);
     }
 
-    // Fallback: if no fcmTokenReady after 15s on iOS, actively try to recover
-    const platform = Capacitor.getPlatform();
+    const isIosEnv = Capacitor.getPlatform() === 'ios' || /iPhone|iPad|iPod/i.test(navigator.userAgent);
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    if (platform === 'ios') {
+    let pageshowHandler: (() => void) | null = null;
+
+    if (isIosEnv) {
       fallbackTimer = setTimeout(async () => {
-        // Check if we already have a valid token
-        const currentToken = token || pendingTokenRef.current;
+        const currentToken = pendingTokenRef.current;
         if (currentToken && !isApnsHexToken(currentToken)) return;
 
         logError('[FALLBACK] ⚠️ No fcmTokenReady after 15s on iOS — attempting active recovery');
         updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Attempting recovery...' });
 
-        // 1. Re-check window buffers one more time
         const bufferedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         if (bufferedToken && typeof bufferedToken === 'string' && bufferedToken.length > 50 && !isApnsHexToken(bufferedToken)) {
           log('[FALLBACK] Found buffered FCM token, saving...');
@@ -950,7 +945,6 @@ export const usePushNotifications = () => {
           return;
         }
 
-        // 2. Re-call register() to trigger a fresh APNs→FCM exchange
         try {
           const status = await PushNotifications.checkPermissions();
           if (status.receive === 'granted') {
@@ -963,8 +957,7 @@ export const usePushNotifications = () => {
         }
       }, 15000);
 
-      // 3. Also listen for pageshow (back-forward cache restore)
-      const handlePageShow = () => {
+      pageshowHandler = () => {
         const buffered = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         if (buffered && typeof buffered === 'string' && buffered.length > 50 && !isApnsHexToken(buffered)) {
           log('[PAGESHOW] FCM token found after page restore');
@@ -974,24 +967,16 @@ export const usePushNotifications = () => {
           saveTokenDynamic(buffered);
         }
       };
-      window.addEventListener('pageshow', handlePageShow);
-
-      // Cleanup pageshow listener in the return
-      const originalCleanup = () => {
-        window.removeEventListener('pageshow', handlePageShow);
-      };
-      // Store for cleanup
-      (window as any).__pushPageshowCleanup = originalCleanup;
+      window.addEventListener('pageshow', pageshowHandler);
     }
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
       window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
       if (fallbackTimer) clearTimeout(fallbackTimer);
-      const pageshowCleanup = (window as any).__pushPageshowCleanup;
-      if (pageshowCleanup) { pageshowCleanup(); delete (window as any).__pushPageshowCleanup; }
+      if (pageshowHandler) window.removeEventListener('pageshow', pageshowHandler);
     };
-  }, [savePushToken, updateDebug, token, isRegistered, user]);
+  }, [savePushToken, updateDebug]);
 
   // ─── useEffect #6: App resume ────────────────────────────
 

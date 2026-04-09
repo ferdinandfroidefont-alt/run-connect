@@ -116,6 +116,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
           try {
             var d = \(jsonString);
             window.fcmToken = d.token;
+            window.fcmTokenPlatform = 'ios';
             window.__fcmTraceId = d.traceId;
             window.__fcmTokenBuffer = d.token;
             window.dispatchEvent(new CustomEvent('fcmTokenReady', { detail: d }));

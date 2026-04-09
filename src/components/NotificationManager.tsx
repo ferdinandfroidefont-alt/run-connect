@@ -143,7 +143,9 @@ export const NotificationManager = () => {
     
     setDiagnosing(true);
     try {
-      const platform = (window as any).AndroidBridge ? 'android' : 'web';
+      const platform = (window as any).fcmTokenPlatform
+        || (/iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : null)
+        || ((window as any).AndroidBridge ? 'android' : 'web');
       
       const { error } = await supabase
         .from('profiles')

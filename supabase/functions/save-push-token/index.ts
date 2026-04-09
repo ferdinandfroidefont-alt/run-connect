@@ -4,7 +4,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { logDbError, logException, logUserRef } from "../_shared/secureLog.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const APNS_HEX_REGEX = /^[A-Fa-f0-9]{64}$/;
+const APNS_HEX_REGEX = /^[A-Fa-f0-9]{32,128}$/;
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
