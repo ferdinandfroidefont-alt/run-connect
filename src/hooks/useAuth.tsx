@@ -1,7 +1,6 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { bootLog } from '@/lib/onScreenLogCapture';
 
 interface SubscriptionInfo {
   subscribed: boolean;
@@ -50,23 +49,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    bootLog('[Auth] provider mounted');
     let mounted = true;
     /** Débloque l’UI si getSession / listener restent bloqués (réseau très faible). */
     const AUTH_LOADING_FAILSAFE_MS = 12_000;
     const failSafe = setTimeout(() => {
       if (!mounted) return;
-      bootLog('[Auth] fail-safe timeout reached');
       console.warn('[Auth] Fail-safe: déblocage du chargement (timeout session)');
       setLoading(false);
     }, AUTH_LOADING_FAILSAFE_MS);
 
     const applySession = (session: Session | null) => {
       if (!mounted) return;
-      bootLog('[Auth] applySession', {
-        hasSession: !!session,
-        userId: session?.user?.id ?? null,
-      });
       clearTimeout(failSafe);
       setSession(session);
       setUser(session?.user ?? null);
@@ -82,11 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       try {
-        bootLog('[Auth] onAuthStateChange', {
-          event,
-          hasSession: !!session,
-          userId: session?.user?.id ?? null,
-        });
+        applySession(session);
         applySession(session);
 
         if (event === 'SIGNED_IN' && session?.user) {
@@ -102,21 +91,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 500);
         }
       } catch (e) {
-        bootLog('[Auth] onAuthStateChange handler error', e);
         console.error('[Auth] onAuthStateChange handler error:', e);
         if (mounted) setLoading(false);
       }
     });
 
-    bootLog('[Auth] getSession:start');
     supabase.auth
       .getSession()
       .then(({ data: { session }, error }) => {
-        bootLog('[Auth] getSession:resolved', {
-          hasSession: !!session,
-          userId: session?.user?.id ?? null,
-          hasError: !!error,
-        });
+        if (error) console.error('[Auth] getSession error:', error);
         if (error) console.error('[Auth] getSession error:', error);
         if (!mounted) return;
         if (session) {
@@ -132,13 +115,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       })
       .catch((err) => {
-        bootLog('[Auth] getSession:rejected', err);
         console.error('[Auth] getSession rejected:', err);
         if (mounted) setLoading(false);
       });
 
     return () => {
-      bootLog('[Auth] provider cleanup');
       mounted = false;
       clearTimeout(failSafe);
       subscription.unsubscribe();

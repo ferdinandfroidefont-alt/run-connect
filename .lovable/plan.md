@@ -1,43 +1,83 @@
 
-## Correction ciblée de l’écran blanc iOS
 
-### Cause identifiée
-Le crash vient de `src/components/Layout.tsx` :
-- un `useEffect` est déclaré **après** des retours conditionnels (`return null`, `return <Navigate />`, `return <ConsentDialog />`)
-- selon l’état (`loading`, `profileLoading`, `user`), React exécute donc un nombre différent de hooks
-- résultat : `Rendered more hooks than during the previous render.` puis écran blanc / fallback d’erreur, surtout visible sur iOS pendant le boot
+## Remplacer "Gérer le club" par une page de gestion complète style iOS Settings
 
-Le build cassé est séparé :
-- `src/lib/onScreenLogCapture.ts` utilise `replaceAll`, non compatible avec la config TS actuelle (`ES2020`)
+### Constat actuel
+Le bouton "Gérer le club" ouvre `ClubInfoDialog` — un dialog plein écran avec des onglets (Membres/Entraînements/Groupes) et un design ancien, incohérent avec le style iOS premium du reste de la page Coaching. Il y a aussi `EditClubDialog` qui s'ouvre en cascade depuis `ClubInfoDialog`. Les deux sont redondants et mal intégrés.
 
-### Plan de correction
-1. **Stabiliser `Layout.tsx`**
-   - remonter le `useEffect` de log “ready” avant tout `return`
-   - garder la logique conditionnelle **dans** l’effet (`if (loading || profileLoading || !user) return`)
-   - vérifier qu’aucun autre hook n’est placé après un `return`
+### Ce qui va changer
 
-2. **Supprimer les effets de bord pendant le render**
-   - déplacer les `bootLog(...)` actuellement exécutés juste avant `return null`, `Navigate` ou `ConsentDialog`
-   - les remplacer par des `useEffect` déclenchés sur changement d’état
-   - objectif : éviter les warnings React du type “update while rendering” et réduire les flashs/blancs au chargement
+**Supprimer** : `ClubInfoDialog` et `EditClubDialog` ne seront plus utilisés depuis la page Coaching. On retire les imports lazy, les states (`showClubInfo`, `showEditClub`, `clubInfoData`), et le rendu `<Suspense>` correspondant dans `Coaching.tsx`.
 
-3. **Corriger l’erreur de build TypeScript**
-   - dans `escapeHtml`, remplacer :
-     - `replaceAll("&", ...)`
-     - `replaceAll("<", ...)`
-     - `replaceAll(">", ...)`
-   - par des `replace(/.../g, ...)`
-   - c’est le correctif le plus sûr, sans élargir toute la cible TS juste pour un helper
+**Créer** : Un nouveau composant `ClubManagementDialog` en plein écran, style iOS Settings (fond `bg-secondary`, sections `IOSListGroup` avec titres en majuscules), qui regroupe tout en un seul écran scrollable :
 
-4. **Validation attendue après correction**
-   - plus d’erreur `Rendered more hooks...`
-   - plus d’écran blanc persistant sur iOS
-   - chargement normal sur web et iOS, avec fallback uniquement si une vraie erreur survient
-   - build TypeScript vert
+### Structure de la nouvelle page
 
-### Fichiers à modifier
-- `src/components/Layout.tsx`
-- `src/lib/onScreenLogCapture.ts`
+```text
+┌─────────────────────────────┐
+│  ← Retour     Gérer le club │
+├─────────────────────────────┤
+│                             │
+│  [Avatar du club]           │
+│  Nom du club                │
+│  Description                │
+│                             │
+│  INFORMATIONS               │
+│  ┌─────────────────────────┐│
+│  │ Nom du club      [Edit] ││
+│  │ Description      [Edit] ││
+│  │ Photo de profil  [Chg]  ││
+│  └─────────────────────────┘│
+│                             │
+│  CODE D'INVITATION          │
+│  ┌─────────────────────────┐│
+│  │ ABC123         [Copier] ││
+│  └─────────────────────────┘│
+│                             │
+│  MEMBRES (12)               │
+│  ┌─────────────────────────┐│
+│  │ Inviter des membres   > ││
+│  │ @alice  Admin  Coach    ││
+│  │ @bob    Membre    [⚙]  ││
+│  │ @charlie Membre   [⚙]  ││
+│  └─────────────────────────┘│
+│                             │
+│  ZONE DANGER                │
+│  ┌─────────────────────────┐│
+│  │ Supprimer le club       ││
+│  └─────────────────────────┘│
+│                             │
+└─────────────────────────────┘
+```
 
-### Détail technique
-Le problème n’est pas “spécifique iOS” au niveau code : iOS l’expose davantage car le cycle de chargement y rend les transitions `loading -> ready` plus sensibles. La vraie racine est la règle React : **les hooks doivent être appelés dans le même ordre à chaque render**.
+### Fonctionnalités intégrées
+
+1. **Modifier nom/description/avatar** — inline, avec sauvegarde directe (reprend la logique d'`EditClubDialog`)
+2. **Code d'invitation** — affiché avec bouton copier (visible uniquement pour le créateur/admin)
+3. **Liste des membres** — avec badges Admin/Coach, actions par membre :
+   - Promouvoir/rétrograder coach (toggle)
+   - Retirer du club (avec confirmation AlertDialog)
+4. **Inviter des membres** — recherche utilisateurs intégrée (dialog léger ou section inline)
+5. **Supprimer le club** — section danger en bas, avec AlertDialog de confirmation
+
+### Détails techniques
+
+**Fichiers créés :**
+- `src/components/coaching/ClubManagementDialog.tsx` — nouveau composant unique (~400 lignes), utilisant `IOSListGroup`, `IOSListItem`, `IosFixedPageHeaderShell`, `CoachingFullscreenHeader`
+
+**Fichiers modifiés :**
+- `src/pages/Coaching.tsx` :
+  - Supprimer les imports lazy de `ClubInfoDialog` et `EditClubDialog`
+  - Supprimer les states `clubInfoData`, `showClubInfo`, `showEditClub`
+  - Supprimer la fonction `openClubManagement` (fetch conversation)
+  - Supprimer le bloc `<Suspense>` avec les deux dialogs
+  - Ajouter un state `showClubManagement` et le nouveau `<ClubManagementDialog>`
+  - Le bouton "Gérer le club" appellera simplement `setShowClubManagement(true)`
+
+**Fichiers NON supprimés** (utilisés ailleurs, depuis Messages/ClubProfileDialog) :
+- `ClubInfoDialog.tsx` — reste en place
+- `EditClubDialog.tsx` — reste en place
+
+### Logique métier reprise
+Toute la logique Supabase (load members, toggle coach, remove member, invite, delete club, upload avatar, update name/description) est copiée depuis `ClubInfoDialog` + `EditClubDialog` et consolidée dans le nouveau composant.
+
