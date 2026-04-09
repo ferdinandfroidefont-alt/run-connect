@@ -121,6 +121,7 @@ export const ElevationProfile3DDialog: React.FC<ElevationProfile3DDialogProps> =
               autoPlay={false}
               routeName={routeName}
               routeStats={computedStats}
+              fullCoordinates={coordinates}
               className="min-h-0 min-w-0 flex-1 basis-0 rounded-none"
             />
           )}

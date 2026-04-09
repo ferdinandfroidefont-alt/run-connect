@@ -38,6 +38,7 @@ import {
   persistMapStyleId,
 } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
+import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { cn } from '@/lib/utils';
@@ -691,14 +692,23 @@ export const RouteCreation = () => {
     if (isEditMode && editRouteDataRef.current && user) {
       const elevStats = await updateElevationAndStats();
       try {
+        const elevationsForEdit = routeElevations.length >= 2 ? routeElevations : (elevStats?.elevations ?? []);
+        const coordsWithElev = elevationsForEdit.length >= 2
+          ? buildCoordinatesWithElevation(allCoordinates, elevationsForEdit)
+          : coordinates;
+        const stats = elevationsForEdit.length >= 2
+          ? computeRouteStats(allCoordinates, elevationsForEdit)
+          : null;
         const { error } = await supabase
           .from('routes')
           .update({
-            coordinates,
+            coordinates: coordsWithElev,
             waypoints: waypointsData,
             total_distance: Math.round(pathLengthMeters(allCoordinates)),
-            total_elevation_gain: elevStats?.elevationGain ?? totalElevationGain,
-            total_elevation_loss: elevStats?.elevationLoss ?? totalElevationLoss,
+            total_elevation_gain: stats?.elevationGain ?? elevStats?.elevationGain ?? totalElevationGain,
+            total_elevation_loss: stats?.elevationLoss ?? elevStats?.elevationLoss ?? totalElevationLoss,
+            min_elevation: stats?.minElevation ?? 0,
+            max_elevation: stats?.maxElevation ?? 0,
           })
           .eq('id', editRouteDataRef.current.id)
           .eq('created_by', user.id);

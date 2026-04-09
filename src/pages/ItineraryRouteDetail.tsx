@@ -201,13 +201,13 @@ export default function ItineraryRouteDetail() {
 
   const handleGpx = async () => {
     if (!route?.coordinates || !Array.isArray(route.coordinates)) return;
-    const trackPoints: GPXTrackPoint[] = route.coordinates
+    let trackPoints: GPXTrackPoint[] = route.coordinates
       .map((coord: any) => {
         if (coord.lat !== undefined && coord.lng !== undefined) {
           return {
             lat: Number(coord.lat),
             lng: Number(coord.lng),
-            elevation: coord.elevation ? Number(coord.elevation) : undefined,
+            elevation: coord.elevation != null ? Number(coord.elevation) : undefined,
           };
         }
         if (Array.isArray(coord) && coord.length >= 2) {
@@ -221,6 +221,26 @@ export default function ItineraryRouteDetail() {
       })
       .filter((p): p is NonNullable<typeof p> => p !== null);
     if (trackPoints.length === 0) return;
+
+    const allElevMissing = trackPoints.every((p) => p.elevation == null || p.elevation === 0);
+    if (allElevMissing && trackPoints.length >= 2) {
+      try {
+        const { fetchElevationsForCoords } = await import('@/lib/openElevation');
+        const { densifyMapCoords, resamplePathEvenlyMapCoords, pathLengthMeters } = await import('@/lib/geoUtils');
+        const path = trackPoints.map((p) => ({ lat: p.lat, lng: p.lng }));
+        const dens = densifyMapCoords(path, 14);
+        const lenM = pathLengthMeters(dens);
+        const samples = Math.min(4000, Math.max(80, Math.ceil(lenM / 12)));
+        const sampled = resamplePathEvenlyMapCoords(dens, samples);
+        const elevs = await fetchElevationsForCoords(sampled);
+        if (elevs.length === sampled.length && elevs.some((e) => e !== 0)) {
+          trackPoints = sampled.map((c, i) => ({ lat: c.lat, lng: c.lng, elevation: elevs[i]! }));
+        }
+      } catch (e) {
+        console.warn('[GPX] Elevation re-fetch failed:', e);
+      }
+    }
+
     const gpx = exportToGPX(route.name, trackPoints, route.description || undefined);
     await shareOrDownloadGPX(route.name, gpx, { title: route.name });
   };

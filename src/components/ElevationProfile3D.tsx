@@ -14,6 +14,7 @@ interface ElevationProfile3DProps {
     elevationGain: number;
     elevationLoss: number;
   } | null;
+  fullCoordinates?: { lat: number; lng: number }[];
 }
 
 export const ElevationProfile3D: FC<ElevationProfile3DProps> = ({
@@ -24,6 +25,7 @@ export const ElevationProfile3D: FC<ElevationProfile3DProps> = ({
   className,
   routeName,
   routeStats,
+  fullCoordinates,
 }) => (
   <RouteFlyover3D
     coordinates={coordinates}
@@ -33,5 +35,6 @@ export const ElevationProfile3D: FC<ElevationProfile3DProps> = ({
     className={className}
     routeName={routeName}
     routeStats={routeStats}
+    fullCoordinates={fullCoordinates}
   />
 );

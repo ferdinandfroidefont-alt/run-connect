@@ -20,6 +20,8 @@ type RouteFlyover3DProps = {
     elevationGain: number;
     elevationLoss: number;
   } | null;
+  /** Full-resolution coordinates for the base route line (avoids curve clipping). */
+  fullCoordinates?: MapCoord[];
 };
 
 const BASE_SOURCE_ID = 'route-flyover-base';
@@ -38,6 +40,7 @@ export function RouteFlyover3D({
   className,
   routeName,
   routeStats,
+  fullCoordinates,
 }: RouteFlyover3DProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
@@ -57,13 +60,18 @@ export function RouteFlyover3D({
     autoPlay,
   });
 
+  const baseLineCoordinates = useMemo(
+    () => (fullCoordinates && fullCoordinates.length >= 2 ? fullCoordinates : playback.flyoverCoordinates),
+    [fullCoordinates, playback.flyoverCoordinates],
+  );
+
   const endpoints = useMemo(() => {
-    if (playback.flyoverCoordinates.length < 2) return [];
+    if (baseLineCoordinates.length < 2) return [];
     return [
-      playback.flyoverCoordinates[0]!,
-      playback.flyoverCoordinates[playback.flyoverCoordinates.length - 1]!,
+      baseLineCoordinates[0]!,
+      baseLineCoordinates[baseLineCoordinates.length - 1]!,
     ];
-  }, [playback.flyoverCoordinates]);
+  }, [baseLineCoordinates]);
 
   const initialFrame = useMemo(
     () => playback.frame,
@@ -133,7 +141,7 @@ export function RouteFlyover3D({
       try {
       m.addSource(BASE_SOURCE_ID, {
         type: 'geojson',
-        data: lineStringFeature(playback.flyoverCoordinates),
+        data: lineStringFeature(baseLineCoordinates),
       });
       m.addSource(TRAVELED_SOURCE_ID, {
         type: 'geojson',
@@ -315,7 +323,7 @@ export function RouteFlyover3D({
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [endpoints, initialFrame, playback.flyoverCoordinates]);
+  }, [baseLineCoordinates, endpoints, initialFrame, playback.flyoverCoordinates]);
 
   useEffect(() => {
     const map = mapRef.current;
