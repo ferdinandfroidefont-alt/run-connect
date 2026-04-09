@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, endOfWeek, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -16,15 +16,9 @@ import { WeeklyTrackingDialog } from "@/components/coaching/WeeklyTrackingDialog
 import { ClubGroupsManagerDialog } from "@/components/coaching/ClubGroupsManagerDialog";
 import { CoachingDraftsList } from "@/components/coaching/CoachingDraftsList";
 import { AthleteWeeklyView } from "@/components/coaching/AthleteWeeklyView";
+import { ClubManagementDialog } from "@/components/coaching/ClubManagementDialog";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { ActivityIcon, getActivityLabel } from "@/lib/activityIcons";
-
-const ClubInfoDialog = lazy(() =>
-  import("@/components/ClubInfoDialog").then((m) => ({ default: m.ClubInfoDialog }))
-);
-const EditClubDialog = lazy(() =>
-  import("@/components/EditClubDialog").then((m) => ({ default: m.EditClubDialog }))
-);
 
 type ClubOption = {
   id: string;
