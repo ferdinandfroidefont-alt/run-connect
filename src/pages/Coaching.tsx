@@ -491,7 +491,7 @@ export default function Coaching() {
                       iconBgColor="bg-indigo-500"
                       title="Gérer le club"
                       subtitle="Membres, invitations, paramètres"
-                      onClick={() => void openClubManagement()}
+                      onClick={() => setShowClubManagement(true)}
                       showChevron={true}
                       showSeparator={false}
                     />
@@ -592,46 +592,20 @@ export default function Coaching() {
             </>
           )}
 
-          <Suspense fallback={null}>
-            {clubInfoData && user && (
-              <>
-                <ClubInfoDialog
-                  isOpen={showClubInfo}
-                  onClose={() => {
-                    setShowClubInfo(false);
-                    void refreshCurrentClub();
-                  }}
-                  conversationId={clubInfoData.id}
-                  groupName={clubInfoData.group_name || ""}
-                  groupDescription={clubInfoData.group_description}
-                  groupAvatarUrl={clubInfoData.group_avatar_url}
-                  isAdmin={clubInfoData.created_by === user.id}
-                  clubCode={clubInfoData.club_code || ""}
-                  createdBy={clubInfoData.created_by || ""}
-                  onEditGroup={() => {
-                    setShowClubInfo(false);
-                    setTimeout(() => setShowEditClub(true), 100);
-                  }}
-                />
-                <EditClubDialog
-                  isOpen={showEditClub}
-                  onClose={() => setShowEditClub(false)}
-                  conversationId={clubInfoData.id}
-                  groupName={clubInfoData.group_name || ""}
-                  groupDescription={clubInfoData.group_description}
-                  groupAvatarUrl={clubInfoData.group_avatar_url}
-                  clubCode={clubInfoData.club_code || ""}
-                  createdBy={clubInfoData.created_by || ""}
-                  isAdmin={clubInfoData.created_by === user.id}
-                  onGroupUpdated={() => {
-                    void loadClubs();
-                    void refreshCurrentClub();
-                    setShowEditClub(false);
-                  }}
-                />
-              </>
-            )}
-          </Suspense>
+          {selectedClubId && (
+            <ClubManagementDialog
+              isOpen={showClubManagement}
+              onClose={() => {
+                setShowClubManagement(false);
+                void refreshCurrentClub();
+              }}
+              clubId={selectedClubId}
+              onClubUpdated={() => {
+                void loadClubs();
+                void refreshCurrentClub();
+              }}
+            />
+          )}
         </>
       )}
     </div>
