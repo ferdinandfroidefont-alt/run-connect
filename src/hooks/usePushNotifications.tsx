@@ -7,7 +7,7 @@ import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
 import { isReallyNative, getPlatform as getNativePlatform } from '@/lib/nativeDetection';
 import { androidPermissions } from '@/lib/androidPermissions';
-import { requireSupabaseUrl } from '@/lib/supabaseEnv';
+import { requireSupabaseAnonKey, requireSupabaseUrl } from '@/lib/supabaseEnv';
 
 const log = (...args: any[]) => console.log('[PUSH]', ...args);
 const logError = (...args: any[]) => console.error('[PUSH]', ...args);
@@ -639,38 +639,38 @@ export const usePushNotifications = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+      const traceId = String(Date.now());
+      const response = await fetch(`${requireSupabaseUrl()}/functions/v1/send-push-notification`, {
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
+          apikey: requireSupabaseAnonKey(),
           Authorization: `Bearer ${session.access_token}`,
           "x-push-debug": debugMode ? "1" : "0",
-          "x-push-trace-id": String(Date.now()),
+          "x-push-trace-id": traceId,
         },
-        body: {
+        body: JSON.stringify({
           user_id: user.id,
           title: 'Test RunConnect',
           body: 'Vos notifications fonctionnent parfaitement ! 🎉',
           type: 'test',
           data: { test: true }
-        }
+        }),
       });
 
-      if (error) {
-        console.error("[PUSH][TEST] invoke error", error);
-        let serverMessage = "";
-        try {
-          const ctx = (error as any)?.context;
-          const txt = await ctx?.response?.text?.();
-          if (txt) {
-            const parsed = JSON.parse(txt);
-            serverMessage = parsed?.message || parsed?.error || parsed?.code || "";
-            console.error("[PUSH][TEST] server payload", parsed);
-          }
-        } catch {
-          /* ignore parse errors */
-        }
+      const raw = await response.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = { message: raw };
+      }
+      if (!response.ok) {
+        const msg = data?.message || data?.error || data?.code || `HTTP ${response.status}`;
+        console.error("[PUSH][TEST] non-2xx", { status: response.status, traceId, data });
         toast({
           title: "Erreur push",
-          description: serverMessage || (error as any)?.message || "Erreur serveur – Vérifiez les logs Supabase",
+          description: `${msg}${data?.trace_id ? ` (trace: ${data.trace_id})` : ""}`,
           variant: "destructive",
         });
         return;

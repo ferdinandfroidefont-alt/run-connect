@@ -144,10 +144,15 @@ export const useSendNotification = () => {
           console.error('❌ Impossible de parser l\'erreur:', parseError);
           setLastPushError({
             stage: 'PARSE_ERROR',
-            reason: error.message,
+            reason: (error as any)?.message || 'Edge Function returned non-2xx status',
             token: null
           });
         }
+        setLastPushError((prev) => prev ?? {
+          stage: 'EDGE_NON_2XX',
+          reason: (error as any)?.message || 'Edge Function returned non-2xx status',
+          token: null,
+        });
         
         return false;
       }
