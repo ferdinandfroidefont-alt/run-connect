@@ -14,7 +14,8 @@ export function samplePathCoords(points: MapCoord[], max: number): MapCoord[] {
 
 const OPEN_METEO_BATCH = 100;
 const OPEN_ELEVATION_BATCH = 80;
-const OPEN_METEO_INTER_CHUNK_MS = 250;
+/** Requêtes Open-Meteo en parallèle par vague (évite ~250 ms × N lots = plusieurs secondes d’attente). */
+const OPEN_METEO_WAVE_CONCURRENCY = 6;
 const OPEN_METEO_CHUNK_RETRIES = 3;
 const OPEN_METEO_CHUNK_TIMEOUT_MS = 45_000;
 const OPEN_ELEVATION_CHUNK_TIMEOUT_MS = 35_000;
@@ -122,16 +123,28 @@ export async function fetchElevationsForCoords(sampled: MapCoord[]): Promise<num
   const results = new Array<number | null>(sampled.length).fill(null);
   const failedChunkRanges: Array<[number, number]> = [];
 
-  // Pass 1: Open-Meteo (primary)
+  // Pass 1: Open-Meteo (primary) — lots en parallèle par vagues au lieu d’un délai fixe entre chaque lot
+  const chunkStarts: number[] = [];
   for (let i = 0; i < sampled.length; i += OPEN_METEO_BATCH) {
-    if (i > 0) await sleep(OPEN_METEO_INTER_CHUNK_MS);
-    const end = Math.min(i + OPEN_METEO_BATCH, sampled.length);
-    const chunk = sampled.slice(i, end);
-    const elevs = await fetchOpenMeteoChunk(chunk);
-    if (elevs) {
-      for (let j = 0; j < elevs.length; j++) results[i + j] = elevs[j]!;
-    } else {
-      failedChunkRanges.push([i, end]);
+    chunkStarts.push(i);
+  }
+  const waveSize = Math.min(OPEN_METEO_WAVE_CONCURRENCY, Math.max(1, chunkStarts.length));
+  for (let w = 0; w < chunkStarts.length; w += waveSize) {
+    const wave = chunkStarts.slice(w, w + waveSize);
+    const settled = await Promise.all(
+      wave.map(async (start) => {
+        const end = Math.min(start + OPEN_METEO_BATCH, sampled.length);
+        const chunk = sampled.slice(start, end);
+        const elevs = await fetchOpenMeteoChunk(chunk);
+        return { start, end, elevs } as const;
+      }),
+    );
+    for (const { start, end, elevs } of settled) {
+      if (elevs) {
+        for (let j = 0; j < elevs.length; j++) results[start + j] = elevs[j]!;
+      } else {
+        failedChunkRanges.push([start, end]);
+      }
     }
   }
 
