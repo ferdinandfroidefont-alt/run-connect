@@ -438,7 +438,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   };
 
   const filteredCategories = settingsCategories.filter(cat => 
-    matchesSearch(cat.title) || matchesSearch(cat.description) || matchesSearch(cat.keywords)
+    matchesSearch(cat.title) || matchesSearch(cat.description) || cat.searchItems.some(item => item.toLowerCase().includes((searchQuery || '').toLowerCase().trim()))
   );
 
   const handleNavigateToSubscription = () => {
