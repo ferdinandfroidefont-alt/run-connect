@@ -343,8 +343,9 @@ jobs:
         run: |
           set -o pipefail
           cd ios/App
-
-          xcodebuild archive \
+          # -quiet : évite les millions de lignes (commandes clang modules) que GitHub tronque ;
+          # warnings/erreurs restent visibles ; détail complet dans l’artefact xcodebuild-log.
+          xcodebuild -quiet archive \
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
@@ -467,7 +468,7 @@ jobs:
           </plist>
           EOF
 
-          xcodebuild -exportArchive \
+          xcodebuild -quiet -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
