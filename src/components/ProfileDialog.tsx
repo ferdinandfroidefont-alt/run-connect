@@ -595,7 +595,7 @@ export const ProfileDialog = ({
                       variant="secondary"
                       size="sm"
                       className="flex-1 rounded-lg text-[13px] font-semibold"
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => { onOpenChange(false); navigate('/profile/edit'); }}
                     >
                       Modifier le profil
                     </Button>
