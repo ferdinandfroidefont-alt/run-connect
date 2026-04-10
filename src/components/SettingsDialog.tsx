@@ -80,7 +80,7 @@ const settingsCategories = [
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
     color: 'bg-[#8E8E93]',
-    keywords: 'langue language thème theme apparence mode sombre clair dark light système system unité unités unit distance km mi kilomètre miles mot de passe password sécurité email réinitialiser carte map appui long pression',
+    searchItems: ['Langue', 'Thème', 'Mode sombre', 'Mode clair', 'Système', 'Apparence', 'Unités de distance', 'Kilomètres', 'Miles', 'Mot de passe', 'Carte', 'Appui long'],
   },
   {
     id: 'notifications' as const,
@@ -88,7 +88,7 @@ const settingsCategories = [
     description: 'Push, alertes, préférences',
     icon: Bell,
     color: 'bg-[#FF3B30]',
-    keywords: 'push alertes notifications message session ami invitation présence demande suivi coaching club entraînement',
+    searchItems: ['Push', 'Alertes', 'Messages', 'Sessions', 'Amis', 'Invitation club', 'Présence confirmée', 'Demande de suivi', 'Coaching'],
   },
   {
     id: 'connections' as const,
@@ -96,7 +96,7 @@ const settingsCategories = [
     description: 'Strava, Instagram, partage',
     icon: Link2,
     color: 'bg-[#007AFF]',
-    keywords: 'strava instagram connexion connecter lier synchronisation import activités réseau social partage',
+    searchItems: ['Strava', 'Instagram', 'Synchronisation', 'Import activités', 'Réseau social', 'Partage'],
   },
   {
     id: 'privacy' as const,
@@ -104,7 +104,7 @@ const settingsCategories = [
     description: 'RGPD, sécurité, données',
     icon: Shield,
     color: 'bg-[#34C759]',
-    keywords: 'rgpd sécurité données privé confidentialité profil privé visibilité bloquer signaler compte supprimer effacer export télécharger',
+    searchItems: ['RGPD', 'Sécurité', 'Données', 'Profil privé', 'Visibilité', 'Bloquer', 'Signaler', 'Supprimer compte', 'Export données'],
   },
   {
     id: 'support' as const,
@@ -112,9 +112,16 @@ const settingsCategories = [
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
     color: 'bg-[#FF9500]',
-    keywords: 'aide support contact tutoriel guide faq bug problème signaler feedback version à propos mentions légales conditions politique déconnexion supprimer compte',
+    searchItems: ['Contact', 'Tutoriel', 'Guide', 'FAQ', 'Bug', 'Signaler problème', 'Feedback', 'Version', 'À propos', 'Mentions légales', 'Conditions', 'Déconnexion', 'Supprimer compte'],
   },
 ];
+
+/** Returns matching searchItems for a category given a query */
+function getMatchingItems(items: string[], query: string): string[] {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase().trim();
+  return items.filter(item => item.toLowerCase().includes(q));
+}
 
 export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
   const { user } = useAuth();
