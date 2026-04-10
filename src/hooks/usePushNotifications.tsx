@@ -640,15 +640,19 @@ export const usePushNotifications = () => {
       }
 
       const traceId = String(Date.now());
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        apikey: requireSupabaseAnonKey(),
+        Authorization: `Bearer ${session.access_token}`,
+        "x-push-trace-id": traceId,
+      };
+      if (debugMode) {
+        headers["x-push-debug"] = "1";
+      }
+
       const response = await fetch(`${requireSupabaseUrl()}/functions/v1/send-push-notification`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: requireSupabaseAnonKey(),
-          Authorization: `Bearer ${session.access_token}`,
-          "x-push-debug": debugMode ? "1" : "0",
-          "x-push-trace-id": traceId,
-        },
+        headers,
         body: JSON.stringify({
           user_id: user.id,
           title: 'Test RunConnect',
