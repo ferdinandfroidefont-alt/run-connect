@@ -17,6 +17,48 @@ interface NotificationPayload {
   type?: string;
 }
 
+type JsonRecord = Record<string, unknown>;
+
+function withStack(err: unknown): JsonRecord {
+  if (err instanceof Error) {
+    return { name: err.name, message: err.message, stack: err.stack ?? null };
+  }
+  return { message: String(err) };
+}
+
+function jsonResponse(
+  corsHeaders: Record<string, string>,
+  status: number,
+  body: JsonRecord,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function fail(
+  corsHeaders: Record<string, string>,
+  status: number,
+  code: string,
+  message: string,
+  extras: JsonRecord = {},
+): Response {
+  return jsonResponse(corsHeaders, status, {
+    success: false,
+    code,
+    message,
+    ...extras,
+  });
+}
+
+function ok(
+  corsHeaders: Record<string, string>,
+  body: JsonRecord,
+): Response {
+  return jsonResponse(corsHeaders, 200, { success: true, ...body });
+}
+
 /** Comparaison constante du secret interne (mitigation timing attacks). */
 function timingSafeEqualString(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -268,76 +310,130 @@ async function authenticatePushRequest(
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
+  const traceId = req.headers.get("x-push-trace-id") ?? crypto.randomUUID();
+  const debugMode = req.headers.get("x-push-debug") === "1";
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    logStructured("send-push", "entry_http", { trace_id: traceId, method: req.method, debug_mode: debugMode });
+    const missingEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "FIREBASE_SERVICE_ACCOUNT_JSON"].filter(
+      (k) => !Deno.env.get(k),
+    );
+    if (missingEnv.length > 0) {
+      logStructured("send-push", "env_missing", { trace_id: traceId, keys: missingEnv.join(",") });
+      return fail(corsHeaders, 500, "env_var_missing", "Variables d'environnement manquantes", {
+        trace_id: traceId,
+        missing_keys: missingEnv,
+      });
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    logStructured("send-push", "auth_start", { trace_id: traceId });
     const auth = await authenticatePushRequest(req, supabaseClient, corsHeaders);
     if (!auth.ok) {
       return auth.response;
     }
+    logStructured("send-push", "auth_ok", {
+      trace_id: traceId,
+      mode: auth.mode,
+      caller_user: auth.mode === "user" ? logUserRef(auth.callerUserId) : "internal",
+    });
 
-    const { user_id, title, body, data, type }: NotificationPayload = await req.json();
-
-    if (!user_id || !title || !body) {
-      return new Response(
-        JSON.stringify({ error: 'user_id, title et body sont requis' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    let payload: NotificationPayload;
+    try {
+      payload = await req.json();
+    } catch (e) {
+      console.error(`[send-push] invalid_payload_json trace_id=${traceId}`, withStack(e));
+      return fail(corsHeaders, 400, "invalid_payload", "Body JSON invalide", { trace_id: traceId });
     }
-
-    logStructured("send-push", "entry", {
+    const { user_id, title, body, data, type } = payload;
+    logStructured("send-push", "payload_received", {
+      trace_id: traceId,
       target_user: logUserRef(user_id),
       type: type ?? "default",
-      title_len: typeof title === "string" ? title.length : 0,
+      title_len: typeof title === "string" ? title.length : -1,
+      body_len: typeof body === "string" ? body.length : -1,
     });
+
+    if (!user_id || !title || !body) {
+      return fail(corsHeaders, 400, "invalid_payload", "user_id, title et body sont requis", {
+        trace_id: traceId,
+      });
+    }
 
     // 1. Firebase service account
     const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
     if (!saJson) {
-      return new Response(
-        JSON.stringify({ error: 'Firebase service account not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return fail(corsHeaders, 500, "env_var_missing", "Firebase service account non configuré", {
+        trace_id: traceId,
+        missing_keys: ["FIREBASE_SERVICE_ACCOUNT_JSON"],
+      });
     }
 
     let serviceAccount: FirebaseServiceAccount;
     try {
       serviceAccount = JSON.parse(saJson);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid Firebase service account JSON' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } catch (e) {
+      console.error(`[send-push] service_account_json_invalid trace_id=${traceId}`, withStack(e));
+      return fail(corsHeaders, 500, "env_var_missing", "FIREBASE_SERVICE_ACCOUNT_JSON invalide", {
+        trace_id: traceId,
+      });
+    }
+    const missingSaFields = ["project_id", "client_email", "private_key"].filter(
+      (k) => !(serviceAccount as unknown as Record<string, unknown>)[k],
+    );
+    if (missingSaFields.length > 0) {
+      return fail(corsHeaders, 500, "env_var_missing", "Service account Firebase incomplet", {
+        trace_id: traceId,
+        missing_keys: missingSaFields,
+      });
     }
 
     // 2. Get profile
-    const { data: profile, error: profileError } = await supabaseClient
+    logStructured("send-push", "db_fetch_target_user", { trace_id: traceId, target_user: logUserRef(user_id) });
+    const { data: profileRows, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('push_token, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
+      .select('push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
       .eq('user_id', user_id)
-      .single();
+      .order('push_token_updated_at', { ascending: false, nullsFirst: false })
+      .limit(5);
 
-    if (profileError || !profile) {
-      return new Response(
-        JSON.stringify({ error: 'Utilisateur non trouvé', stage: 'PROFILE_FETCH', push_token: null }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (profileError) {
+      console.error(`[send-push] profile_fetch_error trace_id=${traceId}`, {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+      });
+      return fail(corsHeaders, 500, "database_error", "Erreur lecture profil cible", {
+        trace_id: traceId,
+        stage: "PROFILE_FETCH",
+        db_code: profileError.code ?? null,
+      });
     }
+    if (!profileRows || profileRows.length === 0) {
+      return fail(corsHeaders, 404, "database_error", "Utilisateur cible non trouvé", {
+        trace_id: traceId,
+        stage: "PROFILE_FETCH",
+      });
+    }
+    const profile = profileRows[0]!;
 
     // 3. Check global notifications
     if (!profile.notifications_enabled) {
-      return new Response(
-        JSON.stringify({ message: 'Notifications désactivées', skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return ok(corsHeaders, {
+        skipped: true,
+        stage: "PREFS_DISABLED",
+        code: "notifications_disabled",
+        message: "Notifications globales désactivées pour l'utilisateur cible",
+        trace_id: traceId,
+      });
     }
 
     // 4. Check per-type preferences
@@ -353,18 +449,37 @@ serve(async (req) => {
     };
 
     if (type && type in prefMap && prefMap[type] === false) {
-      return new Response(
-        JSON.stringify({ message: `Notifications ${type} désactivées`, skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return ok(corsHeaders, {
+        skipped: true,
+        stage: "PREFS_DISABLED",
+        code: "notifications_disabled",
+        message: `Notifications ${type} désactivées`,
+        trace_id: traceId,
+      });
     }
 
     // 5. Check push token
-    if (!profile.push_token || profile.push_token.length < 50) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'Pas de token FCM', web_only: true, stage: 'TOKEN_CHECK', push_token: null }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const tokenCandidates = profileRows
+      .map((row) => ({
+        token: typeof row.push_token === "string" ? row.push_token.trim() : "",
+        platform: (row as { push_token_platform?: string | null }).push_token_platform ?? null,
+        updatedAt: (row as { push_token_updated_at?: string | null }).push_token_updated_at ?? null,
+      }))
+      .filter((row) => row.token.length >= 50);
+    const iosCandidates = tokenCandidates.filter((c) => c.platform === "ios");
+    const selectedToken = (iosCandidates[0] ?? tokenCandidates[0])?.token ?? null;
+    logStructured("send-push", "token_selection", {
+      trace_id: traceId,
+      candidates: tokenCandidates.length,
+      ios_candidates: iosCandidates.length,
+      selected_len: selectedToken?.length ?? 0,
+    });
+    if (!selectedToken) {
+      return fail(corsHeaders, 404, "missing_token", "Aucun token push valide pour l'utilisateur cible", {
+        trace_id: traceId,
+        stage: "TOKEN_CHECK",
+        candidates: tokenCandidates.length,
+      });
     }
 
     // 6. Create notification record
@@ -382,10 +497,11 @@ serve(async (req) => {
         .single();
 
       if (notifError) {
-        return new Response(
-          JSON.stringify({ error: 'Erreur création notification', stage: 'DB_INSERT', push_token: profile.push_token }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return fail(corsHeaders, 500, "database_error", "Erreur création notification", {
+          trace_id: traceId,
+          stage: "DB_INSERT",
+          db_code: notifError.code ?? null,
+        });
       }
       notificationId = notifData?.id ?? null;
     } else {
@@ -436,10 +552,17 @@ serve(async (req) => {
     // 8. Send FCM
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      logStructured("send-push", "fcm_dispatch", { title_len: finalTitle.length, channel: "runconnect_channel" });
+      logStructured("send-push", "provider_dispatch", {
+        trace_id: traceId,
+        provider: "fcm",
+        project_id: serviceAccount.project_id,
+        title_len: finalTitle.length,
+        body_len: finalBody.length,
+        data_keys: data && typeof data === "object" ? Object.keys(data).length : 0,
+      });
 
       const fcmResult = await sendFCMNotification(
-        accessToken, serviceAccount.project_id, profile.push_token, finalTitle, finalBody, fcmData
+        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData
       );
 
       // Handle UNREGISTERED token
@@ -450,7 +573,7 @@ serve(async (req) => {
         if (notificationId) {
           try {
             await supabaseClient.from('notification_logs').insert({
-              notification_id: notificationId, user_id, push_token: profile.push_token,
+              notification_id: notificationId, user_id, push_token: selectedToken,
               fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
             });
           } catch (logErr) {
@@ -458,10 +581,11 @@ serve(async (req) => {
           }
         }
 
-        return new Response(
-          JSON.stringify({ success: false, message: 'Token invalide, nettoyé', token_cleaned: true, stage: 'FCM_UNREGISTERED', push_token: profile.push_token }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return fail(corsHeaders, 502, "push_provider_failed", "Token push invalide (UNREGISTERED), nettoyé", {
+          trace_id: traceId,
+          stage: "FCM_UNREGISTERED",
+          token_cleaned: true,
+        });
       }
 
       const fcmSuccess = typeof fcmResult === 'boolean' ? fcmResult : false;
@@ -470,7 +594,7 @@ serve(async (req) => {
       if (notificationId) {
         try {
           await supabaseClient.from('notification_logs').insert({
-            notification_id: notificationId, user_id, push_token: profile.push_token,
+            notification_id: notificationId, user_id, push_token: selectedToken,
             fcm_success: fcmSuccess, fcm_error: fcmSuccess ? null : 'FCM send failed',
             fcm_response: { type, title: finalTitle }
           });
@@ -479,20 +603,27 @@ serve(async (req) => {
         }
       }
 
-      return new Response(
-        JSON.stringify({
-          success: true, fcm_sent: fcmSuccess, type, stage: fcmSuccess ? 'FCM_SEND' : 'FCM_FAILED',
-          reason: fcmSuccess ? 'OK' : 'FCM send failed', push_token: profile.push_token
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!fcmSuccess) {
+        return fail(corsHeaders, 502, "push_provider_failed", "Le provider push a refusé la notification", {
+          trace_id: traceId,
+          stage: "FCM_FAILED",
+        });
+      }
+      return ok(corsHeaders, {
+        fcm_sent: true,
+        type,
+        stage: "FCM_SEND",
+        reason: "OK",
+        trace_id: traceId,
+      });
     } catch (fcmError) {
+      console.error(`[send-push] fcm_handler_exception trace_id=${traceId}`, withStack(fcmError));
       logException("send-push-fcm-handler", fcmError);
 
       if (notificationId) {
         try {
           await supabaseClient.from('notification_logs').insert({
-            notification_id: notificationId, user_id, push_token: profile.push_token,
+            notification_id: notificationId, user_id, push_token: selectedToken,
             fcm_success: false, fcm_error: "exception", fcm_response: { type: type ?? "unknown" }
           });
         } catch (logErr) {
@@ -500,17 +631,20 @@ serve(async (req) => {
         }
       }
 
-      return new Response(
-        JSON.stringify({ success: true, fcm_sent: false, fcm_error: "exception", stage: 'FCM_EXCEPTION', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return fail(corsHeaders, 500, "push_provider_failed", "Exception lors de l'appel au provider push", {
+        trace_id: traceId,
+        stage: "FCM_EXCEPTION",
+        debug: debugMode ? { error: withStack(fcmError) } : undefined,
+      });
     }
 
   } catch (error) {
+    console.error(`[send-push] general_exception trace_id=${traceId}`, withStack(error));
     logException("send-push-general", error);
-    return new Response(
-      JSON.stringify({ error: 'Erreur serveur interne', stage: 'GENERAL_ERROR' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return fail(corsHeaders, 500, "database_error", "Erreur serveur interne", {
+      trace_id: traceId,
+      stage: "GENERAL_ERROR",
+      debug: debugMode ? { error: withStack(error) } : undefined,
+    });
   }
 });

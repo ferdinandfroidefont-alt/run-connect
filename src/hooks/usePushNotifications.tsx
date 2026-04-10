@@ -632,7 +632,11 @@ export const usePushNotifications = () => {
       }
 
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "x-push-debug": "1",
+          "x-push-trace-id": String(Date.now()),
+        },
         body: {
           user_id: user.id,
           title: 'Test RunConnect',
@@ -643,7 +647,24 @@ export const usePushNotifications = () => {
       });
 
       if (error) {
-        toast({ title: "Erreur serveur", description: "Vérifiez les logs Supabase", variant: "destructive" });
+        console.error("[PUSH][TEST] invoke error", error);
+        let serverMessage = "";
+        try {
+          const ctx = (error as any)?.context;
+          const txt = await ctx?.response?.text?.();
+          if (txt) {
+            const parsed = JSON.parse(txt);
+            serverMessage = parsed?.message || parsed?.error || parsed?.code || "";
+            console.error("[PUSH][TEST] server payload", parsed);
+          }
+        } catch {
+          /* ignore parse errors */
+        }
+        toast({
+          title: "Erreur push",
+          description: serverMessage || (error as any)?.message || "Erreur serveur – Vérifiez les logs Supabase",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -653,8 +674,9 @@ export const usePushNotifications = () => {
         toast({ title: "Token invalide nettoyé", description: "Redémarrez l'app pour régénérer le token push", variant: "destructive" });
       } else {
         const stage = data?.stage || 'unknown';
-        const reason = data?.reason || '';
-        toast({ title: "Notification créée", description: `Non envoyée en push (${stage}: ${reason})`, variant: "destructive" });
+        const reason = data?.message || data?.reason || data?.code || '';
+        console.warn("[PUSH][TEST] non-fcm response", data);
+        toast({ title: "Notification non envoyée", description: `${reason} (${stage})`, variant: "destructive" });
       }
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });
