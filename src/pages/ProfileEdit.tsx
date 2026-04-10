@@ -107,7 +107,7 @@ export default function ProfileEdit() {
       if (isNative) {
         const result = await selectFromGallery();
         if (result) {
-          setOriginalImageSrc(result as string);
+          setOriginalImageSrc(result as unknown as string);
           setShowCropEditor(true);
         }
       } else {
