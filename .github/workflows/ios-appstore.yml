@@ -113,8 +113,11 @@ jobs:
 
       - name: 🔥 Configure AppDelegate for Firebase + APNs + FCM WebView bridge
         run: |
-          if grep -q 'RUNCONNECT_IOS_PUSH_COMPLETE' ios/App/App/AppDelegate.swift; then
-            echo "ℹ️ AppDelegate already includes FCM → WebView bridge (RUNCONNECT_IOS_PUSH_COMPLETE) — skipping configure_ios_push.sh"
+          if grep -q 'RUNCONNECT_IOS_PUSH_COMPLETE' ios/App/App/AppDelegate.swift \
+            || (grep -q 'injectFCMTokenIntoWebView' ios/App/App/AppDelegate.swift \
+                && grep -q 'keyWindowRootVC()' ios/App/App/AppDelegate.swift \
+                && grep -q 'didRegisterForRemoteNotificationsWithDeviceToken' ios/App/App/AppDelegate.swift); then
+            echo "ℹ️ AppDelegate already includes FCM → WebView bridge — skipping configure_ios_push.sh"
           else
             bash scripts/configure_ios_push.sh
           fi

@@ -6,6 +6,8 @@ import FirebaseMessaging
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
+    // RUNCONNECT_IOS_PUSH_COMPLETE
+    // Marker used by CI to avoid re-injecting push bridge code.
 
     var window: UIWindow?
 
