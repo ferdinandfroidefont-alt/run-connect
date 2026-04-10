@@ -584,6 +584,15 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           </div>
                           <div className="min-w-0 flex-1 text-left">
                             <span className="truncate text-[17px]">{category.title}</span>
+                            {searchQuery.trim() && (() => {
+                              const matches = getMatchingItems(category.searchItems, searchQuery);
+                              if (matches.length === 0) return null;
+                              return (
+                                <p className="truncate text-[13px] text-muted-foreground">
+                                  {matches.join(', ')}
+                                </p>
+                              );
+                            })()}
                           </div>
                           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                         </button>
