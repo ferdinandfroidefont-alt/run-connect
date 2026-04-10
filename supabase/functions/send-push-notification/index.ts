@@ -402,12 +402,27 @@ serve(async (req) => {
 
     // 2. Get profile
     logStructured("send-push", "db_fetch_target_user", { trace_id: traceId, target_user: logUserRef(user_id) });
-    const { data: profileRows, error: profileError } = await supabaseClient
+    let { data: profileRows, error: profileError } = await supabaseClient
       .from('profiles')
       .select('push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
       .eq('user_id', user_id)
       .order('push_token_updated_at', { ascending: false, nullsFirst: false })
       .limit(5);
+
+    // Fallback de compatibilité schéma : certaines prod peuvent ne pas avoir push_token_platform / push_token_updated_at
+    if (profileError) {
+      logStructured("send-push", "db_fetch_target_user_fallback", {
+        trace_id: traceId,
+        reason: "primary_select_failed",
+      });
+      const fallback = await supabaseClient
+        .from('profiles')
+        .select('push_token, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
+        .eq('user_id', user_id)
+        .limit(1);
+      profileRows = fallback.data as typeof profileRows;
+      profileError = fallback.error;
+    }
 
     if (profileError) {
       console.error(`[send-push] profile_fetch_error trace_id=${traceId}`, {
