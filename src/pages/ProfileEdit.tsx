@@ -12,7 +12,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "@/components/coaching/CoachingFullscreenHeader";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
-import { Camera, User, Loader2, Globe, Lock } from "lucide-react";
+import { Camera, User, Loader2, Globe, Lock, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SPORT_OPTIONS = [
@@ -68,6 +68,7 @@ export default function ProfileEdit() {
   const [avatarPreview, setAvatarPreview] = useState("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState("");
+  const [showAvatarSheet, setShowAvatarSheet] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -101,7 +102,8 @@ export default function ProfileEdit() {
     fetchProfile();
   }, [user]);
 
-  const handleAvatarPick = async () => {
+  const handlePickFromGallery = async () => {
+    setShowAvatarSheet(false);
     try {
       const isNative = !!(window as any).Capacitor;
       if (isNative) {
@@ -133,6 +135,56 @@ export default function ProfileEdit() {
     } catch {
       // cancelled
     }
+  };
+
+  const handleTakePhoto = async () => {
+    setShowAvatarSheet(false);
+    try {
+      const isNative = !!(window as any).Capacitor;
+      if (isNative) {
+        const { Camera: CapCamera, CameraResultType, CameraSource } = await import("@capacitor/camera");
+        const photo = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+        });
+        if (photo.dataUrl) {
+          setOriginalImageSrc(photo.dataUrl);
+          setShowCropEditor(true);
+        }
+      } else {
+        // Sur web, ouvrir la caméra via input capture
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.setAttribute("capture", "environment");
+        input.onchange = (e: any) => {
+          const file = e.target?.files?.[0];
+          if (!file) return;
+          if (file.size > 5 * 1024 * 1024) {
+            toast({ title: "Erreur", description: "Max 5 MB", variant: "destructive" });
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            setOriginalImageSrc(ev.target?.result as string);
+            setShowCropEditor(true);
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+    } catch {
+      // cancelled
+    }
+  };
+
+  const handleDeleteAvatar = () => {
+    setShowAvatarSheet(false);
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setFormData({ ...formData, avatar_url: "" });
   };
 
   const handleCropComplete = (blob: Blob) => {
@@ -232,7 +284,7 @@ export default function ProfileEdit() {
       >
         {/* Avatar */}
         <div className="flex flex-col items-center py-4">
-          <button type="button" onClick={handleAvatarPick} className="group relative">
+          <button type="button" onClick={() => setShowAvatarSheet(true)} className="group relative">
             <Avatar className="h-24 w-24 border-2 border-border">
               <AvatarImage src={displayAvatar} />
               <AvatarFallback className="bg-muted text-muted-foreground">
@@ -245,7 +297,7 @@ export default function ProfileEdit() {
           </button>
           <button
             type="button"
-            onClick={handleAvatarPick}
+            onClick={() => setShowAvatarSheet(true)}
             className="mt-2 text-[15px] font-medium text-primary"
           >
             Changer la photo
@@ -397,6 +449,60 @@ export default function ProfileEdit() {
         imageSrc={originalImageSrc}
         onCropComplete={handleCropComplete}
       />
+
+      {/* iOS Action Sheet — Photo */}
+      {showAvatarSheet && (
+        <div
+          className="pointer-events-auto fixed inset-0 z-[250] flex items-end justify-center"
+          role="presentation"
+          onClick={() => setShowAvatarSheet(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" aria-hidden />
+          <div
+            className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Actions photo de profil"
+          >
+            <div className="mb-2 overflow-hidden rounded-2xl bg-card shadow-lg">
+              {displayAvatar && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAvatar}
+                  className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                >
+                  <Trash2 className="h-5 w-5 shrink-0" />
+                  Supprimer la photo
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleTakePhoto}
+                className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+              >
+                <Camera className="h-5 w-5 shrink-0 text-muted-foreground" />
+                Prendre une photo
+              </button>
+              <button
+                type="button"
+                onClick={handlePickFromGallery}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+              >
+                <ImageIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
+                Choisir une photo existante
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAvatarSheet(false)}
+              className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary shadow-lg transition-colors active:bg-secondary/60"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
