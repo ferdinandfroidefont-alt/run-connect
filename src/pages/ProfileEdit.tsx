@@ -49,7 +49,7 @@ export default function ProfileEdit() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { selectFromGallery, loading: cameraLoading } = useCamera();
+  const { selectFromGallery } = useCamera();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,7 +107,7 @@ export default function ProfileEdit() {
       if (isNative) {
         const result = await selectFromGallery();
         if (result) {
-          setOriginalImageSrc(result);
+          setOriginalImageSrc(result as string);
           setShowCropEditor(true);
         }
       } else {
@@ -216,7 +216,7 @@ export default function ProfileEdit() {
           <CoachingFullscreenHeader
             title="Modifier le profil"
             onBack={() => navigate(-1)}
-            rightContent={
+            rightSlot={
               <button
                 type="button"
                 onClick={handleSave}
@@ -255,46 +255,50 @@ export default function ProfileEdit() {
         {/* Informations */}
         <IOSListGroup header="INFORMATIONS">
           <IOSListItem
-            label="Pseudo"
-            trailing={
+            title="Pseudo"
+            showChevron={false}
+            rightElement={
               <Input
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0"
+                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
                 placeholder="pseudo"
               />
             }
           />
           <IOSListItem
-            label="Nom d'affichage"
-            trailing={
+            title="Nom d'affichage"
+            showChevron={false}
+            rightElement={
               <Input
                 value={formData.display_name}
                 onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0"
+                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
                 placeholder="Nom"
               />
             }
           />
           <IOSListItem
-            label="Âge"
-            trailing={
+            title="Âge"
+            showChevron={false}
+            rightElement={
               <Input
                 type="number"
                 value={formData.age ?? ""}
                 onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || null })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 w-20"
+                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 w-20 h-auto"
                 placeholder="—"
               />
             }
           />
           <IOSListItem
-            label="Téléphone"
-            trailing={
+            title="Téléphone"
+            showChevron={false}
+            rightElement={
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0"
+                className="border-0 bg-transparent p-0 text-right text-[17px] text-foreground shadow-none focus-visible:ring-0 h-auto"
                 placeholder="06 12 34 56 78"
               />
             }
@@ -303,7 +307,7 @@ export default function ProfileEdit() {
 
         {/* Bio */}
         <IOSListGroup header="BIO">
-          <div className="px-4 py-3">
+          <div className="bg-card px-4 py-3">
             <Textarea
               value={formData.bio}
               onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
@@ -320,8 +324,9 @@ export default function ProfileEdit() {
         {/* Sport & Pays */}
         <IOSListGroup header="PRÉFÉRENCES">
           <IOSListItem
-            label="Sport favori"
-            trailing={
+            title="Sport favori"
+            showChevron={false}
+            rightElement={
               <select
                 value={formData.favorite_sport}
                 onChange={(e) => setFormData({ ...formData, favorite_sport: e.target.value })}
@@ -334,8 +339,9 @@ export default function ProfileEdit() {
             }
           />
           <IOSListItem
-            label="Pays"
-            trailing={
+            title="Pays"
+            showChevron={false}
+            rightElement={
               <select
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -353,16 +359,17 @@ export default function ProfileEdit() {
         <IOSListGroup header="CONFIDENTIALITÉ">
           <IOSListItem
             icon={formData.is_private ? Lock : Globe}
-            iconClassName={formData.is_private ? "bg-orange-500" : "bg-green-500"}
-            label="Compte privé"
-            trailing={
+            iconBgColor={formData.is_private ? "bg-orange-500" : "bg-green-500"}
+            title="Compte privé"
+            showChevron={false}
+            rightElement={
               <Switch
                 checked={formData.is_private}
                 onCheckedChange={(v) => setFormData({ ...formData, is_private: v })}
               />
             }
           />
-          <div className="px-4 pb-3 pt-0">
+          <div className="bg-card px-4 pb-3 pt-0">
             <p className="text-[13px] text-muted-foreground leading-tight">
               {formData.is_private
                 ? "Seuls vos abonnés approuvés peuvent voir vos séances et activités."
@@ -371,7 +378,7 @@ export default function ProfileEdit() {
           </div>
         </IOSListGroup>
 
-        {/* Save button (bottom) */}
+        {/* Save button */}
         <div className="px-4 pb-8 pt-4">
           <Button
             onClick={handleSave}
