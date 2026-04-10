@@ -80,6 +80,7 @@ const settingsCategories = [
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
     color: 'bg-[#8E8E93]',
+    keywords: 'langue language thème theme apparence mode sombre clair dark light système system unité unités unit distance km mi kilomètre miles mot de passe password sécurité email réinitialiser carte map appui long pression',
   },
   {
     id: 'notifications' as const,
@@ -87,6 +88,7 @@ const settingsCategories = [
     description: 'Push, alertes, préférences',
     icon: Bell,
     color: 'bg-[#FF3B30]',
+    keywords: 'push alertes notifications message session ami invitation présence demande suivi coaching club entraînement',
   },
   {
     id: 'connections' as const,
@@ -94,6 +96,7 @@ const settingsCategories = [
     description: 'Strava, Instagram, partage',
     icon: Link2,
     color: 'bg-[#007AFF]',
+    keywords: 'strava instagram connexion connecter lier synchronisation import activités réseau social partage',
   },
   {
     id: 'privacy' as const,
@@ -101,6 +104,7 @@ const settingsCategories = [
     description: 'RGPD, sécurité, données',
     icon: Shield,
     color: 'bg-[#34C759]',
+    keywords: 'rgpd sécurité données privé confidentialité profil privé visibilité bloquer signaler compte supprimer effacer export télécharger',
   },
   {
     id: 'support' as const,
@@ -108,6 +112,7 @@ const settingsCategories = [
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
     color: 'bg-[#FF9500]',
+    keywords: 'aide support contact tutoriel guide faq bug problème signaler feedback version à propos mentions légales conditions politique déconnexion supprimer compte',
   },
 ];
 
@@ -426,7 +431,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   };
 
   const filteredCategories = settingsCategories.filter(cat => 
-    matchesSearch(cat.title) || matchesSearch(cat.description)
+    matchesSearch(cat.title) || matchesSearch(cat.description) || matchesSearch(cat.keywords)
   );
 
   const handleNavigateToSubscription = () => {
