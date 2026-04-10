@@ -588,6 +588,14 @@ export const usePushNotifications = () => {
     }
 
     try {
+      const debugMode = typeof window !== "undefined" && localStorage.getItem("push_debug_mode") === "1";
+      if (debugMode) {
+        console.log("[PUSH][TEST][DEBUG] starting test", {
+          userId: user.id,
+          pushDebug,
+          permissionStatus,
+        });
+      }
       log('[TEST] Fetching token for user:', user.id);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -634,7 +642,7 @@ export const usePushNotifications = () => {
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
-          "x-push-debug": "1",
+          "x-push-debug": debugMode ? "1" : "0",
           "x-push-trace-id": String(Date.now()),
         },
         body: {
@@ -681,7 +689,7 @@ export const usePushNotifications = () => {
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });
     }
-  }, [user, toast, token, detectPlatform, saveTokenViaEdgeFunction]);
+  }, [user, toast, token, detectPlatform, saveTokenViaEdgeFunction, pushDebug, permissionStatus]);
 
   // ─── useEffect #1: INIT ──────────────────────────────────
 

@@ -174,6 +174,7 @@ async function sendFCMNotification(
   title: string,
   body: string,
   data?: any,
+  debugMode: boolean = false,
   retryCount: number = 0,
   maxRetries: number = 3
 ): Promise<boolean | { unregistered: boolean; token: string }> {
@@ -209,6 +210,9 @@ async function sendFCMNotification(
     });
 
     const responseData = await response.json();
+    if (debugMode) {
+      console.log(`[send-push] provider_response status=${response.status} body=${JSON.stringify(responseData)}`);
+    }
 
     if (!response.ok) {
       console.error(
@@ -227,7 +231,7 @@ async function sendFCMNotification(
         const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
         logStructured("send-push", "fcm_retry", { delay_ms: delay, attempt: retryCount + 1, max: maxRetries });
         await new Promise(r => setTimeout(r, delay));
-        return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
+        return sendFCMNotification(accessToken, projectId, token, title, body, data, debugMode, retryCount + 1, maxRetries);
       }
 
       return false;
@@ -240,7 +244,7 @@ async function sendFCMNotification(
     if (retryCount < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       await new Promise(r => setTimeout(r, delay));
-      return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
+      return sendFCMNotification(accessToken, projectId, token, title, body, data, debugMode, retryCount + 1, maxRetries);
     }
     return false;
   }
@@ -562,7 +566,7 @@ serve(async (req) => {
       });
 
       const fcmResult = await sendFCMNotification(
-        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData
+        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData, debugMode
       );
 
       // Handle UNREGISTERED token
