@@ -1011,6 +1011,55 @@ html, body {
     box-shadow: 0 -2px 14px rgb(0 0 0 / 0.12) !important;
   }
 
+  /* Carte accueil : header + rail codés bg-white / dark: — sans classe .dark le bandeau restait blanc (icônes blanches invisibles). */
+  html[data-visual="deep-blue"] .home-map-page-header {
+    background-color: #0b1f3a !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-page-header::after {
+    background-color: #0b1f3a !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation {
+    background-color: #102a4a !important;
+    border-color: rgb(255 255 255 / 0.14) !important;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation svg {
+    color: #fff !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-header-notif-fallback {
+    background-color: #102a4a !important;
+    border-color: rgb(255 255 255 / 0.14) !important;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-header-icon-btn {
+    background-color: #102a4a !important;
+    border-color: rgb(255 255 255 / 0.14) !important;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-control-rail {
+    background-color: #102a4a !important;
+    border-color: rgb(255 255 255 / 0.14) !important;
+    box-shadow:
+      0 10px 32px rgb(0 0 0 / 0.22),
+      0 2px 10px rgb(0 0 0 / 0.12) !important;
+  }
+
+  html[data-visual="deep-blue"] .home-map-place-suggestions {
+    background-color: rgb(16 42 74 / 0.98) !important;
+    border-color: rgb(255 255 255 / 0.12) !important;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06),
+      0 20px 48px rgb(0 0 0 / 0.35) !important;
+    backdrop-filter: blur(16px) saturate(1.05);
+    -webkit-backdrop-filter: blur(16px) saturate(1.05);
+  }
+
   html[data-visual="deep-blue"] .home-map-search-glass {
     background: rgb(16 42 74 / 0.92);
     border: 1px solid rgb(255 255 255 / 0.12);

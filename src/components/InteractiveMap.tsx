@@ -1838,7 +1838,7 @@ export const InteractiveMap = ({
           */}
           <header
             className={cn(
-              "pointer-events-auto relative shrink-0 bg-white dark:bg-black",
+              "home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
@@ -1885,12 +1885,12 @@ export const InteractiveMap = ({
                   </div>
                 )}
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
                     <Suspense
                       fallback={
                         <div
-                          className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
                           aria-hidden
                         />
                       }
@@ -1901,7 +1901,7 @@ export const InteractiveMap = ({
                   <button
                     type="button"
                     className={cn(
-                      "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
+                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
                       "border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
                       "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
                       "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -1972,7 +1972,7 @@ export const InteractiveMap = ({
                     role="listbox"
                     aria-label="Suggestions de lieux"
                     className={cn(
-                      "absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
+                      "home-map-place-suggestions absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
                       "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:ring-[#1f1f1f] dark:backdrop-blur-none",
                       "[-webkit-overflow-scrolling:touch]"
                     )}
@@ -2315,7 +2315,7 @@ export const InteractiveMap = ({
       >
         <div
           className={cn(
-            "pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
+            "home-map-control-rail pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
             "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
             "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
           )}
