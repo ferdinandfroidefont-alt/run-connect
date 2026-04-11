@@ -58,6 +58,7 @@ const SessionTracking = lazy(() => import("./pages/SessionTracking"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const StoryCreate = lazy(() => import("./pages/StoryCreate"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -145,6 +146,7 @@ const App = () => {
         import("./pages/SessionTracking"),
         import("./pages/AuthCallback"),
         import("./pages/StoryCreate"),
+        import("./pages/StoryDeleteConfirm"),
       ]);
     };
 
@@ -347,6 +349,7 @@ const App = () => {
                   <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
+                  <Route path="/stories/:storyId/delete" element={<PageTransition><PageSuspense><StoryDeleteConfirm /></PageSuspense></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />
                   <Route path="/donation-canceled" element={<PageTransition><PageSuspense><DonationCanceled /></PageSuspense></PageTransition>} />

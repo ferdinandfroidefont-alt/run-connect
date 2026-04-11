@@ -1,30 +1,30 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Heart, MoreHorizontal, Eye, Trash2, Share2, MessageCircle, ExternalLink } from "lucide-react";
+import {
+  X,
+  Heart,
+  MoreHorizontal,
+  ChevronLeft,
+  Share2,
+  MessageCircle,
+  ExternalLink,
+  Eye,
+  Pin,
+  UserX,
+  Trash2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 import { cn } from "@/lib/utils";
+import { useStoryMediaUrl } from "@/hooks/useStoryMediaUrl";
 
 type StoryItem = {
   id: string;
@@ -32,6 +32,7 @@ type StoryItem = {
   session_id: string | null;
   created_at: string;
   expires_at: string;
+  hide_from?: string[];
   session?: {
     title: string;
     activity_type: string;
@@ -54,15 +55,14 @@ type ViewerItem = {
   } | null;
 };
 
-type LikeRow = {
+type FollowerRow = {
   user_id: string;
-  created_at: string;
-  profile: {
-    username: string | null;
-    display_name: string | null;
-    avatar_url: string | null;
-  } | null;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
 };
+
+type StoryActionMode = null | "menu" | "views" | "highlight" | "hide";
 
 interface SessionStoryDialogProps {
   open: boolean;
@@ -78,6 +78,8 @@ const IMAGE_DURATION_MS = 5500;
 const LONG_PRESS_MS = 380;
 const SWIPE_CLOSE_PX = 110;
 const TAP_EDGE = 0.32;
+/** Laisse la zone des boutons bas hors du layer de gestes (tap / pause). */
+const GESTURE_BOTTOM_CLEAR = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
 
 export function SessionStoryDialog({
   open,
@@ -88,6 +90,7 @@ export function SessionStoryDialog({
   onOpenFeed,
   stackNested = false,
 }: SessionStoryDialogProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [index, setIndex] = useState(0);
@@ -101,10 +104,15 @@ export function SessionStoryDialog({
   const [likesCount, setLikesCount] = useState(0);
   const [likedByMe, setLikedByMe] = useState(false);
   const [replyText, setReplyText] = useState("");
-  const [actionsOpen, setActionsOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [actionMode, setActionMode] = useState<StoryActionMode>(null);
+  const [highlightTitle, setHighlightTitle] = useState("À la une");
+  const [followers, setFollowers] = useState<FollowerRow[]>([]);
+  const [hideSelection, setHideSelection] = useState<Set<string>>(new Set());
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [highlightSaving, setHighlightSaving] = useState(false);
+  const [hideSaving, setHideSaving] = useState(false);
+
   const [viewers, setViewers] = useState<ViewerItem[]>([]);
-  const [likers, setLikers] = useState<LikeRow[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,6 +122,7 @@ export function SessionStoryDialog({
 
   const current = stories[index];
   const isOwnStory = !!current && current.author_id === viewerUserId;
+  const resolvedMediaUrl = useStoryMediaUrl(current?.media?.media_url ?? null);
 
   const goNext = useCallback(() => {
     setIndex((i) => {
@@ -134,13 +143,16 @@ export function SessionStoryDialog({
     void (async () => {
       let query = (supabase as any)
         .from("session_stories")
-        .select("id, author_id, session_id, created_at, expires_at");
+        .select("id, author_id, session_id, created_at, expires_at, hide_from");
       if (storyId) {
         query = query.eq("id", storyId);
       } else {
         query = query.eq("author_id", authorId).gt("expires_at", new Date().toISOString());
       }
-      const { data } = await query.order("created_at", { ascending: true });
+      const { data, error } = await query.order("created_at", { ascending: true });
+      if (error) {
+        console.warn("[SessionStoryDialog] session_stories", error);
+      }
 
       const storiesData = (data ?? []) as StoryItem[];
       if (storiesData.length === 0) {
@@ -149,29 +161,43 @@ export function SessionStoryDialog({
       }
 
       const sessionIds = storiesData.map((s) => s.session_id).filter((id): id is string => !!id);
-      const [{ data: sessions }, { data: medias }] = await Promise.all([
+      const storyIds = storiesData.map((s) => s.id);
+
+      const [{ data: sessions }, { data: mediasRaw }] = await Promise.all([
         sessionIds.length
           ? supabase
               .from("sessions")
               .select("id, title, activity_type, location_name, scheduled_at")
               .in("id", sessionIds)
           : Promise.resolve({ data: [] as { id: string; title: string; activity_type: string; location_name: string; scheduled_at: string }[] }),
-        (supabase as any)
-          .from("story_media")
-          .select("story_id, media_url, media_type")
-          .in("story_id", storiesData.map((s) => s.id)),
+        storyIds.length
+          ? ((supabase as any)
+              .from("story_media")
+              .select("story_id, media_url, media_type, created_at")
+              .in("story_id", storyIds)
+              .order("created_at", { ascending: true }) as Promise<{ data: unknown }>)
+          : Promise.resolve({ data: [] }),
       ]);
 
+      const medias = (mediasRaw ?? []) as Array<{
+        story_id: string;
+        media_url: string;
+        media_type: "image" | "video" | "boomerang";
+        created_at?: string;
+      }>;
+
       const byId = new Map((sessions ?? []).map((s) => [s.id, s]));
-      const mediaByStoryId = new Map(
-        ((medias ?? []) as Array<{ story_id: string; media_url: string; media_type: "image" | "video" | "boomerang" }>).map((m) => [
-          m.story_id,
-          { media_url: m.media_url, media_type: m.media_type },
-        ])
-      );
+      const mediaByStoryId = new Map<string, { media_url: string; media_type: "image" | "video" | "boomerang" }>();
+      for (const m of medias) {
+        if (!mediaByStoryId.has(m.story_id)) {
+          mediaByStoryId.set(m.story_id, { media_url: m.media_url, media_type: m.media_type });
+        }
+      }
+
       setStories(
         storiesData.map((s) => ({
           ...s,
+          hide_from: Array.isArray(s.hide_from) ? s.hide_from : [],
           session: s.session_id ? ((byId.get(s.session_id) as StoryItem["session"]) ?? null) : null,
           media: mediaByStoryId.get(s.id) ?? null,
         }))
@@ -220,69 +246,80 @@ export function SessionStoryDialog({
     })();
   }, [open, current?.id, viewerUserId]);
 
-  useEffect(() => {
-    if (!open || !current || !isOwnStory) {
+  const loadViewers = useCallback(async () => {
+    if (!current?.id || !isOwnStory) {
       setViewers([]);
       return;
     }
-    void (async () => {
-      const { data: views } = await (supabase as any)
-        .from("session_story_views")
-        .select("viewer_id, created_at")
-        .eq("story_id", current.id)
-        .order("created_at", { ascending: false });
-      const rows = (views ?? []) as Array<{ viewer_id: string; created_at: string }>;
-      if (rows.length === 0) {
-        setViewers([]);
-        return;
-      }
-      const ids = [...new Set(rows.map((v) => v.viewer_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, username, display_name, avatar_url")
-        .in("user_id", ids);
-      const pMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-      setViewers(
-        rows.map((row) => ({
-          ...row,
-          profile: (pMap.get(row.viewer_id) as ViewerItem["profile"]) ?? null,
-        }))
-      );
-    })();
-  }, [open, current?.id, isOwnStory]);
-
-  const loadLikers = useCallback(async () => {
-    if (!current?.id || !isOwnStory) {
-      setLikers([]);
-      return;
-    }
-    const { data: likes } = await (supabase as any)
-      .from("session_story_likes")
-      .select("user_id, created_at")
+    const { data: views } = await (supabase as any)
+      .from("session_story_views")
+      .select("viewer_id, created_at")
       .eq("story_id", current.id)
       .order("created_at", { ascending: false });
-    const rows = (likes ?? []) as Array<{ user_id: string; created_at: string }>;
+    const rawRows = (views ?? []) as Array<{ viewer_id: string; created_at: string }>;
+    const seen = new Set<string>();
+    const rows = rawRows.filter((v) => {
+      if (seen.has(v.viewer_id)) return false;
+      seen.add(v.viewer_id);
+      return true;
+    });
     if (rows.length === 0) {
-      setLikers([]);
+      setViewers([]);
       return;
     }
-    const ids = [...new Set(rows.map((r) => r.user_id))];
+    const ids = rows.map((v) => v.viewer_id);
     const { data: profiles } = await supabase
       .from("profiles")
       .select("user_id, username, display_name, avatar_url")
       .in("user_id", ids);
     const pMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-    setLikers(
+    setViewers(
       rows.map((row) => ({
         ...row,
-        profile: (pMap.get(row.user_id) as LikeRow["profile"]) ?? null,
+        profile: (pMap.get(row.viewer_id) as ViewerItem["profile"]) ?? null,
       }))
     );
   }, [current?.id, isOwnStory]);
 
   useEffect(() => {
-    if (actionsOpen && isOwnStory) void loadLikers();
-  }, [actionsOpen, isOwnStory, loadLikers]);
+    if (open && actionMode === "views" && isOwnStory) void loadViewers();
+  }, [open, actionMode, isOwnStory, loadViewers]);
+
+  const loadFollowersForHide = useCallback(async () => {
+    if (!current?.author_id || !viewerUserId || current.author_id !== viewerUserId) return;
+    setFollowersLoading(true);
+    try {
+      const { data: follows } = await supabase
+        .from("user_follows")
+        .select("follower_id")
+        .eq("following_id", current.author_id)
+        .eq("status", "accepted");
+      const ids = [...new Set((follows ?? []).map((f: { follower_id: string }) => f.follower_id))];
+      if (ids.length === 0) {
+        setFollowers([]);
+        setHideSelection(new Set(current.hide_from ?? []));
+        return;
+      }
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, username, display_name, avatar_url")
+        .in("user_id", ids);
+      setFollowers((profiles ?? []) as FollowerRow[]);
+      setHideSelection(new Set(current.hide_from ?? []));
+    } catch {
+      setFollowers([]);
+    } finally {
+      setFollowersLoading(false);
+    }
+  }, [current?.author_id, current?.hide_from, viewerUserId]);
+
+  useEffect(() => {
+    if (open && actionMode === "hide" && isOwnStory) void loadFollowersForHide();
+  }, [open, actionMode, isOwnStory, loadFollowersForHide]);
+
+  useEffect(() => {
+    if (actionMode) setIsPaused(true);
+  }, [actionMode]);
 
   const isLinearVideo = current?.media?.media_type === "video";
   const isBoomerang = current?.media?.media_type === "boomerang";
@@ -425,25 +462,8 @@ export function SessionStoryDialog({
     }
     await supabase.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
     setReplyText("");
+    setActionMode(null);
     toast({ title: "Envoye", description: "Reponse envoyee en conversation." });
-  };
-
-  const deleteStory = async () => {
-    if (!current?.id) return;
-    const deletedId = current.id;
-    const idxAtDelete = index;
-    const { error } = await (supabase as any).from("session_stories").delete().eq("id", deletedId);
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-      return;
-    }
-    const nextStories = stories.filter((s) => s.id !== deletedId);
-    setStories(nextStories);
-    setDeleteOpen(false);
-    setActionsOpen(false);
-    if (nextStories.length === 0) onOpenChange(false);
-    else setIndex(Math.min(idxAtDelete, nextStories.length - 1));
-    toast({ title: "Story supprimee" });
   };
 
   const shareStory = async () => {
@@ -470,8 +490,79 @@ export function SessionStoryDialog({
     }
   };
 
+  const addToHighlights = async () => {
+    if (!current?.id || !viewerUserId || !isOwnStory) return;
+    const title = highlightTitle.trim() || "À la une";
+    setHighlightSaving(true);
+    try {
+      const { data: lastRow } = await (supabase as any)
+        .from("profile_story_highlights")
+        .select("position")
+        .eq("owner_id", viewerUserId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const position = typeof lastRow?.position === "number" ? lastRow.position + 1 : 0;
+
+      const { error } = await (supabase as any).from("profile_story_highlights").insert({
+        owner_id: viewerUserId,
+        story_id: current.id,
+        title,
+        position,
+      });
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Déjà à la une", description: "Cette story est déjà dans tes éléments à la une." });
+        } else {
+          throw error;
+        }
+        return;
+      }
+      toast({ title: "Ajouté à la une" });
+      setActionMode(null);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Impossible d’ajouter.", variant: "destructive" });
+    } finally {
+      setHighlightSaving(false);
+    }
+  };
+
+  const saveHideFrom = async () => {
+    if (!current?.id || !viewerUserId || !isOwnStory) return;
+    setHideSaving(true);
+    try {
+      const hide_from = Array.from(hideSelection);
+      const { error } = await (supabase as any)
+        .from("session_stories")
+        .update({ hide_from })
+        .eq("id", current.id)
+        .eq("author_id", viewerUserId);
+      if (error) throw error;
+      setStories((prev) => prev.map((s) => (s.id === current.id ? { ...s, hide_from } : s)));
+      toast({ title: "Visibilité mise à jour" });
+      setActionMode(null);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Mise à jour impossible.", variant: "destructive" });
+    } finally {
+      setHideSaving(false);
+    }
+  };
+
+  const openDeletePage = () => {
+    if (!current?.id) return;
+    const id = current.id;
+    setActionMode(null);
+    onOpenChange(false);
+    navigate(`/stories/${id}/delete`);
+  };
+
+  const closeActionPanel = () => {
+    setActionMode(null);
+    setIsPaused(false);
+  };
+
   const onPointerDownCapture = (e: React.PointerEvent) => {
-    if (actionsOpen || deleteOpen) return;
+    if (actionMode) return;
     pressRef.current = { t: Date.now(), x: e.clientX, y: e.clientY, longFired: false };
     longPressTimer.current = setTimeout(() => {
       setIsPaused(true);
@@ -486,7 +577,7 @@ export function SessionStoryDialog({
     }
     const p = pressRef.current;
     pressRef.current = null;
-    if (!p || actionsOpen) return;
+    if (!p || actionMode) return;
     if (p.longFired) {
       setIsPaused(false);
       return;
@@ -501,25 +592,23 @@ export function SessionStoryDialog({
   };
 
   const onTouchStartSwipe = (e: React.TouchEvent) => {
-    if (actionsOpen) return;
+    if (actionMode) return;
     swipeRef.current = { y0: e.touches[0].clientY };
   };
 
   const onTouchEndSwipe = (e: React.TouchEvent) => {
     const s = swipeRef.current;
     swipeRef.current = null;
-    if (!s || actionsOpen) return;
+    if (!s || actionMode) return;
     const y = e.changedTouches[0].clientY;
     if (y - s.y0 > SWIPE_CLOSE_PX) onOpenChange(false);
   };
 
   const displayName = authorProfile?.display_name?.trim() || authorProfile?.username || "Membre";
 
-  const sheetZ = stackNested ? "z-[160]" : "z-[145]";
-
   useEffect(() => {
     if (!open) {
-      setActionsOpen(false);
+      setActionMode(null);
       setIsPaused(false);
     }
   }, [open]);
@@ -533,6 +622,230 @@ export function SessionStoryDialog({
     }
     return parts.join(" · ");
   }, [current?.session]);
+
+  const portalZ = "z-[220]";
+  const displayUrl = resolvedMediaUrl ?? current?.media?.media_url ?? null;
+
+  const actionsPortal =
+    open &&
+    actionMode &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <div className={cn("fixed inset-0", portalZ)} role="presentation">
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/55"
+          aria-label="Fermer"
+          onClick={closeActionPanel}
+        />
+        <div
+          className={cn(
+            "absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-card p-4 text-foreground shadow-xl",
+            "pb-[max(env(safe-area-inset-bottom),16px)]"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {actionMode === "menu" && (
+            <>
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
+              <p className="mb-3 text-center text-sm font-semibold">Options</p>
+              <div className="flex flex-col gap-1">
+                {isOwnStory && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
+                    onClick={() => {
+                      void loadViewers();
+                      setActionMode("views");
+                    }}
+                  >
+                    <Eye className="h-5 w-5 text-muted-foreground" />
+                    Voir les vues
+                  </button>
+                )}
+                {isOwnStory && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
+                    onClick={() => setActionMode("highlight")}
+                  >
+                    <Pin className="h-5 w-5 text-muted-foreground" />
+                    Ajouter aux éléments à la une
+                  </button>
+                )}
+                {isOwnStory && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
+                    onClick={() => setActionMode("hide")}
+                  >
+                    <UserX className="h-5 w-5 text-muted-foreground" />
+                    Masquer pour quelqu&apos;un
+                  </button>
+                )}
+                {isOwnStory && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] text-destructive active:bg-destructive/10"
+                    onClick={openDeletePage}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    Supprimer la story…
+                  </button>
+                )}
+                {onOpenFeed && current?.session_id && (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
+                    onClick={() => {
+                      closeActionPanel();
+                      onOpenFeed(current.session_id!);
+                    }}
+                  >
+                    <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                    Voir dans le feed
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
+                  onClick={() => void shareStory()}
+                >
+                  <Share2 className="h-5 w-5 text-muted-foreground" />
+                  Partager
+                </button>
+                {!isOwnStory && viewerUserId && (
+                  <div className="mt-2 border-t border-border pt-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">Répondre</p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Message…"
+                        className="flex-1"
+                      />
+                      <Button size="icon" variant="secondary" onClick={() => void sendReplyAsMessage()} disabled={!replyText.trim()}>
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {actionMode === "views" && isOwnStory && (
+            <>
+              <button
+                type="button"
+                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                onClick={() => setActionMode("menu")}
+              >
+                <ChevronLeft className="h-5 w-5" />
+                Retour
+              </button>
+              <p className="mb-2 text-lg font-semibold">Vues ({viewers.length})</p>
+              <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+                {viewers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucune vue pour le moment.</p>
+                ) : (
+                  viewers.map((v) => (
+                    <div key={`${v.viewer_id}-${v.created_at}`} className="flex items-center gap-2 rounded-lg border border-border/60 p-2">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={v.profile?.avatar_url ?? ""} />
+                        <AvatarFallback>{(v.profile?.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{v.profile?.display_name || v.profile?.username || "Membre"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(v.created_at), "d MMM yyyy · HH:mm", { locale: fr })}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {actionMode === "highlight" && isOwnStory && (
+            <>
+              <button
+                type="button"
+                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                onClick={() => setActionMode("menu")}
+              >
+                <ChevronLeft className="h-5 w-5" />
+                Retour
+              </button>
+              <p className="mb-2 text-lg font-semibold">Élément à la une</p>
+              <p className="mb-3 text-sm text-muted-foreground">Titre affiché sur ton profil (section à la une).</p>
+              <Input value={highlightTitle} onChange={(e) => setHighlightTitle(e.target.value)} placeholder="Titre" className="mb-3" />
+              <Button className="w-full" disabled={highlightSaving} onClick={() => void addToHighlights()}>
+                {highlightSaving ? "Ajout…" : "Ajouter"}
+              </Button>
+            </>
+          )}
+
+          {actionMode === "hide" && isOwnStory && (
+            <>
+              <button
+                type="button"
+                className="mb-3 flex items-center gap-2 text-[15px] font-medium text-primary"
+                onClick={() => setActionMode("menu")}
+              >
+                <ChevronLeft className="h-5 w-5" />
+                Retour
+              </button>
+              <p className="mb-2 text-lg font-semibold">Masquer pour…</p>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Les personnes cochées ne verront plus cette story (abonnés uniquement).
+              </p>
+              {followersLoading ? (
+                <p className="text-sm text-muted-foreground">Chargement…</p>
+              ) : followers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucun abonné pour masquer la story.</p>
+              ) : (
+                <div className="mb-4 max-h-[45vh] space-y-1 overflow-y-auto">
+                  {followers.map((f) => {
+                    const checked = hideSelection.has(f.user_id);
+                    return (
+                      <label
+                        key={f.user_id}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 p-2"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            setHideSelection((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(f.user_id)) next.delete(f.user_id);
+                              else next.add(f.user_id);
+                              return next;
+                            });
+                          }}
+                          className="h-4 w-4 rounded"
+                        />
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={f.avatar_url ?? ""} />
+                          <AvatarFallback>{(f.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-medium">{f.display_name || f.username || "Membre"}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              <Button className="w-full" disabled={hideSaving || followersLoading} onClick={() => void saveHideFrom()}>
+                {hideSaving ? "Enregistrement…" : "Enregistrer"}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
 
   return (
     <>
@@ -554,7 +867,6 @@ export function SessionStoryDialog({
             <div className="flex flex-1 items-center justify-center p-6 text-sm text-white/60">Aucune story active.</div>
           ) : (
             <>
-              {/* Progress */}
               <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex gap-0.5 px-2 pt-[max(env(safe-area-inset-top),10px)]">
                 {stories.map((story, i) => (
                   <div key={story.id} className="h-0.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/25">
@@ -568,7 +880,6 @@ export function SessionStoryDialog({
                 ))}
               </div>
 
-              {/* Header */}
               <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex items-center gap-2.5 px-3 pt-[calc(max(env(safe-area-inset-top),10px)+14px)]">
                 <Avatar className="pointer-events-none h-9 w-9 shrink-0 border border-white/20">
                   <AvatarImage src={authorProfile?.avatar_url ?? ""} className="object-cover" />
@@ -593,14 +904,14 @@ export function SessionStoryDialog({
                 </DialogClose>
               </div>
 
-              {/* Media + gestures */}
               <div
                 className="relative min-h-0 flex-1 bg-black"
                 onTouchStart={onTouchStartSwipe}
                 onTouchEnd={onTouchEndSwipe}
               >
                 <div
-                  className="absolute inset-0 z-10"
+                  className="absolute inset-x-0 top-0 z-10"
+                  style={{ bottom: GESTURE_BOTTOM_CLEAR }}
                   onPointerDown={onPointerDownCapture}
                   onPointerUp={endPress}
                   onPointerCancel={() => {
@@ -611,10 +922,10 @@ export function SessionStoryDialog({
                   }}
                 />
 
-                {current.media ? (
+                {current.media && displayUrl ? (
                   current.media.media_type === "image" ? (
                     <img
-                      src={current.media.media_url}
+                      src={displayUrl}
                       alt=""
                       draggable={false}
                       className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
@@ -622,8 +933,8 @@ export function SessionStoryDialog({
                   ) : (
                     <video
                       ref={videoRef}
-                      key={current.id}
-                      src={current.media.media_url}
+                      key={`${current.id}-${displayUrl}`}
+                      src={displayUrl}
                       className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                       playsInline
                       muted
@@ -632,38 +943,45 @@ export function SessionStoryDialog({
                       preload="auto"
                     />
                   )
+                ) : current.media && !displayUrl ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
+                    <div className="h-10 w-10 animate-pulse rounded-full bg-white/10" />
+                  </div>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900 px-6 text-center">
-                    <p className="text-sm font-medium text-white/80">{current.session?.title ?? "Story"}</p>
-                    {metaLine ? <p className="mt-2 text-xs text-white/45">{metaLine}</p> : null}
+                    <p className="text-sm font-medium text-white/80">{current.session?.title ?? "Story sans média"}</p>
+                    <p className="mt-2 text-xs text-white/45">Aucune image ou vidéo sur cette story.</p>
+                    {metaLine ? <p className="mt-2 text-xs text-white/35">{metaLine}</p> : null}
                   </div>
                 )}
 
-                {/* Secondary metadata on top of media (subtle) */}
-                {current.media && metaLine ? (
+                {current.media && displayUrl && metaLine ? (
                   <div className="pointer-events-none absolute bottom-28 left-0 right-0 z-20 px-4 text-center">
-                    <p className="text-[12px] text-white/70 drop-shadow-md line-clamp-2">{metaLine}</p>
+                    <p className="line-clamp-2 text-[12px] text-white/70 drop-shadow-md">{metaLine}</p>
                   </div>
                 ) : null}
               </div>
 
-              {/* Bottom bar */}
               <div
-                className="pointer-events-auto absolute bottom-0 left-0 right-0 z-30 flex items-end justify-between gap-3 bg-gradient-to-t from-black/55 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-10"
+                className="pointer-events-auto absolute bottom-0 left-0 right-0 z-40 flex items-end justify-between gap-3 bg-gradient-to-t from-black/55 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-10"
               >
                 <button
                   type="button"
-                  onClick={() => void toggleLike()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void toggleLike();
+                  }}
                   className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
                   aria-label={likedByMe ? "Retirer le j'aime" : "J'aime"}
                 >
-                  <Heart
-                    className={cn("h-7 w-7", likedByMe ? "fill-red-500 text-red-500" : "text-white")}
-                  />
+                  <Heart className={cn("h-7 w-7", likedByMe ? "fill-red-500 text-red-500" : "text-white")} />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActionsOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActionMode("menu");
+                  }}
                   className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
                   aria-label="Plus d'actions"
                 >
@@ -675,130 +993,7 @@ export function SessionStoryDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Bottom sheet actions (above dialog stacking) */}
-      {open && actionsOpen && current && (
-        <div className={cn("fixed inset-0", sheetZ)} role="presentation">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/55"
-            aria-label="Fermer le menu"
-            onClick={() => setActionsOpen(false)}
-          />
-          <div
-            className={cn(
-              "absolute bottom-0 left-0 right-0 max-h-[78vh] overflow-y-auto rounded-t-2xl bg-card p-4 text-foreground shadow-xl",
-              "pb-[max(env(safe-area-inset-bottom),16px)]"
-            )}
-          >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
-            <p className="mb-3 text-center text-sm font-semibold">Actions</p>
-
-            {isOwnStory && (
-              <div className="mb-4 space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Vues ({viewers.length})</p>
-                <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg border border-border p-2">
-                  {viewers.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Aucune vue pour le moment.</p>
-                  ) : (
-                    viewers.map((v) => (
-                      <div key={`${v.viewer_id}-${v.created_at}`} className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={v.profile?.avatar_url ?? ""} />
-                          <AvatarFallback>{(v.profile?.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{v.profile?.display_name || v.profile?.username || "Membre"}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {isOwnStory && (
-              <div className="mb-4 space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  J&apos;aime ({likesCount})
-                </p>
-                <div className="max-h-36 space-y-2 overflow-y-auto rounded-lg border border-border p-2">
-                  {likers.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Aucun j&apos;aime pour le moment.</p>
-                  ) : (
-                    likers.map((like) => (
-                      <div key={`${like.user_id}-${like.created_at}`} className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={like.profile?.avatar_url ?? ""} />
-                          <AvatarFallback>{(like.profile?.username ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{like.profile?.display_name || like.profile?.username || "Membre"}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {!isOwnStory && viewerUserId && (
-              <div className="mb-4 flex gap-2">
-                <Input
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Repondre en message..."
-                  className="flex-1"
-                />
-                <Button size="icon" variant="secondary" onClick={() => void sendReplyAsMessage()} disabled={!replyText.trim()}>
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-
-            {onOpenFeed && current.session_id && (
-              <Button
-                variant="outline"
-                className="mb-2 w-full gap-2"
-                onClick={() => {
-                  setActionsOpen(false);
-                  onOpenFeed(current.session_id!);
-                }}
-              >
-                <ExternalLink className="h-4 w-4" />
-                Voir dans le feed
-              </Button>
-            )}
-
-            <Button variant="outline" className="mb-2 w-full gap-2" onClick={() => void shareStory()}>
-              <Share2 className="h-4 w-4" />
-              Partager
-            </Button>
-
-            {isOwnStory && (
-              <Button
-                variant="destructive"
-                className="w-full gap-2"
-                onClick={() => {
-                  setActionsOpen(false);
-                  setDeleteOpen(true);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-                Supprimer la story
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="z-[175]" overlayClassName="z-[175]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cette story ?</AlertDialogTitle>
-            <AlertDialogDescription>Elle sera retiree pour tout le monde. Cette action est definitive.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void deleteStory()}>Supprimer</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {actionsPortal}
     </>
   );
 }
