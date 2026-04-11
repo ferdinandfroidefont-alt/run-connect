@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { initAccentFromStorage } from '@/lib/accentColor'
+import { initVisualModeFromStorage } from '@/lib/visualMode'
 
 initAccentFromStorage()
+initVisualModeFromStorage()
 import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
