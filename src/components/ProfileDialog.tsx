@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -46,6 +46,9 @@ interface Profile {
 }
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
+);
+const ReferralDialog = lazy(() =>
+  import("@/components/ReferralDialog").then((m) => ({ default: m.ReferralDialog }))
 );
 
 const SPORT_LABELS: Record<string, string> = {
@@ -85,6 +88,7 @@ export const ProfileDialog = ({
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [showReferralDialog, setShowReferralDialog] = useState(false);
   const [showOwnStory, setShowOwnStory] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
   const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
@@ -779,7 +783,7 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Raccourcis - grille 2x2 */}
+                  {/* Raccourcis — grille 2 colonnes ; 5e tuile centrée (premium → abonnement, déjà premium → parrainage) */}
                   <div className="bg-card border-b border-border px-4 py-3">
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
@@ -787,15 +791,39 @@ export const ProfileDialog = ({
                         { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
                         { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
                         { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
+                        isPremiumUser
+                          ? {
+                              icon: Gift,
+                              label: 'Parrainer quelqu’un',
+                              color: 'text-orange-500',
+                              action: () => setShowReferralDialog(true),
+                              accentTile: 'referral' as const,
+                            }
+                          : {
+                              icon: Crown,
+                              label: 'Devenir premium',
+                              color: 'text-yellow-600',
+                              action: () => {
+                                onOpenChange(false);
+                                navigate('/subscription');
+                              },
+                              accentTile: 'premium' as const,
+                            },
                       ].map((item) => (
                         <button
                           key={item.label}
                           type="button"
                           onClick={item.action}
-                          className="flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary"
+                          className={
+                            item.accentTile === 'premium'
+                              ? 'col-span-2 mx-auto flex w-full max-w-[calc(50%-0.3125rem)] flex-col items-center justify-center gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 transition-colors active:bg-yellow-500/15'
+                              : item.accentTile === 'referral'
+                                ? 'col-span-2 mx-auto flex w-full max-w-[calc(50%-0.3125rem)] flex-col items-center justify-center gap-2 rounded-xl border border-orange-500/35 bg-orange-500/10 p-4 transition-colors active:bg-orange-500/15'
+                                : 'flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary'
+                          }
                         >
-                          <item.icon className={`h-6 w-6 ${item.color}`} />
-                          <span className="text-[13px] font-medium text-foreground">{item.label}</span>
+                          <item.icon className={`h-6 w-6 shrink-0 ${item.color}`} />
+                          <span className="text-center text-[13px] font-medium text-foreground leading-snug">{item.label}</span>
                         </button>
                       ))}
                     </div>
@@ -815,20 +843,6 @@ export const ProfileDialog = ({
                   <Video className="h-4 w-4 shrink-0" />
                   Créer une story
                 </Button>
-                {!isPremiumUser && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-11 w-full gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 text-[15px] font-semibold text-foreground hover:bg-yellow-500/15"
-                    onClick={() => {
-                      onOpenChange(false);
-                      navigate("/subscription");
-                    }}
-                  >
-                    <Crown className="h-4 w-4 shrink-0 text-yellow-600" />
-                    Devenir premium
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -861,6 +875,10 @@ export const ProfileDialog = ({
 
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+
+      <Suspense fallback={null}>
+        <ReferralDialog isOpen={showReferralDialog} onClose={() => setShowReferralDialog(false)} />
+      </Suspense>
 
       {qrData && (
         <QRShareDialog
