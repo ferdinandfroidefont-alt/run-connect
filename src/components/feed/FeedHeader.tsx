@@ -65,7 +65,7 @@ export const FeedHeader = ({
   return (
     <header
       className={cn(
-        "shrink-0 overflow-visible bg-white dark:bg-black",
+        "shrink-0 bg-white dark:bg-black",
         isSheet
           ? cn(sheetFullBleed ? "pt-[var(--safe-area-top)]" : "pt-2")
           : "pt-[var(--safe-area-top)]",
@@ -75,7 +75,7 @@ export const FeedHeader = ({
       <div
         className={cn(
           "relative flex items-center justify-between gap-2 px-4 pb-3",
-          isSheet ? "min-h-[2.75rem] pt-1" : "min-h-[3rem] pt-2",
+          isSheet ? "min-h-[2.75rem] pt-3" : "min-h-[3rem] pt-2",
         )}
       >
         <button
