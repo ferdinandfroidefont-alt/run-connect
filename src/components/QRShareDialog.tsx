@@ -233,6 +233,8 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        /* Au-dessus de Mon profil (z-[116]) et autres dialogs plein écran */
+        stackNested
         closeButtonClassName={isIosPhone ? "right-5 top-5" : undefined}
         className={cn(
           "box-border flex h-full max-h-full min-w-0 flex-col overflow-x-hidden overflow-y-auto rounded-none border-0 bg-gradient-to-br from-background via-background to-primary/5 p-0 sm:max-h-[90vh] sm:rounded-lg sm:border",

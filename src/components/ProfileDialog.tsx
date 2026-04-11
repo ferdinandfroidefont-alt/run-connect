@@ -41,6 +41,7 @@ interface Profile {
   instagram_connected?: boolean;
   instagram_verified_at?: string;
   instagram_username?: string;
+  referral_code?: string | null;
 }
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
@@ -605,12 +606,21 @@ export const ProfileDialog = ({
                       size="sm"
                       className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
                       onClick={() => {
-                        if (!profile?.username) return;
+                        const u = profile?.username?.trim();
+                        if (!u) {
+                          toast({
+                            title: "Pseudo manquant",
+                            description: "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
                         void shareProfile({
-                          username: profile.username,
+                          username: u,
                           displayName: profile.display_name,
                           bio: profile.bio,
                           avatarUrl: profile.avatar_url,
+                          referralCode: profile.referral_code,
                         });
                       }}
                     >
