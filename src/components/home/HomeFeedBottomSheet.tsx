@@ -228,7 +228,7 @@ export function HomeFeedBottomSheet() {
         ) : (
           <>
             <div
-              className="relative flex shrink-0 justify-center bg-transparent pt-2"
+              className="relative flex shrink-0 justify-center bg-background pt-2"
               data-tutorial="home-feed-sheet-handle"
             >
               <button
