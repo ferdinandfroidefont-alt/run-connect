@@ -13,8 +13,11 @@ import {
 // pour éviter toute « zone carré » visible autour du logo.
 export const RUCONNECT_SPLASH_BLUE = '#2E68FF';
 
-/** Icône splash RunConnect (fichier dans `public/brand/`). */
+/** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
+
+/** Écran de chargement initial (visuel complet : logo + titre + baseline). */
+export const RUCONNECT_LOADING_SCREEN_URL = '/brand/runconnect-loading-splash.png';
 
 /** Chrome web (Safari / in-app) pendant le splash */
 export function applyRuconnectSplashWebChrome(): void {

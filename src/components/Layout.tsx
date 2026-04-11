@@ -8,6 +8,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
+import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BLUE } from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -118,23 +119,21 @@ export const Layout = ({ children }: LayoutProps) => {
   if (loading) {
     return (
       <div
-        className="fixed inset-0 z-[99] flex items-center justify-center"
-        style={{ backgroundColor: "#2E68FF" }}
+        className="fixed inset-0 z-[99] flex items-center justify-center px-5"
+        style={{
+          backgroundColor: RUCONNECT_SPLASH_BLUE,
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
-        <div className="flex flex-col items-center gap-3">
-          <img
-            src="/brand/runconnect-splash-icon.png"
-            alt=""
-            draggable={false}
-            className="block w-[clamp(10rem,min(72vw,40dvh),19rem)] select-none object-contain"
-          />
-          <p className="text-center text-lg font-bold tracking-wide text-white">RunConnect</p>
-          <div className="mt-2 flex gap-1.5" aria-hidden>
-            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90 [animation-delay:-0.3s]" />
-            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90 [animation-delay:-0.15s]" />
-            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-white/90" />
-          </div>
-        </div>
+        <img
+          src={RUCONNECT_LOADING_SCREEN_URL}
+          alt=""
+          draggable={false}
+          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
+          width={473}
+          height={1024}
+        />
       </div>
     );
   }
