@@ -62,7 +62,17 @@ type FollowerRow = {
   avatar_url: string | null;
 };
 
-type StoryActionMode = null | "menu" | "views" | "highlight" | "hide";
+type LikeRow = {
+  user_id: string;
+  created_at: string;
+  profile: {
+    username: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
+type StoryActionMode = null | "menu" | "views" | "highlight" | "hide" | "likes";
 
 interface SessionStoryDialogProps {
   open: boolean;
@@ -113,6 +123,7 @@ export function SessionStoryDialog({
   const [hideSaving, setHideSaving] = useState(false);
 
   const [viewers, setViewers] = useState<ViewerItem[]>([]);
+  const [likers, setLikers] = useState<LikeRow[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -285,6 +296,45 @@ export function SessionStoryDialog({
     if (open && actionMode === "views" && isOwnStory) void loadViewers();
   }, [open, actionMode, isOwnStory, loadViewers]);
 
+  const loadLikers = useCallback(async () => {
+    if (!current?.id || !isOwnStory) {
+      setLikers([]);
+      return;
+    }
+    const { data: likes } = await (supabase as any)
+      .from("session_story_likes")
+      .select("user_id, created_at")
+      .eq("story_id", current.id)
+      .order("created_at", { ascending: false });
+    const rawRows = (likes ?? []) as Array<{ user_id: string; created_at: string }>;
+    const seen = new Set<string>();
+    const rows = rawRows.filter((r) => {
+      if (seen.has(r.user_id)) return false;
+      seen.add(r.user_id);
+      return true;
+    });
+    if (rows.length === 0) {
+      setLikers([]);
+      return;
+    }
+    const ids = rows.map((r) => r.user_id);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, username, display_name, avatar_url")
+      .in("user_id", ids);
+    const pMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+    setLikers(
+      rows.map((row) => ({
+        ...row,
+        profile: (pMap.get(row.user_id) as LikeRow["profile"]) ?? null,
+      }))
+    );
+  }, [current?.id, isOwnStory]);
+
+  useEffect(() => {
+    if (open && actionMode === "likes" && isOwnStory) void loadLikers();
+  }, [open, actionMode, isOwnStory, loadLikers]);
+
   const loadFollowersForHide = useCallback(async () => {
     if (!current?.author_id || !viewerUserId || current.author_id !== viewerUserId) return;
     setFollowersLoading(true);
@@ -391,6 +441,7 @@ export function SessionStoryDialog({
 
   const toggleLike = async () => {
     if (!current?.id || !viewerUserId) return;
+    if (current.author_id === viewerUserId) return;
     if (likedByMe) {
       await (supabase as any)
         .from("session_story_likes")
@@ -787,6 +838,52 @@ export function SessionStoryDialog({
             </>
           )}
 
+          {actionMode === "likes" && isOwnStory && (
+            <>
+              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
+              <p className="mb-1 text-center text-lg font-semibold">J&apos;aime</p>
+              <p className="mb-4 text-center text-sm text-muted-foreground">
+                {likesCount === 0
+                  ? "Personne n’a encore aimé cette story."
+                  : `${likesCount} j’aime${likesCount > 1 ? "s" : ""}`}
+              </p>
+              <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+                {likers.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Aucun j’aime pour le moment.</p>
+                ) : (
+                  likers.map((like) => (
+                    <div
+                      key={like.user_id}
+                      className="flex items-center gap-3 rounded-xl border border-border/60 bg-secondary/30 px-3 py-2.5"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={like.profile?.avatar_url ?? ""} />
+                        <AvatarFallback className="text-sm">
+                          {(like.profile?.username ?? "U").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-medium text-foreground">
+                          {like.profile?.display_name || like.profile?.username || "Membre"}
+                        </p>
+                        {like.profile?.username && like.profile?.display_name ? (
+                          <p className="truncate text-xs text-muted-foreground">@{like.profile.username}</p>
+                        ) : null}
+                        <p className="text-[11px] text-muted-foreground">
+                          {format(new Date(like.created_at), "d MMM yyyy · HH:mm", { locale: fr })}
+                        </p>
+                      </div>
+                      <Heart className="h-4 w-4 shrink-0 fill-red-500 text-red-500" aria-hidden />
+                    </div>
+                  ))
+                )}
+              </div>
+              <Button variant="outline" className="mt-4 w-full rounded-xl" onClick={closeActionPanel}>
+                Fermer
+              </Button>
+            </>
+          )}
+
           {actionMode === "hide" && isOwnStory && (
             <>
               <button
@@ -965,17 +1062,32 @@ export function SessionStoryDialog({
               <div
                 className="pointer-events-auto absolute bottom-0 left-0 right-0 z-40 flex items-end justify-between gap-3 bg-gradient-to-t from-black/55 to-transparent px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-10"
               >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void toggleLike();
-                  }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
-                  aria-label={likedByMe ? "Retirer le j'aime" : "J'aime"}
-                >
-                  <Heart className={cn("h-7 w-7", likedByMe ? "fill-red-500 text-red-500" : "text-white")} />
-                </button>
+                {isOwnStory ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionMode("likes");
+                    }}
+                    className="flex h-12 min-w-[3.25rem] items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 backdrop-blur-sm transition-transform active:scale-95"
+                    aria-label={`J'aime reçus, ${likesCount}`}
+                  >
+                    <Heart className="h-6 w-6 text-white" strokeWidth={1.75} />
+                    <span className="text-[15px] font-semibold tabular-nums text-white">{likesCount}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void toggleLike();
+                    }}
+                    className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-transform active:scale-95"
+                    aria-label={likedByMe ? "Retirer le j'aime" : "J'aime"}
+                  >
+                    <Heart className={cn("h-7 w-7", likedByMe ? "fill-red-500 text-red-500" : "text-white")} />
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={(e) => {
