@@ -37,7 +37,7 @@ serve(async (req) => {
       `&response_type=code` +
       `&state=${state}`
 
-    console.log('Generated Instagram auth URL for user:', auth.user.id)
+    logStructured("instagram-connect", "auth_url_ready", { user: logUserRef(auth.user.id) });
 
     return new Response(
       JSON.stringify({ authUrl }),

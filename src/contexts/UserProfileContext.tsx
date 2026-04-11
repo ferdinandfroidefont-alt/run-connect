@@ -64,7 +64,6 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
-      console.log(`🔍 [UserProfile] Loading profile for user: ${user.id} (attempt ${retryCount + 1}/3)`);
 
       let data: any = null;
       let fetchError: any = null;
@@ -138,21 +137,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   // Load profile when user changes or session is established
   useEffect(() => {
     if (user && session) {
-      console.log('🔄 [UserProfile] User or session changed, loading profile...');
       setLoading(true);
-      // Small delay to ensure auth is fully established
-      const timer = setTimeout(() => {
-        loadProfile();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    } else {
-      console.log('🔄 [UserProfile] No user/session, clearing profile');
-      console.log('🔄 [UserProfile] No user/session, clearing profile');
-      setUserProfile(null);
-      setLoading(false);
-      setError(null);
+      void loadProfile();
+      return;
     }
+    setUserProfile(null);
+    setLoading(false);
+    setError(null);
   }, [user?.id, session]);
 
   // Subscribe to profile changes

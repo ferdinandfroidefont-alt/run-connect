@@ -114,7 +114,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
             <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider px-4 ios-shell:px-2.5">
               Connexions externes
             </h3>
-            <div className="bg-card overflow-hidden p-4 space-y-4">
+            <div className="space-y-3 overflow-hidden bg-card px-4 py-4 ios-shell:px-2.5">
               <StravaConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
               <InstagramConnect profile={profile} isOwnProfile={true} onProfileUpdate={fetchProfile} />
             </div>

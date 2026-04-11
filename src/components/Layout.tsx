@@ -9,8 +9,6 @@ import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
-import { AppBootFallback } from '@/components/AppBootFallback';
-
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
@@ -116,11 +114,12 @@ export const Layout = ({ children }: LayoutProps) => {
 
   // Hook "ready" — MUST be before any conditional return
 
-  if (loading || profileLoading) {
+  /* Un seul splash bleu (LoadingScreen) : ne pas bloquer sur profileLoading sinon 2e plein écran après restore StatusBar → barre iOS blanche sur fond bleu. */
+  if (loading) {
     return (
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center"
-        style={{ backgroundColor: '#2E68FF' }}
+        style={{ backgroundColor: "#2E68FF" }}
       >
         <div className="flex flex-col items-center gap-3">
           <img
