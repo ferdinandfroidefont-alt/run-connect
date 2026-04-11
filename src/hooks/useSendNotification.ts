@@ -21,9 +21,8 @@ export const useSendNotification = () => {
     type: string,
     data?: any
   ): Promise<boolean> => {
-    const debugMode = typeof window !== "undefined" && localStorage.getItem("push_debug_mode") === "1";
     try {
-      console.log('📱 [PUSH] Envoi notification push:', { userId, title, type, debugMode });
+      console.log('📱 [PUSH] Envoi notification push:', { userId, title, type });
       
       // 🔥 IMPORTANT: Refresh session before calling edge function
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -60,16 +59,10 @@ export const useSendNotification = () => {
         return false;
       }
 
-      const invokeHeaders: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-      };
-      if (debugMode) {
-        invokeHeaders["x-push-debug"] = "1";
-        invokeHeaders["x-push-trace-id"] = String(Date.now());
-      }
-
       const { data: result, error } = await supabase.functions.invoke('send-push-notification', {
-        headers: invokeHeaders,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: {
           user_id: userId,
           title,
@@ -159,9 +152,6 @@ export const useSendNotification = () => {
 
       // Stocker le diagnostic en cas de succès
       if (result) {
-        if (debugMode) {
-          console.log("🧪 [PUSH][DEBUG] send-push-notification response", result);
-        }
         setLastPushError({
           stage: result.stage || 'SUCCESS',
           reason: result.message || result.reason || result.code || 'OK',

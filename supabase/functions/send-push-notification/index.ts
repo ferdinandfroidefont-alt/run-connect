@@ -239,7 +239,6 @@ async function sendFCMNotification(
   title: string,
   body: string,
   data?: any,
-  debugMode: boolean = false,
   retryCount: number = 0,
   maxRetries: number = 3
 ): Promise<boolean | { unregistered: boolean; token: string }> {
@@ -275,9 +274,6 @@ async function sendFCMNotification(
     });
 
     const responseData = await response.json();
-    if (debugMode) {
-      console.log(`[send-push] provider_response status=${response.status} body=${JSON.stringify(responseData)}`);
-    }
 
     if (!response.ok) {
       console.error(
@@ -296,7 +292,7 @@ async function sendFCMNotification(
         const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
         logStructured("send-push", "fcm_retry", { delay_ms: delay, attempt: retryCount + 1, max: maxRetries });
         await new Promise(r => setTimeout(r, delay));
-        return sendFCMNotification(accessToken, projectId, token, title, body, data, debugMode, retryCount + 1, maxRetries);
+        return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
       }
 
       return false;
@@ -309,7 +305,7 @@ async function sendFCMNotification(
     if (retryCount < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       await new Promise(r => setTimeout(r, delay));
-      return sendFCMNotification(accessToken, projectId, token, title, body, data, debugMode, retryCount + 1, maxRetries);
+      return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
     }
     return false;
   }
@@ -380,14 +376,13 @@ async function authenticatePushRequest(
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   const traceId = req.headers.get("x-push-trace-id") ?? crypto.randomUUID();
-  const debugMode = req.headers.get("x-push-debug") === "1";
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    logStructured("send-push", "entry_http", { trace_id: traceId, method: req.method, debug_mode: debugMode });
+    logStructured("send-push", "entry_http", { trace_id: traceId, method: req.method });
     const missingEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "FIREBASE_SERVICE_ACCOUNT_JSON"].filter(
       (k) => !Deno.env.get(k),
     );
@@ -640,7 +635,7 @@ serve(async (req) => {
       });
 
       const fcmResult = await sendFCMNotification(
-        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData, debugMode
+        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData
       );
 
       // Handle UNREGISTERED token
@@ -712,7 +707,6 @@ serve(async (req) => {
       return fail(corsHeaders, 500, "push_provider_failed", "Exception lors de l'appel au provider push", {
         trace_id: traceId,
         stage: "FCM_EXCEPTION",
-        debug: debugMode ? { error: withStack(fcmError) } : undefined,
       });
     }
 
@@ -722,7 +716,6 @@ serve(async (req) => {
     return fail(corsHeaders, 500, "database_error", "Erreur serveur interne", {
       trace_id: traceId,
       stage: "GENERAL_ERROR",
-      debug: debugMode ? { error: withStack(error) } : undefined,
     });
   }
 });

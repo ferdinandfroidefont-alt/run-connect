@@ -588,14 +588,6 @@ export const usePushNotifications = () => {
     }
 
     try {
-      const debugMode = typeof window !== "undefined" && localStorage.getItem("push_debug_mode") === "1";
-      if (debugMode) {
-        console.log("[PUSH][TEST][DEBUG] starting test", {
-          userId: user.id,
-          pushDebug,
-          permissionStatus,
-        });
-      }
       log('[TEST] Fetching token for user:', user.id);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -646,9 +638,6 @@ export const usePushNotifications = () => {
         Authorization: `Bearer ${session.access_token}`,
         "x-push-trace-id": traceId,
       };
-      if (debugMode) {
-        headers["x-push-debug"] = "1";
-      }
 
       const response = await fetch(`${requireSupabaseUrl()}/functions/v1/send-push-notification`, {
         method: "POST",

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, Bug, ArrowLeft, ChevronRight } from "lucide-react";
+import { Bell, BellRing, Smartphone, Users, MessageCircle, Play, CheckCircle, UserCheck, ArrowLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -35,7 +35,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
   const { isRegistered, requestPermissions, isNative, testNotification, checkPermissionStatus, pushDebug, refreshDebugFromBackend, permissionStatus } = usePushNotifications();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pushDebugMode, setPushDebugMode] = useState(false);
   /** Évite double-appui pendant la demande système (sinon sensation de bouton « gelé »). */
   const pushPermissionInFlight = useRef(false);
 
@@ -45,33 +44,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
       refreshDebugFromBackend();
     }
   }, [user]);
-
-  useEffect(() => {
-    try {
-      setPushDebugMode(localStorage.getItem("push_debug_mode") === "1");
-    } catch {
-      setPushDebugMode(false);
-    }
-  }, []);
-
-  const togglePushDebugMode = (enabled: boolean) => {
-    try {
-      localStorage.setItem("push_debug_mode", enabled ? "1" : "0");
-      setPushDebugMode(enabled);
-      toast({
-        title: enabled ? "Mode debug push activé" : "Mode debug push désactivé",
-        description: enabled
-          ? "Les tests push afficheront les logs détaillés (trace_id, payload erreur)."
-          : "Retour au mode normal.",
-      });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e?.message || "Impossible de changer le mode debug push.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const fetchProfile = async () => {
     try {
@@ -264,7 +236,7 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                     className="relative z-10 flex w-full min-w-0 touch-manipulation items-center gap-3 px-4 ios-shell:px-2.5 py-3 active:bg-secondary/50 transition-colors"
                   >
                     <div className="h-[30px] w-[30px] rounded-[7px] bg-[#5856D6] flex items-center justify-center">
-                      <Bug className="h-[18px] w-[18px] text-white" />
+                      <BellRing className="h-[18px] w-[18px] text-white" />
                     </div>
                     <div className="flex-1 text-left">
                       <p className="text-[15px] font-medium">Tester les notifications</p>
@@ -272,22 +244,6 @@ export const SettingsNotifications = ({ onBack }: SettingsNotificationsProps) =>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
                   </button>
-                  <div className="ios-list-row-inset-sep" />
-                  <div className="flex min-w-0 items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5">
-                    <div className="h-[30px] w-[30px] rounded-[7px] bg-slate-600 flex items-center justify-center">
-                      <Bug className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-medium">Mode debug push</p>
-                      <p className="text-[13px] text-muted-foreground">
-                        Logs détaillés backend/frontend pendant les tests
-                      </p>
-                    </div>
-                    <Switch
-                      checked={pushDebugMode}
-                      onCheckedChange={togglePushDebugMode}
-                    />
-                  </div>
                 </>
               )}
             </div>
