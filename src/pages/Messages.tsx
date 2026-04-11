@@ -168,6 +168,8 @@ const Messages = () => {
   const { setHideBottomNav } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
+  const [conversationsHydrated, setConversationsHydrated] = useState(false);
   const [conversationSearch, setConversationSearch] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -492,6 +494,8 @@ const Messages = () => {
     } catch (error: any) {
       console.error('Error loading conversations:', error);
       toast({ title: "Erreur", description: "Impossible de charger les conversations", variant: "destructive" });
+    } finally {
+      setConversationsHydrated(true);
     }
   };
 
@@ -1476,7 +1480,11 @@ const Messages = () => {
 
   useEffect(() => {
     if (user) {
+      setConversationsHydrated(false);
       loadConversations();
+    } else {
+      setConversations([]);
+      setConversationsHydrated(false);
     }
   }, [user]);
 
@@ -1775,10 +1783,11 @@ const Messages = () => {
     }
   }, [searchParams, user, selectedConversation]);
 
-  // Deep link : /messages?conversation=<uuid> (push, partage, recherche club)
+  // Deep link : /messages?conversation=<uuid> (push, partage, profil → DM encore sans message)
   useEffect(() => {
-    if (!conversationParam || !user) return;
-    if (selectedConversation?.id === conversationParam) {
+    if (!conversationParam || !user || !conversationsHydrated) return;
+
+    const clearConversationParam = () =>
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -1787,41 +1796,105 @@ const Messages = () => {
         },
         { replace: true }
       );
+
+    if (selectedConversation?.id === conversationParam) {
+      clearConversationParam();
       return;
     }
-    const conv = conversations.find((c) => c.id === conversationParam);
-    if (!conv) return;
-    setSelectedConversation(conv);
-    void loadMessages(conv.id);
-    void markMessagesAsReadOnOpen(conv.id);
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("conversation");
-        return next;
-      },
-      { replace: true }
-    );
-  }, [conversationParam, user, conversations, selectedConversation?.id, setSearchParams]);
 
-  useEffect(() => {
-    if (!conversationParam || !user) return;
-    if (conversations.length === 0) return;
-    if (conversations.some((c) => c.id === conversationParam)) return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("conversation");
-        return next;
-      },
-      { replace: true }
-    );
-    toast({
-      title: "Conversation introuvable",
-      description: "Elle n’est pas dans ta liste ou tu n’y as pas accès.",
-      variant: "destructive",
-    });
-  }, [conversationParam, conversations, user, setSearchParams]);
+    const conv = conversations.find((c) => c.id === conversationParam);
+    if (conv) {
+      setSelectedConversation(conv);
+      void loadMessages(conv.id);
+      void markMessagesAsReadOnOpen(conv.id);
+      clearConversationParam();
+      return;
+    }
+
+    let cancelled = false;
+    const targetId = conversationParam;
+
+    void (async () => {
+      const { data: row, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("id", targetId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error || !row) {
+        clearConversationParam();
+        toast({
+          title: "Conversation introuvable",
+          description: "Elle n’est pas dans ta liste ou tu n’y as pas accès.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (row.is_group) {
+        clearConversationParam();
+        toast({
+          title: "Conversation introuvable",
+          description: "Elle n’est pas dans ta liste ou tu n’y as pas accès.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (row.participant_1 !== user.id && row.participant_2 !== user.id) {
+        clearConversationParam();
+        toast({
+          title: "Conversation introuvable",
+          description: "Elle n’est pas dans ta liste ou tu n’y as pas accès.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const otherParticipantId =
+        row.participant_1 === user.id ? row.participant_2 : row.participant_1;
+
+      const { data: profileArray } = await supabase.rpc("get_safe_public_profile", {
+        profile_user_id: otherParticipantId,
+      });
+
+      if (cancelled) return;
+
+      const profile =
+        profileArray && profileArray.length > 0
+          ? profileArray[0]
+          : {
+              user_id: otherParticipantId,
+              username: "Utilisateur inconnu",
+              display_name: "Utilisateur inconnu",
+              avatar_url: null,
+            };
+
+      setSelectedConversation({
+        ...row,
+        other_participant: profile,
+        unread_count: 0,
+        last_message: undefined,
+        last_message_date: row.updated_at,
+      });
+      void loadMessages(row.id);
+      void markMessagesAsReadOnOpen(row.id);
+      clearConversationParam();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    conversationParam,
+    user,
+    conversations,
+    conversationsHydrated,
+    selectedConversation?.id,
+    setSearchParams,
+  ]);
 
   useEffect(() => {
     if (tabParam === "feed") {
