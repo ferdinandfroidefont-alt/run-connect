@@ -59,6 +59,71 @@ function ok(
   return jsonResponse(corsHeaders, 200, { success: true, ...body });
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(s: string): boolean {
+  return UUID_RE.test(s.trim());
+}
+
+type ProfileRow = Record<string, unknown>;
+
+/**
+ * PostgREST échoue si une colonne du SELECT n'existe pas en prod.
+ * On essaie du schéma complet au minimal (push_token seul).
+ */
+async function fetchProfileRowsForPush(
+  client: ReturnType<typeof createClient>,
+  userId: string,
+  traceId: string,
+): Promise<{ rows: ProfileRow[]; lastError: { code?: string; message?: string; details?: string } | null }> {
+  const selectAttempts: string[] = [
+    "push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed",
+    "push_token, push_token_platform, push_token_updated_at, notifications_enabled",
+    "push_token, notifications_enabled",
+    "push_token",
+  ];
+
+  let lastError: { code?: string; message?: string; details?: string } | null = null;
+
+  for (let i = 0; i < selectAttempts.length; i++) {
+    const cols = selectAttempts[i]!;
+    const q = client
+      .from("profiles")
+      .select(cols)
+      .eq("user_id", userId)
+      .limit(5);
+
+    const ordered = cols.includes("push_token_updated_at")
+      ? q.order("push_token_updated_at", { ascending: false, nullsFirst: false })
+      : q;
+
+    const { data, error } = await ordered;
+    if (!error) {
+      logStructured("send-push", "db_fetch_profile_ok", {
+        trace_id: traceId,
+        attempt_index: i,
+        cols_len: cols.length,
+        rows: Array.isArray(data) ? data.length : 0,
+      });
+      return { rows: (data ?? []) as ProfileRow[], lastError: null };
+    }
+    lastError = {
+      code: error.code,
+      message: error.message,
+      details: (error as { details?: string }).details,
+    };
+    logStructured("send-push", "db_fetch_profile_retry", {
+      trace_id: traceId,
+      attempt_index: i,
+      db_code: error.code,
+      hint: "column_missing_or_other",
+    });
+  }
+
+  return { rows: [], lastError };
+}
+
 /** Comparaison constante du secret interne (mitigation timing attacks). */
 function timingSafeEqualString(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -371,6 +436,11 @@ serve(async (req) => {
         trace_id: traceId,
       });
     }
+    if (typeof user_id !== "string" || !isUuidLike(user_id)) {
+      return fail(corsHeaders, 400, "invalid_payload", "user_id doit être un UUID valide", {
+        trace_id: traceId,
+      });
+    }
 
     // 1. Firebase service account
     const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
@@ -400,43 +470,27 @@ serve(async (req) => {
       });
     }
 
-    // 2. Get profile
+    // 2. Get profile (SELECT en cascade si colonnes absentes en prod)
     logStructured("send-push", "db_fetch_target_user", { trace_id: traceId, target_user: logUserRef(user_id) });
-    let { data: profileRows, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
-      .eq('user_id', user_id)
-      .order('push_token_updated_at', { ascending: false, nullsFirst: false })
-      .limit(5);
+    const { rows: profileRows, lastError: profileFetchError } = await fetchProfileRowsForPush(
+      supabaseClient,
+      user_id,
+      traceId,
+    );
 
-    // Fallback de compatibilité schéma : certaines prod peuvent ne pas avoir push_token_platform / push_token_updated_at
-    if (profileError) {
-      logStructured("send-push", "db_fetch_target_user_fallback", {
-        trace_id: traceId,
-        reason: "primary_select_failed",
-      });
-      const fallback = await supabaseClient
-        .from('profiles')
-        .select('push_token, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
-        .eq('user_id', user_id)
-        .limit(1);
-      profileRows = fallback.data as typeof profileRows;
-      profileError = fallback.error;
-    }
-
-    if (profileError) {
+    if (profileFetchError) {
       console.error(`[send-push] profile_fetch_error trace_id=${traceId}`, {
-        code: profileError.code,
-        message: profileError.message,
-        details: profileError.details,
+        code: profileFetchError.code,
+        message: profileFetchError.message,
+        details: profileFetchError.details,
       });
       return fail(corsHeaders, 500, "database_error", "Erreur lecture profil cible", {
         trace_id: traceId,
         stage: "PROFILE_FETCH",
-        db_code: profileError.code ?? null,
+        db_code: profileFetchError.code ?? null,
       });
     }
-    if (!profileRows || profileRows.length === 0) {
+    if (profileRows.length === 0) {
       return fail(corsHeaders, 404, "database_error", "Utilisateur cible non trouvé", {
         trace_id: traceId,
         stage: "PROFILE_FETCH",
@@ -444,8 +498,8 @@ serve(async (req) => {
     }
     const profile = profileRows[0]!;
 
-    // 3. Check global notifications
-    if (!profile.notifications_enabled) {
+    // 3. Check global notifications (colonne absente = on n'applique pas la désactivation implicite)
+    if (profile["notifications_enabled"] === false) {
       return ok(corsHeaders, {
         skipped: true,
         stage: "PREFS_DISABLED",
@@ -455,19 +509,19 @@ serve(async (req) => {
       });
     }
 
-    // 4. Check per-type preferences
-    const prefMap: Record<string, boolean | null> = {
-      message: profile.notif_message,
-      boost_nearby: profile.notif_boost_nearby,
-      session_request: profile.notif_session_request,
-      follow_request: profile.notif_follow_request,
-      friend_session: profile.notif_friend_session,
-      club_invitation: profile.notif_club_invitation,
-      session_accepted: profile.notif_session_accepted,
-      presence_confirmed: profile.notif_presence_confirmed,
+    // 4. Check per-type preferences (colonnes absentes = pas de blocage)
+    const prefMap: Record<string, unknown> = {
+      message: profile["notif_message"],
+      boost_nearby: profile["notif_boost_nearby"],
+      session_request: profile["notif_session_request"],
+      follow_request: profile["notif_follow_request"],
+      friend_session: profile["notif_friend_session"],
+      club_invitation: profile["notif_club_invitation"],
+      session_accepted: profile["notif_session_accepted"],
+      presence_confirmed: profile["notif_presence_confirmed"],
     };
 
-    if (type && type in prefMap && prefMap[type] === false) {
+    if (type && Object.prototype.hasOwnProperty.call(prefMap, type) && prefMap[type] === false) {
       return ok(corsHeaders, {
         skipped: true,
         stage: "PREFS_DISABLED",
@@ -479,11 +533,16 @@ serve(async (req) => {
 
     // 5. Check push token
     const tokenCandidates = profileRows
-      .map((row) => ({
-        token: typeof row.push_token === "string" ? row.push_token.trim() : "",
-        platform: (row as { push_token_platform?: string | null }).push_token_platform ?? null,
-        updatedAt: (row as { push_token_updated_at?: string | null }).push_token_updated_at ?? null,
-      }))
+      .map((row) => {
+        const rawToken = row["push_token"];
+        const rawPlat = row["push_token_platform"];
+        const rawUpd = row["push_token_updated_at"];
+        return {
+          token: typeof rawToken === "string" ? rawToken.trim() : "",
+          platform: typeof rawPlat === "string" ? rawPlat : null,
+          updatedAt: typeof rawUpd === "string" ? rawUpd : null,
+        };
+      })
       .filter((row) => row.token.length >= 50);
     const iosCandidates = tokenCandidates.filter((c) => c.platform === "ios");
     const selectedToken = (iosCandidates[0] ?? tokenCandidates[0])?.token ?? null;
