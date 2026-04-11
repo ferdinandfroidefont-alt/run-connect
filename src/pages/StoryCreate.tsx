@@ -224,9 +224,26 @@ export default function StoryCreate() {
     input.click();
   };
 
+  const storyShareErrorMessage = (err: unknown): string => {
+    const raw =
+      err && typeof err === "object" && "message" in err
+        ? String((err as { message?: string }).message ?? "")
+        : String(err ?? "");
+    const lower = raw.toLowerCase();
+    if (lower.includes("bucket") && lower.includes("not found")) {
+      return "Le bucket Storage « story-media » est absent. Applique les migrations Supabase (ou crée ce bucket public dans le tableau de bord).";
+    }
+    if (lower.includes("bucket")) {
+      return "Problème de stockage des stories (bucket). Vérifie la configuration Supabase Storage.";
+    }
+    return raw || "Impossible de partager la story.";
+  };
+
   const onShare = async () => {
     if (!user?.id || !mediaFile) return;
     setSharing(true);
+    let createdStoryId: string | null = null;
+    let uploadedStoragePath: string | null = null;
     try {
       const mediaType = mediaFile.type.startsWith("video/")
         ? (captureMode === "boomerang" ? "boomerang" : "video")
@@ -242,11 +259,13 @@ export default function StoryCreate() {
         .select("id")
         .single();
       if (storyError || !story) throw storyError || new Error("Story creation failed");
+      createdStoryId = story.id as string;
 
       const ext = mediaFile.name.split(".").pop() || (mediaType === "image" ? "jpg" : "mp4");
       const path = `${user.id}/${story.id}-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("story-media").upload(path, mediaFile, { upsert: false });
       if (uploadError) throw uploadError;
+      uploadedStoragePath = path;
 
       const { data: pub } = supabase.storage.from("story-media").getPublicUrl(path);
       const { error: mediaError } = await (supabase as any).from("story_media").insert({
@@ -265,8 +284,18 @@ export default function StoryCreate() {
 
       toast({ title: "Story partagée ✨", description: "Ta story est en ligne." });
       navigate("/feed", { state: { refreshStories: true } });
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error?.message || "Impossible de partager.", variant: "destructive" });
+    } catch (error: unknown) {
+      if (uploadedStoragePath) {
+        await supabase.storage.from("story-media").remove([uploadedStoragePath]);
+      }
+      if (createdStoryId) {
+        await supabase.from("session_stories").delete().eq("id", createdStoryId);
+      }
+      toast({
+        title: "Erreur",
+        description: storyShareErrorMessage(error),
+        variant: "destructive",
+      });
     } finally {
       setSharing(false);
     }
