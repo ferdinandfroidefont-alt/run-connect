@@ -20,6 +20,7 @@ import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
+import { cn } from "@/lib/utils";
 
 interface Profile {
   username: string;
@@ -795,9 +796,9 @@ export const ProfileDialog = ({
                           ? {
                               icon: Gift,
                               label: 'Parrainer quelqu’un',
-                              color: 'text-orange-500',
+                              color: 'text-primary',
                               action: () => setShowReferralDialog(true),
-                              accentTile: 'referral' as const,
+                              centeredHalf: true as const,
                             }
                           : {
                               icon: Crown,
@@ -808,19 +809,21 @@ export const ProfileDialog = ({
                                 navigate('/subscription');
                               },
                               accentTile: 'premium' as const,
+                              centeredHalf: true as const,
                             },
                       ].map((item) => (
                         <button
                           key={item.label}
                           type="button"
                           onClick={item.action}
-                          className={
+                          className={cn(
+                            'flex flex-col items-center justify-center gap-2 rounded-xl p-4 transition-colors',
+                            item.centeredHalf &&
+                              'col-span-2 mx-auto w-full max-w-[calc(50%-0.3125rem)]',
                             item.accentTile === 'premium'
-                              ? 'col-span-2 mx-auto flex w-full max-w-[calc(50%-0.3125rem)] flex-col items-center justify-center gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4 transition-colors active:bg-yellow-500/15'
-                              : item.accentTile === 'referral'
-                                ? 'col-span-2 mx-auto flex w-full max-w-[calc(50%-0.3125rem)] flex-col items-center justify-center gap-2 rounded-xl border border-orange-500/35 bg-orange-500/10 p-4 transition-colors active:bg-orange-500/15'
-                                : 'flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary/50 p-4 transition-colors active:bg-secondary'
-                          }
+                              ? 'border border-yellow-500/40 bg-yellow-500/10 active:bg-yellow-500/15'
+                              : 'bg-secondary/50 active:bg-secondary',
+                          )}
                         >
                           <item.icon className={`h-6 w-6 shrink-0 ${item.color}`} />
                           <span className="text-center text-[13px] font-medium text-foreground leading-snug">{item.label}</span>
