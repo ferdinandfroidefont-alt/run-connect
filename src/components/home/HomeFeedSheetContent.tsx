@@ -148,7 +148,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   const loading = mode === "friends" ? friendsLoading : discoverLoading;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-secondary/80 dark:bg-black/85">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-visible bg-secondary/80 dark:bg-black/85">
       <FeedHeader
         layoutVariant="sheet"
         sheetSnap={sheetSnap}

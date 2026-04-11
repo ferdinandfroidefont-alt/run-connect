@@ -258,7 +258,7 @@ export function HomeFeedBottomSheet() {
               </button>
             </div>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
               <HomeFeedSheetContent
                 sheetSnap={sheetSnapForContent}
                 onBrandClick={() => setSnap(0)}
