@@ -22,6 +22,7 @@ import {
   serializeProfileSports,
 } from "@/lib/profileSports";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
+import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
@@ -73,6 +74,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
+  const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
   const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -160,9 +162,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           const pendingOriginal = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
           if (pendingOriginal && pendingOriginal.size > 0) {
             console.log('📸 [ProfileSetup] Image ORIGINALE trouvée, size:', pendingOriginal.size);
-            const objectUrl = URL.createObjectURL(pendingOriginal);
-            setOriginalImageSrc(objectUrl);
-            originalImageSrcRef.current = objectUrl;
+            const restoreFile = new File([pendingOriginal], "pending.jpg", {
+              type: pendingOriginal.type || "image/jpeg",
+            });
+            let imageSrc: string;
+            try {
+              imageSrc = await prepareImageForProfileCrop(restoreFile);
+            } catch {
+              imageSrc = URL.createObjectURL(pendingOriginal);
+            }
+            setOriginalImageSrc(imageSrc);
+            originalImageSrcRef.current = imageSrc;
             
             // Délai pour s'assurer que le composant est bien monté
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -278,17 +288,27 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // Continuer quand même - ça fonctionnera si pas de reload
     }
 
-    // Révoquer l'ancienne URL si elle existe
-    if (originalImageSrc) {
+    if (originalImageSrc?.startsWith("blob:")) {
       URL.revokeObjectURL(originalImageSrc);
     }
 
-    // URL.createObjectURL est plus fiable que FileReader.readAsDataURL sur Android WebView
-    const objectUrl = URL.createObjectURL(file);
-    console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
-    setOriginalImageSrc(objectUrl);
-    originalImageSrcRef.current = objectUrl;
-    setShowCropEditor(true);
+    setPreparingAvatarCrop(true);
+    try {
+      const imageSrc = await prepareImageForProfileCrop(file);
+      console.log('📸 [ProfileSetup] Image préparée pour recadrage (résolution réduite)');
+      setOriginalImageSrc(imageSrc);
+      originalImageSrcRef.current = imageSrc;
+      setShowCropEditor(true);
+    } catch (e) {
+      console.error('📸 [ProfileSetup] Préparation image échouée:', e);
+      toast({
+        title: t('common.error'),
+        description: t('profileSetup.toastPrepareImage'),
+        variant: "destructive",
+      });
+    } finally {
+      setPreparingAvatarCrop(false);
+    }
   };
 
   const handleCropComplete = async (croppedImageBlob: Blob) => {
@@ -329,8 +349,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       URL.revokeObjectURL(avatarPreview);
     }
     
-    // Révoquer l'URL de l'image originale
-    if (originalImageSrc) {
+    if (originalImageSrc?.startsWith("blob:")) {
       URL.revokeObjectURL(originalImageSrc);
     }
     
@@ -953,9 +972,22 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </form>
         </IosFixedPageHeaderShell>
 
+        {preparingAvatarCrop && (
+          <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
+            <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden />
+            <p className="text-center text-[15px] font-medium text-white">{t("profileSetup.preparingPhoto")}</p>
+          </div>
+        )}
+
         <ImageCropEditor
           open={showCropEditor}
-          onClose={() => setShowCropEditor(false)}
+          onClose={() => {
+            setShowCropEditor(false);
+            setOriginalImageSrc((prev) => {
+              if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+              return "";
+            });
+          }}
           imageSrc={originalImageSrc}
           onCropComplete={handleCropComplete}
         />

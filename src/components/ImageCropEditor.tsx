@@ -179,6 +179,8 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
                   ref={imgRef}
                   alt="Crop me"
                   src={imageSrc}
+                  decoding="async"
+                  fetchPriority="high"
                   style={{ 
                     maxWidth: '100%', 
                     maxHeight: '60vh',

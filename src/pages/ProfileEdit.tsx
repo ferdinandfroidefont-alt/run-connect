@@ -14,6 +14,7 @@ import { CoachingFullscreenHeader } from "@/components/coaching/CoachingFullscre
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { Camera, User, Loader2, Globe, Lock, Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 
 const SPORT_OPTIONS = [
   { value: "", label: "Non renseigné" },
@@ -69,6 +70,7 @@ export default function ProfileEdit() {
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState("");
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
+  const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -102,6 +104,24 @@ export default function ProfileEdit() {
     fetchProfile();
   }, [user]);
 
+  const openCropFromPreparedInput = async (input: File | string) => {
+    setPreparingAvatarCrop(true);
+    try {
+      const imageSrc = await prepareImageForProfileCrop(input);
+      setOriginalImageSrc(imageSrc);
+      setShowCropEditor(true);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de préparer cette image pour le recadrage.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreparingAvatarCrop(false);
+    }
+  };
+
   const handlePickFromGallery = async () => {
     setShowAvatarSheet(false);
     try {
@@ -109,8 +129,11 @@ export default function ProfileEdit() {
       if (isNative) {
         const result = await selectFromGallery();
         if (result) {
-          setOriginalImageSrc(result as unknown as string);
-          setShowCropEditor(true);
+          if (result.size > 5 * 1024 * 1024) {
+            toast({ title: "Erreur", description: "Max 5 Mo", variant: "destructive" });
+            return;
+          }
+          await openCropFromPreparedInput(result);
         }
       } else {
         const input = document.createElement("input");
@@ -120,15 +143,10 @@ export default function ProfileEdit() {
           const file = e.target?.files?.[0];
           if (!file) return;
           if (file.size > 5 * 1024 * 1024) {
-            toast({ title: "Erreur", description: "Max 5 MB", variant: "destructive" });
+            toast({ title: "Erreur", description: "Max 5 Mo", variant: "destructive" });
             return;
           }
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            setOriginalImageSrc(ev.target?.result as string);
-            setShowCropEditor(true);
-          };
-          reader.readAsDataURL(file);
+          void openCropFromPreparedInput(file);
         };
         input.click();
       }
@@ -144,14 +162,13 @@ export default function ProfileEdit() {
       if (isNative) {
         const { Camera: CapCamera, CameraResultType, CameraSource } = await import("@capacitor/camera");
         const photo = await CapCamera.getPhoto({
-          quality: 90,
+          quality: 82,
           allowEditing: false,
           resultType: CameraResultType.DataUrl,
           source: CameraSource.Camera,
         });
         if (photo.dataUrl) {
-          setOriginalImageSrc(photo.dataUrl);
-          setShowCropEditor(true);
+          await openCropFromPreparedInput(photo.dataUrl);
         }
       } else {
         // Sur web, ouvrir la caméra via input capture
@@ -163,15 +180,10 @@ export default function ProfileEdit() {
           const file = e.target?.files?.[0];
           if (!file) return;
           if (file.size > 5 * 1024 * 1024) {
-            toast({ title: "Erreur", description: "Max 5 MB", variant: "destructive" });
+            toast({ title: "Erreur", description: "Max 5 Mo", variant: "destructive" });
             return;
           }
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            setOriginalImageSrc(ev.target?.result as string);
-            setShowCropEditor(true);
-          };
-          reader.readAsDataURL(file);
+          void openCropFromPreparedInput(file);
         };
         input.click();
       }
@@ -192,6 +204,7 @@ export default function ProfileEdit() {
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(blob));
     setShowCropEditor(false);
+    setOriginalImageSrc("");
   };
 
   const uploadAvatar = async (file: File): Promise<string | null> => {
@@ -444,9 +457,19 @@ export default function ProfileEdit() {
         </div>
       </IosFixedPageHeaderShell>
 
+      {preparingAvatarCrop && (
+        <div className="fixed inset-0 z-[260] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
+          <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden />
+          <p className="text-center text-[15px] font-medium text-white">Préparation de la photo…</p>
+        </div>
+      )}
+
       <ImageCropEditor
         open={showCropEditor}
-        onClose={() => setShowCropEditor(false)}
+        onClose={() => {
+          setShowCropEditor(false);
+          setOriginalImageSrc("");
+        }}
         imageSrc={originalImageSrc}
         onCropComplete={handleCropComplete}
       />

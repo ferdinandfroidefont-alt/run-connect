@@ -19,6 +19,7 @@ import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
+import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 
 interface Profile {
   username: string;
@@ -77,6 +78,7 @@ export const ProfileDialog = ({
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
+  const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
@@ -309,33 +311,47 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
+  const openAvatarCropFromFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "La taille du fichier ne doit pas dépasser 5 Mo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPreparingAvatarCrop(true);
+    try {
+      const imageSrc = await prepareImageForProfileCrop(file);
+      setOriginalImageSrc(imageSrc);
+      setShowCropEditor(true);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de préparer cette image pour le recadrage.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreparingAvatarCrop(false);
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner un fichier image.",
-          variant: "destructive"
-        });
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Erreur",
-          description: "La taille du fichier ne doit pas dépasser 5MB.",
-          variant: "destructive"
-        });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = e => {
-        const imageSrc = e.target?.result as string;
-        setOriginalImageSrc(imageSrc);
-        setShowCropEditor(true);
-      };
-      reader.readAsDataURL(file);
-    }
+    const input = e.target;
+    if (!file) return;
+    void openAvatarCropFromFile(file).finally(() => {
+      input.value = "";
+    });
   };
   const handleCropComplete = (croppedImageBlob: Blob) => {
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', {
@@ -345,6 +361,7 @@ export const ProfileDialog = ({
     const previewUrl = URL.createObjectURL(croppedImageBlob);
     setAvatarPreview(previewUrl);
     setShowCropEditor(false);
+    setOriginalImageSrc("");
   };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
@@ -510,9 +527,7 @@ export const ProfileDialog = ({
                             e.stopPropagation();
                             try {
                               const file = await selectFromGallery();
-                              if (file) {
-                                handleAvatarChange({ target: { files: [file] } } as any);
-                              }
+                              if (file) await openAvatarCropFromFile(file);
                             } catch (error) {
                               console.error('Error selecting from gallery:', error);
                               toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
@@ -822,7 +837,22 @@ export const ProfileDialog = ({
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
 
-      <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+      {preparingAvatarCrop && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
+          <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden />
+          <p className="text-center text-[15px] font-medium text-white">Préparation de la photo…</p>
+        </div>
+      )}
+
+      <ImageCropEditor
+        open={showCropEditor}
+        onClose={() => {
+          setShowCropEditor(false);
+          setOriginalImageSrc("");
+        }}
+        imageSrc={originalImageSrc}
+        onCropComplete={handleCropComplete}
+      />
 
       {/* Settings Dialog */}
       <Suspense fallback={null}>
