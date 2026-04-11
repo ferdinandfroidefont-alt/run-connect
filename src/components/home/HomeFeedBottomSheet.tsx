@@ -191,7 +191,7 @@ export function HomeFeedBottomSheet() {
         aria-modal={snap >= 1}
         aria-label={t("navigation.feed")}
         className={cn(
-          "pointer-events-auto relative flex min-h-0 w-full flex-col overflow-x-hidden overflow-y-visible",
+          "pointer-events-auto relative flex min-h-0 w-full flex-col overflow-hidden",
           "rounded-t-[1.25rem] border border-border/50 bg-background/92 shadow-[0_-12px_48px_rgba(0,0,0,0.18)]",
           "backdrop-blur-xl dark:border-[#2a2a2a] dark:bg-black/90 dark:shadow-[0_-16px_56px_rgba(0,0,0,0.55)]",
         )}
@@ -258,7 +258,7 @@ export function HomeFeedBottomSheet() {
               </button>
             </div>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <HomeFeedSheetContent
                 sheetSnap={sheetSnapForContent}
                 onBrandClick={() => setSnap(0)}

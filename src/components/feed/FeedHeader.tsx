@@ -65,7 +65,7 @@ export const FeedHeader = ({
   return (
     <header
       className={cn(
-        "shrink-0 overflow-visible bg-white dark:bg-black",
+        "shrink-0 bg-white dark:bg-black",
         isSheet
           ? cn(sheetFullBleed ? "pt-[var(--safe-area-top)]" : "pt-2")
           : "pt-[var(--safe-area-top)]",
