@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +18,12 @@ import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
+import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
+import {
+  getAppShellBootCompleted,
+  setAppShellBootCompleted,
+} from "@/lib/appShellPersistence";
+import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -83,9 +89,19 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Show loading screen on all platforms
-  const [isAppLoaded, setIsAppLoaded] = useState(false);
+  /** Une fois le boot effectué sur l’appareil, ne plus montrer le splash global (reprise + rechargements WebView). */
+  const [isAppLoaded, setIsAppLoaded] = useState(() => getAppShellBootCompleted());
 
+  const handleShellBootComplete = useCallback(() => {
+    setAppShellBootCompleted();
+    setIsAppLoaded(true);
+  }, []);
+
+  // Si le shell a déjà booté (localStorage), rétablit tout de suite le chrome (pas de passage par LoadingScreen).
+  useEffect(() => {
+    if (!isAppLoaded) return;
+    void restoreChromeAfterRuconnectSplash();
+  }, [isAppLoaded]);
 
   // Route warmup disabled in production/native debug: it eagerly pulled heavy chart pages
   // and could crash the published boot before the auth/home UI appeared.
@@ -274,7 +290,7 @@ const App = () => {
   if (!isAppLoaded) {
     return (
       <>
-        <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />
+        <LoadingScreen onLoadingComplete={handleShellBootComplete} />
       </>
     );
   }
@@ -282,6 +298,7 @@ const App = () => {
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col">
       <QueryClientProvider client={queryClient}>
+        <AppResumeCoordinator />
         <AppErrorBoundary>
           <ThemeProvider>
             <AppProvider>

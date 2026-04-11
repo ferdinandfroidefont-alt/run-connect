@@ -30,6 +30,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   onCompleteRef.current = onLoadingComplete;
 
+  // Dépendances vides : si `t` (LanguageContext) change pendant le boot, un re-run coupait le splash
+  // (cleanup → restoreChrome) et recréait l’effet — ressenti « double chargement » / barre d’état incohérente.
   useEffect(() => {
     scheduleHomeMapPrefetch();
     applyRuconnectSplashWebChrome();
@@ -52,7 +54,6 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           if (!cancelled) setBootPhase("ready");
         })
         .catch(() => {
-          
           if (!cancelled) setBootPhase("ready");
         });
 
@@ -78,7 +79,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       }
       void restoreAfterSplash();
     };
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot unique ; voir commentaire ci-dessus
+  }, []);
 
   const splashLayerStyle: CSSProperties = {
     backgroundColor: RUCONNECT_SPLASH_BLUE,
