@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCamera } from "@/hooks/useCamera";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   X, Camera, Image, ChevronLeft, Send, Type, Music, Smile,
-  Pencil, Plus, Minus, RotateCcw, Zap, Video, CalendarPlus, Check
+  Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
@@ -83,7 +84,7 @@ export default function StoryCreate() {
     void (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode },
+          video: { facingMode: { ideal: facingMode } },
           audio: captureMode !== "photo",
         });
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -126,18 +127,57 @@ export default function StoryCreate() {
 
   useEffect(() => { void loadSessions(); }, [loadSessions]);
 
+  /** Capture JPEG depuis le flux live (respecte avant/arrière, miroir selfie comme l’aperçu). */
+  const capturePhotoFromStream = useCallback(async (): Promise<File | null> => {
+    const video = cameraRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream || video.readyState < 2) return null;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w < 2 || h < 2) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    if (facingMode === "user") {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0, w, h);
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          resolve(new File([blob], `story-${Date.now()}.jpg`, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.92,
+      );
+    });
+  }, [facingMode]);
+
   // ── Actions ──
   const onCapture = async () => {
     if (captureMode === "photo") {
-      const file = await takePicture();
-      if (file) { setMediaFile(file); setStep("edit"); }
+      const fromStream = await capturePhotoFromStream();
+      const file = fromStream ?? (await takePicture({ facing: facingMode }));
+      if (file) {
+        setMediaFile(file);
+        setStep("edit");
+      }
       return;
     }
     const stream = streamRef.current;
     if (!stream) {
       // Fallback: file input
       const input = document.createElement("input");
-      input.type = "file"; input.accept = "video/*"; input.capture = "environment";
+      input.type = "file";
+      input.accept = "video/*";
+      input.capture = facingMode === "user" ? "user" : "environment";
       input.onchange = () => {
         const f = input.files?.[0];
         if (f) { setMediaFile(f); setStep("edit"); }
@@ -263,13 +303,7 @@ export default function StoryCreate() {
           <button type="button" onClick={() => navigate("/feed")} className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm">
             <X className="h-5 w-5" />
           </button>
-          <button
-            type="button"
-            onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-            className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
-          >
-            <RotateCcw className="h-5 w-5" />
-          </button>
+          <div className="h-9 w-9" aria-hidden />
         </div>
 
         {/* Camera viewfinder */}
@@ -277,7 +311,10 @@ export default function StoryCreate() {
           <div className="relative flex-1">
             <video
               ref={cameraRef}
-              className="h-full w-full object-cover"
+              className={cn(
+                "h-full w-full object-cover",
+                facingMode === "user" && "scale-x-[-1]",
+              )}
               playsInline
               muted
               autoPlay
@@ -305,20 +342,27 @@ export default function StoryCreate() {
 
         {/* Bottom controls */}
         <div className="absolute inset-x-0 bottom-0 z-10 pb-[max(24px,env(safe-area-inset-bottom,24px))]">
-          {/* Mode selector */}
-          <div className="mb-6 flex items-center justify-center gap-6">
-            {(["photo", "video", "boomerang"] as CaptureMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setCaptureMode(mode)}
-                className={`text-xs font-bold uppercase tracking-wider ${
-                  captureMode === mode ? "text-white" : "text-white/50"
-                }`}
-              >
-                {mode === "photo" ? "PHOTO" : mode === "video" ? "VIDEO" : "BOOMERANG"}
-              </button>
-            ))}
+          {/* Mode selector (style bandeau type Stories) */}
+          <div className="mb-6 flex flex-col items-center gap-1">
+            <div className="flex items-center justify-center gap-6">
+              {(["photo", "video", "boomerang"] as CaptureMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setCaptureMode(mode)}
+                  className={`text-xs font-bold uppercase tracking-wider ${
+                    captureMode === mode ? "text-white" : "text-white/50"
+                  }`}
+                >
+                  {mode === "photo" ? "PHOTO" : mode === "video" ? "VIDEO" : "BOOMERANG"}
+                </button>
+              ))}
+            </div>
+            {sourceMode === "camera" && (
+              <p className="text-[11px] font-medium text-white/45">
+                {facingMode === "user" ? "Selfie" : "Caméra arrière"}
+              </p>
+            )}
           </div>
 
           {/* Capture + gallery toggle */}
@@ -357,8 +401,21 @@ export default function StoryCreate() {
               </button>
             )}
 
-            {/* Placeholder for alignment */}
-            <div className="h-12 w-12" />
+            {/* Inverser la caméra (comme Snapchat / Instagram) */}
+            {sourceMode === "camera" ? (
+              <button
+                type="button"
+                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+                className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm text-white transition-transform active:scale-95"
+                aria-label={
+                  facingMode === "user" ? "Passer à la caméra arrière" : "Passer à la caméra avant (selfie)"
+                }
+              >
+                <RefreshCw className="h-5 w-5" />
+              </button>
+            ) : (
+              <div className="h-12 w-12" />
+            )}
           </div>
         </div>
       </div>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera, CameraDirection, CameraResultType, CameraSource } from '@capacitor/camera';
 import { CameraPermissions } from '@/types/permissions';
 import { nativeManager } from '@/lib/nativeInit';
 import { Device } from '@capacitor/device';
 import { Capacitor } from '@capacitor/core';
+
+type TakePictureFacing = 'user' | 'environment';
 
 export const useCamera = () => {
   const [loading, setLoading] = useState(false);
@@ -49,10 +51,13 @@ export const useCamera = () => {
     }
   };
 
-  const takePicture = async (): Promise<File | null> => {
+  const takePicture = async (options?: { facing?: TakePictureFacing }): Promise<File | null> => {
     setLoading(true);
     console.log('📸 DÉBUT PRISE PHOTO ROBUSTE...');
-    
+    const facing = options?.facing ?? 'environment';
+    const capacitorDirection =
+      facing === 'user' ? CameraDirection.Front : CameraDirection.Rear;
+
     try {
       const isNative = await nativeManager.ensureNativeStatus();
       console.log('📸 Mode détecté:', isNative ? 'NATIF' : 'WEB');
@@ -68,7 +73,8 @@ export const useCamera = () => {
             quality: 85, // Qualité réduite pour éviter les timeouts
             allowEditing: false,
             resultType: CameraResultType.DataUrl,
-            source: CameraSource.Camera
+            source: CameraSource.Camera,
+            direction: capacitorDirection,
           });
           
           if (result.dataUrl) {
@@ -93,7 +99,7 @@ export const useCamera = () => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.capture = 'environment';
+        input.capture = facing === 'user' ? 'user' : 'environment';
         input.setAttribute('data-camera-picker', 'true');
         input.style.position = 'fixed';
         input.style.top = '-9999px';
