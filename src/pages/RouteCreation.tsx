@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
 import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
@@ -65,6 +65,7 @@ const ELEV_NOISE_THRESHOLD_M = 2;
 
 export const RouteCreation = () => {
   const navigate = useNavigate();
+  const { pathname: routeCreationPathname, search: routeCreationSearch } = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { formatKm, unit } = useDistanceUnits();
@@ -716,7 +717,9 @@ export const RouteCreation = () => {
         if (error) throw error;
 
         toast.success('Itinéraire modifié avec succès');
-        navigate('/itinerary/my-routes');
+        navigate('/itinerary/my-routes', {
+          state: { itineraryBackTo: routeCreationPathname },
+        });
         return;
       } catch (error) {
         console.error('Erreur mise à jour itinéraire:', error);
@@ -787,7 +790,9 @@ export const RouteCreation = () => {
 
     toast.success('Itinéraire enregistré');
     setSaveDialogOpen(false);
-    navigate('/itinerary/my-routes');
+    navigate('/itinerary/my-routes', {
+      state: { itineraryBackTo: routeCreationPathname },
+    });
   };
 
   addWaypointRef.current = addWaypoint;
@@ -885,7 +890,11 @@ export const RouteCreation = () => {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => navigate('/itinerary/my-routes')}
+            onClick={() =>
+              navigate('/itinerary/my-routes', {
+                state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
+              })
+            }
             className="gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
           >
             <Layers className="h-4 w-4" />

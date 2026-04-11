@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MapPin, PenLine, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
@@ -24,8 +24,16 @@ const RouteEditDialog = lazy(() =>
   import('@/components/RouteEditDialog').then((m) => ({ default: m.RouteEditDialog }))
 );
 
+type ItineraryMyRoutesLocationState = {
+  /** Cible du bouton Retour (ex. `/route-creation` depuis l’éditeur de carte). */
+  itineraryBackTo?: string;
+};
+
 export default function ItineraryMyRoutes() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const itineraryBackTo =
+    (location.state as ItineraryMyRoutesLocationState | null)?.itineraryBackTo ?? '/itinerary';
   const { user } = useAuth();
   const { routes, loading, refresh } = useMyRoutesList();
   const [editingRoute, setEditingRoute] = useState<any>(null);
@@ -70,7 +78,7 @@ export default function ItineraryMyRoutes() {
               left={
                 <button
                   type="button"
-                  onClick={() => navigate('/itinerary')}
+                  onClick={() => navigate(itineraryBackTo)}
                   className="text-[17px] font-medium text-primary"
                 >
                   Retour
