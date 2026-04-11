@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCamera } from "@/hooks/useCamera";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Search, X, Settings, Music, Type, Smile, Pencil, Plus, Minus } from "lucide-react";
+import {
+  X, Camera, Image, ChevronLeft, Send, Type, Music, Smile,
+  Pencil, Plus, Minus, RotateCcw, Zap, Video, CalendarPlus, Check
+} from "lucide-react";
 
-type CreateTab = "gallery" | "camera" | "privacy";
-type CameraMode = "normal" | "video" | "boomerang";
-type PrivacyMode = "public" | "friends" | "custom";
+type CaptureMode = "photo" | "video" | "boomerang";
+type StoryStep = "capture" | "edit";
 
 type ScheduledSession = {
   id: string;
@@ -20,195 +21,176 @@ type ScheduledSession = {
   scheduled_at: string;
 };
 
+const MUSIC_LIBRARY = [
+  { id: "1", title: "Motivation Run", artist: "SportBeats", duration: "0:30" },
+  { id: "2", title: "Victory Lap", artist: "FitMusic", duration: "0:15" },
+  { id: "3", title: "Trail Vibes", artist: "NatureSound", duration: "0:30" },
+  { id: "4", title: "Speed Up", artist: "RunTempo", duration: "0:20" },
+  { id: "5", title: "Chill Recovery", artist: "ZenRun", duration: "0:30" },
+  { id: "6", title: "Race Day", artist: "SportBeats", duration: "0:15" },
+  { id: "7", title: "Endurance", artist: "FitMusic", duration: "0:25" },
+  { id: "8", title: "Final Sprint", artist: "RunTempo", duration: "0:10" },
+];
+
 export default function StoryCreate() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
 
-  const [activeTab, setActiveTab] = useState<CreateTab>("gallery");
-  const [cameraMode, setCameraMode] = useState<CameraMode>("normal");
-  const [privacy, setPrivacy] = useState<PrivacyMode>("friends");
-  const [hideFromRaw, setHideFromRaw] = useState("");
-  const [shareToInstagram, setShareToInstagram] = useState(false);
-  const [multipleSelect, setMultipleSelect] = useState(false);
-  const [mediaPool, setMediaPool] = useState<File[]>([]);
-  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  // Flow
+  const [step, setStep] = useState<StoryStep>("capture");
+  const [sourceMode, setSourceMode] = useState<"camera" | "gallery">("camera");
+  const [captureMode, setCaptureMode] = useState<CaptureMode>("photo");
+
+  // Media
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+
+  // Camera
+  const cameraRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordSec, setRecordSec] = useState(0);
+
+  // Edit overlays
+  const [textOverlay, setTextOverlay] = useState("");
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [selectedMusic, setSelectedMusic] = useState<typeof MUSIC_LIBRARY[0] | null>(null);
+  const [showMusicPicker, setShowMusicPicker] = useState(false);
+  const [caption, setCaption] = useState("");
+
+  // Session
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ScheduledSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
-  const [caption, setCaption] = useState("");
-  const [textOverlay, setTextOverlay] = useState("");
-  const [photosDenied, setPhotosDenied] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [stickerPos, setStickerPos] = useState({ x: 20, y: 20 });
+  const [stickerPos, setStickerPos] = useState({ x: 20, y: 80 });
   const [stickerScale, setStickerScale] = useState(1);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
-  const cameraPreviewRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaChunksRef = useRef<BlobPart[]>([]);
 
-  const selectedMedia = mediaPool[selectedMediaIndex] ?? null;
-  const mediaPreviewUrls = useMemo(() => mediaPool.map((f) => URL.createObjectURL(f)), [mediaPool]);
-  const selectedPreviewUrl = mediaPreviewUrls[selectedMediaIndex] ?? null;
+  // Share
+  const [sharing, setSharing] = useState(false);
 
+  const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  // ── Camera stream ──
   useEffect(() => {
-    return () => {
-      mediaPreviewUrls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, [mediaPreviewUrls]);
-
-  useEffect(() => {
-    if (activeTab !== "camera") return;
+    if (step !== "capture" || sourceMode !== "camera") return;
     let cancelled = false;
     void (async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: cameraMode !== "normal" });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+          audio: captureMode !== "photo",
+        });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (cameraRef.current) {
+          cameraRef.current.srcObject = stream;
+          await cameraRef.current.play().catch(() => undefined);
         }
-        mediaStreamRef.current = stream;
-        if (cameraPreviewRef.current) {
-          cameraPreviewRef.current.srcObject = stream;
-          await cameraPreviewRef.current.play().catch(() => undefined);
-        }
-      } catch {
-        // ignore: devices may block preview, capture fallback still works
-      }
+      } catch { /* camera unavailable */ }
     })();
     return () => {
       cancelled = true;
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-        mediaStreamRef.current = null;
-      }
+      if (recorderRef.current?.state !== "inactive") recorderRef.current?.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
       setIsRecording(false);
-      setRecordingSeconds(0);
+      setRecordSec(0);
     };
-  }, [activeTab, cameraMode]);
+  }, [step, sourceMode, captureMode, facingMode]);
 
+  // Recording timer
   useEffect(() => {
     if (!isRecording) return;
-    const id = window.setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    return () => window.clearInterval(id);
+    const id = setInterval(() => setRecordSec((s) => s + 1), 1000);
+    return () => clearInterval(id);
   }, [isRecording]);
 
+  // ── Load sessions ──
   const loadSessions = useCallback(async () => {
     if (!user?.id) return;
-    const nowIso = new Date().toISOString();
     const { data } = await supabase
       .from("sessions")
       .select("id, title, location_name, scheduled_at")
       .eq("organizer_id", user.id)
-      .gt("scheduled_at", nowIso)
+      .gt("scheduled_at", new Date().toISOString())
       .order("scheduled_at", { ascending: true })
       .limit(30);
     setSessions((data ?? []) as ScheduledSession[]);
   }, [user?.id]);
 
-  useEffect(() => {
-    void loadSessions();
-    void (async () => {
-      const perms = await checkPermissions();
-      setPhotosDenied(perms.photos === "denied");
-    })();
-  }, [checkPermissions, loadSessions]);
+  useEffect(() => { void loadSessions(); }, [loadSessions]);
 
-  const onPickFromGallery = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*,video/*";
-    input.multiple = multipleSelect;
-    input.onchange = () => {
-      const files = Array.from(input.files ?? []);
-      if (!files.length) return;
-      setMediaPool((prev) => (multipleSelect ? [...prev, ...files] : files));
-      setSelectedMediaIndex(0);
-    };
-    input.click();
-  };
-
+  // ── Actions ──
   const onCapture = async () => {
-    if (cameraMode === "normal") {
+    if (captureMode === "photo") {
       const file = await takePicture();
-      if (!file) return;
-      setMediaPool([file]);
-      setSelectedMediaIndex(0);
+      if (file) { setMediaFile(file); setStep("edit"); }
       return;
     }
-    const stream = mediaStreamRef.current;
+    const stream = streamRef.current;
     if (!stream) {
+      // Fallback: file input
       const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "video/*";
-      input.capture = "environment";
+      input.type = "file"; input.accept = "video/*"; input.capture = "environment";
       input.onchange = () => {
-        const file = input.files?.[0];
-        if (!file) return;
-        setMediaPool([file]);
-        setSelectedMediaIndex(0);
+        const f = input.files?.[0];
+        if (f) { setMediaFile(f); setStep("edit"); }
       };
       input.click();
       return;
     }
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
+      recorderRef.current?.stop();
       setIsRecording(false);
       return;
     }
-    mediaChunksRef.current = [];
-    let recorderOptions: MediaRecorderOptions | undefined;
-    for (const mime of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
-      if (MediaRecorder.isTypeSupported(mime)) {
-        recorderOptions = { mimeType: mime };
-        break;
-      }
+    chunksRef.current = [];
+    let opts: MediaRecorderOptions | undefined;
+    for (const m of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
+      if (MediaRecorder.isTypeSupported(m)) { opts = { mimeType: m }; break; }
     }
-    const recorder = recorderOptions ? new MediaRecorder(stream, recorderOptions) : new MediaRecorder(stream);
-    mediaRecorderRef.current = recorder;
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) mediaChunksRef.current.push(e.data);
+    const rec = opts ? new MediaRecorder(stream, opts) : new MediaRecorder(stream);
+    recorderRef.current = rec;
+    rec.ondataavailable = (e) => { if (e.data?.size > 0) chunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const type = rec.mimeType || "video/webm";
+      const blob = new Blob(chunksRef.current, { type });
+      const ext = type.includes("mp4") ? "mp4" : "webm";
+      const file = new File([blob], `${captureMode}-${Date.now()}.${ext}`, { type });
+      setMediaFile(file);
+      setStep("edit");
+      setRecordSec(0);
     };
-    recorder.onstop = () => {
-      const blobType = recorder.mimeType || "video/webm";
-      const blob = new Blob(mediaChunksRef.current, { type: blobType });
-      const ext = blobType.includes("mp4") ? "mp4" : "webm";
-      const file = new File([blob], `${cameraMode}-${Date.now()}.${ext}`, { type: blobType });
-      setMediaPool([file]);
-      setSelectedMediaIndex(0);
-      setRecordingSeconds(0);
-    };
-    recorder.start();
+    rec.start();
     setIsRecording(true);
-    if (cameraMode === "boomerang") {
-      window.setTimeout(() => {
-        if (recorder.state !== "inactive") {
-          recorder.stop();
-          setIsRecording(false);
-        }
-      }, 1800);
+    if (captureMode === "boomerang") {
+      setTimeout(() => { if (rec.state !== "inactive") { rec.stop(); setIsRecording(false); } }, 1800);
     }
   };
 
+  const onPickGallery = () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*,video/*";
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (f) { setMediaFile(f); setStep("edit"); }
+    };
+    input.click();
+  };
+
   const onShare = async () => {
-    if (!user?.id || !selectedMedia) return;
+    if (!user?.id || !mediaFile) return;
     setSharing(true);
     try {
-      const mediaType = selectedMedia.type.startsWith("video/")
-        ? (cameraMode === "boomerang" ? "boomerang" : "video")
+      const mediaType = mediaFile.type.startsWith("video/")
+        ? (captureMode === "boomerang" ? "boomerang" : "video")
         : "image";
-      const uuidRe = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-      const hideFrom = hideFromRaw
-        .split(",")
-        .map((x) => x.trim())
-        .filter((x) => uuidRe.test(x));
 
       const { data: story, error: storyError } = await (supabase as any)
         .from("session_stories")
@@ -216,35 +198,32 @@ export default function StoryCreate() {
           author_id: user.id,
           session_id: selectedSession?.id ?? null,
           caption: caption || null,
-          privacy,
-          hide_from: hideFrom,
         })
         .select("id")
         .single();
       if (storyError || !story) throw storyError || new Error("Story creation failed");
 
-      const ext = selectedMedia.name.split(".").pop() || (mediaType === "image" ? "jpg" : "mp4");
+      const ext = mediaFile.name.split(".").pop() || (mediaType === "image" ? "jpg" : "mp4");
       const path = `${user.id}/${story.id}-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("story-media").upload(path, selectedMedia, {
-        upsert: false,
-      });
+      const { error: uploadError } = await supabase.storage.from("story-media").upload(path, mediaFile, { upsert: false });
       if (uploadError) throw uploadError;
-      const { data: mediaPublic } = supabase.storage.from("story-media").getPublicUrl(path);
+
+      const { data: pub } = supabase.storage.from("story-media").getPublicUrl(path);
       const { error: mediaError } = await (supabase as any).from("story_media").insert({
         story_id: story.id,
-        media_url: mediaPublic.publicUrl,
+        media_url: pub.publicUrl,
         media_type: mediaType,
         metadata: {
           text_overlay: textOverlay || null,
+          music: selectedMusic ? { id: selectedMusic.id, title: selectedMusic.title } : null,
           sticker: selectedSession
             ? { session_id: selectedSession.id, x: stickerPos.x, y: stickerPos.y, scale: stickerScale }
             : null,
-          share_to_instagram: shareToInstagram,
         },
       });
       if (mediaError) throw mediaError;
 
-      toast({ title: "Story partagee", description: "Ta story est en ligne." });
+      toast({ title: "Story partagée ✨", description: "Ta story est en ligne." });
       navigate("/feed", { state: { refreshStories: true } });
     } catch (error: any) {
       toast({ title: "Erreur", description: error?.message || "Impossible de partager.", variant: "destructive" });
@@ -253,290 +232,353 @@ export default function StoryCreate() {
     }
   };
 
-  const startStickerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+  // ── Sticker drag ──
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!selectedSession) return;
-    stickerDragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      baseX: stickerPos.x,
-      baseY: stickerPos.y,
-    };
+    stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: stickerPos.x, baseY: stickerPos.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
-  const moveStickerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+  const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
-    const dx = e.clientX - stickerDragRef.current.startX;
-    const dy = e.clientY - stickerDragRef.current.startY;
     setStickerPos({
-      x: Math.max(0, stickerDragRef.current.baseX + dx),
-      y: Math.max(0, stickerDragRef.current.baseY + dy),
+      x: Math.max(0, stickerDragRef.current.baseX + e.clientX - stickerDragRef.current.startX),
+      y: Math.max(0, stickerDragRef.current.baseY + e.clientY - stickerDragRef.current.startY),
     });
   };
-  const endStickerDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (stickerDragRef.current) {
       stickerDragRef.current = null;
-      try {
-        (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
+      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[180] flex flex-col bg-background">
-      <div className="border-b bg-card pt-[env(safe-area-inset-top,0px)]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button type="button" onClick={() => navigate("/feed")} className="text-muted-foreground">
+  // ═══════════════════════════════════════
+  // STEP 1: CAPTURE (Camera / Gallery)
+  // ═══════════════════════════════════════
+  if (step === "capture") {
+    return (
+      <div className="fixed inset-0 z-[180] flex flex-col bg-black">
+        {/* Top bar */}
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+          <button type="button" onClick={() => navigate("/feed")} className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm">
             <X className="h-5 w-5" />
           </button>
-          <h1 className="text-[17px] font-semibold">Creer une story</h1>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setActiveTab("camera")} className="text-muted-foreground">
-              <Camera className="h-5 w-5" />
-            </button>
-            <button type="button" onClick={() => setActiveTab("privacy")} className="text-muted-foreground">
-              <Settings className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+            className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
+          >
+            <RotateCcw className="h-5 w-5" />
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-1 px-3 pb-3">
-          {[
-            { id: "gallery", label: "Galerie" },
-            { id: "camera", label: "Camera" },
-            { id: "privacy", label: "Confidentialite" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as CreateTab)}
-              className={`min-h-[38px] rounded-ios-md text-xs font-semibold ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {activeTab === "gallery" && (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex items-center justify-between px-4 py-3">
-              <button type="button" onClick={onPickFromGallery} className="inline-flex items-center gap-1 text-sm text-primary">
-                <Search className="h-4 w-4" />
-                Rechercher
-              </button>
-              <button type="button" onClick={() => setMultipleSelect((v) => !v)} className="text-sm text-primary">
-                {multipleSelect ? "Selection multiplee" : "Selection multiple"}
-              </button>
-            </div>
-            {photosDenied ? (
-              <div className="m-4 rounded-ios-lg border p-5 text-center">
-                <p className="text-base font-semibold">Autoriser l'acces aux photos</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Pour partager une story, autorise l'acces a ta galerie.
-                </p>
-                <Button
-                  className="mt-4"
-                  onClick={async () => {
-                    const result = await requestPermissions();
-                    setPhotosDenied(result.photos === "denied");
-                  }}
-                >
-                  Autoriser
-                </Button>
-              </div>
-            ) : (
-              <div className="grid flex-1 grid-cols-3 gap-1 overflow-y-auto px-2 pb-2">
-                {mediaPool.length === 0 ? (
-                  <button
-                    type="button"
-                    onClick={onPickFromGallery}
-                    className="col-span-3 m-4 rounded-ios-lg border border-dashed p-10 text-center text-sm text-muted-foreground"
-                  >
-                    Ouvre ta pellicule pour selectionner un media.
-                  </button>
-                ) : (
-                  mediaPool.map((file, idx) => (
-                    <button
-                      key={`${file.name}-${idx}`}
-                      type="button"
-                      onClick={() => setSelectedMediaIndex(idx)}
-                      className={`aspect-square overflow-hidden rounded-ios-md border ${idx === selectedMediaIndex ? "border-primary" : "border-border"}`}
-                    >
-                      {file.type.startsWith("video/") ? (
-                        <video src={mediaPreviewUrls[idx]} className="h-full w-full object-cover" muted />
-                      ) : (
-                        <img src={mediaPreviewUrls[idx]} alt="" className="h-full w-full object-cover" />
-                      )}
-                    </button>
-                  ))
-                )}
+        {/* Camera viewfinder */}
+        {sourceMode === "camera" ? (
+          <div className="relative flex-1">
+            <video
+              ref={cameraRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+            {isRecording && (
+              <div className="absolute left-1/2 top-20 -translate-x-1/2 rounded-full bg-destructive/90 px-4 py-1.5 text-sm font-semibold text-white">
+                ● {recordSec}s
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === "camera" && (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4">
-            <div className="mb-4 h-44 w-full max-w-sm overflow-hidden rounded-ios-lg border bg-black">
-              <video ref={cameraPreviewRef} className="h-full w-full object-cover" playsInline muted autoPlay />
-            </div>
-            <div className="mb-8 text-sm text-muted-foreground">Mode {cameraMode.toUpperCase()}</div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center">
             <button
               type="button"
-              onClick={() => void onCapture()}
-              className={`mb-3 flex h-20 w-20 items-center justify-center rounded-full border-4 border-white text-primary-foreground ${isRecording ? "bg-destructive" : "bg-primary"}`}
+              onClick={onPickGallery}
+              className="flex flex-col items-center gap-3 text-white/70"
             >
-              <Camera className="h-8 w-8" />
+              <div className="rounded-2xl border-2 border-dashed border-white/30 p-10">
+                <Image className="h-12 w-12" />
+              </div>
+              <span className="text-sm font-medium">Choisir depuis la galerie</span>
             </button>
-            {cameraMode !== "normal" && (
-              <p className="mb-5 text-xs text-muted-foreground">
-                {isRecording ? `Enregistrement ${recordingSeconds}s` : cameraMode === "boomerang" ? "Capture courte auto." : "Appuie pour demarrer/arreter."}
-              </p>
-            )}
-            <div className="grid w-full max-w-sm grid-cols-3 gap-2">
-              {(["normal", "video", "boomerang"] as CameraMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setCameraMode(mode)}
-                  className={`min-h-[38px] rounded-ios-md text-xs font-semibold ${cameraMode === mode ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                >
-                  {mode === "normal" ? "NORMAL" : mode === "video" ? "VIDEO" : "BOOMERANG"}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
-        {activeTab === "privacy" && (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-            {(["public", "friends", "custom"] as PrivacyMode[]).map((p) => (
+        {/* Bottom controls */}
+        <div className="absolute inset-x-0 bottom-0 z-10 pb-[max(24px,env(safe-area-inset-bottom,24px))]">
+          {/* Mode selector */}
+          <div className="mb-6 flex items-center justify-center gap-6">
+            {(["photo", "video", "boomerang"] as CaptureMode[]).map((mode) => (
               <button
-                key={p}
+                key={mode}
                 type="button"
-                onClick={() => setPrivacy(p)}
-                className={`rounded-ios-md border px-4 py-3 text-left ${privacy === p ? "border-primary bg-primary/5" : "border-border"}`}
+                onClick={() => setCaptureMode(mode)}
+                className={`text-xs font-bold uppercase tracking-wider ${
+                  captureMode === mode ? "text-white" : "text-white/50"
+                }`}
               >
-                <p className="font-medium">{p === "public" ? "Public" : p === "friends" ? "Amis" : "Personnalise"}</p>
+                {mode === "photo" ? "PHOTO" : mode === "video" ? "VIDEO" : "BOOMERANG"}
               </button>
             ))}
-            <div className="rounded-ios-md border p-3">
-              <p className="mb-2 text-sm font-medium">Masquer a... (ids utilisateur, separes par virgules)</p>
-              <Input value={hideFromRaw} onChange={(e) => setHideFromRaw(e.target.value)} placeholder="uuid1, uuid2" />
-            </div>
-            <div className="rounded-ios-md border p-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Partager Instagram</p>
-                <Switch checked={shareToInstagram} onCheckedChange={setShareToInstagram} />
-              </div>
+          </div>
+
+          {/* Capture + gallery toggle */}
+          <div className="flex items-center justify-center gap-8">
+            {/* Gallery toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                if (sourceMode === "gallery") {
+                  setSourceMode("camera");
+                } else {
+                  setSourceMode("gallery");
+                  onPickGallery();
+                }
+              }}
+              className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 backdrop-blur-sm"
+            >
+              <Image className="h-5 w-5 text-white" />
+            </button>
+
+            {/* Shutter button */}
+            {sourceMode === "camera" && (
+              <button
+                type="button"
+                onClick={() => void onCapture()}
+                className="relative flex h-[76px] w-[76px] items-center justify-center"
+              >
+                <div className="absolute inset-0 rounded-full border-[3px] border-white" />
+                <div className={`h-[62px] w-[62px] rounded-full transition-all ${
+                  isRecording
+                    ? "scale-75 rounded-2xl bg-destructive"
+                    : captureMode === "photo"
+                      ? "bg-white"
+                      : "bg-destructive"
+                }`} />
+              </button>
+            )}
+
+            {/* Placeholder for alignment */}
+            <div className="h-12 w-12" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════
+  // STEP 2: EDIT & SHARE
+  // ═══════════════════════════════════════
+  const isVideo = mediaFile?.type.startsWith("video/");
+
+  return (
+    <div className="fixed inset-0 z-[180] flex flex-col bg-black">
+      {/* Preview fullscreen */}
+      <div className="relative flex-1">
+        {previewUrl && (
+          isVideo ? (
+            <video src={previewUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+          ) : (
+            <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+          )
+        )}
+
+        {/* Text overlay on preview */}
+        {textOverlay && (
+          <div className="absolute inset-x-0 top-1/3 flex justify-center">
+            <div className="rounded-lg bg-black/50 px-4 py-2 text-lg font-bold text-white backdrop-blur-sm">
+              {textOverlay}
             </div>
           </div>
         )}
+
+        {/* Music badge */}
+        {selectedMusic && (
+          <div className="absolute bottom-20 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur-sm">
+            <Music className="h-3.5 w-3.5 text-white" />
+            <span className="text-xs font-medium text-white">{selectedMusic.title}</span>
+          </div>
+        )}
+
+        {/* Session sticker on preview */}
+        {selectedSession && (
+          <div
+            className="absolute cursor-move rounded-2xl border border-white/20 bg-white/90 p-3 shadow-lg dark:bg-black/80"
+            style={{
+              transform: `translate(${stickerPos.x}px, ${stickerPos.y}px) scale(${stickerScale})`,
+              transformOrigin: "top left",
+            }}
+            onPointerDown={startDrag}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            <p className="text-xs font-bold text-foreground">{selectedSession.title}</p>
+            <p className="text-[10px] text-muted-foreground">{selectedSession.location_name}</p>
+            <div className="mt-1.5 flex items-center gap-1">
+              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); setStickerScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2))); }}>
+                <Minus className="h-3 w-3" />
+              </button>
+              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); setStickerScale((s) => Math.min(1.8, +(s + 0.1).toFixed(2))); }}>
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Top bar */}
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+          <button
+            type="button"
+            onClick={() => { setMediaFile(null); setStep("capture"); setTextOverlay(""); setSelectedMusic(null); setSelectedSession(null); }}
+            className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="border-t bg-card px-4 pb-[max(14px,env(safe-area-inset-bottom,14px))] pt-3">
-        <div className="mb-3 rounded-ios-md border p-3">
-          <p className="mb-2 text-sm font-medium">Ajouter une seance</p>
-          <Button type="button" variant="outline" onClick={() => setShowSessionPicker((v) => !v)}>
-            {selectedSession ? "Changer la seance" : "Ajouter une seance"}
-          </Button>
-          {sessions.length === 0 && (
-            <p className="mt-2 text-xs text-muted-foreground">Aucune seance programmee. Cree-en une pour la partager.</p>
-          )}
-          {showSessionPicker && sessions.length > 0 && (
-            <div className="mt-2 max-h-32 space-y-2 overflow-auto">
-              {sessions.map((s) => (
+      {/* Bottom editing panel */}
+      <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
+        {/* Tool row */}
+        <div className="mb-4 flex items-center gap-3 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setShowTextInput(!showTextInput)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+              textOverlay ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+            }`}
+          >
+            <Type className="h-4 w-4" />Texte
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMusicPicker(!showMusicPicker)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+              selectedMusic ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+            }`}
+          >
+            <Music className="h-4 w-4" />Musique
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSessionPicker(!showSessionPicker)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
+              selectedSession ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+            }`}
+          >
+            <CalendarPlus className="h-4 w-4" />Séance
+          </button>
+          <button type="button" className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground">
+            <Smile className="h-4 w-4" />Sticker
+          </button>
+          <button type="button" className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground">
+            <Pencil className="h-4 w-4" />Dessin
+          </button>
+        </div>
+
+        {/* Text input */}
+        {showTextInput && (
+          <div className="mb-3">
+            <Input
+              value={textOverlay}
+              onChange={(e) => setTextOverlay(e.target.value)}
+              placeholder="Ajouter du texte..."
+              className="rounded-xl"
+              autoFocus
+            />
+          </div>
+        )}
+
+        {/* Music picker */}
+        {showMusicPicker && (
+          <div className="mb-3 max-h-44 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
+            {MUSIC_LIBRARY.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => { setSelectedMusic(selectedMusic?.id === m.id ? null : m); }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors ${
+                  selectedMusic?.id === m.id ? "bg-primary/10" : "hover:bg-secondary"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                    selectedMusic?.id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"
+                  }`}>
+                    <Music className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{m.title}</p>
+                    <p className="text-xs text-muted-foreground">{m.artist}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{m.duration}</span>
+                  {selectedMusic?.id === m.id && <Check className="h-4 w-4 text-primary" />}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Session picker */}
+        {showSessionPicker && (
+          <div className="mb-3 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
+            {sessions.length === 0 ? (
+              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                Aucune séance à venir
+              </p>
+            ) : (
+              sessions.map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => {
-                    setSelectedSession(s);
+                    setSelectedSession(selectedSession?.id === s.id ? null : s);
                     setShowSessionPicker(false);
                   }}
-                  className="w-full rounded-ios-md border px-3 py-2 text-left"
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
+                    selectedSession?.id === s.id ? "bg-primary/10" : "hover:bg-secondary"
+                  }`}
                 >
-                  <p className="text-sm font-semibold">{s.title}</p>
-                  <p className="text-xs text-muted-foreground">{s.location_name}</p>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+                    <CalendarPlus className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{s.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
+                  </div>
+                  {selectedSession?.id === s.id && <Check className="h-4 w-4 text-primary" />}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mb-3 rounded-ios-md border p-3">
-          <p className="mb-2 text-sm font-medium">Edition</p>
-          <div className="mb-2 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline"><Type className="mr-1 h-4 w-4" />Texte</Button>
-            <Button type="button" size="sm" variant="outline"><Music className="mr-1 h-4 w-4" />Musique</Button>
-            <Button type="button" size="sm" variant="outline"><Smile className="mr-1 h-4 w-4" />Sticker</Button>
-            <Button type="button" size="sm" variant="outline"><Pencil className="mr-1 h-4 w-4" />Dessin</Button>
+              ))
+            )}
           </div>
-          <Input value={textOverlay} onChange={(e) => setTextOverlay(e.target.value)} placeholder="Ajouter du texte..." />
-          <Input value={caption} onChange={(e) => setCaption(e.target.value)} className="mt-2" placeholder="Description optionnelle..." />
-        </div>
+        )}
 
-        <div className="mb-3 rounded-ios-md border p-2">
-          <div className="relative aspect-[9/16] w-full overflow-hidden rounded-ios-md bg-secondary">
-            {selectedPreviewUrl ? (
-              selectedMedia?.type.startsWith("video/") ? (
-                <video src={selectedPreviewUrl} className="h-full w-full object-cover" controls />
-              ) : (
-                <img src={selectedPreviewUrl} alt="" className="h-full w-full object-cover" />
-              )
+        {/* Caption + Share */}
+        <div className="flex items-center gap-3">
+          <Input
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Ajouter une description..."
+            className="flex-1 rounded-xl"
+          />
+          <Button
+            type="button"
+            disabled={!mediaFile || sharing}
+            onClick={() => void onShare()}
+            className="h-11 shrink-0 gap-2 rounded-xl px-6"
+          >
+            {sharing ? (
+              <span className="text-sm">Envoi...</span>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Apercu story</div>
+              <>
+                <Send className="h-4 w-4" />
+                <span className="text-sm font-semibold">Story</span>
+              </>
             )}
-            {textOverlay && (
-              <div className="absolute left-3 top-3 rounded bg-black/50 px-2 py-1 text-sm text-white">
-                {textOverlay}
-              </div>
-            )}
-            {selectedSession && (
-              <div
-                className="absolute cursor-move rounded-ios-md border bg-background/90 p-2 shadow"
-                style={{
-                  transform: `translate(${stickerPos.x}px, ${stickerPos.y}px) scale(${stickerScale})`,
-                  transformOrigin: "top left",
-                }}
-                onPointerDown={startStickerDrag}
-                onPointerMove={moveStickerDrag}
-                onPointerUp={endStickerDrag}
-                onPointerCancel={endStickerDrag}
-              >
-                <p className="text-xs font-semibold">Seance: {selectedSession.title}</p>
-                <p className="text-[10px] text-muted-foreground">{selectedSession.location_name}</p>
-                <div className="mt-1 flex items-center gap-1">
-                  <button
-                    type="button"
-                    className="rounded border p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setStickerScale((s) => Math.max(0.7, Number((s - 0.1).toFixed(2))));
-                    }}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setStickerScale((s) => Math.min(1.8, Number((s + 0.1).toFixed(2))));
-                    }}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          </Button>
         </div>
-
-        <Button type="button" className="w-full" disabled={!selectedMedia || sharing} onClick={() => void onShare()}>
-          {sharing ? "Partage..." : "Partager la story"}
-        </Button>
       </div>
     </div>
   );
