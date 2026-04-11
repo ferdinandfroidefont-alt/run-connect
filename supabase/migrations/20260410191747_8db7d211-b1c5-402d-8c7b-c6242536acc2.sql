@@ -1,4 +1,4 @@
-create table public.support_tickets (
+create table if not exists public.support_tickets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   subject text not null,
