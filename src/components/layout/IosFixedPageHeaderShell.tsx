@@ -86,6 +86,7 @@ export function IosFixedPageHeaderShell({
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
       <div
         ref={headerRef}
+        data-ios-pinned-header={pin ? "" : undefined}
         className={cn(pin ? "ios-internal-header-pinned" : "shrink-0", headerWrapperClassName)}
       >
         {header}

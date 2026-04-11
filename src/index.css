@@ -659,6 +659,11 @@ html, body {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Évite le double safe-area : le parent applique déjà env(safe-area-inset-top) (ex. CoachingFullscreenHeader avec pt-[...var(--safe-area-top)]). */
+[data-ios-pinned-header] > header {
+  padding-top: 0 !important;
+}
+
 /* Zone scroll sous header épinglé (évite saut d’ancrage vue clavier). */
 .ios-keyboard-scroll-body {
   -webkit-overflow-scrolling: touch;

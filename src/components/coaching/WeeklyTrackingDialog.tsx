@@ -55,6 +55,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
         <DialogContent fullScreen hideCloseButton className="flex min-h-0 flex-col gap-0 overflow-hidden p-0">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
+            contentTopOffsetPx={0}
             headerWrapperClassName="shrink-0"
             header={
               <CoachingFullscreenHeader
@@ -62,7 +63,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
                 onBack={handleBack}
               />
             }
-            scrollClassName="bg-secondary px-0 py-4"
+            scrollClassName="bg-secondary px-0 pb-4"
           >
             <WeeklyTrackingView
               clubId={clubId}

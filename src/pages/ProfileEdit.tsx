@@ -264,6 +264,7 @@ export default function ProfileEdit() {
     <>
       <IosFixedPageHeaderShell
         className="min-h-0 flex-1 bg-secondary"
+        contentTopOffsetPx={0}
         header={
           <CoachingFullscreenHeader
             title="Modifier le profil"
@@ -280,10 +281,10 @@ export default function ProfileEdit() {
             }
           />
         }
-        scrollClassName="bg-secondary py-4"
+        scrollClassName="bg-secondary pb-6"
       >
-        {/* Avatar */}
-        <div className="flex flex-col items-center py-4">
+        {/* Avatar — collé sous le header (pas de py global sur la zone scroll) */}
+        <div className="flex flex-col items-center pb-4 pt-0">
           <button type="button" onClick={() => setShowAvatarSheet(true)} className="group relative">
             <Avatar className="h-24 w-24 border-2 border-border">
               <AvatarImage src={displayAvatar} />

@@ -462,8 +462,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   return (
     <div className="space-y-4">
-      {/* Profile hero — marge sous le header (safe area / top bar) */}
-      <div className="bg-card px-4 pb-4 pt-8 flex flex-col items-center text-center mt-1">
+      {/* Hero profil : espacement léger sous le header (safe-area gérée par IosFixedPageHeaderShell) */}
+      <div className="flex flex-col items-center bg-card px-4 pb-4 pt-2 text-center">
         <div className="h-[72px] w-[72px] rounded-full bg-secondary flex items-center justify-center overflow-hidden mb-3">
           {selectedAthlete.avatarUrl ? (
             <img src={selectedAthlete.avatarUrl} alt="" className="h-full w-full object-cover" />
