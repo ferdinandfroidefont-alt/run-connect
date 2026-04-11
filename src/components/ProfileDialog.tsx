@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -434,12 +434,13 @@ export const ProfileDialog = ({
     "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
   const socialSessionsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
+  const isPremiumUser = !!(profile?.is_premium || subscriptionInfo?.subscribed);
   const socialHighlights = [
     profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] ?? "Sport" : null,
     profile?.country ? COUNTRY_LABELS[profile.country] ?? profile.country : null,
     (profile?.strava_connected && profile?.strava_verified_at) ? "Strava" : null,
     (profile?.instagram_connected && profile?.instagram_verified_at) ? "Instagram" : null,
-    (profile?.is_premium || subscriptionInfo?.subscribed) ? "Premium" : null,
+    isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
 
   if (loading && open) {
@@ -563,7 +564,7 @@ export const ProfileDialog = ({
                       <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
                         {profile?.display_name || profile?.username || "Utilisateur"}
                       </h2>
-                      {(profile?.is_premium || subscriptionInfo?.subscribed) && (
+                      {isPremiumUser && (
                         <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
                       )}
                     </div>
@@ -786,6 +787,34 @@ export const ProfileDialog = ({
                   </div>
                 </>
               )}
+
+              <div className="mt-4 space-y-2 px-4">
+                <Button
+                  type="button"
+                  className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate("/stories/create");
+                  }}
+                >
+                  <Video className="h-4 w-4 shrink-0" />
+                  Créer une story
+                </Button>
+                {!isPremiumUser && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-11 w-full gap-2 rounded-xl border border-yellow-500/40 bg-yellow-500/10 text-[15px] font-semibold text-foreground hover:bg-yellow-500/15"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate("/subscription");
+                    }}
+                  >
+                    <Crown className="h-4 w-4 shrink-0 text-yellow-600" />
+                    Devenir premium
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </DialogContent>
