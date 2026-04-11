@@ -11,7 +11,6 @@
  * Splash (voir ruconnectSplashChrome) : overlay true + fond bleu + Style.Light (icônes blanches).
  */
 import { Capacitor } from '@capacitor/core';
-import { DEEP_BLUE_CHROME_HEX, isDeepBlueVisualFromDom } from '@/lib/visualMode';
 
 const THEME_STORAGE_KEY = 'runconnect-ui-theme';
 
@@ -115,13 +114,11 @@ function hslFromShadcnBackgroundVar(): string | null {
  * Applique la barre d’état native pour le thème courant (iOS et Android).
  * overlay: false → le WebView commence **sous** la barre : pas de double bandeau (barre système + padding safe-area redondant côté natif).
  */
-export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = false): Promise<void> {
+export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   const platform = Capacitor.getPlatform();
   if (platform !== 'ios' && platform !== 'android') return;
-
-  const deepBlueActive = deepBlue || isDeepBlueVisualFromDom();
 
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
@@ -129,13 +126,11 @@ export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = fals
     await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.show();
 
-    if (deepBlueActive || isDark) {
+    if (isDark) {
       /* Capacitor Style.Dark = texte / icônes clairs sur fond sombre */
       await StatusBar.setStyle({ style: Style.Dark });
       try {
-        const hex = deepBlueActive
-          ? DEEP_BLUE_CHROME_HEX
-          : nativeHexFromShadcnTripletVar('--background', '#000000');
+        const hex = nativeHexFromShadcnTripletVar('--background', '#000000');
         await StatusBar.setBackgroundColor({ color: hex });
       } catch {
         /* iOS peut ignorer setBackgroundColor */
@@ -159,28 +154,7 @@ export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = fals
  * sinon sur iOS en mode sombre on voit une frange (#000 natif vs gris `--background`).
  * theme-color = même teinte que le canvas (PWA / Chrome mobile).
  */
-export function applyWebChromeForTheme(isDark: boolean, deepBlue = false): void {
-  const deepBlueActive = deepBlue || isDeepBlueVisualFromDom();
-
-  if (deepBlueActive) {
-    const chromeBarColor = DEEP_BLUE_CHROME_HEX;
-    const metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) metaTheme.setAttribute('content', chromeBarColor);
-
-    const apple = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-    if (apple) {
-      apple.setAttribute('content', 'black');
-    }
-
-    document.documentElement.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
-    document.body.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
-    const appRoot = document.getElementById('root');
-    if (appRoot) {
-      appRoot.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
-    }
-    return;
-  }
-
+export function applyWebChromeForTheme(isDark: boolean): void {
   const fromCss = hslFromShadcnBackgroundVar();
   const contentBg = fromCss ?? (isDark ? 'hsl(240 5% 11%)' : 'hsl(0 0% 100%)');
   const chromeBarColor = nativeHexFromShadcnTripletVar(

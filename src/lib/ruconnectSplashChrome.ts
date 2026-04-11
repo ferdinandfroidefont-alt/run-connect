@@ -61,9 +61,8 @@ export async function restoreChromeAfterRuconnectSplash(): Promise<void> {
   const appRoot = document.getElementById('root');
   if (appRoot) appRoot.style.removeProperty('background-color');
   const isDark = getPreferredDarkFromStorage();
-  const deepBlue = document.documentElement.dataset.visual === 'deep-blue';
-  applyWebChromeForTheme(isDark, deepBlue);
+  applyWebChromeForTheme(isDark);
   if (Capacitor.isNativePlatform()) {
-    await applyIosStatusBarForTheme(isDark, deepBlue);
+    await applyIosStatusBarForTheme(isDark);
   }
 }

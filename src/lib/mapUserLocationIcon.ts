@@ -22,7 +22,7 @@ function cssTripletLightnessPercent(triplet: string): number | null {
 
 /**
  * Remplissage du point « position actuelle » sur la carte.
- * En Deep Blue, `--primary` est blanc : on utilise `--primary-foreground` (bleu marine) pour rester visible.
+ * Si `--primary` est très clair (peu de contraste avec une bordure blanche), on utilise `--primary-foreground`.
  */
 export function getUserLocationDotFillColor(): string {
   if (typeof document === "undefined") return "hsl(212 100% 50%)";

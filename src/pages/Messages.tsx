@@ -329,10 +329,7 @@ const Messages = () => {
       }
     }
     return () => {
-      applyWebChromeForTheme(
-        root.classList.contains('dark'),
-        root.dataset.visual === 'deep-blue',
-      );
+      applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setHideBottomNav]);
 
