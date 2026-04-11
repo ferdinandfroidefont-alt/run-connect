@@ -11,6 +11,7 @@
  * Splash (voir ruconnectSplashChrome) : overlay true + fond bleu + Style.Light (icônes blanches).
  */
 import { Capacitor } from '@capacitor/core';
+import { DEEP_BLUE_CHROME_HEX, isDeepBlueVisualFromDom } from '@/lib/visualMode';
 
 const THEME_STORAGE_KEY = 'runconnect-ui-theme';
 
@@ -114,13 +115,13 @@ function hslFromShadcnBackgroundVar(): string | null {
  * Applique la barre d’état native pour le thème courant (iOS et Android).
  * overlay: false → le WebView commence **sous** la barre : pas de double bandeau (barre système + padding safe-area redondant côté natif).
  */
-const DEEP_BLUE_HEX = '#0B1F3A';
-
 export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = false): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   const platform = Capacitor.getPlatform();
   if (platform !== 'ios' && platform !== 'android') return;
+
+  const deepBlueActive = deepBlue || isDeepBlueVisualFromDom();
 
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
@@ -128,12 +129,12 @@ export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = fals
     await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.show();
 
-    if (deepBlue || isDark) {
+    if (deepBlueActive || isDark) {
       /* Capacitor Style.Dark = texte / icônes clairs sur fond sombre */
       await StatusBar.setStyle({ style: Style.Dark });
       try {
-        const hex = deepBlue
-          ? DEEP_BLUE_HEX
+        const hex = deepBlueActive
+          ? DEEP_BLUE_CHROME_HEX
           : nativeHexFromShadcnTripletVar('--background', '#000000');
         await StatusBar.setBackgroundColor({ color: hex });
       } catch {
@@ -159,8 +160,10 @@ export async function applyIosStatusBarForTheme(isDark: boolean, deepBlue = fals
  * theme-color = même teinte que le canvas (PWA / Chrome mobile).
  */
 export function applyWebChromeForTheme(isDark: boolean, deepBlue = false): void {
-  if (deepBlue) {
-    const chromeBarColor = DEEP_BLUE_HEX;
+  const deepBlueActive = deepBlue || isDeepBlueVisualFromDom();
+
+  if (deepBlueActive) {
+    const chromeBarColor = DEEP_BLUE_CHROME_HEX;
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute('content', chromeBarColor);
 
@@ -169,11 +172,11 @@ export function applyWebChromeForTheme(isDark: boolean, deepBlue = false): void 
       apple.setAttribute('content', 'black');
     }
 
-    document.documentElement.style.backgroundColor = DEEP_BLUE_HEX;
-    document.body.style.backgroundColor = DEEP_BLUE_HEX;
+    document.documentElement.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
+    document.body.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
     const appRoot = document.getElementById('root');
     if (appRoot) {
-      appRoot.style.backgroundColor = DEEP_BLUE_HEX;
+      appRoot.style.backgroundColor = DEEP_BLUE_CHROME_HEX;
     }
     return;
   }

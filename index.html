@@ -29,10 +29,19 @@
     <meta name="theme-color" content="#2E68FF" />
     <!-- default = barre d’état opaque claire ; le thème sombre met « black » via JS -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <!-- Anti-flash thème (next-themes / runconnect-ui-theme) -->
+    <!-- Anti-flash thème (next-themes / runconnect-ui-theme) ; Deep Blue = #0B1F3A (voir VISUAL_MODE_STORAGE_KEY / DEEP_BLUE_CHROME_HEX). -->
     <script>
       (function () {
         try {
+          if (localStorage.getItem('runconnect-visual') === 'deepBlue') {
+            document.documentElement.setAttribute('data-visual', 'deep-blue');
+            var metaDeep = document.querySelector('meta[name="theme-color"]');
+            if (metaDeep) metaDeep.setAttribute('content', '#0B1F3A');
+            var appleDeep = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+            if (appleDeep) appleDeep.setAttribute('content', 'black');
+            document.documentElement.style.backgroundColor = '#0B1F3A';
+            return;
+          }
           var key = 'runconnect-ui-theme';
           var t = localStorage.getItem(key);
           var dark = false;
@@ -42,9 +51,13 @@
           if (dark) document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
-      /* Avant React : même fond que --background en sombre (évite frange bleu #2455EB / noir #000). */
+      /* Avant React : Deep Blue ou fond sombre (évite frange / flash). */
       document.addEventListener('DOMContentLoaded', function () {
         try {
+          if (localStorage.getItem('runconnect-visual') === 'deepBlue' && document.body) {
+            document.body.style.backgroundColor = '#0B1F3A';
+            return;
+          }
           if (document.documentElement.classList.contains('dark') && document.body) {
             var d = 'hsl(240 5% 11%)';
             document.documentElement.style.backgroundColor = d;

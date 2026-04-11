@@ -3,10 +3,23 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { initAccentFromStorage } from '@/lib/accentColor'
-import { initVisualModeFromStorage } from '@/lib/visualMode'
+import { Capacitor } from '@capacitor/core'
+import {
+  applyIosStatusBarForTheme,
+  applyWebChromeForTheme,
+  getPreferredDarkFromStorage,
+} from '@/lib/iosStatusBarTheme'
+import { getStoredVisualMode, initVisualModeFromStorage } from '@/lib/visualMode'
 
 initAccentFromStorage()
 initVisualModeFromStorage()
+/* Barre d’état native + chrome : #0B1F3A avant ThemeProvider (évite flash blanc en Deep Blue). */
+if (getStoredVisualMode() === 'deepBlue') {
+  applyWebChromeForTheme(getPreferredDarkFromStorage(), true)
+  if (Capacitor.isNativePlatform()) {
+    void applyIosStatusBarForTheme(getPreferredDarkFromStorage(), true)
+  }
+}
 import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";

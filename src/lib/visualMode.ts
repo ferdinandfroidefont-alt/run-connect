@@ -1,5 +1,8 @@
 export const VISUAL_MODE_STORAGE_KEY = 'runconnect-visual';
 
+/** Fond barre d’état / chrome : aligné sur l’identité Deep Blue (#0B1F3A). */
+export const DEEP_BLUE_CHROME_HEX = '#0B1F3A';
+
 export type VisualModeId = 'default' | 'deepBlue';
 
 const DEEP_BLUE_DATASET = 'deep-blue';
