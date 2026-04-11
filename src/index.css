@@ -215,6 +215,33 @@ html, body {
     --gradient-control: linear-gradient(180deg, hsl(0 0% 6.7%) 0%, hsl(0 0% 4%) 100%);
   }
 
+  /*
+   * Accent « bleu nuit » (#0B1F3A) — Paramètres → Apparence.
+   * Clair : primaire = marine profond. Sombre : primaire plus clair pour le contraste sur fond noir.
+   */
+  :root[data-accent="marine"]:not(.dark) {
+    --primary: 215 68% 14%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 215 68% 14%;
+    --sidebar-primary: 215 68% 14%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 215 55% 32%;
+    --chart-1: 215 55% 38%;
+    --primary-glow: 215 68% 14%;
+    --shadow-glow: 0 0 26px hsl(215 68% 14% / 0.2);
+  }
+
+  :root.dark[data-accent="marine"] {
+    --primary: 215 62% 52%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 215 62% 52%;
+    --sidebar-primary: 215 62% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-ring: 215 62% 52%;
+    --chart-1: 215 62% 52%;
+    --primary-glow: 215 62% 52%;
+    --shadow-glow: 0 0 28px hsl(215 62% 52% / 0.22);
+  }
 }
 
 @layer base {

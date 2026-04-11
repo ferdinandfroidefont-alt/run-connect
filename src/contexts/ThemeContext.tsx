@@ -3,6 +3,7 @@ import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 import { Capacitor } from '@capacitor/core';
 import { applyIosStatusBarForTheme, applyWebChromeForTheme } from '@/lib/iosStatusBarTheme';
 import { syncMapStyleWithAppTheme } from '@/lib/mapboxMapStylePreference';
+import { ACCENT_STORAGE_KEY, applyAccentToDocument, getStoredAccent } from '@/lib/accentColor';
 
 const STORAGE_KEY = 'runconnect-ui-theme';
 
@@ -66,6 +67,18 @@ function ThemeMetaSync() {
   return null;
 }
 
+/** Synchronise l’accent (bleu RunConnect / bleu nuit) entre onglets. */
+function AccentColorSync() {
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ACCENT_STORAGE_KEY) applyAccentToDocument(getStoredAccent());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  return null;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <NextThemesProvider
@@ -76,6 +89,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       disableTransitionOnChange={false}
     >
       <ThemeMetaSync />
+      <AccentColorSync />
       {children}
     </NextThemesProvider>
   );

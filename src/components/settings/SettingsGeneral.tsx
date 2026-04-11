@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, Palette, Droplets } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { getStoredAccent, setAccentAndPersist, type AccentId } from "@/lib/accentColor";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import type { DistanceUnit } from "@/lib/distanceUnits";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
@@ -28,6 +29,11 @@ const THEME_MODES = [
   { id: "system" as const, labelKey: "themeModeSystem" as const, Icon: Monitor },
 ];
 
+const ACCENT_MODES: { id: AccentId; labelKey: "accentDefault" | "accentMarine"; Icon: typeof Palette }[] = [
+  { id: "default", labelKey: "accentDefault", Icon: Palette },
+  { id: "marine", labelKey: "accentMarine", Icon: Droplets },
+];
+
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
@@ -37,9 +43,14 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const { unit, setUnit } = useDistanceUnits();
+  const [accent, setAccent] = useState<AccentId>("default");
 
   useEffect(() => {
     setThemeMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setAccent(getStoredAccent());
   }, []);
 
   const handlePasswordReset = async () => {
@@ -218,6 +229,61 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                         <span className="leading-tight text-center">{label}</span>
                       </button>
                     );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="ios-list-row-inset-sep" />
+
+              {/* Couleur d’accent (bleu iOS / bleu nuit) */}
+              <div className="space-y-2.5 px-4 ios-shell:px-2.5 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="ios-list-row-icon bg-primary">
+                    <Palette className="h-[18px] w-[18px] text-primary-foreground" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium">{t("settings.accentColor")}</p>
+                    <p className="text-[13px] text-muted-foreground leading-snug">
+                      {t("settings.accentColorDescription")}
+                    </p>
+                  </div>
+                </div>
+                {!themeMounted ? (
+                  <div className="h-11 rounded-[12px] bg-secondary animate-pulse" />
+                ) : (
+                  <div
+                    className="flex gap-0.5 rounded-[12px] border border-border/50 bg-secondary/80 p-1 dark:bg-secondary"
+                    role="tablist"
+                    aria-label={t("settings.accentColor")}
+                  >
+                    {ACCENT_MODES.map(({ id, labelKey, Icon }) => {
+                      const label =
+                        labelKey === "accentDefault"
+                          ? t("settings.accentDefault")
+                          : t("settings.accentMarine");
+                      const active = accent === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => {
+                            setAccent(id);
+                            setAccentAndPersist(id);
+                          }}
+                          className={cn(
+                            "flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1 rounded-[10px] px-1.5 py-2 text-[11px] font-semibold transition-all sm:flex-row sm:text-[12px]",
+                            active
+                              ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                              : "text-muted-foreground hover:text-foreground active:opacity-70",
+                          )}
+                        >
+                          <Icon className="h-4 w-4 shrink-0 opacity-90" />
+                          <span className="text-center leading-tight">{label}</span>
+                        </button>
+                      );
                     })}
                   </div>
                 )}
