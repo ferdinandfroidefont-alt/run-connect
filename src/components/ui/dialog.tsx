@@ -35,14 +35,16 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
    * Monte overlay + contenu en z-[130] pour que les clics et le voile passent devant.
    */
   stackNested?: boolean;
+  /** Surcharge du voile (ex. plein écran story : fond noir opaque). */
+  overlayClassName?: string;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps>(
-  ({ className, children, hideCloseButton = false, fullScreen = false, closeButtonClassName, stackNested = false, ...props }, ref) => (
+  ({ className, children, hideCloseButton = false, fullScreen = false, closeButtonClassName, stackNested = false, overlayClassName, ...props }, ref) => (
     <DialogPortal>
-      <DialogOverlay className={cn(stackNested && "z-[130]")} />
+      <DialogOverlay className={cn(stackNested && "z-[130]", overlayClassName)} />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
