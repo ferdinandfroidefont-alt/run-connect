@@ -993,56 +993,66 @@ html, body {
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
+}
 
-  /* ─── Deep Blue (test) : canvas, cartes carte, teintes iOS, utilitaires bleus ─── */
-  html[data-visual="deep-blue"] body,
-  html[data-visual="deep-blue"] #root {
-    background-image: linear-gradient(180deg, #0b1f3a 0%, #0e2745 100%) !important;
-    background-color: #0b1f3a !important;
-  }
+/**
+ * Deep Blue — ne pas mettre ce bloc dans @supports(-webkit-touch-callout) :
+ * sinon Android / Chrome ne reçoivent pas les overrides (header carte reste blanc).
+ */
+html[data-visual="deep-blue"] body,
+html[data-visual="deep-blue"] #root {
+  background-image: linear-gradient(180deg, #0b1f3a 0%, #0e2745 100%) !important;
+  background-color: #0b1f3a !important;
+}
 
-  html[data-visual="deep-blue"] .ios-app-canvas {
-    background: linear-gradient(180deg, #0b1f3a 0%, #0e2745 100%) !important;
-  }
+html[data-visual="deep-blue"] .ios-app-canvas {
+  background: linear-gradient(180deg, #0b1f3a 0%, #0e2745 100%) !important;
+}
 
-  html[data-visual="deep-blue"] .ios-nav-shell {
-    background-color: #0b1f3a !important;
-    border-top-color: rgb(255 255 255 / 0.08) !important;
-    box-shadow: 0 -2px 14px rgb(0 0 0 / 0.12) !important;
-  }
+html[data-visual="deep-blue"] .ios-nav-shell {
+  background-color: #0b1f3a !important;
+  border-top-color: rgb(255 255 255 / 0.08) !important;
+  box-shadow: 0 -2px 14px rgb(0 0 0 / 0.12) !important;
+}
 
-  /* Carte accueil : header + rail codés bg-white / dark: — sans classe .dark le bandeau restait blanc (icônes blanches invisibles). */
-  html[data-visual="deep-blue"] .home-map-page-header {
-    background-color: #0b1f3a !important;
-  }
+/*
+ * Headers accueil (carte + fil) : bg-white / dark:bg-black — forcer #0B1F3A.
+ * `.runconnect-home-top-header` = FeedHeader ; `.home-map-page-header` = InteractiveMap (+ ::after dégradé).
+ */
+html[data-visual="deep-blue"] .runconnect-home-top-header,
+html[data-visual="deep-blue"] .home-map-page-header {
+  background: #0b1f3a !important;
+  background-color: #0b1f3a !important;
+}
 
-  html[data-visual="deep-blue"] .home-map-page-header::after {
-    background-color: #0b1f3a !important;
-  }
+html[data-visual="deep-blue"] .home-map-page-header::after {
+  background: #0b1f3a !important;
+  background-color: #0b1f3a !important;
+}
 
-  html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation {
+html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation {
+  background-color: #102a4a !important;
+  border-color: rgb(255 255 255 / 0.14) !important;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
+}
+
+html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation svg {
+  color: #fff !important;
+}
+
+html[data-visual="deep-blue"] .home-map-header-notif-fallback {
     background-color: #102a4a !important;
     border-color: rgb(255 255 255 / 0.14) !important;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
   }
 
-  html[data-visual="deep-blue"] .home-map-header-actions button.touch-manipulation svg {
-    color: #fff !important;
-  }
-
-  html[data-visual="deep-blue"] .home-map-header-notif-fallback {
+html[data-visual="deep-blue"] .home-map-header-icon-btn {
     background-color: #102a4a !important;
     border-color: rgb(255 255 255 / 0.14) !important;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
   }
 
-  html[data-visual="deep-blue"] .home-map-header-icon-btn {
-    background-color: #102a4a !important;
-    border-color: rgb(255 255 255 / 0.14) !important;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.14) !important;
-  }
-
-  html[data-visual="deep-blue"] .home-map-control-rail {
+html[data-visual="deep-blue"] .home-map-control-rail {
     background-color: #102a4a !important;
     border-color: rgb(255 255 255 / 0.14) !important;
     box-shadow:
@@ -1050,7 +1060,7 @@ html, body {
       0 2px 10px rgb(0 0 0 / 0.12) !important;
   }
 
-  html[data-visual="deep-blue"] .home-map-place-suggestions {
+html[data-visual="deep-blue"] .home-map-place-suggestions {
     background-color: rgb(16 42 74 / 0.98) !important;
     border-color: rgb(255 255 255 / 0.12) !important;
     box-shadow:
@@ -1060,7 +1070,7 @@ html, body {
     -webkit-backdrop-filter: blur(16px) saturate(1.05);
   }
 
-  html[data-visual="deep-blue"] .home-map-search-glass {
+html[data-visual="deep-blue"] .home-map-search-glass {
     background: rgb(16 42 74 / 0.92);
     border: 1px solid rgb(255 255 255 / 0.12);
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
@@ -1068,12 +1078,12 @@ html, body {
     -webkit-backdrop-filter: blur(12px) saturate(1.05);
   }
 
-  html[data-visual="deep-blue"] .home-map-search-glass:focus-within {
+html[data-visual="deep-blue"] .home-map-search-glass:focus-within {
     border-color: rgb(255 255 255 / 0.22);
     background: rgb(16 42 74 / 0.98);
   }
 
-  html[data-visual="deep-blue"] .home-map-filter-chip {
+html[data-visual="deep-blue"] .home-map-filter-chip {
     background: rgb(16 42 74 / 0.95);
     border: 1px solid rgb(255 255 255 / 0.12);
     color: #fff;
@@ -1082,7 +1092,7 @@ html, body {
     -webkit-backdrop-filter: blur(12px);
   }
 
-  html[data-visual="deep-blue"] .home-map-filter-sheet {
+html[data-visual="deep-blue"] .home-map-filter-sheet {
     border-color: rgb(255 255 255 / 0.1);
     background: rgb(16 42 74 / 0.98);
     box-shadow: 0 12px 40px rgb(0 0 0 / 0.2);
@@ -1090,100 +1100,99 @@ html, body {
     -webkit-backdrop-filter: blur(18px) saturate(1.1);
   }
 
-  html[data-visual="deep-blue"] .ios-chip {
+html[data-visual="deep-blue"] .ios-chip {
     border-color: rgb(255 255 255 / 0.2) !important;
     background-color: transparent !important;
     color: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .ios-chip-active {
+html[data-visual="deep-blue"] .ios-chip-active {
     background-color: #fff !important;
     color: #0b1f3a !important;
     border-color: transparent !important;
   }
 
-  html[data-visual="deep-blue"] .ios-pastel-blue {
+html[data-visual="deep-blue"] .ios-pastel-blue {
     background: hsl(215 64% 17.6%) !important;
   }
 
-  html[data-visual="deep-blue"] .ios-tinted-blue {
+html[data-visual="deep-blue"] .ios-tinted-blue {
     background: rgb(255 255 255 / 0.1) !important;
     color: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .dark .ios-tinted-blue {
+html[data-visual="deep-blue"] .dark .ios-tinted-blue {
     background: rgb(255 255 255 / 0.1) !important;
     color: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .ios-gradient-btn {
+html[data-visual="deep-blue"] .ios-gradient-btn {
     background: linear-gradient(180deg, #ffffff 0%, #e9edf2 100%) !important;
     color: #0b1f3a !important;
   }
 
-  html[data-visual="deep-blue"] .map-ios-colored-fab.bg-\[\#007AFF\] {
+html[data-visual="deep-blue"] .map-ios-colored-fab.bg-\[\#007AFF\] {
     background-color: #102a4a !important;
     border-color: rgb(255 255 255 / 0.2) !important;
   }
 
-  html[data-visual="deep-blue"] .bg-\[\#007AFF\] {
+html[data-visual="deep-blue"] .bg-\[\#007AFF\] {
     background-color: #102a4a !important;
   }
 
-  html[data-visual="deep-blue"] .bg-blue-50,
-  html[data-visual="deep-blue"] .bg-blue-50\/50,
-  html[data-visual="deep-blue"] .bg-blue-100 {
+html[data-visual="deep-blue"] .bg-blue-50,
+html[data-visual="deep-blue"] .bg-blue-50\/50,
+html[data-visual="deep-blue"] .bg-blue-100 {
     background-color: rgb(16 42 74 / 0.45) !important;
   }
 
-  html[data-visual="deep-blue"] .bg-blue-400,
-  html[data-visual="deep-blue"] .bg-blue-500,
-  html[data-visual="deep-blue"] .bg-blue-600 {
+html[data-visual="deep-blue"] .bg-blue-400,
+html[data-visual="deep-blue"] .bg-blue-500,
+html[data-visual="deep-blue"] .bg-blue-600 {
     background-color: #0b1f3a !important;
     color: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .bg-blue-500\/10,
-  html[data-visual="deep-blue"] .bg-blue-500\/12,
-  html[data-visual="deep-blue"] .bg-blue-500\/20 {
+html[data-visual="deep-blue"] .bg-blue-500\/10,
+html[data-visual="deep-blue"] .bg-blue-500\/12,
+html[data-visual="deep-blue"] .bg-blue-500\/20 {
     background-color: rgb(255 255 255 / 0.08) !important;
   }
 
-  html[data-visual="deep-blue"] .hover\:bg-blue-500\/20:hover {
+html[data-visual="deep-blue"] .hover\:bg-blue-500\/20:hover {
     background-color: rgb(255 255 255 / 0.12) !important;
   }
 
-  html[data-visual="deep-blue"] .hover\:bg-blue-600:hover {
+html[data-visual="deep-blue"] .hover\:bg-blue-600:hover {
     background-color: #102a4a !important;
   }
 
-  html[data-visual="deep-blue"] .text-blue-400,
-  html[data-visual="deep-blue"] .text-blue-500,
-  html[data-visual="deep-blue"] .text-blue-600,
-  html[data-visual="deep-blue"] .text-blue-700,
-  html[data-visual="deep-blue"] .text-blue-800,
-  html[data-visual="deep-blue"] .text-blue-900,
-  html[data-visual="deep-blue"] .dark\:text-blue-400 {
+html[data-visual="deep-blue"] .text-blue-400,
+html[data-visual="deep-blue"] .text-blue-500,
+html[data-visual="deep-blue"] .text-blue-600,
+html[data-visual="deep-blue"] .text-blue-700,
+html[data-visual="deep-blue"] .text-blue-800,
+html[data-visual="deep-blue"] .text-blue-900,
+html[data-visual="deep-blue"] .dark\:text-blue-400 {
     color: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .border-blue-200,
-  html[data-visual="deep-blue"] .border-blue-500\/20 {
+html[data-visual="deep-blue"] .border-blue-200,
+html[data-visual="deep-blue"] .border-blue-500\/20 {
     border-color: rgb(255 255 255 / 0.2) !important;
   }
 
-  html[data-visual="deep-blue"] .fill-blue-400,
-  html[data-visual="deep-blue"] .fill-blue-600,
-  html[data-visual="deep-blue"] .dark\:fill-blue-400 {
+html[data-visual="deep-blue"] .fill-blue-400,
+html[data-visual="deep-blue"] .fill-blue-600,
+html[data-visual="deep-blue"] .dark\:fill-blue-400 {
     fill: #fff !important;
   }
 
-  html[data-visual="deep-blue"] .bg-blue-100.text-blue-600,
-  html[data-visual="deep-blue"] .bg-blue-50\/90.border-blue-200 {
+html[data-visual="deep-blue"] .bg-blue-100.text-blue-600,
+html[data-visual="deep-blue"] .bg-blue-50\/90.border-blue-200 {
     background-color: rgb(16 42 74 / 0.75) !important;
     color: #fff !important;
     border-color: rgb(255 255 255 / 0.15) !important;
-  }
 }
 
 /* Imminent session pulse animation - orange/red glow */

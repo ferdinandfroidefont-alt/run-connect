@@ -1838,7 +1838,7 @@ export const InteractiveMap = ({
           */}
           <header
             className={cn(
-              "home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
+              "runconnect-home-top-header home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
