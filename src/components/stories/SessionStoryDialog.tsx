@@ -958,6 +958,22 @@ export function SessionStoryDialog({
             stackNested && "!z-[130]"
           )}
           aria-describedby={undefined}
+          /* Le menu ⋯ est en portal sur document.body : sans ça, Radix traite les clics comme « outside » et ferme la story avant l’action. */
+          onPointerDownOutside={(e) => {
+            if (actionMode) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (actionMode) e.preventDefault();
+          }}
+          onFocusOutside={(e) => {
+            if (actionMode) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (actionMode) {
+              e.preventDefault();
+              closeActionPanel();
+            }
+          }}
         >
           <DialogTitle className="sr-only">Stories</DialogTitle>
           {!current ? (
