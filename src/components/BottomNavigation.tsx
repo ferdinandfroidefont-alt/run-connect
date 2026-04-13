@@ -148,7 +148,7 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[110] w-full border-t border-border bg-background",
+        "fixed inset-x-0 bottom-0 z-[110] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
@@ -217,6 +217,7 @@ export const BottomNavigation = () => {
           })}
         </div>
       </div>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-[4px] h-[4px] bg-white dark:bg-black" />
     </nav>
   );
 };

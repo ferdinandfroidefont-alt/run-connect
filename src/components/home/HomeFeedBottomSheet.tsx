@@ -164,7 +164,7 @@ export function HomeFeedBottomSheet() {
   return (
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-[102] flex flex-col justify-end"
-      style={{ bottom: "var(--layout-bottom-inset, 0px)" }}
+      style={{ bottom: "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px)))" }}
     >
       <motion.button
         type="button"
