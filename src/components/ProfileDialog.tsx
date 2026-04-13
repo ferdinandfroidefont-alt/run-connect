@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,9 @@ const SPORT_LABELS: Record<string, string> = {
   trail: '⛰️ Trail',
 };
 
+const HIGHLIGHT_GRID_LONG_PRESS_MS = 480;
+const HIGHLIGHT_GRID_MOVE_CANCEL_PX = 16;
+
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -93,10 +96,46 @@ export const ProfileDialog = ({
   const [showOwnStory, setShowOwnStory] = useState(false);
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
-  const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
+  const [ownStories, setOwnStories] = useState<Array<{
+    id: string;
+    created_at: string;
+    expires_at: string;
+    media_url: string | null;
+    media_type: 'image' | 'video' | 'boomerang' | null;
+    duration_label: string | null;
+    is_highlighted: boolean;
+  }>>([]);
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [highlightStoryId, setHighlightStoryId] = useState<string | null>(null);
   const [newHighlightTitle, setNewHighlightTitle] = useState("");
+  /** Ordre de sélection = ordre d’insertion dans « à la une » (premier tap = position 0). */
+  const [highlightPickOrder, setHighlightPickOrder] = useState<string[]>([]);
+  const [highlightSubmitting, setHighlightSubmitting] = useState(false);
+  const highlightPressRef = useRef<{
+    storyId: string | null;
+    timer: ReturnType<typeof setTimeout> | null;
+    longTriggered: boolean;
+    startX: number;
+    startY: number;
+    startT: number;
+  }>({
+    storyId: null,
+    timer: null,
+    longTriggered: false,
+    startX: 0,
+    startY: 0,
+    startT: 0,
+  });
+  const clearHighlightGridPressTimer = () => {
+    const t = highlightPressRef.current.timer;
+    if (t) clearTimeout(t);
+    highlightPressRef.current.timer = null;
+  };
+  const resetHighlightGridPress = () => {
+    clearHighlightGridPressTimer();
+    highlightPressRef.current.storyId = null;
+    highlightPressRef.current.longTriggered = false;
+  };
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -164,8 +203,66 @@ export const ProfileDialog = ({
         .eq("owner_id", user.id)
         .order("position", { ascending: true }),
     ]);
-    setOwnStories((stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>);
-    setStoryHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
+    const baseStories = (stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>;
+    const highlightRows = (highlights ?? []) as Array<{ id: string; story_id: string; title: string }>;
+    const storyIds = baseStories.map((s) => s.id);
+    const highlighted = new Set(highlightRows.map((h) => h.story_id));
+    const { data: mediaRows } = storyIds.length
+      ? await (supabase as any)
+          .from("story_media")
+          .select("story_id, media_url, media_type, metadata, created_at")
+          .in("story_id", storyIds)
+          .order("created_at", { ascending: true })
+      : { data: [] };
+    const mediaByStory = new Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }>();
+    for (const row of (mediaRows ?? []) as Array<any>) {
+      if (mediaByStory.has(row.story_id)) continue;
+      const sec = Number(row?.metadata?.duration_sec ?? row?.metadata?.duration ?? 0);
+      const duration_label = Number.isFinite(sec) && sec > 0 ? `0:${String(Math.round(sec)).padStart(2, "0")}` : null;
+      mediaByStory.set(row.story_id, {
+        media_url: row.media_url ?? null,
+        media_type: row.media_type ?? null,
+        duration_label,
+      });
+    }
+    setOwnStories(
+      baseStories.map((s) => {
+        const media = mediaByStory.get(s.id);
+        return {
+          ...s,
+          media_url: media?.media_url ?? null,
+          media_type: media?.media_type ?? null,
+          duration_label: media?.duration_label ?? null,
+          is_highlighted: highlighted.has(s.id),
+        };
+      })
+    );
+    setStoryHighlights(highlightRows);
+    setHighlightPickOrder([]);
+  };
+
+  const addStoriesToHighlights = async (storyIds: string[]) => {
+    if (!user || storyIds.length === 0) return;
+    setHighlightSubmitting(true);
+    try {
+      const title = (newHighlightTitle || "À la une").trim();
+      const startPos = storyHighlights.length;
+      const payload = storyIds.map((story_id, idx) => ({
+        owner_id: user.id,
+        story_id,
+        title,
+        position: startPos + idx,
+      }));
+      const { error } = await (supabase as any).from("profile_story_highlights").insert(payload);
+      if (error) throw error;
+      toast({ title: "Ajouté", description: `${storyIds.length} story${storyIds.length > 1 ? "s" : ""} ajoutée${storyIds.length > 1 ? "s" : ""} à la une.` });
+      await fetchStoriesAndHighlights();
+      setShowHighlightsManager(false);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'ajouter ces stories à la une", variant: "destructive" });
+    } finally {
+      setHighlightSubmitting(false);
+    }
   };
   const addStoryToHighlights = async (storyId: string) => {
     if (!user) return;
@@ -929,82 +1026,186 @@ export const ProfileDialog = ({
           referralCode={qrData.referralCode}
         />
       )}
-      <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
+      <Dialog
+        open={showHighlightsManager}
+        onOpenChange={(next) => {
+          setShowHighlightsManager(next);
+          if (next) setHighlightPickOrder([]);
+        }}
+      >
         <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Stories à la une</DialogTitle>
-          {/* Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex items-center justify-between px-4 py-3">
-              <button type="button" onClick={() => setShowHighlightsManager(false)} className="flex items-center gap-1 text-primary">
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+          <div className="shrink-0 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+            <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-3">
+              <button
+                type="button"
+                onClick={() => setShowHighlightsManager(false)}
+                className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              >
+                Annuler
               </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Stories à la une</h1>
-              <div className="w-16" />
+              <h1 className="truncate px-2 text-center text-[16px] font-semibold text-foreground">Ajouter au contenu à la une</h1>
+              <button
+                type="button"
+                disabled={highlightPickOrder.length === 0 || highlightSubmitting}
+                onClick={() => void addStoriesToHighlights(highlightPickOrder)}
+                className={cn(
+                  "justify-self-end rounded-full px-2 py-1 text-[15px] font-semibold transition-opacity",
+                  highlightPickOrder.length === 0 || highlightSubmitting
+                    ? "text-muted-foreground/60"
+                    : "text-primary active:opacity-70"
+                )}
+              >
+                {highlightSubmitting ? "..." : "Suivant"}
+              </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Titre du highlight */}
-            <div>
-              <label className="text-[13px] font-medium text-muted-foreground mb-1 block">Titre du highlight</label>
-              <Input
-                value={newHighlightTitle}
-                onChange={(e) => setNewHighlightTitle(e.target.value)}
-                placeholder="Ex: Courses, PR, Trails..."
-                className="bg-card"
-              />
-            </div>
-
-            {/* Liste des stories */}
-            <div>
-              <p className="text-[13px] font-medium text-muted-foreground mb-2">Sélectionner une story</p>
-              <div className="space-y-2">
+          <div className="flex-1 overflow-y-auto px-3 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3">
+            {ownStories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <Heart className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="text-base font-semibold text-foreground">Aucune story</p>
+                <p className="mt-1 max-w-[260px] text-sm text-muted-foreground">
+                  Crée ta première story pour pouvoir l&apos;épingler à la une de ton profil.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
                 {ownStories.map((story) => {
-                  const already = storyHighlights.some((h) => h.story_id === story.id);
+                  const pickIndex = highlightPickOrder.indexOf(story.id);
+                  const selected = pickIndex >= 0;
+                  const dateLabel = new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
                   return (
-                    <div key={story.id} className="flex items-center justify-between rounded-xl bg-card border px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Story du {new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(story.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      {already ? (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-lg"
-                          onClick={() => {
-                            const h = storyHighlights.find((x) => x.story_id === story.id);
-                            if (h) void removeHighlight(h.id);
-                          }}
-                        >
-                          Retirer
-                        </Button>
-                      ) : (
-                        <Button size="sm" className="rounded-lg" onClick={() => void addStoryToHighlights(story.id)}>
-                          Épingler
-                        </Button>
+                    <button
+                      key={story.id}
+                      type="button"
+                      onPointerDown={(e) => {
+                        if (e.button !== 0 && e.button !== -1) return;
+                        resetHighlightGridPress();
+                        const r = highlightPressRef.current;
+                        r.storyId = story.id;
+                        r.longTriggered = false;
+                        r.startX = e.clientX;
+                        r.startY = e.clientY;
+                        r.startT = Date.now();
+                        try {
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        } catch {
+                          /* ignore */
+                        }
+                        r.timer = setTimeout(() => {
+                          r.longTriggered = true;
+                          r.timer = null;
+                          setHighlightStoryId(story.id);
+                          if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                            navigator.vibrate(12);
+                          }
+                        }, HIGHLIGHT_GRID_LONG_PRESS_MS);
+                      }}
+                      onPointerMove={(e) => {
+                        const r = highlightPressRef.current;
+                        if (r.storyId !== story.id || r.longTriggered) return;
+                        const dx = e.clientX - r.startX;
+                        const dy = e.clientY - r.startY;
+                        if (Math.hypot(dx, dy) > HIGHLIGHT_GRID_MOVE_CANCEL_PX) clearHighlightGridPressTimer();
+                      }}
+                      onPointerUp={(e) => {
+                        const r = highlightPressRef.current;
+                        if (r.storyId !== story.id) return;
+                        const longTriggered = r.longTriggered;
+                        clearHighlightGridPressTimer();
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch {
+                          /* ignore */
+                        }
+                        const dur = Date.now() - r.startT;
+                        const dist = Math.hypot(e.clientX - r.startX, e.clientY - r.startY);
+                        resetHighlightGridPress();
+                        if (longTriggered) return;
+                        if (dur < HIGHLIGHT_GRID_LONG_PRESS_MS && dist <= HIGHLIGHT_GRID_MOVE_CANCEL_PX) {
+                          setHighlightPickOrder((prev) =>
+                            prev.includes(story.id) ? prev.filter((id) => id !== story.id) : [...prev, story.id]
+                          );
+                          if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                            navigator.vibrate(8);
+                          }
+                        }
+                      }}
+                      onPointerCancel={resetHighlightGridPress}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        setHighlightPickOrder((prev) =>
+                          prev.includes(story.id) ? prev.filter((id) => id !== story.id) : [...prev, story.id]
+                        );
+                        if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                          navigator.vibrate(8);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        clearHighlightGridPressTimer();
+                        resetHighlightGridPress();
+                        setHighlightStoryId(story.id);
+                      }}
+                      className={cn(
+                        "group relative aspect-[9/16] touch-manipulation overflow-hidden rounded-xl bg-black transition-all select-none",
+                        selected && "ring-2 ring-primary"
                       )}
-                    </div>
+                    >
+                      {story.media_type === "video" || story.media_type === "boomerang" ? (
+                        <video
+                          src={story.media_url ?? undefined}
+                          className={cn("h-full w-full object-cover transition-opacity", selected ? "opacity-75" : "opacity-100")}
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img
+                          src={story.media_url ?? ""}
+                          alt=""
+                          loading="lazy"
+                          className={cn("h-full w-full object-cover transition-opacity", selected ? "opacity-75" : "opacity-100")}
+                        />
+                      )}
+
+                      <div className="absolute left-1.5 top-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        {dateLabel}
+                      </div>
+
+                      {(story.media_type === "video" || story.media_type === "boomerang") && (
+                        <div className="absolute bottom-1.5 right-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          {story.duration_label || "Vidéo"}
+                        </div>
+                      )}
+
+                      {story.is_highlighted && !selected && (
+                        <div className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          Déjà à la une
+                        </div>
+                      )}
+
+                      <div
+                        className={cn(
+                          "absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums",
+                          selected
+                            ? "border-primary bg-primary text-white"
+                            : "border-white/75 bg-black/25 text-transparent"
+                        )}
+                        aria-hidden
+                      >
+                        {selected ? pickIndex + 1 : "\u00a0"}
+                      </div>
+                    </button>
                   );
                 })}
-                {ownStories.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-                      <Heart className="h-7 w-7 text-muted-foreground" />
-                    </div>
-                    <p className="text-base font-semibold text-foreground">Aucune story</p>
-                    <p className="mt-1 text-sm text-muted-foreground max-w-[260px]">
-                      Crée ta première story pour pouvoir l'épingler à la une de ton profil.
-                    </p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

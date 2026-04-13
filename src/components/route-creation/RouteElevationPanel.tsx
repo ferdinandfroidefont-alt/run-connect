@@ -80,10 +80,32 @@ function areaPath(curvePath: string, firstX: number, lastX: number, baseY: numbe
   return `${curvePath} L ${lastX.toFixed(2)} ${baseY.toFixed(2)} L ${firstX.toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const v = hex.replace('#', '');
+  const n = Number.parseInt(v, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function lerpColor(a: string, b: string, t: number): string {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  return rgbToHex(ca.r + (cb.r - ca.r) * t, ca.g + (cb.g - ca.g) * t, ca.b + (cb.b - ca.b) * t);
+}
+
 function gradeColor(gradePct: number): string {
-  if (gradePct >= 8) return '#ef4444';
-  if (gradePct >= 3) return '#f59e0b';
-  return '#10b981';
+  // Descente -> vert, 0-3% jaune, 3-6% orange, 6-10% rouge, >10% rouge très sombre.
+  if (gradePct <= -2) return '#16a34a';
+  if (gradePct < 0) return lerpColor('#16a34a', '#84cc16', (gradePct + 2) / 2);
+  if (gradePct <= 3) return lerpColor('#fde047', '#facc15', gradePct / 3);
+  if (gradePct <= 6) return lerpColor('#facc15', '#fb923c', (gradePct - 3) / 3);
+  if (gradePct <= 10) return lerpColor('#fb923c', '#ef4444', (gradePct - 6) / 4);
+  if (gradePct <= 14) return lerpColor('#ef4444', '#7f1d1d', (gradePct - 10) / 4);
+  return '#3b0a0a';
 }
 
 export function RouteElevationPanel({
@@ -382,15 +404,15 @@ export function RouteElevationPanel({
                 <path d={fillPath} fill="url(#elevFillPremium)" stroke="none" />
 
                 {gradeSegments.map((seg, i) => (
-                  <path key={`g-${i}`} d={seg.d} fill="none" stroke={seg.color} strokeWidth={1.8} strokeLinecap="round" opacity={0.9} />
+                  <path key={`g-${i}`} d={seg.d} fill="none" stroke={seg.color} strokeWidth={2.6} strokeLinecap="round" opacity={0.96} />
                 ))}
 
                 <path
                   ref={mainPathRef}
                   d={curvePath}
                   fill="none"
-                  stroke="url(#elevLine)"
-                  strokeWidth={LINE_STROKE}
+                  stroke="rgba(255,255,255,0.55)"
+                  strokeWidth={1.2}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   style={

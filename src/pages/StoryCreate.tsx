@@ -91,9 +91,6 @@ export default function StoryCreate() {
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [musicQuery, setMusicQuery] = useState("");
   const [filteredMusic, setFilteredMusic] = useState<StoryMusicTrack[]>([]);
-  const [musicPos, setMusicPos] = useState({ x: 16, y: 520 });
-  const [musicScale, setMusicScale] = useState(1);
-  const [musicRotation, setMusicRotation] = useState(0);
   const musicDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
@@ -109,15 +106,9 @@ export default function StoryCreate() {
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ScheduledSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
-  const [stickerPos, setStickerPos] = useState({ x: 20, y: 80 });
-  const [stickerScale, setStickerScale] = useState(1);
-  const [stickerRotation, setStickerRotation] = useState(0);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
-  const [emojiPos, setEmojiPos] = useState({ x: 120, y: 220 });
-  const [emojiScale, setEmojiScale] = useState(1);
-  const [emojiRotation, setEmojiRotation] = useState(0);
   const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [drawMode, setDrawMode] = useState(false);
   const [drawColor, setDrawColor] = useState("#FFFFFF");
@@ -148,6 +139,30 @@ export default function StoryCreate() {
   }, [musicQuery]);
 
   useEffect(() => {
+    if (selectedMusic) {
+      upsertKindLayer("music", { x: 16, y: 520, scale: 1, rotation: 0, label: selectedMusic.title });
+    } else {
+      removeKindLayer("music");
+    }
+  }, [selectedMusic]);
+
+  useEffect(() => {
+    if (selectedSession) {
+      upsertKindLayer("session", { x: 20, y: 80, scale: 1, rotation: 0, label: selectedSession.title });
+    } else {
+      removeKindLayer("session");
+    }
+  }, [selectedSession]);
+
+  useEffect(() => {
+    if (emojiSticker) {
+      upsertKindLayer("emoji", { x: 120, y: 220, scale: 1, rotation: 0, label: emojiSticker });
+    } else {
+      removeKindLayer("emoji");
+    }
+  }, [emojiSticker]);
+
+  useEffect(() => {
     return () => {
       if (previewAudioRef.current) {
         previewAudioRef.current.pause();
@@ -171,12 +186,6 @@ export default function StoryCreate() {
     if (selectedLayer === "text") {
       setTextOverlay("");
       setShowTextInput(false);
-    } else if (selectedLayer === "music") {
-      setSelectedMusic(null);
-    } else if (selectedLayer === "session") {
-      setSelectedSession(null);
-    } else if (selectedLayer === "emoji") {
-      setEmojiSticker(null);
     }
     setSelectedLayer(null);
   };
@@ -206,9 +215,6 @@ export default function StoryCreate() {
       );
       return;
     }
-    if (selectedLayer === "session") setStickerScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
-    if (selectedLayer === "emoji") setEmojiScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
-    if (selectedLayer === "music") setMusicScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
   };
 
   const nudgeSelectedObjectRotation = (delta: number) => {
@@ -218,9 +224,6 @@ export default function StoryCreate() {
       );
       return;
     }
-    if (selectedLayer === "session") setStickerRotation((r) => r + delta);
-    if (selectedLayer === "emoji") setEmojiRotation((r) => r + delta);
-    if (selectedLayer === "music") setMusicRotation((r) => r + delta);
   };
 
   const deleteSelectedObject = () => {
@@ -743,31 +746,31 @@ export default function StoryCreate() {
                 id: selectedMusic.id,
                 title: selectedMusic.title,
                 artist: selectedMusic.artist,
-                x: musicPos.x,
-                y: musicPos.y,
-                scale: musicScale,
-                rotation: musicRotation,
+                x: musicLayer?.x ?? 16,
+                y: musicLayer?.y ?? 520,
+                scale: musicLayer?.scale ?? 1,
+                rotation: musicLayer?.rotation ?? 0,
               }
             : null,
           sticker: selectedSession
             ? {
                 session_id: selectedSession.id,
-                x: stickerPos.x,
-                y: stickerPos.y,
-                scale: stickerScale,
-                rotation: stickerRotation,
+                x: sessionLayer?.x ?? 20,
+                y: sessionLayer?.y ?? 80,
+                scale: sessionLayer?.scale ?? 1,
+                rotation: sessionLayer?.rotation ?? 0,
               }
             : null,
           emoji_sticker: emojiSticker
             ? {
                 emoji: emojiSticker,
-                x: emojiPos.x,
-                y: emojiPos.y,
-                scale: emojiScale,
-                rotation: emojiRotation,
+                x: emojiLayer?.x ?? 120,
+                y: emojiLayer?.y ?? 220,
+                scale: emojiLayer?.scale ?? 1,
+                rotation: emojiLayer?.rotation ?? 0,
               }
             : null,
-          dynamic_layers: dynamicLayers,
+          dynamic_layers: dynamicLayers.filter((layer) => layer.kind === "mention" || layer.kind === "place" || layer.kind === "time"),
           draw_enabled: drawMode,
         },
       });
@@ -794,22 +797,23 @@ export default function StoryCreate() {
 
   // ── Sticker drag ──
   const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!selectedSession) return;
-    stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: stickerPos.x, baseY: stickerPos.y };
+    if (!sessionLayer) return;
+    stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: sessionLayer.x, baseY: sessionLayer.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
 
   const startMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!selectedMusic) return;
-    musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicPos.x, baseY: musicPos.y };
+    if (!musicLayer) return;
+    musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicLayer.x, baseY: musicLayer.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicDragRef.current) return;
-    setMusicPos({
-      x: Math.max(0, musicDragRef.current.baseX + e.clientX - musicDragRef.current.startX),
-      y: Math.max(0, musicDragRef.current.baseY + e.clientY - musicDragRef.current.startY),
-    });
+    updateKindLayer("music", (layer) => ({
+      ...layer,
+      x: Math.max(0, musicDragRef.current!.baseX + e.clientX - musicDragRef.current!.startX),
+      y: Math.max(0, musicDragRef.current!.baseY + e.clientY - musicDragRef.current!.startY),
+    }));
   };
   const endMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (musicDragRef.current) {
@@ -819,10 +823,11 @@ export default function StoryCreate() {
   };
   const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
-    setStickerPos({
-      x: Math.max(0, stickerDragRef.current.baseX + e.clientX - stickerDragRef.current.startX),
-      y: Math.max(0, stickerDragRef.current.baseY + e.clientY - stickerDragRef.current.startY),
-    });
+    updateKindLayer("session", (layer) => ({
+      ...layer,
+      x: Math.max(0, stickerDragRef.current!.baseX + e.clientX - stickerDragRef.current!.startX),
+      y: Math.max(0, stickerDragRef.current!.baseY + e.clientY - stickerDragRef.current!.startY),
+    }));
   };
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (stickerDragRef.current) {
@@ -832,16 +837,17 @@ export default function StoryCreate() {
   };
 
   const startEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!emojiSticker) return;
-    emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiPos.x, baseY: emojiPos.y };
+    if (!emojiLayer) return;
+    emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiLayer.x, baseY: emojiLayer.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiDragRef.current) return;
-    setEmojiPos({
-      x: Math.max(0, emojiDragRef.current.baseX + e.clientX - emojiDragRef.current.startX),
-      y: Math.max(0, emojiDragRef.current.baseY + e.clientY - emojiDragRef.current.startY),
-    });
+    updateKindLayer("emoji", (layer) => ({
+      ...layer,
+      x: Math.max(0, emojiDragRef.current!.baseX + e.clientX - emojiDragRef.current!.startX),
+      y: Math.max(0, emojiDragRef.current!.baseY + e.clientY - emojiDragRef.current!.startY),
+    }));
   };
   const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (emojiDragRef.current) {
@@ -1067,16 +1073,16 @@ export default function StoryCreate() {
 
       if (selectedMusic) {
         ctx.save();
-        const bx = Math.round(musicPos.x * sx);
-        const by = Math.round(musicPos.y * sy);
+        const bx = Math.round((musicLayer?.x ?? 16) * sx);
+        const by = Math.round((musicLayer?.y ?? 520) * sy);
         const bh = Math.round(30 * sy);
         const text = selectedMusic.title;
         ctx.font = `600 ${Math.max(11, Math.round(outW * 0.024))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
         const tw = ctx.measureText(text).width;
         const bw = Math.round(tw + 42 * sx);
         ctx.translate(bx, by);
-        ctx.scale(musicScale, musicScale);
-        ctx.rotate((musicRotation * Math.PI) / 180);
+        ctx.scale(musicLayer?.scale ?? 1, musicLayer?.scale ?? 1);
+        ctx.rotate(((musicLayer?.rotation ?? 0) * Math.PI) / 180);
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.beginPath();
         ctx.roundRect(0, 0, bw, bh, 999);
@@ -1089,9 +1095,9 @@ export default function StoryCreate() {
 
       if (selectedSession) {
         ctx.save();
-        ctx.translate(stickerPos.x * sx, stickerPos.y * sy);
-        ctx.scale(stickerScale, stickerScale);
-        ctx.rotate((stickerRotation * Math.PI) / 180);
+        ctx.translate((sessionLayer?.x ?? 20) * sx, (sessionLayer?.y ?? 80) * sy);
+        ctx.scale(sessionLayer?.scale ?? 1, sessionLayer?.scale ?? 1);
+        ctx.rotate(((sessionLayer?.rotation ?? 0) * Math.PI) / 180);
         const w = Math.max(170, Math.round(outW * 0.36));
         const h = 66;
         ctx.fillStyle = "rgba(255,255,255,0.92)";
@@ -1109,16 +1115,17 @@ export default function StoryCreate() {
 
       if (emojiSticker) {
         ctx.save();
-        ctx.translate(emojiPos.x * sx, emojiPos.y * sy);
-        ctx.scale(emojiScale, emojiScale);
-        ctx.rotate((emojiRotation * Math.PI) / 180);
+        ctx.translate((emojiLayer?.x ?? 120) * sx, (emojiLayer?.y ?? 220) * sy);
+        ctx.scale(emojiLayer?.scale ?? 1, emojiLayer?.scale ?? 1);
+        ctx.rotate(((emojiLayer?.rotation ?? 0) * Math.PI) / 180);
         ctx.font = `700 ${Math.max(26, Math.round(outW * 0.08))}px -apple-system, BlinkMacSystemFont, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
         ctx.fillText(emojiSticker, 0, 0);
         ctx.restore();
       }
 
-      if (dynamicLayers.length > 0) {
-        for (const layer of dynamicLayers) {
+      const freestyleLayers = dynamicLayers.filter((layer) => layer.kind === "mention" || layer.kind === "place" || layer.kind === "time");
+      if (freestyleLayers.length > 0) {
+        for (const layer of freestyleLayers) {
           ctx.save();
           ctx.translate(layer.x * sx, layer.y * sy);
           ctx.scale(layer.scale, layer.scale);
@@ -1144,21 +1151,12 @@ export default function StoryCreate() {
     }
   }, [
     dynamicLayers,
-    emojiPos.x,
-    emojiPos.y,
-    emojiScale,
-    emojiRotation,
+    emojiLayer,
     emojiSticker,
-    musicPos.x,
-    musicPos.y,
-    musicRotation,
-    musicScale,
+    musicLayer,
     selectedMusic,
     selectedSession,
-    stickerPos.x,
-    stickerPos.y,
-    stickerRotation,
-    stickerScale,
+    sessionLayer,
     textAlign,
     textBold,
     textColor,
@@ -1506,11 +1504,11 @@ export default function StoryCreate() {
           <div
             className={cn(
               "absolute flex cursor-move items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur-sm",
-              selectedLayer === "music" && "ring-2 ring-white/60"
+              selectedDynamicLayerId === musicLayer?.id && "ring-2 ring-white/60"
             )}
             style={{
               zIndex: layerZ("music"),
-              transform: `translate(${musicPos.x}px, ${musicPos.y}px) scale(${musicScale}) rotate(${musicRotation}deg)`,
+              transform: `translate(${musicLayer?.x ?? 16}px, ${musicLayer?.y ?? 520}px) scale(${musicLayer?.scale ?? 1}) rotate(${musicLayer?.rotation ?? 0}deg)`,
               transformOrigin: "top left",
             }}
             onPointerDown={startMusicDrag}
@@ -1519,9 +1517,10 @@ export default function StoryCreate() {
             onPointerCancel={endMusicDrag}
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedLayer("music");
-              setSelectedDynamicLayerId(null);
-              bringLayerToFront("music");
+              if (musicLayer) {
+                setSelectedDynamicLayerId(musicLayer.id);
+                setDynamicLayers((prev) => [...prev.filter((l) => l.id !== musicLayer.id), musicLayer]);
+              }
               setActiveTool("music");
             }}
           >
@@ -1535,11 +1534,11 @@ export default function StoryCreate() {
           <div
             className={cn(
               "absolute cursor-move rounded-2xl border border-white/20 bg-white/90 p-3 shadow-lg dark:bg-black/80",
-              selectedLayer === "session" && "ring-2 ring-white/65"
+              selectedDynamicLayerId === sessionLayer?.id && "ring-2 ring-white/65"
             )}
             style={{
               zIndex: layerZ("session"),
-              transform: `translate(${stickerPos.x}px, ${stickerPos.y}px) scale(${stickerScale}) rotate(${stickerRotation}deg)`,
+              transform: `translate(${sessionLayer?.x ?? 20}px, ${sessionLayer?.y ?? 80}px) scale(${sessionLayer?.scale ?? 1}) rotate(${sessionLayer?.rotation ?? 0}deg)`,
               transformOrigin: "top left",
             }}
             onPointerDown={startDrag}
@@ -1548,19 +1547,20 @@ export default function StoryCreate() {
             onPointerCancel={endDrag}
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedLayer("session");
-              setSelectedDynamicLayerId(null);
-              bringLayerToFront("session");
+              if (sessionLayer) {
+                setSelectedDynamicLayerId(sessionLayer.id);
+                setDynamicLayers((prev) => [...prev.filter((l) => l.id !== sessionLayer.id), sessionLayer]);
+              }
               setActiveTool("session");
             }}
           >
             <p className="text-xs font-bold text-foreground">{selectedSession.title}</p>
             <p className="text-[10px] text-muted-foreground">{selectedSession.location_name}</p>
             <div className="mt-1.5 flex items-center gap-1">
-              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); setStickerScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2))); }}>
+              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); nudgeSelectedObjectScale(-0.1); }}>
                 <Minus className="h-3 w-3" />
               </button>
-              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); setStickerScale((s) => Math.min(1.8, +(s + 0.1).toFixed(2))); }}>
+              <button type="button" className="rounded-full border p-0.5" onClick={(e) => { e.stopPropagation(); nudgeSelectedObjectScale(0.1); }}>
                 <Plus className="h-3 w-3" />
               </button>
             </div>
@@ -1569,10 +1569,10 @@ export default function StoryCreate() {
 
         {emojiSticker && (
           <div
-            className={cn("absolute cursor-move select-none", selectedLayer === "emoji" && "ring-2 ring-white/65 rounded-2xl")}
+            className={cn("absolute cursor-move select-none", selectedDynamicLayerId === emojiLayer?.id && "ring-2 ring-white/65 rounded-2xl")}
             style={{
               zIndex: layerZ("emoji"),
-              transform: `translate(${emojiPos.x}px, ${emojiPos.y}px) scale(${emojiScale}) rotate(${emojiRotation}deg)`,
+              transform: `translate(${emojiLayer?.x ?? 120}px, ${emojiLayer?.y ?? 220}px) scale(${emojiLayer?.scale ?? 1}) rotate(${emojiLayer?.rotation ?? 0}deg)`,
               transformOrigin: "top left",
             }}
             onPointerDown={startEmojiDrag}
@@ -1581,9 +1581,10 @@ export default function StoryCreate() {
             onPointerCancel={endEmojiDrag}
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedLayer("emoji");
-              setSelectedDynamicLayerId(null);
-              bringLayerToFront("emoji");
+              if (emojiLayer) {
+                setSelectedDynamicLayerId(emojiLayer.id);
+                setDynamicLayers((prev) => [...prev.filter((l) => l.id !== emojiLayer.id), emojiLayer]);
+              }
               setActiveTool("sticker");
             }}
           >
@@ -1591,7 +1592,9 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {dynamicLayers.map((layer, i) => (
+        {dynamicLayers
+          .filter((layer) => layer.kind === "mention" || layer.kind === "place" || layer.kind === "time")
+          .map((layer, i) => (
           <div
             key={layer.id}
             className={cn(
@@ -2024,10 +2027,10 @@ export default function StoryCreate() {
             </div>
             {emojiSticker && (
               <div className="mt-2 flex items-center justify-end gap-2">
-                <button type="button" className="rounded-full border p-1" onClick={() => setEmojiScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2)))}>
+                <button type="button" className="rounded-full border p-1" onClick={() => nudgeSelectedObjectScale(-0.1)}>
                   <Minus className="h-3.5 w-3.5" />
                 </button>
-                <button type="button" className="rounded-full border p-1" onClick={() => setEmojiScale((s) => Math.min(2, +(s + 0.1).toFixed(2)))}>
+                <button type="button" className="rounded-full border p-1" onClick={() => nudgeSelectedObjectScale(0.1)}>
                   <Plus className="h-3.5 w-3.5" />
                 </button>
                 <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => setEmojiSticker(null)}>

@@ -19,7 +19,7 @@ import {
   UserX,
   Trash2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { buildPreferredProfileShareLink } from "@/lib/appLinks";
@@ -121,6 +121,7 @@ export function SessionStoryDialog({
   const [followersLoading, setFollowersLoading] = useState(false);
   const [highlightSaving, setHighlightSaving] = useState(false);
   const [hideSaving, setHideSaving] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const [viewers, setViewers] = useState<ViewerItem[]>([]);
   const [likers, setLikers] = useState<LikeRow[]>([]);
@@ -147,6 +148,12 @@ export function SessionStoryDialog({
   const goPrev = useCallback(() => {
     setIndex((i) => Math.max(0, i - 1));
     setStoryProgress(0);
+  }, []);
+
+  const triggerTapHaptic = useCallback(() => {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(8);
+    }
   }, []);
 
   useEffect(() => {
@@ -423,10 +430,13 @@ export function SessionStoryDialog({
 
   useEffect(() => {
     setStoryProgress(0);
+    setIsTransitioning(true);
+    const id = window.setTimeout(() => setIsTransitioning(false), 140);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       void videoRef.current.play().catch(() => {});
     }
+    return () => window.clearTimeout(id);
   }, [index, current?.id]);
 
   useEffect(() => {
@@ -636,8 +646,13 @@ export function SessionStoryDialog({
     const dy = e.clientY - p.y;
     if (dt > 450 || Math.abs(dx) > 20 || Math.abs(dy) > 20) return;
     const w = typeof window !== "undefined" ? window.innerWidth : 400;
-    if (e.clientX < w * TAP_EDGE) goPrev();
-    else if (e.clientX > w * (1 - TAP_EDGE)) goNext();
+    if (e.clientX < w * TAP_EDGE) {
+      triggerTapHaptic();
+      goPrev();
+    } else if (e.clientX > w * (1 - TAP_EDGE)) {
+      triggerTapHaptic();
+      goNext();
+    }
   };
 
   const onTouchStartSwipe = (e: React.TouchEvent) => {
@@ -654,6 +669,19 @@ export function SessionStoryDialog({
   };
 
   const displayName = authorProfile?.display_name?.trim() || authorProfile?.username || "Membre";
+  const relativeStoryTime = useMemo(() => {
+    if (!current?.created_at) return "";
+    const raw = formatDistanceToNowStrict(new Date(current.created_at), { addSuffix: false, locale: fr });
+    return raw
+      .replace(" secondes", " s")
+      .replace(" seconde", " s")
+      .replace(" minutes", " min")
+      .replace(" minute", " min")
+      .replace(" heures", " h")
+      .replace(" heure", " h")
+      .replace(" jours", " j")
+      .replace(" jour", " j");
+  }, [current?.created_at]);
   const likersByUserId = useMemo(() => new Map(likers.map((l) => [l.user_id, l])), [likers]);
   const insightRows = useMemo(() => {
     const rows = viewers.map((v) => {
@@ -954,11 +982,12 @@ export function SessionStoryDialog({
             <div className="flex flex-1 items-center justify-center p-6 text-sm text-white/60">Aucune story active.</div>
           ) : (
             <>
-              <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex gap-0.5 px-2 pt-[max(env(safe-area-inset-top),10px)]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-28 bg-gradient-to-b from-black/58 via-black/22 to-transparent" />
+              <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex gap-1 px-3 pt-[calc(env(safe-area-inset-top,0px)+6px)]">
                 {stories.map((story, i) => (
-                  <div key={story.id} className="h-0.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/25">
+                  <div key={story.id} className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/25">
                     <div
-                      className="h-full bg-white transition-[width] duration-75 ease-linear"
+                      className="h-full rounded-full bg-white transition-[width] duration-75 ease-linear"
                       style={{
                         width: i < index ? "100%" : i > index ? "0%" : `${storyProgress}%`,
                       }}
@@ -967,26 +996,50 @@ export function SessionStoryDialog({
                 ))}
               </div>
 
-              <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex items-center gap-2.5 px-3 pt-[calc(max(env(safe-area-inset-top),10px)+14px)]">
-                <Avatar className="pointer-events-none h-9 w-9 shrink-0 border border-white/20">
-                  <AvatarImage src={authorProfile?.avatar_url ?? ""} className="object-cover" />
-                  <AvatarFallback className="bg-white/10 text-xs text-white">
-                    {(authorProfile?.username ?? "U").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="pointer-events-none min-w-0 flex-1">
+              <div className="absolute left-0 right-0 top-0 z-30 flex items-center gap-2.5 px-3 pt-[calc(env(safe-area-inset-top,0px)+18px)]">
+                <button
+                  type="button"
+                  className="pointer-events-auto rounded-full"
+                  aria-label="Ouvrir le profil"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (authorProfile?.username) {
+                      onOpenChange(false);
+                      navigate(`/p/${authorProfile.username}`);
+                    }
+                  }}
+                >
+                  <Avatar className="h-9 w-9 shrink-0 border border-white/25">
+                    <AvatarImage src={authorProfile?.avatar_url ?? ""} className="object-cover" />
+                    <AvatarFallback className="bg-white/10 text-xs text-white">
+                      {(authorProfile?.username ?? "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold leading-tight">{displayName}</p>
-                  <p className="truncate text-[11px] text-white/55">
-                    {format(new Date(current.created_at), "HH:mm", { locale: fr })}
+                  <p className="truncate text-[11px] text-white/70">
+                    {(relativeStoryTime || format(new Date(current.created_at), "HH:mm", { locale: fr }))} · {index + 1}/{stories.length}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/25 text-white/90 backdrop-blur-sm transition-opacity active:opacity-70"
+                  aria-label="Options"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActionMode("menu");
+                  }}
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
                 <DialogClose asChild>
                   <button
                     type="button"
-                    className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-opacity active:opacity-60"
+                    className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/25 text-white/95 backdrop-blur-sm transition-opacity active:opacity-70"
                     aria-label="Fermer"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5" />
                   </button>
                 </DialogClose>
               </div>
@@ -1015,14 +1068,20 @@ export function SessionStoryDialog({
                       src={displayUrl}
                       alt=""
                       draggable={false}
-                      className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover"
+                      className={cn(
+                        "pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition-opacity duration-200",
+                        isTransitioning ? "opacity-70" : "opacity-100"
+                      )}
                     />
                   ) : (
                     <video
                       ref={videoRef}
                       key={`${current.id}-${displayUrl}`}
                       src={displayUrl}
-                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                      className={cn(
+                        "pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
+                        isTransitioning ? "opacity-70" : "opacity-100"
+                      )}
                       playsInline
                       muted
                       autoPlay
