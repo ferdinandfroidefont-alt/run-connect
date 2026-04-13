@@ -8,13 +8,29 @@ import { useCamera } from "@/hooks/useCamera";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
+import { storyMusicProvider, type StoryMusicTrack } from "@/lib/storyMusicProvider";
 import {
-  X, Camera, Image, ChevronLeft, Send, Type, Music, Smile,
-  Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check
+  X, Camera, Image, ChevronLeft, Type, Music, Smile,
+  Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
+  AlignLeft, AlignCenter, AlignRight, Trash2, Search
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
 type StoryStep = "entry" | "capture" | "edit";
+type LayerKind = "text" | "music" | "session" | "emoji";
+type DynamicLayerKind = "mention" | "place" | "time";
+type DynamicLayer = {
+  id: string;
+  kind: DynamicLayerKind;
+  label: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+};
+type TextAlign = "left" | "center" | "right";
+type TextStyleMode = "plain" | "bubble" | "outline" | "band";
+type TextFontMode = "modern" | "clean" | "signature";
 
 type ScheduledSession = {
   id: string;
@@ -27,16 +43,11 @@ type ScheduledSession = {
   route_coordinates?: Array<{ lat: number; lng: number }>;
 };
 
-const MUSIC_LIBRARY = [
-  { id: "1", title: "Motivation Run", artist: "SportBeats", duration: "0:30" },
-  { id: "2", title: "Victory Lap", artist: "FitMusic", duration: "0:15" },
-  { id: "3", title: "Trail Vibes", artist: "NatureSound", duration: "0:30" },
-  { id: "4", title: "Speed Up", artist: "RunTempo", duration: "0:20" },
-  { id: "5", title: "Chill Recovery", artist: "ZenRun", duration: "0:30" },
-  { id: "6", title: "Race Day", artist: "SportBeats", duration: "0:15" },
-  { id: "7", title: "Endurance", artist: "FitMusic", duration: "0:25" },
-  { id: "8", title: "Final Sprint", artist: "RunTempo", duration: "0:10" },
-];
+const FONT_MAP: Record<TextFontMode, string> = {
+  modern: '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif',
+  clean: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif',
+  signature: '"Snell Roundhand", "Segoe Script", cursive',
+};
 
 export default function StoryCreate() {
   const navigate = useNavigate();
@@ -66,9 +77,33 @@ export default function StoryCreate() {
   const [showTextInput, setShowTextInput] = useState(false);
   const [textPos, setTextPos] = useState({ x: 120, y: 200 });
   const textDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
-  const [selectedMusic, setSelectedMusic] = useState<typeof MUSIC_LIBRARY[0] | null>(null);
+  const [textScale, setTextScale] = useState(1);
+  const [textRotation, setTextRotation] = useState(0);
+  const [textColor, setTextColor] = useState("#FFFFFF");
+  const [textFont, setTextFont] = useState<TextFontMode>("modern");
+  const [textAlign, setTextAlign] = useState<TextAlign>("center");
+  const [textStyle, setTextStyle] = useState<TextStyleMode>("bubble");
+  const [textSize, setTextSize] = useState(30);
+  const [textBold, setTextBold] = useState(true);
+  const [textPinching, setTextPinching] = useState(false);
+  const textGestureRef = useRef<{ startDist: number; startAngle: number; baseScale: number; baseRotation: number } | null>(null);
+  const [selectedMusic, setSelectedMusic] = useState<StoryMusicTrack | null>(null);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
+  const [musicQuery, setMusicQuery] = useState("");
+  const [filteredMusic, setFilteredMusic] = useState<StoryMusicTrack[]>([]);
+  const [musicPos, setMusicPos] = useState({ x: 16, y: 520 });
+  const [musicScale, setMusicScale] = useState(1);
+  const [musicRotation, setMusicRotation] = useState(0);
+  const musicDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
+  const [activeTool, setActiveTool] = useState<"text" | "music" | "session" | "sticker" | "draw" | null>(null);
+  const [selectedLayer, setSelectedLayer] = useState<LayerKind | null>(null);
+  const [layerOrder, setLayerOrder] = useState<LayerKind[]>(["session", "music", "emoji", "text"]);
+  const [dynamicLayers, setDynamicLayers] = useState<DynamicLayer[]>([]);
+  const [selectedDynamicLayerId, setSelectedDynamicLayerId] = useState<string | null>(null);
+  const dynamicDragRef = useRef<{ id: string; startX: number; startY: number; baseX: number; baseY: number } | null>(null);
 
   // Session
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
@@ -76,11 +111,13 @@ export default function StoryCreate() {
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [stickerPos, setStickerPos] = useState({ x: 20, y: 80 });
   const [stickerScale, setStickerScale] = useState(1);
+  const [stickerRotation, setStickerRotation] = useState(0);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
   const [emojiPos, setEmojiPos] = useState({ x: 120, y: 220 });
   const [emojiScale, setEmojiScale] = useState(1);
+  const [emojiRotation, setEmojiRotation] = useState(0);
   const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [drawMode, setDrawMode] = useState(false);
   const [drawColor, setDrawColor] = useState("#FFFFFF");
@@ -95,6 +132,164 @@ export default function StoryCreate() {
 
   const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      const tracks = await storyMusicProvider.searchTracks(musicQuery);
+      if (mounted) setFilteredMusic(tracks);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [musicQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const layerZ = useCallback(
+    (layer: LayerKind) => 10 + layerOrder.indexOf(layer),
+    [layerOrder]
+  );
+
+  const bringLayerToFront = (layer: LayerKind) => {
+    setLayerOrder((prev) => [...prev.filter((l) => l !== layer), layer]);
+    setSelectedLayer(layer);
+  };
+
+  const deleteSelectedLayer = () => {
+    if (!selectedLayer) return;
+    if (selectedLayer === "text") {
+      setTextOverlay("");
+      setShowTextInput(false);
+    } else if (selectedLayer === "music") {
+      setSelectedMusic(null);
+    } else if (selectedLayer === "session") {
+      setSelectedSession(null);
+    } else if (selectedLayer === "emoji") {
+      setEmojiSticker(null);
+    }
+    setSelectedLayer(null);
+  };
+
+  const selectedObjectType = selectedDynamicLayerId ? "dynamic" : selectedLayer;
+
+  const bringSelectedObjectToFront = () => {
+    if (selectedDynamicLayerId) {
+      setDynamicLayers((prev) => {
+        const target = prev.find((l) => l.id === selectedDynamicLayerId);
+        if (!target) return prev;
+        return [...prev.filter((l) => l.id !== selectedDynamicLayerId), target];
+      });
+      return;
+    }
+    if (selectedLayer) bringLayerToFront(selectedLayer);
+  };
+
+  const nudgeSelectedObjectScale = (delta: number) => {
+    if (selectedDynamicLayerId) {
+      setDynamicLayers((prev) =>
+        prev.map((l) =>
+          l.id === selectedDynamicLayerId
+            ? { ...l, scale: Math.max(0.6, Math.min(2.4, +(l.scale + delta).toFixed(2))) }
+            : l
+        )
+      );
+      return;
+    }
+    if (selectedLayer === "session") setStickerScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
+    if (selectedLayer === "emoji") setEmojiScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
+    if (selectedLayer === "music") setMusicScale((s) => Math.max(0.6, Math.min(2.4, +(s + delta).toFixed(2))));
+  };
+
+  const nudgeSelectedObjectRotation = (delta: number) => {
+    if (selectedDynamicLayerId) {
+      setDynamicLayers((prev) =>
+        prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation + delta } : l))
+      );
+      return;
+    }
+    if (selectedLayer === "session") setStickerRotation((r) => r + delta);
+    if (selectedLayer === "emoji") setEmojiRotation((r) => r + delta);
+    if (selectedLayer === "music") setMusicRotation((r) => r + delta);
+  };
+
+  const deleteSelectedObject = () => {
+    if (selectedDynamicLayerId) {
+      setDynamicLayers((prev) => prev.filter((l) => l.id !== selectedDynamicLayerId));
+      setSelectedDynamicLayerId(null);
+      return;
+    }
+    deleteSelectedLayer();
+  };
+
+  const addDynamicLayer = (kind: DynamicLayerKind) => {
+    const id = `${kind}-${Date.now()}`;
+    const label =
+      kind === "mention"
+        ? "@mention"
+        : kind === "place"
+          ? "📍 Mon lieu"
+          : new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const layer: DynamicLayer = { id, kind, label, x: 120, y: 300, scale: 1, rotation: 0 };
+    setDynamicLayers((prev) => [...prev, layer]);
+    setSelectedDynamicLayerId(id);
+  };
+
+  const startDynamicDrag = (id: string, e: React.PointerEvent<HTMLDivElement>) => {
+    const layer = dynamicLayers.find((l) => l.id === id);
+    if (!layer) return;
+    dynamicDragRef.current = { id, startX: e.clientX, startY: e.clientY, baseX: layer.x, baseY: layer.y };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+  const moveDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dynamicDragRef.current) return;
+    setDynamicLayers((prev) =>
+      prev.map((l) =>
+        l.id === dynamicDragRef.current!.id
+          ? {
+              ...l,
+              x: Math.max(0, dynamicDragRef.current!.baseX + e.clientX - dynamicDragRef.current!.startX),
+              y: Math.max(0, dynamicDragRef.current!.baseY + e.clientY - dynamicDragRef.current!.startY),
+            }
+          : l
+      )
+    );
+  };
+  const endDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dynamicDragRef.current) {
+      dynamicDragRef.current = null;
+      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const toggleTrackPreview = async (track: StoryMusicTrack) => {
+    if (!track.previewUrl) return;
+    if (previewAudioRef.current && previewingTrackId === track.id) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      setPreviewingTrackId(null);
+      return;
+    }
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+    }
+    const audio = new Audio(track.previewUrl);
+    previewAudioRef.current = audio;
+    setPreviewingTrackId(track.id);
+    audio.onended = () => setPreviewingTrackId(null);
+    try {
+      await audio.play();
+    } catch {
+      setPreviewingTrackId(null);
+    }
+  };
 
   // ── Camera stream ──
   useEffect(() => {
@@ -103,7 +298,12 @@ export default function StoryCreate() {
     void (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: facingMode } },
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+            frameRate: { ideal: 30, max: 60 },
+          },
           audio: captureMode !== "photo",
         });
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -192,7 +392,7 @@ export default function StoryCreate() {
           resolve(new File([blob], `story-${Date.now()}.jpg`, { type: "image/jpeg" }));
         },
         "image/jpeg",
-        0.92,
+        0.98,
       );
     });
   }, [facingMode]);
@@ -447,7 +647,7 @@ export default function StoryCreate() {
         h - 120,
       );
 
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.98));
       if (!blob) return null;
       return new File([blob], `session-story-${session.id}-${Date.now()}.jpg`, { type: "image/jpeg" });
     } catch {
@@ -466,8 +666,17 @@ export default function StoryCreate() {
         : "image";
       let fileToUpload = mediaFile;
       if (mediaType === "image") {
-        const baked = await renderImageStoryWithOverlays(mediaFile);
-        if (baked) fileToUpload = baked;
+        const hasOverlays =
+          !!textOverlay.trim() ||
+          !!selectedMusic ||
+          !!selectedSession ||
+          !!emojiSticker ||
+          dynamicLayers.length > 0 ||
+          drawHistoryRef.current.length > 0;
+        if (hasOverlays) {
+          const baked = await renderImageStoryWithOverlays(mediaFile);
+          if (baked) fileToUpload = baked;
+        }
       }
 
       const { data: story, error: storyError } = await (supabase as any)
@@ -495,15 +704,50 @@ export default function StoryCreate() {
         media_type: mediaType,
         metadata: {
           text_overlay: textOverlay
-            ? { value: textOverlay, x: textPos.x, y: textPos.y }
+            ? {
+                value: textOverlay,
+                x: textPos.x,
+                y: textPos.y,
+                scale: textScale,
+                rotation: textRotation,
+                color: textColor,
+                font: textFont,
+                align: textAlign,
+                style: textStyle,
+                size: textSize,
+                bold: textBold,
+              }
             : null,
-          music: selectedMusic ? { id: selectedMusic.id, title: selectedMusic.title } : null,
+          music: selectedMusic
+            ? {
+                id: selectedMusic.id,
+                title: selectedMusic.title,
+                artist: selectedMusic.artist,
+                x: musicPos.x,
+                y: musicPos.y,
+                scale: musicScale,
+                rotation: musicRotation,
+              }
+            : null,
           sticker: selectedSession
-            ? { session_id: selectedSession.id, x: stickerPos.x, y: stickerPos.y, scale: stickerScale }
+            ? {
+                session_id: selectedSession.id,
+                x: stickerPos.x,
+                y: stickerPos.y,
+                scale: stickerScale,
+                rotation: stickerRotation,
+              }
             : null,
           emoji_sticker: emojiSticker
-            ? { emoji: emojiSticker, x: emojiPos.x, y: emojiPos.y, scale: emojiScale }
+            ? {
+                emoji: emojiSticker,
+                x: emojiPos.x,
+                y: emojiPos.y,
+                scale: emojiScale,
+                rotation: emojiRotation,
+              }
             : null,
+          dynamic_layers: dynamicLayers,
           draw_enabled: drawMode,
         },
       });
@@ -533,6 +777,25 @@ export default function StoryCreate() {
     if (!selectedSession) return;
     stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: stickerPos.x, baseY: stickerPos.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+
+  const startMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!selectedMusic) return;
+    musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicPos.x, baseY: musicPos.y };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+  const moveMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!musicDragRef.current) return;
+    setMusicPos({
+      x: Math.max(0, musicDragRef.current.baseX + e.clientX - musicDragRef.current.startX),
+      y: Math.max(0, musicDragRef.current.baseY + e.clientY - musicDragRef.current.startY),
+    });
+  };
+  const endMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (musicDragRef.current) {
+      musicDragRef.current = null;
+      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
   };
   const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
@@ -583,6 +846,40 @@ export default function StoryCreate() {
     if (textDragRef.current) {
       textDragRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2) return;
+    const [a, b] = [e.touches[0], e.touches[1]];
+    const dx = b.clientX - a.clientX;
+    const dy = b.clientY - a.clientY;
+    textGestureRef.current = {
+      startDist: Math.hypot(dx, dy),
+      startAngle: Math.atan2(dy, dx),
+      baseScale: textScale,
+      baseRotation: textRotation,
+    };
+    setTextPinching(true);
+  };
+
+  const onTextTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2 || !textGestureRef.current) return;
+    const [a, b] = [e.touches[0], e.touches[1]];
+    const dx = b.clientX - a.clientX;
+    const dy = b.clientY - a.clientY;
+    const dist = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+    const ratio = dist / Math.max(1, textGestureRef.current.startDist);
+    setTextScale(Math.max(0.6, Math.min(3, +(textGestureRef.current.baseScale * ratio).toFixed(2))));
+    const deltaDeg = ((angle - textGestureRef.current.startAngle) * 180) / Math.PI;
+    setTextRotation(textGestureRef.current.baseRotation + deltaDeg);
+  };
+
+  const onTextTouchEnd = () => {
+    if (textPinching) {
+      setTextPinching(false);
+      textGestureRef.current = null;
     }
   };
 
@@ -719,39 +1016,54 @@ export default function StoryCreate() {
 
       if (textOverlay.trim()) {
         ctx.save();
-        ctx.font = `700 ${Math.max(18, Math.round(outW * 0.05))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
-        ctx.textAlign = "left";
+        const fontPx = Math.max(18, Math.round(textSize * sx));
+        ctx.font = `${textBold ? 700 : 500} ${fontPx}px ${FONT_MAP[textFont]}`;
+        ctx.textAlign = textAlign;
         ctx.textBaseline = "top";
         const tx = Math.max(18, textPos.x * sx);
         const ty = Math.max(18, textPos.y * sy);
         const metrics = ctx.measureText(textOverlay);
         const boxW = metrics.width + 30;
         const boxH = Math.max(40, Math.round(outW * 0.08));
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.beginPath();
-        ctx.roundRect(tx - 14, ty - 10, boxW, boxH, 14);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillText(textOverlay, tx, ty);
+        ctx.translate(tx, ty);
+        ctx.scale(textScale, textScale);
+        ctx.rotate((textRotation * Math.PI) / 180);
+        const anchorX = textAlign === "center" ? 0 : textAlign === "right" ? -metrics.width : 0;
+        if (textStyle === "bubble" || textStyle === "band") {
+          ctx.fillStyle = textStyle === "bubble" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.38)";
+          ctx.beginPath();
+          ctx.roundRect(anchorX - 14, -10, boxW, boxH, textStyle === "bubble" ? 14 : 4);
+          ctx.fill();
+        }
+        if (textStyle === "outline") {
+          ctx.strokeStyle = "rgba(0,0,0,0.6)";
+          ctx.lineWidth = Math.max(1, Math.round(fontPx / 12));
+          ctx.strokeText(textOverlay, anchorX, 0);
+        }
+        ctx.fillStyle = textColor;
+        ctx.fillText(textOverlay, anchorX, 0);
         ctx.restore();
       }
 
       if (selectedMusic) {
         ctx.save();
-        const bx = Math.round(16 * sx);
-        const by = Math.round((hostH - 80) * sy);
+        const bx = Math.round(musicPos.x * sx);
+        const by = Math.round(musicPos.y * sy);
         const bh = Math.round(30 * sy);
         const text = selectedMusic.title;
         ctx.font = `600 ${Math.max(11, Math.round(outW * 0.024))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
         const tw = ctx.measureText(text).width;
         const bw = Math.round(tw + 42 * sx);
+        ctx.translate(bx, by);
+        ctx.scale(musicScale, musicScale);
+        ctx.rotate((musicRotation * Math.PI) / 180);
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.beginPath();
-        ctx.roundRect(bx, by, bw, bh, 999);
+        ctx.roundRect(0, 0, bw, bh, 999);
         ctx.fill();
         ctx.fillStyle = "#FFFFFF";
-        ctx.fillText("♪", bx + Math.round(12 * sx), by + bh / 2 + 4);
-        ctx.fillText(text, bx + Math.round(24 * sx), by + bh / 2 + 4);
+        ctx.fillText("♪", Math.round(12 * sx), bh / 2 + 4);
+        ctx.fillText(text, Math.round(24 * sx), bh / 2 + 4);
         ctx.restore();
       }
 
@@ -759,6 +1071,7 @@ export default function StoryCreate() {
         ctx.save();
         ctx.translate(stickerPos.x * sx, stickerPos.y * sy);
         ctx.scale(stickerScale, stickerScale);
+        ctx.rotate((stickerRotation * Math.PI) / 180);
         const w = Math.max(170, Math.round(outW * 0.36));
         const h = 66;
         ctx.fillStyle = "rgba(255,255,255,0.92)";
@@ -778,12 +1091,30 @@ export default function StoryCreate() {
         ctx.save();
         ctx.translate(emojiPos.x * sx, emojiPos.y * sy);
         ctx.scale(emojiScale, emojiScale);
+        ctx.rotate((emojiRotation * Math.PI) / 180);
         ctx.font = `700 ${Math.max(26, Math.round(outW * 0.08))}px -apple-system, BlinkMacSystemFont, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
         ctx.fillText(emojiSticker, 0, 0);
         ctx.restore();
       }
 
-      const blob = await new Promise<Blob | null>((resolve) => out.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+      if (dynamicLayers.length > 0) {
+        for (const layer of dynamicLayers) {
+          ctx.save();
+          ctx.translate(layer.x * sx, layer.y * sy);
+          ctx.scale(layer.scale, layer.scale);
+          ctx.rotate((layer.rotation * Math.PI) / 180);
+          ctx.fillStyle = "rgba(0,0,0,0.48)";
+          ctx.beginPath();
+          ctx.roundRect(0, -4, Math.max(120, layer.label.length * 9), 34, 14);
+          ctx.fill();
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = `700 ${Math.max(14, Math.round(outW * 0.028))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
+          ctx.fillText(layer.label, 10, 20);
+          ctx.restore();
+        }
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) => out.toBlob((b) => resolve(b), "image/jpeg", 0.98));
       if (!blob) return null;
       return new File([blob], `story-baked-${Date.now()}.jpg`, { type: "image/jpeg" });
     } catch {
@@ -791,7 +1122,35 @@ export default function StoryCreate() {
     } finally {
       URL.revokeObjectURL(mediaUrl);
     }
-  }, [emojiPos.x, emojiPos.y, emojiScale, emojiSticker, selectedMusic, selectedSession, stickerPos.x, stickerPos.y, stickerScale, textOverlay, textPos.x, textPos.y]);
+  }, [
+    dynamicLayers,
+    emojiPos.x,
+    emojiPos.y,
+    emojiScale,
+    emojiRotation,
+    emojiSticker,
+    musicPos.x,
+    musicPos.y,
+    musicRotation,
+    musicScale,
+    selectedMusic,
+    selectedSession,
+    stickerPos.x,
+    stickerPos.y,
+    stickerRotation,
+    stickerScale,
+    textAlign,
+    textBold,
+    textColor,
+    textFont,
+    textOverlay,
+    textPos.x,
+    textPos.y,
+    textRotation,
+    textScale,
+    textSize,
+    textStyle,
+  ]);
 
   // ═══════════════════════════════════════
   // STEP 0: ENTRY CHOICE
@@ -1034,7 +1393,11 @@ export default function StoryCreate() {
         className="relative flex-1"
         ref={drawHostRef}
         onClick={(e) => {
-          if (!showTextInput) return;
+          if (activeTool !== "text") {
+            setSelectedLayer(null);
+            setSelectedDynamicLayerId(null);
+            return;
+          }
           const host = drawHostRef.current;
           if (!host) return;
           const rect = host.getBoundingClientRect();
@@ -1042,6 +1405,7 @@ export default function StoryCreate() {
             x: Math.max(8, e.clientX - rect.left),
             y: Math.max(8, e.clientY - rect.top),
           });
+          if (!textOverlay) setShowTextInput(true);
         }}
       >
         {previewUrl && (
@@ -1055,12 +1419,28 @@ export default function StoryCreate() {
         {/* Text overlay on preview (positioned at cursor) */}
         {(textOverlay || showTextInput) && (
           <div
-            className="absolute z-[8]"
-            style={{ transform: `translate(${textPos.x}px, ${textPos.y}px)` }}
+            className={cn("absolute", selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}
+            style={{
+              zIndex: layerZ("text"),
+              transform: `translate(${textPos.x}px, ${textPos.y}px) scale(${textScale}) rotate(${textRotation}deg)`,
+              transformOrigin: "top left",
+            }}
             onPointerDown={startTextDrag}
             onPointerMove={moveTextDrag}
             onPointerUp={endTextDrag}
             onPointerCancel={endTextDrag}
+            onTouchStart={onTextTouchStart}
+            onTouchMove={onTextTouchMove}
+            onTouchEnd={onTextTouchEnd}
+            onTouchCancel={onTextTouchEnd}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLayer("text");
+              setSelectedDynamicLayerId(null);
+              bringLayerToFront("text");
+              setActiveTool("text");
+              setShowTextInput(true);
+            }}
           >
             {showTextInput ? (
               <input
@@ -1068,10 +1448,33 @@ export default function StoryCreate() {
                 onChange={(e) => setTextOverlay(e.target.value)}
                 placeholder="Ecrire ici..."
                 autoFocus
-                className="min-w-[140px] rounded-lg border border-white/25 bg-black/45 px-3 py-2 text-base font-semibold text-white outline-none backdrop-blur-sm placeholder:text-white/60"
+                className="min-w-[160px] rounded-xl border border-white/30 bg-black/35 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/60"
+                style={{
+                  fontFamily: FONT_MAP[textFont],
+                  fontWeight: textBold ? 700 : 500,
+                  textAlign,
+                  fontSize: `${textSize}px`,
+                  color: textColor,
+                }}
               />
             ) : (
-              <div className="rounded-lg bg-black/50 px-4 py-2 text-lg font-bold text-white backdrop-blur-sm">
+              <div
+                className={cn(
+                  "rounded-xl px-4 py-2 backdrop-blur-sm",
+                  textStyle === "plain" && "bg-transparent",
+                  textStyle === "bubble" && "bg-black/45",
+                  textStyle === "band" && "bg-black/35 border-y border-white/25",
+                  textStyle === "outline" && "bg-transparent",
+                )}
+                style={{
+                  fontFamily: FONT_MAP[textFont],
+                  fontWeight: textBold ? 700 : 500,
+                  textAlign,
+                  fontSize: `${textSize}px`,
+                  color: textColor,
+                  WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                }}
+              >
                 {textOverlay}
               </div>
             )}
@@ -1080,7 +1483,28 @@ export default function StoryCreate() {
 
         {/* Music badge */}
         {selectedMusic && (
-          <div className="absolute bottom-20 left-4 flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur-sm">
+          <div
+            className={cn(
+              "absolute flex cursor-move items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 backdrop-blur-sm",
+              selectedLayer === "music" && "ring-2 ring-white/60"
+            )}
+            style={{
+              zIndex: layerZ("music"),
+              transform: `translate(${musicPos.x}px, ${musicPos.y}px) scale(${musicScale}) rotate(${musicRotation}deg)`,
+              transformOrigin: "top left",
+            }}
+            onPointerDown={startMusicDrag}
+            onPointerMove={moveMusicDrag}
+            onPointerUp={endMusicDrag}
+            onPointerCancel={endMusicDrag}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLayer("music");
+              setSelectedDynamicLayerId(null);
+              bringLayerToFront("music");
+              setActiveTool("music");
+            }}
+          >
             <Music className="h-3.5 w-3.5 text-white" />
             <span className="text-xs font-medium text-white">{selectedMusic.title}</span>
           </div>
@@ -1089,15 +1513,26 @@ export default function StoryCreate() {
         {/* Session sticker on preview */}
         {selectedSession && (
           <div
-            className="absolute cursor-move rounded-2xl border border-white/20 bg-white/90 p-3 shadow-lg dark:bg-black/80"
+            className={cn(
+              "absolute cursor-move rounded-2xl border border-white/20 bg-white/90 p-3 shadow-lg dark:bg-black/80",
+              selectedLayer === "session" && "ring-2 ring-white/65"
+            )}
             style={{
-              transform: `translate(${stickerPos.x}px, ${stickerPos.y}px) scale(${stickerScale})`,
+              zIndex: layerZ("session"),
+              transform: `translate(${stickerPos.x}px, ${stickerPos.y}px) scale(${stickerScale}) rotate(${stickerRotation}deg)`,
               transformOrigin: "top left",
             }}
             onPointerDown={startDrag}
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLayer("session");
+              setSelectedDynamicLayerId(null);
+              bringLayerToFront("session");
+              setActiveTool("session");
+            }}
           >
             <p className="text-xs font-bold text-foreground">{selectedSession.title}</p>
             <p className="text-[10px] text-muted-foreground">{selectedSession.location_name}</p>
@@ -1114,19 +1549,53 @@ export default function StoryCreate() {
 
         {emojiSticker && (
           <div
-            className="absolute cursor-move select-none"
+            className={cn("absolute cursor-move select-none", selectedLayer === "emoji" && "ring-2 ring-white/65 rounded-2xl")}
             style={{
-              transform: `translate(${emojiPos.x}px, ${emojiPos.y}px) scale(${emojiScale})`,
+              zIndex: layerZ("emoji"),
+              transform: `translate(${emojiPos.x}px, ${emojiPos.y}px) scale(${emojiScale}) rotate(${emojiRotation}deg)`,
               transformOrigin: "top left",
             }}
             onPointerDown={startEmojiDrag}
             onPointerMove={moveEmojiDrag}
             onPointerUp={endEmojiDrag}
             onPointerCancel={endEmojiDrag}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedLayer("emoji");
+              setSelectedDynamicLayerId(null);
+              bringLayerToFront("emoji");
+              setActiveTool("sticker");
+            }}
           >
             <div className="rounded-2xl bg-black/35 px-3 py-2 text-3xl backdrop-blur-sm">{emojiSticker}</div>
           </div>
         )}
+
+        {dynamicLayers.map((layer, i) => (
+          <div
+            key={layer.id}
+            className={cn(
+              "absolute cursor-move select-none rounded-2xl border border-white/20 bg-black/45 px-3 py-2 text-sm font-semibold text-white backdrop-blur-md",
+              selectedDynamicLayerId === layer.id && "ring-2 ring-white/70"
+            )}
+            style={{
+              zIndex: 40 + i,
+              transform: `translate(${layer.x}px, ${layer.y}px) scale(${layer.scale}) rotate(${layer.rotation}deg)`,
+              transformOrigin: "top left",
+            }}
+            onPointerDown={(e) => startDynamicDrag(layer.id, e)}
+            onPointerMove={moveDynamicDrag}
+            onPointerUp={endDynamicDrag}
+            onPointerCancel={endDynamicDrag}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedDynamicLayerId(layer.id);
+              setSelectedLayer(null);
+            }}
+          >
+            {layer.label}
+          </div>
+        ))}
 
         <canvas
           ref={drawCanvasRef}
@@ -1154,6 +1623,17 @@ export default function StoryCreate() {
           }}
         />
 
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18] bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-14">
+          <div className="pointer-events-auto">
+            <Input
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Ajouter une légende..."
+              className="h-10 rounded-full border-white/20 bg-black/35 text-white placeholder:text-white/65 backdrop-blur-md focus-visible:ring-white/30"
+            />
+          </div>
+        </div>
+
         {/* Top bar */}
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <button
@@ -1165,13 +1645,27 @@ export default function StoryCreate() {
               setSelectedMusic(null);
               setSelectedSession(null);
               setEmojiSticker(null);
+              setDynamicLayers([]);
               setDrawMode(false);
               setShowTextInput(false);
+              setSelectedLayer(null);
+              if (previewAudioRef.current) {
+                previewAudioRef.current.pause();
+                previewAudioRef.current = null;
+              }
             }}
             className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
+          <Button
+            type="button"
+            disabled={!mediaFile || sharing}
+            onClick={() => void onShare()}
+            className="h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
+          >
+            {sharing ? "Envoi..." : "Partager"}
+          </Button>
         </div>
 
         {/* Vertical tool rail (iOS map controls style) */}
@@ -1183,10 +1677,12 @@ export default function StoryCreate() {
               icon: Type,
               active: showTextInput || !!textOverlay,
               onClick: () => {
-                setShowTextInput((v) => !v);
+                setActiveTool("text");
+                setShowTextInput(true);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
+                setDrawMode(false);
               },
             },
             {
@@ -1195,10 +1691,12 @@ export default function StoryCreate() {
               icon: Music,
               active: showMusicPicker || !!selectedMusic,
               onClick: () => {
+                setActiveTool("music");
                 setShowMusicPicker((v) => !v);
                 setShowTextInput(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
+                setDrawMode(false);
               },
             },
             {
@@ -1207,10 +1705,12 @@ export default function StoryCreate() {
               icon: CalendarPlus,
               active: showSessionPicker || !!selectedSession,
               onClick: () => {
+                setActiveTool("session");
                 setShowSessionPicker((v) => !v);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
                 setShowStickerPicker(false);
+                setDrawMode(false);
               },
             },
             {
@@ -1219,10 +1719,12 @@ export default function StoryCreate() {
               icon: Smile,
               active: showStickerPicker || !!emojiSticker,
               onClick: () => {
+                setActiveTool("sticker");
                 setShowStickerPicker((v) => !v);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
+                setDrawMode(false);
               },
             },
             {
@@ -1231,6 +1733,7 @@ export default function StoryCreate() {
               icon: Pencil,
               active: drawMode,
               onClick: () => {
+                setActiveTool("draw");
                 setDrawMode((v) => !v);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
@@ -1244,7 +1747,7 @@ export default function StoryCreate() {
               type="button"
               onClick={tool.onClick}
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-sm transition-transform active:scale-[0.96]",
+                "flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-transform active:scale-[0.96]",
                 tool.active && "bg-primary text-primary-foreground",
               )}
               aria-label={tool.label}
@@ -1256,25 +1759,122 @@ export default function StoryCreate() {
         </div>
       </div>
 
-      {/* Bottom editing panel */}
-      <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
+      {/* Contextual tool panel */}
+      <div
+        className={cn(
+          "absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 rounded-2xl border border-white/15 bg-black/45 px-3 pb-3 pt-3 backdrop-blur-xl",
+          !showTextInput && !showMusicPicker && !showSessionPicker && !showStickerPicker && !drawMode && "hidden",
+        )}
+      >
         {/* Text input */}
         {showTextInput && (
-          <div className="mb-3 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground">
-            Appuie sur la story pour placer le curseur, puis ecris directement dessus. Tu peux glisser le texte pour le repositionner.
+          <div className="mb-3 space-y-3 rounded-xl border border-white/15 bg-black/35 p-3 text-white">
+            <Input
+              value={textOverlay}
+              onChange={(e) => setTextOverlay(e.target.value)}
+              placeholder="Tape ton texte..."
+              autoFocus
+              className="h-10 rounded-lg border-white/20 bg-black/30 text-white placeholder:text-white/60"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                {([
+                  { id: "left", icon: AlignLeft },
+                  { id: "center", icon: AlignCenter },
+                  { id: "right", icon: AlignRight },
+                ] as const).map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setTextAlign(a.id)}
+                    className={cn(
+                      "rounded-lg border border-white/20 p-1.5",
+                      textAlign === a.id && "bg-primary text-primary-foreground",
+                    )}
+                  >
+                    <a.icon className="h-4 w-4" />
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setTextSize((s) => Math.max(18, s - 2))} className="rounded-lg border border-white/20 p-1">
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" onClick={() => setTextSize((s) => Math.min(72, s + 2))} className="rounded-lg border border-white/20 p-1">
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" onClick={() => setTextBold((v) => !v)} className={cn("rounded-lg border border-white/20 px-2 text-sm", textBold && "bg-primary text-primary-foreground")}>
+                  B
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              {(["modern", "clean", "signature"] as TextFontMode[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setTextFont(f)}
+                  className={cn("rounded-lg border border-white/20 px-2 py-1 text-xs", textFont === f && "bg-primary text-primary-foreground")}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              {(["bubble", "plain", "outline", "band"] as TextStyleMode[]).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTextStyle(s)}
+                  className={cn("rounded-lg border border-white/20 px-2 py-1 text-xs", textStyle === s && "bg-primary text-primary-foreground")}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
+                <button key={c} type="button" onClick={() => setTextColor(c)} className={cn("h-6 w-6 rounded-full border", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setTextOverlay("");
+                  setShowTextInput(false);
+                }}
+                className="ml-auto rounded-lg border border-white/20 p-1.5 text-white/80"
+                aria-label="Supprimer texte"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-[11px] text-white/65">Glisse le texte pour déplacer. Pince avec 2 doigts pour zoomer et pivoter.</p>
           </div>
         )}
 
         {/* Music picker */}
         {showMusicPicker && (
-          <div className="mb-3 max-h-44 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
-            {MUSIC_LIBRARY.map((m) => (
+          <div className="mb-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/15 bg-black/35 p-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
+              <Input
+                value={musicQuery}
+                onChange={(e) => setMusicQuery(e.target.value)}
+                placeholder="Rechercher un titre ou artiste..."
+                className="h-9 rounded-lg border-white/20 bg-black/35 pl-8 text-white placeholder:text-white/60"
+              />
+            </div>
+            {filteredMusic.map((m) => (
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setSelectedMusic(selectedMusic?.id === m.id ? null : m); }}
+                onClick={() => {
+                  const next = selectedMusic?.id === m.id ? null : m;
+                  setSelectedMusic(next);
+                  setSelectedLayer(next ? "music" : null);
+                }}
                 className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors ${
-                  selectedMusic?.id === m.id ? "bg-primary/10" : "hover:bg-secondary"
+                  selectedMusic?.id === m.id ? "bg-primary/20" : "hover:bg-white/10"
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -1290,10 +1890,25 @@ export default function StoryCreate() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{m.duration}</span>
+                  {m.previewUrl ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void toggleTrackPreview(m);
+                      }}
+                      className="rounded-md border border-white/20 px-1.5 py-0.5 text-[10px] text-white/85"
+                    >
+                      {previewingTrackId === m.id ? "Stop" : "Aperçu"}
+                    </button>
+                  ) : null}
                   {selectedMusic?.id === m.id && <Check className="h-4 w-4 text-primary" />}
                 </div>
               </button>
             ))}
+            {filteredMusic.length === 0 ? (
+              <p className="py-4 text-center text-xs text-white/65">Aucun résultat. Branche un provider externe pour enrichir le catalogue.</p>
+            ) : null}
           </div>
         )}
 
@@ -1311,6 +1926,7 @@ export default function StoryCreate() {
                   type="button"
                   onClick={() => {
                     setSelectedSession(selectedSession?.id === s.id ? null : s);
+                    setSelectedLayer(selectedSession?.id === s.id ? null : "session");
                     setShowSessionPicker(false);
                   }}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
@@ -1335,6 +1951,38 @@ export default function StoryCreate() {
         {showStickerPicker && (
           <div className="mb-3 rounded-2xl border bg-card p-3">
             <p className="mb-2 text-xs font-semibold text-muted-foreground">Choisir un sticker</p>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  addDynamicLayer("mention");
+                  setShowStickerPicker(false);
+                }}
+                className="rounded-full border px-2 py-1 text-xs"
+              >
+                + Mention
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  addDynamicLayer("place");
+                  setShowStickerPicker(false);
+                }}
+                className="rounded-full border px-2 py-1 text-xs"
+              >
+                + Lieu
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  addDynamicLayer("time");
+                  setShowStickerPicker(false);
+                }}
+                className="rounded-full border px-2 py-1 text-xs"
+              >
+                + Heure
+              </button>
+            </div>
             <div className="grid grid-cols-8 gap-2">
               {["🔥", "💪", "🏃", "🚴", "🏊", "🎯", "⚡", "👏", "❤️", "📍", "🏁", "🌟", "🎵", "📸", "😎", "✅"].map((emoji) => (
                 <button
@@ -1342,6 +1990,7 @@ export default function StoryCreate() {
                   type="button"
                   onClick={() => {
                     setEmojiSticker(emojiSticker === emoji ? null : emoji);
+                    setSelectedLayer(emojiSticker === emoji ? null : "emoji");
                     setShowStickerPicker(false);
                   }}
                   className={cn(
@@ -1405,30 +2054,132 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {/* Caption + Share */}
-        <div className="flex items-center gap-3">
-          <Input
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="Ajouter une description..."
-            className="flex-1 rounded-xl"
-          />
-          <Button
-            type="button"
-            disabled={!mediaFile || sharing}
-            onClick={() => void onShare()}
-            className="h-11 shrink-0 gap-2 rounded-xl px-6"
-          >
-            {sharing ? (
-              <span className="text-sm">Envoi...</span>
-            ) : (
+        {selectedLayer && (
+          <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
+            <button
+              type="button"
+              className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+              onClick={() => bringLayerToFront(selectedLayer)}
+            >
+              Premier plan
+            </button>
+            {(selectedLayer === "session" || selectedLayer === "emoji" || selectedLayer === "music") && (
               <>
-                <Send className="h-4 w-4" />
-                <span className="text-sm font-semibold">Story</span>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/20 p-1"
+                  onClick={() => {
+                    if (selectedLayer === "session") setStickerScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
+                    if (selectedLayer === "emoji") setEmojiScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
+                    if (selectedLayer === "music") setMusicScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
+                  }}
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/20 p-1"
+                  onClick={() => {
+                    if (selectedLayer === "session") setStickerScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
+                    if (selectedLayer === "emoji") setEmojiScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
+                    if (selectedLayer === "music") setMusicScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+                  onClick={() => {
+                    if (selectedLayer === "session") setStickerRotation((r) => r - 8);
+                    if (selectedLayer === "emoji") setEmojiRotation((r) => r - 8);
+                    if (selectedLayer === "music") setMusicRotation((r) => r - 8);
+                  }}
+                >
+                  ↺
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+                  onClick={() => {
+                    if (selectedLayer === "session") setStickerRotation((r) => r + 8);
+                    if (selectedLayer === "emoji") setEmojiRotation((r) => r + 8);
+                    if (selectedLayer === "music") setMusicRotation((r) => r + 8);
+                  }}
+                >
+                  ↻
+                </button>
               </>
             )}
-          </Button>
-        </div>
+            <button
+              type="button"
+              className="ml-auto rounded-lg border border-white/20 p-1.5 text-white/85"
+              onClick={deleteSelectedLayer}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {selectedDynamicLayerId && (
+          <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
+            <button
+              type="button"
+              className="rounded-lg border border-white/20 p-1"
+              onClick={() =>
+                setDynamicLayers((prev) =>
+                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, scale: Math.max(0.6, +(l.scale - 0.1).toFixed(2)) } : l))
+                )
+              }
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-white/20 p-1"
+              onClick={() =>
+                setDynamicLayers((prev) =>
+                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, scale: Math.min(2.4, +(l.scale + 0.1).toFixed(2)) } : l))
+                )
+              }
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+              onClick={() =>
+                setDynamicLayers((prev) =>
+                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation - 8 } : l))
+                )
+              }
+            >
+              ↺
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+              onClick={() =>
+                setDynamicLayers((prev) =>
+                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation + 8 } : l))
+                )
+              }
+            >
+              ↻
+            </button>
+            <button
+              type="button"
+              className="ml-auto rounded-lg border border-white/20 p-1.5"
+              onClick={() => {
+                setDynamicLayers((prev) => prev.filter((l) => l.id !== selectedDynamicLayerId));
+                setSelectedDynamicLayerId(null);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
