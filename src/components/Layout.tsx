@@ -8,7 +8,11 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
-import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BACKGROUND } from '@/lib/ruconnectSplashChrome';
+import {
+  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_SPLASH_ICON_URL,
+  RUCONNECT_SPLASH_PRIMARY,
+} from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -115,7 +119,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   // Hook "ready" — MUST be before any conditional return
 
-  /* Un seul splash bleu (LoadingScreen) : ne pas bloquer sur profileLoading sinon 2e plein écran après restore StatusBar → barre iOS blanche sur fond bleu. */
+  /* Un seul splash premium (LoadingScreen) : ne pas bloquer sur profileLoading sinon double plein écran. */
   if (loading) {
     return (
       <div
@@ -126,14 +130,20 @@ export const Layout = ({ children }: LayoutProps) => {
           paddingBottom: '0px',
         }}
       >
-        <img
-          src={RUCONNECT_LOADING_SCREEN_URL}
-          alt=""
-          draggable={false}
-          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
-          width={473}
-          height={1024}
-        />
+        <div className="flex flex-col items-center">
+          <img
+            src={RUCONNECT_SPLASH_ICON_URL}
+            alt="RunConnect"
+            draggable={false}
+            className="mb-5 block h-[128px] w-[128px] select-none object-contain"
+          />
+          <p className="text-[26px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+            RUNCONNECT
+          </p>
+          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-foreground/45">
+            TROUVE. CONNECTE. PARTAGE.
+          </p>
+        </div>
       </div>
     );
   }
