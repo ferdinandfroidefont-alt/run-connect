@@ -70,6 +70,18 @@ export default function StoryCreate() {
   const [stickerPos, setStickerPos] = useState({ x: 20, y: 80 });
   const [stickerScale, setStickerScale] = useState(1);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
+  const [emojiPos, setEmojiPos] = useState({ x: 120, y: 220 });
+  const [emojiScale, setEmojiScale] = useState(1);
+  const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawColor, setDrawColor] = useState("#FFFFFF");
+  const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawHostRef = useRef<HTMLDivElement | null>(null);
+  const drawingRef = useRef(false);
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const drawHistoryRef = useRef<ImageData[]>([]);
 
   // Share
   const [sharing, setSharing] = useState(false);
@@ -321,6 +333,87 @@ export default function StoryCreate() {
     }
   };
 
+  const startEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!emojiSticker) return;
+    emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiPos.x, baseY: emojiPos.y };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+  const moveEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!emojiDragRef.current) return;
+    setEmojiPos({
+      x: Math.max(0, emojiDragRef.current.baseX + e.clientX - emojiDragRef.current.startX),
+      y: Math.max(0, emojiDragRef.current.baseY + e.clientY - emojiDragRef.current.startY),
+    });
+  };
+  const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (emojiDragRef.current) {
+      emojiDragRef.current = null;
+      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const syncDrawCanvasSize = useCallback(() => {
+    const host = drawHostRef.current;
+    const canvas = drawCanvasRef.current;
+    if (!host || !canvas) return;
+    const rect = host.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const targetW = Math.round(rect.width * dpr);
+    const targetH = Math.round(rect.height * dpr);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      const snapshot = document.createElement("canvas");
+      snapshot.width = canvas.width;
+      snapshot.height = canvas.height;
+      const snapCtx = snapshot.getContext("2d");
+      if (snapCtx) snapCtx.drawImage(canvas, 0, 0);
+      canvas.width = targetW;
+      canvas.height = targetH;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        if (snapshot.width > 0 && snapshot.height > 0) {
+          ctx.drawImage(snapshot, 0, 0, snapshot.width / dpr, snapshot.height / dpr);
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step !== "edit") return;
+    syncDrawCanvasSize();
+    const onResize = () => syncDrawCanvasSize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [step, syncDrawCanvasSize, previewUrl]);
+
+  const drawAtPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = drawColor;
+    ctx.lineWidth = 4;
+    if (!lastPointRef.current) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    lastPointRef.current = { x, y };
+  };
+
   // ═══════════════════════════════════════
   // STEP 1: CAPTURE (Camera / Gallery)
   // ═══════════════════════════════════════
@@ -459,7 +552,7 @@ export default function StoryCreate() {
   return (
     <div className="fixed inset-0 z-[180] flex flex-col bg-black">
       {/* Preview fullscreen */}
-      <div className="relative flex-1">
+      <div className="relative flex-1" ref={drawHostRef}>
         {previewUrl && (
           isVideo ? (
             <video src={previewUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline />
@@ -511,6 +604,47 @@ export default function StoryCreate() {
           </div>
         )}
 
+        {emojiSticker && (
+          <div
+            className="absolute cursor-move select-none"
+            style={{
+              transform: `translate(${emojiPos.x}px, ${emojiPos.y}px) scale(${emojiScale})`,
+              transformOrigin: "top left",
+            }}
+            onPointerDown={startEmojiDrag}
+            onPointerMove={moveEmojiDrag}
+            onPointerUp={endEmojiDrag}
+            onPointerCancel={endEmojiDrag}
+          >
+            <div className="rounded-2xl bg-black/35 px-3 py-2 text-3xl backdrop-blur-sm">{emojiSticker}</div>
+          </div>
+        )}
+
+        <canvas
+          ref={drawCanvasRef}
+          className={cn("absolute inset-0 z-[5]", drawMode ? "pointer-events-auto touch-none" : "pointer-events-none")}
+          onPointerDown={(e) => {
+            if (!drawMode) return;
+            drawingRef.current = true;
+            (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
+            drawAtPointer(e);
+          }}
+          onPointerMove={(e) => {
+            if (!drawMode || !drawingRef.current) return;
+            drawAtPointer(e);
+          }}
+          onPointerUp={(e) => {
+            if (!drawMode) return;
+            drawingRef.current = false;
+            lastPointRef.current = null;
+            try { (e.currentTarget as HTMLCanvasElement).releasePointerCapture(e.pointerId); } catch {}
+          }}
+          onPointerCancel={() => {
+            drawingRef.current = false;
+            lastPointRef.current = null;
+          }}
+        />
+
         {/* Top bar */}
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <button
@@ -521,47 +655,91 @@ export default function StoryCreate() {
             <ChevronLeft className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Vertical tool rail (iOS map controls style) */}
+        <div className="absolute right-4 top-[max(5.25rem,calc(env(safe-area-inset-top)+4.25rem))] z-20 flex flex-col gap-2">
+          {[
+            {
+              id: "text",
+              label: "Texte",
+              icon: Type,
+              active: showTextInput || !!textOverlay,
+              onClick: () => {
+                setShowTextInput((v) => !v);
+                setShowMusicPicker(false);
+                setShowSessionPicker(false);
+                setShowStickerPicker(false);
+              },
+            },
+            {
+              id: "music",
+              label: "Musique",
+              icon: Music,
+              active: showMusicPicker || !!selectedMusic,
+              onClick: () => {
+                setShowMusicPicker((v) => !v);
+                setShowTextInput(false);
+                setShowSessionPicker(false);
+                setShowStickerPicker(false);
+              },
+            },
+            {
+              id: "session",
+              label: "Séance",
+              icon: CalendarPlus,
+              active: showSessionPicker || !!selectedSession,
+              onClick: () => {
+                setShowSessionPicker((v) => !v);
+                setShowTextInput(false);
+                setShowMusicPicker(false);
+                setShowStickerPicker(false);
+              },
+            },
+            {
+              id: "sticker",
+              label: "Sticker",
+              icon: Smile,
+              active: showStickerPicker || !!emojiSticker,
+              onClick: () => {
+                setShowStickerPicker((v) => !v);
+                setShowTextInput(false);
+                setShowMusicPicker(false);
+                setShowSessionPicker(false);
+              },
+            },
+            {
+              id: "draw",
+              label: "Dessin",
+              icon: Pencil,
+              active: drawMode,
+              onClick: () => {
+                setDrawMode((v) => !v);
+                setShowTextInput(false);
+                setShowMusicPicker(false);
+                setShowSessionPicker(false);
+                setShowStickerPicker(false);
+              },
+            },
+          ].map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              onClick={tool.onClick}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-sm transition-transform active:scale-[0.96]",
+                tool.active && "bg-primary text-primary-foreground",
+              )}
+              aria-label={tool.label}
+              title={tool.label}
+            >
+              <tool.icon className="h-4 w-4" />
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Bottom editing panel */}
       <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
-        {/* Tool row */}
-        <div className="mb-4 flex items-center gap-3 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => setShowTextInput(!showTextInput)}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-              textOverlay ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-            }`}
-          >
-            <Type className="h-4 w-4" />Texte
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowMusicPicker(!showMusicPicker)}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-              selectedMusic ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-            }`}
-          >
-            <Music className="h-4 w-4" />Musique
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowSessionPicker(!showSessionPicker)}
-            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-colors ${
-              selectedSession ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-            }`}
-          >
-            <CalendarPlus className="h-4 w-4" />Séance
-          </button>
-          <button type="button" className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground">
-            <Smile className="h-4 w-4" />Sticker
-          </button>
-          <button type="button" className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-xs font-semibold text-foreground">
-            <Pencil className="h-4 w-4" />Dessin
-          </button>
-        </div>
-
         {/* Text input */}
         {showTextInput && (
           <div className="mb-3">
@@ -638,6 +816,74 @@ export default function StoryCreate() {
                 </button>
               ))
             )}
+          </div>
+        )}
+
+        {/* Emoji sticker picker */}
+        {showStickerPicker && (
+          <div className="mb-3 rounded-2xl border bg-card p-3">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">Choisir un sticker</p>
+            <div className="grid grid-cols-8 gap-2">
+              {["🔥", "💪", "🏃", "🚴", "🏊", "🎯", "⚡", "👏", "❤️", "📍", "🏁", "🌟", "🎵", "📸", "😎", "✅"].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    setEmojiSticker(emojiSticker === emoji ? null : emoji);
+                    setShowStickerPicker(false);
+                  }}
+                  className={cn(
+                    "rounded-lg border px-2 py-1.5 text-lg transition-colors",
+                    emojiSticker === emoji ? "border-primary bg-primary/10" : "hover:bg-secondary",
+                  )}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            {emojiSticker && (
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button type="button" className="rounded-full border p-1" onClick={() => setEmojiScale((s) => Math.max(0.7, +(s - 0.1).toFixed(2)))}>
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" className="rounded-full border p-1" onClick={() => setEmojiScale((s) => Math.min(2, +(s + 0.1).toFixed(2)))}>
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => setEmojiSticker(null)}>
+                  Supprimer
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Draw controls */}
+        {drawMode && (
+          <div className="mb-3 flex items-center justify-between rounded-2xl border bg-card p-3">
+            <div className="flex items-center gap-2">
+              {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B"].map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setDrawColor(color)}
+                  className={cn("h-6 w-6 rounded-full border", drawColor === color && "ring-2 ring-primary ring-offset-2")}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border px-2 py-1 text-xs"
+              onClick={() => {
+                const canvas = drawCanvasRef.current;
+                const ctx = canvas?.getContext("2d");
+                if (canvas && ctx) {
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+              }}
+            >
+              Effacer
+            </button>
           </div>
         )}
 
