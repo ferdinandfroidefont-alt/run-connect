@@ -823,6 +823,10 @@ const Profile = () => {
                   triathlon_records: profile?.triathlon_records,
                   walking_records: profile?.walking_records,
                 }}
+                canEdit={!isViewingOtherUser}
+                onRecordsChange={(nextRecords) => {
+                  setProfile((prev) => (prev ? { ...prev, ...nextRecords } : prev));
+                }}
               />
             </CollapsibleContent>
           </Collapsible>

@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PersonStanding, Bike, Waves, Trophy, Footprints, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface PersonalRecordsProps {
   records: {
@@ -12,6 +16,14 @@ interface PersonalRecordsProps {
     triathlon_records?: any;
     walking_records?: any;
   };
+  canEdit?: boolean;
+  onRecordsChange?: (nextRecords: {
+    running_records?: any;
+    cycling_records?: any;
+    swimming_records?: any;
+    triathlon_records?: any;
+    walking_records?: any;
+  }) => void;
 }
 
 const sportConfig = {
@@ -22,9 +34,177 @@ const sportConfig = {
   walking: { icon: Footprints, color: "bg-yellow-500", label: "Marche" },
 };
 
-export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
+export const PersonalRecords = ({ records, canEdit = false, onRecordsChange }: PersonalRecordsProps) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
+  const [localRecords, setLocalRecords] = useState(records);
+  const [saving, setSaving] = useState(false);
+  const [plannerSport, setPlannerSport] = useState<"running" | "cycling" | "swimming">("running");
+  const [plannerDistanceKm, setPlannerDistanceKm] = useState(5);
+  const [plannerTimeSeconds, setPlannerTimeSeconds] = useState(25 * 60);
+  const [plannerMetric, setPlannerMetric] = useState(5);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+  const formatSeconds = (seconds: number) => {
+    const safe = Math.max(0, Math.round(seconds));
+    const h = Math.floor(safe / 3600);
+    const m = Math.floor((safe % 3600) / 60);
+    const s = safe % 60;
+    if (h > 0) {
+      return `${h}h ${String(m).padStart(2, "0")}'${String(s).padStart(2, "0")}"`;
+    }
+    return `${m}'${String(s).padStart(2, "0")}"`;
+  };
+
+  const formatPace = (minutesPerUnit: number, suffix: string) => {
+    const safe = Math.max(0, minutesPerUnit);
+    const mins = Math.floor(safe);
+    const secs = Math.round((safe - mins) * 60);
+    const normalizedSecs = secs === 60 ? 0 : secs;
+    const normalizedMins = secs === 60 ? mins + 1 : mins;
+    return `${normalizedMins}'${String(normalizedSecs).padStart(2, "0")} / ${suffix}`;
+  };
+
+  const getPlannerConfig = () => {
+    if (plannerSport === "cycling") {
+      return {
+        metricLabel: "Vitesse",
+        metricSuffix: "km/h",
+        metricMin: 8,
+        metricMax: 75,
+        distanceMinKm: 0.06,
+        distanceMaxKm: 300,
+        distanceLabel: `${plannerDistanceKm < 1 ? `${Math.round(plannerDistanceKm * 1000)} m` : `${plannerDistanceKm.toFixed(1)} km`}`,
+        metricDisplay: `${plannerMetric.toFixed(1)} km/h`,
+      };
+    }
+
+    if (plannerSport === "swimming") {
+      return {
+        metricLabel: "Allure",
+        metricSuffix: "100m",
+        metricMin: 0.7,
+        metricMax: 4,
+        distanceMinKm: 0.06,
+        distanceMaxKm: 10,
+        distanceLabel: `${plannerDistanceKm < 1 ? `${Math.round(plannerDistanceKm * 1000)} m` : `${plannerDistanceKm.toFixed(2)} km`}`,
+        metricDisplay: formatPace(plannerMetric, "100m"),
+      };
+    }
+
+    return {
+      metricLabel: "Allure",
+      metricSuffix: "km",
+      metricMin: 1.5,
+      metricMax: 10,
+      distanceMinKm: 0.06,
+      distanceMaxKm: 300,
+      distanceLabel: `${plannerDistanceKm < 1 ? `${Math.round(plannerDistanceKm * 1000)} m` : `${plannerDistanceKm.toFixed(1)} km`}`,
+      metricDisplay: formatPace(plannerMetric, "km"),
+    };
+  };
+
+  const recalculate = (driver: "distance" | "time" | "metric", nextDistanceKm?: number, nextTimeSeconds?: number, nextMetric?: number) => {
+    const cfg = getPlannerConfig();
+    const distance = clamp(nextDistanceKm ?? plannerDistanceKm, cfg.distanceMinKm, cfg.distanceMaxKm);
+    const metric = clamp(nextMetric ?? plannerMetric, cfg.metricMin, cfg.metricMax);
+    const time = clamp(nextTimeSeconds ?? plannerTimeSeconds, 10, 48 * 3600);
+
+    if (plannerSport === "cycling") {
+      if (driver === "time") {
+        const computedMetric = clamp(distance / (time / 3600), cfg.metricMin, cfg.metricMax);
+        setPlannerMetric(computedMetric);
+        setPlannerDistanceKm(distance);
+        setPlannerTimeSeconds(time);
+        return;
+      }
+
+      if (driver === "metric") {
+        const computedTime = clamp((distance / metric) * 3600, 10, 48 * 3600);
+        setPlannerDistanceKm(distance);
+        setPlannerMetric(metric);
+        setPlannerTimeSeconds(computedTime);
+        return;
+      }
+
+      const computedTime = clamp((distance / metric) * 3600, 10, 48 * 3600);
+      setPlannerDistanceKm(distance);
+      setPlannerMetric(metric);
+      setPlannerTimeSeconds(computedTime);
+      return;
+    }
+
+    if (plannerSport === "swimming") {
+      if (driver === "time") {
+        const computedMetric = clamp((time / 60) / (distance * 10), cfg.metricMin, cfg.metricMax);
+        setPlannerMetric(computedMetric);
+        setPlannerDistanceKm(distance);
+        setPlannerTimeSeconds(time);
+        return;
+      }
+
+      if (driver === "metric") {
+        const computedTime = clamp(distance * 10 * metric * 60, 10, 48 * 3600);
+        setPlannerDistanceKm(distance);
+        setPlannerMetric(metric);
+        setPlannerTimeSeconds(computedTime);
+        return;
+      }
+
+      const computedTime = clamp(distance * 10 * metric * 60, 10, 48 * 3600);
+      setPlannerDistanceKm(distance);
+      setPlannerMetric(metric);
+      setPlannerTimeSeconds(computedTime);
+      return;
+    }
+
+    if (driver === "time") {
+      const computedMetric = clamp((time / 60) / distance, cfg.metricMin, cfg.metricMax);
+      setPlannerMetric(computedMetric);
+      setPlannerDistanceKm(distance);
+      setPlannerTimeSeconds(time);
+      return;
+    }
+
+    if (driver === "metric") {
+      const computedTime = clamp(distance * metric * 60, 10, 48 * 3600);
+      setPlannerDistanceKm(distance);
+      setPlannerMetric(metric);
+      setPlannerTimeSeconds(computedTime);
+      return;
+    }
+
+    const computedTime = clamp(distance * metric * 60, 10, 48 * 3600);
+    setPlannerDistanceKm(distance);
+    setPlannerMetric(metric);
+    setPlannerTimeSeconds(computedTime);
+  };
+
+  const handleSportChange = (sport: "running" | "cycling" | "swimming") => {
+    setPlannerSport(sport);
+    if (sport === "cycling") {
+      setPlannerDistanceKm(40);
+      setPlannerMetric(30);
+      setPlannerTimeSeconds((40 / 30) * 3600);
+      return;
+    }
+    if (sport === "swimming") {
+      setPlannerDistanceKm(1);
+      setPlannerMetric(2);
+      setPlannerTimeSeconds(1 * 10 * 2 * 60);
+      return;
+    }
+    setPlannerDistanceKm(5);
+    setPlannerMetric(5);
+    setPlannerTimeSeconds(5 * 5 * 60);
+  };
 
   const formatTime = (time: string | number) => {
     if (!time) return null;
@@ -32,20 +212,78 @@ export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
   };
 
   const hasRecords = 
-    (records.running_records && Object.keys(records.running_records).some(k => records.running_records[k])) ||
-    (records.cycling_records && Object.keys(records.cycling_records).some(k => records.cycling_records[k])) ||
-    (records.swimming_records && Object.keys(records.swimming_records).some(k => records.swimming_records[k])) ||
-    (records.triathlon_records && Object.keys(records.triathlon_records).some(k => records.triathlon_records[k])) ||
-    (records.walking_records && Object.keys(records.walking_records).some(k => records.walking_records[k]));
+    (localRecords.running_records && Object.keys(localRecords.running_records).some(k => localRecords.running_records[k])) ||
+    (localRecords.cycling_records && Object.keys(localRecords.cycling_records).some(k => localRecords.cycling_records[k])) ||
+    (localRecords.swimming_records && Object.keys(localRecords.swimming_records).some(k => localRecords.swimming_records[k])) ||
+    (localRecords.triathlon_records && Object.keys(localRecords.triathlon_records).some(k => localRecords.triathlon_records[k])) ||
+    (localRecords.walking_records && Object.keys(localRecords.walking_records).some(k => localRecords.walking_records[k]));
 
   const getRecordsCount = () => {
     let count = 0;
-    if (records.running_records) count += Object.values(records.running_records).filter(v => v).length;
-    if (records.cycling_records) count += Object.values(records.cycling_records).filter(v => v).length;
-    if (records.swimming_records) count += Object.values(records.swimming_records).filter(v => v).length;
-    if (records.triathlon_records) count += Object.values(records.triathlon_records).filter(v => v).length;
-    if (records.walking_records) count += Object.values(records.walking_records).filter(v => v).length;
+    if (localRecords.running_records) count += Object.values(localRecords.running_records).filter(v => v).length;
+    if (localRecords.cycling_records) count += Object.values(localRecords.cycling_records).filter(v => v).length;
+    if (localRecords.swimming_records) count += Object.values(localRecords.swimming_records).filter(v => v).length;
+    if (localRecords.triathlon_records) count += Object.values(localRecords.triathlon_records).filter(v => v).length;
+    if (localRecords.walking_records) count += Object.values(localRecords.walking_records).filter(v => v).length;
     return count;
+  };
+
+  const plannerDistanceLabel = useMemo(() => {
+    if (plannerDistanceKm < 1) {
+      return `${Math.round(plannerDistanceKm * 1000)}m`;
+    }
+    if (Number.isInteger(plannerDistanceKm)) {
+      return `${Math.round(plannerDistanceKm)}k`;
+    }
+    return `${plannerDistanceKm.toFixed(1)}k`;
+  }, [plannerDistanceKm]);
+
+  const savePlannedRecord = async () => {
+    if (!canEdit || !user?.id) {
+      toast({
+        title: "Action impossible",
+        description: "Tu peux enregistrer un record seulement sur ton profil.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const fieldName = plannerSport === "running" ? "running_records" : plannerSport === "cycling" ? "cycling_records" : "swimming_records";
+    const currentSportRecords = (localRecords[fieldName] && typeof localRecords[fieldName] === "object") ? localRecords[fieldName] : {};
+    const nextSportRecords = {
+      ...currentSportRecords,
+      [plannerDistanceLabel]: formatSeconds(plannerTimeSeconds),
+    };
+
+    const nextRecords = {
+      ...localRecords,
+      [fieldName]: nextSportRecords,
+    };
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ [fieldName]: nextSportRecords })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setLocalRecords(nextRecords);
+      onRecordsChange?.(nextRecords);
+      toast({
+        title: "Record enregistré",
+        description: `${sportConfig[plannerSport].label} ${plannerDistanceLabel}: ${formatSeconds(plannerTimeSeconds)}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error?.message || "Impossible d'enregistrer ce record.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderSportRecordsDetail = (recordsData: any, sportKey: keyof typeof sportConfig) => {
@@ -90,6 +328,7 @@ export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
   };
 
   const recordsCount = getRecordsCount();
+  const plannerConfig = getPlannerConfig();
 
   return (
     <>
@@ -120,13 +359,107 @@ export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
               <Trophy className="h-5 w-5 text-orange-500" />
               Records personnels
             </h3>
+            <div className="mb-4 rounded-xl border border-border/60 bg-secondary/30 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Planifier un record</p>
+                <select
+                  value={plannerSport}
+                  onChange={(e) => handleSportChange(e.target.value as "running" | "cycling" | "swimming")}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="running">Course à pied</option>
+                  <option value="cycling">Vélo</option>
+                  <option value="swimming">Natation</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg bg-background px-2 py-2">
+                  <p className="text-[11px] text-muted-foreground">Temps</p>
+                  <p className="text-sm font-semibold tabular-nums">{formatSeconds(plannerTimeSeconds)}</p>
+                </div>
+                <div className="rounded-lg bg-background px-2 py-2">
+                  <p className="text-[11px] text-muted-foreground">Kilométrage</p>
+                  <p className="text-sm font-semibold tabular-nums">{plannerConfig.distanceLabel}</p>
+                </div>
+                <div className="rounded-lg bg-background px-2 py-2 min-w-0">
+                  <p className="text-[11px] text-muted-foreground">{plannerConfig.metricLabel}</p>
+                  <p className="text-sm font-semibold tabular-nums truncate">{plannerConfig.metricDisplay}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                    <span>Temps</span>
+                    <span>{formatSeconds(plannerTimeSeconds)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={48 * 3600}
+                    step={10}
+                    value={Math.round(plannerTimeSeconds)}
+                    onChange={(e) => recalculate("time", undefined, Number(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                    <span>Distance</span>
+                    <span>{plannerConfig.distanceLabel}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={plannerConfig.distanceMinKm}
+                    max={plannerConfig.distanceMaxKm}
+                    step={plannerSport === "swimming" ? 0.01 : 0.1}
+                    value={plannerDistanceKm}
+                    onChange={(e) => recalculate("distance", Number(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                    <span>{plannerConfig.metricLabel}</span>
+                    <span>
+                      {plannerSport === "cycling"
+                        ? `${plannerConfig.metricMin} ${plannerConfig.metricSuffix} (gauche) - ${plannerConfig.metricMax} ${plannerConfig.metricSuffix} (droite)`
+                        : `${formatPace(plannerConfig.metricMax, plannerConfig.metricSuffix)} (gauche) - ${formatPace(plannerConfig.metricMin, plannerConfig.metricSuffix)} (droite)`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={plannerConfig.metricMin}
+                    max={plannerConfig.metricMax}
+                    step={0.01}
+                    value={plannerMetric}
+                    onChange={(e) => recalculate("metric", undefined, undefined, Number(e.target.value))}
+                    className="w-full accent-primary"
+                    style={{
+                      direction: plannerSport === "cycling" ? "ltr" : "rtl",
+                    }}
+                  />
+                </div>
+              </div>
+              {canEdit && (
+                <Button
+                  type="button"
+                  onClick={savePlannedRecord}
+                  disabled={saving}
+                  className="w-full"
+                >
+                  {saving ? "Enregistrement..." : "Enregistrer ce record"}
+                </Button>
+              )}
+            </div>
             {hasRecords ? (
               <div className="space-y-4">
-                {renderSportRecordsDetail(records.running_records, 'running')}
-                {renderSportRecordsDetail(records.cycling_records, 'cycling')}
-                {renderSportRecordsDetail(records.swimming_records, 'swimming')}
-                {renderSportRecordsDetail(records.triathlon_records, 'triathlon')}
-                {renderSportRecordsDetail(records.walking_records, 'walking')}
+                {renderSportRecordsDetail(localRecords.running_records, 'running')}
+                {renderSportRecordsDetail(localRecords.cycling_records, 'cycling')}
+                {renderSportRecordsDetail(localRecords.swimming_records, 'swimming')}
+                {renderSportRecordsDetail(localRecords.triathlon_records, 'triathlon')}
+                {renderSportRecordsDetail(localRecords.walking_records, 'walking')}
               </div>
             ) : (
               <div className="text-center py-8 px-4 bg-secondary/50 rounded-lg">

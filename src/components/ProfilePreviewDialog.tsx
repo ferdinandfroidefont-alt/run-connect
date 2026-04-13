@@ -557,7 +557,12 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 swimming_records: profile.swimming_records,
                 triathlon_records: profile.triathlon_records,
                 walking_records: profile.walking_records,
-              }} />
+              }}
+              canEdit={isOwnProfile}
+              onRecordsChange={(nextRecords) => {
+                setProfile((prev) => (prev ? { ...prev, ...nextRecords } : prev));
+              }}
+              />
             )}
           </ScrollArea>
         </SheetContent>
