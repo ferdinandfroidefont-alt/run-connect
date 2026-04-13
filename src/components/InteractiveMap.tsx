@@ -1600,7 +1600,7 @@ export const InteractiveMap = ({
     };
   };
 
-  const saveRoute = async (routeName: string, routeDescription: string, isPublic?: boolean) => {
+  const saveRoute = async (routeName: string, routeDescription: string) => {
     if (!user) {
       toast.error('Connectez-vous pour enregistrer un itinéraire');
       return false;
@@ -1634,7 +1634,7 @@ export const InteractiveMap = ({
       pathCoords: routeCoordinates.current,
       elevations: routeElevations,
       waypoints: waypointsData,
-      isPublic: isPublic ?? false,
+      isPublic: false,
       statsOverride: routeStats,
     });
 
@@ -1651,10 +1651,9 @@ export const InteractiveMap = ({
     routeName: string,
     routeDescription: string,
     createSession?: boolean,
-    isPublic?: boolean,
   ) => {
     setRouteSaving(true);
-    const success = await saveRoute(routeName, routeDescription, isPublic);
+    const success = await saveRoute(routeName, routeDescription);
     setRouteSaving(false);
     if (success) {
       pendingRouteStatsRef.current = null;
@@ -2447,7 +2446,6 @@ export const InteractiveMap = ({
         title="Créer un itinéraire"
         loading={routeSaving}
         showCreateSessionOption={true}
-        showPublicToggle={true}
       />
     </div>
   );

@@ -741,7 +741,6 @@ export const RouteCreation = () => {
     name: string,
     description: string,
     _createSession?: boolean,
-    isPublic?: boolean,
   ) => {
     if (!user) {
       toast.error('Connectez-vous pour enregistrer un itinéraire');
@@ -779,7 +778,7 @@ export const RouteCreation = () => {
       pathCoords,
       elevations: elevationsForSave,
       waypoints: waypointsData,
-      isPublic: isPublic ?? false,
+      isPublic: false,
     });
     setRouteSaving(false);
 
@@ -994,7 +993,6 @@ export const RouteCreation = () => {
         title="Enregistrer l'itinéraire"
         loading={routeSaving}
         showCreateSessionOption={false}
-        showPublicToggle={true}
       />
     </div>
   );

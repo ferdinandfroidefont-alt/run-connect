@@ -1,24 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Switch } from '@/components/ui/switch';
 import {
   Route,
   TrendingUp,
   Mountain,
-  Edit,
-  Trash2,
-  Download,
-  Box,
-  Navigation,
-  Globe,
   Clock,
-  CalendarPlus,
   ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { exportToGPX, shareOrDownloadGPX, GPXTrackPoint } from '@/lib/gpxExport';
-import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
@@ -26,7 +16,6 @@ import type { Map, Marker } from 'mapbox-gl';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
-import { cn } from '@/lib/utils';
 
 const ROUTE_CARD_LINE_SRC = 'route-card-preview-line';
 const ROUTE_CARD_LINE_LAYER = 'route-card-preview-line-layer';
@@ -41,20 +30,15 @@ interface RouteCardProps {
     created_at: string;
     coordinates: any;
   };
-  onEdit: (route: any) => void;
-  onDelete: (routeId: string) => void;
-  onPublishToggle?: (isPublic: boolean) => void;
-  isPublic?: boolean;
 }
 
-export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
+export const RouteCard = ({ route }: RouteCardProps) => {
   const navigate = useNavigate();
   const { formatMeters } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const userLocationMarkerRef = useRef<Marker | null>(null);
   const { position } = useGeolocation();
-  const [show3DDialog, setShow3DDialog] = useState(false);
 
   const formatElevation = (meters: number | null) => {
     if (!meters) return '—';
@@ -69,55 +53,6 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     const min = Math.round(totalMinutes % 60);
     if (h > 0) return `${h}h${min.toString().padStart(2, '0')}`;
     return `${min} min`;
-  };
-
-  const handleExportGPX = async () => {
-    if (!route.coordinates || !Array.isArray(route.coordinates)) return;
-    let trackPoints: GPXTrackPoint[] = route.coordinates
-      .map((coord: any) => {
-        if (coord.lat !== undefined && coord.lng !== undefined) {
-          return {
-            lat: Number(coord.lat),
-            lng: Number(coord.lng),
-            elevation: coord.elevation != null ? Number(coord.elevation) : undefined,
-          };
-        } else if (Array.isArray(coord) && coord.length >= 2) {
-          return {
-            lat: Number(coord[0]),
-            lng: Number(coord[1]),
-            elevation: coord.length > 2 ? Number(coord[2]) : undefined,
-          };
-        }
-        return null;
-      })
-      .filter((point): point is NonNullable<typeof point> => point !== null);
-    if (trackPoints.length === 0) return;
-
-    const allElevMissing = trackPoints.every((p) => p.elevation == null || p.elevation === 0);
-    if (allElevMissing && trackPoints.length >= 2) {
-      try {
-        const { fetchElevationsForCoords } = await import('@/lib/openElevation');
-        const { densifyMapCoords, resamplePathEvenlyMapCoords, pathLengthMeters } = await import('@/lib/geoUtils');
-        const path = trackPoints.map((p) => ({ lat: p.lat, lng: p.lng }));
-        const dens = densifyMapCoords(path, 14);
-        const lenM = pathLengthMeters(dens);
-        const samples = Math.min(4000, Math.max(80, Math.ceil(lenM / 12)));
-        const sampled = resamplePathEvenlyMapCoords(dens, samples);
-        const elevs = await fetchElevationsForCoords(sampled);
-        if (elevs.length === sampled.length && elevs.some((e) => e !== 0)) {
-          trackPoints = sampled.map((c, i) => ({ lat: c.lat, lng: c.lng, elevation: elevs[i]! }));
-        }
-      } catch (e) {
-        console.warn('[GPX] Elevation re-fetch failed:', e);
-      }
-    }
-
-    const gpxContent = exportToGPX(route.name, trackPoints, route.description || undefined);
-    await shareOrDownloadGPX(route.name, gpxContent, { title: route.name });
-  };
-
-  const openSessionWithRoute = () => {
-    navigate({ pathname: '/', search: `?presetRoute=${encodeURIComponent(route.id)}` });
   };
 
   useEffect(() => {
@@ -193,18 +128,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
 
   const hasCoordinates = route.coordinates?.length > 0;
 
-  const chipPrimary = cn(
-    'inline-flex min-h-[40px] flex-1 shrink-0 items-center justify-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold shadow-sm transition-colors active:scale-[0.98] sm:flex-none sm:px-4',
-    'bg-primary text-primary-foreground active:bg-primary/90'
-  );
-
-  const chipSecondary = cn(
-    'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1.5 rounded-full border border-border/70 bg-secondary/70 px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-sm active:bg-secondary active:scale-[0.98]'
-  );
-
   return (
-    <>
-      <div className="ios-card overflow-hidden border border-border/60">
+    <div className="ios-card overflow-hidden border border-border/60">
         <button
           type="button"
           onClick={() => navigate(`/itinerary/route/${route.id}`)}
@@ -271,83 +196,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
               {formatDuration(route.total_distance)}
             </span>
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className={chipPrimary} onClick={() => setShow3DDialog(true)}>
-              <Box className="h-4 w-4 shrink-0" />
-              Survol 3D
-            </button>
-            <button
-              type="button"
-              className={chipPrimary}
-              onClick={() => navigate(`/training/route/${route.id}`)}
-            >
-              <Navigation className="h-4 w-4 shrink-0" />
-              Entraînement
-            </button>
-          </div>
-
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <button type="button" className={chipSecondary} onClick={handleExportGPX}>
-              <Download className="h-3.5 w-3.5 shrink-0" />
-              GPX
-            </button>
-            <button type="button" className={chipSecondary} onClick={openSessionWithRoute}>
-              <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
-              Séance
-            </button>
-            <button type="button" className={chipSecondary} onClick={() => onEdit(route)}>
-              <Edit className="h-3.5 w-3.5 shrink-0" />
-              Modifier
-            </button>
-            <button
-              type="button"
-              className={cn(chipSecondary, 'border-destructive/30 text-destructive')}
-              onClick={() => onDelete(route.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
-              Supprimer
-            </button>
-          </div>
-
-          {onPublishToggle && (
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/50 bg-secondary/40 px-3.5 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-[13px] font-medium text-foreground">
-                  {isPublic ? 'Itinéraire public' : 'Rendre public'}
-                </span>
-              </div>
-              <Switch checked={isPublic} onCheckedChange={onPublishToggle} />
-            </div>
-          )}
         </div>
       </div>
-
-      <ElevationProfile3DDialog
-        open={show3DDialog}
-        onOpenChange={setShow3DDialog}
-        coordinates={
-          Array.isArray(route.coordinates)
-            ? route.coordinates.map((c: any) => ({ lat: Number(c.lat ?? c[0]), lng: Number(c.lng ?? c[1]) }))
-            : []
-        }
-        elevations={
-          Array.isArray(route.coordinates)
-            ? route.coordinates.map((c: any) => Number(c.elevation ?? c[2] ?? 0))
-            : []
-        }
-        routeName={route.name}
-        routeStats={
-          route.total_distance || route.total_elevation_gain
-            ? {
-                totalDistance: route.total_distance || 0,
-                elevationGain: route.total_elevation_gain || 0,
-                elevationLoss: 0,
-              }
-            : null
-        }
-      />
-    </>
+    </div>
   );
 };
