@@ -784,21 +784,21 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Raccourcis — grille 2 colonnes ; 5e tuile centrée (premium → abonnement, déjà premium → parrainage) */}
+                  {/* Raccourcis — grille 2 colonnes ; premium: rangée basse Parrainage + Plan d'entraînement */}
                   <div className="bg-card border-b border-border px-4 py-3">
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
                         { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
-                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
-                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
                         { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
+                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: MapPin, label: 'Mes itinéraires', color: 'text-blue-500', action: () => { onOpenChange(false); navigate('/itinerary/my-routes'); } },
                         isPremiumUser
                           ? {
                               icon: Gift,
                               label: 'Parrainer quelqu’un',
                               color: 'text-primary',
                               action: () => setShowReferralDialog(true),
-                              centeredHalf: true as const,
+                              halfTile: true as const,
                             }
                           : {
                               icon: Crown,
@@ -811,13 +811,34 @@ export const ProfileDialog = ({
                               accentTile: 'premium' as const,
                               centeredHalf: true as const,
                             },
-                      ].map((item) => (
+                        isPremiumUser
+                          ? {
+                              icon: Calendar,
+                              label: "Plan d'entraînement",
+                              color: 'text-primary',
+                              action: () => {
+                                onOpenChange(false);
+                                navigate('/coaching');
+                              },
+                              halfTile: true as const,
+                            }
+                          : {
+                              icon: Crown,
+                              label: '',
+                              color: 'hidden',
+                              action: () => {},
+                              hiddenTile: true as const,
+                            },
+                      ].map((item, idx) => (
                         <button
-                          key={item.label}
+                          key={item.label || `shortcut-empty-${idx}`}
                           type="button"
                           onClick={item.action}
+                          disabled={item.hiddenTile}
                           className={cn(
                             'flex flex-col items-center justify-center gap-2 rounded-xl p-4 transition-colors',
+                            item.hiddenTile && 'pointer-events-none opacity-0',
+                            item.halfTile && 'w-full',
                             item.centeredHalf &&
                               'col-span-2 mx-auto w-full max-w-[calc(50%-0.3125rem)]',
                             item.accentTile === 'premium'
