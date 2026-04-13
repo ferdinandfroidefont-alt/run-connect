@@ -899,7 +899,7 @@ export const RouteCreation = () => {
       )}
 
       <div className="absolute left-ios-4 top-ios-4 z-10 max-w-[calc(100vw-2rem)] min-w-0">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-wrap items-center gap-ios-1">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-nowrap items-center gap-ios-1">
           <Button
             size="sm"
             variant={!isManualMode ? 'default' : 'ghost'}
@@ -926,7 +926,7 @@ export const RouteCreation = () => {
                 state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
               })
             }
-            className="ml-auto gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
+            className="ml-auto shrink-0 gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
           >
             <Layers className="h-4 w-4" />
             Mes itinéraires
