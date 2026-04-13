@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
-const PEEK_HEIGHT_PX = 68;
+const PEEK_HEIGHT_PX = 74;
 
 const SPRING = { type: "spring" as const, stiffness: 440, damping: 36, mass: 0.85 };
 
@@ -164,7 +164,10 @@ export function HomeFeedBottomSheet() {
   return (
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-[102] flex flex-col justify-end"
-      style={{ bottom: "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + 4px))" }}
+      style={{
+        bottom:
+          "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap)))",
+      }}
     >
       <motion.button
         type="button"

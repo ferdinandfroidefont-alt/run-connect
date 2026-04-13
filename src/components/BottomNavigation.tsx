@@ -148,13 +148,13 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-[4px] z-[110] w-full border-t border-border bg-background overflow-visible",
+        "fixed inset-x-0 z-[110] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
       role="navigation"
       aria-label="Navigation principale"
-      style={{ paddingBottom: "0px" }}
+      style={{ paddingBottom: "0px", bottom: "var(--tab-bar-ground-strip)" }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
@@ -217,7 +217,14 @@ export const BottomNavigation = () => {
           })}
         </div>
       </div>
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-[4px] h-[4px] bg-white dark:bg-black" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bg-white dark:bg-black"
+        style={{
+          height: "var(--tab-bar-ground-strip)",
+          bottom: "calc(-1 * var(--tab-bar-ground-strip))",
+        }}
+      />
     </nav>
   );
 };
