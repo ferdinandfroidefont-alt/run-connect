@@ -907,7 +907,14 @@ export const RouteCreation = () => {
         </p>
       </div>
 
-      <div className="absolute right-ios-4 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.25rem))] flex flex-col gap-ios-2 z-10">
+      <div
+        className={cn(
+          'absolute right-ios-4 z-10 flex flex-col gap-ios-2 transition-[bottom] duration-200 ease-out',
+          waypointCount >= 2
+            ? 'bottom-[max(13.25rem,calc(env(safe-area-inset-bottom)+12rem))]'
+            : 'bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.25rem))]'
+        )}
+      >
         <Button
           size="icon"
           variant="outline"
