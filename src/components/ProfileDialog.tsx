@@ -182,6 +182,7 @@ export const ProfileDialog = ({
   } = useCamera();
   useEffect(() => {
     if (user && open) {
+      setLoading(true);
       fetchProfile();
       fetchFollowCounts();
       fetchReliabilityStats();
@@ -576,33 +577,23 @@ export const ProfileDialog = ({
     isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
 
-  if (loading && open) {
-    return (
+  return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
+        {open ? (
         <DialogContent
           data-tutorial="tutorial-profile-page"
           hideCloseButton
           fullScreen
           className={profileDialogShellClassName}
         >
+          {loading ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
             <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
             <div className="flex flex-1 items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  return <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          data-tutorial="tutorial-profile-page"
-          hideCloseButton
-          fullScreen
-          className={profileDialogShellClassName}
-        >
+          ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
           {/* iOS Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
@@ -768,14 +759,18 @@ export const ProfileDialog = ({
               {/* Stories à la une - cercles style Instagram */}
               <div className="bg-card border-b border-border px-4 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
-                  {storyHighlights.map((item) => (
+                  {storyHighlights.map((item) => {
+                    const titleSafe = String(item.title ?? "").trim() || "À la une";
+                    const initials = titleSafe.slice(0, 2).toUpperCase();
+                    return (
                     <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
                       <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                        {item.title.slice(0, 2).toUpperCase()}
+                        {initials}
                       </div>
-                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{titleSafe}</p>
                     </button>
-                  ))}
+                    );
+                  })}
                   {/* Bouton ajouter */}
                   <button
                     type="button"
@@ -987,7 +982,9 @@ export const ProfileDialog = ({
             </div>
           </div>
           </div>
+          )}
         </DialogContent>
+        ) : null}
       </Dialog>
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
