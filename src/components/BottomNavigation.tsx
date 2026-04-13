@@ -155,8 +155,8 @@ export const BottomNavigation = () => {
       role="navigation"
       aria-label="Navigation principale"
       style={{
-        /* Safe area home indicator, légèrement resserrée pour éviter l’air “double” sous les onglets. */
-        paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+        /* Pas de bande additionnelle sous la tab bar. */
+        paddingBottom: "0px",
       }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}

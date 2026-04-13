@@ -84,7 +84,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     width: "auto",
     height: "auto",
     maxWidth: "min(92vw, 28rem)",
-    maxHeight: "min(78dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem))",
+    maxHeight: "min(78dvh, calc(100dvh - env(safe-area-inset-top) - 2rem))",
   };
 
   return (
@@ -105,7 +105,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
             className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-5"
             style={{
               paddingTop: "env(safe-area-inset-top, 0px)",
-              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+              paddingBottom: "0px",
             }}
           >
             <motion.div

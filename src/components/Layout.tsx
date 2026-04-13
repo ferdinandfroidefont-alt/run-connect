@@ -123,14 +123,14 @@ export const Layout = ({ children }: LayoutProps) => {
         style={{
           backgroundColor: RUCONNECT_SPLASH_BLUE,
           paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingBottom: '0px',
         }}
       >
         <img
           src={RUCONNECT_LOADING_SCREEN_URL}
           alt=""
           draggable={false}
-          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
+          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
           width={473}
           height={1024}
         />
