@@ -317,6 +317,7 @@ export const InteractiveMap = ({
   highlightSessionId,
   isActive = true,
 }: InteractiveMapProps = {}) => {
+  const HOME_PROFILE_CACHE_KEY = "runconnect_home_profile_cache_v1";
   const {
     user,
     subscriptionInfo
@@ -660,15 +661,45 @@ export const InteractiveMap = ({
 
   // Load user profile
   useEffect(() => {
-    if (user) {
-      const loadUserProfile = async () => {
-        const {
-          data: profile
-        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', user.id).single();
-        setUserProfile(profile);
-      };
-      loadUserProfile();
+    if (!user?.id) return;
+
+    // Affichage immédiat depuis cache local pour éviter le "trou" avatar au boot.
+    try {
+      const cachedRaw = localStorage.getItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw) as {
+          username?: string;
+          display_name?: string;
+          avatar_url?: string | null;
+        };
+        if (cached?.username || cached?.display_name || cached?.avatar_url) {
+          setUserProfile({
+            username: cached.username || '',
+            display_name: cached.display_name || '',
+            avatar_url: cached.avatar_url ?? null,
+          });
+        }
+      }
+    } catch {
+      /* ignore cache parse */
     }
+
+    const loadUserProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, display_name, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      if (profile) {
+        setUserProfile(profile);
+        try {
+          localStorage.setItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`, JSON.stringify(profile));
+        } catch {
+          /* ignore cache write */
+        }
+      }
+    };
+    void loadUserProfile();
   }, [user]);
 
   // Function to mark a session as new with 5 second pulse animation

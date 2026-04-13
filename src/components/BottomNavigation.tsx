@@ -148,7 +148,7 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[110] w-full border-t border-border bg-background overflow-visible",
+        "fixed inset-x-0 bottom-[4px] z-[110] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
