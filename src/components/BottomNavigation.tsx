@@ -154,9 +154,7 @@ export const BottomNavigation = () => {
       )}
       role="navigation"
       aria-label="Navigation principale"
-      style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-      }}
+      style={{ paddingBottom: "0px" }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
