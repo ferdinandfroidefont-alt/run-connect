@@ -1,14 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Route,
-  TrendingUp,
   Mountain,
-  Clock,
+  TrendingUp,
   ChevronRight,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
@@ -45,15 +41,32 @@ export const RouteCard = ({ route }: RouteCardProps) => {
     return `${Math.round(meters)} m`;
   };
 
-  const formatDuration = (distance: number | null) => {
-    if (!distance) return '—';
-    const hours = (distance / 1000) / 10;
-    const totalMinutes = hours * 60;
-    const h = Math.floor(totalMinutes / 60);
-    const min = Math.round(totalMinutes % 60);
-    if (h > 0) return `${h}h${min.toString().padStart(2, '0')}`;
-    return `${min} min`;
-  };
+  const elevations = useMemo(() => {
+    if (!Array.isArray(route.coordinates)) return [] as number[];
+    return route.coordinates
+      .map((coord: any) => {
+        if (coord?.elevation != null) return Number(coord.elevation);
+        if (Array.isArray(coord) && coord.length > 2) return Number(coord[2]);
+        return NaN;
+      })
+      .filter((v) => Number.isFinite(v));
+  }, [route.coordinates]);
+
+  const elevationPath = useMemo(() => {
+    const width = 64;
+    const height = 28;
+    if (elevations.length < 2) return `M0 ${height / 2} L${width} ${height / 2}`;
+    const min = Math.min(...elevations);
+    const max = Math.max(...elevations);
+    const range = Math.max(1, max - min);
+    return elevations
+      .map((e, i) => {
+        const x = (i / (elevations.length - 1)) * width;
+        const y = height - ((e - min) / range) * height;
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .join(' ');
+  }, [elevations]);
 
   useEffect(() => {
     if (!mapContainer.current || !route.coordinates?.length || !getMapboxAccessToken()) return;
@@ -126,78 +139,45 @@ export const RouteCard = ({ route }: RouteCardProps) => {
     })();
   }, [position, route.coordinates]);
 
-  const hasCoordinates = route.coordinates?.length > 0;
+  const hasCoordinates = Array.isArray(route.coordinates) && route.coordinates.length > 0;
 
   return (
-    <div className="ios-card overflow-hidden border border-border/60">
-        <button
-          type="button"
-          onClick={() => navigate(`/itinerary/route/${route.id}`)}
-          className="block w-full text-left transition-opacity active:opacity-90"
-          aria-label={`Voir le détail de ${route.name}`}
-        >
+    <button
+      type="button"
+      onClick={() => navigate(`/itinerary/route/${route.id}`)}
+      className="ios-list-row w-full border border-white dark:border-white/10 text-left"
+      aria-label={`Voir le détail de ${route.name}`}
+    >
+      <div className="flex items-center gap-ios-2">
+        <div className="h-[64px] w-[88px] shrink-0 overflow-hidden rounded-ios-md border border-border/60 bg-secondary">
           {hasCoordinates ? (
-            <div className="relative mx-4 mt-4 overflow-hidden rounded-2xl">
-              <div ref={mapContainer} className="pointer-events-none h-44 w-full" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+            <div ref={mapContainer} className="pointer-events-none h-full w-full" />
+          ) : null}
+        </div>
 
-              <div className="pointer-events-none absolute left-3 top-3">
-                <span className="rounded-full bg-background/85 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
-                  {format(new Date(route.created_at), 'dd MMM yyyy', { locale: fr })}
-                </span>
-              </div>
-
-              <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Route className="h-3 w-3" /> {formatMeters(route.total_distance)}
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Mountain className="h-3 w-3" /> {formatElevation(route.total_elevation_gain)}
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Clock className="h-3 w-3" /> {formatDuration(route.total_distance)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-4 mt-4 flex h-32 items-center justify-center rounded-2xl bg-secondary">
-              <Route className="h-8 w-8 text-muted-foreground/40" />
-            </div>
-          )}
-        </button>
-
-        <div className="px-4 pb-4 pt-3">
-          <button
-            type="button"
-            onClick={() => navigate(`/itinerary/route/${route.id}`)}
-            className="flex w-full min-w-0 items-start gap-2 text-left transition-colors active:opacity-80"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-1">
-                <h3 className="truncate text-[17px] font-semibold text-foreground">{route.name}</h3>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              </div>
-              {route.description && (
-                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">{route.description}</p>
-              )}
-            </div>
-          </button>
-
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-ios-headline font-semibold text-foreground">{route.name}</h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
             <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
               <TrendingUp className="h-3.5 w-3.5" />
               {formatMeters(route.total_distance)}
             </span>
             <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
-              <Mountain className="h-3.5 w-3.5" />D+ {formatElevation(route.total_elevation_gain)}
-            </span>
-            <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
-              <Clock className="h-3.5 w-3.5" />
-              {formatDuration(route.total_distance)}
+              <Mountain className="h-3.5 w-3.5" />
+              D+ {formatElevation(route.total_elevation_gain)}
             </span>
           </div>
         </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          <div className="h-[44px] w-[64px] rounded-ios-md bg-secondary/70 px-1.5 py-1">
+            <svg viewBox="0 0 64 28" className="h-full w-full" preserveAspectRatio="none" aria-hidden>
+              <path d={elevationPath} fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+        </div>
       </div>
-    </div>
+    </button>
   );
 };
