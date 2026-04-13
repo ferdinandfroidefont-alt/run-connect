@@ -299,12 +299,6 @@ export function SessionStoryDialog({
     );
   }, [current?.id, isOwnStory]);
 
-  useEffect(() => {
-    if (open && actionMode === "insights" && isOwnStory) {
-      void Promise.all([loadViewers(), loadLikers()]);
-    }
-  }, [open, actionMode, isOwnStory, loadViewers, loadLikers]);
-
   const loadLikers = useCallback(async () => {
     if (!current?.id || !isOwnStory) {
       setLikers([]);
@@ -339,6 +333,12 @@ export function SessionStoryDialog({
       }))
     );
   }, [current?.id, isOwnStory]);
+
+  useEffect(() => {
+    if (open && actionMode === "insights" && isOwnStory) {
+      void Promise.all([loadViewers(), loadLikers()]);
+    }
+  }, [open, actionMode, isOwnStory, loadViewers, loadLikers]);
 
   const loadFollowersForHide = useCallback(async () => {
     if (!current?.author_id || !viewerUserId || current.author_id !== viewerUserId) return;

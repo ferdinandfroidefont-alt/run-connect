@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+import { AvatarViewer } from "@/components/AvatarViewer";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
@@ -1245,22 +1246,12 @@ export const ProfileDialog = ({
         }}
       />
       )}
-      <Dialog open={showAvatarFullscreen} onOpenChange={setShowAvatarFullscreen}>
-        <DialogContent
-          stackNested
-          hideCloseButton
-          className="z-[210] flex min-h-0 min-w-0 max-w-[min(100vw,28rem)] flex-col items-center gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0"
-          aria-describedby={undefined}
-        >
-          <DialogTitle className="sr-only">Photo de profil</DialogTitle>
-          <div className="w-full p-3">
-            <img
-              src={avatarPreview || profile?.avatar_url || ""}
-              alt="Photo de profil"
-              className="block aspect-square w-full rounded-xl object-cover"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AvatarViewer
+        open={showAvatarFullscreen}
+        onClose={() => setShowAvatarFullscreen(false)}
+        avatarUrl={avatarPreview || profile?.avatar_url || null}
+        username={profile?.username?.trim() || "Profil"}
+        stackNested
+      />
     </>;
 };
