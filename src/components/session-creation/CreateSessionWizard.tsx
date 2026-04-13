@@ -23,7 +23,12 @@ import { DateTimeStep } from './steps/DateTimeStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { ConfirmStep } from './steps/ConfirmStep';
 import { BoostSessionDialog } from '@/components/sessions/BoostSessionDialog';
-import { FREE_VISIBILITY_RADIUS_KM, PREMIUM_VISIBILITY_RADIUS_KM } from '@/lib/sessionVisibility';
+import {
+  FREE_VISIBILITY_RADIUS_KM,
+  PREMIUM_VISIBILITY_RADIUS_KM,
+  isPostgrestMissingSessionsVisibilitySnapshot,
+  stripSessionsVisibilitySnapshot,
+} from '@/lib/sessionVisibility';
 
 declare global {
   interface Window {
@@ -182,7 +187,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       // Calculate session level automatically (only for endurance sports)
       const calculatedLevel = calculateSessionLevel(formData);
 
-      const sessionPayload = {
+      const sessionPayloadCore = {
         title: formData.title,
         description: formData.description,
         activity_type: formData.activity_type,
@@ -212,21 +217,44 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         hidden_from_users: formData.hidden_from_users || [],
         intensity: formData.intensity || null,
         coaching_session_id: coachingSession?.id || null,
+      };
+
+      const visibilitySnapshot = {
         visibility_tier: visibilityTier,
         visibility_radius_km: Number.isFinite(visibilityRadiusKm) ? visibilityRadiusKm : 999999,
         discovery_score: discoveryScore,
       };
 
+      const sessionPayload = { ...sessionPayloadCore, ...visibilitySnapshot };
+
       let sessionData;
 
       if (isEditMode && editSession) {
         // UPDATE existing session
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('sessions')
           .update(sessionPayload)
           .eq('id', editSession.id)
           .select()
           .single();
+
+        if (error && isPostgrestMissingSessionsVisibilitySnapshot(error)) {
+          if (isPublicSession && isPremiumUser) {
+            toast({
+              title: "Base de données à jour requise",
+              description:
+                "Appliquez la migration Supabase « sessions_visibility_tiers » (fichier 20260405132000_sessions_visibility_tiers.sql) pour les séances publiques premium.",
+              variant: "destructive",
+            });
+            throw error;
+          }
+          ({ data, error } = await supabase
+            .from('sessions')
+            .update(sessionPayloadCore)
+            .eq('id', editSession.id)
+            .select()
+            .single());
+        }
 
         if (error) throw error;
         sessionData = data;
@@ -263,10 +291,24 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           });
         }
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('sessions')
           .insert(sessionsToCreate)
           .select();
+
+        if (error && isPostgrestMissingSessionsVisibilitySnapshot(error)) {
+          if (isPublicSession && isPremiumUser) {
+            toast({
+              title: "Base de données à jour requise",
+              description:
+                "Appliquez la migration Supabase « sessions_visibility_tiers » (fichier 20260405132000_sessions_visibility_tiers.sql) pour les séances publiques premium.",
+              variant: "destructive",
+            });
+            throw error;
+          }
+          const legacyRows = sessionsToCreate.map((row) => stripSessionsVisibilitySnapshot(row));
+          ({ data, error } = await supabase.from('sessions').insert(legacyRows).select());
+        }
 
         if (error) throw error;
         sessionData = data?.[0]; // Use first session for callbacks

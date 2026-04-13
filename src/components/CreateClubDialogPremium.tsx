@@ -265,6 +265,8 @@ export const CreateClubDialogPremium = ({ isOpen, onClose, onGroupCreated }: Cre
           <DialogTitle className="sr-only">Créer un club</DialogTitle>
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
+            contentTopOffsetPx={0}
+            headerWrapperClassName="shrink-0"
             header={<CoachingFullscreenHeader title="Créer un club" onBack={handleClose} />}
             scrollClassName="bg-secondary py-4"
           >

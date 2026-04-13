@@ -38,8 +38,8 @@ html, body {
     /* Safe area bas : appliquée UNE SEULE FOIS sur la <nav> fixe ; le scroll principal ajoute seulement la hauteur utile des onglets */
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
-    /* Réserve scroll : hauteur utile de la barre d'onglets (sans bande safe-area dédiée) */
-    --bottom-nav-offset: var(--nav-height);
+    /* Réserve scroll / pages fixed : hauteur onglets + bandeau sous la barre (aligné sur BottomNavigation `bottom: var(--tab-bar-ground-strip)`). */
+    --bottom-nav-offset: calc(var(--nav-height) + var(--tab-bar-ground-strip));
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     /* Bandeau Feed replié : garder la même valeur que PEEK_HEIGHT_PX dans HomeFeedBottomSheet.tsx */
@@ -797,7 +797,7 @@ html, body {
 
   /**
    * Pages en position:fixed dans le Layout (ignorent le padding de <main>).
-   * bottom suit la barre du bas + safe area, ou 0 si --layout-bottom-inset est mis à 0.
+   * bottom suit la barre d’onglets + bandeau bas (--bottom-nav-offset), ou 0 si --layout-bottom-inset est mis à 0.
    */
   .fixed-fill-with-bottom-nav {
     position: fixed;

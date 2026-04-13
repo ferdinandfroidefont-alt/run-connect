@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type Ref } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type Ref } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -267,6 +267,7 @@ const Leaderboard = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const meRowRef = useRef<HTMLButtonElement>(null);
+  const meDockRef = useRef<HTMLDivElement | null>(null);
 
   const { selectedUserId, showProfilePreview, navigateToProfile, closeProfilePreview } = useProfileNavigation();
 
@@ -377,23 +378,48 @@ const Leaderboard = () => {
   const u3 = topThree.find((u) => u.rank === 3);
   const listFromRank4 = leaderboard.filter((u) => u.rank > 3);
 
-  const hideBottomMe =
-    (mySnapshot !== null && mySnapshot.rank <= 3) || (mySnapshot !== null && mySnapshot.rank > 3 && meRowInView);
+  /** Dock « Toi » : uniquement hors top 3 et quand la ligne n’est pas visible dans la liste scrollable. */
+  const showMeDock = Boolean(mySnapshot && mySnapshot.rank > 3 && !meRowInView);
 
-  useEffect(() => {
+  /** Ligne « moi » lisible dans le scroll ; si le dock overlay est présent, exclut le chevauchement avec sa carte. */
+  const syncMeRowInScroll = useCallback((root: HTMLDivElement, row: HTMLButtonElement, dock: HTMLElement | null) => {
+    const rr = root.getBoundingClientRect();
+    const br = row.getBoundingClientRect();
+    const pad = 2;
+    const inRoot = br.bottom > rr.top + pad && br.top < rr.bottom - pad;
+    if (!dock) return inRoot;
+    const dr = dock.getBoundingClientRect();
+    const overlaps = !(br.bottom <= dr.top || br.top >= dr.bottom || br.right <= dr.left || br.left >= dr.right);
+    return inRoot && !overlaps;
+  }, []);
+
+  useLayoutEffect(() => {
     const root = scrollRef.current;
     const el = meRowRef.current;
     if (!root || !el || !user || !mySnapshot || mySnapshot.rank <= 3) {
       setMeRowInView(false);
       return;
     }
-    const obs = new IntersectionObserver(
-      ([entry]) => setMeRowInView(entry.isIntersecting),
-      { root, threshold: 0.2, rootMargin: "-8px 0px -64px 0px" }
-    );
+
+    const apply = () => {
+      const r = scrollRef.current;
+      const row = meRowRef.current;
+      if (r && row && mySnapshot.rank > 3) {
+        setMeRowInView(syncMeRowInScroll(r, row, meDockRef.current));
+      }
+    };
+
+    apply();
+
+    const obs = new IntersectionObserver(() => apply(), {
+      root,
+      threshold: [0, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
+      rootMargin: "0px",
+    });
     obs.observe(el);
+
     return () => obs.disconnect();
-  }, [user, mySnapshot, listFromRank4.length, leaderboard.length]);
+  }, [user, mySnapshot, listFromRank4.length, leaderboard.length, syncMeRowInScroll, showMeDock]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -472,34 +498,6 @@ const Leaderboard = () => {
 
   /* ─── Footer: sticky "me" bar ─── */
 
-  const footerContent = mySnapshot && !hideBottomMe ? (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="border-t border-border/60 bg-card px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
-    >
-      <div className="mx-auto flex min-w-0 max-w-lg items-center gap-3">
-        <span className="w-8 shrink-0 text-center text-[13px] font-bold tabular-nums text-primary">
-          #{mySnapshot.rank}
-        </span>
-        <Avatar className="h-10 w-10 shrink-0 ring-1 ring-border/60">
-          <AvatarImage src={mySnapshot.avatar_url || ""} className="object-cover" />
-          <AvatarFallback className="bg-secondary text-sm font-bold">
-            {mySnapshot.username?.[0]?.toUpperCase() || "?"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <p className="truncate text-[14px] font-semibold text-foreground">Toi</p>
-          <p className="truncate text-[12px] text-muted-foreground">@{mySnapshot.username}</p>
-        </div>
-        <div className="min-w-0 shrink-0 text-right">
-          <p className="text-[15px] font-bold tabular-nums text-foreground">{mySnapshot.points.toLocaleString()}</p>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">pts</p>
-        </div>
-      </div>
-    </motion.div>
-  ) : null;
-
   /* ─── Content ─── */
 
   const listBody = loading && leaderboard.length === 0 ? (
@@ -544,32 +542,69 @@ const Leaderboard = () => {
     <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
       <IosFixedPageHeaderShell
         className="min-h-0 flex-1"
+        headerWrapperClassName="shrink-0"
         header={headerContent}
-        footer={footerContent}
         contentScroll
       >
-        {/* Podium — fixed above scroll */}
-        <div className="shrink-0 bg-secondary px-4 pb-3 pt-3">
-          <div className="mx-auto w-full max-w-sm">
-            <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Podium
-            </p>
-            <div className="flex min-w-0 items-end justify-center gap-2">
-              <PodiumBlock rank={2} user={u2} pointsMode={pointsMode} onProfile={() => u2 && navigateToProfile(u2.user_id)} />
-              <PodiumBlock rank={1} user={u1} pointsMode={pointsMode} onProfile={() => u1 && navigateToProfile(u1.user_id)} />
-              <PodiumBlock rank={3} user={u3} pointsMode={pointsMode} onProfile={() => u3 && navigateToProfile(u3.user_id)} />
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* Podium — au-dessus de la liste */}
+          <div className="shrink-0 bg-secondary px-4 pb-3 pt-3">
+            <div className="mx-auto w-full max-w-sm">
+              <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Podium
+              </p>
+              <div className="flex min-w-0 items-end justify-center gap-2">
+                <PodiumBlock rank={2} user={u2} pointsMode={pointsMode} onProfile={() => u2 && navigateToProfile(u2.user_id)} />
+                <PodiumBlock rank={1} user={u1} pointsMode={pointsMode} onProfile={() => u1 && navigateToProfile(u1.user_id)} />
+                <PodiumBlock rank={3} user={u3} pointsMode={pointsMode} onProfile={() => u3 && navigateToProfile(u3.user_id)} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Scrollable list */}
-        <div
-          ref={scrollRef}
-          className={cn(
-            "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pb-4 pt-1",
+          {/* Liste scrollable — hauteur stable (dock « Toi » en overlay pour éviter oscillation layout / IO). */}
+          <div
+            ref={scrollRef}
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pt-1",
+              showMeDock
+                ? "scroll-pb-[max(5.25rem,calc(4.75rem+env(safe-area-inset-bottom,0px)*0.35))] pb-[max(5.25rem,calc(4.75rem+env(safe-area-inset-bottom,0px)*0.35))]"
+                : "scroll-pb-4 pb-4",
+            )}
+          >
+            {listBody}
+          </div>
+
+          {showMeDock && mySnapshot && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-ios-4 pb-[max(0.25rem,env(safe-area-inset-bottom,0px)*0.2)] pt-2">
+              <motion.div
+                ref={meDockRef}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                className="pointer-events-auto w-full max-w-[16.5rem] min-w-0 rounded-2xl border border-border/50 bg-card/95 px-2.5 py-1.5 shadow-md backdrop-blur-sm supports-[backdrop-filter]:bg-card/90"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="w-7 shrink-0 text-center text-[12px] font-bold tabular-nums text-primary">
+                    #{mySnapshot.rank}
+                  </span>
+                  <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border/50">
+                    <AvatarImage src={mySnapshot.avatar_url || ""} className="object-cover" />
+                    <AvatarFallback className="bg-secondary text-xs font-bold">
+                      {mySnapshot.username?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="truncate text-[13px] font-semibold leading-tight text-foreground">Toi</p>
+                    <p className="truncate text-[11px] leading-tight text-muted-foreground">@{mySnapshot.username}</p>
+                  </div>
+                  <div className="shrink-0 text-right tabular-nums">
+                    <p className="text-[14px] font-bold leading-tight text-foreground">{mySnapshot.points.toLocaleString()}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">pts</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           )}
-        >
-          {listBody}
         </div>
       </IosFixedPageHeaderShell>
 

@@ -45,7 +45,13 @@ export function IosFixedPageHeaderShell({
   const [pin] = useState(() => isIosAppShell());
   const headerRef = useRef<HTMLDivElement>(null);
   const localScrollRef = useRef<HTMLDivElement>(null);
-  const [padPx, setPadPx] = useState(0);
+  /** Sous iOS (header fixe), valeur de secours jusqu’à la mesure — évite le contenu sous le header au 1er rendu / dans les modales. */
+  const [padPx, setPadPx] = useState(() => {
+    if (!isIosAppShell()) return 0;
+    const raw = getComputedStyle(document.documentElement).getPropertyValue("--safe-area-top").trim();
+    const safeTop = Number.isFinite(parseFloat(raw)) ? parseFloat(raw) : 0;
+    return Math.ceil(safeTop + 54);
+  });
 
   useLayoutEffect(() => {
     if (!contentScroll && scrollRef && localScrollRef.current) {
@@ -65,6 +71,10 @@ export function IosFixedPageHeaderShell({
       setPadPx(Math.ceil(el.getBoundingClientRect().height) + 1);
     };
     sync();
+    requestAnimationFrame(() => {
+      sync();
+      requestAnimationFrame(sync);
+    });
     const ro = new ResizeObserver(sync);
     ro.observe(el);
     const vv = window.visualViewport;
