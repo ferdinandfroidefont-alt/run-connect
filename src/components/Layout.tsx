@@ -8,7 +8,7 @@ import { lazy, Suspense, useState, useEffect } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
-import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BLUE } from '@/lib/ruconnectSplashChrome';
+import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BACKGROUND } from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -121,7 +121,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center px-5"
         style={{
-          backgroundColor: RUCONNECT_SPLASH_BLUE,
+          backgroundColor: RUCONNECT_SPLASH_BACKGROUND,
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: '0px',
         }}
