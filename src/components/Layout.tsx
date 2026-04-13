@@ -57,7 +57,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
 
-  // Réserve l’espace sous le contenu quand la tab bar est visible (profil = plein écran sans barre).
+  // Réserve l’espace sous le contenu quand la tab bar fixed est visible.
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--layout-bottom-inset',
@@ -156,7 +156,10 @@ export const Layout = ({ children }: LayoutProps) => {
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
         partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
       */}
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden">
+      <main
+        className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden"
+        style={{ paddingBottom: 'var(--layout-bottom-inset)' }}
+      >
         {homeMapPrimed && (
           <div
             className={

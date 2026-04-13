@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
@@ -19,19 +18,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
+import { MainTabsSwipeHost } from "@/components/MainTabsSwipeHost";
 import {
   getAppShellBootCompleted,
   setAppShellBootCompleted,
 } from "@/lib/appShellPersistence";
 import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
-const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Feed = lazy(() => import("./pages/Feed"));
-const MySessions = lazy(() => import("./pages/MySessions"));
-const Messages = lazy(() => import("./pages/Messages"));
-const Coaching = lazy(() => import("./pages/Coaching"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
@@ -114,13 +109,9 @@ const App = () => {
 
     const preload = () => {
       void Promise.allSettled([
-        import("./pages/Index"),
+        import("./components/MainTabsSwipeHost"),
         import("./pages/Auth"),
         import("./pages/Feed"),
-        import("./pages/MySessions"),
-        import("./pages/Messages"),
-        import("./pages/Coaching"),
-        import("./pages/Leaderboard"),
         import("./pages/ProfileEntry"),
         import("./pages/ProfileByUserIdPage"),
         import("./pages/ProfileSportRecordsEdit"),
@@ -314,16 +305,15 @@ const App = () => {
                 <NetworkStatusBanner />
                 <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
-                <AnimatePresence mode="sync">
                   <Routes>
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
-                  <Route path="/" element={<Layout><PageTransition><PageSuspense><Index /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/my-sessions" element={<Layout><PageTransition><PageSuspense><MySessions /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Coaching /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/leaderboard" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
@@ -357,7 +347,6 @@ const App = () => {
                   <Route path="/p/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
                   <Route path="*" element={<PageTransition><PageSuspense><NotFound /></PageSuspense></PageTransition>} />
                   </Routes>
-                </AnimatePresence>
                 </div>
               </BrowserRouter>
             </TooltipProvider>

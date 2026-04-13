@@ -148,15 +148,14 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[110] w-full shrink-0 border-t border-border bg-background",
+        "fixed inset-x-0 bottom-0 z-[110] w-full border-t border-border bg-background",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
       role="navigation"
       aria-label="Navigation principale"
       style={{
-        /* Pas de bande additionnelle sous la tab bar. */
-        paddingBottom: "0px",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}

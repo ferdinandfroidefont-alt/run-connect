@@ -37,7 +37,7 @@ html, body {
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
     /* Réserve scroll : hauteur réelle de la barre d'onglets (une seule barre en bas) */
-    --bottom-nav-offset: var(--nav-height);
+    --bottom-nav-offset: calc(var(--nav-height) + var(--safe-area-bottom));
     /* Sous la barre fixe quand elle est visible (0 quand masquée, géré par Layout) */
     --layout-bottom-inset: var(--bottom-nav-offset);
     /* Bandeau Feed replié : garder la même valeur que PEEK_HEIGHT_PX dans HomeFeedBottomSheet.tsx */
