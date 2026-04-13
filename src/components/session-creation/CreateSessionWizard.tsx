@@ -214,9 +214,6 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         coaching_session_id: coachingSession?.id || null,
         visibility_tier: visibilityTier,
         visibility_radius_km: Number.isFinite(visibilityRadiusKm) ? visibilityRadiusKm : 999999,
-        boost_expires_at: null,
-        boost_consumed_at: null,
-        boost_notification_sent_at: null,
         discovery_score: discoveryScore,
       };
 
