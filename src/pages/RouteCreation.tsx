@@ -202,7 +202,7 @@ export const RouteCreation = () => {
       await fitMapToCoords(map.current, waypoints.current, 50);
     }
 
-    await updateElevationAndStats();
+    await updateElevationAndStats('fast');
     setWaypointCount(waypoints.current.length);
 
     toast.success("Itinéraire chargé - modifiez les points");
@@ -468,7 +468,7 @@ export const RouteCreation = () => {
       if (newSegment) {
         segments.current.push(newSegment);
         setWaypointCount(waypoints.current.length);
-        await updateElevationAndStats();
+        void updateElevationAndStats('fast');
       }
     }
   };
@@ -487,7 +487,9 @@ export const RouteCreation = () => {
     return allCoords;
   };
 
-  const updateElevationAndStats = async (): Promise<{
+  const updateElevationAndStats = async (
+    quality: 'fast' | 'full' = 'fast'
+  ): Promise<{
     distanceKm: number;
     elevations: number[];
     elevationGain: number;
@@ -506,13 +508,41 @@ export const RouteCreation = () => {
     const reqId = ++elevationRequestId.current;
     setElevationLoading(true);
 
-    const pathForElevation = densifyMapCoords(allCoordinates, 7);
+    const pathForElevation = densifyMapCoords(allCoordinates, quality === 'full' ? 7 : 18);
     const totalPathM = pathLengthMeters(pathForElevation);
-    /** Pas grossier sur lointain : ~7–11 m entre requêtes MNE selon longueur. */
     const stepM =
-      totalPathM > 90_000 ? 11 : totalPathM > 55_000 ? 10 : totalPathM > 28_000 ? 9 : 7;
+      quality === 'full'
+        ? totalPathM > 90_000
+          ? 11
+          : totalPathM > 55_000
+            ? 10
+            : totalPathM > 28_000
+              ? 9
+              : 7
+        : totalPathM > 90_000
+          ? 80
+          : totalPathM > 55_000
+            ? 60
+            : totalPathM > 28_000
+              ? 42
+              : totalPathM > 10_000
+                ? 28
+                : totalPathM > 3_000
+                  ? 20
+                  : 12;
     let sampled = resamplePathEveryMeters(pathForElevation, stepM);
-    const MAX_POINTS = 4000;
+    const MAX_POINTS =
+      quality === 'full'
+        ? 4000
+        : totalPathM > 90_000
+          ? 520
+          : totalPathM > 28_000
+            ? 420
+            : totalPathM > 10_000
+              ? 320
+              : totalPathM > 3_000
+                ? 240
+                : 180;
     if (sampled.length > MAX_POINTS) {
       sampled = resamplePathEvenlyMapCoords(sampled, MAX_POINTS);
     }
@@ -609,7 +639,7 @@ export const RouteCreation = () => {
       setTotalElevationGain(0);
       setTotalElevationLoss(0);
     } else {
-      await updateElevationAndStats();
+      void updateElevationAndStats('fast');
     }
     setWaypointCount(waypoints.current.length);
   };
@@ -642,7 +672,7 @@ export const RouteCreation = () => {
 
     setCanRedo(undoHistory.current.length > 0);
     setWaypointCount(waypoints.current.length);
-    await updateElevationAndStats();
+    void updateElevationAndStats('fast');
   };
 
   const handleClear = () => {
@@ -698,7 +728,7 @@ export const RouteCreation = () => {
     });
 
     if (isEditMode && editRouteDataRef.current && user) {
-      const elevStats = await updateElevationAndStats();
+      const elevStats = await updateElevationAndStats('full');
       try {
         const elevationsForEdit = routeElevations.length >= 2 ? routeElevations : (elevStats?.elevations ?? []);
         const coordsWithElev = elevationsForEdit.length >= 2
@@ -740,7 +770,7 @@ export const RouteCreation = () => {
       return;
     }
 
-    void updateElevationAndStats();
+    void updateElevationAndStats('fast');
     setSaveDialogOpen(true);
   };
 
@@ -761,7 +791,7 @@ export const RouteCreation = () => {
 
     let elevationsForSave = routeElevations;
     if (elevationsForSave.length < 2) {
-      const refreshed = await updateElevationAndStats();
+      const refreshed = await updateElevationAndStats('full');
       if (!refreshed || refreshed.elevations.length < 2) {
         toast.error('Impossible de calculer le dénivelé — réessayez dans un instant');
         return;
