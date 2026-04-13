@@ -13,13 +13,17 @@ import {
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video" | "boomerang";
-type StoryStep = "capture" | "edit";
+type StoryStep = "entry" | "capture" | "edit";
 
 type ScheduledSession = {
   id: string;
   title: string;
   location_name: string;
   scheduled_at: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  route_id?: string | null;
+  route_coordinates?: Array<{ lat: number; lng: number }>;
 };
 
 const MUSIC_LIBRARY = [
@@ -40,7 +44,7 @@ export default function StoryCreate() {
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
 
   // Flow
-  const [step, setStep] = useState<StoryStep>("capture");
+  const [step, setStep] = useState<StoryStep>("entry");
   const [sourceMode, setSourceMode] = useState<"camera" | "gallery">("camera");
   const [captureMode, setCaptureMode] = useState<CaptureMode>("photo");
 
@@ -59,6 +63,8 @@ export default function StoryCreate() {
   // Edit overlays
   const [textOverlay, setTextOverlay] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
+  const [textPos, setTextPos] = useState({ x: 120, y: 200 });
+  const textDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [selectedMusic, setSelectedMusic] = useState<typeof MUSIC_LIBRARY[0] | null>(null);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [caption, setCaption] = useState("");
@@ -129,12 +135,30 @@ export default function StoryCreate() {
     if (!user?.id) return;
     const { data } = await supabase
       .from("sessions")
-      .select("id, title, location_name, scheduled_at")
+      .select("id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates)")
       .eq("organizer_id", user.id)
       .gt("scheduled_at", new Date().toISOString())
       .order("scheduled_at", { ascending: true })
       .limit(30);
-    setSessions((data ?? []) as ScheduledSession[]);
+    const normalized = ((data ?? []) as Array<any>).map((s) => ({
+      id: s.id,
+      title: s.title,
+      location_name: s.location_name,
+      location_lat: s.location_lat,
+      location_lng: s.location_lng,
+      route_id: s.route_id,
+      scheduled_at: s.scheduled_at,
+      route_coordinates: Array.isArray(s?.route?.coordinates)
+        ? s.route.coordinates
+            .map((c: any) =>
+              c && typeof c === "object" && c.lat != null && c.lng != null
+                ? { lat: Number(c.lat), lng: Number(c.lng) }
+                : null,
+            )
+            .filter(Boolean)
+        : [],
+    })) as ScheduledSession[];
+    setSessions(normalized);
   }, [user?.id]);
 
   useEffect(() => { void loadSessions(); }, [loadSessions]);
@@ -251,6 +275,121 @@ export default function StoryCreate() {
     return raw || "Impossible de partager la story.";
   };
 
+  const createSessionStoryImage = async (session: ScheduledSession): Promise<File | null> => {
+    try {
+      const w = 1080;
+      const h = 1920;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+
+      // Fond carte clair
+      ctx.fillStyle = "#f6f7fb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#e3e7f0";
+      ctx.lineWidth = 2;
+      for (let x = 0; x < w; x += 80) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 80) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      let pinX = w / 2;
+      let pinY = h / 2 - 140;
+
+      // Itinéraire si disponible
+      const route = session.route_coordinates ?? [];
+      if (route.length >= 2) {
+        const minLat = Math.min(...route.map((p) => p.lat));
+        const maxLat = Math.max(...route.map((p) => p.lat));
+        const minLng = Math.min(...route.map((p) => p.lng));
+        const maxLng = Math.max(...route.map((p) => p.lng));
+        const dx = Math.max(1e-6, maxLng - minLng);
+        const dy = Math.max(1e-6, maxLat - minLat);
+        const pad = 120;
+        const mapTop = 200;
+        const mapBottom = h - 420;
+        const mapH = mapBottom - mapTop;
+        const mapW = w - pad * 2;
+        const toX = (lng: number) => pad + ((lng - minLng) / dx) * mapW;
+        const toY = (lat: number) => mapBottom - ((lat - minLat) / dy) * mapH;
+        ctx.strokeStyle = "#2563EB";
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        route.forEach((p, i) => {
+          const x = toX(p.lng);
+          const y = toY(p.lat);
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        if (typeof session.location_lat === "number" && typeof session.location_lng === "number") {
+          pinX = toX(session.location_lng);
+          pinY = toY(session.location_lat);
+        } else {
+          const last = route[route.length - 1]!;
+          pinX = toX(last.lng);
+          pinY = toY(last.lat);
+        }
+      }
+
+      // Pin position
+      ctx.fillStyle = "#2563EB";
+      ctx.beginPath();
+      ctx.arc(pinX, pinY, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      ctx.arc(pinX, pinY, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#2563EB";
+      ctx.beginPath();
+      ctx.moveTo(pinX, pinY + 28);
+      ctx.lineTo(pinX - 18, pinY + 70);
+      ctx.lineTo(pinX + 18, pinY + 70);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cartouche infos séance
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.roundRect(72, h - 360, w - 144, 250, 34);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(37,99,235,0.15)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#2563EB";
+      ctx.font = "700 58px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
+      ctx.fillText("SEANCE", 120, h - 285);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = "700 44px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
+      ctx.fillText((session.title || "Session").slice(0, 32), 120, h - 220);
+
+      ctx.fillStyle = "#4b5563";
+      ctx.font = "600 34px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
+      ctx.fillText(`📍 ${session.location_name || "Lieu a definir"}`.slice(0, 42), 120, h - 165);
+      const dt = new Date(session.scheduled_at);
+      ctx.fillText(
+        dt.toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
+        120,
+        h - 120,
+      );
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+      if (!blob) return null;
+      return new File([blob], `session-story-${session.id}-${Date.now()}.jpg`, { type: "image/jpeg" });
+    } catch {
+      return null;
+    }
+  };
+
   const onShare = async () => {
     if (!user?.id || !mediaFile) return;
     setSharing(true);
@@ -260,6 +399,11 @@ export default function StoryCreate() {
       const mediaType = mediaFile.type.startsWith("video/")
         ? (captureMode === "boomerang" ? "boomerang" : "video")
         : "image";
+      let fileToUpload = mediaFile;
+      if (mediaType === "image") {
+        const baked = await renderImageStoryWithOverlays(mediaFile);
+        if (baked) fileToUpload = baked;
+      }
 
       const { data: story, error: storyError } = await (supabase as any)
         .from("session_stories")
@@ -273,9 +417,9 @@ export default function StoryCreate() {
       if (storyError || !story) throw storyError || new Error("Story creation failed");
       createdStoryId = story.id as string;
 
-      const ext = mediaFile.name.split(".").pop() || (mediaType === "image" ? "jpg" : "mp4");
+      const ext = fileToUpload.name.split(".").pop() || (mediaType === "image" ? "jpg" : "mp4");
       const path = `${user.id}/${story.id}-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("story-media").upload(path, mediaFile, { upsert: false });
+      const { error: uploadError } = await supabase.storage.from("story-media").upload(path, fileToUpload, { upsert: false });
       if (uploadError) throw uploadError;
       uploadedStoragePath = path;
 
@@ -285,11 +429,17 @@ export default function StoryCreate() {
         media_url: pub.publicUrl,
         media_type: mediaType,
         metadata: {
-          text_overlay: textOverlay || null,
+          text_overlay: textOverlay
+            ? { value: textOverlay, x: textPos.x, y: textPos.y }
+            : null,
           music: selectedMusic ? { id: selectedMusic.id, title: selectedMusic.title } : null,
           sticker: selectedSession
             ? { session_id: selectedSession.id, x: stickerPos.x, y: stickerPos.y, scale: stickerScale }
             : null,
+          emoji_sticker: emojiSticker
+            ? { emoji: emojiSticker, x: emojiPos.x, y: emojiPos.y, scale: emojiScale }
+            : null,
+          draw_enabled: drawMode,
         },
       });
       if (mediaError) throw mediaError;
@@ -348,6 +498,25 @@ export default function StoryCreate() {
   const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (emojiDragRef.current) {
       emojiDragRef.current = null;
+      try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const startTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!textOverlay) return;
+    textDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: textPos.x, baseY: textPos.y };
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  };
+  const moveTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!textDragRef.current) return;
+    setTextPos({
+      x: Math.max(0, textDragRef.current.baseX + e.clientX - textDragRef.current.startX),
+      y: Math.max(0, textDragRef.current.baseY + e.clientY - textDragRef.current.startY),
+    });
+  };
+  const endTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (textDragRef.current) {
+      textDragRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -413,6 +582,254 @@ export default function StoryCreate() {
     }
     lastPointRef.current = { x, y };
   };
+
+  const snapshotDrawState = () => {
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx || canvas.width < 1 || canvas.height < 1) return;
+    const snap = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    drawHistoryRef.current.push(snap);
+    if (drawHistoryRef.current.length > 30) {
+      drawHistoryRef.current.shift();
+    }
+  };
+
+  const undoLastStroke = () => {
+    const canvas = drawCanvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const previous = drawHistoryRef.current.pop();
+    if (previous) {
+      ctx.putImageData(previous, 0, 0);
+      return;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const renderImageStoryWithOverlays = useCallback(async (file: File): Promise<File | null> => {
+    const host = drawHostRef.current;
+    if (!host) return null;
+
+    const mediaUrl = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new window.Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("Image load failed"));
+        el.src = mediaUrl;
+      });
+
+      const hostRect = host.getBoundingClientRect();
+      const hostW = Math.max(1, hostRect.width);
+      const hostH = Math.max(1, hostRect.height);
+      const imgW = Math.max(1, img.naturalWidth);
+      const imgH = Math.max(1, img.naturalHeight);
+      const coverScale = Math.max(hostW / imgW, hostH / imgH);
+      const shownW = imgW * coverScale;
+      const shownH = imgH * coverScale;
+      const offsetX = (hostW - shownW) / 2;
+      const offsetY = (hostH - shownH) / 2;
+
+      const srcX = Math.max(0, (-offsetX) / coverScale);
+      const srcY = Math.max(0, (-offsetY) / coverScale);
+      const srcW = Math.max(1, hostW / coverScale);
+      const srcH = Math.max(1, hostH / coverScale);
+
+      const outW = Math.max(1, Math.round(srcW));
+      const outH = Math.max(1, Math.round(srcH));
+      const out = document.createElement("canvas");
+      out.width = outW;
+      out.height = outH;
+      const ctx = out.getContext("2d");
+      if (!ctx) return null;
+
+      const sx = outW / hostW;
+      const sy = outH / hostH;
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+      const drawCanvas = drawCanvasRef.current;
+      if (drawCanvas) {
+        ctx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, outW, outH);
+      }
+
+      if (textOverlay.trim()) {
+        ctx.save();
+        ctx.font = `700 ${Math.max(18, Math.round(outW * 0.05))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        const tx = Math.max(18, textPos.x * sx);
+        const ty = Math.max(18, textPos.y * sy);
+        const metrics = ctx.measureText(textOverlay);
+        const boxW = metrics.width + 30;
+        const boxH = Math.max(40, Math.round(outW * 0.08));
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.beginPath();
+        ctx.roundRect(tx - 14, ty - 10, boxW, boxH, 14);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(textOverlay, tx, ty);
+        ctx.restore();
+      }
+
+      if (selectedMusic) {
+        ctx.save();
+        const bx = Math.round(16 * sx);
+        const by = Math.round((hostH - 80) * sy);
+        const bh = Math.round(30 * sy);
+        const text = selectedMusic.title;
+        ctx.font = `600 ${Math.max(11, Math.round(outW * 0.024))}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
+        const tw = ctx.measureText(text).width;
+        const bw = Math.round(tw + 42 * sx);
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, 999);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText("♪", bx + Math.round(12 * sx), by + bh / 2 + 4);
+        ctx.fillText(text, bx + Math.round(24 * sx), by + bh / 2 + 4);
+        ctx.restore();
+      }
+
+      if (selectedSession) {
+        ctx.save();
+        ctx.translate(stickerPos.x * sx, stickerPos.y * sy);
+        ctx.scale(stickerScale, stickerScale);
+        const w = Math.max(170, Math.round(outW * 0.36));
+        const h = 66;
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.beginPath();
+        ctx.roundRect(0, 0, w, h, 16);
+        ctx.fill();
+        ctx.fillStyle = "#111111";
+        ctx.font = "700 12px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
+        ctx.fillText(selectedSession.title.slice(0, 30), 12, 24);
+        ctx.fillStyle = "#5f5f5f";
+        ctx.font = "500 10px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
+        ctx.fillText(selectedSession.location_name.slice(0, 34), 12, 42);
+        ctx.restore();
+      }
+
+      if (emojiSticker) {
+        ctx.save();
+        ctx.translate(emojiPos.x * sx, emojiPos.y * sy);
+        ctx.scale(emojiScale, emojiScale);
+        ctx.font = `700 ${Math.max(26, Math.round(outW * 0.08))}px -apple-system, BlinkMacSystemFont, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+        ctx.fillText(emojiSticker, 0, 0);
+        ctx.restore();
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) => out.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+      if (!blob) return null;
+      return new File([blob], `story-baked-${Date.now()}.jpg`, { type: "image/jpeg" });
+    } catch {
+      return null;
+    } finally {
+      URL.revokeObjectURL(mediaUrl);
+    }
+  }, [emojiPos.x, emojiPos.y, emojiScale, emojiSticker, selectedMusic, selectedSession, stickerPos.x, stickerPos.y, stickerScale, textOverlay, textPos.x, textPos.y]);
+
+  // ═══════════════════════════════════════
+  // STEP 0: ENTRY CHOICE
+  // ═══════════════════════════════════════
+  if (step === "entry") {
+    return (
+      <div className="fixed inset-0 z-[180] flex flex-col bg-black">
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+          <button type="button" onClick={() => navigate("/feed")} className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm">
+            <X className="h-5 w-5" />
+          </button>
+          <h1 className="text-sm font-semibold tracking-wide text-white/90">CREER UNE STORY</h1>
+          <div className="h-9 w-9" aria-hidden />
+        </div>
+        <div className="flex min-h-0 flex-1 items-center justify-center px-5">
+          <div className="w-full max-w-sm space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                setSourceMode("camera");
+                setCaptureMode("photo");
+                setStep("capture");
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+            >
+              <Camera className="h-5 w-5" />
+              <div>
+                <p className="text-sm font-semibold">Prendre une photo</p>
+                <p className="text-xs text-white/70">Partager depuis la camera</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSourceMode("gallery");
+                onPickGallery();
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+            >
+              <Image className="h-5 w-5" />
+              <div>
+                <p className="text-sm font-semibold">Choisir dans la galerie</p>
+                <p className="text-xs text-white/70">Image ou video existante</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSessionPicker((v) => !v)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-5 w-5" />
+              <div>
+                <p className="text-sm font-semibold">Partager une seance programmee</p>
+                <p className="text-xs text-white/70">Carte, pin et itineraire</p>
+              </div>
+            </button>
+          </div>
+        </div>
+        {showSessionPicker && (
+          <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold">Selectionne une seance</p>
+              <button type="button" className="text-xs text-muted-foreground" onClick={() => setShowSessionPicker(false)}>
+                Fermer
+              </button>
+            </div>
+            <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
+              {sessions.length === 0 ? (
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune seance a venir</p>
+              ) : (
+                sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={async () => {
+                      const generated = await createSessionStoryImage(s);
+                      if (!generated) {
+                        toast({ title: "Erreur", description: "Impossible de preparer la story de seance", variant: "destructive" });
+                        return;
+                      }
+                      setSelectedSession(s);
+                      setMediaFile(generated);
+                      setShowSessionPicker(false);
+                      setStep("edit");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-secondary"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
+                      <CalendarPlus className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // ═══════════════════════════════════════
   // STEP 1: CAPTURE (Camera / Gallery)
@@ -552,7 +969,20 @@ export default function StoryCreate() {
   return (
     <div className="fixed inset-0 z-[180] flex flex-col bg-black">
       {/* Preview fullscreen */}
-      <div className="relative flex-1" ref={drawHostRef}>
+      <div
+        className="relative flex-1"
+        ref={drawHostRef}
+        onClick={(e) => {
+          if (!showTextInput) return;
+          const host = drawHostRef.current;
+          if (!host) return;
+          const rect = host.getBoundingClientRect();
+          setTextPos({
+            x: Math.max(8, e.clientX - rect.left),
+            y: Math.max(8, e.clientY - rect.top),
+          });
+        }}
+      >
         {previewUrl && (
           isVideo ? (
             <video src={previewUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline />
@@ -561,12 +991,29 @@ export default function StoryCreate() {
           )
         )}
 
-        {/* Text overlay on preview */}
-        {textOverlay && (
-          <div className="absolute inset-x-0 top-1/3 flex justify-center">
-            <div className="rounded-lg bg-black/50 px-4 py-2 text-lg font-bold text-white backdrop-blur-sm">
-              {textOverlay}
-            </div>
+        {/* Text overlay on preview (positioned at cursor) */}
+        {(textOverlay || showTextInput) && (
+          <div
+            className="absolute z-[8]"
+            style={{ transform: `translate(${textPos.x}px, ${textPos.y}px)` }}
+            onPointerDown={startTextDrag}
+            onPointerMove={moveTextDrag}
+            onPointerUp={endTextDrag}
+            onPointerCancel={endTextDrag}
+          >
+            {showTextInput ? (
+              <input
+                value={textOverlay}
+                onChange={(e) => setTextOverlay(e.target.value)}
+                placeholder="Ecrire ici..."
+                autoFocus
+                className="min-w-[140px] rounded-lg border border-white/25 bg-black/45 px-3 py-2 text-base font-semibold text-white outline-none backdrop-blur-sm placeholder:text-white/60"
+              />
+            ) : (
+              <div className="rounded-lg bg-black/50 px-4 py-2 text-lg font-bold text-white backdrop-blur-sm">
+                {textOverlay}
+              </div>
+            )}
           </div>
         )}
 
@@ -625,6 +1072,7 @@ export default function StoryCreate() {
           className={cn("absolute inset-0 z-[5]", drawMode ? "pointer-events-auto touch-none" : "pointer-events-none")}
           onPointerDown={(e) => {
             if (!drawMode) return;
+            snapshotDrawState();
             drawingRef.current = true;
             (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
             drawAtPointer(e);
@@ -649,7 +1097,16 @@ export default function StoryCreate() {
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <button
             type="button"
-            onClick={() => { setMediaFile(null); setStep("capture"); setTextOverlay(""); setSelectedMusic(null); setSelectedSession(null); }}
+            onClick={() => {
+              setMediaFile(null);
+              setStep("entry");
+              setTextOverlay("");
+              setSelectedMusic(null);
+              setSelectedSession(null);
+              setEmojiSticker(null);
+              setDrawMode(false);
+              setShowTextInput(false);
+            }}
             className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -742,14 +1199,8 @@ export default function StoryCreate() {
       <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
         {/* Text input */}
         {showTextInput && (
-          <div className="mb-3">
-            <Input
-              value={textOverlay}
-              onChange={(e) => setTextOverlay(e.target.value)}
-              placeholder="Ajouter du texte..."
-              className="rounded-xl"
-              autoFocus
-            />
+          <div className="mb-3 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground">
+            Appuie sur la story pour placer le curseur, puis ecris directement dessus. Tu peux glisser le texte pour le repositionner.
           </div>
         )}
 
@@ -871,19 +1322,25 @@ export default function StoryCreate() {
                 />
               ))}
             </div>
-            <button
-              type="button"
-              className="rounded-lg border px-2 py-1 text-xs"
-              onClick={() => {
-                const canvas = drawCanvasRef.current;
-                const ctx = canvas?.getContext("2d");
-                if (canvas && ctx) {
-                  ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
-              }}
-            >
-              Effacer
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" className="rounded-lg border px-2 py-1 text-xs" onClick={undoLastStroke}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border px-2 py-1 text-xs"
+                onClick={() => {
+                  const canvas = drawCanvasRef.current;
+                  const ctx = canvas?.getContext("2d");
+                  if (canvas && ctx) {
+                    drawHistoryRef.current = [];
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  }
+                }}
+              >
+                Effacer
+              </button>
+            </div>
           </div>
         )}
 
