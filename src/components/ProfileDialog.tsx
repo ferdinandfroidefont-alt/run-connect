@@ -91,6 +91,7 @@ export const ProfileDialog = ({
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
   const [showOwnStory, setShowOwnStory] = useState(false);
+  const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
   const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
@@ -455,6 +456,19 @@ export const ProfileDialog = ({
   const profileDialogShellClassName =
     "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
+  const hasActiveOwnStory = ownStories.some((story) => {
+    const expiresAtMs = Date.parse(story.expires_at);
+    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+  });
+
+  const handleAvatarPress = () => {
+    if (hasActiveOwnStory) {
+      setShowOwnStory(true);
+      return;
+    }
+    setShowAvatarFullscreen(true);
+  };
+
   const socialSessionsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
   const isPremiumUser = !!(profile?.is_premium || subscriptionInfo?.subscribed);
   const socialHighlights = [
@@ -518,7 +532,7 @@ export const ProfileDialog = ({
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
                     {/* Avatar */}
-                    <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                    <button type="button" className="relative shrink-0" onClick={handleAvatarPress}>
                       <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
                         <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
                         <AvatarFallback className="text-2xl bg-secondary">
@@ -1006,6 +1020,23 @@ export const ProfileDialog = ({
           navigate("/feed");
         }}
       />
+      <Dialog open={showAvatarFullscreen} onOpenChange={setShowAvatarFullscreen}>
+        <DialogContent
+          stackNested
+          hideCloseButton
+          className="z-[210] flex min-h-0 min-w-0 max-w-[min(100vw,28rem)] flex-col items-center gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0"
+          aria-describedby={undefined}
+        >
+          <DialogTitle className="sr-only">Photo de profil</DialogTitle>
+          <div className="w-full p-3">
+            <img
+              src={avatarPreview || profile?.avatar_url || ""}
+              alt="Photo de profil"
+              className="block aspect-square w-full rounded-xl object-cover"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
       <SessionStoryDialog
         open={!!highlightStoryId}
         onOpenChange={(open) => {
