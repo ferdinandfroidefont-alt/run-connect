@@ -9,7 +9,6 @@ import { FeedEmptyState } from "@/components/feed/FeedEmptyState";
 import { DiscoverFilters } from "@/components/feed/DiscoverFilters";
 import { DiscoverCard } from "@/components/feed/DiscoverCard";
 import { DiscoverEmptyState } from "@/components/feed/DiscoverEmptyState";
-import { ProfileDialog } from "@/components/ProfileDialog";
 import { SessionDetailsDialog } from "@/components/SessionDetailsDialog";
 import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
@@ -18,6 +17,10 @@ import { cn } from "@/lib/utils";
 
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+);
+
+const ProfileDialog = lazy(() =>
+  import("@/components/ProfileDialog").then((m) => ({ default: m.ProfileDialog })),
 );
 
 type Props = {
@@ -313,7 +316,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         </div>
       </div>
 
-      <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+      {showProfileDialog && (
+        <Suspense fallback={null}>
+          <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <SettingsDialog

@@ -6,5 +6,10 @@ export function extractStoryMediaStoragePath(url: string): string | null {
   const i = url.indexOf(marker);
   if (i === -1) return null;
   const rest = url.slice(i + marker.length).split("?")[0];
-  return rest ? decodeURIComponent(rest) : null;
+  if (!rest) return null;
+  try {
+    return decodeURIComponent(rest);
+  } catch {
+    return null;
+  }
 }

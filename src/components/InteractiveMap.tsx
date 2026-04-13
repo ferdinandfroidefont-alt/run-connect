@@ -33,7 +33,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -330,6 +330,7 @@ export const InteractiveMap = ({
     homeFeedSheetSnap,
   } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
 
@@ -392,6 +393,14 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  /** /profile → / avec state : ouvrir Mon profil depuis la carte (ProfileDialog n’est monté qu’à l’ouverture). */
+  useEffect(() => {
+    const st = location.state as { openProfileDialog?: boolean } | null | undefined;
+    if (!st?.openProfileDialog) return;
+    setShowProfileDialog(true);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+  }, [location.state, location.pathname, location.search, navigate]);
 
   useEffect(() => {
     setHomeMapImmersive(isActive && isImmersiveMode);
@@ -2446,11 +2455,11 @@ export const InteractiveMap = ({
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <Suspense fallback={null}>
-      <Suspense fallback={null}>
-        <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
-      </Suspense>
-      </Suspense>
+      {showProfileDialog && (
+        <Suspense fallback={null}>
+          <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
       <Suspense fallback={null}>

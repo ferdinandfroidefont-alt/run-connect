@@ -1036,6 +1036,7 @@ export const ProfileDialog = ({
           if (next) setHighlightPickOrder([]);
         }}
       >
+        {showHighlightsManager ? (
         <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Stories à la une</DialogTitle>
           <div className="shrink-0 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
@@ -1211,7 +1212,9 @@ export const ProfileDialog = ({
             )}
           </div>
         </DialogContent>
+        ) : null}
       </Dialog>
+      {showOwnStory && (
       <SessionStoryDialog
         open={showOwnStory}
         onOpenChange={setShowOwnStory}
@@ -1224,6 +1227,24 @@ export const ProfileDialog = ({
           navigate("/feed");
         }}
       />
+      )}
+      {highlightStoryId && (
+      <SessionStoryDialog
+        open
+        onOpenChange={(next) => {
+          if (!next) setHighlightStoryId(null);
+        }}
+        authorId={user?.id ?? null}
+        viewerUserId={user?.id ?? null}
+        storyId={highlightStoryId}
+        stackNested
+        onOpenFeed={() => {
+          setHighlightStoryId(null);
+          onOpenChange(false);
+          navigate("/feed");
+        }}
+      />
+      )}
       <Dialog open={showAvatarFullscreen} onOpenChange={setShowAvatarFullscreen}>
         <DialogContent
           stackNested
@@ -1241,20 +1262,5 @@ export const ProfileDialog = ({
           </div>
         </DialogContent>
       </Dialog>
-      <SessionStoryDialog
-        open={!!highlightStoryId}
-        onOpenChange={(open) => {
-          if (!open) setHighlightStoryId(null);
-        }}
-        authorId={user?.id ?? null}
-        viewerUserId={user?.id ?? null}
-        storyId={highlightStoryId}
-        stackNested
-        onOpenFeed={() => {
-          setHighlightStoryId(null);
-          onOpenChange(false);
-          navigate("/feed");
-        }}
-      />
     </>;
 };
