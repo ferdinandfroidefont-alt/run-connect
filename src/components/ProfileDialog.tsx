@@ -585,9 +585,11 @@ export const ProfileDialog = ({
           fullScreen
           className={profileDialogShellClassName}
         >
-          <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
-          <div className="flex flex-1 items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
+            <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
+            <div className="flex flex-1 items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -601,6 +603,7 @@ export const ProfileDialog = ({
           fullScreen
           className={profileDialogShellClassName}
         >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
           {/* iOS Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
@@ -623,8 +626,8 @@ export const ProfileDialog = ({
             </div>
           </div>
           
-           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-             <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
+             <div className="box-border min-w-0 max-w-full pb-4">
                 {/* Profile Header - Instagram layout: avatar + stats side by side */}
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
@@ -965,21 +968,24 @@ export const ProfileDialog = ({
                   </div>
                 </>
               )}
-
-              <div className="mt-4 space-y-2 px-4">
-                <Button
-                  type="button"
-                  className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/stories/create");
-                  }}
-                >
-                  <Video className="h-4 w-4 shrink-0" />
-                  Créer une story
-                </Button>
-              </div>
             </div>
+          </div>
+
+          <div className="shrink-0 border-t border-border/40 bg-secondary px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom,0px))] dark:border-border/50">
+            <div className="mx-auto w-full max-w-md">
+              <Button
+                type="button"
+                className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate("/stories/create");
+                }}
+              >
+                <Video className="h-4 w-4 shrink-0" />
+                Créer une story
+              </Button>
+            </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
