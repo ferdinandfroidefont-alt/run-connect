@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="app.runconnect">
-
     <!-- 📍 GÉOLOCALISATION -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -52,10 +52,7 @@
         android:requestLegacyExternalStorage="true"
         android:largeHeap="true"
         android:theme="@style/AppTheme.NoActionBarFull">
-
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="@string/admob_app_id" />
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="@string/admob_app_id" />
 
         <!-- 🧠 ACTIVITÉ PRINCIPALE (avec splash intégré) -->
         <activity
@@ -66,7 +63,6 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/SplashTheme">
-            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -77,9 +73,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="app.runconnect"
-                      android:host="auth"
-                      android:pathPrefix="/callback" />
+                <data android:scheme="app.runconnect" android:host="auth" android:pathPrefix="/callback" />
             </intent-filter>
 
             <!-- Deep Link spécifique pour Strava callback -->
@@ -87,12 +81,9 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="app.runconnect"
-                    android:host="auth"
-                    android:pathPrefix="/strava" />
+                <data android:scheme="app.runconnect" android:host="auth" android:pathPrefix="/strava" />
             </intent-filter>
-            
+
             <!-- Deep Link générique -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -106,10 +97,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="https"
-                    android:host="run-connect.lovable.app"
-                    android:pathPrefix="/auth" />
+                <data android:scheme="https" android:host="run-connect.lovable.app" android:pathPrefix="/auth" />
             </intent-filter>
 
             <!-- 👤 App Link HTTPS pour profils publics -->
@@ -117,10 +105,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="https"
-                    android:host="run-connect.lovable.app"
-                    android:pathPrefix="/p/" />
+                <data android:scheme="https" android:host="run-connect.lovable.app" android:pathPrefix="/p/" />
             </intent-filter>
 
             <!-- 🔑 Deep Link password reset (custom scheme pour fiabilité) -->
@@ -128,9 +113,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="app.runconnect"
-                    android:host="reset" />
+                <data android:scheme="app.runconnect" android:host="reset" />
             </intent-filter>
 
             <!-- 👤 Deep Link profils publics : app.runconnect://profile/<username> -->
@@ -138,10 +121,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data 
-                    android:scheme="app.runconnect"
-                    android:host="profile"
-                    android:pathPattern=".*" />
+                <data android:scheme="app.runconnect" android:host="profile" android:pathPattern=".*" />
             </intent-filter>
         </activity>
 
@@ -151,15 +131,11 @@
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
         <!-- 🔔 FIREBASE CLOUD MESSAGING - Service personnalisé RunConnect -->
-        <service
-            android:name=".MessagingService"
-            android:exported="false">
+        <service android:name=".MessagingService" android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
@@ -167,14 +143,17 @@
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification" />
-            
+            android:resource="@drawable/ic_notification"
+        />
+
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="high_importance_channel" />
+            android:value="high_importance_channel"
+        />
 
         <meta-data
             android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
+            android:value="@integer/google_play_services_version"
+        />
     </application>
 </manifest>

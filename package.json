@@ -9,9 +9,9 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "assets:ios": "npx capacitor-assets generate --ios",
-    "assets:android": "npx capacitor-assets generate --android",
-    "assets:generate": "npx capacitor-assets generate"
+    "assets:ios": "npx @capacitor/assets generate --ios",
+    "assets:android": "npx @capacitor/assets generate --android",
+    "assets:generate": "npx @capacitor/assets generate"
   },
   "dependencies": {
     "@awesome-cordova-plugins/core": "^8.1.0",
