@@ -19,10 +19,6 @@ import { resolveIncomingAppUrl } from "@/lib/appLinks";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
 import { MainTabsSwipeHost } from "@/components/MainTabsSwipeHost";
-import {
-  getAppShellBootCompleted,
-  setAppShellBootCompleted,
-} from "@/lib/appShellPersistence";
 import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
 const Auth = lazy(() => import("./pages/Auth"));
@@ -85,11 +81,10 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  /** Une fois le boot effectué sur l’appareil, ne plus montrer le splash global (reprise + rechargements WebView). */
-  const [isAppLoaded, setIsAppLoaded] = useState(() => getAppShellBootCompleted());
+  /** Toujours afficher le splash au lancement de l'app (minimum géré dans LoadingScreen). */
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
 
   const handleShellBootComplete = useCallback(() => {
-    setAppShellBootCompleted();
     setIsAppLoaded(true);
   }, []);
 
