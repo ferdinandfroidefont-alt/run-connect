@@ -6,6 +6,7 @@ import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppContext } from '@/contexts/AppContext';
 
 import { RouteDialog } from '@/components/RouteDialog';
 import { MapStyleSelector } from '@/components/MapStyleSelector';
@@ -68,6 +69,7 @@ export const RouteCreation = () => {
   const { pathname: routeCreationPathname, search: routeCreationSearch } = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { setHideBottomNav } = useAppContext();
   const { formatKm, unit } = useDistanceUnits();
 
   const { getCurrentPosition } = useGeolocation();
@@ -115,6 +117,11 @@ export const RouteCreation = () => {
   }, [isManualMode]);
 
   const addWaypointRef = useRef<(latLng: MapCoord) => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;
@@ -881,11 +888,6 @@ export const RouteCreation = () => {
             <MapPin className="w-4 h-4" />
             Manuel
           </Button>
-          <div
-            className="mx-2 h-5 w-px shrink-0 bg-border/70"
-            aria-hidden
-            role="presentation"
-          />
           <Button
             size="sm"
             variant="ghost"
@@ -894,7 +896,7 @@ export const RouteCreation = () => {
                 state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
               })
             }
-            className="gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
+            className="ml-auto gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
           >
             <Layers className="h-4 w-4" />
             Mes itinéraires
@@ -905,7 +907,7 @@ export const RouteCreation = () => {
         </p>
       </div>
 
-      <div className="absolute right-ios-4 top-ios-4 flex flex-col gap-ios-2 z-10">
+      <div className="absolute right-ios-4 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.25rem))] flex flex-col gap-ios-2 z-10">
         <Button
           size="icon"
           variant="outline"
