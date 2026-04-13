@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCamera } from "@/hooks/useCamera";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Capacitor } from "@capacitor/core";
 import {
   X, Camera, Image, ChevronLeft, Send, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check
@@ -199,10 +200,26 @@ export default function StoryCreate() {
   // ── Actions ──
   const onCapture = async () => {
     if (captureMode === "photo") {
+      if (Capacitor.isNativePlatform()) {
+        const nativeFile = await takePicture({ facing: facingMode });
+        if (nativeFile) {
+          setMediaFile(nativeFile);
+          setStep("edit");
+          return;
+        }
+      }
       const fromStream = await capturePhotoFromStream();
       const file = fromStream ?? (await takePicture({ facing: facingMode }));
       if (file) {
         setMediaFile(file);
+        setStep("edit");
+      }
+      return;
+    }
+    if (Capacitor.isNativePlatform() && captureMode === "video") {
+      const nativeVideo = await pickNativeVideoFromCamera(facingMode);
+      if (nativeVideo) {
+        setMediaFile(nativeVideo);
         setStep("edit");
       }
       return;
@@ -231,7 +248,9 @@ export default function StoryCreate() {
     for (const m of ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]) {
       if (MediaRecorder.isTypeSupported(m)) { opts = { mimeType: m }; break; }
     }
-    const rec = opts ? new MediaRecorder(stream, opts) : new MediaRecorder(stream);
+    const rec = opts
+      ? new MediaRecorder(stream, { ...opts, videoBitsPerSecond: 8_000_000 })
+      : new MediaRecorder(stream, { videoBitsPerSecond: 8_000_000 });
     recorderRef.current = rec;
     rec.ondataavailable = (e) => { if (e.data?.size > 0) chunksRef.current.push(e.data); };
     rec.onstop = () => {
@@ -250,6 +269,23 @@ export default function StoryCreate() {
     }
   };
 
+  const onTakePhoto = async () => {
+    setSourceMode("camera");
+    setCaptureMode("photo");
+
+    // On mobile native, open system camera app directly for best quality.
+    if (Capacitor.isNativePlatform()) {
+      const file = await takePicture({ facing: "environment" });
+      if (file) {
+        setMediaFile(file);
+        setStep("edit");
+      }
+      return;
+    }
+
+    setStep("capture");
+  };
+
   const onPickGallery = () => {
     const input = document.createElement("input");
     input.type = "file"; input.accept = "image/*,video/*";
@@ -259,6 +295,35 @@ export default function StoryCreate() {
     };
     input.click();
   };
+
+  const pickNativeVideoFromCamera = (facing: "user" | "environment"): Promise<File | null> =>
+    new Promise((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "video/*";
+      input.capture = facing === "user" ? "user" : "environment";
+      input.style.position = "fixed";
+      input.style.top = "-9999px";
+      input.style.left = "-9999px";
+      document.body.appendChild(input);
+      const cleanup = () => {
+        try {
+          input.remove();
+        } catch {
+          // ignore
+        }
+      };
+      input.onchange = () => {
+        const f = input.files?.[0] ?? null;
+        cleanup();
+        resolve(f);
+      };
+      input.oncancel = () => {
+        cleanup();
+        resolve(null);
+      };
+      input.click();
+    });
 
   const storyShareErrorMessage = (err: unknown): string => {
     const raw =
@@ -745,11 +810,7 @@ export default function StoryCreate() {
           <div className="w-full max-w-sm space-y-3">
             <button
               type="button"
-              onClick={() => {
-                setSourceMode("camera");
-                setCaptureMode("photo");
-                setStep("capture");
-              }}
+              onClick={() => void onTakePhoto()}
               className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
             >
               <Camera className="h-5 w-5" />

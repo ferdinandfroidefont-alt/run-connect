@@ -72,7 +72,7 @@ type LikeRow = {
   } | null;
 };
 
-type StoryActionMode = null | "menu" | "views" | "highlight" | "hide" | "likes";
+type StoryActionMode = null | "menu" | "insights" | "highlight" | "hide";
 
 interface SessionStoryDialogProps {
   open: boolean;
@@ -293,8 +293,10 @@ export function SessionStoryDialog({
   }, [current?.id, isOwnStory]);
 
   useEffect(() => {
-    if (open && actionMode === "views" && isOwnStory) void loadViewers();
-  }, [open, actionMode, isOwnStory, loadViewers]);
+    if (open && actionMode === "insights" && isOwnStory) {
+      void Promise.all([loadViewers(), loadLikers()]);
+    }
+  }, [open, actionMode, isOwnStory, loadViewers, loadLikers]);
 
   const loadLikers = useCallback(async () => {
     if (!current?.id || !isOwnStory) {
@@ -330,10 +332,6 @@ export function SessionStoryDialog({
       }))
     );
   }, [current?.id, isOwnStory]);
-
-  useEffect(() => {
-    if (open && actionMode === "likes" && isOwnStory) void loadLikers();
-  }, [open, actionMode, isOwnStory, loadLikers]);
 
   const loadFollowersForHide = useCallback(async () => {
     if (!current?.author_id || !viewerUserId || current.author_id !== viewerUserId) return;
@@ -656,6 +654,24 @@ export function SessionStoryDialog({
   };
 
   const displayName = authorProfile?.display_name?.trim() || authorProfile?.username || "Membre";
+  const likersByUserId = useMemo(() => new Map(likers.map((l) => [l.user_id, l])), [likers]);
+  const insightRows = useMemo(() => {
+    const rows = viewers.map((v) => {
+      const like = likersByUserId.get(v.viewer_id);
+      return {
+        viewer_id: v.viewer_id,
+        created_at: v.created_at,
+        profile: v.profile,
+        liked: !!like,
+        liked_at: like?.created_at ?? null,
+      };
+    });
+    rows.sort((a, b) => {
+      if (a.liked !== b.liked) return a.liked ? -1 : 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    return rows;
+  }, [viewers, likersByUserId]);
 
   useEffect(() => {
     if (!open) {
@@ -706,8 +722,8 @@ export function SessionStoryDialog({
                     type="button"
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-secondary"
                     onClick={() => {
-                      void loadViewers();
-                      setActionMode("views");
+                      void Promise.all([loadViewers(), loadLikers()]);
+                      setActionMode("insights");
                     }}
                   >
                     <Eye className="h-5 w-5 text-muted-foreground" />
@@ -785,7 +801,7 @@ export function SessionStoryDialog({
             </>
           )}
 
-          {actionMode === "views" && isOwnStory && (
+          {actionMode === "insights" && isOwnStory && (
             <>
               <button
                 type="button"
@@ -795,12 +811,15 @@ export function SessionStoryDialog({
                 <ChevronLeft className="h-5 w-5" />
                 Retour
               </button>
-              <p className="mb-2 text-lg font-semibold">Vues ({viewers.length})</p>
+              <p className="mb-1 text-lg font-semibold">Vues ({viewers.length})</p>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Les personnes qui ont aimé apparaissent en premier ({likers.length} j&apos;aime).
+              </p>
               <div className="max-h-[55vh] space-y-2 overflow-y-auto">
-                {viewers.length === 0 ? (
+                {insightRows.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Aucune vue pour le moment.</p>
                 ) : (
-                  viewers.map((v) => (
+                  insightRows.map((v) => (
                     <div key={`${v.viewer_id}-${v.created_at}`} className="flex items-center gap-2 rounded-lg border border-border/60 p-2">
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={v.profile?.avatar_url ?? ""} />
@@ -812,6 +831,7 @@ export function SessionStoryDialog({
                           {format(new Date(v.created_at), "d MMM yyyy · HH:mm", { locale: fr })}
                         </p>
                       </div>
+                      {v.liked ? <Heart className="h-4 w-4 shrink-0 fill-red-500 text-red-500" aria-hidden /> : null}
                     </div>
                   ))
                 )}
@@ -834,52 +854,6 @@ export function SessionStoryDialog({
               <Input value={highlightTitle} onChange={(e) => setHighlightTitle(e.target.value)} placeholder="Titre" className="mb-3" />
               <Button className="w-full" disabled={highlightSaving} onClick={() => void addToHighlights()}>
                 {highlightSaving ? "Ajout…" : "Ajouter"}
-              </Button>
-            </>
-          )}
-
-          {actionMode === "likes" && isOwnStory && (
-            <>
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted" />
-              <p className="mb-1 text-center text-lg font-semibold">J&apos;aime</p>
-              <p className="mb-4 text-center text-sm text-muted-foreground">
-                {likesCount === 0
-                  ? "Personne n’a encore aimé cette story."
-                  : `${likesCount} j’aime${likesCount > 1 ? "s" : ""}`}
-              </p>
-              <div className="max-h-[55vh] space-y-2 overflow-y-auto">
-                {likers.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">Aucun j’aime pour le moment.</p>
-                ) : (
-                  likers.map((like) => (
-                    <div
-                      key={like.user_id}
-                      className="flex items-center gap-3 rounded-xl border border-border/60 bg-secondary/30 px-3 py-2.5"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={like.profile?.avatar_url ?? ""} />
-                        <AvatarFallback className="text-sm">
-                          {(like.profile?.username ?? "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-medium text-foreground">
-                          {like.profile?.display_name || like.profile?.username || "Membre"}
-                        </p>
-                        {like.profile?.username && like.profile?.display_name ? (
-                          <p className="truncate text-xs text-muted-foreground">@{like.profile.username}</p>
-                        ) : null}
-                        <p className="text-[11px] text-muted-foreground">
-                          {format(new Date(like.created_at), "d MMM yyyy · HH:mm", { locale: fr })}
-                        </p>
-                      </div>
-                      <Heart className="h-4 w-4 shrink-0 fill-red-500 text-red-500" aria-hidden />
-                    </div>
-                  ))
-                )}
-              </div>
-              <Button variant="outline" className="mt-4 w-full rounded-xl" onClick={closeActionPanel}>
-                Fermer
               </Button>
             </>
           )}
@@ -1083,7 +1057,8 @@ export function SessionStoryDialog({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActionMode("likes");
+                      void Promise.all([loadViewers(), loadLikers()]);
+                      setActionMode("insights");
                     }}
                     className="flex h-12 min-w-[3.25rem] items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 backdrop-blur-sm transition-transform active:scale-95"
                     aria-label={`J'aime reçus, ${likesCount}`}
