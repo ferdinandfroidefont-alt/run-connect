@@ -19,7 +19,7 @@ import {
 } from "@/lib/profileSportRecords";
 import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsDisplay";
 
-type MetricMode = "pace-km" | "pace-100m" | "speed-kmh";
+type MetricMode = "pace-km" | "pace-100m" | "speed-kmh" | "speed-watts";
 type LastEdited = "distance" | "duration" | "metric";
 
 type SportConfig = {
@@ -71,6 +71,15 @@ const DEFAULT_DISTANCE_BY_EVENT: Record<string, number> = {
 
 const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
+function speedFromWatts(watts: number): number {
+  // Approximation utilitaire UI pour garder les 3 sliders synchronises.
+  return 10 + watts * 0.065;
+}
+
+function wattsFromSpeed(speedKmh: number): number {
+  return (speedKmh - 10) / 0.065;
+}
+
 function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
   const h = Math.floor(total / 3600);
@@ -95,35 +104,41 @@ function formatDistance(km: number, sport: ProfileSportRecordKey): string {
 function metricLabel(mode: MetricMode): string {
   if (mode === "pace-km") return "Allure";
   if (mode === "pace-100m") return "Allure nat";
+  if (mode === "speed-watts") return "Puissance";
   return "Vitesse";
 }
 
 function metricUnit(mode: MetricMode): string {
   if (mode === "pace-km") return "min/km";
   if (mode === "pace-100m") return "min/100m";
+  if (mode === "speed-watts") return "W";
   return "km/h";
 }
 
 function formatMetric(mode: MetricMode, value: number): string {
   if (mode === "speed-kmh") return `${value.toFixed(1)} km/h`;
+  if (mode === "speed-watts") return `${Math.round(value)} W`;
   const suffix = mode === "pace-km" ? "/km" : "/100m";
   return `${formatPace(value)}${suffix}`;
 }
 
 function metricFromDistanceDuration(mode: MetricMode, distanceKm: number, durationSec: number): number {
   if (mode === "speed-kmh") return distanceKm / (durationSec / 3600);
+  if (mode === "speed-watts") return wattsFromSpeed(distanceKm / (durationSec / 3600));
   if (mode === "pace-100m") return durationSec / (distanceKm * 10);
   return durationSec / distanceKm;
 }
 
 function durationFromDistanceMetric(mode: MetricMode, distanceKm: number, metric: number): number {
   if (mode === "speed-kmh") return (distanceKm / metric) * 3600;
+  if (mode === "speed-watts") return (distanceKm / speedFromWatts(metric)) * 3600;
   if (mode === "pace-100m") return metric * distanceKm * 10;
   return metric * distanceKm;
 }
 
 function distanceFromDurationMetric(mode: MetricMode, durationSec: number, metric: number): number {
   if (mode === "speed-kmh") return (durationSec / 3600) * metric;
+  if (mode === "speed-watts") return (durationSec / 3600) * speedFromWatts(metric);
   if (mode === "pace-100m") return durationSec / (metric * 10);
   return durationSec / metric;
 }
@@ -152,6 +167,7 @@ export default function ProfileSportRecordsEdit() {
   const [sportKey, setSportKey] = useState<ProfileSportRecordKey>("running");
   const [eventLabel, setEventLabel] = useState("");
   const [customMode, setCustomMode] = useState(false);
+  const [cyclingMetricKind, setCyclingMetricKind] = useState<"kmh" | "watts">("kmh");
 
   const [distanceKm, setDistanceKm] = useState(5);
   const [durationSec, setDurationSec] = useState(17 * 60 + 30);
@@ -161,7 +177,14 @@ export default function ProfileSportRecordsEdit() {
   const [editingEventLabel, setEditingEventLabel] = useState("");
   const [editingRecordValue, setEditingRecordValue] = useState("");
 
-  const cfg = SPORT_CONFIG[sportKey];
+  const cfg = useMemo(() => {
+    const base = SPORT_CONFIG[sportKey];
+    if (sportKey !== "cycling") return base;
+    if (cyclingMetricKind === "watts") {
+      return { ...base, mode: "speed-watts" as const, metricMin: 80, metricMax: 650 };
+    }
+    return { ...base, mode: "speed-kmh" as const, metricMin: 5, metricMax: 80 };
+  }, [sportKey, cyclingMetricKind]);
 
   const recompute = useCallback(
     (lastEdited: LastEdited, nextDistance = distanceKm, nextDuration = durationSec, nextMetric = metricValue) => {
@@ -200,7 +223,7 @@ export default function ProfileSportRecordsEdit() {
   }, [sportKey, eventLabel, cfg.distanceMinKm, cfg.distanceMaxKm, cfg.metricMin, cfg.metricMax, cfg.mode]);
 
   const recordValue = useMemo(() => {
-    return `${formatDuration(durationSec)} • ${formatDistance(distanceKm, sportKey)} • ${formatMetric(cfg.mode, metricValue)}`;
+    return `${formatDuration(durationSec)} ? ${formatDistance(distanceKm, sportKey)} ? ${formatMetric(cfg.mode, metricValue)}`;
   }, [durationSec, distanceKm, sportKey, cfg.mode, metricValue]);
 
   const canAdd = eventLabel.trim() !== "" && durationSec > 0;
@@ -381,6 +404,7 @@ export default function ProfileSportRecordsEdit() {
                     setSportKey(v as ProfileSportRecordKey);
                     setEventLabel("");
                     setCustomMode(false);
+                    setCyclingMetricKind("kmh");
                   }}
                 >
                   <SelectTrigger className="h-auto w-auto border-0 bg-transparent p-0 text-[17px] font-medium text-foreground shadow-none [&>svg]:ml-1">
@@ -443,23 +467,44 @@ export default function ProfileSportRecordsEdit() {
 
           {eventLabel.trim() !== "" && (
             <>
+              {sportKey === "cycling" && (
+                <div className="px-4 ios-shell:px-2.5">
+                  <div className="inline-flex rounded-xl border border-border bg-card p-1">
+                    <button
+                      type="button"
+                      onClick={() => setCyclingMetricKind("kmh")}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${cyclingMetricKind === "kmh" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    >
+                      km/h
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCyclingMetricKind("watts")}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${cyclingMetricKind === "watts" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    >
+                      Watts
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2 px-4 ios-shell:px-2.5">
-                <div className="rounded-xl bg-card p-3 text-center">
+                <div className="rounded-xl border border-border/50 bg-gradient-to-b from-card to-secondary/20 p-3 text-center shadow-sm">
                   <p className="text-[11px] text-muted-foreground">Temps</p>
                   <p className="font-mono text-[17px] font-semibold text-primary">{formatDuration(durationSec)}</p>
                 </div>
-                <div className="rounded-xl bg-card p-3 text-center">
+                <div className="rounded-xl border border-border/50 bg-gradient-to-b from-card to-secondary/20 p-3 text-center shadow-sm">
                   <p className="text-[11px] text-muted-foreground">Kilometrage</p>
                   <p className="font-mono text-[17px] font-semibold text-primary">{formatDistance(distanceKm, sportKey)}</p>
                 </div>
-                <div className="rounded-xl bg-card p-3 text-center">
+                <div className="rounded-xl border border-border/50 bg-gradient-to-b from-card to-secondary/20 p-3 text-center shadow-sm">
                   <p className="text-[11px] text-muted-foreground">{metricLabel(cfg.mode)}</p>
                   <p className="font-mono text-[17px] font-semibold text-primary">{formatMetric(cfg.mode, metricValue)}</p>
                 </div>
               </div>
 
               <div className="space-y-3 bg-card px-4 py-4 ios-shell:px-2.5">
-                <div>
+                <div className="rounded-xl border border-border/40 bg-secondary/20 p-3">
                   <div className="mb-2 flex items-center justify-between text-[13px]">
                     <span className="text-muted-foreground">Distance</span>
                     <span className="font-mono text-foreground">{formatDistance(distanceKm, sportKey)}</span>
@@ -479,7 +524,7 @@ export default function ProfileSportRecordsEdit() {
                   </div>
                 </div>
 
-                <div>
+                <div className="rounded-xl border border-border/40 bg-secondary/20 p-3">
                   <div className="mb-2 flex items-center justify-between text-[13px]">
                     <span className="text-muted-foreground">Temps</span>
                     <span className="font-mono text-foreground">{formatDuration(durationSec)}</span>
@@ -499,7 +544,7 @@ export default function ProfileSportRecordsEdit() {
                   </div>
                 </div>
 
-                <div>
+                <div className="rounded-xl border border-border/40 bg-secondary/20 p-3">
                   <div className="mb-2 flex items-center justify-between text-[13px]">
                     <span className="text-muted-foreground">{metricLabel(cfg.mode)}</span>
                     <span className="font-mono text-foreground">{formatMetric(cfg.mode, metricValue)}</span>
