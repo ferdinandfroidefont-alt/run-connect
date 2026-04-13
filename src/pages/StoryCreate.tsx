@@ -18,7 +18,7 @@ import {
 type CaptureMode = "photo" | "video" | "boomerang";
 type StoryStep = "entry" | "capture" | "edit";
 type LayerKind = "text" | "music" | "session" | "emoji";
-type DynamicLayerKind = "mention" | "place" | "time";
+type DynamicLayerKind = "mention" | "place" | "time" | "music" | "session" | "emoji";
 type DynamicLayer = {
   id: string;
   kind: DynamicLayerKind;
@@ -130,6 +130,10 @@ export default function StoryCreate() {
   // Share
   const [sharing, setSharing] = useState(false);
 
+  const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
+  const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
+  const emojiLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "emoji") ?? null, [dynamicLayers]);
+
   const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   useEffect(() => {
@@ -239,6 +243,22 @@ export default function StoryCreate() {
     const layer: DynamicLayer = { id, kind, label, x: 120, y: 300, scale: 1, rotation: 0 };
     setDynamicLayers((prev) => [...prev, layer]);
     setSelectedDynamicLayerId(id);
+  };
+
+  const upsertKindLayer = (kind: DynamicLayerKind, defaults: Pick<DynamicLayer, "x" | "y" | "scale" | "rotation" | "label">) => {
+    setDynamicLayers((prev) => {
+      const existing = prev.find((l) => l.kind === kind);
+      if (existing) return prev;
+      return [...prev, { id: `${kind}-${Date.now()}`, kind, ...defaults }];
+    });
+  };
+
+  const updateKindLayer = (kind: DynamicLayerKind, updater: (layer: DynamicLayer) => DynamicLayer) => {
+    setDynamicLayers((prev) => prev.map((l) => (l.kind === kind ? updater(l) : l)));
+  };
+
+  const removeKindLayer = (kind: DynamicLayerKind) => {
+    setDynamicLayers((prev) => prev.filter((l) => l.kind !== kind));
   };
 
   const startDynamicDrag = (id: string, e: React.PointerEvent<HTMLDivElement>) => {
@@ -2054,58 +2074,42 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {selectedLayer && (
+        {selectedObjectType && (
           <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
             <button
               type="button"
               className="rounded-lg border border-white/20 px-2 py-1 text-xs"
-              onClick={() => bringLayerToFront(selectedLayer)}
+              onClick={bringSelectedObjectToFront}
             >
               Premier plan
             </button>
-            {(selectedLayer === "session" || selectedLayer === "emoji" || selectedLayer === "music") && (
+            {selectedObjectType !== "text" && (
               <>
                 <button
                   type="button"
                   className="rounded-lg border border-white/20 p-1"
-                  onClick={() => {
-                    if (selectedLayer === "session") setStickerScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
-                    if (selectedLayer === "emoji") setEmojiScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
-                    if (selectedLayer === "music") setMusicScale((s) => Math.max(0.6, +(s - 0.1).toFixed(2)));
-                  }}
+                  onClick={() => nudgeSelectedObjectScale(-0.1)}
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/20 p-1"
-                  onClick={() => {
-                    if (selectedLayer === "session") setStickerScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
-                    if (selectedLayer === "emoji") setEmojiScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
-                    if (selectedLayer === "music") setMusicScale((s) => Math.min(2.4, +(s + 0.1).toFixed(2)));
-                  }}
+                  onClick={() => nudgeSelectedObjectScale(0.1)}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/20 px-2 py-1 text-xs"
-                  onClick={() => {
-                    if (selectedLayer === "session") setStickerRotation((r) => r - 8);
-                    if (selectedLayer === "emoji") setEmojiRotation((r) => r - 8);
-                    if (selectedLayer === "music") setMusicRotation((r) => r - 8);
-                  }}
+                  onClick={() => nudgeSelectedObjectRotation(-8)}
                 >
                   ↺
                 </button>
                 <button
                   type="button"
                   className="rounded-lg border border-white/20 px-2 py-1 text-xs"
-                  onClick={() => {
-                    if (selectedLayer === "session") setStickerRotation((r) => r + 8);
-                    if (selectedLayer === "emoji") setEmojiRotation((r) => r + 8);
-                    if (selectedLayer === "music") setMusicRotation((r) => r + 8);
-                  }}
+                  onClick={() => nudgeSelectedObjectRotation(8)}
                 >
                   ↻
                 </button>
@@ -2114,66 +2118,7 @@ export default function StoryCreate() {
             <button
               type="button"
               className="ml-auto rounded-lg border border-white/20 p-1.5 text-white/85"
-              onClick={deleteSelectedLayer}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {selectedDynamicLayerId && (
-          <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
-            <button
-              type="button"
-              className="rounded-lg border border-white/20 p-1"
-              onClick={() =>
-                setDynamicLayers((prev) =>
-                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, scale: Math.max(0.6, +(l.scale - 0.1).toFixed(2)) } : l))
-                )
-              }
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-white/20 p-1"
-              onClick={() =>
-                setDynamicLayers((prev) =>
-                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, scale: Math.min(2.4, +(l.scale + 0.1).toFixed(2)) } : l))
-                )
-              }
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-white/20 px-2 py-1 text-xs"
-              onClick={() =>
-                setDynamicLayers((prev) =>
-                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation - 8 } : l))
-                )
-              }
-            >
-              ↺
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-white/20 px-2 py-1 text-xs"
-              onClick={() =>
-                setDynamicLayers((prev) =>
-                  prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation + 8 } : l))
-                )
-              }
-            >
-              ↻
-            </button>
-            <button
-              type="button"
-              className="ml-auto rounded-lg border border-white/20 p-1.5"
-              onClick={() => {
-                setDynamicLayers((prev) => prev.filter((l) => l.id !== selectedDynamicLayerId));
-                setSelectedDynamicLayerId(null);
-              }}
+              onClick={deleteSelectedObject}
             >
               <Trash2 className="h-4 w-4" />
             </button>
