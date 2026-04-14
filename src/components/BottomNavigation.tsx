@@ -57,11 +57,11 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/itinerary",
+        path: "/route-create",
         icon: Route,
         label: t("navigation.itinerary") || "Itinéraire",
         tutorialId: "nav-itinerary",
-        isActive: (p) => p === "/itinerary" || p.startsWith("/itinerary/"),
+        isActive: (p) => p === "/route-create" || p === "/route-creation",
       },
       {
         path: "/coaching",

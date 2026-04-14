@@ -33,7 +33,6 @@ const DonationCanceled = lazy(() => import("./pages/DonationCanceled"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Search = lazy(() => import("./pages/Search"));
 const RouteCreation = lazy(() => import("./pages/RouteCreation"));
-const ItineraryHub = lazy(() => import("./pages/ItineraryHub"));
 const ItineraryMyRoutes = lazy(() => import("./pages/ItineraryMyRoutes"));
 const ItineraryRouteDetail = lazy(() => import("./pages/ItineraryRouteDetail"));
 const Itinerary3D = lazy(() => import("./pages/Itinerary3D"));
@@ -118,7 +117,6 @@ const App = () => {
         import("./pages/NotFound"),
         import("./pages/Search"),
         import("./pages/RouteCreation"),
-        import("./pages/ItineraryHub"),
         import("./pages/ItineraryMyRoutes"),
         import("./pages/ItineraryRouteDetail"),
         import("./pages/Itinerary3D"),
@@ -310,14 +308,14 @@ const App = () => {
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
-                  <Route path="/leaderboard" element={<Navigate to="/itinerary" replace />} />
+                  <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
-                  <Route path="/itinerary" element={<Layout><PageTransition><PageSuspense><ItineraryHub /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/itinerary" element={<Navigate to="/route-create" replace />} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/3d" element={<Layout><PageTransition><PageSuspense><Itinerary3D /></PageSuspense></PageTransition></Layout>} />
