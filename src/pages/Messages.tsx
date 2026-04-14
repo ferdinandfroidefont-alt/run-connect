@@ -329,6 +329,8 @@ const Messages = () => {
       }
     }
     return () => {
+      // Always restore tab bar when leaving Messages page.
+      setHideBottomNav(false);
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setHideBottomNav]);

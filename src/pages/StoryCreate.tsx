@@ -41,6 +41,8 @@ type DynamicLayer = {
 type TextAlign = "left" | "center" | "right";
 type TextStyleMode = "plain" | "bubble" | "outline" | "band";
 type TextFontMode = "modern" | "clean" | "signature";
+type StoryEditorMode = "idle" | "text" | "music" | "sticker" | "draw";
+type MusicSheetTab = "forYou" | "popular" | "original";
 
 type ScheduledSession = {
   id: string;
@@ -145,17 +147,21 @@ export default function StoryCreate() {
   const [textSize, setTextSize] = useState(30);
   const [textBold, setTextBold] = useState(true);
   const [textPinching, setTextPinching] = useState(false);
+  const [textDragging, setTextDragging] = useState(false);
   const textGestureRef = useRef<{ startDist: number; startAngle: number; baseScale: number; baseRotation: number } | null>(null);
   const [selectedMusic, setSelectedMusic] = useState<StoryMusicTrack | null>(null);
   const [pendingMusic, setPendingMusic] = useState<StoryMusicTrack | null>(null);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [musicQuery, setMusicQuery] = useState("");
   const [filteredMusic, setFilteredMusic] = useState<StoryMusicTrack[]>([]);
+  const [musicSheetTab, setMusicSheetTab] = useState<MusicSheetTab>("forYou");
   const musicDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [activeTool, setActiveTool] = useState<"text" | "music" | "session" | "sticker" | "draw" | null>(null);
+  const [editorMode, setEditorMode] = useState<StoryEditorMode>("idle");
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [selectedLayer, setSelectedLayer] = useState<LayerKind | null>(null);
   const [layerOrder, setLayerOrder] = useState<LayerKind[]>(["session", "music", "emoji", "text"]);
   const [dynamicLayers, setDynamicLayers] = useState<DynamicLayer[]>([]);
@@ -265,6 +271,16 @@ export default function StoryCreate() {
   };
 
   const selectedObjectType = selectedDynamicLayerId ? "dynamic" : selectedLayer;
+  const editToolbarHeight = editorMode === "text" ? 52 : 0;
+  const visibleMusicTracks = useMemo(() => {
+    if (musicSheetTab === "forYou") return filteredMusic;
+    if (musicSheetTab === "popular") {
+      const popular = filteredMusic.filter((track, idx) => /sport|fit|tempo/i.test(track.artist) || idx % 2 === 0);
+      return popular.length > 0 ? popular : filteredMusic;
+    }
+    const original = filteredMusic.filter((track) => /nature|zen|original|audio/i.test(`${track.title} ${track.artist}`));
+    return original.length > 0 ? original : filteredMusic.slice(0, Math.min(filteredMusic.length, 4));
+  }, [filteredMusic, musicSheetTab]);
 
   const bringSelectedObjectToFront = () => {
     if (selectedDynamicLayerId) {
@@ -277,6 +293,15 @@ export default function StoryCreate() {
     }
     if (selectedLayer) bringLayerToFront(selectedLayer);
   };
+
+  const triggerHaptic = useCallback((style: "light" | "medium" = "light") => {
+    if (!Capacitor.isNativePlatform()) return;
+    void import("@capacitor/haptics")
+      .then(({ Haptics, ImpactStyle }) =>
+        Haptics.impact({ style: style === "medium" ? ImpactStyle.Medium : ImpactStyle.Light })
+      )
+      .catch(() => undefined);
+  }, []);
 
   const nudgeSelectedObjectScale = (delta: number) => {
     if (selectedDynamicLayerId) {
@@ -334,6 +359,7 @@ export default function StoryCreate() {
     setShowMusicPicker(false);
     setShowSessionPicker(false);
     setShowStickerPicker(false);
+    setEditorMode("idle");
     setSelectedLayer(null);
     setSelectedDynamicLayerId(null);
     setCaption("");
@@ -1299,6 +1325,7 @@ export default function StoryCreate() {
 
   const startTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!textOverlay) return;
+    setTextDragging(true);
     textDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: textPos.x, baseY: textPos.y };
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
@@ -1312,30 +1339,82 @@ export default function StoryCreate() {
   const endTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (textDragRef.current) {
       textDragRef.current = null;
+      setTextDragging(false);
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
 
-  const placeTextEditorAtCenter = useCallback(() => {
-    const host = drawHostRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    // Place le curseur au centre-haut visuel, loin de la zone légende/panneau bas.
-    const x = Math.max(16, rect.width / 2 - 90);
-    const y = Math.max(20, Math.min(rect.height - 360, rect.height * 0.32));
-    setTextPos({ x, y });
+  useEffect(() => {
+    if (step !== "edit") return;
+    const updateKeyboardInset = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        setKeyboardHeight(0);
+        return;
+      }
+      const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      setKeyboardHeight(inset);
+    };
+    updateKeyboardInset();
+    window.visualViewport?.addEventListener("resize", updateKeyboardInset);
+    window.visualViewport?.addEventListener("scroll", updateKeyboardInset);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateKeyboardInset);
+      window.visualViewport?.removeEventListener("scroll", updateKeyboardInset);
+    };
+  }, [step]);
+
+  const closeEditorMode = useCallback(() => {
+    setEditorMode("idle");
+    setShowTextInput(false);
+    setShowMusicPicker(false);
+    setShowSessionPicker(false);
+    setShowStickerPicker(false);
+    setDrawMode(false);
   }, []);
+
+  const getTextEditingViewport = useCallback(() => {
+    const host = drawHostRef.current;
+    if (!host) return null;
+    const rect = host.getBoundingClientRect();
+    const topBoundary = 92;
+    const bottomBoundary = rect.height - Math.max(24, keyboardHeight + editToolbarHeight + 24);
+    return {
+      width: rect.width,
+      top: Math.max(32, topBoundary),
+      bottom: Math.max(topBoundary + 72, bottomBoundary),
+    };
+  }, [editToolbarHeight, keyboardHeight]);
+
+  const placeTextEditorAtCenter = useCallback(() => {
+    const viewport = getTextEditingViewport();
+    if (!viewport) return;
+    const x = Math.max(16, viewport.width / 2 - 90);
+    const y = Math.max(viewport.top + 8, viewport.top + (viewport.bottom - viewport.top) * 0.42);
+    setTextPos({ x, y });
+  }, [getTextEditingViewport]);
 
   useEffect(() => {
     if (!showTextInput) return;
-    const host = drawHostRef.current;
-    if (!host) return;
-    const rect = host.getBoundingClientRect();
-    const maxSafeY = Math.max(20, rect.height - 340);
-    if (textPos.y > maxSafeY) {
-      setTextPos((prev) => ({ ...prev, y: maxSafeY }));
+    const viewport = getTextEditingViewport();
+    if (!viewport) return;
+    const maxSafeY = Math.max(viewport.top + 8, viewport.bottom - 64);
+    const minSafeY = viewport.top + 8;
+    if (textPos.y > maxSafeY || textPos.y < minSafeY) {
+      setTextPos((prev) => ({ ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) }));
     }
-  }, [showTextInput, textPos.y]);
+  }, [getTextEditingViewport, showTextInput, textPos.y]);
+
+  useEffect(() => {
+    if (!showTextInput) return;
+    const viewport = getTextEditingViewport();
+    if (!viewport) return;
+    const targetY = viewport.top + (viewport.bottom - viewport.top) * 0.42;
+    setTextPos((prev) => {
+      const nextY = prev.y + (targetY - prev.y) * 0.32;
+      return { ...prev, y: Math.max(viewport.top + 8, Math.min(viewport.bottom - 64, nextY)) };
+    });
+  }, [getTextEditingViewport, keyboardHeight, showTextInput]);
 
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 2) return;
@@ -1940,7 +2019,7 @@ export default function StoryCreate() {
         className="relative flex-1"
         ref={drawHostRef}
         onClick={(e) => {
-          if (activeTool !== "text") {
+          if (editorMode !== "text") {
             setSelectedLayer(null);
             setSelectedDynamicLayerId(null);
             return;
@@ -1962,6 +2041,9 @@ export default function StoryCreate() {
             <img src={previewUrl} alt="" className="h-full w-full object-cover" />
           )
         )}
+        {editorMode !== "idle" && (
+          <div className="pointer-events-none absolute inset-0 z-[6] bg-black/30 transition-opacity duration-200" />
+        )}
 
         {/* Text overlay on preview (positioned at cursor) */}
         {(textOverlay || showTextInput) && (
@@ -1971,6 +2053,7 @@ export default function StoryCreate() {
               zIndex: layerZ("text"),
               transform: `translate(${textPos.x}px, ${textPos.y}px) scale(${textScale}) rotate(${textRotation}deg)`,
               transformOrigin: "top left",
+              transition: textDragging || textPinching ? "none" : "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
             onPointerDown={startTextDrag}
             onPointerMove={moveTextDrag}
@@ -1986,7 +2069,9 @@ export default function StoryCreate() {
               setSelectedDynamicLayerId(null);
               bringLayerToFront("text");
               setActiveTool("text");
+              setEditorMode("text");
               setShowTextInput(true);
+                triggerHaptic("light");
             }}
           >
             {showTextInput ? (
@@ -1995,12 +2080,12 @@ export default function StoryCreate() {
                 onChange={(e) => setTextOverlay(e.target.value)}
                 placeholder="Ecrire ici..."
                 autoFocus
-                className="min-w-[160px] rounded-xl border border-white/30 bg-black/35 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/60"
+                className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
                 style={{
                   fontFamily: FONT_MAP[textFont],
-                  fontWeight: textBold ? 700 : 500,
+                  fontWeight: textBold ? 800 : 600,
                   textAlign,
-                  fontSize: `${textSize}px`,
+                  fontSize: `${Math.max(30, textSize)}px`,
                   color: textColor,
                 }}
               />
@@ -2175,36 +2260,49 @@ export default function StoryCreate() {
           }}
         />
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18] bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-14">
-          <div className="pointer-events-auto">
-            <Input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Ajouter une légende..."
-              className="h-10 rounded-full border-white/20 bg-black/35 text-white placeholder:text-white/65 backdrop-blur-md focus-visible:ring-white/30"
-            />
+        {editorMode === "idle" && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18] bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-14">
+            <div className="pointer-events-auto">
+              <Input
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Ajouter une légende..."
+                className="h-10 rounded-full border-white/20 bg-black/35 text-white placeholder:text-white/65 backdrop-blur-md focus-visible:ring-white/30"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Top bar */}
-        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+        <div
+          className={cn(
+            "fixed inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl transition-colors duration-200",
+            editorMode === "idle" ? "border-b border-white/15 bg-black/35" : "border-b border-white/10 bg-black/25"
+          )}
+        >
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
               onClick={() => void requestExitWithDraftPrompt(resumedFromDraft ? "back" : "entry")}
-              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-white active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
               Retour
             </button>
-            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-white">Créer une story</h1>
             <Button
               type="button"
-              disabled={!mediaFile || sharing}
-              onClick={() => void onShare()}
-              className="justify-self-end h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
+              disabled={sharing || (editorMode === "idle" && !mediaFile)}
+              onClick={() => {
+                if (editorMode !== "idle") {
+                  closeEditorMode();
+                  return;
+                }
+                void onShare();
+              }}
+              className="justify-self-end h-9 rounded-full bg-white/20 px-4 text-xs font-semibold text-white"
             >
-              {sharing ? "Envoi..." : "Partager"}
+              {sharing ? "Envoi..." : editorMode === "idle" ? "Partager" : "Terminé"}
             </Button>
           </div>
         </div>
@@ -2216,33 +2314,35 @@ export default function StoryCreate() {
               id: "text",
               label: "Texte",
               icon: Type,
-              active: showTextInput || !!textOverlay,
+              active: editorMode === "text",
               onClick: () => {
                 setActiveTool("text");
+                setEditorMode("text");
                 placeTextEditorAtCenter();
                 setShowTextInput(true);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
                 setDrawMode(false);
+                triggerHaptic("light");
               },
             },
             {
               id: "music",
               label: "Musique",
               icon: Music,
-              active: showMusicPicker || !!selectedMusic,
+              active: editorMode === "music" || !!selectedMusic,
               onClick: () => {
                 setActiveTool("music");
-                setShowMusicPicker((v) => {
-                  const next = !v;
-                  if (next) setPendingMusic(selectedMusic);
-                  return next;
-                });
+                setEditorMode("music");
+                setShowMusicPicker(true);
+                setMusicSheetTab("forYou");
+                setPendingMusic(selectedMusic);
                 setShowTextInput(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
                 setDrawMode(false);
+                triggerHaptic("light");
               },
             },
             {
@@ -2252,25 +2352,29 @@ export default function StoryCreate() {
               active: showSessionPicker || !!selectedSession,
               onClick: () => {
                 setActiveTool("session");
+                setEditorMode("idle");
                 setShowSessionPicker((v) => !v);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
                 setShowStickerPicker(false);
                 setDrawMode(false);
+                triggerHaptic("light");
               },
             },
             {
               id: "sticker",
               label: "Sticker",
               icon: Smile,
-              active: showStickerPicker || !!emojiSticker,
+              active: editorMode === "sticker" || !!emojiSticker,
               onClick: () => {
                 setActiveTool("sticker");
-                setShowStickerPicker((v) => !v);
+                setEditorMode("sticker");
+                setShowStickerPicker(true);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
                 setDrawMode(false);
+                triggerHaptic("light");
               },
             },
             {
@@ -2280,11 +2384,14 @@ export default function StoryCreate() {
               active: drawMode,
               onClick: () => {
                 setActiveTool("draw");
-                setDrawMode((v) => !v);
+                const next = !drawMode;
+                setEditorMode(next ? "draw" : "idle");
+                setDrawMode(next);
                 setShowTextInput(false);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
+                triggerHaptic("light");
               },
             },
           ].map((tool) => (
@@ -2293,7 +2400,7 @@ export default function StoryCreate() {
               type="button"
               onClick={tool.onClick}
               className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-transform active:scale-[0.96]",
+                "flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-all duration-200 ease-out active:scale-[0.92]",
                 tool.active && "bg-primary text-primary-foreground",
               )}
               aria-label={tool.label}
@@ -2305,166 +2412,9 @@ export default function StoryCreate() {
         </div>
       </div>
 
-      {/* Contextual tool panel */}
-      <div
-        className={cn(
-          "absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 rounded-2xl border border-white/15 bg-black/45 px-3 pb-3 pt-3 backdrop-blur-xl",
-          !showTextInput && !showMusicPicker && !showSessionPicker && !showStickerPicker && !drawMode && "hidden",
-        )}
-      >
-        {/* Text input */}
-        {showTextInput && (
-          <div className="mb-3 space-y-3 rounded-xl border border-white/15 bg-black/35 p-3 text-white">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1">
-                {([
-                  { id: "left", icon: AlignLeft },
-                  { id: "center", icon: AlignCenter },
-                  { id: "right", icon: AlignRight },
-                ] as const).map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setTextAlign(a.id)}
-                    className={cn(
-                      "rounded-lg border border-white/20 p-1.5",
-                      textAlign === a.id && "bg-primary text-primary-foreground",
-                    )}
-                  >
-                    <a.icon className="h-4 w-4" />
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => setTextSize((s) => Math.max(18, s - 2))} className="rounded-lg border border-white/20 p-1">
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" onClick={() => setTextSize((s) => Math.min(72, s + 2))} className="rounded-lg border border-white/20 p-1">
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" onClick={() => setTextBold((v) => !v)} className={cn("rounded-lg border border-white/20 px-2 text-sm", textBold && "bg-primary text-primary-foreground")}>
-                  B
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              {(["modern", "clean", "signature"] as TextFontMode[]).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setTextFont(f)}
-                  className={cn("rounded-lg border border-white/20 px-2 py-1 text-xs", textFont === f && "bg-primary text-primary-foreground")}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              {(["bubble", "plain", "outline", "band"] as TextStyleMode[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTextStyle(s)}
-                  className={cn("rounded-lg border border-white/20 px-2 py-1 text-xs", textStyle === s && "bg-primary text-primary-foreground")}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
-                <button key={c} type="button" onClick={() => setTextColor(c)} className={cn("h-6 w-6 rounded-full border", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setTextOverlay("");
-                  setShowTextInput(false);
-                }}
-                className="ml-auto rounded-lg border border-white/20 p-1.5 text-white/80"
-                aria-label="Supprimer texte"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-[11px] text-white/65">Glisse le texte pour déplacer. Pince avec 2 doigts pour zoomer et pivoter.</p>
-          </div>
-        )}
-
-        {/* Music picker */}
-        {showMusicPicker && (
-          <div className="mb-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/15 bg-black/35 p-2">
-            <div className="mb-1 flex items-center justify-between gap-2 px-1">
-              <p className="text-xs font-semibold text-white/85">Musique</p>
-              <button
-                type="button"
-                onClick={applyPendingMusic}
-                className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition-colors active:bg-white/20"
-              >
-                Mettre cette musique
-              </button>
-            </div>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
-              <Input
-                value={musicQuery}
-                onChange={(e) => setMusicQuery(e.target.value)}
-                placeholder="Rechercher un titre ou artiste..."
-                className="h-9 rounded-lg border-white/20 !bg-black/55 pl-8 !text-white placeholder:!text-white/65"
-              />
-            </div>
-            {filteredMusic.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  const next = pendingMusic?.id === m.id ? null : m;
-                  setPendingMusic(next);
-                  setSelectedLayer(next ? "music" : null);
-                  if (next) void toggleTrackPreview(next);
-                }}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors ${
-                  pendingMusic?.id === m.id ? "bg-primary/20" : "hover:bg-white/10"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                    pendingMusic?.id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"
-                  }`}>
-                    <Music className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">{m.title}</p>
-                    <p className="text-xs text-muted-foreground">{m.artist}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{m.duration}</span>
-                  {m.previewUrl ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void toggleTrackPreview(m);
-                      }}
-                      className="rounded-md border border-white/20 px-1.5 py-0.5 text-[10px] text-white/85"
-                    >
-                      {previewingTrackId === m.id ? "Stop" : "Aperçu"}
-                    </button>
-                  ) : null}
-                  {pendingMusic?.id === m.id && <Check className="h-4 w-4 text-primary" />}
-                </div>
-              </button>
-            ))}
-            {filteredMusic.length === 0 ? (
-              <p className="py-4 text-center text-xs text-white/65">Aucun résultat. Branche un provider externe pour enrichir le catalogue.</p>
-            ) : null}
-          </div>
-        )}
-
-        {/* Session picker */}
+      {/* Session picker */}
         {showSessionPicker && (
-          <div className="mb-3 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
+          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
             {sessions.length === 0 ? (
               <p className="px-3 py-4 text-center text-sm text-muted-foreground">
                 Aucune séance disponible
@@ -2497,9 +2447,9 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {/* Emoji sticker picker */}
+      {/* Emoji sticker picker */}
         {showStickerPicker && (
-          <div className="mb-3 rounded-2xl border bg-card p-3">
+          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 rounded-2xl border bg-card p-3">
             <p className="mb-2 text-xs font-semibold text-muted-foreground">Choisir un sticker</p>
             <div className="mb-2 flex flex-wrap gap-2">
               <button
@@ -2568,9 +2518,9 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {/* Draw controls */}
+      {/* Draw controls */}
         {drawMode && (
-          <div className="mb-3 flex items-center justify-between rounded-2xl border bg-card p-3">
+          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 flex items-center justify-between rounded-2xl border bg-card p-3">
             <div className="flex items-center gap-2">
               {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B"].map((color) => (
                 <button
@@ -2604,8 +2554,148 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {selectedObjectType && (
-          <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
+      {showTextInput && (
+        <div
+          className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
+          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 0px) + ${keyboardHeight + 8}px))` }}
+        >
+          <button
+            type="button"
+            className={cn("rounded-lg border border-white/20 p-1.5", textStyle === "bubble" && "bg-primary text-primary-foreground")}
+            onClick={() => {
+              setTextStyle((prev) => (prev === "bubble" ? "plain" : "bubble"));
+              triggerHaptic("light");
+            }}
+            aria-label="Style texte"
+          >
+            Aa
+          </button>
+          {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
+            <button key={c} type="button" onClick={() => { setTextColor(c); triggerHaptic("light"); }} className={cn("h-6 w-6 rounded-full border transition-transform active:scale-90", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
+          ))}
+          <button
+            type="button"
+            className="rounded-lg border border-white/20 p-1.5"
+            onClick={() => {
+              setTextAlign((prev) => (prev === "left" ? "center" : prev === "center" ? "right" : "left"));
+              triggerHaptic("light");
+            }}
+            aria-label="Alignement"
+          >
+            {textAlign === "left" ? <AlignLeft className="h-4 w-4" /> : textAlign === "center" ? <AlignCenter className="h-4 w-4" /> : <AlignRight className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className={cn("rounded-lg border border-white/20 px-2 text-sm", textBold && "bg-primary text-primary-foreground")}
+            onClick={() => {
+              setTextBold((v) => !v);
+              triggerHaptic("light");
+            }}
+            aria-label="Gras"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-white/20 p-1"
+            onClick={() => setTextSize((s) => Math.max(20, s - 2))}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-white/20 p-1"
+            onClick={() => setTextSize((s) => Math.min(72, s + 2))}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+            onClick={() => {
+              setTextFont((prev) => (prev === "modern" ? "clean" : prev === "clean" ? "signature" : "modern"));
+              triggerHaptic("light");
+            }}
+          >
+            {textFont}
+          </button>
+        </div>
+      )}
+
+      {showMusicPicker && (
+        <div className="absolute inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-white/15 bg-black/90 px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3 backdrop-blur-xl transition-all duration-300 ease-out animate-in slide-in-from-bottom-3">
+          <div className="mx-auto mb-2 h-1 w-12 rounded-full bg-white/25" />
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-base font-semibold text-white">Musique</p>
+            <button type="button" onClick={applyPendingMusic} className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
+              Mettre cette musique
+            </button>
+          </div>
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3">
+            <Search className="h-3.5 w-3.5 text-white/60" />
+            <Input
+              value={musicQuery}
+              onChange={(e) => setMusicQuery(e.target.value)}
+              placeholder="Rechercher..."
+              className="h-10 border-0 bg-transparent px-0 text-white placeholder:text-white/60"
+            />
+          </div>
+          <div className="mb-2 flex items-center gap-2 text-xs text-white/80">
+            {([
+              { id: "forYou", label: "Pour vous" },
+              { id: "popular", label: "Populaire" },
+              { id: "original", label: "Audio d'origine" },
+            ] as const).map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => {
+                  setMusicSheetTab(chip.id);
+                  triggerHaptic("light");
+                }}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 transition-colors",
+                  musicSheetTab === chip.id ? "border-white/70 bg-white/20 text-white" : "border-white/20 text-white/80"
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <div className="max-h-[52vh] space-y-1 overflow-y-auto pb-1">
+            {visibleMusicTracks.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  const next = pendingMusic?.id === m.id ? null : m;
+                  setPendingMusic(next);
+                  if (next) void toggleTrackPreview(next);
+                }}
+                className={cn("flex w-full items-center justify-between rounded-xl px-2 py-2 text-left", pendingMusic?.id === m.id ? "bg-white/15" : "hover:bg-white/10")}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-white/15" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{m.title}</p>
+                    <p className="truncate text-xs text-white/65">{m.artist}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white/60">{m.duration}</span>
+                  {pendingMusic?.id === m.id ? <Check className="h-4 w-4 text-white" /> : null}
+                </div>
+              </button>
+            ))}
+            {visibleMusicTracks.length === 0 ? (
+              <p className="py-6 text-center text-xs text-white/65">Aucun son dans cet onglet.</p>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {selectedObjectType && editorMode === "idle" && (
+          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 flex items-center gap-2 rounded-xl border border-white/20 bg-black/35 px-2 py-2 text-white">
             <button
               type="button"
               className="rounded-lg border border-white/20 px-2 py-1 text-xs"
@@ -2654,8 +2744,6 @@ export default function StoryCreate() {
             </button>
           </div>
         )}
-
-      </div>
     </div>
   );
 }
