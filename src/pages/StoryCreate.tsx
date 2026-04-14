@@ -148,6 +148,12 @@ export default function StoryCreate() {
   const [textBold, setTextBold] = useState(true);
   const [textPinching, setTextPinching] = useState(false);
   const [textDragging, setTextDragging] = useState(false);
+  const [textSnapGuides, setTextSnapGuides] = useState<{ centerX: boolean; topThird: boolean; midY: boolean; bottomThird: boolean }>({
+    centerX: false,
+    topThird: false,
+    midY: false,
+    bottomThird: false,
+  });
   const textGestureRef = useRef<{ startDist: number; startAngle: number; baseScale: number; baseRotation: number } | null>(null);
   const [selectedMusic, setSelectedMusic] = useState<StoryMusicTrack | null>(null);
   const [pendingMusic, setPendingMusic] = useState<StoryMusicTrack | null>(null);
@@ -1331,15 +1337,46 @@ export default function StoryCreate() {
   };
   const moveTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!textDragRef.current) return;
-    setTextPos({
-      x: Math.max(0, textDragRef.current.baseX + e.clientX - textDragRef.current.startX),
-      y: Math.max(0, textDragRef.current.baseY + e.clientY - textDragRef.current.startY),
-    });
+    const host = drawHostRef.current;
+    const baseX = textDragRef.current.baseX + e.clientX - textDragRef.current.startX;
+    const baseY = textDragRef.current.baseY + e.clientY - textDragRef.current.startY;
+    if (!host) {
+      setTextPos({ x: Math.max(0, baseX), y: Math.max(0, baseY) });
+      return;
+    }
+    const rect = host.getBoundingClientRect();
+    const snapThreshold = 14;
+    const centerTargetX = Math.max(8, rect.width / 2 - 90);
+    const topThirdY = rect.height * 0.26;
+    const middleY = rect.height * 0.43;
+    const bottomThirdY = rect.height * 0.62;
+
+    let nextX = Math.max(0, baseX);
+    let nextY = Math.max(0, baseY);
+    const guides = { centerX: false, topThird: false, midY: false, bottomThird: false };
+
+    if (Math.abs(nextX - centerTargetX) <= snapThreshold) {
+      nextX = centerTargetX;
+      guides.centerX = true;
+    }
+    if (Math.abs(nextY - topThirdY) <= snapThreshold) {
+      nextY = topThirdY;
+      guides.topThird = true;
+    } else if (Math.abs(nextY - middleY) <= snapThreshold) {
+      nextY = middleY;
+      guides.midY = true;
+    } else if (Math.abs(nextY - bottomThirdY) <= snapThreshold) {
+      nextY = bottomThirdY;
+      guides.bottomThird = true;
+    }
+    setTextSnapGuides(guides);
+    setTextPos({ x: nextX, y: nextY });
   };
   const endTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (textDragRef.current) {
       textDragRef.current = null;
       setTextDragging(false);
+      setTextSnapGuides({ centerX: false, topThird: false, midY: false, bottomThird: false });
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -2043,6 +2080,14 @@ export default function StoryCreate() {
         )}
         {editorMode !== "idle" && (
           <div className="pointer-events-none absolute inset-0 z-[6] bg-black/30 transition-opacity duration-200" />
+        )}
+        {textDragging && (
+          <>
+            {textSnapGuides.centerX && <div className="pointer-events-none absolute bottom-0 top-0 z-[11] w-px bg-white/50" style={{ left: "50%" }} />}
+            {textSnapGuides.topThird && <div className="pointer-events-none absolute left-0 right-0 z-[11] h-px bg-white/45" style={{ top: "26%" }} />}
+            {textSnapGuides.midY && <div className="pointer-events-none absolute left-0 right-0 z-[11] h-px bg-white/45" style={{ top: "43%" }} />}
+            {textSnapGuides.bottomThird && <div className="pointer-events-none absolute left-0 right-0 z-[11] h-px bg-white/45" style={{ top: "62%" }} />}
+          </>
         )}
 
         {/* Text overlay on preview (positioned at cursor) */}
