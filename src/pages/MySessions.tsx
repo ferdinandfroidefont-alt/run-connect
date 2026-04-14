@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -1271,16 +1272,21 @@ Ouvrir avec RunConnect: ${shareUrl}`;
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showShareActions} onOpenChange={setShowShareActions}>
-        <AlertDialogContent className="rounded-ios-lg max-w-[320px] p-0 gap-0">
-          <AlertDialogHeader className="p-ios-6 pb-ios-4">
-            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
+      <Dialog open={showShareActions} onOpenChange={setShowShareActions}>
+        <DialogContent
+          stackNested
+          hideCloseButton
+          className="z-[210] rounded-ios-lg max-w-[320px] overflow-hidden p-0"
+          overlayClassName="z-[210]"
+        >
+          <DialogHeader className="p-ios-6 pb-ios-4">
+            <DialogTitle className="text-center text-ios-headline font-semibold">
               Partager la séance
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
+            </DialogTitle>
+            <DialogDescription className="text-center text-ios-footnote text-muted-foreground">
               Choisis comment partager ta séance.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="border-t border-border">
             <button
               type="button"
@@ -1309,12 +1315,16 @@ Ouvrir avec RunConnect: ${shareUrl}`;
             </button>
           </div>
           <div className="border-t border-border">
-            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-ios-headline font-normal hover:bg-secondary/50">
+            <button
+              type="button"
+              onClick={() => setShowShareActions(false)}
+              className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-ios-headline font-normal hover:bg-secondary/50"
+            >
               Annuler
-            </AlertDialogCancel>
+            </button>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
 
     </>
   );
