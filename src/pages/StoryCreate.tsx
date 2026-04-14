@@ -88,6 +88,7 @@ export default function StoryCreate() {
   const [textPinching, setTextPinching] = useState(false);
   const textGestureRef = useRef<{ startDist: number; startAngle: number; baseScale: number; baseRotation: number } | null>(null);
   const [selectedMusic, setSelectedMusic] = useState<StoryMusicTrack | null>(null);
+  const [pendingMusic, setPendingMusic] = useState<StoryMusicTrack | null>(null);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [musicQuery, setMusicQuery] = useState("");
   const [filteredMusic, setFilteredMusic] = useState<StoryMusicTrack[]>([]);
@@ -215,6 +216,9 @@ export default function StoryCreate() {
       );
       return;
     }
+    if (selectedLayer === "text") {
+      setTextScale((prev) => Math.max(0.6, Math.min(3, +(prev + delta).toFixed(2))));
+    }
   };
 
   const nudgeSelectedObjectRotation = (delta: number) => {
@@ -223,6 +227,9 @@ export default function StoryCreate() {
         prev.map((l) => (l.id === selectedDynamicLayerId ? { ...l, rotation: l.rotation + delta } : l))
       );
       return;
+    }
+    if (selectedLayer === "text") {
+      setTextRotation((prev) => prev + delta);
     }
   };
 
@@ -233,6 +240,11 @@ export default function StoryCreate() {
       return;
     }
     deleteSelectedLayer();
+  };
+
+  const applyPendingMusic = () => {
+    setSelectedMusic(pendingMusic);
+    setShowMusicPicker(false);
   };
 
   const addDynamicLayer = (kind: DynamicLayerKind) => {
@@ -1718,7 +1730,11 @@ export default function StoryCreate() {
               active: showMusicPicker || !!selectedMusic,
               onClick: () => {
                 setActiveTool("music");
-                setShowMusicPicker((v) => !v);
+                setShowMusicPicker((v) => {
+                  const next = !v;
+                  if (next) setPendingMusic(selectedMusic);
+                  return next;
+                });
                 setShowTextInput(false);
                 setShowSessionPicker(false);
                 setShowStickerPicker(false);
@@ -1795,13 +1811,6 @@ export default function StoryCreate() {
         {/* Text input */}
         {showTextInput && (
           <div className="mb-3 space-y-3 rounded-xl border border-white/15 bg-black/35 p-3 text-white">
-            <Input
-              value={textOverlay}
-              onChange={(e) => setTextOverlay(e.target.value)}
-              placeholder="Tape ton texte..."
-              autoFocus
-              className="h-10 rounded-lg border-white/20 bg-black/30 text-white placeholder:text-white/60"
-            />
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1">
                 {([
@@ -1881,13 +1890,23 @@ export default function StoryCreate() {
         {/* Music picker */}
         {showMusicPicker && (
           <div className="mb-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/15 bg-black/35 p-2">
+            <div className="mb-1 flex items-center justify-between gap-2 px-1">
+              <p className="text-xs font-semibold text-white/85">Musique</p>
+              <button
+                type="button"
+                onClick={applyPendingMusic}
+                className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white transition-colors active:bg-white/20"
+              >
+                Mettre cette musique
+              </button>
+            </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
               <Input
                 value={musicQuery}
                 onChange={(e) => setMusicQuery(e.target.value)}
                 placeholder="Rechercher un titre ou artiste..."
-                className="h-9 rounded-lg border-white/20 bg-black/35 pl-8 text-white placeholder:text-white/60"
+                className="h-9 rounded-lg border-white/20 !bg-black/55 pl-8 !text-white placeholder:!text-white/65"
               />
             </div>
             {filteredMusic.map((m) => (
@@ -1895,17 +1914,18 @@ export default function StoryCreate() {
                 key={m.id}
                 type="button"
                 onClick={() => {
-                  const next = selectedMusic?.id === m.id ? null : m;
-                  setSelectedMusic(next);
+                  const next = pendingMusic?.id === m.id ? null : m;
+                  setPendingMusic(next);
                   setSelectedLayer(next ? "music" : null);
+                  if (next) void toggleTrackPreview(next);
                 }}
                 className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition-colors ${
-                  selectedMusic?.id === m.id ? "bg-primary/20" : "hover:bg-white/10"
+                  pendingMusic?.id === m.id ? "bg-primary/20" : "hover:bg-white/10"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                    selectedMusic?.id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"
+                    pendingMusic?.id === m.id ? "bg-primary text-primary-foreground" : "bg-secondary"
                   }`}>
                     <Music className="h-3.5 w-3.5" />
                   </div>
@@ -1928,7 +1948,7 @@ export default function StoryCreate() {
                       {previewingTrackId === m.id ? "Stop" : "Aperçu"}
                     </button>
                   ) : null}
-                  {selectedMusic?.id === m.id && <Check className="h-4 w-4 text-primary" />}
+                  {pendingMusic?.id === m.id && <Check className="h-4 w-4 text-primary" />}
                 </div>
               </button>
             ))}
