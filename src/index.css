@@ -961,6 +961,7 @@ html, body {
 
 .rc-session-pin__shape {
   position: relative;
+  display: block;
   width: 50px;
   height: 64px;
   border: 0;
@@ -969,8 +970,7 @@ html, body {
   background: transparent;
 }
 
-.rc-session-pin__shape::before {
-  content: "";
+.rc-session-pin__circle {
   position: absolute;
   left: 50%;
   top: 2px;
@@ -982,8 +982,7 @@ html, body {
   box-shadow: 0 7px 18px rgba(15, 23, 42, 0.3);
 }
 
-.rc-session-pin__shape::after {
-  content: "";
+.rc-session-pin__tip {
   position: absolute;
   left: 50%;
   top: 31px;

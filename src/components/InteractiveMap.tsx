@@ -938,16 +938,18 @@ export const InteractiveMap = ({
       try {
         if (runId !== markersRunIdRef.current) return null;
         const session = cluster[0];
-        if (!session?.location_lat || !session?.location_lng || !session?.profiles) {
+        if (!session?.profiles) {
+          return null;
+        }
+        const lng = Number(session.location_lng);
+        const lat = Number(session.location_lat);
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
           return null;
         }
         const sessionDate = new Date(session.scheduled_at);
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
         const isSelected = !!previewSession && cluster.some((s) => s.id === previewSession.id);
-
-        const lng = Number(session.location_lng);
-        const lat = Number(session.location_lat);
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -961,6 +963,15 @@ export const InteractiveMap = ({
         pin.type = 'button';
         pin.className = 'rc-session-pin__shape';
         pin.setAttribute('aria-label', cluster.length > 1 ? `${cluster.length} séances` : session.title || 'Séance');
+        pin.style.display = 'block';
+
+        // Structure explicite (plus fiable que des pseudo-éléments seuls selon WebView/device)
+        const pinCircle = document.createElement('span');
+        pinCircle.className = 'rc-session-pin__circle';
+        const pinTip = document.createElement('span');
+        pinTip.className = 'rc-session-pin__tip';
+        pin.appendChild(pinCircle);
+        pin.appendChild(pinTip);
 
         const avatarRing = document.createElement('span');
         avatarRing.className = 'rc-session-pin__avatar-ring';
