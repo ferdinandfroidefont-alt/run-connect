@@ -585,6 +585,7 @@ const PublicProfile = () => {
           ) : null}
 
           {canViewPrivateContent ? (
+          <>
           <div className="ios-card min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <p className="border-b border-border/50 px-4 py-2.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
               Informations
@@ -675,6 +676,7 @@ const PublicProfile = () => {
           <p className="pb-2 pt-1 text-center text-ios-caption1 text-muted-foreground">
             Rejoignez {profile.username} sur RunConnect
           </p>
+          </>
           ) : null}
         </div>
       </div>
