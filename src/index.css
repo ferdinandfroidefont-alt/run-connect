@@ -941,10 +941,17 @@ html, body {
 
 .rc-session-pin {
   position: relative;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
   transition: opacity 160ms ease-out, filter 180ms ease-out;
 }
 
 .rc-session-pin__shape {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -100%);
   transform-origin: center bottom;
 }
 

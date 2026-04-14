@@ -910,16 +910,21 @@ export const InteractiveMap = ({
         );
         wrap.style.setProperty('--rc-pin-color', '#2563EB');
         wrap.style.position = 'relative';
-        wrap.style.width = '50px';
-        wrap.style.height = '64px';
-        wrap.style.cursor = 'pointer';
+        // Anchor point must remain a true map coordinate (1x1),
+        // pin visual is rendered above it to avoid zoom/dezoom drift.
+        wrap.style.width = '1px';
+        wrap.style.height = '1px';
+        wrap.style.overflow = 'visible';
 
         const pin = document.createElement('button');
         pin.type = 'button';
         pin.className = 'rc-session-pin__shape';
         pin.setAttribute('aria-label', session.title || 'Séance');
         pin.style.display = 'block';
-        pin.style.position = 'relative';
+        pin.style.position = 'absolute';
+        pin.style.left = '50%';
+        pin.style.top = '0';
+        pin.style.transform = 'translate(-50%, -100%)';
         pin.style.width = '50px';
         pin.style.height = '64px';
         pin.style.border = '0';
