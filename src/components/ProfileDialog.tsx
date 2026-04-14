@@ -967,7 +967,7 @@ export const ProfileDialog = ({
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-border/40 bg-secondary px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom,0px))] dark:border-border/50">
+          <div className="shrink-0 border-t border-border/40 bg-card px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom,0px))] dark:border-border/50">
             <div className="mx-auto w-full max-w-md">
               <Button
                 type="button"
