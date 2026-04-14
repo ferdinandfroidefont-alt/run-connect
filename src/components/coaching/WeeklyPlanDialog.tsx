@@ -1173,6 +1173,8 @@ export const WeeklyPlanDialog = ({
                   const daySessions = sessionsByDay[dayIndex] || [];
                   const dayDate = addDays(weekStart, dayIndex);
                   const isToday = format(dayDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+                  const dayKm = Math.round((dailyCharge[dayIndex] || 0) * 10) / 10;
+                  const weekKm = weekLoadSummary?.totalKm ?? 0;
                   return (
                     <div key={dayIndex} className="flex flex-col items-center gap-1.5">
                       <span className={`text-[11px] font-semibold uppercase ${isToday ? "text-primary" : "text-muted-foreground"}`}>
@@ -1183,6 +1185,10 @@ export const WeeklyPlanDialog = ({
                       }`}>
                         {format(dayDate, "d")}
                       </span>
+                      <div className="text-[10px] text-muted-foreground tabular-nums leading-tight text-center">
+                        <p>Jour: {dayKm.toFixed(1)} km</p>
+                        <p>Semaine: {weekKm.toFixed(1)} km</p>
+                      </div>
                       {daySessions.map(sIdx => {
                         const s = sessions[sIdx];
                         const obj = (s.objective || s.activityType || "").toLowerCase();
