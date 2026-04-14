@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { storyMusicProvider, type StoryMusicTrack } from "@/lib/storyMusicProvider";
 import {
-  X, Camera, Image, ChevronLeft, Type, Music, Smile,
+  Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
   AlignLeft, AlignCenter, AlignRight, Trash2, Search
 } from "lucide-react";
@@ -1213,25 +1213,31 @@ export default function StoryCreate() {
   // ═══════════════════════════════════════
   if (step === "entry") {
     return (
-      <div className="fixed inset-0 z-[180] flex flex-col bg-black">
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
-          <button type="button" onClick={() => navigate("/feed")} className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm">
-            <X className="h-5 w-5" />
-          </button>
-          <h1 className="text-sm font-semibold tracking-wide text-white/90">CREER UNE STORY</h1>
-          <div className="h-9 w-9" aria-hidden />
+      <div className="fixed inset-0 z-[180] flex flex-col bg-background">
+        <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => navigate("/feed")}
+              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+            >
+              Retour
+            </button>
+            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+            <div aria-hidden />
+          </div>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center px-5">
           <div className="w-full max-w-sm space-y-3">
             <button
               type="button"
               onClick={() => void onTakePhoto()}
-              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
             >
-              <Camera className="h-5 w-5" />
+              <Camera className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-semibold">Prendre une photo</p>
-                <p className="text-xs text-white/70">Partager depuis la camera</p>
+                <p className="text-xs text-muted-foreground">Partager depuis la caméra</p>
               </div>
             </button>
             <button
@@ -1240,23 +1246,23 @@ export default function StoryCreate() {
                 setSourceMode("gallery");
                 onPickGallery();
               }}
-              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
             >
-              <Image className="h-5 w-5" />
+              <Image className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-semibold">Choisir dans la galerie</p>
-                <p className="text-xs text-white/70">Image ou video existante</p>
+                <p className="text-xs text-muted-foreground">Image ou vidéo existante</p>
               </div>
             </button>
             <button
               type="button"
               onClick={() => setShowSessionPicker((v) => !v)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-4 text-left text-white backdrop-blur-sm transition active:scale-[0.98]"
+              className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
             >
-              <CalendarPlus className="h-5 w-5" />
+              <CalendarPlus className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-semibold">Partager une seance programmee</p>
-                <p className="text-xs text-white/70">Carte, pin et itineraire</p>
+                <p className="text-xs text-muted-foreground">Carte, pin et itinéraire</p>
               </div>
             </button>
           </div>
@@ -1314,11 +1320,18 @@ export default function StoryCreate() {
     return (
       <div className="fixed inset-0 z-[180] flex flex-col bg-black">
         {/* Top bar */}
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
-          <button type="button" onClick={() => navigate("/feed")} className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm">
-            <X className="h-5 w-5" />
-          </button>
-          <div className="h-9 w-9" aria-hidden />
+        <div className="absolute inset-x-0 top-0 z-20 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => navigate("/feed")}
+              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+            >
+              Retour
+            </button>
+            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+            <div aria-hidden />
+          </div>
         </div>
 
         {/* Camera viewfinder */}
@@ -1696,40 +1709,40 @@ export default function StoryCreate() {
         </div>
 
         {/* Top bar */}
-        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pb-2 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
-          <button
-            type="button"
-            onClick={() => {
-              setMediaFile(null);
-              setStep("entry");
-              setTextOverlay("");
-              setSelectedMusic(null);
-              setSelectedSession(null);
-              setEmojiSticker(null);
-              setDynamicLayers([]);
-              setDrawMode(false);
-              setShowTextInput(false);
-              setSelectedLayer(null);
-              if (previewAudioRef.current) {
-                previewAudioRef.current.pause();
-                previewAudioRef.current = null;
-              }
-            }}
-            className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+8px)] rounded-full p-2 text-primary transition-colors active:bg-secondary"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div className="px-4 pt-2">
-            <h1 className="text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setMediaFile(null);
+                setStep("entry");
+                setTextOverlay("");
+                setSelectedMusic(null);
+                setSelectedSession(null);
+                setEmojiSticker(null);
+                setDynamicLayers([]);
+                setDrawMode(false);
+                setShowTextInput(false);
+                setSelectedLayer(null);
+                if (previewAudioRef.current) {
+                  previewAudioRef.current.pause();
+                  previewAudioRef.current = null;
+                }
+              }}
+              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+            >
+              Retour
+            </button>
+            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+            <Button
+              type="button"
+              disabled={!mediaFile || sharing}
+              onClick={() => void onShare()}
+              className="justify-self-end h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
+            >
+              {sharing ? "Envoi..." : "Partager"}
+            </Button>
           </div>
-          <Button
-            type="button"
-            disabled={!mediaFile || sharing}
-            onClick={() => void onShare()}
-            className="absolute right-4 top-[calc(env(safe-area-inset-top,0px)+8px)] h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
-          >
-            {sharing ? "Envoi..." : "Partager"}
-          </Button>
         </div>
 
         {/* Vertical tool rail (iOS map controls style) */}
