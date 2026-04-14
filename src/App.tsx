@@ -48,6 +48,7 @@ const TrainingMode = lazy(() => import("./pages/TrainingMode"));
 const SessionTracking = lazy(() => import("./pages/SessionTracking"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const StoryCreate = lazy(() => import("./pages/StoryCreate"));
+const Drafts = lazy(() => import("./pages/Drafts"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 
@@ -132,6 +133,7 @@ const App = () => {
         import("./pages/SessionTracking"),
         import("./pages/AuthCallback"),
         import("./pages/StoryCreate"),
+        import("./pages/Drafts"),
         import("./pages/StoryDeleteConfirm"),
       ]);
     };
@@ -334,6 +336,7 @@ const App = () => {
                   <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
                   <Route path="/stories/:storyId/delete" element={<PageTransition><PageSuspense><StoryDeleteConfirm /></PageSuspense></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />

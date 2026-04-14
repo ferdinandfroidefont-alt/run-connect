@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -109,6 +109,7 @@ const FONT_MAP: Record<TextFontMode, string> = {
 
 export default function StoryCreate() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
@@ -182,7 +183,7 @@ export default function StoryCreate() {
   const [hasDraft, setHasDraft] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [pendingExitTarget, setPendingExitTarget] = useState<"feed" | "entry" | null>(null);
-  const [deleteDraftConfirmOpen, setDeleteDraftConfirmOpen] = useState(false);
+  const autoRestoreDoneRef = useRef(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -473,6 +474,17 @@ export default function StoryCreate() {
       toast({ title: "Erreur", description: "Impossible de restaurer le brouillon.", variant: "destructive" });
     }
   }, [dataUrlToFile, toast]);
+
+  useEffect(() => {
+    if (autoRestoreDoneRef.current) return;
+    if (searchParams.get("restoreDraft") !== "1") return;
+    autoRestoreDoneRef.current = true;
+    void restoreDraft().finally(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("restoreDraft");
+      setSearchParams(next, { replace: true });
+    });
+  }, [restoreDraft, searchParams, setSearchParams]);
 
   const proceedExit = useCallback(
     (next: "feed" | "entry") => {
@@ -1601,28 +1613,17 @@ export default function StoryCreate() {
               </div>
             </button>
             {hasDraft && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => void restoreDraft()}
-                  className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
-                >
-                  <RefreshCw className="h-5 w-5 text-primary" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">Reprendre un brouillon</p>
-                    <p className="text-xs text-muted-foreground">Restaurer la story non publiée</p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDeleteDraftConfirmOpen(true);
-                  }}
-                  className="w-full rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition active:scale-[0.98]"
-                >
-                  Supprimer le brouillon
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/drafts")}
+                className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
+              >
+                <RefreshCw className="h-5 w-5 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">Reprendre un brouillon</p>
+                  <p className="text-xs text-muted-foreground">Voir tous les brouillons</p>
+                </div>
+              </button>
             )}
           </div>
         </div>
@@ -1702,28 +1703,6 @@ export default function StoryCreate() {
               }}
             >
               Enregistrer et quitter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={deleteDraftConfirmOpen} onOpenChange={setDeleteDraftConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le brouillon ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est définitive et supprimera la story enregistrée localement.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                clearDraft();
-                toast({ title: "Brouillon supprimé" });
-              }}
-            >
-              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

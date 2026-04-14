@@ -85,8 +85,8 @@ const ELEV_NOISE_THRESHOLD_M = 2;
 
 export const RouteCreation = () => {
   const navigate = useNavigate();
-  const { pathname: routeCreationPathname, search: routeCreationSearch } = useLocation();
-  const [searchParams] = useSearchParams();
+  const { pathname: routeCreationPathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { setHideBottomNav } = useAppContext();
   const { formatKm, unit } = useDistanceUnits();
@@ -120,8 +120,8 @@ export const RouteCreation = () => {
   const elevationRequestId = useRef(0);
   const [hasRouteDraft, setHasRouteDraft] = useState(false);
   const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
-  const [discardRouteDraftDialogOpen, setDiscardRouteDraftDialogOpen] = useState(false);
   const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
+  const autoRestoreDoneRef = useRef(false);
 
   const undoHistory = useRef<
     Array<{
@@ -804,6 +804,18 @@ export const RouteCreation = () => {
     }
   }, [isEditMode]);
 
+  useEffect(() => {
+    if (autoRestoreDoneRef.current) return;
+    if (!isMapLoaded || isEditMode) return;
+    if (searchParams.get('restoreDraft') !== '1') return;
+    autoRestoreDoneRef.current = true;
+    void restoreRouteDraft().finally(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('restoreDraft');
+      setSearchParams(next, { replace: true });
+    });
+  }, [isMapLoaded, isEditMode, restoreRouteDraft, searchParams, setSearchParams]);
+
   const requestExitWithRouteDraft = useCallback((to: string) => {
     if (isEditMode || waypoints.current.length < 2) {
       navigate(to);
@@ -1081,16 +1093,8 @@ export const RouteCreation = () => {
           <div className="mt-2 rounded-ios-lg border border-border/50 bg-background/90 px-3 py-2 shadow-md backdrop-blur">
             <p className="text-[12px] text-foreground">Un brouillon d’itinéraire est disponible</p>
             <div className="mt-2 flex items-center gap-2">
-              <Button size="sm" className="h-7 px-3" onClick={() => void restoreRouteDraft()}>
-                Reprendre
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-3 border-destructive/30 text-destructive"
-                onClick={() => setDiscardRouteDraftDialogOpen(true)}
-              >
-                Supprimer
+              <Button size="sm" className="h-7 px-3" onClick={() => navigate('/drafts')}>
+                Voir les brouillons
               </Button>
             </div>
           </div>
@@ -1224,26 +1228,6 @@ export const RouteCreation = () => {
               }}
             >
               Enregistrer et quitter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={discardRouteDraftDialogOpen} onOpenChange={setDiscardRouteDraftDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le brouillon d’itinéraire ?</AlertDialogTitle>
-            <AlertDialogDescription>Cette action est définitive.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                clearRouteDraft();
-                toast.success('Brouillon supprimé');
-              }}
-            >
-              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
