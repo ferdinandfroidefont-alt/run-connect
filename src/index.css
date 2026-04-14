@@ -47,7 +47,7 @@ html, body {
     /* Offset bas du panneau feed / FAB au-dessus tab + strip (un peu plus que la seule --tab-bar-ground-strip) */
     --home-bottom-stack-gap: 10px;
     /* Colonne carte (itinéraire, style, GPS, plein écran) : au-dessus du FAB et du peek Feed */
-    --home-map-controls-stack-bottom: max(3.5rem, calc(var(--home-feed-sheet-peek) + 0.5rem));
+    --home-map-controls-stack-bottom: max(3.25rem, calc(var(--home-feed-sheet-peek) + 0.35rem));
     --ios-motion-duration-fast: 140ms;
     --ios-motion-duration-base: 220ms;
     --ios-motion-duration-slow: 320ms;
