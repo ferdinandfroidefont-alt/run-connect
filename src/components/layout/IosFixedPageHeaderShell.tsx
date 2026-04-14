@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -85,56 +84,6 @@ export function IosFixedPageHeaderShell({
       ro.disconnect();
       vv?.removeEventListener?.("resize", sync);
       vv?.removeEventListener?.("scroll", sync);
-    };
-  }, [pin]);
-
-  useEffect(() => {
-    if (!pin || typeof document === "undefined") return;
-
-    const isEditableTarget = (node: EventTarget | null): boolean => {
-      const el = node instanceof HTMLElement ? node : null;
-      if (!el) return false;
-      return !!el.closest("input, textarea, [contenteditable='true']");
-    };
-
-    const pinViewportTop = () => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-
-    let keyboardEditing = false;
-
-    const onFocusIn = (event: FocusEvent) => {
-      if (!isEditableTarget(event.target)) return;
-      keyboardEditing = true;
-      pinViewportTop();
-      requestAnimationFrame(pinViewportTop);
-      window.setTimeout(pinViewportTop, 120);
-    };
-
-    const onFocusOut = () => {
-      window.setTimeout(() => {
-        const active = document.activeElement;
-        keyboardEditing = isEditableTarget(active);
-      }, 0);
-    };
-
-    const onViewportShift = () => {
-      if (!keyboardEditing) return;
-      pinViewportTop();
-    };
-
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    window.visualViewport?.addEventListener("resize", onViewportShift);
-    window.visualViewport?.addEventListener("scroll", onViewportShift);
-
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-      window.visualViewport?.removeEventListener("resize", onViewportShift);
-      window.visualViewport?.removeEventListener("scroll", onViewportShift);
     };
   }, [pin]);
 

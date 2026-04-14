@@ -947,35 +947,6 @@ export default function StoryCreate() {
     return () => window.removeEventListener("resize", onResize);
   }, [step, syncDrawCanvasSize, previewUrl]);
 
-  useEffect(() => {
-    if (step !== "edit") return;
-
-    const pinViewportTop = () => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target?.closest("input, textarea, [contenteditable='true']")) return;
-      pinViewportTop();
-      requestAnimationFrame(pinViewportTop);
-      window.setTimeout(pinViewportTop, 120);
-    };
-
-    pinViewportTop();
-    document.addEventListener("focusin", onFocusIn);
-    window.visualViewport?.addEventListener("resize", pinViewportTop);
-    window.visualViewport?.addEventListener("scroll", pinViewportTop);
-
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-      window.visualViewport?.removeEventListener("resize", pinViewportTop);
-      window.visualViewport?.removeEventListener("scroll", pinViewportTop);
-    };
-  }, [step]);
-
   const drawAtPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -1687,7 +1658,7 @@ export default function StoryCreate() {
         </div>
 
         {/* Top bar */}
-        <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pb-2 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
           <button
             type="button"
             onClick={() => {
@@ -1706,15 +1677,18 @@ export default function StoryCreate() {
                 previewAudioRef.current = null;
               }
             }}
-            className="rounded-full bg-black/40 p-2 text-white backdrop-blur-sm"
+            className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+8px)] rounded-full p-2 text-primary transition-colors active:bg-secondary"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
+          <div className="px-4 pt-2">
+            <h1 className="text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
+          </div>
           <Button
             type="button"
             disabled={!mediaFile || sharing}
             onClick={() => void onShare()}
-            className="h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
+            className="absolute right-4 top-[calc(env(safe-area-inset-top,0px)+8px)] h-9 rounded-full bg-primary/95 px-4 text-xs font-semibold text-primary-foreground"
           >
             {sharing ? "Envoi..." : "Partager"}
           </Button>
