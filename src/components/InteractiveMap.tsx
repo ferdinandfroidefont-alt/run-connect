@@ -938,9 +938,6 @@ export const InteractiveMap = ({
       try {
         if (runId !== markersRunIdRef.current) return null;
         const session = cluster[0];
-        if (!session?.profiles) {
-          return null;
-        }
         const lng = Number(session.location_lng);
         const lat = Number(session.location_lat);
         if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
@@ -977,7 +974,7 @@ export const InteractiveMap = ({
         avatarRing.className = 'rc-session-pin__avatar-ring';
         const avatarImg = document.createElement('img');
         avatarImg.className = 'rc-session-pin__avatar';
-        avatarImg.src = session.profiles.avatar_url || '/placeholder.svg';
+        avatarImg.src = session.profiles?.avatar_url || '/placeholder.svg';
         avatarImg.alt = '';
         avatarImg.draggable = false;
         avatarRing.appendChild(avatarImg);
