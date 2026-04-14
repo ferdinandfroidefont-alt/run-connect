@@ -948,7 +948,6 @@ html, body {
 .rc-session-pin__shape {
   transform-origin: center bottom;
   transform: scale(var(--rc-pin-scale));
-  transition: transform 170ms ease-out;
 }
 
 .rc-session-pin-pop .rc-session-pin__shape {
