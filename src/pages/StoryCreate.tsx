@@ -369,14 +369,40 @@ export default function StoryCreate() {
   // ── Load sessions ──
   const loadSessions = useCallback(async () => {
     if (!user?.id) return;
-    const { data } = await supabase
-      .from("sessions")
-      .select("id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates)")
-      .eq("organizer_id", user.id)
-      .gt("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: true })
-      .limit(30);
-    const normalized = ((data ?? []) as Array<any>).map((s) => ({
+    const [createdRes, joinedRes] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates)")
+        .eq("organizer_id", user.id)
+        .order("scheduled_at", { ascending: true })
+        .limit(80),
+      supabase
+        .from("session_participants")
+        .select(
+          "session:sessions(id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates))"
+        )
+        .eq("user_id", user.id)
+        .limit(120),
+    ]);
+
+    const createdRows = (createdRes.data ?? []) as Array<any>;
+    const joinedRows = (joinedRes.data ?? []) as Array<{ session?: any }>;
+    const joinedSessions = joinedRows.map((r) => r.session).filter(Boolean);
+
+    const now = Date.now();
+    const byId = new Map<string, any>();
+    for (const s of [...createdRows, ...joinedSessions]) {
+      if (!s?.id) continue;
+      const ts = Date.parse(s.scheduled_at ?? "");
+      if (!Number.isFinite(ts)) continue;
+      if (ts < now) continue;
+      if (!byId.has(s.id)) byId.set(s.id, s);
+    }
+
+    const normalized = Array.from(byId.values())
+      .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))
+      .slice(0, 30)
+      .map((s) => ({
       id: s.id,
       title: s.title,
       location_name: s.location_name,
