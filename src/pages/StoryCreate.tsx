@@ -506,6 +506,31 @@ export default function StoryCreate() {
     [mediaFile, caption, textOverlay, selectedMusic, selectedSession, emojiSticker, dynamicLayers, proceedExit]
   );
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let removed = false;
+    const setup = async () => {
+      try {
+        const { App: CapApp } = await import("@capacitor/app");
+        const listener = await CapApp.addListener("backButton", () => {
+          requestExitWithDraftPrompt("feed");
+        });
+        return () => {
+          if (!removed) {
+            removed = true;
+            listener.remove();
+          }
+        };
+      } catch {
+        return undefined;
+      }
+    };
+    const cleanupPromise = setup();
+    return () => {
+      cleanupPromise.then((cleanup) => cleanup?.());
+    };
+  }, [requestExitWithDraftPrompt]);
+
   const addDynamicLayer = (kind: DynamicLayerKind) => {
     const id = `${kind}-${Date.now()}`;
     const label =

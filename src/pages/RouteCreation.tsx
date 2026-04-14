@@ -53,6 +53,7 @@ import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePer
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -811,6 +812,31 @@ export const RouteCreation = () => {
     setPendingExitPath(to);
     setExitDraftDialogOpen(true);
   }, [isEditMode, navigate]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let removed = false;
+    const setup = async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        const listener = await CapApp.addListener('backButton', () => {
+          requestExitWithRouteDraft('/');
+        });
+        return () => {
+          if (!removed) {
+            removed = true;
+            listener.remove();
+          }
+        };
+      } catch {
+        return undefined;
+      }
+    };
+    const cleanupPromise = setup();
+    return () => {
+      cleanupPromise.then((cleanup) => cleanup?.());
+    };
+  }, [requestExitWithRouteDraft]);
 
   const handleRecenter = async () => {
     try {
