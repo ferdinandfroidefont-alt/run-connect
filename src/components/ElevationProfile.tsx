@@ -101,13 +101,6 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
           );
         })}
         
-        {/* Étiquettes d'élévation */}
-        <text x={padding} y={15} fontSize="10" fill="#666" textAnchor="start">
-          {Math.round(maxElev)}m
-        </text>
-        <text x={padding} y={height - 5} fontSize="10" fill="#666" textAnchor="start">
-          {Math.round(minElev)}m
-        </text>
       </svg>
     );
   };
@@ -170,10 +163,6 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
             <div className="flex items-center gap-1">
               <TrendingDown className="h-3 w-3 text-red-500" />
               <span>-{routeStats.elevationLoss}m</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Mountain className="h-3 w-3" />
-              <span>{routeStats.minElevation}-{routeStats.maxElevation}m</span>
             </div>
           </div>
         )}
