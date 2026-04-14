@@ -1267,11 +1267,22 @@ export default function StoryCreate() {
     const host = drawHostRef.current;
     if (!host) return;
     const rect = host.getBoundingClientRect();
-    // Place le curseur au centre visuel, au-dessus du panneau outils bas.
+    // Place le curseur au centre-haut visuel, loin de la zone légende/panneau bas.
     const x = Math.max(16, rect.width / 2 - 90);
-    const y = Math.max(16, Math.min(rect.height - 260, rect.height * 0.42));
+    const y = Math.max(20, Math.min(rect.height - 360, rect.height * 0.32));
     setTextPos({ x, y });
   }, []);
+
+  useEffect(() => {
+    if (!showTextInput) return;
+    const host = drawHostRef.current;
+    if (!host) return;
+    const rect = host.getBoundingClientRect();
+    const maxSafeY = Math.max(20, rect.height - 340);
+    if (textPos.y > maxSafeY) {
+      setTextPos((prev) => ({ ...prev, y: maxSafeY }));
+    }
+  }, [showTextInput, textPos.y]);
 
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 2) return;
@@ -2155,7 +2166,7 @@ export default function StoryCreate() {
               active: showTextInput || !!textOverlay,
               onClick: () => {
                 setActiveTool("text");
-                if (!textOverlay) placeTextEditorAtCenter();
+                placeTextEditorAtCenter();
                 setShowTextInput(true);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
