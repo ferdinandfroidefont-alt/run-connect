@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { storyMusicProvider, type StoryMusicTrack } from "@/lib/storyMusicProvider";
 import {
-  Camera, Image, Type, Music, Smile,
+  ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
   AlignLeft, AlignCenter, AlignRight, Trash2, Search
 } from "lucide-react";
@@ -1234,8 +1234,9 @@ export default function StoryCreate() {
             <button
               type="button"
               onClick={() => navigate("/feed")}
-              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
+              <ArrowLeft className="h-4 w-4" />
               Retour
             </button>
             <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
@@ -1340,8 +1341,9 @@ export default function StoryCreate() {
             <button
               type="button"
               onClick={() => navigate("/feed")}
-              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
+              <ArrowLeft className="h-4 w-4" />
               Retour
             </button>
             <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>
@@ -1744,8 +1746,9 @@ export default function StoryCreate() {
                   previewAudioRef.current = null;
                 }
               }}
-              className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
+              <ArrowLeft className="h-4 w-4" />
               Retour
             </button>
             <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Créer une story</h1>

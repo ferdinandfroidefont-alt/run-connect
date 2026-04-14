@@ -63,7 +63,7 @@ export default function ProfileEdit() {
     favorite_sport: "",
     country: "",
     avatar_url: "",
-    is_private: false,
+    is_private: true,
   });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");

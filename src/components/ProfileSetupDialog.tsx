@@ -464,6 +464,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         age: calculatedAge,
         bio: bio.trim(),
         avatar_url: uploadedUrl,
+        // Nouveau compte: privé par défaut. L'utilisateur peut le changer ensuite dans Modifier le profil.
+        is_private: true,
       };
       profileData.favorite_sport = serializeProfileSports(selectedSports);
       if (country) profileData.country = country;
