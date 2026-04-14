@@ -1940,6 +1940,7 @@ const Messages = () => {
         <div className="max-w-md mx-auto flex min-h-0 w-full flex-1 flex-col">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
+            forcePin
             headerWrapperClassName="z-50 bg-card border-b border-border/50"
             header={
             <div className="flex items-center px-ios-2 py-ios-2">
