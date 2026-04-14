@@ -24,7 +24,7 @@ type WizardStep = 1 | 2 | 3 | 4;
 type RunningMode = "time" | "pace";
 type CyclingMode = "speed" | "watts";
 
-const STEP_LABELS = ["Sport", "Distance", "Performance", "Rùcap"];
+const STEP_LABELS = ["Sport", "Distance", "Performance", "RÈcap"];
 
 const DISTANCE_PRESETS: Array<{ id: string; label: string; km: number | null }> = [
   { id: "5k", label: "5 km", km: 5 },
@@ -307,7 +307,7 @@ export default function ProfileSportRecordsEdit() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             }
-            title="Crùer un record"
+            title="CrÈer un record"
           />
         </div>
       }
@@ -336,7 +336,7 @@ export default function ProfileSportRecordsEdit() {
           {step === 1 && (
             <div className="rounded-2xl bg-card p-4">
               <h2 className="text-[20px] font-semibold text-foreground">Choisis ton sport</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sùlection, puis suivant.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sÈlection, puis suivant.</p>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {PROFILE_SPORT_RECORD_KEYS.map((k) => {
                   const SportIcon = SPORT_ICONS[k];
@@ -358,8 +358,8 @@ export default function ProfileSportRecordsEdit() {
 
           {step === 2 && (
             <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Distance / ùpreuve</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Format guidù, rapide ù une main.</p>
+              <h2 className="text-[20px] font-semibold text-foreground">Distance / Èpreuve</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Format guidÈ, rapide ‡ une main.</p>
               <div className="mt-4 space-y-2">
                 {DISTANCE_PRESETS.map((d) => (
                   <button
@@ -373,12 +373,12 @@ export default function ProfileSportRecordsEdit() {
                 ))}
               </div>
               <div className="mt-4 rounded-xl border border-border/60 bg-secondary/40 p-3">
-                <p className="text-xs text-muted-foreground">Distance sùlectionnùe</p>
+                <p className="text-xs text-muted-foreground">Distance sÈlectionnÈe</p>
                 <p className="text-[17px] font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</p>
                 <Input
                   value={eventLabel}
                   onChange={(e) => setEventLabel(e.target.value)}
-                  placeholder="Nom de lùùpreuve"
+                  placeholder="Nom de líÈpreuve"
                   className="mt-2 h-10"
                 />
               </div>
@@ -388,7 +388,7 @@ export default function ProfileSportRecordsEdit() {
           {step === 3 && (
             <div className="rounded-2xl bg-card p-4">
               <h2 className="text-[20px] font-semibold text-foreground">Performance</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Sùlection prùcise via roulettes verticales.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">SÈlection prÈcise via roulettes verticales.</p>
 
               {(sportKey === "running" || sportKey === "walking" || sportKey === "swimming") && (
                 <div className="mt-4 space-y-3">
