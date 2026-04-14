@@ -942,12 +942,16 @@ html, body {
 .rc-session-pin {
   --rc-pin-scale: 1;
   position: relative;
-  transform-origin: center bottom;
-  transform: scale(var(--rc-pin-scale));
-  transition: transform 170ms ease-out, opacity 160ms ease-out, filter 180ms ease-out;
+  transition: opacity 160ms ease-out, filter 180ms ease-out;
 }
 
-.rc-session-pin-pop {
+.rc-session-pin__shape {
+  transform-origin: center bottom;
+  transform: scale(var(--rc-pin-scale));
+  transition: transform 170ms ease-out;
+}
+
+.rc-session-pin-pop .rc-session-pin__shape {
   animation: rcPinPopIn 220ms ease-out both;
 }
 
