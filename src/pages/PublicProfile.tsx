@@ -491,7 +491,7 @@ const PublicProfile = () => {
                     </>
                   )}
                 </Button>
-                {isFollowing && (
+                {canViewPrivateContent && (
                   <Button
                     type="button"
                     variant="outline"
