@@ -262,7 +262,7 @@ export default function ProfileSportRecordsEdit() {
         .single();
       if (error) throw error;
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
-      toast({ title: "Record ajoutù" });
+      toast({ title: "Record ajoutÈ" });
       resetWizard();
     } catch {
       toast({ title: "Erreur", description: "Impossible d'ajouter le record.", variant: "destructive" });
@@ -278,7 +278,7 @@ export default function ProfileSportRecordsEdit() {
       const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
-      toast({ title: "Record supprimù" });
+      toast({ title: "Record supprimÈ" });
     } catch {
       toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
     } finally {
@@ -438,11 +438,11 @@ export default function ProfileSportRecordsEdit() {
 
           {step === 4 && (
             <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Rùcapitulatif</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Vùrifie puis confirme ton record.</p>
+              <h2 className="text-[20px] font-semibold text-foreground">RÈcapitulatif</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">VÈrifie puis confirme ton record.</p>
               <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-secondary/30 p-3">
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Sport</span><span className="font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[sportKey]}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">ùpreuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">…preuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Distance</span><span className="font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</span></div>
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Performance</span><span className="font-semibold text-primary">{recordValue}</span></div>
               </div>
