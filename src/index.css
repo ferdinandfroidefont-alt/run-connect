@@ -931,11 +931,11 @@ html, body {
 @keyframes rcPinPopIn {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: translate(-50%, -100%) scale(0.8);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translate(-50%, -100%) scale(1);
   }
 }
 
