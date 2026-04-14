@@ -384,6 +384,21 @@ export const RouteCreation = () => {
     return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
   }, []);
 
+  // Sécurise l'affichage des traits à chaque rechargement de style Mapbox.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const ensureSegmentsVisible = () => {
+      replayAllSegments();
+      window.setTimeout(() => replayAllSegments(), 120);
+      window.setTimeout(() => replayAllSegments(), 320);
+    };
+    m.on('style.load', ensureSegmentsVisible);
+    return () => {
+      m.off('style.load', ensureSegmentsVisible);
+    };
+  }, [isMapLoaded, replayAllSegments]);
+
   const clearScrubMarker = () => {
     scrubMarkerRef.current?.remove();
     scrubMarkerRef.current = null;
@@ -777,10 +792,24 @@ export const RouteCreation = () => {
           if (segment) segments.current.push(segment);
         }
       }
+      // Fallback robuste : si aucun segment n'a pu être reconstruit (style/reseau),
+      // on trace des segments manuels pour garantir l'affichage des traits.
+      if (segments.current.length === 0 && waypoints.current.length >= 2) {
+        for (let i = 1; i < waypoints.current.length; i += 1) {
+          const prevPoint = waypoints.current[i - 1]!;
+          const currPoint = waypoints.current[i]!;
+          const seg = createManualSegment(prevPoint, currPoint);
+          if (seg) segments.current.push(seg);
+        }
+      }
       setIsManualMode(!!draft.isManualMode);
       isManualModeRef.current = !!draft.isManualMode;
       setWaypointCount(waypoints.current.length);
       await fitMapToCoords(map.current, waypoints.current, 50);
+      // Rejouer les lignes après restauration + après éventuel refresh style.
+      replayAllSegments();
+      window.setTimeout(() => replayAllSegments(), 120);
+      window.setTimeout(() => replayAllSegments(), 320);
       void updateElevationAndStats('fast');
       toast.success('Brouillon d’itinéraire restauré');
     } catch {
