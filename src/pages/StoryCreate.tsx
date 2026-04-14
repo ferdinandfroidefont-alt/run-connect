@@ -1559,8 +1559,9 @@ export default function StoryCreate() {
   // ═══════════════════════════════════════
   if (step === "entry") {
     return (
+      <>
       <div className="fixed inset-0 z-[180] flex flex-col bg-background">
-        <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+        <div className="fixed inset-x-0 top-0 z-30 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
@@ -1574,7 +1575,7 @@ export default function StoryCreate() {
             <div aria-hidden />
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 items-center justify-center px-5">
+        <div className="flex min-h-0 flex-1 items-center justify-center px-5 pt-[calc(env(safe-area-inset-top,0px)+52px)]">
           <div className="w-full max-w-sm space-y-3">
             <button
               type="button"
@@ -1707,6 +1708,7 @@ export default function StoryCreate() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </>
     );
   }
 
@@ -1717,7 +1719,7 @@ export default function StoryCreate() {
     return (
       <div className="fixed inset-0 z-[180] flex flex-col bg-black">
         {/* Top bar */}
-        <div className="absolute inset-x-0 top-0 z-20 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+        <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
