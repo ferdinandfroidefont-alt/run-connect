@@ -931,23 +931,21 @@ html, body {
 @keyframes rcPinPopIn {
   from {
     opacity: 0;
-    transform: scale(calc(var(--rc-pin-scale, 1) * 0.8));
+    transform: scale(0.8);
   }
   to {
     opacity: 1;
-    transform: scale(var(--rc-pin-scale, 1));
+    transform: scale(1);
   }
 }
 
 .rc-session-pin {
-  --rc-pin-scale: 1;
   position: relative;
   transition: opacity 160ms ease-out, filter 180ms ease-out;
 }
 
 .rc-session-pin__shape {
   transform-origin: center bottom;
-  transform: scale(var(--rc-pin-scale));
 }
 
 .rc-session-pin-pop .rc-session-pin__shape {

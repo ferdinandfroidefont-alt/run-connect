@@ -416,12 +416,8 @@ export const InteractiveMap = ({
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 
   const applyMarkerScaleFromZoom = useCallback(() => {
-    if (markers.current.length === 0) return;
-    // Stabilité géo prioritaire: taille fixe pour éviter tout décalage visuel du point d’ancrage.
-    const scaleStr = "1";
-    for (const item of markers.current) {
-      item.el.style.setProperty('--rc-pin-scale', scaleStr);
-    }
+    // No-op: pin scaling disabled to keep marker anchor pixel-stable.
+    return;
   }, []);
 
   const toggleImmersiveMode = () => {
