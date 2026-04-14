@@ -531,6 +531,8 @@ export const InteractiveMap = ({
   const filteredSessionsForMap = useMemo(() => {
     const q = (filters.search_query ?? '').trim().toLowerCase();
     return sessions.filter((session) => {
+      // Toujours afficher les séances de l'utilisateur sur la carte.
+      if (session.organizer_id === user?.id) return true;
       const matchesActivity =
         filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType =
@@ -559,7 +561,7 @@ export const InteractiveMap = ({
 
       return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
     });
-  }, [sessions, filters]);
+  }, [sessions, filters, user?.id]);
 
   const offscreenSessionIndicators = useOffscreenSessionIndicators({
     map: mapboxMap,
@@ -1012,7 +1014,32 @@ export const InteractiveMap = ({
       } catch (error) {
         console.error('Error creating custom marker cluster:', error);
         if (runId !== markersRunIdRef.current) return null;
-        return null;
+        try {
+          const session = cluster[0];
+          if (!session) return null;
+          const lng = Number(session.location_lng);
+          const lat = Number(session.location_lat);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+
+          const fallbackWrap = document.createElement('div');
+          fallbackWrap.style.width = '16px';
+          fallbackWrap.style.height = '16px';
+          fallbackWrap.style.borderRadius = '999px';
+          fallbackWrap.style.background = '#2563EB';
+          fallbackWrap.style.border = '2px solid #ffffff';
+          fallbackWrap.style.boxShadow = '0 3px 8px rgba(0,0,0,0.3)';
+          fallbackWrap.style.cursor = 'pointer';
+          fallbackWrap.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            setPreviewSession(session);
+          });
+          const fallbackMarker = new mapboxgl.Marker({ element: fallbackWrap, anchor: 'center' })
+            .setLngLat([lng, lat])
+            .addTo(map.current!);
+          return { marker: fallbackMarker, el: fallbackWrap };
+        } catch {
+          return null;
+        }
       }
     });
 
