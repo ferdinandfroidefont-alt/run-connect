@@ -43,6 +43,16 @@ type ScheduledSession = {
   route_coordinates?: Array<{ lat: number; lng: number }>;
 };
 
+type SessionRowBase = {
+  id: string;
+  title: string;
+  location_name: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  route_id?: string | null;
+  scheduled_at: string;
+};
+
 type StoryDraftPayload = {
   savedAt: number;
   sourceMode: "camera" | "gallery";
@@ -620,59 +630,92 @@ export default function StoryCreate() {
   // ── Load sessions ──
   const loadSessions = useCallback(async () => {
     if (!user?.id) return;
-    const [createdRes, joinedRes] = await Promise.all([
-      supabase
-        .from("sessions")
-        .select("id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates)")
-        .eq("organizer_id", user.id)
-        .order("scheduled_at", { ascending: true })
-        .limit(80),
-      supabase
-        .from("session_participants")
-        .select(
-          "session:sessions(id, title, location_name, location_lat, location_lng, route_id, scheduled_at, route:routes(coordinates))"
-        )
-        .eq("user_id", user.id)
-        .limit(120),
-    ]);
+    try {
+      const [createdRes, joinedRes] = await Promise.all([
+        supabase
+          .from("sessions")
+          .select("id, title, location_name, location_lat, location_lng, route_id, scheduled_at")
+          .eq("organizer_id", user.id)
+          .order("scheduled_at", { ascending: true })
+          .limit(120),
+        supabase
+          .from("session_participants")
+          .select("session:sessions(id, title, location_name, location_lat, location_lng, route_id, scheduled_at)")
+          .eq("user_id", user.id)
+          .limit(180),
+      ]);
 
-    const createdRows = (createdRes.data ?? []) as Array<any>;
-    const joinedRows = (joinedRes.data ?? []) as Array<{ session?: any }>;
-    const joinedSessions = joinedRows.map((r) => r.session).filter(Boolean);
+      if (createdRes.error) {
+        console.error("StoryCreate loadSessions created error:", createdRes.error);
+      }
+      if (joinedRes.error) {
+        console.error("StoryCreate loadSessions joined error:", joinedRes.error);
+      }
 
-    // Tolérance pour éviter les faux négatifs "aucune séance à venir" liés aux décalages timezone/device.
-    const minVisibleTs = Date.now() - 6 * 60 * 60 * 1000;
-    const byId = new Map<string, any>();
-    for (const s of [...createdRows, ...joinedSessions]) {
-      if (!s?.id) continue;
-      const ts = parseSessionTimestamp(s.scheduled_at ?? "");
-      if (!Number.isFinite(ts)) continue;
-      if (ts < minVisibleTs) continue;
-      if (!byId.has(s.id)) byId.set(s.id, s);
+      const createdRows = (createdRes.data ?? []) as SessionRowBase[];
+      const joinedRows = (joinedRes.data ?? []) as Array<{ session?: SessionRowBase | null }>;
+      const joinedSessions = joinedRows.map((r) => r.session).filter(Boolean) as SessionRowBase[];
+
+      const allRows = [...createdRows, ...joinedSessions];
+      const byId = new Map<string, SessionRowBase>();
+      for (const s of allRows) {
+        if (!s?.id) continue;
+        if (!byId.has(s.id)) byId.set(s.id, s);
+      }
+
+      const routeIds = Array.from(new Set(allRows.map((s) => s.route_id).filter(Boolean))) as string[];
+      const routeCoordsById = new Map<string, Array<{ lat: number; lng: number }>>();
+      if (routeIds.length > 0) {
+        const routesRes = await supabase.from("routes").select("id, coordinates").in("id", routeIds);
+        if (routesRes.error) {
+          console.error("StoryCreate loadSessions routes error:", routesRes.error);
+        } else {
+          for (const route of (routesRes.data ?? []) as Array<{ id: string; coordinates: unknown }>) {
+            const coords = Array.isArray(route.coordinates)
+              ? route.coordinates
+                  .map((c: unknown) => {
+                    const row = c as { lat?: number; lng?: number };
+                    return row && row.lat != null && row.lng != null
+                      ? { lat: Number(row.lat), lng: Number(row.lng) }
+                      : null;
+                  })
+                  .filter(Boolean) as Array<{ lat: number; lng: number }>
+              : [];
+            routeCoordsById.set(route.id, coords);
+          }
+        }
+      }
+
+      const now = Date.now();
+      const normalized = Array.from(byId.values())
+        .sort((a, b) => {
+          const ta = parseSessionTimestamp(a.scheduled_at);
+          const tb = parseSessionTimestamp(b.scheduled_at);
+          const aFuture = Number.isFinite(ta) ? ta >= now : false;
+          const bFuture = Number.isFinite(tb) ? tb >= now : false;
+          if (aFuture !== bFuture) return aFuture ? -1 : 1;
+          if (Number.isFinite(ta) && Number.isFinite(tb)) return ta - tb;
+          if (Number.isFinite(ta)) return -1;
+          if (Number.isFinite(tb)) return 1;
+          return 0;
+        })
+        .slice(0, 40)
+        .map((s) => ({
+          id: s.id,
+          title: s.title ?? "Séance",
+          location_name: s.location_name ?? "Lieu non défini",
+          location_lat: s.location_lat ?? null,
+          location_lng: s.location_lng ?? null,
+          route_id: s.route_id ?? null,
+          scheduled_at: s.scheduled_at,
+          route_coordinates: s.route_id ? routeCoordsById.get(s.route_id) ?? [] : [],
+        })) as ScheduledSession[];
+
+      setSessions(normalized);
+    } catch (err) {
+      console.error("StoryCreate loadSessions fatal:", err);
+      setSessions([]);
     }
-
-    const normalized = Array.from(byId.values())
-      .sort((a, b) => parseSessionTimestamp(a.scheduled_at) - parseSessionTimestamp(b.scheduled_at))
-      .slice(0, 30)
-      .map((s) => ({
-      id: s.id,
-      title: s.title,
-      location_name: s.location_name,
-      location_lat: s.location_lat,
-      location_lng: s.location_lng,
-      route_id: s.route_id,
-      scheduled_at: s.scheduled_at,
-      route_coordinates: Array.isArray(s?.route?.coordinates)
-        ? s.route.coordinates
-            .map((c: any) =>
-              c && typeof c === "object" && c.lat != null && c.lng != null
-                ? { lat: Number(c.lat), lng: Number(c.lng) }
-                : null,
-            )
-            .filter(Boolean)
-        : [],
-    })) as ScheduledSession[];
-    setSessions(normalized);
   }, [user?.id]);
 
   useEffect(() => { void loadSessions(); }, [loadSessions]);
@@ -1558,7 +1601,7 @@ export default function StoryCreate() {
             </div>
             <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
               {sessions.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune séance à venir</p>
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune séance disponible</p>
               ) : (
                 sessions.map((s) => (
                   <button
@@ -2270,7 +2313,7 @@ export default function StoryCreate() {
           <div className="mb-3 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
             {sessions.length === 0 ? (
               <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-                Aucune séance à venir
+                Aucune séance disponible
               </p>
             ) : (
               sessions.map((s) => (
