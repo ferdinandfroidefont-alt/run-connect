@@ -2,6 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +71,14 @@ interface EditRouteData {
   waypoints?: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
 }
 
+type RouteDraftPayload = {
+  savedAt: number;
+  waypoints: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
+  isManualMode: boolean;
+};
+
+const ROUTE_DRAFT_STORAGE_KEY = 'runconnect_route_creation_draft_v1';
+
 /** Réduit le bruit des petites oscillations du MNE (m). */
 const ELEV_NOISE_THRESHOLD_M = 2;
 
@@ -99,6 +117,10 @@ export const RouteCreation = () => {
   const [waypointCount, setWaypointCount] = useState(0);
   const [elevationLoading, setElevationLoading] = useState(false);
   const elevationRequestId = useRef(0);
+  const [hasRouteDraft, setHasRouteDraft] = useState(false);
+  const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
+  const [discardRouteDraftDialogOpen, setDiscardRouteDraftDialogOpen] = useState(false);
+  const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
 
   const undoHistory = useRef<
     Array<{
@@ -122,6 +144,18 @@ export const RouteCreation = () => {
     setHideBottomNav(true);
     return () => setHideBottomNav(false);
   }, [setHideBottomNav]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setHasRouteDraft(false);
+      return;
+    }
+    try {
+      setHasRouteDraft(!!localStorage.getItem(ROUTE_DRAFT_STORAGE_KEY));
+    } catch {
+      setHasRouteDraft(false);
+    }
+  }, [isEditMode]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;
@@ -690,6 +724,94 @@ export const RouteCreation = () => {
     setWaypointCount(0);
   };
 
+  const getWaypointModes = useCallback((): Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }> => {
+    return waypoints.current.map((wp, index) => {
+      const mode = index > 0 && index - 1 < segments.current.length ? segments.current[index - 1]!.mode : 'manual';
+      return { lat: wp.lat, lng: wp.lng, mode };
+    });
+  }, []);
+
+  const clearRouteDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(ROUTE_DRAFT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    setHasRouteDraft(false);
+  }, []);
+
+  const saveRouteDraft = useCallback(() => {
+    const payload: RouteDraftPayload = {
+      savedAt: Date.now(),
+      waypoints: getWaypointModes(),
+      isManualMode,
+    };
+    try {
+      localStorage.setItem(ROUTE_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+      setHasRouteDraft(true);
+    } catch {
+      // ignore
+    }
+  }, [getWaypointModes, isManualMode]);
+
+  const restoreRouteDraft = useCallback(async () => {
+    if (isEditMode) return;
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(ROUTE_DRAFT_STORAGE_KEY);
+    } catch {
+      raw = null;
+    }
+    if (!raw) {
+      setHasRouteDraft(false);
+      toast.error('Aucun brouillon trouvé');
+      return;
+    }
+    try {
+      const draft = JSON.parse(raw) as RouteDraftPayload;
+      if (!Array.isArray(draft.waypoints) || draft.waypoints.length < 2) {
+        toast.error('Brouillon invalide');
+        return;
+      }
+      if (!map.current) {
+        toast.error('Carte non prête');
+        return;
+      }
+      handleClear();
+      for (let i = 0; i < draft.waypoints.length; i += 1) {
+        const wp = draft.waypoints[i]!;
+        const latLng: MapCoord = { lat: Number(wp.lat), lng: Number(wp.lng) };
+        waypoints.current.push(latLng);
+        await addWaypointMarker(latLng, i, wp.mode || 'manual');
+        if (i > 0) {
+          const prev = draft.waypoints[i - 1]!;
+          const prevLatLng: MapCoord = { lat: Number(prev.lat), lng: Number(prev.lng) };
+          const segment = wp.mode === 'guided'
+            ? await createGuidedSegment(prevLatLng, latLng)
+            : createManualSegment(prevLatLng, latLng);
+          if (segment) segments.current.push(segment);
+        }
+      }
+      setIsManualMode(!!draft.isManualMode);
+      isManualModeRef.current = !!draft.isManualMode;
+      setWaypointCount(waypoints.current.length);
+      await fitMapToCoords(map.current, waypoints.current, 50);
+      void updateElevationAndStats('fast');
+      toast.success('Brouillon d’itinéraire restauré');
+    } catch {
+      toast.error('Impossible de restaurer le brouillon');
+    }
+  }, [isEditMode]);
+
+  const requestExitWithRouteDraft = useCallback((to: string) => {
+    if (isEditMode || waypoints.current.length < 2) {
+      navigate(to);
+      return;
+    }
+    setPendingExitPath(to);
+    setExitDraftDialogOpen(true);
+  }, [isEditMode, navigate]);
+
   const handleRecenter = async () => {
     try {
       const position = await getCurrentPosition();
@@ -702,7 +824,7 @@ export const RouteCreation = () => {
   };
 
   const handleCancel = () => {
-    navigate('/');
+    requestExitWithRouteDraft('/');
   };
 
   const handleFinish = async () => {
@@ -826,6 +948,7 @@ export const RouteCreation = () => {
 
     toast.success('Itinéraire enregistré');
     setSaveDialogOpen(false);
+    clearRouteDraft();
     navigate('/itinerary/my-routes', {
       state: { itineraryBackTo: routeCreationPathname },
     });
@@ -921,17 +1044,31 @@ export const RouteCreation = () => {
           <Button
             size="sm"
             variant="ghost"
-            onClick={() =>
-              navigate('/itinerary/my-routes', {
-                state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
-              })
-            }
+            onClick={() => requestExitWithRouteDraft('/itinerary/my-routes')}
             className="ml-auto shrink-0 gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
           >
             <Layers className="h-4 w-4" />
             Mes itinéraires
           </Button>
         </div>
+        {!isEditMode && hasRouteDraft && waypointCount < 2 && (
+          <div className="mt-2 rounded-ios-lg border border-border/50 bg-background/90 px-3 py-2 shadow-md backdrop-blur">
+            <p className="text-[12px] text-foreground">Un brouillon d’itinéraire est disponible</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Button size="sm" className="h-7 px-3" onClick={() => void restoreRouteDraft()}>
+                Reprendre
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 border-destructive/30 text-destructive"
+                onClick={() => setDiscardRouteDraftDialogOpen(true)}
+              >
+                Supprimer
+              </Button>
+            </div>
+          </div>
+        )}
         <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
           {isManualMode ? '🛤️ Tracé libre hors-piste' : '🚶 Suit les chemins'}
         </p>
@@ -1033,6 +1170,58 @@ export const RouteCreation = () => {
         loading={routeSaving}
         showCreateSessionOption={false}
       />
+      <AlertDialog open={exitDraftDialogOpen} onOpenChange={setExitDraftDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ton itinéraire en cours n’est pas encore enregistré. Tu peux le reprendre plus tard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                const to = pendingExitPath;
+                setPendingExitPath(null);
+                if (to) navigate(to);
+              }}
+            >
+              Quitter sans enregistrer
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                saveRouteDraft();
+                toast.success('Brouillon d’itinéraire enregistré');
+                const to = pendingExitPath;
+                setPendingExitPath(null);
+                if (to) navigate(to);
+              }}
+            >
+              Enregistrer et quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={discardRouteDraftDialogOpen} onOpenChange={setDiscardRouteDraftDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le brouillon d’itinéraire ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action est définitive.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                clearRouteDraft();
+                toast.success('Brouillon supprimé');
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

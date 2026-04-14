@@ -18,8 +18,6 @@ import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
-import { OffscreenSessionIndicators } from '@/components/map/OffscreenSessionIndicators';
-import { useOffscreenSessionIndicators } from '@/hooks/useOffscreenSessionIndicators';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -562,38 +560,6 @@ export const InteractiveMap = ({
       return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
     });
   }, [sessions, filters, user?.id]);
-
-  const offscreenSessionIndicators = useOffscreenSessionIndicators({
-    map: mapboxMap,
-    isMapLoaded,
-    isActive,
-    immersive: isImmersiveMode,
-    sessions: filteredSessionsForMap,
-    mapContainerRef: mapContainer,
-    topStackRef: homeMapTopStackRef,
-    feedSnap: homeFeedSheetSnap,
-  });
-
-  const handleOffscreenIndicatorFlyTo = useCallback(
-    (lng: number, lat: number) => {
-      const m = map.current;
-      if (!m) return;
-      requestAnimationFrame(() => {
-        const padding = computeHomeMapViewportPadding({
-          immersive: isImmersiveMode,
-          topStackEl: homeMapTopStackRef.current,
-        });
-        m.easeTo({
-          center: [lng, lat],
-          zoom: Math.max(m.getZoom(), 13.5),
-          padding,
-          duration: 780,
-          essential: true,
-        });
-      });
-    },
-    [isImmersiveMode],
-  );
 
   const routeCoordinates = useRef<MapCoord[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
@@ -1878,10 +1844,6 @@ export const InteractiveMap = ({
             isMapLoaded ? 'opacity-0' : 'opacity-100'
           )}
           aria-hidden
-        />
-        <OffscreenSessionIndicators
-          items={offscreenSessionIndicators}
-          onFlyToSession={handleOffscreenIndicatorFlyTo}
         />
       </div>
       

@@ -2,6 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCamera } from "@/hooks/useCamera";
@@ -170,6 +180,9 @@ export default function StoryCreate() {
   // Share
   const [sharing, setSharing] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [pendingExitTarget, setPendingExitTarget] = useState<"feed" | "entry" | null>(null);
+  const [deleteDraftConfirmOpen, setDeleteDraftConfirmOpen] = useState(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -461,8 +474,19 @@ export default function StoryCreate() {
     }
   }, [dataUrlToFile, toast]);
 
+  const proceedExit = useCallback(
+    (next: "feed" | "entry") => {
+      if (next === "feed") {
+        navigate("/feed");
+        return;
+      }
+      resetEditorState();
+    },
+    [navigate, resetEditorState]
+  );
+
   const requestExitWithDraftPrompt = useCallback(
-    async (next: "feed" | "entry") => {
+    (next: "feed" | "entry") => {
       const hasWork =
         !!mediaFile ||
         !!caption.trim() ||
@@ -472,25 +496,14 @@ export default function StoryCreate() {
         !!emojiSticker ||
         dynamicLayers.length > 0;
 
-      if (hasWork) {
-        const save = window.confirm("Enregistrer le brouillon avant de quitter ?");
-        if (save) {
-          try {
-            await saveDraft();
-            toast({ title: "Brouillon enregistré", description: "Tu pourras le reprendre plus tard." });
-          } catch {
-            toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
-          }
-        }
-      }
-
-      if (next === "feed") {
-        navigate("/feed");
+      if (!hasWork) {
+        proceedExit(next);
         return;
       }
-      resetEditorState();
+      setPendingExitTarget(next);
+      setExitConfirmOpen(true);
     },
-    [mediaFile, caption, textOverlay, selectedMusic, selectedSession, emojiSticker, dynamicLayers, saveDraft, toast, navigate, resetEditorState]
+    [mediaFile, caption, textOverlay, selectedMusic, selectedSession, emojiSticker, dynamicLayers, proceedExit]
   );
 
   const addDynamicLayer = (kind: DynamicLayerKind) => {
@@ -1578,10 +1591,7 @@ export default function StoryCreate() {
                 <button
                   type="button"
                   onClick={() => {
-                    const ok = window.confirm("Supprimer ce brouillon ?");
-                    if (!ok) return;
-                    clearDraft();
-                    toast({ title: "Brouillon supprimé" });
+                    setDeleteDraftConfirmOpen(true);
                   }}
                   className="w-full rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition active:scale-[0.98]"
                 >
@@ -1634,6 +1644,65 @@ export default function StoryCreate() {
           </div>
         )}
       </div>
+      <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Si tu quittes maintenant, ta story peut être enregistrée pour la reprendre plus tard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                const target = pendingExitTarget;
+                setPendingExitTarget(null);
+                if (target) proceedExit(target);
+              }}
+            >
+              Quitter sans enregistrer
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  await saveDraft();
+                  toast({ title: "Brouillon enregistré", description: "Tu pourras le reprendre plus tard." });
+                } catch {
+                  toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
+                } finally {
+                  const target = pendingExitTarget;
+                  setPendingExitTarget(null);
+                  if (target) proceedExit(target);
+                }
+              }}
+            >
+              Enregistrer et quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={deleteDraftConfirmOpen} onOpenChange={setDeleteDraftConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est définitive et supprimera la story enregistrée localement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                clearDraft();
+                toast({ title: "Brouillon supprimé" });
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   }
 
