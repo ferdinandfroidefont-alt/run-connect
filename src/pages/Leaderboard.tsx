@@ -539,7 +539,7 @@ const Leaderboard = () => {
   );
 
   return (
-    <div className="fixed-fill-with-bottom-nav flex min-h-0 flex-col bg-secondary">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-secondary">
       <IosFixedPageHeaderShell
         className="min-h-0 flex-1"
         headerWrapperClassName="shrink-0"
