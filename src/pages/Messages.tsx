@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
@@ -163,6 +163,7 @@ const Messages = () => {
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const { setHideBottomNav } = useAppContext();
@@ -334,6 +335,12 @@ const Messages = () => {
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setHideBottomNav]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith("/messages")) {
+      setHideBottomNav(false);
+    }
+  }, [location.pathname, setHideBottomNav]);
 
   // Fetch user notification settings
   useEffect(() => {
