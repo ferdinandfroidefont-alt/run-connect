@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, Loader2, Plus, Trash2 } from "lucide-react";
+import { Activity, ArrowLeft, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -34,13 +34,13 @@ const DISTANCE_PRESETS: Array<{ id: string; label: string; km: number | null }> 
   { id: "custom", label: "Autre", km: null },
 ];
 
-const SPORT_ICONS: Record<ProfileSportRecordKey, string> = {
-  running: "??",
-  walking: "??",
-  cycling: "??",
-  swimming: "??",
-  triathlon: "??",
-  other: "?",
+const SPORT_ICONS: Record<ProfileSportRecordKey, LucideIcon> = {
+  running: Activity,
+  walking: Footprints,
+  cycling: Bike,
+  swimming: Waves,
+  triathlon: Zap,
+  other: Plus,
 };
 
 function formatDuration(totalSec: number): string {
@@ -338,17 +338,20 @@ export default function ProfileSportRecordsEdit() {
               <h2 className="text-[20px] font-semibold text-foreground">Choisis ton sport</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">Une seule sùlection, puis suivant.</p>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
-                {PROFILE_SPORT_RECORD_KEYS.map((k) => (
+                {PROFILE_SPORT_RECORD_KEYS.map((k) => {
+                  const SportIcon = SPORT_ICONS[k];
+                  return (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setSportKey(k)}
                     className={`rounded-2xl border px-3 py-4 text-left ${sportKey === k ? "border-primary bg-primary/10" : "border-border bg-secondary/40"}`}
                   >
-                    <p className="text-[22px]">{SPORT_ICONS[k]}</p>
+                    <SportIcon className="h-6 w-6 text-primary" />
                     <p className="mt-1 text-[14px] font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[k]}</p>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

@@ -184,6 +184,7 @@ export default function StoryCreate() {
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [pendingExitTarget, setPendingExitTarget] = useState<"feed" | "entry" | null>(null);
   const autoRestoreDoneRef = useRef(false);
+  const [resumedFromDraft, setResumedFromDraft] = useState(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -465,9 +466,11 @@ export default function StoryCreate() {
         const restoredFile = dataUrlToFile(draft.mediaDataUrl, draft.mediaName || "story-draft", draft.mediaType);
         setMediaFile(restoredFile);
         setStep(restoredFile ? "edit" : "entry");
+        setResumedFromDraft(!!restoredFile);
       } else {
         setMediaFile(null);
         setStep("entry");
+        setResumedFromDraft(false);
       }
       toast({ title: "Brouillon repris", description: "Ton brouillon a été restauré." });
     } catch {
@@ -493,6 +496,7 @@ export default function StoryCreate() {
         return;
       }
       resetEditorState();
+      setResumedFromDraft(false);
     },
     [navigate, resetEditorState]
   );
@@ -2113,7 +2117,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => void requestExitWithDraftPrompt("entry")}
+              onClick={() => void requestExitWithDraftPrompt(resumedFromDraft ? "feed" : "entry")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
