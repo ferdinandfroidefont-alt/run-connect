@@ -66,7 +66,8 @@ export function ProfileRecordsDisplay({
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    (async () => {
+
+    const fetchRows = async () => {
       try {
         const { data, error } = await (supabase as any)
           .from("profile_sport_records")
@@ -81,9 +82,31 @@ export function ProfileRecordsDisplay({
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    void fetchRows();
+
+    const onRecordsUpdated = () => {
+      if (cancelled) return;
+      setLoading(true);
+      void fetchRows();
+    };
+    const onFocus = () => {
+      if (cancelled) return;
+      void fetchRows();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") onFocus();
+    };
+
+    window.addEventListener("profile-records-updated", onRecordsUpdated);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
+      window.removeEventListener("profile-records-updated", onRecordsUpdated);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [userId]);
 

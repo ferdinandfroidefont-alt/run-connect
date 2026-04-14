@@ -262,6 +262,7 @@ export default function ProfileSportRecordsEdit() {
         .single();
       if (error) throw error;
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
+      window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record ajouté" });
       resetWizard();
     } catch {
@@ -278,6 +279,7 @@ export default function ProfileSportRecordsEdit() {
       const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
+      window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record supprimé" });
     } catch {
       toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
