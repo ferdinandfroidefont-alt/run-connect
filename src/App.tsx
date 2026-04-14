@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
@@ -310,7 +310,7 @@ const App = () => {
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
-                  <Route path="/leaderboard" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/leaderboard" element={<Navigate to="/itinerary" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />

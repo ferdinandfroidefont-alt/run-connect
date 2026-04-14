@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 const Index = lazy(() => import("@/pages/Index"));
 const MySessions = lazy(() => import("@/pages/MySessions"));
 const Messages = lazy(() => import("@/pages/Messages"));
-const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
+const ItineraryHub = lazy(() => import("@/pages/ItineraryHub"));
 const Coaching = lazy(() => import("@/pages/Coaching"));
 
 type TabDef = {
@@ -26,7 +26,7 @@ const TABS: TabDef[] = [
   { path: "/", render: () => <Index /> },
   { path: "/my-sessions", render: () => <MySessions /> },
   { path: "/messages", render: () => <Messages /> },
-  { path: "/leaderboard", render: () => <Leaderboard /> },
+  { path: "/itinerary", render: () => <ItineraryHub /> },
   { path: "/coaching", render: () => <Coaching /> },
 ];
 

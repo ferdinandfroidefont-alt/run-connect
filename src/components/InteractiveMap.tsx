@@ -914,8 +914,8 @@ export const InteractiveMap = ({
         );
         wrap.style.setProperty('--rc-pin-color', '#2563EB');
         wrap.style.position = 'relative';
-        wrap.style.width = '56px';
-        wrap.style.height = '74px';
+        wrap.style.width = '50px';
+        wrap.style.height = '64px';
         wrap.style.cursor = 'pointer';
 
         const pin = document.createElement('button');
@@ -924,20 +924,46 @@ export const InteractiveMap = ({
         pin.setAttribute('aria-label', session.title || 'Séance');
         pin.style.display = 'block';
         pin.style.position = 'relative';
-        pin.style.width = '56px';
-        pin.style.height = '74px';
+        pin.style.width = '50px';
+        pin.style.height = '64px';
         pin.style.border = '0';
         pin.style.padding = '0';
         pin.style.background = 'transparent';
         pin.style.cursor = 'pointer';
 
+        // Structure explicite (plus fiable que des pseudo-éléments seuls selon WebView/device)
+        const pinCircle = document.createElement('span');
+        pinCircle.className = 'rc-session-pin__circle';
+        pinCircle.style.position = 'absolute';
+        pinCircle.style.left = '50%';
+        pinCircle.style.top = '2px';
+        pinCircle.style.width = '44px';
+        pinCircle.style.height = '44px';
+        pinCircle.style.transform = 'translateX(-50%)';
+        pinCircle.style.borderRadius = '999px';
+        pinCircle.style.background = '#2563EB';
+        pinCircle.style.boxShadow = '0 7px 18px rgba(15,23,42,0.3)';
+        const pinTip = document.createElement('span');
+        pinTip.className = 'rc-session-pin__tip';
+        pinTip.style.position = 'absolute';
+        pinTip.style.left = '50%';
+        pinTip.style.top = '48px';
+        pinTip.style.width = '18px';
+        pinTip.style.height = '16px';
+        pinTip.style.transform = 'translateX(-50%)';
+        pinTip.style.clipPath = 'polygon(50% 100%, 0 0, 100% 0)';
+        pinTip.style.background = '#2563EB';
+        pinTip.style.filter = 'drop-shadow(0 3px 5px rgba(15,23,42,0.28))';
+        pin.appendChild(pinCircle);
+        pin.appendChild(pinTip);
+
         const avatarRing = document.createElement('span');
         avatarRing.className = 'rc-session-pin__avatar-ring';
         avatarRing.style.position = 'absolute';
         avatarRing.style.left = '50%';
-        avatarRing.style.top = '10px';
-        avatarRing.style.width = '36px';
-        avatarRing.style.height = '36px';
+        avatarRing.style.top = '8px';
+        avatarRing.style.width = '30px';
+        avatarRing.style.height = '30px';
         avatarRing.style.transform = 'translateX(-50%)';
         avatarRing.style.borderRadius = '999px';
         avatarRing.style.border = '2px solid #fff';

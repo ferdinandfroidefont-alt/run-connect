@@ -965,23 +965,44 @@ html, body {
 .rc-session-pin__shape {
   position: relative;
   display: block;
-  width: 56px;
-  height: 74px;
-  border: 2px solid #1d4ed8;
+  width: 50px;
+  height: 64px;
+  border: 0;
   padding: 0;
-  border-radius: 34px 34px 36px 36px;
   cursor: pointer;
+  background: transparent;
+}
+
+.rc-session-pin__circle {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 44px;
+  height: 44px;
+  transform: translateX(-50%);
+  border-radius: 999px;
   background: var(--rc-pin-color, #2563EB);
-  clip-path: polygon(50% 100%, 15% 66%, 12% 42%, 18% 24%, 32% 10%, 50% 4%, 68% 10%, 82% 24%, 88% 42%, 85% 66%);
-  box-shadow: 0 9px 22px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.3);
+}
+
+.rc-session-pin__tip {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  width: 18px;
+  height: 16px;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  background: var(--rc-pin-color, #2563EB);
+  filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.28));
 }
 
 .rc-session-pin__avatar-ring {
   position: absolute;
   left: 50%;
-  top: 10px;
-  width: 36px;
-  height: 36px;
+  top: 8px;
+  width: 30px;
+  height: 30px;
   transform: translateX(-50%);
   border-radius: 999px;
   border: 2px solid #fff;

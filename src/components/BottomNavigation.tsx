@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, Trophy, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, Route, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -57,11 +57,11 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/leaderboard",
-        icon: Trophy,
-        label: t("navigation.leaderboard") || "Classement",
-        tutorialId: "nav-leaderboard",
-        isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
+        path: "/itinerary",
+        icon: Route,
+        label: t("navigation.itinerary") || "Itinéraire",
+        tutorialId: "nav-itinerary",
+        isActive: (p) => p === "/itinerary" || p.startsWith("/itinerary/"),
       },
       {
         path: "/coaching",
