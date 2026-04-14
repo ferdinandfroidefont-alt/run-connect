@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -118,7 +118,6 @@ export const RouteCreation = () => {
   const [waypointCount, setWaypointCount] = useState(0);
   const [elevationLoading, setElevationLoading] = useState(false);
   const elevationRequestId = useRef(0);
-  const [hasRouteDraft, setHasRouteDraft] = useState(false);
   const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
   const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
   const autoRestoreDoneRef = useRef(false);
@@ -145,18 +144,6 @@ export const RouteCreation = () => {
     setHideBottomNav(true);
     return () => setHideBottomNav(false);
   }, [setHideBottomNav]);
-
-  useEffect(() => {
-    if (isEditMode) {
-      setHasRouteDraft(false);
-      return;
-    }
-    try {
-      setHasRouteDraft(!!localStorage.getItem(ROUTE_DRAFT_STORAGE_KEY));
-    } catch {
-      setHasRouteDraft(false);
-    }
-  }, [isEditMode]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;
@@ -738,7 +725,6 @@ export const RouteCreation = () => {
     } catch {
       // ignore
     }
-    setHasRouteDraft(false);
   }, []);
 
   const saveRouteDraft = useCallback(() => {
@@ -749,7 +735,6 @@ export const RouteCreation = () => {
     };
     try {
       localStorage.setItem(ROUTE_DRAFT_STORAGE_KEY, JSON.stringify(payload));
-      setHasRouteDraft(true);
     } catch {
       // ignore
     }
@@ -764,7 +749,6 @@ export const RouteCreation = () => {
       raw = null;
     }
     if (!raw) {
-      setHasRouteDraft(false);
       toast.error('Aucun brouillon trouvé');
       return;
     }
@@ -1089,16 +1073,6 @@ export const RouteCreation = () => {
             Mes itinéraires
           </Button>
         </div>
-        {!isEditMode && hasRouteDraft && waypointCount < 2 && (
-          <div className="mt-2 rounded-ios-lg border border-border/50 bg-background/90 px-3 py-2 shadow-md backdrop-blur">
-            <p className="text-[12px] text-foreground">Un brouillon d’itinéraire est disponible</p>
-            <div className="mt-2 flex items-center gap-2">
-              <Button size="sm" className="h-7 px-3" onClick={() => navigate('/drafts')}>
-                Voir les brouillons
-              </Button>
-            </div>
-          </div>
-        )}
         <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
           {isManualMode ? '🛤️ Tracé libre hors-piste' : '🚶 Suit les chemins'}
         </p>
@@ -1154,6 +1128,18 @@ export const RouteCreation = () => {
         >
           <Trash2 className="w-4 h-4" />
         </Button>
+
+        {!isEditMode && (
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => navigate('/drafts/routes')}
+            className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
+            title="Brouillons itinéraire"
+          >
+            <FileText className="w-4 h-4" />
+          </Button>
+        )}
 
         {/* Même bottom sheet « Style de carte » que l’accueil ; gabarit h-11 comme les boutons outline */}
         <div

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, FileText, Route, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,16 +21,20 @@ type SwipeState = {
 
 export default function Drafts() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [refreshTick, setRefreshTick] = useState(0);
   const [openSwipeId, setOpenSwipeId] = useState<DraftRow["id"] | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>({});
   const swipeRef = useRef<SwipeState | null>(null);
 
+  const mode: "all" | "stories" | "routes" =
+    pathname.includes("/drafts/stories") ? "stories" : pathname.includes("/drafts/routes") ? "routes" : "all";
+
   const rows = useMemo(() => {
     const list: DraftRow[] = [];
     try {
       const storyRaw = localStorage.getItem(STORY_DRAFT_STORAGE_KEY);
-      if (storyRaw) {
+      if (storyRaw && mode !== "routes") {
         const story = JSON.parse(storyRaw) as { savedAt?: number };
         list.push({
           id: "story",
@@ -40,7 +44,7 @@ export default function Drafts() {
         });
       }
       const routeRaw = localStorage.getItem(ROUTE_DRAFT_STORAGE_KEY);
-      if (routeRaw) {
+      if (routeRaw && mode !== "stories") {
         const route = JSON.parse(routeRaw) as { savedAt?: number };
         list.push({
           id: "route",
@@ -53,7 +57,7 @@ export default function Drafts() {
       return [];
     }
     return list.sort((a, b) => b.savedAt - a.savedAt);
-  }, [refreshTick]);
+  }, [refreshTick, mode]);
 
   useEffect(() => {
     if (rows.length === 0) setOpenSwipeId(null);
@@ -100,7 +104,9 @@ export default function Drafts() {
             <ArrowLeft className="h-4 w-4" />
             Retour
           </button>
-          <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">Brouillons</h1>
+          <h1 className="truncate px-2 text-center text-[17px] font-semibold text-foreground">
+            {mode === "stories" ? "Brouillons story" : mode === "routes" ? "Brouillons itinéraire" : "Brouillons"}
+          </h1>
           <div aria-hidden />
         </div>
       </div>
@@ -108,7 +114,13 @@ export default function Drafts() {
         {rows.length === 0 ? (
           <div className="ios-card rounded-2xl border border-border/60 bg-card p-5 text-center">
             <p className="text-sm font-semibold text-foreground">Aucun brouillon</p>
-            <p className="mt-1 text-xs text-muted-foreground">Tes stories et itinéraires non publiés apparaîtront ici.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {mode === "stories"
+                ? "Tes stories non publiées apparaîtront ici."
+                : mode === "routes"
+                  ? "Tes brouillons d’itinéraire apparaîtront ici."
+                  : "Tes stories et itinéraires non publiés apparaîtront ici."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

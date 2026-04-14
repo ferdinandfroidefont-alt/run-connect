@@ -1620,7 +1620,7 @@ export default function StoryCreate() {
             {hasDraft && (
               <button
                 type="button"
-                onClick={() => navigate("/drafts")}
+                onClick={() => navigate("/drafts/stories")}
                 className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
               >
                 <RefreshCw className="h-5 w-5 text-primary" />

@@ -337,6 +337,8 @@ const App = () => {
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
                   <Route path="/drafts" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts/stories" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts/routes" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
                   <Route path="/stories/:storyId/delete" element={<PageTransition><PageSuspense><StoryDeleteConfirm /></PageSuspense></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />
