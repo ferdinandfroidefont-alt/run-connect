@@ -947,6 +947,35 @@ export default function StoryCreate() {
     return () => window.removeEventListener("resize", onResize);
   }, [step, syncDrawCanvasSize, previewUrl]);
 
+  useEffect(() => {
+    if (step !== "edit") return;
+
+    const pinViewportTop = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest("input, textarea, [contenteditable='true']")) return;
+      pinViewportTop();
+      requestAnimationFrame(pinViewportTop);
+      window.setTimeout(pinViewportTop, 120);
+    };
+
+    pinViewportTop();
+    document.addEventListener("focusin", onFocusIn);
+    window.visualViewport?.addEventListener("resize", pinViewportTop);
+    window.visualViewport?.addEventListener("scroll", pinViewportTop);
+
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      window.visualViewport?.removeEventListener("resize", pinViewportTop);
+      window.visualViewport?.removeEventListener("scroll", pinViewportTop);
+    };
+  }, [step]);
+
   const drawAtPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -1405,7 +1434,7 @@ export default function StoryCreate() {
   const isVideo = mediaFile?.type.startsWith("video/");
 
   return (
-    <div className="fixed inset-0 z-[180] flex flex-col bg-black">
+    <div className="fixed inset-0 z-[180] flex flex-col overflow-hidden bg-black">
       {/* Preview fullscreen */}
       <div
         className="relative flex-1"
@@ -1658,7 +1687,7 @@ export default function StoryCreate() {
         </div>
 
         {/* Top bar */}
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
+        <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
           <button
             type="button"
             onClick={() => {
