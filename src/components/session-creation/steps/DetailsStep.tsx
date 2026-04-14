@@ -36,6 +36,7 @@ import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
+import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -61,6 +62,13 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onBack,
 }) => {
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
+  const [openPicker, setOpenPicker] = useState<null | 'pace' | 'distance' | 'elevation' | 'participants'>(null);
+  const [draftPaceMin, setDraftPaceMin] = useState("5");
+  const [draftPaceSec, setDraftPaceSec] = useState("30");
+  const [draftDistanceWhole, setDraftDistanceWhole] = useState("10");
+  const [draftDistanceDec, setDraftDistanceDec] = useState("0");
+  const [draftElevation, setDraftElevation] = useState("150");
+  const [draftParticipants, setDraftParticipants] = useState("20");
   // Auto-generate title suggestion
   useEffect(() => {
     if (!formData.title && formData.activity_type && selectedLocation) {
@@ -92,6 +100,40 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
   const handleRouteAutoFill = (data: { distance_km: string; elevation_gain: string }) => {
     onFormDataChange(data);
+  };
+
+  const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const distanceDecOptions = Array.from({ length: 10 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const participantsOptions = Array.from({ length: 200 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+  const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+  const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+
+  const openDistancePicker = () => {
+    const [w = "0", d = "0"] = (formData.distance_km || "0").replace(",", ".").split(".");
+    setDraftDistanceWhole(String(Math.max(0, Number.parseInt(w, 10) || 0)));
+    setDraftDistanceDec(String(Math.max(0, Math.min(9, Number.parseInt(d?.[0] ?? "0", 10) || 0))));
+    setOpenPicker("distance");
+  };
+
+  const openPacePicker = () => {
+    const raw = (formData.pace_general || "").trim();
+    const mmss = raw.match(/(\d{1,2}):(\d{2})/);
+    const min = mmss ? Number.parseInt(mmss[1], 10) : 5;
+    const sec = mmss ? Number.parseInt(mmss[2], 10) : 30;
+    setDraftPaceMin(String(Math.max(0, Math.min(59, min))));
+    setDraftPaceSec(String(Math.max(0, Math.min(59, sec))));
+    setOpenPicker("pace");
+  };
+
+  const openElevationPicker = () => {
+    setDraftElevation(String(Math.max(0, Number.parseInt(formData.elevation_gain || "0", 10) || 0)));
+    setOpenPicker("elevation");
+  };
+
+  const openParticipantsPicker = () => {
+    setDraftParticipants(String(Math.max(1, Number.parseInt(formData.max_participants || "20", 10) || 20)));
+    setOpenPicker("participants");
   };
 
   return (
@@ -163,10 +205,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 Allure générale
               </Label>
               <Input
-                value={formData.pace_general}
-                onChange={(e) => onFormDataChange({ pace_general: e.target.value })}
+                value={formData.pace_general || ''}
+                readOnly
+                onClick={openPacePicker}
                 placeholder={pacePlaceholder}
-                className="h-11"
+                className="h-11 cursor-pointer"
               />
             </div>
           </div>
@@ -206,12 +249,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 </Label>
                 <Input
                   id="distance_km"
-                  type="number"
-                  step="0.1"
                   value={formData.distance_km}
-                  onChange={(e) => onFormDataChange({ distance_km: e.target.value })}
+                  readOnly
+                  onClick={openDistancePicker}
                   placeholder={isSwimmingActivity(formData.activity_type) ? "1500" : "10"}
-                  className="h-11 mt-1.5"
+                  className="h-11 mt-1.5 cursor-pointer"
                 />
               </div>
               {showElevationField && (
@@ -222,11 +264,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                   </Label>
                   <Input
                     id="elevation_gain"
-                    type="number"
                     value={formData.elevation_gain}
-                    onChange={(e) => onFormDataChange({ elevation_gain: e.target.value })}
+                    readOnly
+                    onClick={openElevationPicker}
                     placeholder="150"
-                    className="h-11 mt-1.5"
+                    className="h-11 mt-1.5 cursor-pointer"
                   />
                 </div>
               )}
@@ -264,12 +306,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             </Label>
             <Input
               id="max_participants"
-              type="number"
               value={formData.max_participants}
-              onChange={(e) => onFormDataChange({ max_participants: e.target.value })}
+              readOnly
+              onClick={openParticipantsPicker}
               placeholder="Illimité"
-              min="1"
-              className="h-11 mt-1.5"
+              className="h-11 mt-1.5 cursor-pointer"
             />
           </div>
 
@@ -390,6 +431,57 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
           </div>
         </div>
       </div>
+
+      <WheelValuePickerModal
+        open={openPicker === 'pace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure générale"
+        columns={[
+          { items: paceMinOptions, value: draftPaceMin, onChange: setDraftPaceMin, suffix: 'min' },
+          { items: paceSecOptions, value: draftPaceSec, onChange: setDraftPaceSec, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ pace_general: `${draftPaceMin}:${draftPaceSec.padStart(2, '0')}/km` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'distance'}
+        onClose={() => setOpenPicker(null)}
+        title={`Distance (${distanceUnit})`}
+        columns={[
+          { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole },
+          { items: distanceDecOptions, value: draftDistanceDec, onChange: setDraftDistanceDec },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ distance_km: `${draftDistanceWhole}.${draftDistanceDec}` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'elevation'}
+        onClose={() => setOpenPicker(null)}
+        title="Dénivelé positif"
+        columns={[
+          { items: elevationOptions, value: draftElevation, onChange: setDraftElevation, suffix: 'm' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ elevation_gain: draftElevation });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'participants'}
+        onClose={() => setOpenPicker(null)}
+        title="Participants max"
+        columns={[
+          { items: participantsOptions, value: draftParticipants, onChange: setDraftParticipants, suffix: 'pers.' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ max_participants: draftParticipants });
+          setOpenPicker(null);
+        }}
+      />
 
       {/* Navigation */}
       <div className="flex gap-3 mt-auto pt-4">

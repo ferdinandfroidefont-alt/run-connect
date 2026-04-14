@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionBlock as SessionBlockType, BlockType, INTENSITY_LEVELS, RECOVERY_TYPES, getPacePlaceholder, isRunningActivity } from './types';
 import { cn } from '@/lib/utils';
-import { rpeChipColor } from '@/lib/sessionBlockRpe';
+import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 
 function RpeTenPicker({
   label,
@@ -17,25 +17,33 @@ function RpeTenPicker({
   value?: number;
   onChange: (v: number | undefined) => void;
 }) {
+  const [open, setOpen] = React.useState(false);
+  const [draft, setDraft] = React.useState(String(value ?? 5));
+  const rpeOptions = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+
   return (
     <div className="flex flex-col gap-1.5 pt-2 border-t border-border/50">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex flex-wrap gap-0.5">
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(value === n ? undefined : n)}
-            className={cn(
-              'h-8 min-w-[28px] px-1 rounded-lg text-[11px] font-semibold transition-colors touch-manipulation',
-              value === n ? 'text-white shadow-sm' : 'bg-card text-muted-foreground hover:bg-card/80 active:scale-95'
-            )}
-            style={value === n ? { backgroundColor: rpeChipColor(n) } : undefined}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(String(value ?? 5));
+          setOpen(true);
+        }}
+        className="h-10 rounded-lg border border-border bg-card px-3 text-left text-sm text-foreground"
+      >
+        RPE {value ?? "—"} / 10
+      </button>
+      <WheelValuePickerModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={label}
+        columns={[{ items: rpeOptions, value: draft, onChange: setDraft }]}
+        onConfirm={() => {
+          onChange(Number.parseInt(draft, 10) || undefined);
+          setOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -65,6 +73,24 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
   const config = BLOCK_CONFIG[block.type];
   const IconComponent = config.icon;
   const pacePlaceholder = getPacePlaceholder(activityType);
+  const [openPicker, setOpenPicker] = React.useState<null | 'repetitions' | 'distance' | 'effortPace' | 'recovery' | 'duration' | 'pace'>(null);
+  const [draftA, setDraftA] = React.useState("0");
+  const [draftB, setDraftB] = React.useState("0");
+
+  const intOptions = (max: number, start = 0) => Array.from({ length: max - start + 1 }, (_, i) => ({ value: String(i + start), label: String(i + start) }));
+  const secOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+
+  const openIntPicker = (kind: 'repetitions' | 'distance' | 'recovery' | 'duration', current: string | number | undefined, fallback = 0) => {
+    setDraftA(String(Number.parseInt(String(current ?? fallback), 10) || fallback));
+    setOpenPicker(kind);
+  };
+
+  const openPacePicker = (kind: 'effortPace' | 'pace', current: string | undefined) => {
+    const mmss = (current || "").match(/(\d{1,2}):(\d{2})/);
+    setDraftA(String(mmss ? Number.parseInt(mmss[1], 10) : 5));
+    setDraftB(String(mmss ? Number.parseInt(mmss[2], 10) : 0));
+    setOpenPicker(kind);
+  };
 
   return (
     <motion.div
@@ -103,30 +129,31 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
               <div>
                 <Label className="text-xs text-muted-foreground">Répétitions</Label>
                 <Input
-                  type="number"
                   value={block.repetitions || ''}
-                  onChange={(e) => onUpdate({ repetitions: parseInt(e.target.value) || undefined })}
+                  readOnly
+                  onClick={() => openIntPicker('repetitions', block.repetitions, 10)}
                   placeholder="10"
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Distance (m)</Label>
                 <Input
-                  type="number"
                   value={block.effortDuration || ''}
-                  onChange={(e) => onUpdate({ effortDuration: e.target.value, effortType: 'distance' })}
+                  readOnly
+                  onClick={() => openIntPicker('distance', block.effortDuration, 400)}
                   placeholder="400"
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Allure</Label>
                 <Input
                   value={block.effortPace || ''}
-                  onChange={(e) => onUpdate({ effortPace: e.target.value })}
+                  readOnly
+                  onClick={() => openPacePicker('effortPace', block.effortPace)}
                   placeholder={isRunningActivity(activityType) ? "3:30" : "35"}
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
             </div>
@@ -160,11 +187,11 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
                 <div>
                   <Label className="text-xs text-muted-foreground">Durée (sec)</Label>
                   <Input
-                    type="number"
                     value={block.recoveryDuration || ''}
-                    onChange={(e) => onUpdate({ recoveryDuration: e.target.value })}
+                    readOnly
+                    onClick={() => openIntPicker('recovery', block.recoveryDuration, 90)}
                     placeholder="90"
-                    className="h-10 text-sm"
+                    className="h-10 cursor-pointer text-sm"
                   />
                 </div>
                 <div>
@@ -201,20 +228,21 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
               <div>
                 <Label className="text-xs text-muted-foreground">Durée (min)</Label>
                 <Input
-                  type="number"
                   value={block.duration || ''}
-                  onChange={(e) => onUpdate({ duration: e.target.value, durationType: 'time' })}
+                  readOnly
+                  onClick={() => openIntPicker('duration', block.duration, 15)}
                   placeholder={block.type === 'warmup' ? "15" : "10"}
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Allure</Label>
                 <Input
                   value={block.pace || ''}
-                  onChange={(e) => onUpdate({ pace: e.target.value })}
+                  readOnly
+                  onClick={() => openPacePicker('pace', block.pace)}
                   placeholder={pacePlaceholder}
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
             </div>
@@ -245,6 +273,72 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
           </>
         )}
       </div>
+      <WheelValuePickerModal
+        open={openPicker === 'repetitions'}
+        onClose={() => setOpenPicker(null)}
+        title="Répétitions"
+        columns={[{ items: intOptions(100, 1), value: draftA, onChange: setDraftA, suffix: 'x' }]}
+        onConfirm={() => {
+          onUpdate({ repetitions: Number.parseInt(draftA, 10) || undefined });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'distance'}
+        onClose={() => setOpenPicker(null)}
+        title="Distance effort"
+        columns={[{ items: intOptions(5000, 50), value: draftA, onChange: setDraftA, suffix: 'm' }]}
+        onConfirm={() => {
+          onUpdate({ effortDuration: draftA, effortType: 'distance' });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'recovery'}
+        onClose={() => setOpenPicker(null)}
+        title="Récupération"
+        columns={[{ items: intOptions(1200, 0), value: draftA, onChange: setDraftA, suffix: 's' }]}
+        onConfirm={() => {
+          onUpdate({ recoveryDuration: draftA });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'duration'}
+        onClose={() => setOpenPicker(null)}
+        title="Durée du bloc"
+        columns={[{ items: intOptions(240, 1), value: draftA, onChange: setDraftA, suffix: 'min' }]}
+        onConfirm={() => {
+          onUpdate({ duration: draftA, durationType: 'time' });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'effortPace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure effort"
+        columns={[
+          { items: intOptions(59, 0).map((it) => ({ ...it, label: it.label.padStart(2, '0') })), value: draftA, onChange: setDraftA, suffix: 'min' },
+          { items: secOptions, value: draftB, onChange: setDraftB, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onUpdate({ effortPace: `${draftA}:${draftB.padStart(2, '0')}` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'pace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure du bloc"
+        columns={[
+          { items: intOptions(59, 0).map((it) => ({ ...it, label: it.label.padStart(2, '0') })), value: draftA, onChange: setDraftA, suffix: 'min' },
+          { items: secOptions, value: draftB, onChange: setDraftB, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onUpdate({ pace: `${draftA}:${draftB.padStart(2, '0')}` });
+          setOpenPicker(null);
+        }}
+      />
     </motion.div>
   );
 };

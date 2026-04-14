@@ -304,7 +304,14 @@ export default function StoryCreate() {
   };
 
   const toggleTrackPreview = async (track: StoryMusicTrack) => {
-    if (!track.previewUrl) return;
+    if (!track.previewUrl) {
+      toast({
+        title: "Aperçu indisponible",
+        description: "Cette musique n'a pas de préécoute.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (previewAudioRef.current && previewingTrackId === track.id) {
       previewAudioRef.current.pause();
       previewAudioRef.current.currentTime = 0;
@@ -316,6 +323,9 @@ export default function StoryCreate() {
       previewAudioRef.current.currentTime = 0;
     }
     const audio = new Audio(track.previewUrl);
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.muted = false;
     previewAudioRef.current = audio;
     setPreviewingTrackId(track.id);
     audio.onended = () => setPreviewingTrackId(null);
@@ -323,6 +333,11 @@ export default function StoryCreate() {
       await audio.play();
     } catch {
       setPreviewingTrackId(null);
+      toast({
+        title: "Lecture impossible",
+        description: "Impossible de lancer la préécoute audio.",
+        variant: "destructive",
+      });
     }
   };
 

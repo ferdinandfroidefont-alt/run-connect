@@ -13,6 +13,8 @@ interface IosWheelColumnProps {
   className?: string;
 }
 
+type WheelOption = { value: string; label: string };
+
 export function IosWheelColumn({ items, value, onChange, suffix, className }: IosWheelColumnProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -122,6 +124,58 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+interface WheelValuePickerModalProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  columns: Array<{
+    items: WheelOption[];
+    value: string;
+    onChange: (next: string) => void;
+    suffix?: string;
+  }>;
+  onConfirm: () => void;
+}
+
+export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm }: WheelValuePickerModalProps) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
+          <button onClick={onClose} className="text-[17px] text-muted-foreground active:opacity-60">
+            Annuler
+          </button>
+          <span className="text-[17px] font-semibold text-foreground">{title}</span>
+          <button onClick={onConfirm} className="text-[17px] font-semibold text-primary active:opacity-60">
+            OK
+          </button>
+        </div>
+        <div className="flex items-center gap-0 px-4 py-2">
+          {columns.map((col, colIndex) => {
+            const selectedIndex = Math.max(0, col.items.findIndex((it) => it.value === col.value));
+            return (
+              <div key={colIndex} className="flex min-w-0 flex-1 items-center">
+                <IosWheelColumn
+                  items={col.items.map((it) => it.label)}
+                  value={selectedIndex}
+                  onChange={(idx) => col.onChange(col.items[idx]?.value ?? col.value)}
+                  suffix={col.suffix}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
