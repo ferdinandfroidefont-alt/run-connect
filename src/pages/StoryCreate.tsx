@@ -1560,7 +1560,7 @@ export default function StoryCreate() {
   if (step === "entry") {
     return (
       <>
-      <div className="fixed inset-0 z-[180] flex flex-col bg-background">
+      <div className="relative flex min-h-0 flex-1 flex-col bg-background">
         <div className="fixed inset-x-0 top-0 z-30 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
@@ -1717,7 +1717,7 @@ export default function StoryCreate() {
   // ═══════════════════════════════════════
   if (step === "capture") {
     return (
-      <div className="fixed inset-0 z-[180] flex flex-col bg-black">
+      <div className="relative flex min-h-0 flex-1 flex-col bg-black">
         {/* Top bar */}
         <div className="fixed inset-x-0 top-0 z-30 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
@@ -1856,7 +1856,7 @@ export default function StoryCreate() {
   const isVideo = mediaFile?.type.startsWith("video/");
 
   return (
-    <div className="fixed inset-0 z-[180] flex flex-col overflow-hidden bg-black">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
       {/* Preview fullscreen */}
       <div
         className="relative flex-1"
