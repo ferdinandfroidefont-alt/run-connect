@@ -985,13 +985,13 @@ html, body {
 .rc-session-pin__tip {
   position: absolute;
   left: 50%;
-  top: 31px;
+  top: 48px;
   width: 18px;
-  height: 18px;
-  transform: translateX(-50%) rotate(45deg);
-  border-radius: 0 0 4px 0;
+  height: 16px;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
   background: var(--rc-pin-color, #2563EB);
-  box-shadow: 3px 3px 8px rgba(15, 23, 42, 0.2);
+  filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.28));
 }
 
 .rc-session-pin__avatar-ring {

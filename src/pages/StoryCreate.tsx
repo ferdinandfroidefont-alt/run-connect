@@ -43,6 +43,44 @@ type ScheduledSession = {
   route_coordinates?: Array<{ lat: number; lng: number }>;
 };
 
+type StoryDraftPayload = {
+  savedAt: number;
+  sourceMode: "camera" | "gallery";
+  captureMode: CaptureMode;
+  mediaDataUrl: string | null;
+  mediaType: string | null;
+  mediaName: string | null;
+  textOverlay: string;
+  showTextInput: boolean;
+  textPos: { x: number; y: number };
+  textScale: number;
+  textRotation: number;
+  textColor: string;
+  textFont: TextFontMode;
+  textAlign: TextAlign;
+  textStyle: TextStyleMode;
+  textSize: number;
+  textBold: boolean;
+  caption: string;
+  selectedMusic: StoryMusicTrack | null;
+  selectedSession: ScheduledSession | null;
+  dynamicLayers: DynamicLayer[];
+  emojiSticker: string | null;
+  layerOrder: LayerKind[];
+};
+
+const STORY_DRAFT_STORAGE_KEY = "runconnect_story_create_draft_v1";
+
+function parseSessionTimestamp(value: string | null | undefined): number {
+  if (!value) return Number.NaN;
+  const direct = Date.parse(value);
+  if (Number.isFinite(direct)) return direct;
+  // Fallback: certaines valeurs SQL sans timezone peuvent être interprétées différemment selon device.
+  const normalized = value.includes("T") ? value : value.replace(" ", "T");
+  const asLocal = Date.parse(normalized);
+  return Number.isFinite(asLocal) ? asLocal : Number.NaN;
+}
+
 const FONT_MAP: Record<TextFontMode, string> = {
   modern: '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif',
   clean: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif',
@@ -121,6 +159,7 @@ export default function StoryCreate() {
 
   // Share
   const [sharing, setSharing] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
@@ -170,6 +209,14 @@ export default function StoryCreate() {
         previewAudioRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      setHasDraft(!!window.localStorage.getItem(STORY_DRAFT_STORAGE_KEY));
+    } catch {
+      setHasDraft(false);
+    }
   }, []);
 
   const layerZ = useCallback(
@@ -246,6 +293,195 @@ export default function StoryCreate() {
     setSelectedMusic(pendingMusic);
     setShowMusicPicker(false);
   };
+
+  const resetEditorState = useCallback(() => {
+    setMediaFile(null);
+    setStep("entry");
+    setTextOverlay("");
+    setSelectedMusic(null);
+    setPendingMusic(null);
+    setSelectedSession(null);
+    setEmojiSticker(null);
+    setDynamicLayers([]);
+    setDrawMode(false);
+    setShowTextInput(false);
+    setShowMusicPicker(false);
+    setShowSessionPicker(false);
+    setShowStickerPicker(false);
+    setSelectedLayer(null);
+    setSelectedDynamicLayerId(null);
+    setCaption("");
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+  }, []);
+
+  const fileToDataUrl = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("read_error"));
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const dataUrlToFile = useCallback((dataUrl: string, fileName: string, mimeType: string): File | null => {
+    const comma = dataUrl.indexOf(",");
+    if (comma < 0) return null;
+    const b64 = dataUrl.slice(comma + 1);
+    try {
+      const bin = window.atob(b64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i += 1) bytes[i] = bin.charCodeAt(i);
+      return new File([bytes], fileName || `story-draft-${Date.now()}`, { type: mimeType || "application/octet-stream" });
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const saveDraft = useCallback(async () => {
+    const mediaDataUrl = mediaFile ? await fileToDataUrl(mediaFile) : null;
+    const payload: StoryDraftPayload = {
+      savedAt: Date.now(),
+      sourceMode,
+      captureMode,
+      mediaDataUrl,
+      mediaType: mediaFile?.type ?? null,
+      mediaName: mediaFile?.name ?? null,
+      textOverlay,
+      showTextInput,
+      textPos,
+      textScale,
+      textRotation,
+      textColor,
+      textFont,
+      textAlign,
+      textStyle,
+      textSize,
+      textBold,
+      caption,
+      selectedMusic,
+      selectedSession,
+      dynamicLayers,
+      emojiSticker,
+      layerOrder,
+    };
+    window.localStorage.setItem(STORY_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    setHasDraft(true);
+  }, [
+    mediaFile,
+    fileToDataUrl,
+    sourceMode,
+    captureMode,
+    textOverlay,
+    showTextInput,
+    textPos,
+    textScale,
+    textRotation,
+    textColor,
+    textFont,
+    textAlign,
+    textStyle,
+    textSize,
+    textBold,
+    caption,
+    selectedMusic,
+    selectedSession,
+    dynamicLayers,
+    emojiSticker,
+    layerOrder,
+  ]);
+
+  const clearDraft = useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORY_DRAFT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    setHasDraft(false);
+  }, []);
+
+  const restoreDraft = useCallback(async () => {
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(STORY_DRAFT_STORAGE_KEY);
+    } catch {
+      raw = null;
+    }
+    if (!raw) {
+      setHasDraft(false);
+      toast({ title: "Aucun brouillon", description: "Aucun brouillon à reprendre." });
+      return;
+    }
+    try {
+      const draft = JSON.parse(raw) as StoryDraftPayload;
+      setSourceMode(draft.sourceMode ?? "gallery");
+      setCaptureMode(draft.captureMode ?? "photo");
+      setTextOverlay(draft.textOverlay ?? "");
+      setShowTextInput(!!draft.showTextInput);
+      setTextPos(draft.textPos ?? { x: 120, y: 200 });
+      setTextScale(typeof draft.textScale === "number" ? draft.textScale : 1);
+      setTextRotation(typeof draft.textRotation === "number" ? draft.textRotation : 0);
+      setTextColor(draft.textColor ?? "#FFFFFF");
+      setTextFont(draft.textFont ?? "modern");
+      setTextAlign(draft.textAlign ?? "center");
+      setTextStyle(draft.textStyle ?? "bubble");
+      setTextSize(typeof draft.textSize === "number" ? draft.textSize : 30);
+      setTextBold(draft.textBold ?? true);
+      setCaption(draft.caption ?? "");
+      setSelectedMusic(draft.selectedMusic ?? null);
+      setPendingMusic(draft.selectedMusic ?? null);
+      setSelectedSession(draft.selectedSession ?? null);
+      setDynamicLayers(Array.isArray(draft.dynamicLayers) ? draft.dynamicLayers : []);
+      setEmojiSticker(draft.emojiSticker ?? null);
+      setLayerOrder(Array.isArray(draft.layerOrder) ? draft.layerOrder : ["session", "music", "emoji", "text"]);
+      if (draft.mediaDataUrl && draft.mediaType) {
+        const restoredFile = dataUrlToFile(draft.mediaDataUrl, draft.mediaName || "story-draft", draft.mediaType);
+        setMediaFile(restoredFile);
+        setStep(restoredFile ? "edit" : "entry");
+      } else {
+        setMediaFile(null);
+        setStep("entry");
+      }
+      toast({ title: "Brouillon repris", description: "Ton brouillon a été restauré." });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de restaurer le brouillon.", variant: "destructive" });
+    }
+  }, [dataUrlToFile, toast]);
+
+  const requestExitWithDraftPrompt = useCallback(
+    async (next: "feed" | "entry") => {
+      const hasWork =
+        !!mediaFile ||
+        !!caption.trim() ||
+        !!textOverlay.trim() ||
+        !!selectedMusic ||
+        !!selectedSession ||
+        !!emojiSticker ||
+        dynamicLayers.length > 0;
+
+      if (hasWork) {
+        const save = window.confirm("Enregistrer le brouillon avant de quitter ?");
+        if (save) {
+          try {
+            await saveDraft();
+            toast({ title: "Brouillon enregistré", description: "Tu pourras le reprendre plus tard." });
+          } catch {
+            toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
+          }
+        }
+      }
+
+      if (next === "feed") {
+        navigate("/feed");
+        return;
+      }
+      resetEditorState();
+    },
+    [mediaFile, caption, textOverlay, selectedMusic, selectedSession, emojiSticker, dynamicLayers, saveDraft, toast, navigate, resetEditorState]
+  );
 
   const addDynamicLayer = (kind: DynamicLayerKind) => {
     const id = `${kind}-${Date.now()}`;
@@ -404,18 +640,19 @@ export default function StoryCreate() {
     const joinedRows = (joinedRes.data ?? []) as Array<{ session?: any }>;
     const joinedSessions = joinedRows.map((r) => r.session).filter(Boolean);
 
-    const now = Date.now();
+    // Tolérance pour éviter les faux négatifs "aucune séance à venir" liés aux décalages timezone/device.
+    const minVisibleTs = Date.now() - 6 * 60 * 60 * 1000;
     const byId = new Map<string, any>();
     for (const s of [...createdRows, ...joinedSessions]) {
       if (!s?.id) continue;
-      const ts = Date.parse(s.scheduled_at ?? "");
+      const ts = parseSessionTimestamp(s.scheduled_at ?? "");
       if (!Number.isFinite(ts)) continue;
-      if (ts < now) continue;
+      if (ts < minVisibleTs) continue;
       if (!byId.has(s.id)) byId.set(s.id, s);
     }
 
     const normalized = Array.from(byId.values())
-      .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))
+      .sort((a, b) => parseSessionTimestamp(a.scheduled_at) - parseSessionTimestamp(b.scheduled_at))
       .slice(0, 30)
       .map((s) => ({
       id: s.id,
@@ -830,6 +1067,7 @@ export default function StoryCreate() {
       if (mediaError) throw mediaError;
 
       toast({ title: "Story partagée ✨", description: "Ta story est en ligne." });
+      clearDraft();
       navigate("/feed", { state: { refreshStories: true } });
     } catch (error: unknown) {
       if (uploadedStoragePath) {
@@ -1233,7 +1471,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => navigate("/feed")}
+              onClick={() => void requestExitWithDraftPrompt("feed")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1277,23 +1515,50 @@ export default function StoryCreate() {
             >
               <CalendarPlus className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-sm font-semibold">Partager une seance programmee</p>
+                <p className="text-sm font-semibold">Partager une séance programmée</p>
                 <p className="text-xs text-muted-foreground">Carte, pin et itinéraire</p>
               </div>
             </button>
+            {hasDraft && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => void restoreDraft()}
+                  className="ios-card flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-4 text-left text-foreground transition active:scale-[0.98]"
+                >
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Reprendre un brouillon</p>
+                    <p className="text-xs text-muted-foreground">Restaurer la story non publiée</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ok = window.confirm("Supprimer ce brouillon ?");
+                    if (!ok) return;
+                    clearDraft();
+                    toast({ title: "Brouillon supprimé" });
+                  }}
+                  className="w-full rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-2.5 text-sm font-medium text-destructive transition active:scale-[0.98]"
+                >
+                  Supprimer le brouillon
+                </button>
+              </div>
+            )}
           </div>
         </div>
         {showSessionPicker && (
           <div className="shrink-0 rounded-t-3xl bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Selectionne une seance</p>
+              <p className="text-sm font-semibold">Sélectionne une séance</p>
               <button type="button" className="text-xs text-muted-foreground" onClick={() => setShowSessionPicker(false)}>
                 Fermer
               </button>
             </div>
             <div className="max-h-56 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
               {sessions.length === 0 ? (
-                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune seance a venir</p>
+                <p className="px-3 py-4 text-center text-sm text-muted-foreground">Aucune séance à venir</p>
               ) : (
                 sessions.map((s) => (
                   <button
@@ -1302,7 +1567,7 @@ export default function StoryCreate() {
                     onClick={async () => {
                       const generated = await createSessionStoryImage(s);
                       if (!generated) {
-                        toast({ title: "Erreur", description: "Impossible de preparer la story de seance", variant: "destructive" });
+                        toast({ title: "Erreur", description: "Impossible de préparer la story de séance", variant: "destructive" });
                         return;
                       }
                       setSelectedSession(s);
@@ -1340,7 +1605,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => navigate("/feed")}
+              onClick={() => void requestExitWithDraftPrompt("feed")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1730,22 +1995,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => {
-                setMediaFile(null);
-                setStep("entry");
-                setTextOverlay("");
-                setSelectedMusic(null);
-                setSelectedSession(null);
-                setEmojiSticker(null);
-                setDynamicLayers([]);
-                setDrawMode(false);
-                setShowTextInput(false);
-                setSelectedLayer(null);
-                if (previewAudioRef.current) {
-                  previewAudioRef.current.pause();
-                  previewAudioRef.current = null;
-                }
-              }}
+              onClick={() => void requestExitWithDraftPrompt("entry")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
