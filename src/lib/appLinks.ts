@@ -41,7 +41,7 @@ export function buildPreferredProfileShareLink(options: ProfileLinkOptions): str
 }
 
 export function buildPreferredSessionShareLink(sessionId: string): string {
-  return buildSessionUniversalLink(sessionId);
+  return `${APP_WEB_ORIGIN}/open/session/${encodeURIComponent(sessionId)}`;
 }
 
 export function getStoreFallbackUrl(): string {
