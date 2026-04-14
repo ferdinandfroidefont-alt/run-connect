@@ -239,7 +239,7 @@ export const ClubManagementDialog = ({
           <DialogTitle className="sr-only">Gérer le club</DialogTitle>
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
-            contentTopOffsetPx={0}
+            contentTopOffsetPx={12}
             headerWrapperClassName="shrink-0"
             header={<CoachingFullscreenHeader title="Gérer le club" onBack={onClose} />}
             scrollClassName="bg-secondary py-4"
