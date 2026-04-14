@@ -890,60 +890,23 @@ export const InteractiveMap = ({
       hasRoute: !!s.routes
     })));
 
-    const resolveSessionMarkerPoint = (session: Session): { lng: number; lat: number } | null => {
-      const rawLng = session.location_lng;
-      const rawLat = session.location_lat;
-      const lng = typeof rawLng === 'number' ? rawLng : Number(rawLng);
-      const lat = typeof rawLat === 'number' ? rawLat : Number(rawLat);
-      const hasDirect =
-        rawLng != null &&
-        rawLat != null &&
-        Number.isFinite(lng) &&
-        Number.isFinite(lat) &&
-        Math.abs(lat) <= 90 &&
-        Math.abs(lng) <= 180 &&
-        !(Math.abs(lat) < 1e-8 && Math.abs(lng) < 1e-8);
-      if (hasDirect) return { lng, lat };
-
-      const routeCoords = Array.isArray(session.routes?.coordinates) ? session.routes?.coordinates : [];
-      const first = routeCoords.find(
-        (c: any) =>
-          c &&
-          typeof c === 'object' &&
-          Number.isFinite(Number(c.lng)) &&
-          Number.isFinite(Number(c.lat)) &&
-          Math.abs(Number(c.lat)) <= 90 &&
-          Math.abs(Number(c.lng)) <= 180,
-      );
-      if (first) return { lng: Number(first.lng), lat: Number(first.lat) };
-      return null;
-    };
-
-    const clustersByCoord = new window.Map<string, Session[]>();
-    for (const session of filteredSessions) {
-      const point = resolveSessionMarkerPoint(session);
-      if (!point) continue;
-      const { lng, lat } = point;
-      const key = `${lat.toFixed(5)}:${lng.toFixed(5)}`;
-      const list = clustersByCoord.get(key) ?? [];
-      list.push(session);
-      clustersByCoord.set(key, list);
-    }
-    const clusterSessions = Array.from(clustersByCoord.values());
-
-    const markerPromises = clusterSessions.map(async (cluster) => {
+    const markerPromises = filteredSessions.map(async (session) => {
       try {
         if (runId !== markersRunIdRef.current) return null;
-        const session = cluster[0];
-        const point = resolveSessionMarkerPoint(session);
-        if (!point) {
+        const lng = Number(session.location_lng);
+        const lat = Number(session.location_lat);
+        if (
+          !Number.isFinite(lng) ||
+          !Number.isFinite(lat) ||
+          Math.abs(lat) > 90 ||
+          Math.abs(lng) > 180
+        ) {
           return null;
         }
-        const { lng, lat } = point;
         const sessionDate = new Date(session.scheduled_at);
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
-        const isSelected = !!previewSession && cluster.some((s) => s.id === previewSession.id);
+        const isSelected = previewSession?.id === session.id;
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -960,7 +923,7 @@ export const InteractiveMap = ({
         const pin = document.createElement('button');
         pin.type = 'button';
         pin.className = 'rc-session-pin__shape';
-        pin.setAttribute('aria-label', cluster.length > 1 ? `${cluster.length} séances` : session.title || 'Séance');
+        pin.setAttribute('aria-label', session.title || 'Séance');
         pin.style.display = 'block';
         pin.style.position = 'relative';
         pin.style.width = '50px';
@@ -1019,26 +982,6 @@ export const InteractiveMap = ({
         avatarRing.appendChild(avatarImg);
         pin.appendChild(avatarRing);
 
-        if (cluster.length > 1) {
-          const badge = document.createElement('span');
-          badge.className = 'rc-session-pin__cluster-badge';
-          badge.textContent = String(cluster.length);
-          pin.appendChild(badge);
-
-          const stack = document.createElement('span');
-          stack.className = 'rc-session-pin__stack';
-          const extras = cluster.slice(1, 3);
-          for (const extra of extras) {
-            const s = document.createElement('img');
-            s.className = 'rc-session-pin__stack-avatar';
-            s.src = extra.profiles?.avatar_url || '/placeholder.svg';
-            s.alt = '';
-            s.draggable = false;
-            stack.appendChild(s);
-          }
-          pin.appendChild(stack);
-        }
-
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -1052,11 +995,9 @@ export const InteractiveMap = ({
         console.error('Error creating custom marker cluster:', error);
         if (runId !== markersRunIdRef.current) return null;
         try {
-          const session = cluster[0];
-          if (!session) return null;
-          const point = resolveSessionMarkerPoint(session);
-          if (!point) return null;
-          const { lng, lat } = point;
+          const lng = Number(session.location_lng);
+          const lat = Number(session.location_lat);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
 
           const fallbackWrap = document.createElement('div');
           fallbackWrap.style.width = '16px';
@@ -1086,7 +1027,7 @@ export const InteractiveMap = ({
     const validMarkers = createdMarkers.filter((marker): marker is SessionMarkerVisual => marker !== null);
     markers.current = validMarkers;
     applyMarkerScaleFromZoom();
-    console.log(`Successfully created ${validMarkers.length} marker clusters out of ${filteredSessions.length} sessions`);
+    console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
   };
 
   // Handle shared session link parameters
