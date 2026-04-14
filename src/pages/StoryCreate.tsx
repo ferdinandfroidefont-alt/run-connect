@@ -182,8 +182,9 @@ export default function StoryCreate() {
   const [sharing, setSharing] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-  const [pendingExitTarget, setPendingExitTarget] = useState<"feed" | "entry" | null>(null);
+  const [pendingExitTarget, setPendingExitTarget] = useState<"back" | "feed" | "entry" | null>(null);
   const autoRestoreDoneRef = useRef(false);
+  const autoSessionShareDoneRef = useRef(false);
   const [resumedFromDraft, setResumedFromDraft] = useState(false);
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
@@ -490,7 +491,15 @@ export default function StoryCreate() {
   }, [restoreDraft, searchParams, setSearchParams]);
 
   const proceedExit = useCallback(
-    (next: "feed" | "entry") => {
+    (next: "back" | "feed" | "entry") => {
+      if (next === "back") {
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          navigate("/feed");
+        }
+        return;
+      }
       if (next === "feed") {
         navigate("/feed");
         return;
@@ -502,7 +511,7 @@ export default function StoryCreate() {
   );
 
   const requestExitWithDraftPrompt = useCallback(
-    (next: "feed" | "entry") => {
+    (next: "back" | "feed" | "entry") => {
       const hasWork =
         !!mediaFile ||
         !!caption.trim() ||
@@ -529,7 +538,7 @@ export default function StoryCreate() {
       try {
         const { App: CapApp } = await import("@capacitor/app");
         const listener = await CapApp.addListener("backButton", () => {
-          requestExitWithDraftPrompt("feed");
+          requestExitWithDraftPrompt("back");
         });
         return () => {
           if (!removed) {
@@ -1065,6 +1074,50 @@ export default function StoryCreate() {
     }
   };
 
+  useEffect(() => {
+    if (autoSessionShareDoneRef.current) return;
+    const sharedSessionId = searchParams.get("sessionShareId");
+    if (!sharedSessionId) return;
+    if (sessions.length === 0) return;
+
+    autoSessionShareDoneRef.current = true;
+    const targetSession = sessions.find((s) => s.id === sharedSessionId);
+    const clearParam = () => {
+      const next = new URLSearchParams(searchParams);
+      next.delete("sessionShareId");
+      setSearchParams(next, { replace: true });
+    };
+
+    if (!targetSession) {
+      toast({
+        title: "Séance introuvable",
+        description: "Impossible de préparer cette séance en story.",
+        variant: "destructive",
+      });
+      clearParam();
+      return;
+    }
+
+    void (async () => {
+      const generated = await createSessionStoryImage(targetSession);
+      if (!generated) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de préparer la story de séance.",
+          variant: "destructive",
+        });
+        clearParam();
+        return;
+      }
+      setSelectedSession(targetSession);
+      setMediaFile(generated);
+      setShowSessionPicker(false);
+      setStep("edit");
+      setResumedFromDraft(false);
+      clearParam();
+    })();
+  }, [createSessionStoryImage, searchParams, sessions, setSearchParams, toast]);
+
   const onShare = async () => {
     if (!user?.id || !mediaFile) return;
     setSharing(true);
@@ -1590,7 +1643,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => void requestExitWithDraftPrompt("feed")}
+              onClick={() => void requestExitWithDraftPrompt("back")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -1748,7 +1801,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => void requestExitWithDraftPrompt("feed")}
+              onClick={() => void requestExitWithDraftPrompt("back")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -2138,7 +2191,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => void requestExitWithDraftPrompt(resumedFromDraft ? "feed" : "entry")}
+              onClick={() => void requestExitWithDraftPrompt(resumedFromDraft ? "back" : "entry")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />

@@ -3,10 +3,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import ConfirmPresence from '@/pages/ConfirmPresence';
 import { StravaActivitiesPanel } from '@/components/sessions/StravaActivitiesPanel';
+import { buildPreferredSessionShareLink } from '@/lib/appLinks';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -86,6 +88,7 @@ export default function MySessions() {
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showShareActions, setShowShareActions] = useState(false);
   const [sessionPage, setSessionPage] = useState(0);
   const [focusColumn, setFocusColumn] = useState<'programmed' | 'finished'>('programmed');
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
@@ -206,6 +209,69 @@ export default function MySessions() {
       await supabase.from('sessions').update({ live_tracking_active: false }).eq('id', selectedSession.id);
     }
   }, [sessionSource, selectedSession]);
+
+  const buildSessionShareMessage = useCallback(() => {
+    if (!selectedSession) return '';
+    const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
+    const dateLabel = format(new Date(selectedSession.scheduled_at), "EEEE d MMMM 'à' HH:mm", { locale: fr });
+    return `🏃 ${selectedSession.title}
+
+📅 ${dateLabel}
+📍 ${selectedSession.location_name}
+
+Ouvrir avec RunConnect: ${shareUrl}`;
+  }, [selectedSession]);
+
+  const handleCopySessionLink = useCallback(async () => {
+    if (!selectedSession) return;
+    try {
+      const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: "Lien copié", description: "Le lien de la séance est prêt à être collé." });
+      setShowShareActions(false);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de copier le lien.", variant: "destructive" });
+    }
+  }, [selectedSession, toast]);
+
+  const handleShareToRunConnectStory = useCallback(() => {
+    if (!selectedSession) return;
+    setShowShareActions(false);
+    navigate(`/stories/create?sessionShareId=${encodeURIComponent(selectedSession.id)}`);
+  }, [navigate, selectedSession]);
+
+  const handleShareToInstagram = useCallback(async () => {
+    if (!selectedSession) return;
+    const shareMessage = buildSessionShareMessage();
+    const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({
+          title: selectedSession.title,
+          text: `${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`,
+          url: shareUrl,
+          dialogTitle: "Partager sur Instagram",
+        });
+      } else if (navigator.share) {
+        await navigator.share({
+          title: selectedSession.title,
+          text: `${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(`${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`);
+        toast({
+          title: "Texte copié",
+          description: "Colle ce texte dans Instagram et ajoute le lien RunConnect.",
+        });
+      }
+      setShowShareActions(false);
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        toast({ title: "Erreur", description: "Partage Instagram impossible.", variant: "destructive" });
+      }
+    }
+  }, [buildSessionShareMessage, selectedSession, toast]);
 
   const handleTrackingToggle = (checked: boolean) => {
     if (checked) {
@@ -536,6 +602,14 @@ export default function MySessions() {
               </Button>
               {!isViewingJoinedSession && (
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowShareActions(true)}
+                    className="h-9 w-9"
+                  >
+                    <Share2 className="h-5 w-5 text-primary" />
+                  </Button>
                   {isUpcoming && (
                     <Button
                       variant="ghost"
@@ -553,6 +627,18 @@ export default function MySessions() {
                     className="h-9 w-9"
                   >
                     <Trash2 className="h-5 w-5 text-destructive" />
+                  </Button>
+                </div>
+              )}
+              {isViewingJoinedSession && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowShareActions(true)}
+                    className="h-9 w-9"
+                  >
+                    <Share2 className="h-5 w-5 text-primary" />
                   </Button>
                 </div>
               )}
@@ -1181,6 +1267,51 @@ export default function MySessions() {
             >
               Supprimer
             </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showShareActions} onOpenChange={setShowShareActions}>
+        <AlertDialogContent className="rounded-ios-lg max-w-[320px] p-0 gap-0">
+          <AlertDialogHeader className="p-ios-6 pb-ios-4">
+            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
+              Partager la séance
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
+              Choisis comment partager ta séance.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="border-t border-border">
+            <button
+              type="button"
+              onClick={() => void handleCopySessionLink()}
+              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
+            >
+              Copier le lien
+            </button>
+          </div>
+          <div className="border-t border-border">
+            <button
+              type="button"
+              onClick={() => handleShareToRunConnectStory()}
+              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
+            >
+              Publier en story RunConnect
+            </button>
+          </div>
+          <div className="border-t border-border">
+            <button
+              type="button"
+              onClick={() => void handleShareToInstagram()}
+              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
+            >
+              Partager sur Instagram
+            </button>
+          </div>
+          <div className="border-t border-border">
+            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-ios-headline font-normal hover:bg-secondary/50">
+              Annuler
+            </AlertDialogCancel>
           </div>
         </AlertDialogContent>
       </AlertDialog>
