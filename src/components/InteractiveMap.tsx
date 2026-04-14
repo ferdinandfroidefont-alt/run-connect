@@ -27,7 +27,6 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import type { Position } from '@/types/permissions';
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
-import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -269,6 +268,11 @@ function coordsToLineString(points: MapCoord[]): GeoJSON.Feature<GeoJSON.LineStr
   };
 }
 
+type SessionMarkerVisual = {
+  marker: Marker;
+  el: HTMLDivElement;
+};
+
 const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
   type: 'Feature',
   properties: {},
@@ -337,9 +341,6 @@ export const InteractiveMap = ({
   // Track newly created sessions for pulse animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
 
-  // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef(new window.Map<string, string>());
-
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
     if (!user) {
@@ -351,7 +352,7 @@ export const InteractiveMap = ({
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
-  const markers = useRef<Marker[]>([]);
+  const markers = useRef<SessionMarkerVisual[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -415,6 +416,17 @@ export const InteractiveMap = ({
   const [showMapStyleSelector, setShowMapStyleSelector] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
+
+  const applyMarkerScaleFromZoom = useCallback(() => {
+    const m = map.current;
+    if (!m || markers.current.length === 0) return;
+    const zoom = m.getZoom();
+    const scale = Math.min(1.3, Math.max(0.82, 0.82 + (zoom - 10) * 0.06));
+    const scaleStr = scale.toFixed(3);
+    for (const item of markers.current) {
+      item.el.style.setProperty('--rc-pin-scale', scaleStr);
+    }
+  }, []);
 
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
@@ -889,14 +901,14 @@ export const InteractiveMap = ({
     }
   };
 
-  // Create map markers for sessions
+  // Create map markers for sessions (custom pin + avatar)
   const createMarkers = async () => {
     if (!map.current) return;
     const mapboxgl = await loadMapboxGl();
     const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
-    markers.current.forEach((marker) => marker.remove());
+    markers.current.forEach((item) => item.marker.remove());
     sessionPolylines.current = [];
     markers.current = [];
 
@@ -910,67 +922,77 @@ export const InteractiveMap = ({
       hasRoute: !!s.routes
     })));
 
-    // Create markers for filtered sessions with error handling
-    const markerPromises = filteredSessions.map(async (session, index) => {
+    const clustersByCoord = new window.Map<string, Session[]>();
+    for (const session of filteredSessions) {
+      const lng = Number(session.location_lng);
+      const lat = Number(session.location_lat);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+      const key = `${lat.toFixed(5)}:${lng.toFixed(5)}`;
+      const list = clustersByCoord.get(key) ?? [];
+      list.push(session);
+      clustersByCoord.set(key, list);
+    }
+    const clusterSessions = Array.from(clustersByCoord.values());
+
+    const markerPromises = clusterSessions.map(async (cluster) => {
       try {
         if (runId !== markersRunIdRef.current) return null;
-        // Ensure session has valid data
-        if (!session.location_lat || !session.location_lng || !session.profiles) {
-          console.warn(`Session ${session.id} missing required data:`, {
-            lat: session.location_lat,
-            lng: session.location_lng,
-            profiles: session.profiles
-          });
+        const session = cluster[0];
+        if (!session?.location_lat || !session?.location_lng || !session?.profiles) {
           return null;
         }
-        const markerIcon = await createCustomMarker(session);
-        if (runId !== markersRunIdRef.current) return null;
-        const isNewSession = newSessionIds.has(session.id);
-        
-        // Check if session is imminent (starts in less than 2 hours)
         const sessionDate = new Date(session.scheduled_at);
         const now = new Date();
-        const diffMs = sessionDate.getTime() - now.getTime();
-        const diffMinutes = diffMs / 60000;
-        const isImminent = diffMinutes > 0 && diffMinutes <= 120; // 0 to 2 hours
-        
+        const isPastSession = sessionDate.getTime() < now.getTime();
+        const isSelected = !!previewSession && cluster.some((s) => s.id === previewSession.id);
+
         const lng = Number(session.location_lng);
         const lat = Number(session.location_lat);
         const wrap = document.createElement('div');
-        wrap.style.cursor = 'pointer';
-        wrap.style.position = 'relative';
-        const img = document.createElement('img');
-        img.src = markerIcon;
-        img.alt = '';
-        const isBoosted = session.visibility_state === 'boosted';
-        const isPremium = session.visibility_state === 'premium';
-        img.style.width = isBoosted ? '62px' : isPremium ? '52px' : '48px';
-        img.style.height = isBoosted ? '78px' : isPremium ? '66px' : '60px';
-        img.style.display = 'block';
-        img.draggable = false;
-        if (isNewSession) img.className = 'pulse-marker-animation';
-        else if (isImminent) img.className = 'imminent-marker-animation';
-        if (isBoosted) {
-          const halo = document.createElement('div');
-          halo.style.position = 'absolute';
-          halo.style.left = '50%';
-          halo.style.top = '50%';
-          halo.style.transform = 'translate(-50%, -58%)';
-          halo.style.width = '54px';
-          halo.style.height = '54px';
-          halo.style.borderRadius = '999px';
-          halo.style.background = 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(59,130,246,0.08) 55%, rgba(59,130,246,0) 75%)';
-          halo.style.pointerEvents = 'none';
-          halo.animate(
-            [
-              { transform: 'translate(-50%, -58%) scale(0.9)', opacity: 0.7 },
-              { transform: 'translate(-50%, -58%) scale(1.15)', opacity: 0.2 },
-            ],
-            { duration: 1600, iterations: Infinity, easing: 'ease-out' },
-          );
-          wrap.appendChild(halo);
+        wrap.className = cn(
+          'rc-session-pin',
+          'rc-session-pin-pop',
+          isSelected && 'is-selected',
+          isPastSession && 'is-past'
+        );
+        wrap.style.setProperty('--rc-pin-color', '#2563EB');
+
+        const pin = document.createElement('button');
+        pin.type = 'button';
+        pin.className = 'rc-session-pin__shape';
+        pin.setAttribute('aria-label', cluster.length > 1 ? `${cluster.length} séances` : session.title || 'Séance');
+
+        const avatarRing = document.createElement('span');
+        avatarRing.className = 'rc-session-pin__avatar-ring';
+        const avatarImg = document.createElement('img');
+        avatarImg.className = 'rc-session-pin__avatar';
+        avatarImg.src = session.profiles.avatar_url || '/placeholder.svg';
+        avatarImg.alt = '';
+        avatarImg.draggable = false;
+        avatarRing.appendChild(avatarImg);
+        pin.appendChild(avatarRing);
+
+        if (cluster.length > 1) {
+          const badge = document.createElement('span');
+          badge.className = 'rc-session-pin__cluster-badge';
+          badge.textContent = String(cluster.length);
+          pin.appendChild(badge);
+
+          const stack = document.createElement('span');
+          stack.className = 'rc-session-pin__stack';
+          const extras = cluster.slice(1, 3);
+          for (const extra of extras) {
+            const s = document.createElement('img');
+            s.className = 'rc-session-pin__stack-avatar';
+            s.src = extra.profiles?.avatar_url || '/placeholder.svg';
+            s.alt = '';
+            s.draggable = false;
+            stack.appendChild(s);
+          }
+          pin.appendChild(stack);
         }
-        wrap.appendChild(img);
+
+        wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
           setPreviewSession(session);
@@ -978,94 +1000,21 @@ export const InteractiveMap = ({
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
-        if (isBoosted) marker.setOffset([0, -4]);
-        return marker;
+        return { marker, el: wrap };
       } catch (error) {
-        console.error(`Error creating marker for session ${session.id}:`, error);
+        console.error('Error creating custom marker cluster:', error);
         if (runId !== markersRunIdRef.current) return null;
-
-        try {
-          const wrap = document.createElement('div');
-          wrap.style.cursor = 'pointer';
-          const img = document.createElement('img');
-          img.src = getFallbackIcon(session.activity_type);
-          img.alt = '';
-          img.style.width = session.visibility_state === 'boosted' ? '48px' : '40px';
-          img.style.height = session.visibility_state === 'boosted' ? '48px' : '40px';
-          wrap.appendChild(img);
-          wrap.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            setPreviewSession(session);
-          });
-          const fallbackMarker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
-            .setLngLat([Number(session.location_lng), Number(session.location_lat)])
-            .addTo(map.current!);
-          return fallbackMarker;
-        } catch (fallbackError) {
-          console.error(`Failed to create fallback marker for session ${session.id}:`, fallbackError);
-          return null;
-        }
+        return null;
       }
     });
 
     // Wait for all markers to be created and add successful ones
     const createdMarkers = await Promise.all(markerPromises);
     if (runId !== markersRunIdRef.current) return;
-    const validMarkers = createdMarkers.filter(marker => marker !== null);
+    const validMarkers = createdMarkers.filter((marker): marker is SessionMarkerVisual => marker !== null);
     markers.current = validMarkers;
-    console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
-  };
-  const createCustomMarker = async (session: Session): Promise<string> => {
-    console.log('🎨 Creating RunConnect custom marker for session:', session.id, session.title);
-
-    // Validation des données de session
-    if (!session || !session.profiles) {
-      console.warn('Session or profiles missing:', session);
-      return getFallbackIcon(session?.activity_type || 'course');
-    }
-    const organizerId = session.organizer_id;
-
-    // Check cache first
-    if (markerCache.current.has(organizerId)) {
-      console.log('✅ Using cached marker for user:', organizerId);
-      return markerCache.current.get(organizerId)!;
-    }
-
-    // Generate new RunConnect SVG marker with base64 image
-    const profileImageUrl = session.profiles.avatar_url || '/placeholder.svg';
-    console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
-    try {
-      // Convert image to base64 first
-      const base64Image = await imageUrlToBase64(profileImageUrl);
-      console.log('📸 Image converted to base64, length:', base64Image.length);
-      const svg = generateRunConnectMarkerSVG(base64Image, 48);
-      const dataUrl = svgToDataUrl(svg);
-
-      // Cache the generated marker
-      markerCache.current.set(organizerId, dataUrl);
-      console.log('✨ RunConnect marker generated and cached for user:', organizerId);
-      return dataUrl;
-    } catch (error) {
-      console.error('❌ Error generating RunConnect marker:', error);
-      return getFallbackIcon(session.activity_type);
-    }
-  };
-  const getActivityColor = (activityType: string) => {
-    const colors: Record<string, string> = {
-      'course': '#ef4444',
-      'trail': '#f97316',
-      // Orange pour le trail
-      'velo': '#3b82f6',
-      'vtt': '#059669',
-      // Vert pour le VTT
-      'marche': '#22c55e',
-      'natation': '#0d9488'
-    };
-    return colors[activityType] || colors['course'];
-  };
-  const getFallbackIcon = (activityType: string) => {
-    // Fallback simple SVG data URL
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNlZjQ0NDQiLz48L3N2Zz4=';
+    applyMarkerScaleFromZoom();
+    console.log(`Successfully created ${validMarkers.length} marker clusters out of ${filteredSessions.length} sessions`);
   };
 
   // Handle shared session link parameters
@@ -1177,7 +1126,18 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [sessions, filters, isMapLoaded, newSessionIds]);
+  }, [sessions, filters, isMapLoaded, newSessionIds, previewSession?.id]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !isMapLoaded) return;
+    const onZoom = () => applyMarkerScaleFromZoom();
+    m.on('zoom', onZoom);
+    onZoom();
+    return () => {
+      m.off('zoom', onZoom);
+    };
+  }, [isMapLoaded, applyMarkerScaleFromZoom]);
 
   /** Suggestions de lieux Mapbox pendant la saisie (monde entier, sans restriction pays). */
   useEffect(() => {
