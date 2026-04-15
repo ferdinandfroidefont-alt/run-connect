@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Share } from "@capacitor/share";
 
 type ReferralStats = {
   referral_code: string;
@@ -91,15 +92,21 @@ export default function Referral() {
   const shareCode = async () => {
     if (!shareText) return;
     try {
-      if (navigator.share) {
+      const isNative = !!(window as any).Capacitor;
+      if (isNative) {
+        await Share.share({
+          title: "Parrainer quelqu'un sur RunConnect",
+          text: shareText,
+        });
+      } else if (navigator.share) {
         await navigator.share({
           title: "Parrainer quelqu'un sur RunConnect",
           text: shareText,
         });
-        return;
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        toast({ title: "Message copie", description: "Le message de partage est copie." });
       }
-      await navigator.clipboard.writeText(shareText);
-      toast({ title: "Message copie", description: "Le message de partage est copie." });
     } catch {
       toast({ title: "Erreur", description: "Impossible de partager le code.", variant: "destructive" });
     }
