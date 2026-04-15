@@ -14,7 +14,6 @@ import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
-import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -874,7 +873,6 @@ export const WeeklyPlanDialog = ({
   const [showDupDropdown, setShowDupDropdown] = useState(false);
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [showAthleteOverrides, setShowAthleteOverrides] = useState(false);
-  const [showMesocycle, setShowMesocycle] = useState(false);
 
   // Get base values from the selected session for override defaults
   const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
@@ -1349,22 +1347,12 @@ export const WeeklyPlanDialog = ({
               <IOSListItem
                 icon={TrendingUp}
                 iconBgColor="bg-indigo-500"
-                title="Vue mesocycle (8 sem.)"
-                subtitle="Progression volume et intensité"
-                onClick={() => setShowMesocycle(!showMesocycle)}
+                title="Vue mesocycle"
+                subtitle="Disponible dans la fiche athlète"
                 showSeparator={false}
               />
             </div>
           </div>
-
-          {/* Mesocycle panel */}
-          {showMesocycle && (
-            <div className="mb-3 px-4">
-              <div className="ios-card border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <MesocycleView clubId={clubId} currentWeek={currentWeek} />
-              </div>
-            </div>
-          )}
 
           {/* Save template input */}
           {showSaveTemplate && (

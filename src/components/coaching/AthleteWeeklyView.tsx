@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { WeeklyBarChart } from "./WeeklyBarChart";
 import { WeeklyPlanCard } from "./WeeklyPlanCard";
 import { AthleteBlockRpeSliders } from "./AthleteBlockRpeSliders";
+import { MesocycleView } from "./MesocycleView";
 import {
   athleteBlockRpeFeltToJson,
   blockRpeFromCoachingRow,
@@ -331,6 +332,11 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
           />
         </div>
       )}
+
+      <div className="border-b border-border/60 bg-card px-4 py-4 shadow-none">
+        <p className="mb-3 text-[13px] font-semibold text-muted-foreground">Vue mesocycle</p>
+        <MesocycleView clubId={clubId} currentWeek={currentWeek} />
+      </div>
 
       {/* Session list */}
       {sessions.length === 0 ? (

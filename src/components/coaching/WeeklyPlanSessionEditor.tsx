@@ -10,9 +10,10 @@ import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { geocodeSearchMapbox } from "@/lib/mapboxGeocode";
-import { mergeParsedBlocksByIndex, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
+import { mergeParsedBlocksByIndex, parseRCC, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
 import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { normalizeBlockRpeLength } from "@/lib/sessionBlockRpe";
+import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 
 const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const DAY_SHORT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -63,6 +64,66 @@ const PACE_EXAMPLES: Record<string, { code: string; label: string }[]> = {
   ],
 };
 
+const BLOCK_TYPE_LABELS: Record<ParsedBlock["type"], string> = {
+  warmup: "Échauff.",
+  interval: "Interval",
+  steady: "Tempo",
+  cooldown: "Retour",
+  recovery: "Récup",
+};
+
+const DISTANCE_OPTIONS = Array.from({ length: 50 }, (_, i) => {
+  const meters = (i + 1) * 100;
+  return { value: String(meters), label: `${meters} m` };
+});
+
+const REP_OPTIONS = Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+const RECOVERY_OPTIONS = Array.from({ length: 21 }, (_, i) => {
+  const seconds = i * 15;
+  if (seconds === 0) return { value: "0", label: "Aucune" };
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return { value: String(seconds), label: min > 0 ? `${min}'${String(sec).padStart(2, "0")}` : `${sec}s` };
+});
+const RPE_OPTIONS = Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) }));
+
+function paceToRcc(pace?: string): string {
+  if (!pace) return "5'30";
+  const [m, s] = pace.split(":");
+  return `${m || "5"}'${String(Number.parseInt(s || "0", 10)).padStart(2, "0")}`;
+}
+
+function blockToRcc(block: ParsedBlock): string {
+  if (block.type === "interval") {
+    const reps = Math.max(1, block.repetitions || 1);
+    const effort = block.distance ? `${Math.max(100, block.distance)}` : `${Math.max(1, block.duration || 3)}'`;
+    const pace = paceToRcc(block.pace);
+    let recovery = "";
+    if (reps > 1 && (block.recoveryDuration || 0) > 0) {
+      const rec = block.recoveryDuration || 0;
+      const recMin = Math.floor(rec / 60);
+      const recSec = rec % 60;
+      recovery = recMin > 0
+        ? ` r${recMin}'${String(recSec).padStart(2, "0")}>${block.recoveryType || "trot"}`
+        : ` r${rec}>${block.recoveryType || "trot"}`;
+    }
+    return `${reps}x${effort}>${pace}${recovery}`;
+  }
+  if (block.duration) {
+    const pace = block.pace ? `>${paceToRcc(block.pace)}` : "";
+    return `${Math.max(1, block.duration)}'${pace}`;
+  }
+  return block.raw || "10'";
+}
+
+function recoveryLabel(seconds?: number): string {
+  const safe = seconds || 0;
+  if (safe <= 0) return "Aucune";
+  const min = Math.floor(safe / 60);
+  const sec = safe % 60;
+  return min > 0 ? `${min}'${String(sec).padStart(2, "0")}` : `${safe}s`;
+}
+
 interface AthleteOverride {
   pace?: string;
   reps?: number;
@@ -112,6 +173,12 @@ export const WeeklyPlanSessionEditor = ({
   const [locationResults, setLocationResults] = useState<any[]>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [showLocationResults, setShowLocationResults] = useState(false);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number>(0);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  const [wheelTitle, setWheelTitle] = useState("");
+  const [wheelItems, setWheelItems] = useState<Array<{ value: string; label: string }>>([]);
+  const [wheelValue, setWheelValue] = useState("0");
+  const [wheelApply, setWheelApply] = useState<((next: string) => void) | null>(null);
 
   useEffect(() => {
     if (!locationSearch.trim() || locationSearch === session.locationName) {
@@ -159,6 +226,34 @@ export const WeeklyPlanSessionEditor = ({
     const merged = mergeParsedBlocksByIndex(result.blocks, session.parsedBlocks || []);
     const nextBlockRpe = normalizeBlockRpeLength(session.blockRpe, merged.length);
     onChange({ ...session, parsedBlocks: merged, blockRpe: nextBlockRpe });
+    if (merged.length > 0 && selectedBlockIndex > merged.length - 1) {
+      setSelectedBlockIndex(merged.length - 1);
+    }
+  };
+
+  const applyBlocks = (blocks: ParsedBlock[], nextBlockRpe?: number[]) => {
+    const code = blocks.map(blockToRcc).join(", ");
+    const reparsed = mergeParsedBlocksByIndex(parseRCC(code).blocks, blocks);
+    const mergedRpe = normalizeBlockRpeLength(nextBlockRpe ?? session.blockRpe, reparsed.length);
+    onChange({
+      ...session,
+      rccCode: code,
+      parsedBlocks: reparsed,
+      blockRpe: mergedRpe,
+    });
+  };
+
+  const openWheel = (
+    title: string,
+    items: Array<{ value: string; label: string }>,
+    current: string,
+    onConfirm: (next: string) => void
+  ) => {
+    setWheelTitle(title);
+    setWheelItems(items);
+    setWheelValue(current);
+    setWheelApply(() => onConfirm);
+    setWheelOpen(true);
   };
 
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
@@ -167,6 +262,8 @@ export const WeeklyPlanSessionEditor = ({
   const currentObjectives = QUICK_OBJECTIVES[session.activityType] || QUICK_OBJECTIVES.running;
   const currentPaceUnit = PACE_UNITS[session.activityType] || PACE_UNITS.running;
   const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
+
+  const selectedBlock = session.parsedBlocks?.[selectedBlockIndex] || null;
 
   return (
     <div className="overflow-hidden bg-transparent">
@@ -210,19 +307,25 @@ export const WeeklyPlanSessionEditor = ({
         {/* Activity type + Objective */}
         <div className="space-y-3">
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Type d'activité
-            </label>
-            <Select value={session.activityType} onValueChange={v => update("activityType", v)}>
-              <SelectTrigger className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTIVITY_TYPES.map(a => (
-                  <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <button type="button" className="mb-1.5 inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Type &gt;
+            </button>
+            <div className="grid grid-cols-3 gap-2">
+              {ACTIVITY_TYPES.map((a) => (
+                <button
+                  key={a.value}
+                  type="button"
+                  onClick={() => update("activityType", a.value)}
+                  className={`h-10 rounded-xl text-[13px] font-semibold transition-colors ${
+                    session.activityType === a.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary/70 text-muted-foreground"
+                  }`}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -282,6 +385,190 @@ export const WeeklyPlanSessionEditor = ({
           <BookOpen className="h-4 w-4 mr-2 text-primary" />
           Charger un template
         </Button>
+
+        {/* Bloc builder */}
+        <div className="space-y-2">
+          <button type="button" className="inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Bloc &gt;
+          </button>
+          {session.parsedBlocks.length > 0 ? (
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {session.parsedBlocks.map((b, idx) => (
+                  <button
+                    key={`${b.raw}-${idx}`}
+                    type="button"
+                    onClick={() => setSelectedBlockIndex(idx)}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                      idx === selectedBlockIndex
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    Bloc {idx + 1} · {BLOCK_TYPE_LABELS[b.type]}
+                  </button>
+                ))}
+              </div>
+              {selectedBlock && (
+                <div className="rounded-xl bg-secondary/50 p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="justify-start rounded-xl text-[13px]"
+                      onClick={() =>
+                        openWheel(
+                          "Distance",
+                          DISTANCE_OPTIONS,
+                          String(selectedBlock.distance || 1000),
+                          (next) => {
+                            const nextBlocks = [...session.parsedBlocks];
+                            nextBlocks[selectedBlockIndex] = {
+                              ...selectedBlock,
+                              type: "interval",
+                              distance: Number.parseInt(next, 10),
+                              duration: undefined,
+                              repetitions: Math.max(1, selectedBlock.repetitions || 1),
+                              pace: selectedBlock.pace || "5:30",
+                            };
+                            applyBlocks(nextBlocks);
+                          }
+                        )
+                      }
+                    >
+                      Distance
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="justify-start rounded-xl text-[13px]"
+                      onClick={() =>
+                        openWheel(
+                          "Répétitions",
+                          REP_OPTIONS,
+                          String(selectedBlock.repetitions || 1),
+                          (next) => {
+                            const reps = Number.parseInt(next, 10);
+                            const nextBlocks = [...session.parsedBlocks];
+                            nextBlocks[selectedBlockIndex] = {
+                              ...selectedBlock,
+                              type: "interval",
+                              repetitions: reps,
+                              distance: selectedBlock.distance || 1000,
+                              duration: undefined,
+                              pace: selectedBlock.pace || "5:30",
+                            };
+                            applyBlocks(nextBlocks);
+                          }
+                        )
+                      }
+                    >
+                      Répétitions
+                    </Button>
+                    {(selectedBlock.repetitions || 1) > 1 && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="justify-start rounded-xl text-[13px]"
+                        onClick={() =>
+                          openWheel(
+                            "Récup répétitions",
+                            RECOVERY_OPTIONS,
+                            String(selectedBlock.recoveryDuration || 0),
+                            (next) => {
+                              const nextBlocks = [...session.parsedBlocks];
+                              nextBlocks[selectedBlockIndex] = {
+                                ...selectedBlock,
+                                recoveryDuration: Number.parseInt(next, 10),
+                              };
+                              applyBlocks(nextBlocks);
+                            }
+                          )
+                        }
+                      >
+                        Récup répétitions
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="justify-start rounded-xl text-[13px]"
+                      onClick={() =>
+                        openWheel(
+                          "RPE",
+                          RPE_OPTIONS,
+                          String(session.blockRpe[selectedBlockIndex] ?? 0),
+                          (next) => {
+                            const nextRpe = [...session.blockRpe];
+                            nextRpe[selectedBlockIndex] = Number.parseInt(next, 10);
+                            applyBlocks([...session.parsedBlocks], nextRpe);
+                          }
+                        )
+                      }
+                    >
+                      RPE
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="col-span-2 rounded-xl border-dashed text-[13px]"
+                      onClick={() => {
+                        const nextBlocks = [
+                          ...session.parsedBlocks,
+                          {
+                            type: "interval",
+                            raw: "1x1000>5'30",
+                            distance: 1000,
+                            repetitions: 1,
+                            pace: "5:30",
+                            recoveryType: "trot",
+                          } as ParsedBlock,
+                        ];
+                        const nextRpe = normalizeBlockRpeLength(session.blockRpe, nextBlocks.length);
+                        applyBlocks(nextBlocks, nextRpe);
+                        setSelectedBlockIndex(nextBlocks.length - 1);
+                      }}
+                    >
+                      + Bloc
+                    </Button>
+                  </div>
+                  <div className="mt-2 rounded-lg border border-border/60 bg-card px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bloc actif</p>
+                    <p className="mt-1 text-[13px] font-semibold text-foreground">
+                      {BLOCK_TYPE_LABELS[selectedBlock.type]} · {selectedBlock.distance ? `${selectedBlock.distance}m` : `${selectedBlock.duration || 0} min`} · x{selectedBlock.repetitions || 1}
+                    </p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">
+                      Récup: {recoveryLabel(selectedBlock.recoveryDuration)} · RPE: {session.blockRpe[selectedBlockIndex] ?? 0}
+                    </p>
+                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{blockToRcc(selectedBlock)}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl border-dashed text-[13px]"
+              onClick={() => {
+                const nextBlocks: ParsedBlock[] = [
+                  {
+                    type: "interval",
+                    raw: "1x1000>5'30",
+                    distance: 1000,
+                    repetitions: 1,
+                    pace: "5:30",
+                    recoveryType: "trot",
+                  },
+                ];
+                applyBlocks(nextBlocks, [0]);
+                setSelectedBlockIndex(0);
+              }}
+            >
+              + Bloc
+            </Button>
+          )}
+        </div>
 
         {/* RCC Editor */}
         <div>
@@ -386,6 +673,16 @@ export const WeeklyPlanSessionEditor = ({
           update("rccCode", code);
           if (objective) update("objective", objective);
           setShowTemplates(false);
+        }}
+      />
+      <WheelValuePickerModal
+        open={wheelOpen}
+        onClose={() => setWheelOpen(false)}
+        title={wheelTitle}
+        columns={[{ items: wheelItems, value: wheelValue, onChange: setWheelValue }]}
+        onConfirm={() => {
+          wheelApply?.(wheelValue);
+          setWheelOpen(false);
         }}
       />
     </div>
