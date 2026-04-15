@@ -2,39 +2,34 @@ import { useEffect, useMemo, useState } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
-  Bell,
   Bike,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
   Dumbbell,
-  EllipsisVertical,
   Flame,
-  ListChecks,
+  Leaf,
+  Minus,
   Plus,
-  Search,
-  Send,
   SwatchBook,
-  Trash2,
   Waves,
+  Zap,
 } from "lucide-react";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useEnhancedToast } from "@/hooks/useEnhancedToast";
+import { useAppContext } from "@/contexts/AppContext";
+import { useNavigate } from "react-router-dom";
+import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
+import { PlanningSegmentedControl } from "@/components/coaching/planning/PlanningSegmentedControl";
+import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
+import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
+import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
+import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -81,12 +76,60 @@ const SPORTS: Array<{ id: SportType; label: string; icon: React.ComponentType<{ 
   { id: "strength", label: "Renforcement", icon: Dumbbell },
 ];
 
-const BLOCK_TYPES: Array<{ id: BlockType; label: string; detail: string }> = [
-  { id: "warmup", label: "Échauffement", detail: "Montée progressive" },
-  { id: "interval", label: "Intervalle", detail: "Répétitions effort/récup" },
-  { id: "steady", label: "Bloc continu", detail: "Effort constant" },
-  { id: "recovery", label: "Récupération", detail: "Intensité faible" },
-  { id: "cooldown", label: "Retour au calme", detail: "Descente progressive" },
+const BLOCK_TYPES: Array<{
+  id: BlockType;
+  label: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+  emoji: string;
+  tone: string;
+  iconTone: string;
+}> = [
+  {
+    id: "warmup",
+    label: "Échauffement",
+    detail: "Montée progressive",
+    icon: Flame,
+    emoji: "🔥",
+    tone: "border-orange-500/25 bg-orange-500/10",
+    iconTone: "bg-orange-500/20 text-orange-700 dark:text-orange-300",
+  },
+  {
+    id: "interval",
+    label: "Intervalle",
+    detail: "Effort + récup",
+    icon: Zap,
+    emoji: "⚡",
+    tone: "border-red-500/25 bg-red-500/10",
+    iconTone: "bg-red-500/20 text-red-700 dark:text-red-300",
+  },
+  {
+    id: "steady",
+    label: "Bloc continu",
+    detail: "Effort stable",
+    icon: Minus,
+    emoji: "➖",
+    tone: "border-yellow-500/25 bg-yellow-500/10",
+    iconTone: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300",
+  },
+  {
+    id: "recovery",
+    label: "Récupération",
+    detail: "Facile",
+    icon: Waves,
+    emoji: "💙",
+    tone: "border-blue-500/25 bg-blue-500/10",
+    iconTone: "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+  },
+  {
+    id: "cooldown",
+    label: "Retour au calme",
+    detail: "Descente progressive",
+    icon: Leaf,
+    emoji: "🌿",
+    tone: "border-emerald-500/25 bg-emerald-500/10",
+    iconTone: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+  },
 ];
 
 const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone: string }> = [
@@ -131,6 +174,10 @@ function blockTitle(type: BlockType) {
   return BLOCK_TYPES.find((b) => b.id === type)?.label ?? "Bloc";
 }
 
+function blockTypeMeta(type: BlockType) {
+  return BLOCK_TYPES.find((b) => b.id === type) ?? BLOCK_TYPES[2];
+}
+
 function blockSummary(block: SessionBlock) {
   const volume = block.distanceM ? metersToLabel(block.distanceM) : secondsToLabel(block.durationSec);
   const target =
@@ -163,6 +210,8 @@ function emptyDraft(dateIso: string): SessionDraft {
 
 export function CoachPlanningExperience() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { setHideBottomNav } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
@@ -189,6 +238,46 @@ export function CoachPlanningExperience() {
   const [wheelValue, setWheelValue] = useState("0");
   const [applyWheel, setApplyWheel] = useState<((next: string) => void) | null>(null);
   const [savePulse, setSavePulse] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    setHideBottomNav(false);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
+
+  useEffect(() => {
+    setHideBottomNav(false);
+  }, [coachingTab, setHideBottomNav]);
+
+  useEffect(() => {
+    if (!user) return;
+    let ignore = false;
+    const loadUnread = async () => {
+      const { data: conversations } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
+      const conversationIds = (conversations || []).map((conv) => conv.id);
+      if (!conversationIds.length) {
+        if (!ignore) setUnreadMessages(0);
+        return;
+      }
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .in("conversation_id", conversationIds)
+        .neq("sender_id", user.id)
+        .is("read_at", null);
+      if (!ignore) setUnreadMessages(count || 0);
+    };
+    void loadUnread();
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -598,14 +687,46 @@ export function CoachPlanningExperience() {
     ? groups.find((g) => g.id === activeGroupId)?.name
     : "Tous les athlètes";
 
-  const weekRange = `${format(weekAnchor, "d MMM", { locale: fr })} - ${format(addDays(weekAnchor, 6), "d MMM", { locale: fr })}`;
+  const dayIndicatorsByDate = useMemo(() => {
+    const map: Record<string, Array<{ color: string }>> = {};
+    filteredSessions.forEach((session) => {
+      const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
+      const type = session.blocks[0]?.type;
+      const color =
+        type === "interval" ? "#EF4444" :
+        type === "warmup" ? "#F97316" :
+        type === "recovery" ? "#3B82F6" :
+        type === "cooldown" ? "#10B981" :
+        "#EAB308";
+      if (!map[key]) map[key] = [];
+      map[key].push({ color });
+    });
+    return map;
+  }, [filteredSessions]);
 
-  const openCreateFromTab = () => {
-    if (coachingTab === "create") return;
-    setEditingSessionId(null);
-    setDraft(emptyDraft(new Date().toISOString()));
-    setEditorTab("build");
-    setCoachingTab("create");
+  const activeClubName = clubs.find((club) => club.id === activeClubId)?.name;
+  const coachName =
+    (user?.user_metadata?.display_name as string | undefined) ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    (user?.email ? user.email.split("@")[0] : "Coach");
+
+  const handleDrawerSelect = (key: CoachMenuKey) => {
+    setActiveMenuKey(key);
+    setDrawerOpen(false);
+    if (key === "planning") {
+      setCoachingTab("planning");
+      return;
+    }
+    if (key === "messages") {
+      navigate("/messages");
+      return;
+    }
+    if (key === "settings") {
+      navigate("/profile/edit");
+      return;
+    }
+    // Keep in-coaching sections in place (dashboard, athletes, groups, etc.)
+    setCoachingTab("planning");
   };
 
   return (
@@ -614,23 +735,7 @@ export function CoachPlanningExperience() {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
-          header={
-            <div className="pt-[var(--safe-area-top)]">
-              <IosPageHeaderBar
-                left={
-                  <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-foreground">
-                    <ListChecks className="h-5 w-5" />
-                  </button>
-                }
-                title={<span className="text-[17px] font-semibold">RunConnect</span>}
-                right={
-                  <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-foreground">
-                    <Bell className="h-5 w-5" />
-                  </button>
-                }
-              />
-            </div>
-          }
+          header={<PlanningHeader onOpenMenu={() => setDrawerOpen(true)} />}
           scrollClassName="bg-secondary pb-24"
         >
           <div className="space-y-4 px-ios-4 pb-ios-6">
@@ -639,30 +744,22 @@ export function CoachPlanningExperience() {
               <p className="text-[13px] text-muted-foreground">Semaine de {targetLabel}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-1.5">
-              <button
-                type="button"
-                onClick={() => setCoachingTab("planning")}
-                className={cn(
-                  "rounded-xl py-2 text-[13px] font-semibold transition-colors",
-                  coachingTab === "planning" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                )}
-              >
-                Planification
-              </button>
-              <button
-                type="button"
-                onClick={openCreateFromTab}
-                className={cn(
-                  "rounded-xl py-2 text-[13px] font-semibold transition-colors",
-                  coachingTab === "create" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                )}
-              >
-                Créer une séance
-              </button>
-            </div>
+            <PlanningSegmentedControl
+              active={coachingTab}
+              onChange={(next) => {
+                if (next === "planning") {
+                  setCoachingTab("planning");
+                  return;
+                }
+                if (coachingTab === "create") return;
+                setEditingSessionId(null);
+                setDraft(emptyDraft(new Date().toISOString()));
+                setEditorTab("build");
+                setCoachingTab("create");
+              }}
+            />
 
-            {clubs.length > 1 && (
+            {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="ios-card rounded-2xl border border-border/70 bg-card p-2">
                 <p className="px-2 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
                 <div className="grid grid-cols-1 gap-1">
@@ -683,17 +780,9 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un athlète ou un groupe"
-                className="h-11 rounded-2xl border-border bg-card pl-9 text-[15px]"
-              />
-            </div>
+            {activeMenuKey === "planning" && <PlanningSearchBar value={search} onChange={setSearch} />}
 
-            {(searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
+            {activeMenuKey === "planning" && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
               <div className="ios-card rounded-2xl border border-border/70 bg-card p-2">
                 {searchResults.groups.map((group) => (
                   <button
@@ -726,116 +815,99 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            <div className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-2">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary"
-                  onClick={() => setWeekAnchor((current) => subWeeks(current, 1))}
-                >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
-                </button>
-                <div className="text-center">
-                  <p className="text-[12px] uppercase tracking-wider text-muted-foreground">Semaine</p>
-                  <p className="text-[16px] font-semibold text-foreground">{weekRange}</p>
-                </div>
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary"
-                  onClick={() => setWeekAnchor((current) => addWeeks(current, 1))}
-                >
-                  <ChevronRight className="h-5 w-5 text-foreground" />
-                </button>
-              </div>
-            </div>
+            {activeMenuKey === "planning" ? (
+              <>
+                <WeekSelectorPremium
+                  weekStart={weekAnchor}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
+                  onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
+                  indicatorsByDate={dayIndicatorsByDate}
+                />
 
-            <div className="space-y-2">
+                <div className="space-y-2">
               {loading && (
                 <div className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-4 text-center text-[13px] text-muted-foreground">
                   Chargement de la semaine...
                 </div>
               )}
-              {weekDays.map((day) => {
+                  {weekDays.map((day) => {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                const session = daySessions[0];
+                const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+                const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
+                const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
+                const summary = session
+                  ? {
+                      title: session.title,
+                      duration: durationSec > 0 ? secondsToLabel(durationSec) : undefined,
+                      distance: distanceM > 0 ? metersToLabel(distanceM) : undefined,
+                      intensityLabel:
+                        session.blocks[0]?.intensityMode === "rpe"
+                          ? session.blocks[0]?.rpe != null
+                            ? `RPE ${session.blocks[0].rpe}`
+                            : undefined
+                          : session.blocks[0]?.zone,
+                    }
+                  : undefined;
+                const accentColor =
+                  !session ? "#9CA3AF" :
+                  session.sport === "cycling" ? "#EAB308" :
+                  session.blocks[0]?.type === "recovery" ? "#22C55E" :
+                  session.blocks[0]?.type === "interval" ? "#F97316" :
+                  session.blocks[0]?.type === "steady" ? "#8B5CF6" :
+                  session.sport === "running" ? "#60A5FA" :
+                  "#9CA3AF";
                 return (
-                  <div key={day.toISOString()} className="ios-card rounded-2xl border border-border/70 bg-card p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div>
-                        <p className="text-[15px] font-semibold text-foreground">{format(day, "EEEE", { locale: fr })}</p>
-                        <p className="text-[12px] text-muted-foreground">{format(day, "d MMM", { locale: fr })}</p>
-                      </div>
-                      {daySessions.length === 0 && (
-                        <button
-                          type="button"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                          onClick={() => openCreateForDate(day)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    {daySessions.length === 0 ? (
-                      <p className="rounded-xl bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
-                        Aucune séance planifiée.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {daySessions.map((session) => (
-                          <div
-                            key={session.id}
-                            className={cn(
-                              "flex items-center justify-between rounded-xl border border-border/60 px-3 py-2",
-                              "transition-all active:scale-[0.99]"
-                            )}
-                          >
-                            <button
-                              type="button"
-                              className="min-w-0 flex-1 text-left"
-                              onClick={() => openEditSession(session.id)}
-                            >
-                              <p className="truncate text-[14px] font-semibold text-foreground">{session.title}</p>
-                              <p className="truncate text-[12px] text-muted-foreground">
-                                {session.blocks.length} bloc{session.blocks.length > 1 ? "s" : ""} - {blockSummary(session.blocks[0])}
-                              </p>
-                            </button>
-                            {session.sent ? (
-                              <Check className="h-5 w-5 text-emerald-500" />
-                            ) : (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button type="button" className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                                    <EllipsisVertical className="h-4 w-4 text-foreground" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => openEditSession(session.id)}>Modifier</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => sendSession(session.id)}>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Envoyer à l'athlète
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => void duplicateSession(session, addDays(day, 1))}>
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Dupliquer
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive" onClick={() => void removeSession(session.id)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Supprimer
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <DayPlanningRow
+                    key={day.toISOString()}
+                    dayLabel={format(day, "EEEE", { locale: fr })}
+                    dateLabel={format(day, "d MMM", { locale: fr })}
+                    isSelected={isSelectedDay}
+                    session={summary}
+                    isSent={session?.sent}
+                    accentColor={accentColor}
+                    onAdd={() => openCreateForDate(day)}
+                    onOpen={session ? () => openEditSession(session.id) : undefined}
+                    onEdit={session ? () => openEditSession(session.id) : undefined}
+                    onSend={session ? () => void sendSession(session.id) : undefined}
+                    onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
+                    onDelete={session ? () => void removeSession(session.id) : undefined}
+                  />
                 );
-              })}
-            </div>
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="ios-card rounded-2xl border border-border/70 bg-card p-4">
+                <p className="text-[16px] font-semibold text-foreground">
+                  {activeMenuKey === "dashboard" && "Tableau de bord coach"}
+                  {activeMenuKey === "athletes" && "Athlètes"}
+                  {activeMenuKey === "groups" && "Groupes"}
+                  {activeMenuKey === "tracking" && "Suivi athlète"}
+                  {activeMenuKey === "library" && "Bibliothèque de séances"}
+                  {activeMenuKey === "templates" && "Modèles"}
+                  {activeMenuKey === "club" && "Gérer le club"}
+                </p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Section prête dans le drawer coach. La navigation latérale est active et ce module peut être enrichi ensuite.
+                </p>
+              </div>
+            )}
           </div>
         </IosFixedPageHeaderShell>
       </div>
+
+      <AppDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        activeKey={activeMenuKey}
+        onSelect={handleDrawerSelect}
+        coachName={coachName}
+        clubName={activeClubName}
+        messageBadge={unreadMessages}
+      />
 
       {coachingTab === "create" && (
         <div className="fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-secondary">
@@ -1047,154 +1119,202 @@ export function CoachPlanningExperience() {
                 <button
                   key={entry.id}
                   type="button"
-                  className="w-full rounded-2xl border border-border bg-secondary px-3 py-3 text-left active:scale-[0.99]"
+                  className={cn(
+                    "w-full rounded-2xl border px-3 py-3 text-left transition-transform active:scale-[0.99]",
+                    entry.tone
+                  )}
                   onClick={() => {
                     if (!blockForm) return;
                     setBlockForm({ ...blockForm, type: entry.id });
                     setBlockStep("config");
                   }}
                 >
-                  <p className="text-[15px] font-semibold text-foreground">{entry.label}</p>
-                  <p className="text-[12px] text-muted-foreground">{entry.detail}</p>
+                  <div className="flex items-center gap-3">
+                    <div className={cn("inline-flex h-10 w-10 items-center justify-center rounded-xl", entry.iconTone)}>
+                      <entry.icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-semibold text-foreground">
+                        {entry.emoji} {entry.label}
+                      </p>
+                      <p className="text-[12px] text-muted-foreground">{entry.detail}</p>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
           ) : blockForm ? (
             <div className="space-y-3 px-4 py-4">
-              <button
-                type="button"
-                onClick={() => setBlockStep("type")}
-                className="text-[13px] font-medium text-primary"
-              >
-                Modifier le type
-              </button>
+              {(() => {
+                const meta = blockTypeMeta(blockForm.type);
+                return (
+                  <div className={cn("rounded-2xl border p-3", meta.tone)}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn("inline-flex h-10 w-10 items-center justify-center rounded-xl", meta.iconTone)}>
+                        <meta.icon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] font-semibold text-foreground">
+                          {meta.emoji} {meta.label}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">{meta.detail}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBlockStep("type")}
+                        className="rounded-lg bg-card/80 px-2.5 py-1 text-[12px] font-medium text-primary"
+                      >
+                        Changer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="secondary"
-                  className="h-10 justify-start rounded-xl text-[13px]"
-                  onClick={() =>
-                    openWheel(
-                      "Durée",
-                      Array.from({ length: 121 }, (_, i) => ({ value: String(i * 60), label: i === 0 ? "0 min" : `${i} min` })),
-                      String(blockForm.durationSec || 0),
-                      (next) => setBlockForm((prev) => (prev ? { ...prev, durationSec: Number(next), distanceM: undefined } : prev))
-                    )
-                  }
-                >
-                  Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="h-10 justify-start rounded-xl text-[13px]"
-                  onClick={() =>
-                    openWheel(
-                      "Distance",
-                      Array.from({ length: 101 }, (_, i) => ({ value: String(i * 100), label: i === 0 ? "0 m" : `${i * 100} m` })),
-                      String(blockForm.distanceM || 0),
-                      (next) => setBlockForm((prev) => (prev ? { ...prev, distanceM: Number(next), durationSec: undefined } : prev))
-                    )
-                  }
-                >
-                  Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
-                </Button>
-              </div>
-
-              {blockForm.type === "interval" && (
+              <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Volume
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     variant="secondary"
                     className="h-10 justify-start rounded-xl text-[13px]"
                     onClick={() =>
                       openWheel(
-                        "Répétitions",
-                        Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                        String(blockForm.repetitions || 1),
-                        (next) => setBlockForm((prev) => (prev ? { ...prev, repetitions: Number(next) } : prev))
+                        "Durée",
+                        Array.from({ length: 121 }, (_, i) => ({ value: String(i * 60), label: i === 0 ? "0 min" : `${i} min` })),
+                        String(blockForm.durationSec || 0),
+                        (next) => setBlockForm((prev) => (prev ? { ...prev, durationSec: Number(next), distanceM: undefined } : prev))
                       )
                     }
                   >
-                    Répétitions: {blockForm.repetitions || 1}
+                    Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
                   </Button>
                   <Button
                     variant="secondary"
                     className="h-10 justify-start rounded-xl text-[13px]"
                     onClick={() =>
                       openWheel(
-                        "Récupération (sec)",
-                        Array.from({ length: 61 }, (_, i) => ({ value: String(i * 15), label: i === 0 ? "Aucune" : `${i * 15} s` })),
-                        String(blockForm.recoveryDurationSec || 0),
-                        (next) => setBlockForm((prev) => (prev ? { ...prev, recoveryDurationSec: Number(next) } : prev))
+                        "Distance",
+                        Array.from({ length: 101 }, (_, i) => ({ value: String(i * 100), label: i === 0 ? "0 m" : `${i * 100} m` })),
+                        String(blockForm.distanceM || 0),
+                        (next) => setBlockForm((prev) => (prev ? { ...prev, distanceM: Number(next), durationSec: undefined } : prev))
                       )
                     }
                   >
-                    Récup: {secondsToLabel(blockForm.recoveryDurationSec) || "Aucune"}
+                    Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
                   </Button>
+                </div>
+              </div>
+
+              {blockForm.type === "interval" && (
+                <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
+                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Répétitions & récupération
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[13px]"
+                      onClick={() =>
+                        openWheel(
+                          "Répétitions",
+                          Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+                          String(blockForm.repetitions || 1),
+                          (next) => setBlockForm((prev) => (prev ? { ...prev, repetitions: Number(next) } : prev))
+                        )
+                      }
+                    >
+                      Répétitions: {blockForm.repetitions || 1}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[13px]"
+                      onClick={() =>
+                        openWheel(
+                          "Récupération (sec)",
+                          Array.from({ length: 61 }, (_, i) => ({ value: String(i * 15), label: i === 0 ? "Aucune" : `${i * 15} s` })),
+                          String(blockForm.recoveryDurationSec || 0),
+                          (next) => setBlockForm((prev) => (prev ? { ...prev, recoveryDurationSec: Number(next) } : prev))
+                        )
+                      }
+                    >
+                      Récup: {secondsToLabel(blockForm.recoveryDurationSec) || "Aucune"}
+                    </Button>
+                  </div>
                 </div>
               )}
 
               {draft.sport !== "strength" && (
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[12px]"
-                    onClick={() =>
-                      openWheel(
-                        "Allure",
-                        Array.from({ length: 541 }, (_, idx) => {
-                          const total = 180 + idx;
-                          const min = Math.floor(total / 60);
-                          const sec = total % 60;
-                          return { value: String(total), label: `${min}:${sec.toString().padStart(2, "0")}/km` };
-                        }),
-                        String(blockForm.paceSecPerKm || 330),
-                        (next) =>
-                          setBlockForm((prev) =>
-                            prev ? { ...prev, paceSecPerKm: Number(next), speedKmh: undefined, powerWatts: undefined } : prev
-                          )
-                      )
-                    }
-                  >
-                    {paceToLabel(blockForm.paceSecPerKm) || "Allure"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[12px]"
-                    onClick={() =>
-                      openWheel(
-                        "Vitesse",
-                        Array.from({ length: 51 }, (_, i) => ({ value: String(i + 10), label: `${i + 10} km/h` })),
-                        String(blockForm.speedKmh || 12),
-                        (next) =>
-                          setBlockForm((prev) =>
-                            prev ? { ...prev, speedKmh: Number(next), paceSecPerKm: undefined, powerWatts: undefined } : prev
-                          )
-                      )
-                    }
-                  >
-                    {blockForm.speedKmh ? `${blockForm.speedKmh} km/h` : "Vitesse"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[12px]"
-                    onClick={() =>
-                      openWheel(
-                        "Puissance",
-                        Array.from({ length: 351 }, (_, i) => ({ value: String(i + 50), label: `${i + 50} W` })),
-                        String(blockForm.powerWatts || 180),
-                        (next) =>
-                          setBlockForm((prev) =>
-                            prev ? { ...prev, powerWatts: Number(next), paceSecPerKm: undefined, speedKmh: undefined } : prev
-                          )
-                      )
-                    }
-                  >
-                    {blockForm.powerWatts ? `${blockForm.powerWatts} W` : "Puissance"}
-                  </Button>
+                <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
+                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Cible
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Button
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[12px]"
+                      onClick={() =>
+                        openWheel(
+                          "Allure",
+                          Array.from({ length: 541 }, (_, idx) => {
+                            const total = 180 + idx;
+                            const min = Math.floor(total / 60);
+                            const sec = total % 60;
+                            return { value: String(total), label: `${min}:${sec.toString().padStart(2, "0")}/km` };
+                          }),
+                          String(blockForm.paceSecPerKm || 330),
+                          (next) =>
+                            setBlockForm((prev) =>
+                              prev ? { ...prev, paceSecPerKm: Number(next), speedKmh: undefined, powerWatts: undefined } : prev
+                            )
+                        )
+                      }
+                    >
+                      {paceToLabel(blockForm.paceSecPerKm) || "Allure"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[12px]"
+                      onClick={() =>
+                        openWheel(
+                          "Vitesse",
+                          Array.from({ length: 51 }, (_, i) => ({ value: String(i + 10), label: `${i + 10} km/h` })),
+                          String(blockForm.speedKmh || 12),
+                          (next) =>
+                            setBlockForm((prev) =>
+                              prev ? { ...prev, speedKmh: Number(next), paceSecPerKm: undefined, powerWatts: undefined } : prev
+                            )
+                        )
+                      }
+                    >
+                      {blockForm.speedKmh ? `${blockForm.speedKmh} km/h` : "Vitesse"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[12px]"
+                      onClick={() =>
+                        openWheel(
+                          "Puissance",
+                          Array.from({ length: 351 }, (_, i) => ({ value: String(i + 50), label: `${i + 50} W` })),
+                          String(blockForm.powerWatts || 180),
+                          (next) =>
+                            setBlockForm((prev) =>
+                              prev ? { ...prev, powerWatts: Number(next), paceSecPerKm: undefined, speedKmh: undefined } : prev
+                            )
+                        )
+                      }
+                    >
+                      {blockForm.powerWatts ? `${blockForm.powerWatts} W` : "Puissance"}
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              <div className="rounded-2xl border border-border p-2">
+              <div className="rounded-2xl border border-border bg-secondary/40 p-2">
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Intensité
+                </p>
                 <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
                   <button
                     type="button"

@@ -306,7 +306,7 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Keep bottom navigation visible on Messages pages.
+  // Show tab bar on inbox list, hide it inside a conversation thread.
   useEffect(() => {
     const root = document.documentElement;
     const hslVar = (name: string) => {
@@ -314,7 +314,7 @@ const Messages = () => {
       return t ? `hsl(${t})` : '';
     };
 
-    setHideBottomNav(false);
+    setHideBottomNav(!!selectedConversation);
     if (selectedConversation) {
       const sec = hslVar('--secondary');
       if (sec) {
