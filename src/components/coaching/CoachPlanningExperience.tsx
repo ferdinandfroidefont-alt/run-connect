@@ -175,7 +175,7 @@ export function CoachPlanningExperience() {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
   const [editorTab, setEditorTab] = useState<"build" | "library" | "templates">("build");
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(() => emptyDraft(new Date().toISOString()));
@@ -378,7 +378,7 @@ export function CoachPlanningExperience() {
     setEditingSessionId(null);
     setDraft(emptyDraft(date.toISOString()));
     setEditorTab("build");
-    setEditorOpen(true);
+    setCoachingTab("create");
   };
 
   const openEditSession = (sessionId: string) => {
@@ -394,7 +394,7 @@ export function CoachPlanningExperience() {
       blocks: [...existing.blocks].sort((a, b) => a.order - b.order),
     });
     setEditorTab("build");
-    setEditorOpen(true);
+    setCoachingTab("create");
   };
 
   const saveSession = async () => {
@@ -446,7 +446,7 @@ export function CoachPlanningExperience() {
       if (!editingSessionId) return [...prev, payload];
       return prev.map((item) => (item.id === editingSessionId ? payload : item));
     });
-    setEditorOpen(false);
+    setCoachingTab("planning");
     setSavePulse(true);
     window.setTimeout(() => setSavePulse(false), 900);
     toast.success("Séance enregistrée");
@@ -600,6 +600,14 @@ export function CoachPlanningExperience() {
 
   const weekRange = `${format(weekAnchor, "d MMM", { locale: fr })} - ${format(addDays(weekAnchor, 6), "d MMM", { locale: fr })}`;
 
+  const openCreateFromTab = () => {
+    if (coachingTab === "create") return;
+    setEditingSessionId(null);
+    setDraft(emptyDraft(new Date().toISOString()));
+    setEditorTab("build");
+    setCoachingTab("create");
+  };
+
   return (
     <>
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-coaching">
@@ -629,6 +637,29 @@ export function CoachPlanningExperience() {
             <div className="pt-1">
               <h1 className="text-[32px] font-bold tracking-tight text-foreground">Planification</h1>
               <p className="text-[13px] text-muted-foreground">Semaine de {targetLabel}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-card p-1.5">
+              <button
+                type="button"
+                onClick={() => setCoachingTab("planning")}
+                className={cn(
+                  "rounded-xl py-2 text-[13px] font-semibold transition-colors",
+                  coachingTab === "planning" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
+              >
+                Planification
+              </button>
+              <button
+                type="button"
+                onClick={openCreateFromTab}
+                className={cn(
+                  "rounded-xl py-2 text-[13px] font-semibold transition-colors",
+                  coachingTab === "create" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                )}
+              >
+                Créer une séance
+              </button>
             </div>
 
             {clubs.length > 1 && (
@@ -806,23 +837,19 @@ export function CoachPlanningExperience() {
         </IosFixedPageHeaderShell>
       </div>
 
-      <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          className="h-[92dvh] rounded-t-[20px] border-border bg-secondary p-0"
-        >
+      {coachingTab === "create" && (
+        <div className="fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-secondary">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
             headerWrapperClassName="shrink-0 border-b border-border bg-card"
             header={
-              <div className="pt-[max(0.25rem,var(--safe-area-top))]">
+              <div className="pt-[var(--safe-area-top)]">
                 <IosPageHeaderBar
                   left={
                     <button
                       type="button"
                       className="text-[16px] font-medium text-primary"
-                      onClick={() => setEditorOpen(false)}
+                      onClick={() => setCoachingTab("planning")}
                     >
                       Retour
                     </button>
@@ -998,8 +1025,8 @@ export function CoachPlanningExperience() {
               </div>
             )}
           </IosFixedPageHeaderShell>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
 
       <Sheet open={blockSheetOpen} onOpenChange={setBlockSheetOpen}>
         <SheetContent
