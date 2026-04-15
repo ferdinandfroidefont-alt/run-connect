@@ -36,6 +36,7 @@ import { parseRCC } from "@/lib/rccParser";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
+import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -1110,11 +1111,6 @@ export function CoachPlanningExperience() {
       setDrawerOpen(false);
       return;
     }
-    if (key === "groups") {
-      setActiveMenuKey("club");
-      setDrawerOpen(false);
-      return;
-    }
     setActiveMenuKey(key);
     setDrawerOpen(false);
     if (key === "planning") {
@@ -1253,6 +1249,82 @@ export function CoachPlanningExperience() {
     }
     setClubInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
     toast.success("Invitation annulée");
+  };
+
+  const openOrCreateGroupConversation = async (group: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+    memberIds: string[];
+  }) => {
+    if (!user || !activeClubId) return;
+    const locationMarker = `club-group:${group.id}`;
+    try {
+      let conversationId: string | null = null;
+      const { data: existing } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("is_group", true)
+        .eq("location", locationMarker)
+        .maybeSingle();
+      if (existing?.id) {
+        conversationId = existing.id;
+        await supabase
+          .from("conversations")
+          .update({
+            group_name: group.name,
+            group_avatar_url: group.avatarUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+      } else {
+        const { data: created, error: createError } = await supabase
+          .from("conversations")
+          .insert({
+            is_group: true,
+            group_name: group.name,
+            group_avatar_url: group.avatarUrl,
+            created_by: user.id,
+            participant_1: user.id,
+            participant_2: user.id,
+            location: locationMarker,
+          })
+          .select("id")
+          .single();
+        if (createError) {
+          toast.error("Impossible de créer la conversation groupe", createError.message);
+          return;
+        }
+        conversationId = created.id;
+      }
+      if (!conversationId) return;
+
+      const targetMemberIds = Array.from(new Set([user.id, ...group.memberIds]));
+      const { data: existingMembers } = await supabase
+        .from("group_members")
+        .select("user_id")
+        .eq("conversation_id", conversationId)
+        .in("user_id", targetMemberIds);
+      const existingSet = new Set((existingMembers || []).map((entry) => entry.user_id));
+      const toInsert = targetMemberIds
+        .filter((memberId) => !existingSet.has(memberId))
+        .map((memberId) => ({
+          conversation_id: conversationId!,
+          user_id: memberId,
+          is_admin: memberId === user.id,
+          is_coach: memberId === user.id,
+        }));
+      if (toInsert.length) {
+        const { error: memberInsertError } = await supabase.from("group_members").insert(toInsert);
+        if (memberInsertError) {
+          toast.error("Impossible d'ajouter tous les membres au groupe", memberInsertError.message);
+          return;
+        }
+      }
+      navigate(`/messages?conversation=${conversationId}`);
+    } catch (error) {
+      toast.error("Erreur lors de l'ouverture du groupe de discussion");
+    }
   };
 
   return (
@@ -1411,6 +1483,20 @@ export function CoachPlanningExperience() {
                 onDuplicateModel={(model) => void duplicateModel(model)}
                 onDeleteModel={(model) => void deleteModel(model)}
               />
+            ) : activeMenuKey === "groups" ? (
+              activeClubId ? (
+                <div className="ios-card rounded-2xl border border-border/70 bg-card py-3">
+                  <ClubGroupsManager
+                    clubId={activeClubId}
+                    onMessageGroup={(group) => void openOrCreateGroupConversation(group)}
+                  />
+                </div>
+              ) : (
+                <div className="ios-card rounded-2xl border border-border/70 bg-card p-4">
+                  <p className="text-[16px] font-semibold text-foreground">Groupes</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher les groupes.</p>
+                </div>
+              )
             ) : activeMenuKey === "club" ? (
               <ClubManagementPage
                 clubName={activeClubName || "RunConnect Club"}

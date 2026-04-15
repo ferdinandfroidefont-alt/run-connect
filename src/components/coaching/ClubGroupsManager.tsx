@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X, MessageCircle } from "lucide-react";
 
 interface ClubGroup {
   id: string;
@@ -24,13 +24,14 @@ interface Member {
 
 interface ClubGroupsManagerProps {
   clubId: string;
+  onMessageGroup?: (group: { id: string; name: string; avatarUrl: string | null; memberIds: string[] }) => void;
 }
 
 const GROUP_COLORS = [
   "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316",
 ];
 
-export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
+export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [groups, setGroups] = useState<ClubGroup[]>([]);
@@ -40,7 +41,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: groupsData } = await supabase
@@ -85,7 +86,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
         setGroups(groupsData.map(g => ({
           ...g,
           member_count: countMap[g.id] || 0,
-          avatar_url: (g as any).avatar_url || null,
+          avatar_url: g.avatar_url || null,
         })));
       } else {
         setGroups([]);
@@ -95,9 +96,9 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clubId, user?.id]);
 
-  useEffect(() => { loadData(); }, [clubId]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -146,7 +147,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
         return;
       }
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      await supabase.from("club_groups").update({ avatar_url: urlData.publicUrl } as any).eq("id", groupId);
+      await supabase.from("club_groups").update({ avatar_url: urlData.publicUrl }).eq("id", groupId);
       loadData();
       toast({ title: "Photo mise à jour !" });
     };
@@ -211,6 +212,22 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
                   <Camera className="h-4 w-4" />
                   {group.avatar_url ? "Changer la photo" : "Ajouter une photo"}
                 </button>
+                {onMessageGroup ? (
+                  <button
+                    onClick={() =>
+                      onMessageGroup({
+                        id: group.id,
+                        name: group.name,
+                        avatarUrl: group.avatar_url,
+                        memberIds: groupMembersList,
+                      })
+                    }
+                    className="flex items-center gap-2 py-2 px-1 text-primary text-[13px] font-medium w-full active:opacity-70"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Envoyer un message au groupe
+                  </button>
+                ) : null}
 
                 <div className="border-t border-border pt-1">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium py-1.5">Membres</p>
