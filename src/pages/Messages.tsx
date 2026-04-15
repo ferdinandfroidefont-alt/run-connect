@@ -306,7 +306,7 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Show/hide bottom navigation based on conversation state
+  // Keep bottom navigation visible on Messages pages.
   useEffect(() => {
     const root = document.documentElement;
     const hslVar = (name: string) => {
@@ -314,15 +314,14 @@ const Messages = () => {
       return t ? `hsl(${t})` : '';
     };
 
+    setHideBottomNav(false);
     if (selectedConversation) {
-      setHideBottomNav(true);
       const sec = hslVar('--secondary');
       if (sec) {
         root.style.backgroundColor = sec;
         document.body.style.backgroundColor = sec;
       }
     } else {
-      setHideBottomNav(false);
       const bg = hslVar('--background');
       if (bg) {
         root.style.backgroundColor = bg;

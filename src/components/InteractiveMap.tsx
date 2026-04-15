@@ -2316,7 +2316,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+var(--home-map-controls-stack-bottom))]",
+          "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >

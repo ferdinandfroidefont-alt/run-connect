@@ -406,16 +406,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!avatarFile) {
-      toast({ title: t('common.error'), description: t('profileSetup.toastPhotoRequired'), variant: "destructive" });
-      return;
-    }
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6 || !country) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
-      return;
-    }
-    if (selectedSports.length === 0) {
-      toast({ title: t('common.error'), description: t('profileSetup.toastSportsRequired'), variant: "destructive" });
       return;
     }
     if (!acceptedPolicies) {
@@ -430,11 +422,14 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     setIsLoading(true);
 
     try {
-      const uploadedUrl = await uploadAvatar(avatarFile);
-      if (!uploadedUrl) {
-        toast({ title: t('common.error'), description: t('profileSetup.toastUploadFail'), variant: "destructive" });
-        setIsLoading(false);
-        return;
+      let uploadedUrl: string | null = null;
+      if (avatarFile) {
+        uploadedUrl = await uploadAvatar(avatarFile);
+        if (!uploadedUrl) {
+          toast({ title: t('common.error'), description: t('profileSetup.toastUploadFail'), variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
       }
 
       await supabase.auth.updateUser({ password });
@@ -507,7 +502,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // Check that all required fields are actually populated
       const fieldsOk = verifiedProfile.username?.trim() &&
         verifiedProfile.display_name?.trim() &&
-        verifiedProfile.avatar_url?.trim() &&
         verifiedProfile.age &&
         verifiedProfile.bio?.trim();
 
@@ -729,7 +723,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     )}
                   </button>
                 </div>
-                <p className="mt-2 text-center text-[13px] text-muted-foreground">{t('profileSetup.photoLabel')}</p>
+                <p className="mt-2 text-center text-[13px] text-muted-foreground">{t('profileSetup.photoLabel')} (facultatif)</p>
                 <p className="mt-1 max-w-xs text-center text-[12px] leading-snug text-muted-foreground/80">
                   {t('profileSetup.heroSubtitle')}
                 </p>
@@ -838,6 +832,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 <div className="overflow-hidden rounded-[10px] bg-card">
                   <p className="border-b border-border px-4 py-2.5 text-[12px] leading-snug text-muted-foreground">
                     {t('profileSetup.sportsPickHint')}
+                  </p>
+                  <p className="border-b border-border px-4 py-2 text-[12px] leading-snug text-muted-foreground">
+                    Sport favori et pays (facultatif)
                   </p>
                   <div className="px-2">
                     {PROFILE_SPORT_KEYS.map((key) => (
@@ -953,7 +950,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 className="h-12 w-full rounded-ios-md text-[17px] font-semibold shadow-md shadow-primary/15"
                 disabled={
                   isLoading ||
-                  !avatarFile ||
                   !username.trim() ||
                   !displayName.trim() ||
                   !birthDate ||
@@ -961,8 +957,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   !bio.trim() ||
                   !password ||
                   password.length < 6 ||
-                  selectedSports.length === 0 ||
-                  !country ||
                   !acceptedPolicies
                 }
               >

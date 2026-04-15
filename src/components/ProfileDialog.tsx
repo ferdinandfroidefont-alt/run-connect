@@ -45,12 +45,10 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
   referral_code?: string | null;
+  onboarding_completed?: boolean;
 }
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
-);
-const ReferralDialog = lazy(() =>
-  import("@/components/ReferralDialog").then((m) => ({ default: m.ReferralDialog }))
 );
 
 const SPORT_LABELS: Record<string, string> = {
@@ -93,7 +91,6 @@ export const ProfileDialog = ({
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
   const [showOwnStory, setShowOwnStory] = useState(false);
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
@@ -907,7 +904,10 @@ export const ProfileDialog = ({
                               icon: Gift,
                               label: 'Parrainer quelqu’un',
                               color: 'text-primary',
-                              action: () => setShowReferralDialog(true),
+                              action: () => {
+                                onOpenChange(false);
+                                navigate("/referral");
+                              },
                               halfTile: true as const,
                             }
                           : {
@@ -1014,10 +1014,6 @@ export const ProfileDialog = ({
 
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
-
-      <Suspense fallback={null}>
-        <ReferralDialog isOpen={showReferralDialog} onClose={() => setShowReferralDialog(false)} />
-      </Suspense>
 
       {qrData && (
         <QRShareDialog

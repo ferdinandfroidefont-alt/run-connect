@@ -154,7 +154,7 @@ export const BottomNavigation = () => {
       )}
       role="navigation"
       aria-label="Navigation principale"
-      style={{ paddingBottom: "0px", bottom: "var(--tab-bar-ground-strip)" }}
+      style={{ paddingBottom: "var(--tab-bar-ground-strip)", bottom: "0px" }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}
@@ -217,14 +217,6 @@ export const BottomNavigation = () => {
           })}
         </div>
       </div>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bg-white dark:bg-black"
-        style={{
-          height: "var(--tab-bar-ground-strip)",
-          bottom: "calc(-1 * var(--tab-bar-ground-strip))",
-        }}
-      />
     </nav>
   );
 };

@@ -314,7 +314,7 @@ export default function ProfileEdit() {
             onClick={() => setShowAvatarSheet(true)}
             className="mt-2 text-[15px] font-medium text-primary"
           >
-            Changer la photo
+            Changer la photo (facultatif)
           </button>
         </div>
 
@@ -358,7 +358,7 @@ export default function ProfileEdit() {
             }
           />
           <IOSListItem
-            title="Téléphone"
+            title="Téléphone (facultatif)"
             showChevron={false}
             rightElement={
               <Input
@@ -390,7 +390,7 @@ export default function ProfileEdit() {
         {/* Sport & Pays */}
         <IOSListGroup header="PRÉFÉRENCES">
           <IOSListItem
-            title="Sport favori"
+            title="Sport favori (facultatif)"
             showChevron={false}
             rightElement={
               <select
@@ -405,7 +405,7 @@ export default function ProfileEdit() {
             }
           />
           <IOSListItem
-            title="Pays"
+            title="Pays (facultatif)"
             showChevron={false}
             rightElement={
               <select

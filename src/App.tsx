@@ -50,6 +50,7 @@ const StoryCreate = lazy(() => import("./pages/StoryCreate"));
 const Drafts = lazy(() => import("./pages/Drafts"));
 const OpenSessionLink = lazy(() => import("./pages/OpenSessionLink"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
@@ -313,6 +314,7 @@ const App = () => {
                   <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
+                  <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />

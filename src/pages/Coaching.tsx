@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreateClubDialogPremium } from "@/components/CreateClubDialogPremium";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppContext } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ type AthleteClubRow = {
 
 export default function Coaching() {
   const { user, loading: authLoading } = useAuth();
+  const { setHideBottomNav } = useAppContext();
   const navigate = useNavigate();
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const [clubs, setClubs] = useState<ClubOption[]>([]);
@@ -245,6 +247,11 @@ export default function Coaching() {
   useEffect(() => {
     void loadAthleteClubs();
   }, [loadAthleteClubs]);
+
+  useEffect(() => {
+    setHideBottomNav(false);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
 
   useEffect(() => {
     if (displayClubs.length === 0) {

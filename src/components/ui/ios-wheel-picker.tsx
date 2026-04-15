@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { lightHaptic } from "@/lib/haptics";
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
@@ -27,13 +28,21 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
   const animFrame = useRef(0);
   const pendingOffset = useRef(0);
   const ticking = useRef(false);
+  const lastHapticIndex = useRef(value);
 
   const [offset, setOffset] = useState(-value * ITEM_HEIGHT);
+
+  const triggerSelectionHaptic = useCallback((index: number) => {
+    if (index === lastHapticIndex.current) return;
+    lastHapticIndex.current = index;
+    void lightHaptic();
+  }, []);
 
   useEffect(() => {
     if (!isDragging.current) {
       setOffset(-value * ITEM_HEIGHT);
     }
+    lastHapticIndex.current = value;
   }, [value]);
 
   const clampIndex = useCallback((idx: number) => Math.max(0, Math.min(items.length - 1, idx)), [items.length]);
@@ -41,8 +50,9 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
   const snapTo = useCallback((rawOffset: number) => {
     const idx = clampIndex(Math.round(-rawOffset / ITEM_HEIGHT));
     setOffset(-idx * ITEM_HEIGHT);
+    triggerSelectionHaptic(idx);
     onChange(idx);
-  }, [clampIndex, onChange]);
+  }, [clampIndex, onChange, triggerSelectionHaptic]);
 
   const commitOffset = useCallback((next: number) => {
     pendingOffset.current = next;
@@ -80,6 +90,8 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     let next = startOffset.current + delta;
     if (next > maxOffset) next = maxOffset + (next - maxOffset) * 0.28;
     if (next < minOffset) next = minOffset + (next - minOffset) * 0.28;
+    const idx = clampIndex(Math.round(-next / ITEM_HEIGHT));
+    triggerSelectionHaptic(idx);
     commitOffset(next);
   };
 
@@ -95,6 +107,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     const delta = e.deltaY > 0 ? rawSteps : -rawSteps;
     const newIdx = clampIndex(Math.round(-offset / ITEM_HEIGHT) + delta);
     setOffset(-newIdx * ITEM_HEIGHT);
+    triggerSelectionHaptic(newIdx);
     onChange(newIdx);
   };
 
@@ -143,6 +156,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
               style={{ height: ITEM_HEIGHT }}
               onClick={() => {
                 setOffset(-idx * ITEM_HEIGHT);
+                triggerSelectionHaptic(idx);
                 onChange(idx);
               }}
             >
