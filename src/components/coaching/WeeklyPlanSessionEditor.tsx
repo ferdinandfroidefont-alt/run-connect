@@ -6,12 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RCCEditor } from "./RCCEditor";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
-import { BookOpen, Copy, Trash2, MapPin, Loader2, HelpCircle, ChevronDown } from "lucide-react";
+import { BookOpen, Copy, Trash2, HelpCircle, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { geocodeSearchMapbox } from "@/lib/mapboxGeocode";
 import { mergeParsedBlocksByIndex, parseRCC, type RCCResult, type ParsedBlock } from "@/lib/rccParser";
-import { RCCBlocksPreview } from "./RCCBlocksPreview";
 import { normalizeBlockRpeLength } from "@/lib/sessionBlockRpe";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 
@@ -23,22 +21,6 @@ const ACTIVITY_TYPES = [
   { value: "cycling", label: "Vélo" },
   { value: "swimming", label: "Natation" },
 ];
-
-const QUICK_OBJECTIVES: Record<string, string[]> = {
-  running: [
-    "Footing", "Footing Z2", "Seuil", "VMA", "VMA courte",
-    "VMA longue", "Fartlek", "Côtes", "Sortie longue", "Récupération",
-    "PPG / Renfo", "Spé 10K", "Spé semi", "Spé marathon"
-  ],
-  cycling: [
-    "Endurance", "Récup", "Tempo", "Seuil", "PMA", "PMA courte",
-    "PMA longue", "Sprint", "Côtes", "Sortie longue", "Home trainer"
-  ],
-  swimming: [
-    "Échauffement", "Technique", "Endurance", "Seuil", "Vitesse",
-    "Interval", "Retour au calme", "Mixte", "Palmes", "Pull buoy"
-  ],
-};
 
 const PACE_UNITS: Record<string, string> = {
   running: "min/km",
@@ -169,54 +151,12 @@ export const WeeklyPlanSessionEditor = ({
   members,
 }: WeeklyPlanSessionEditorProps) => {
   const [showTemplates, setShowTemplates] = useState(false);
-  const [locationSearch, setLocationSearch] = useState(session.locationName || "");
-  const [locationResults, setLocationResults] = useState<any[]>([]);
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-  const [showLocationResults, setShowLocationResults] = useState(false);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number>(0);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
   const [wheelItems, setWheelItems] = useState<Array<{ value: string; label: string }>>([]);
   const [wheelValue, setWheelValue] = useState("0");
   const [wheelApply, setWheelApply] = useState<((next: string) => void) | null>(null);
-
-  useEffect(() => {
-    if (!locationSearch.trim() || locationSearch === session.locationName) {
-      setLocationResults([]);
-      setShowLocationResults(false);
-      return;
-    }
-    const timer = setTimeout(() => { searchLocation(locationSearch); }, 500);
-    return () => clearTimeout(timer);
-  }, [locationSearch]);
-
-  const searchLocation = async (query: string) => {
-    if (!query.trim()) return;
-    setIsSearchingLocation(true);
-    try {
-      const rows = await geocodeSearchMapbox(query, 4);
-      setLocationResults(
-        rows.map((r) => ({
-          name: r.formatted_address,
-          lat: r.geometry.location.lat,
-          lng: r.geometry.location.lng,
-        })),
-      );
-      setShowLocationResults(rows.length > 0);
-    } catch {
-      setLocationResults([]);
-      setShowLocationResults(false);
-    } finally {
-      setIsSearchingLocation(false);
-    }
-  };
-
-  const selectLocation = (loc: { name: string; lat: number; lng: number }) => {
-    onChange({ ...session, locationName: loc.name, locationLat: loc.lat, locationLng: loc.lng });
-    setLocationSearch(loc.name);
-    setShowLocationResults(false);
-    setLocationResults([]);
-  };
 
   const update = <K extends keyof WeekSession>(key: K, value: WeekSession[K]) => {
     onChange({ ...session, [key]: value });
@@ -259,7 +199,6 @@ export const WeeklyPlanSessionEditor = ({
   const otherDays = DAY_SHORT.map((label, i) => ({ label, index: i }))
     .filter(d => d.index !== session.dayIndex);
 
-  const currentObjectives = QUICK_OBJECTIVES[session.activityType] || QUICK_OBJECTIVES.running;
   const currentPaceUnit = PACE_UNITS[session.activityType] || PACE_UNITS.running;
   const currentPaceExamples = PACE_EXAMPLES[session.activityType] || PACE_EXAMPLES.running;
 
@@ -277,7 +216,7 @@ export const WeeklyPlanSessionEditor = ({
           </div>
           <div>
             <p className="text-[15px] font-semibold text-foreground leading-tight">
-              {session.objective || "Nouvelle séance"}
+              {session.objective || "Titre de la séance"}
             </p>
             <p className="text-[12px] text-muted-foreground">{DAY_LABELS[session.dayIndex]}</p>
           </div>
@@ -304,6 +243,30 @@ export const WeeklyPlanSessionEditor = ({
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Session title */}
+        <div>
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
+            Titre de la séance
+          </label>
+          <Input
+            value={session.objective}
+            onChange={e => update("objective", e.target.value)}
+            placeholder="Ex: Footing, VMA, Seuil..."
+            className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px]"
+          />
+        </div>
+
+        {/* Template button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 rounded-xl text-[14px] w-full border-dashed border-border/80 hover:bg-primary/5"
+          onClick={() => setShowTemplates(true)}
+        >
+          <BookOpen className="h-4 w-4 mr-2 text-primary" />
+          Charger un template
+        </Button>
+
         {/* Activity type + Objective */}
         <div className="space-y-3">
           <div>
@@ -328,63 +291,7 @@ export const WeeklyPlanSessionEditor = ({
             </div>
           </div>
 
-          <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Objectif de la séance
-            </label>
-            <div className="relative">
-              <Input
-                value={session.objective}
-                onChange={e => update("objective", e.target.value)}
-                placeholder="Ex: Footing, VMA, Seuil..."
-                className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px] pr-10"
-              />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground">
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="w-72 p-2" 
-                  side="bottom"
-                  align="end"
-                  sideOffset={4}
-                  style={{ maxHeight: '280px' }}
-                >
-                  <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-2">
-                    Sélection rapide
-                  </p>
-                  <ScrollArea className="h-[220px]">
-                    <div className="grid grid-cols-2 gap-1 pr-2" style={{ touchAction: 'pan-y' }}>
-                      {currentObjectives.map(t => (
-                        <button
-                          key={t}
-                          type="button"
-                          className="text-left px-3 py-2.5 rounded-lg text-[14px] hover:bg-primary/10 active:bg-primary/20 transition-colors truncate"
-                          onClick={() => update("objective", t)}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
         </div>
-
-        {/* Template button */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-10 rounded-xl text-[14px] w-full border-dashed border-border/80 hover:bg-primary/5"
-          onClick={() => setShowTemplates(true)}
-        >
-          <BookOpen className="h-4 w-4 mr-2 text-primary" />
-          Charger un template
-        </Button>
 
         {/* Bloc builder */}
         <div className="space-y-2">
@@ -537,9 +444,7 @@ export const WeeklyPlanSessionEditor = ({
                     <p className="mt-1 text-[13px] font-semibold text-foreground">
                       {BLOCK_TYPE_LABELS[selectedBlock.type]} · {selectedBlock.distance ? `${selectedBlock.distance}m` : `${selectedBlock.duration || 0} min`} · x{selectedBlock.repetitions || 1}
                     </p>
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      Récup: {recoveryLabel(selectedBlock.recoveryDuration)} · RPE: {session.blockRpe[selectedBlockIndex] ?? 0}
-                    </p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">Récup: {recoveryLabel(selectedBlock.recoveryDuration)}</p>
                     <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{blockToRcc(selectedBlock)}</p>
                   </div>
                 </div>
@@ -602,52 +507,6 @@ export const WeeklyPlanSessionEditor = ({
             onChange={v => update("rccCode", v)}
             onParsedChange={handleParsedChange}
           />
-          {session.parsedBlocks && session.parsedBlocks.length > 0 && (
-            <div className="mt-4">
-              <RCCBlocksPreview
-                blocks={session.parsedBlocks}
-                blockRpe={session.blockRpe}
-                onBlockRpeChange={(blockRpe) => onChange({ ...session, blockRpe })}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Location */}
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
-            Lieu de rendez-vous
-          </label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={locationSearch}
-              onChange={e => {
-                setLocationSearch(e.target.value);
-                if (!e.target.value.trim()) update("locationName", "");
-              }}
-              placeholder="Rechercher un lieu..."
-              className="h-11 rounded-xl bg-secondary/50 border-0 text-[15px] pl-10 pr-10"
-            />
-            {isSearchingLocation && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-            )}
-          </div>
-          {showLocationResults && locationResults.length > 0 && (
-            <div className="mt-1.5 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
-              {locationResults.map((loc, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="w-full text-left px-4 py-3 text-[14px] hover:bg-secondary/50 active:bg-secondary transition-colors flex items-center gap-2.5 border-b border-border/50 last:border-0"
-                  onClick={() => selectLocation(loc)}
-                >
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  <span className="truncate">{loc.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Coach notes */}

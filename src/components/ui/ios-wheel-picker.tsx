@@ -5,7 +5,10 @@ import { lightHaptic } from "@/lib/haptics";
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const CENTER_INDEX = Math.floor(VISIBLE_ITEMS / 2);
-const MOMENTUM_MULTIPLIER = 260;
+const MOMENTUM_MULTIPLIER = 980;
+const FLICK_BOOST = 1.35;
+const MODAL_ROOT_CLASS = "fixed inset-0 z-[420] flex items-end justify-center overscroll-none pb-[max(5.75rem,calc(var(--safe-area-bottom)+4.5rem))]";
+const MODAL_PANEL_CLASS = "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl";
 
 interface IosWheelColumnProps {
   items: string[];
@@ -29,6 +32,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
   const pendingOffset = useRef(0);
   const ticking = useRef(false);
   const lastHapticIndex = useRef(value);
+  const offsetRef = useRef(-value * ITEM_HEIGHT);
 
   const [offset, setOffset] = useState(-value * ITEM_HEIGHT);
 
@@ -40,7 +44,9 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
 
   useEffect(() => {
     if (!isDragging.current) {
-      setOffset(-value * ITEM_HEIGHT);
+      const aligned = -value * ITEM_HEIGHT;
+      offsetRef.current = aligned;
+      setOffset(aligned);
     }
     lastHapticIndex.current = value;
   }, [value]);
@@ -49,7 +55,9 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
 
   const snapTo = useCallback((rawOffset: number) => {
     const idx = clampIndex(Math.round(-rawOffset / ITEM_HEIGHT));
-    setOffset(-idx * ITEM_HEIGHT);
+    const aligned = -idx * ITEM_HEIGHT;
+    offsetRef.current = aligned;
+    setOffset(aligned);
     triggerSelectionHaptic(idx);
     onChange(idx);
   }, [clampIndex, onChange, triggerSelectionHaptic]);
@@ -60,6 +68,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     ticking.current = true;
     animFrame.current = requestAnimationFrame(() => {
       ticking.current = false;
+      offsetRef.current = pendingOffset.current;
       setOffset(pendingOffset.current);
     });
   }, []);
@@ -69,7 +78,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     ticking.current = false;
     isDragging.current = true;
     startY.current = e.touches[0].clientY;
-    startOffset.current = offset;
+    startOffset.current = offsetRef.current;
     lastY.current = e.touches[0].clientY;
     lastTime.current = performance.now();
     velocity.current = 0;
@@ -88,8 +97,8 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     const minOffset = -(items.length - 1) * ITEM_HEIGHT;
     const maxOffset = 0;
     let next = startOffset.current + delta;
-    if (next > maxOffset) next = maxOffset + (next - maxOffset) * 0.28;
-    if (next < minOffset) next = minOffset + (next - minOffset) * 0.28;
+    if (next > maxOffset) next = maxOffset + (next - maxOffset) * 0.14;
+    if (next < minOffset) next = minOffset + (next - minOffset) * 0.14;
     const idx = clampIndex(Math.round(-next / ITEM_HEIGHT));
     triggerSelectionHaptic(idx);
     commitOffset(next);
@@ -97,16 +106,18 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
 
   const handleTouchEnd = () => {
     isDragging.current = false;
-    const v = velocity.current * MOMENTUM_MULTIPLIER;
-    snapTo(offset - v);
+    const v = velocity.current * MOMENTUM_MULTIPLIER * FLICK_BOOST;
+    snapTo(offsetRef.current - v);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const rawSteps = Math.max(1, Math.min(6, Math.round(Math.abs(e.deltaY) / 36)));
+    const rawSteps = Math.max(1, Math.min(24, Math.round(Math.abs(e.deltaY) / 10)));
     const delta = e.deltaY > 0 ? rawSteps : -rawSteps;
-    const newIdx = clampIndex(Math.round(-offset / ITEM_HEIGHT) + delta);
-    setOffset(-newIdx * ITEM_HEIGHT);
+    const newIdx = clampIndex(Math.round(-offsetRef.current / ITEM_HEIGHT) + delta);
+    const aligned = -newIdx * ITEM_HEIGHT;
+    offsetRef.current = aligned;
+    setOffset(aligned);
     triggerSelectionHaptic(newIdx);
     onChange(newIdx);
   };
@@ -140,7 +151,7 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
         className="transition-transform"
         style={{
           transform: `translateY(${offset + CENTER_INDEX * ITEM_HEIGHT}px)`,
-          transitionDuration: isDragging.current ? "0ms" : "300ms",
+          transitionDuration: isDragging.current ? "0ms" : "110ms",
           transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
@@ -155,7 +166,9 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
               )}
               style={{ height: ITEM_HEIGHT }}
               onClick={() => {
-                setOffset(-idx * ITEM_HEIGHT);
+                const aligned = -idx * ITEM_HEIGHT;
+                offsetRef.current = aligned;
+                setOffset(aligned);
                 triggerSelectionHaptic(idx);
                 onChange(idx);
               }}
@@ -187,18 +200,32 @@ function useBodyScrollLock(active: boolean) {
     if (!active) return;
     const body = document.body;
     const html = document.documentElement;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
     const previousBodyOverflow = body.style.overflow;
     const previousBodyTouchAction = body.style.touchAction;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyWidth = body.style.width;
     const previousHtmlOverflow = html.style.overflow;
+    const previousHtmlOverscroll = html.style.overscrollBehavior;
 
     body.style.overflow = "hidden";
     body.style.touchAction = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
     html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
 
     return () => {
       body.style.overflow = previousBodyOverflow;
       body.style.touchAction = previousBodyTouchAction;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.width = previousBodyWidth;
       html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousHtmlOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [active]);
 }
@@ -209,15 +236,19 @@ export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      className={MODAL_ROOT_CLASS}
       onClick={onClose}
       onWheel={(e) => e.preventDefault()}
       onTouchMove={(e) => e.preventDefault()}
+      onWheelCapture={(e) => e.preventDefault()}
+      onTouchMoveCapture={(e) => e.preventDefault()}
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
+        className={MODAL_PANEL_CLASS}
         onClick={(e) => e.stopPropagation()}
+        onWheelCapture={(e) => e.stopPropagation()}
+        onTouchMoveCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
           <button onClick={onClose} className="text-[17px] text-muted-foreground active:opacity-60">
@@ -292,15 +323,19 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      className={MODAL_ROOT_CLASS}
       onClick={onClose}
       onWheel={(e) => e.preventDefault()}
       onTouchMove={(e) => e.preventDefault()}
+      onWheelCapture={(e) => e.preventDefault()}
+      onTouchMoveCapture={(e) => e.preventDefault()}
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
+        className={MODAL_PANEL_CLASS}
         onClick={(e) => e.stopPropagation()}
+        onWheelCapture={(e) => e.stopPropagation()}
+        onTouchMoveCapture={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
@@ -370,15 +405,19 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      className={MODAL_ROOT_CLASS}
       onClick={onClose}
       onWheel={(e) => e.preventDefault()}
       onTouchMove={(e) => e.preventDefault()}
+      onWheelCapture={(e) => e.preventDefault()}
+      onTouchMoveCapture={(e) => e.preventDefault()}
     >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
+        className={MODAL_PANEL_CLASS}
         onClick={(e) => e.stopPropagation()}
+        onWheelCapture={(e) => e.stopPropagation()}
+        onTouchMoveCapture={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
           <button onClick={onClose} className="text-[17px] text-muted-foreground active:opacity-60">
