@@ -25,7 +25,6 @@ import { useEnhancedToast } from "@/hooks/useEnhancedToast";
 import { useAppContext } from "@/contexts/AppContext";
 import { useNavigate } from "react-router-dom";
 import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
-import { PlanningSegmentedControl } from "@/components/coaching/planning/PlanningSegmentedControl";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
@@ -744,21 +743,6 @@ export function CoachPlanningExperience() {
               <p className="text-[13px] text-muted-foreground">Semaine de {targetLabel}</p>
             </div>
 
-            <PlanningSegmentedControl
-              active={coachingTab}
-              onChange={(next) => {
-                if (next === "planning") {
-                  setCoachingTab("planning");
-                  return;
-                }
-                if (coachingTab === "create") return;
-                setEditingSessionId(null);
-                setDraft(emptyDraft(new Date().toISOString()));
-                setEditorTab("build");
-                setCoachingTab("create");
-              }}
-            />
-
             {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="ios-card rounded-2xl border border-border/70 bg-card p-2">
                 <p className="px-2 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
@@ -827,11 +811,6 @@ export function CoachPlanningExperience() {
                 />
 
                 <div className="space-y-2">
-              {loading && (
-                <div className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-4 text-center text-[13px] text-muted-foreground">
-                  Chargement de la semaine...
-                </div>
-              )}
                   {weekDays.map((day) => {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
