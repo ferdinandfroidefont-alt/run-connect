@@ -5,7 +5,18 @@ import { useSendNotification } from "@/hooks/useSendNotification";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, ClipboardList, Bell, Loader2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ChevronRight as ChevronRightIcon,
+  ClipboardList,
+  Bell,
+  Loader2,
+  CalendarDays,
+  MessageCircle,
+  Send,
+} from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -102,6 +113,22 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
   );
 };
 
+type UiDayStatus = "done" | "missed" | "pending" | "none";
+
+const STATUS_CHIP_BY_DAY: Record<UiDayStatus, { short: string; className: string }> = {
+  done: { short: "Fait", className: "bg-emerald-500 text-white" },
+  missed: { short: "Non fait", className: "bg-red-500 text-white" },
+  pending: { short: "En attente", className: "bg-orange-400 text-white" },
+  none: { short: "Aucune", className: "bg-zinc-300 text-white dark:bg-zinc-600" },
+};
+
+const toUiStatus = (status?: string): UiDayStatus => {
+  if (status === "completed") return "done";
+  if (status === "missed") return "missed";
+  if (status === "pending") return "pending";
+  return "none";
+};
+
 export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -189,7 +216,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        (supabase.from("coaching_sessions") as any)
+        supabase
+          .from("coaching_sessions")
           .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
@@ -223,8 +251,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await (supabase
-          .from("coaching_participations") as any)
+        const { data: participations } = await supabase
+          .from("coaching_participations")
           .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);
 
@@ -482,97 +510,198 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
+  const sessionsForWeek = weekDays
+    .map((day) => {
+      const dayKey = format(day, "yyyy-MM-dd");
+      const dayData = selectedAthlete.days[dayKey];
+      if (!dayData) return null;
+      const status = toUiStatus(dayData.status);
+      const felt = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, 12);
+      const avgRpe = felt.length > 0 ? Math.round(felt.reduce((a, b) => a + b, 0) / felt.length) : null;
+      const details = [
+        dayData.session.distance_km ? `${Math.round(Number(dayData.session.distance_km) * 10) / 10} km` : "",
+        dayData.session.pace_target ? `Allure ${dayData.session.pace_target}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • ");
+      return {
+        day,
+        dayData,
+        status,
+        avgRpe,
+        details: details || "Séance planifiée",
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+  const trendPct = fourWeekVolume
+    ? Math.round((((fourWeekVolume.current || 0) - (fourWeekVolume.previous || 0)) / Math.max(1, fourWeekVolume.previous || 0)) * 100)
+    : 0;
+
+  const handleResendSession = async () => {
+    if (!selectedAthleteId) return;
+    try {
+      await sendPushNotification(
+        selectedAthleteId,
+        "📩 Rappel séance",
+        "Ton coach vient de renvoyer la séance. Pense à la valider dès qu'elle est faite.",
+        "coaching_session_resend"
+      );
+      toast.success("Séance renvoyée à l'athlète");
+    } catch {
+      toast.error("Impossible de renvoyer la séance");
+    }
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5 px-4 pb-[calc(1.25rem+var(--safe-area-bottom))]">
+      <div className="pt-1.5">
+        <h2 className="text-[38px] font-black leading-[0.95] tracking-tight text-foreground">Suivi athlète</h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">Vue athlètes et séances réalisées</p>
+      </div>
+
       <AthleteHeader
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
         username={selectedAthlete.username}
         groupName={selectedAthlete.groupName}
         age={selectedAthlete.age}
+        status={pct >= 70 ? "active" : "late"}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
+        onViewProfile={() => navigate(`/profile/${selectedAthlete.userId}`)}
       />
 
-      <div className="bg-card p-3">
-        <div className="flex items-center justify-between">
-          <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
-            <ChevronLeft className="h-4 w-4 text-primary" />
-          </button>
-          <p className="text-[15px] font-semibold text-foreground">{weekLabel}</p>
-          <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
-            <ChevronRight className="h-4 w-4 text-primary" />
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-card p-4">
-        <div className="flex items-center gap-4">
+      <div className="ios-card rounded-2xl border border-border/60 bg-card px-3 py-3 shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-3">
           <ProgressRing percent={pct} />
-          <div className="flex-1">
-            <p className="text-[15px] font-semibold text-foreground">
-              {selectedAthlete.completedCount}/{selectedAthlete.totalCount} séances faites
+          <div className="min-w-0 flex-1">
+            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
+            <p className="text-[34px] font-black leading-none text-emerald-500">
+              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
+              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
             </p>
-            {selectedAthlete.weeklyVolumeKm > 0 && (
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                📏 {Math.round(selectedAthlete.weeklyVolumeKm * 10) / 10} km cette semaine
-              </p>
-            )}
+            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
+            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {trendPct >= 0 ? "+" : ""}
+              {trendPct}%
+            </p>
+            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
           </div>
         </div>
       </div>
 
-      <div className="space-y-2 px-4">
-        {weekDays.map((day) => {
-          const dayKey = format(day, "yyyy-MM-dd");
-          const dayData = selectedAthlete.days[dayKey];
-          if (!dayData) return null;
-
-          const status =
-            dayData.status === "completed"
-              ? "done"
-              : dayData.status === "missed"
-              ? "missed"
-              : "pending";
-          const felt = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, 12);
-          const avgRpe = felt.length > 0 ? Math.round(felt.reduce((a, b) => a + b, 0) / felt.length) : null;
-          const details = [
-            dayData.session.distance_km ? `${Math.round(Number(dayData.session.distance_km) * 10) / 10} km` : "",
-            dayData.session.pace_target ? `Allure ${dayData.session.pace_target}` : "",
-          ]
-            .filter(Boolean)
-            .join(" • ");
-
-          return (
-            <AthleteSessionCard
-              key={dayKey}
-              dayLabel={format(day, "EEE", { locale: fr })}
-              dateLabel={format(day, "d MMM", { locale: fr })}
-              title={dayData.sessionTitle}
-              details={details || "Séance planifiée"}
-              status={status}
-              note={dayData.note}
-              rpeLabel={avgRpe != null ? `RPE : ${avgRpe}/10` : undefined}
-              objective={dayData.session.objective}
-              onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
-            />
-          );
-        })}
+      <div className="ios-card rounded-2xl border border-border/60 bg-card px-3 py-3 shadow-[var(--shadow-card)]">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Semaine précédente"
+          >
+            <ChevronLeft className="h-4 w-4 text-primary" />
+          </button>
+          <p className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-foreground">
+            {weekLabel}
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </p>
+          <button
+            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Semaine suivante"
+          >
+            <ChevronRight className="h-4 w-4 text-primary" />
+          </button>
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {weekDays.map((day) => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const dayData = selectedAthlete.days[dayKey];
+            const status = toUiStatus(dayData?.status);
+            const conf = STATUS_CHIP_BY_DAY[status];
+            return (
+              <div key={dayKey} className="text-center">
+                <p className="text-[11px] font-semibold text-foreground">{format(day, "EEE", { locale: fr }).slice(0, 3)}</p>
+                <p className="text-[10px] text-muted-foreground">{format(day, "d", { locale: fr })}</p>
+                <div className="mt-1 flex justify-center">
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold shadow-sm ${conf.className}`}>
+                    {status === "done" ? "✓" : status === "missed" ? "✕" : status === "pending" ? "⏳" : "–"}
+                  </span>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">{conf.short}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {onOpenPlanForAthlete && (
-        <div className="px-4">
-          <Button
-            onClick={() => {
-              onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined, currentWeek);
-            }}
-            className="w-full rounded-2xl h-12 text-[15px] font-semibold gap-2"
-          >
-            <ClipboardList className="h-4.5 w-4.5" />
-            Continuer le plan pour {selectedAthlete.displayName.split(" ")[0]}
-          </Button>
+      <div className="pt-1">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[27px] font-black leading-none tracking-tight text-foreground">Séances de la semaine</p>
+          <button type="button" className="text-[13px] font-semibold text-primary">
+            Tout voir
+          </button>
         </div>
-      )}
+        <div className="space-y-2.5">
+          {sessionsForWeek.length === 0 ? (
+            <div className="ios-card border border-border/60 bg-card p-4 text-center">
+              <p className="text-[13px] text-muted-foreground">Aucune séance planifiée cette semaine.</p>
+            </div>
+          ) : (
+            sessionsForWeek.map(({ day, dayData, status, avgRpe, details }) => (
+              <AthleteSessionCard
+                key={`${dayData.sessionId}-${format(day, "yyyy-MM-dd")}`}
+                dayLabel={format(day, "EEE", { locale: fr }).toUpperCase()}
+                dayNumber={format(day, "d", { locale: fr })}
+                title={dayData.sessionTitle}
+                details={details}
+                status={status === "none" ? "pending" : status}
+                note={dayData.note}
+                rpeLabel={avgRpe != null ? `RPE ${avgRpe}/10` : undefined}
+                objective={dayData.session.objective}
+                onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
+                onOpen={() => void handleRescheduleSession(dayData.sessionId)}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 rounded-xl text-[12px] font-semibold bg-card"
+          onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
+        >
+          <MessageCircle className="mr-1.5 h-4 w-4" />
+          Envoyer message
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 rounded-xl text-[12px] font-semibold bg-card"
+          onClick={() =>
+            onOpenPlanForAthlete?.(
+              selectedAthlete.userId,
+              selectedAthlete.displayName,
+              selectedAthlete.groupId || undefined,
+              currentWeek
+            )
+          }
+        >
+          <ClipboardList className="mr-1.5 h-4 w-4" />
+          Modifier semaine
+        </Button>
+        <Button type="button" variant="outline" className="h-11 rounded-xl text-[12px] font-semibold bg-card" onClick={() => void handleResendSession()}>
+          <Send className="mr-1.5 h-4 w-4" />
+          Renvoyer séance
+        </Button>
+      </div>
+      {completionStreak > 0 ? (
+        <p className="text-center text-[11px] font-medium text-muted-foreground">
+          Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
+        </p>
+      ) : null}
     </div>
   );
 };

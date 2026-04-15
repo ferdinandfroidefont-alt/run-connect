@@ -52,6 +52,7 @@ import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
+import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
 
@@ -101,6 +102,7 @@ export const RouteCreation = () => {
   const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
   const waypointMarkers = useRef<Marker[]>([]);
+  const userLocationMarkerRef = useRef<Marker | null>(null);
   const segmentIdCounterRef = useRef(0);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -149,6 +151,21 @@ export const RouteCreation = () => {
     const n = segmentIdCounterRef.current++;
     return { layerSourceId: `rc-${n}-src`, layerId: `rc-${n}-ly` };
   }
+
+  const ensureUserLocationMarker = useCallback(async (position: { lat: number; lng: number }) => {
+    if (!map.current) return;
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.setLngLat([position.lng, position.lat]);
+      return;
+    }
+    const marker = await createUserLocationMapboxMarker(position.lng, position.lat);
+    if (!map.current) {
+      marker.remove();
+      return;
+    }
+    marker.addTo(map.current);
+    userLocationMarkerRef.current = marker;
+  }, []);
 
   useEffect(() => {
     if (isEditMode) {
@@ -274,6 +291,7 @@ export const RouteCreation = () => {
               .then((position) => {
                 if (position && map.current) {
                   map.current.jumpTo({ center: [position.lng, position.lat], zoom: 14 });
+                  void ensureUserLocationMarker(position);
                 }
               })
               .catch(() => {
@@ -299,6 +317,8 @@ export const RouteCreation = () => {
       roCleanup?.();
       scrubMarkerRef.current?.remove();
       scrubMarkerRef.current = null;
+      userLocationMarkerRef.current?.remove();
+      userLocationMarkerRef.current = null;
       map.current?.remove();
       map.current = null;
     };
@@ -863,16 +883,17 @@ export const RouteCreation = () => {
     };
   }, [requestExitWithRouteDraft]);
 
-  const handleRecenter = async () => {
+  const handleRecenter = useCallback(async () => {
     try {
       const position = await getCurrentPosition();
       if (position) {
         map.current?.flyTo({ center: [position.lng, position.lat], zoom: 14, duration: 600 });
+        await ensureUserLocationMarker(position);
       }
     } catch {
       toast.error('Position non disponible');
     }
-  };
+  }, [ensureUserLocationMarker, getCurrentPosition]);
 
   const handleCancel = () => {
     requestExitWithRouteDraft('/');

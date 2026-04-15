@@ -5,7 +5,7 @@ interface SessionFeedbackProps {
 
 export function SessionFeedback({ note, rpeLabel }: SessionFeedbackProps) {
   if (!note && !rpeLabel) {
-    return <p className="text-[12px] text-muted-foreground">Aucun retour pour le moment</p>;
+    return <p className="text-[12px] text-muted-foreground">Aucun retour</p>;
   }
 
   return (

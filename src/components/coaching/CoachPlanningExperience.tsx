@@ -37,6 +37,7 @@ import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubI
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
+import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -1091,6 +1092,8 @@ export function CoachPlanningExperience() {
   const sectionSubtitle =
     activeMenuKey === "planning"
       ? `Semaine de ${targetLabel}`
+      : activeMenuKey === "dashboard"
+      ? "Vue d’ensemble de votre coaching"
       : activeMenuKey === "tracking"
       ? "Vue athlètes et séances réalisées"
       : activeMenuKey === "templates"
@@ -1457,6 +1460,30 @@ export function CoachPlanningExperience() {
                   })}
                 </div>
               </>
+            ) : activeMenuKey === "dashboard" ? (
+              activeClubId ? (
+                <CoachDashboardPage
+                  clubId={activeClubId}
+                  onOpenLateAthletes={() => {
+                    setActiveMenuKey("tracking");
+                    setTrackingSelectedAthleteId(null);
+                  }}
+                  onOpenMessages={() => navigate("/messages")}
+                  onOpenPlanning={() => {
+                    setActiveMenuKey("planning");
+                    setCoachingTab("planning");
+                  }}
+                  onOpenTemplates={() => {
+                    setActiveMenuKey("templates");
+                    setCoachingTab("planning");
+                  }}
+                />
+              ) : (
+                <div className="ios-card rounded-2xl border border-border/70 bg-card p-4">
+                  <p className="text-[16px] font-semibold text-foreground">Tableau de bord</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher le dashboard.</p>
+                </div>
+              )
             ) : activeMenuKey === "tracking" ? (
               activeClubId ? (
                 <WeeklyTrackingView
