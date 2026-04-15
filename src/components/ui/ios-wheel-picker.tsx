@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const CENTER_INDEX = Math.floor(VISIBLE_ITEMS / 2);
+const MOMENTUM_MULTIPLIER = 260;
 
 interface IosWheelColumnProps {
   items: string[];
@@ -24,6 +25,8 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
   const lastY = useRef(0);
   const lastTime = useRef(0);
   const animFrame = useRef(0);
+  const pendingOffset = useRef(0);
+  const ticking = useRef(false);
 
   const [offset, setOffset] = useState(-value * ITEM_HEIGHT);
 
@@ -41,13 +44,24 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     onChange(idx);
   }, [clampIndex, onChange]);
 
+  const commitOffset = useCallback((next: number) => {
+    pendingOffset.current = next;
+    if (ticking.current) return;
+    ticking.current = true;
+    animFrame.current = requestAnimationFrame(() => {
+      ticking.current = false;
+      setOffset(pendingOffset.current);
+    });
+  }, []);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     cancelAnimationFrame(animFrame.current);
+    ticking.current = false;
     isDragging.current = true;
     startY.current = e.touches[0].clientY;
     startOffset.current = offset;
     lastY.current = e.touches[0].clientY;
-    lastTime.current = Date.now();
+    lastTime.current = performance.now();
     velocity.current = 0;
   };
 
@@ -55,28 +69,40 @@ export function IosWheelColumn({ items, value, onChange, suffix, className }: Io
     if (!isDragging.current) return;
     e.preventDefault();
     const y = e.touches[0].clientY;
-    const now = Date.now();
+    const now = performance.now();
     const dt = now - lastTime.current;
     if (dt > 0) velocity.current = (y - lastY.current) / dt;
     lastY.current = y;
     lastTime.current = now;
     const delta = y - startY.current;
-    setOffset(startOffset.current + delta);
+    const minOffset = -(items.length - 1) * ITEM_HEIGHT;
+    const maxOffset = 0;
+    let next = startOffset.current + delta;
+    if (next > maxOffset) next = maxOffset + (next - maxOffset) * 0.28;
+    if (next < minOffset) next = minOffset + (next - minOffset) * 0.28;
+    commitOffset(next);
   };
 
   const handleTouchEnd = () => {
     isDragging.current = false;
-    const v = velocity.current * 150;
+    const v = velocity.current * MOMENTUM_MULTIPLIER;
     snapTo(offset - v);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 1 : -1;
+    const rawSteps = Math.max(1, Math.min(6, Math.round(Math.abs(e.deltaY) / 36)));
+    const delta = e.deltaY > 0 ? rawSteps : -rawSteps;
     const newIdx = clampIndex(Math.round(-offset / ITEM_HEIGHT) + delta);
     setOffset(-newIdx * ITEM_HEIGHT);
     onChange(newIdx);
   };
+
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(animFrame.current);
+    };
+  }, []);
 
   return (
     <div
