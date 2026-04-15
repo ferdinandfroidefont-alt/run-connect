@@ -168,11 +168,38 @@ interface WheelValuePickerModalProps {
   onConfirm: () => void;
 }
 
+function useBodyScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyTouchAction = body.style.touchAction;
+    const previousHtmlOverflow = html.style.overflow;
+
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+    html.style.overflow = "hidden";
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.touchAction = previousBodyTouchAction;
+      html.style.overflow = previousHtmlOverflow;
+    };
+  }, [active]);
+}
+
 export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm }: WheelValuePickerModalProps) {
+  useBodyScrollLock(open);
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      onClick={onClose}
+      onWheel={(e) => e.preventDefault()}
+      onTouchMove={(e) => e.preventDefault()}
+    >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
@@ -235,6 +262,7 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
     }
   }, [open, initialSeconds]);
 
+  useBodyScrollLock(open);
   if (!open) return null;
 
   const handleConfirm = () => {
@@ -249,7 +277,12 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      onClick={onClose}
+      onWheel={(e) => e.preventDefault()}
+      onTouchMove={(e) => e.preventDefault()}
+    >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
@@ -312,6 +345,7 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
     }
   }, [open, initialSecondsPerKm]);
 
+  useBodyScrollLock(open);
   if (!open) return null;
 
   const handleConfirm = () => {
@@ -321,7 +355,12 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-end justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[300] flex items-end justify-center overscroll-none"
+      onClick={onClose}
+      onWheel={(e) => e.preventDefault()}
+      onTouchMove={(e) => e.preventDefault()}
+    >
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
         className="relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl"
