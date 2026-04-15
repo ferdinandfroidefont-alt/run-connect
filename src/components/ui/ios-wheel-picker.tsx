@@ -114,6 +114,11 @@ function useBodyScrollLock(active: boolean) {
   }, [active]);
 }
 
+function eventFromWheelColumn(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest("[data-wheel-column='true']");
+}
+
 function resolveAccentColor(title: string) {
   const key = title.toLowerCase();
   if (key.includes("allure")) return "#8B5CF6";
@@ -257,6 +262,26 @@ export function SmartPerformancePicker({
   onConfirm,
 }: SmartPerformancePickerProps) {
   useBodyScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Force-scroll lock at document level to prevent any underlying page scroll,
+    // while keeping wheel columns scrollable.
+    const blockBackgroundScroll = (event: TouchEvent | WheelEvent) => {
+      if (eventFromWheelColumn(event.target)) return;
+      event.preventDefault();
+    };
+
+    document.addEventListener("touchmove", blockBackgroundScroll, { passive: false, capture: true });
+    document.addEventListener("wheel", blockBackgroundScroll, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener("touchmove", blockBackgroundScroll, { capture: true } as EventListenerOptions);
+      document.removeEventListener("wheel", blockBackgroundScroll, { capture: true } as EventListenerOptions);
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const accentColor = resolveAccentColor(title);
@@ -264,6 +289,16 @@ export function SmartPerformancePicker({
     <div
       className={MODAL_ROOT_CLASS}
       onClick={onClose}
+      onTouchMoveCapture={(event) => {
+        if (!eventFromWheelColumn(event.target)) {
+          event.preventDefault();
+        }
+      }}
+      onWheelCapture={(event) => {
+        if (!eventFromWheelColumn(event.target)) {
+          event.preventDefault();
+        }
+      }}
     >
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm dark:bg-black/65" />
       <div className={cn(MODAL_PANEL_CLASS, "border border-border/60 dark:bg-[#0a0a0a]")} onClick={(e) => e.stopPropagation()}>

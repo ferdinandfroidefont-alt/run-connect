@@ -138,6 +138,7 @@ export default function StoryCreate() {
   const [showTextInput, setShowTextInput] = useState(false);
   const [textPos, setTextPos] = useState({ x: 120, y: 200 });
   const textDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const textInputRef = useRef<HTMLInputElement | null>(null);
   const [textScale, setTextScale] = useState(1);
   const [textRotation, setTextRotation] = useState(0);
   const [textColor, setTextColor] = useState("#FFFFFF");
@@ -1453,6 +1454,15 @@ export default function StoryCreate() {
     });
   }, [getTextEditingViewport, keyboardHeight, showTextInput]);
 
+  useEffect(() => {
+    if (!showTextInput) return;
+    placeTextEditorAtCenter();
+    const t = window.setTimeout(() => {
+      textInputRef.current?.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [placeTextEditorAtCenter, showTextInput]);
+
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 2) return;
     const [a, b] = [e.touches[0], e.touches[1]];
@@ -2121,10 +2131,10 @@ export default function StoryCreate() {
           >
             {showTextInput ? (
               <input
+                ref={textInputRef}
                 value={textOverlay}
                 onChange={(e) => setTextOverlay(e.target.value)}
                 placeholder="Ecrire ici..."
-                autoFocus
                 className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
                 style={{
                   fontFamily: FONT_MAP[textFont],
@@ -2328,7 +2338,7 @@ export default function StoryCreate() {
           <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
             <button
               type="button"
-              onClick={() => void requestExitWithDraftPrompt(resumedFromDraft ? "back" : "entry")}
+              onClick={() => void requestExitWithDraftPrompt("back")}
               className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-white active:opacity-70"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -2364,6 +2374,8 @@ export default function StoryCreate() {
                 setActiveTool("text");
                 setEditorMode("text");
                 placeTextEditorAtCenter();
+                setSelectedLayer("text");
+                setSelectedDynamicLayerId(null);
                 setShowTextInput(true);
                 setShowMusicPicker(false);
                 setShowSessionPicker(false);
