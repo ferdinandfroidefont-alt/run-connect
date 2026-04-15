@@ -18,6 +18,7 @@ import {
   parseAthleteBlockRpeFelt,
 } from "@/lib/sessionBlockRpe";
 import { parseRCC } from "@/lib/rccParser";
+import { getOrCreateDirectConversation, sendCoachingMessageToConversation } from "@/lib/coachingMessaging";
 
 interface CoachingSession {
   id: string;
@@ -218,6 +219,22 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
       ...prev,
       [sessionId]: { ...prev[sessionId], athlete_note: note || null }
     }));
+
+    if (note.trim()) {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (session?.coach_id && user?.id) {
+        try {
+          const conversationId = await getOrCreateDirectConversation(user.id, session.coach_id);
+          await sendCoachingMessageToConversation(
+            conversationId,
+            user.id,
+            `Séance du ${format(new Date(session.scheduled_at), "d MMM", { locale: fr })}\n\n"${note.trim()}"${session.rpe ? `\n\nRPE prévu : ${session.rpe}/10` : ""}`
+          );
+        } catch (err) {
+          console.error("Unable to sync athlete note to messages:", err);
+        }
+      }
+    }
   };
 
   if (loading) {
