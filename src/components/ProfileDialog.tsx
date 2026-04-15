@@ -15,6 +15,7 @@ import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { AvatarViewer } from "@/components/AvatarViewer";
 
@@ -173,7 +174,7 @@ export const ProfileDialog = ({
   const {
     toast
   } = useToast();
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const {
     selectFromGallery,
     loading: cameraLoading
@@ -1014,6 +1015,15 @@ export const ProfileDialog = ({
 
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
 
       {qrData && (
         <QRShareDialog

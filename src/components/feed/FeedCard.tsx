@@ -11,7 +11,7 @@ import { Share } from '@capacitor/share';
 import { toast } from 'sonner';
 import type { FeedSession } from '@/hooks/useFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
-import { buildPreferredSessionShareLink } from '@/lib/appLinks';
+import { getSessionPublicUrl } from '@/lib/appLinks';
 import { Link } from 'react-router-dom';
 
 interface FeedCardProps {
@@ -77,7 +77,7 @@ export const FeedCard = ({
   };
 
   const handleShare = async () => {
-    const shareUrl = buildPreferredSessionShareLink(session.id);
+    const shareUrl = getSessionPublicUrl(session.id);
     const shareText = `🏃 ${session.title} - ${activityLabels[session.activity_type] || session.activity_type}\n📍 ${session.location_name}\n📅 ${format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}`;
     const fullText = `${shareText}\n\n${shareUrl}`;
     

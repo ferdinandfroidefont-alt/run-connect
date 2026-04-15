@@ -37,6 +37,7 @@ import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
+import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn } from '@/lib/utils';
 import {
   getPersistedHomeMapPosition,
@@ -429,12 +430,7 @@ export const InteractiveMap = ({
   };
 
   // Share profile hook
-  const {
-    shareProfile,
-    showQRDialog,
-    setShowQRDialog,
-    qrData
-  } = useShareProfile();
+  const { showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -2432,6 +2428,15 @@ export const InteractiveMap = ({
       </Suspense>
       </Suspense>
 
+
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
 
       {/* QR Share Dialog */}
       {qrData && <QRShareDialog open={showQRDialog} onOpenChange={setShowQRDialog} profileUrl={qrData.profileUrl} username={qrData.username} displayName={qrData.displayName} avatarUrl={qrData.avatarUrl} referralCode={qrData.referralCode} />}

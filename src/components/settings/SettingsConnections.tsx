@@ -10,6 +10,7 @@ import { StravaConnect } from "@/components/StravaConnect";
 import { InstagramConnect } from "@/components/InstagramConnect";
 import { ContactsPermissionButton } from "@/components/ContactsPermissionButton";
 import { QRShareDialog } from "@/components/QRShareDialog";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { ReferralDialog } from "@/components/ReferralDialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { motion } from "framer-motion";
@@ -33,7 +34,7 @@ interface SettingsConnectionsProps {
 export const SettingsConnections = ({ onBack, onNavigateToSubscription }: SettingsConnectionsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
@@ -170,7 +171,7 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="truncate text-[15px] font-medium">Partager mon profil</p>
-                  <p className="truncate text-[13px] text-muted-foreground">QR code, Story Instagram...</p>
+                  <p className="truncate text-[13px] text-muted-foreground">Story, lien, modèles…</p>
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/40" />
               </button>
@@ -227,6 +228,15 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
         onClose={() => setShowReferralDialog(false)}
       />
 
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
+
       {qrData && (
         <QRShareDialog
           open={showQRDialog}
@@ -234,6 +244,8 @@ export const SettingsConnections = ({ onBack, onNavigateToSubscription }: Settin
           profileUrl={qrData.profileUrl}
           username={qrData.username}
           displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
         />
       )}
     </motion.div>

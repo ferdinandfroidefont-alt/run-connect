@@ -6,6 +6,9 @@
         "appIDs": ["YOUR_TEAM_ID.com.ferdi.runconnect"],
         "components": [
           { "/": "/p/*" },
+          { "/": "/u/*" },
+          { "/": "/s/*" },
+          { "/": "/open/session/*" },
           { "/": "/confirm-presence/*" },
           { "/": "/" }
         ]

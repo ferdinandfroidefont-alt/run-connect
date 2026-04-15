@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
+import { SessionShareScreen } from "./session-share/SessionShareScreen";
 import { SessionQuestions } from "./SessionQuestions";
 import { SessionLevelBadge } from "./SessionLevelBadge";
 import { CreateSessionWizard } from "./session-creation/CreateSessionWizard";
@@ -141,6 +142,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showSessionShare, setShowSessionShare] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -834,7 +836,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
                 {/* Share */}
                 <button
-                  onClick={() => setShowShareDialog(true)}
+                  onClick={() => setShowSessionShare(true)}
                   className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
                 >
                   <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
@@ -1043,6 +1045,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         organizerName={session.profiles.username || session.profiles.display_name}
         userId={user?.id || ''}
         onRated={() => setHasRated(true)}
+      />
+
+      <SessionShareScreen
+        open={showSessionShare}
+        onClose={() => setShowSessionShare(false)}
+        session={session}
+        onOpenConversationShare={() => {
+          setShowSessionShare(false);
+          setShowShareDialog(true);
+        }}
       />
 
       <ShareSessionToConversationDialog

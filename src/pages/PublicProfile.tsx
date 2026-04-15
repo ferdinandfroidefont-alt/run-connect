@@ -27,7 +27,8 @@ import { ProfileSportChips } from "@/components/profile/ProfileSportsCard";
 import { parseProfileSports } from "@/lib/profileSports";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
+import { APP_WEB_ORIGIN, buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
+import { PROFILE_SPORT_LABELS, type ProfileSportKey } from "@/lib/profileSports";
 import { getCountryLabel } from "@/lib/countryLabels";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
@@ -111,6 +112,50 @@ const PublicProfile = () => {
   const [profileHighlights, setProfileHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [selectedHighlightStoryId, setSelectedHighlightStoryId] = useState<string | null>(null);
   const [showAllHighlights, setShowAllHighlights] = useState(false);
+
+  useEffect(() => {
+    if (!profile) return;
+    const name = profile.display_name || profile.username;
+    const pageTitle = `${name} sur RunConnect`;
+    const sportKey = profile.favorite_sport as ProfileSportKey | undefined;
+    const sportFr =
+      sportKey && sportKey in PROFILE_SPORT_LABELS ? PROFILE_SPORT_LABELS[sportKey].label : profile.favorite_sport;
+    const description =
+      [sportFr, profile.bio?.trim().slice(0, 100)].filter(Boolean).join(" · ") ||
+      `Découvre le profil de ${name} sur RunConnect — séances et communauté sportive.`;
+
+    const prevTitle = document.title;
+    document.title = pageTitle;
+
+    const upsertMeta = (attr: "property" | "name", key: string, content: string) => {
+      const sel = `meta[${attr}="${key}"]`;
+      let el = document.head.querySelector(sel) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    const ogImage =
+      profile.avatar_url && /^https?:\/\//i.test(profile.avatar_url)
+        ? profile.avatar_url
+        : `${APP_WEB_ORIGIN}/favicon.png`;
+
+    upsertMeta("property", "og:title", pageTitle);
+    upsertMeta("property", "og:description", description);
+    upsertMeta("property", "og:image", ogImage);
+    upsertMeta("property", "og:type", "website");
+    upsertMeta("name", "twitter:card", "summary_large_image");
+    upsertMeta("name", "twitter:title", pageTitle);
+    upsertMeta("name", "twitter:description", description);
+    upsertMeta("name", "twitter:image", ogImage);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [profile]);
 
   useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());

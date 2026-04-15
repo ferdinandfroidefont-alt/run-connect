@@ -49,6 +49,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const StoryCreate = lazy(() => import("./pages/StoryCreate"));
 const Drafts = lazy(() => import("./pages/Drafts"));
 const OpenSessionLink = lazy(() => import("./pages/OpenSessionLink"));
+const ShortSessionLinkRedirect = lazy(() => import("./pages/ShortSessionLinkRedirect"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
@@ -339,6 +340,7 @@ const App = () => {
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
                   <Route path="/open/session/:sessionId" element={<PageTransition><PageSuspense><OpenSessionLink /></PageSuspense></PageTransition>} />
+                  <Route path="/s/:sessionId" element={<PageTransition><PageSuspense><ShortSessionLinkRedirect /></PageSuspense></PageTransition>} />
                   <Route path="/drafts" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
                   <Route path="/drafts/stories" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
                   <Route path="/drafts/routes" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
@@ -348,6 +350,7 @@ const App = () => {
                   <Route path="/donation-canceled" element={<PageTransition><PageSuspense><DonationCanceled /></PageSuspense></PageTransition>} />
                   {/* Route profil public (AVANT *) */}
                   <Route path="/p/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
+                  <Route path="/u/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
                   <Route path="*" element={<PageTransition><PageSuspense><NotFound /></PageSuspense></PageTransition>} />
                   </Routes>
                 </div>

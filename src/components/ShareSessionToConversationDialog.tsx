@@ -10,7 +10,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { buildPreferredSessionShareLink } from "@/lib/appLinks";
+import { getSessionPublicUrl } from "@/lib/appLinks";
 
 
 interface Session {
@@ -131,7 +131,7 @@ export const ShareSessionToConversationDialog = ({
 
   const getShareMessage = () => {
     if (!session) return '';
-    const shareUrl = buildPreferredSessionShareLink(session.id);
+    const shareUrl = getSessionPublicUrl(session.id);
     const date = format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH:mm", { locale: fr });
     return `🏃 Rejoins-moi pour "${session.title}" !
 
@@ -143,7 +143,7 @@ Ouvre directement dans RunConnect : ${shareUrl}`;
 
   const handleNativeShare = async () => {
     const shareMessage = getShareMessage();
-    const shareUrl = session ? buildPreferredSessionShareLink(session.id) : '';
+    const shareUrl = session ? getSessionPublicUrl(session.id) : '';
     
     try {
       // Priority 1: AndroidBridge for native Android WebView

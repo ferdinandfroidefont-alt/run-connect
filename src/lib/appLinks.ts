@@ -13,9 +13,20 @@ export const ANDROID_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.ferdi.runconnect';
 export const IOS_STORE_URL = import.meta.env.VITE_PUBLIC_IOS_STORE_URL || APP_WEB_ORIGIN;
 
+/** Profil public court (partage, Universal Links). */
 export function buildProfileUniversalLink({ username, referralCode }: ProfileLinkOptions): string {
-  const base = `${APP_WEB_ORIGIN}/p/${encodeURIComponent(username)}`;
+  const base = `${APP_WEB_ORIGIN}/u/${encodeURIComponent(username)}`;
   return referralCode ? `${base}?r=${encodeURIComponent(referralCode)}` : base;
+}
+
+/** Lien canonique page profil web (historique `/p/`). */
+export function buildProfileWebPath(username: string): string {
+  return `/p/${encodeURIComponent(username)}`;
+}
+
+/** URL publique à copier / partager (identique au lien universel). */
+export function getProfilePublicUrl(username: string, referralCode?: string | null): string {
+  return buildProfileUniversalLink({ username, referralCode: referralCode ?? undefined });
 }
 
 export function buildProfileDeepLink({ username, referralCode }: ProfileLinkOptions): string {
@@ -42,6 +53,16 @@ export function buildPreferredProfileShareLink(options: ProfileLinkOptions): str
 
 export function buildPreferredSessionShareLink(sessionId: string): string {
   return `${APP_WEB_ORIGIN}/open/session/${encodeURIComponent(sessionId)}`;
+}
+
+/** URL publique courte (partage texte / réseaux) — redirige vers la même landing que `/open/session/:id`. */
+export function buildShortSessionUniversalLink(sessionId: string): string {
+  return `${APP_WEB_ORIGIN}/s/${encodeURIComponent(sessionId)}`;
+}
+
+/** Alias explicite pour le partage de séance (lien universel). */
+export function getSessionPublicUrl(sessionId: string): string {
+  return buildShortSessionUniversalLink(sessionId);
 }
 
 export function getStoreFallbackUrl(): string {
@@ -96,6 +117,14 @@ export function resolveIncomingAppUrl(rawUrl: string): string | null {
     ]);
     if (allowedHosts.has(url.hostname)) {
       if (url.pathname.startsWith('/p/')) return `${url.pathname}${url.search}`;
+      if (url.pathname.startsWith('/u/')) {
+        const u = url.pathname.slice('/u/'.length);
+        if (u) return `/p/${decodeURIComponent(u)}${url.search}`;
+      }
+      if (url.pathname.startsWith('/s/')) {
+        const id = url.pathname.slice('/s/'.length);
+        if (id) return `/?session=${encodeURIComponent(decodeURIComponent(id))}`;
+      }
       if (url.pathname === '/' && url.searchParams.get('session')) return `/${url.search}`;
       if (url.pathname.startsWith('/confirm-presence')) return `${url.pathname}${url.search}`;
       if (url.pathname === '/profile' || url.pathname.startsWith('/profile/')) return `${url.pathname}${url.search}`;

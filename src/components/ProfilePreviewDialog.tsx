@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "./QRShareDialog";
-import { buildPreferredProfileShareLink } from "@/lib/appLinks";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { AvatarViewer } from "@/components/AvatarViewer";
 
 interface Profile {
@@ -78,7 +78,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showAboutSheet, setShowAboutSheet] = useState(false);
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
 
@@ -823,6 +823,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           </div>
         </SheetContent>
       </Sheet>
+
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
 
       {/* QR Share Dialog */}
       {qrData && (
