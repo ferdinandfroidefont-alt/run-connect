@@ -3,6 +3,7 @@ import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "dat
 import { fr } from "date-fns/locale";
 import {
   Bike,
+  ChevronLeft,
   Dumbbell,
   Flame,
   Leaf,
@@ -1486,9 +1487,10 @@ export function CoachPlanningExperience() {
                   left={
                     <button
                       type="button"
-                      className="text-[16px] font-medium text-primary"
+                      className="inline-flex items-center gap-1 text-[16px] font-medium text-primary"
                       onClick={() => setCoachingTab("planning")}
                     >
+                      <ChevronLeft className="h-4 w-4" />
                       Retour
                     </button>
                   }

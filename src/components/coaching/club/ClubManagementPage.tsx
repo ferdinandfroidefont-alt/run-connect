@@ -113,11 +113,6 @@ export function ClubManagementPage({
 }: ClubManagementPageProps) {
   return (
     <div className="space-y-4">
-      <div className="pt-1">
-        <h1 className="text-[32px] font-bold tracking-tight text-foreground">Gérer le club</h1>
-        <p className="text-[13px] text-muted-foreground">Administration du club et des membres</p>
-      </div>
-
       <div className="ios-card rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
         <div className="flex items-start gap-3">
           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-secondary">

@@ -235,6 +235,7 @@ const Messages = () => {
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
+  const startConversationParam = searchParams.get("startConversation");
 
   const visibleMessages = useMemo(() => {
     const q = threadSearch.trim().toLowerCase();
@@ -285,6 +286,17 @@ const Messages = () => {
     }
   }, [selectedConversation, broadcastStopTyping]);
 
+  // Entering /messages from bottom tab should always land on inbox list
+  // unless an explicit conversation deep-link/startConversation is provided.
+  useEffect(() => {
+    if (location.pathname !== "/messages") return;
+    if (conversationParam || startConversationParam) return;
+    if (selectedConversation) {
+      setSelectedConversation(null);
+    }
+    setHideBottomNav(false);
+  }, [location.pathname, conversationParam, startConversationParam, selectedConversation, setHideBottomNav]);
+
   const isLoading = loading || cameraLoading;
 
   const scrollToBottom = () => {
@@ -306,7 +318,7 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Show tab bar on inbox list, hide it inside a conversation thread.
+  // Show tab bar on inbox list, hide it only inside a conversation thread.
   useEffect(() => {
     const root = document.documentElement;
     const hslVar = (name: string) => {
@@ -314,7 +326,8 @@ const Messages = () => {
       return t ? `hsl(${t})` : '';
     };
 
-    setHideBottomNav(!!selectedConversation);
+    const shouldHideBottomNav = location.pathname.startsWith("/messages") && !!selectedConversation;
+    setHideBottomNav(shouldHideBottomNav);
     if (selectedConversation) {
       const sec = hslVar('--secondary');
       if (sec) {
@@ -333,7 +346,7 @@ const Messages = () => {
       setHideBottomNav(false);
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
-  }, [selectedConversation, setHideBottomNav]);
+  }, [selectedConversation, setHideBottomNav, location.pathname]);
 
   useEffect(() => {
     if (!location.pathname.startsWith("/messages")) {
