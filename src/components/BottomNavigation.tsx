@@ -145,6 +145,14 @@ export const BottomNavigation = () => {
 
   if (hideBottomNav) return null;
 
+  const handleNavClick = (path: string) => {
+    if (path === "/messages") {
+      navigate("/messages", { state: { resetConversation: true, fromBottomTab: true, ts: Date.now() } });
+      return;
+    }
+    navigate(path);
+  };
+
   return (
     <nav
       className={cn(
@@ -177,7 +185,7 @@ export const BottomNavigation = () => {
               <button
                 key={`slot-${slot}`}
                 type="button"
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavClick(item.path)}
                 data-tutorial={tutorialId}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(

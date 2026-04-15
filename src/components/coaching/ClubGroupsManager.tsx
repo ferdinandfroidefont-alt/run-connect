@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X, MessageCircle } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X, MessageCircle, Pencil, GraduationCap, ArchiveRestore, Archive } from "lucide-react";
 
 interface ClubGroup {
   id: string;
@@ -20,6 +20,7 @@ interface Member {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  is_coach: boolean;
 }
 
 interface ClubGroupsManagerProps {
@@ -40,6 +41,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
+  const [archivedGroups, setArchivedGroups] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -57,6 +59,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
 
       if (memberIds && memberIds.length > 0) {
         const uids = memberIds.map(m => m.user_id).filter(id => id !== user?.id);
+        const roleById = new Map(memberIds.map((m) => [m.user_id, !!m.is_coach]));
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
@@ -65,6 +68,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
           user_id: p.user_id!,
           display_name: p.display_name || "Athlète",
           avatar_url: p.avatar_url || null,
+          is_coach: roleById.get(p.user_id!) ?? false,
         })));
       }
 
@@ -83,13 +87,19 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
         });
 
         setGroupMembers(memberMap);
-        setGroups(groupsData.map(g => ({
+        const archived = new Set<string>();
+        setGroups(groupsData.map(g => {
+          if (g.name.startsWith("[ARCHIVE] ")) archived.add(g.id);
+          return ({
           ...g,
           member_count: countMap[g.id] || 0,
           avatar_url: g.avatar_url || null,
-        })));
+          });
+        }));
+        setArchivedGroups(archived);
       } else {
         setGroups([]);
+        setArchivedGroups(new Set());
       }
     } catch (e) {
       console.error("Error loading groups:", e);
@@ -119,6 +129,57 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
   const deleteGroup = async (groupId: string) => {
     await supabase.from("club_groups").delete().eq("id", groupId);
     loadData();
+  };
+
+  const renameGroup = async (groupId: string, currentName: string) => {
+    const cleanCurrent = currentName.replace(/^\[ARCHIVE\]\s*/, "");
+    const next = window.prompt("Renommer le groupe", cleanCurrent);
+    if (!next?.trim()) return;
+    const isArchived = currentName.startsWith("[ARCHIVE] ");
+    const updatedName = `${isArchived ? "[ARCHIVE] " : ""}${next.trim()}`;
+    const { error } = await supabase.from("club_groups").update({ name: updatedName }).eq("id", groupId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: "Groupe renommé" });
+  };
+
+  const assignCoach = async (groupId: string) => {
+    const coaches = members.filter((m) => m.is_coach);
+    if (coaches.length === 0) {
+      toast({ title: "Aucun coach disponible", description: "Ajoutez un coach au club d'abord." });
+      return;
+    }
+    const list = coaches.map((coach, index) => `${index + 1}. ${coach.display_name}`).join("\n");
+    const picked = window.prompt(`Assigner coach (numéro):\n${list}`, "1");
+    if (!picked) return;
+    const idx = Number(picked) - 1;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= coaches.length) {
+      toast({ title: "Choix invalide", variant: "destructive" });
+      return;
+    }
+    const coach = coaches[idx];
+    const { error } = await supabase.from("club_group_members").upsert({ group_id: groupId, user_id: coach.user_id });
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: `${coach.display_name} assigné au groupe` });
+  };
+
+  const toggleArchiveGroup = async (groupId: string, currentName: string) => {
+    const isArchived = currentName.startsWith("[ARCHIVE] ");
+    const nextName = isArchived ? currentName.replace(/^\[ARCHIVE\]\s*/, "") : `[ARCHIVE] ${currentName}`;
+    const { error } = await supabase.from("club_groups").update({ name: nextName }).eq("id", groupId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: isArchived ? "Groupe désarchivé" : "Groupe archivé" });
   };
 
   const toggleMember = async (groupId: string, userId: string) => {
@@ -165,6 +226,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
       {groups.map(group => {
         const isExpanded = expandedGroup === group.id;
         const groupMembersList = groupMembers[group.id] || [];
+        const isArchived = archivedGroups.has(group.id);
         return (
           <div
             key={group.id}
@@ -192,7 +254,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
                 </div>
               )}
               <div className="flex-1 text-left">
-                <p className="text-[15px] font-semibold text-foreground">{group.name}</p>
+                <p className="text-[15px] font-semibold text-foreground">{group.name.replace(/^\[ARCHIVE\]\s*/, "")}</p>
                 <p className="text-[12px] text-muted-foreground">
                   {group.member_count} athlète{group.member_count > 1 ? "s" : ""}
                 </p>
@@ -228,6 +290,18 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
                     Envoyer un message au groupe
                   </button>
                 ) : null}
+                <div className="grid grid-cols-3 gap-1 px-1 pb-1">
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => renameGroup(group.id, group.name)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Renommer
+                  </Button>
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => assignCoach(group.id)}>
+                    <GraduationCap className="h-3.5 w-3.5 mr-1" /> Assigner coach
+                  </Button>
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => toggleArchiveGroup(group.id, group.name)}>
+                    {isArchived ? <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> : <Archive className="h-3.5 w-3.5 mr-1" />}
+                    {isArchived ? "Désarchiver" : "Archiver"}
+                  </Button>
+                </div>
 
                 <div className="border-t border-border pt-1">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium py-1.5">Membres</p>

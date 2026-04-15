@@ -235,7 +235,6 @@ const Messages = () => {
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
-  const startConversationParam = searchParams.get("startConversation");
 
   const visibleMessages = useMemo(() => {
     const q = threadSearch.trim().toLowerCase();
@@ -286,16 +285,16 @@ const Messages = () => {
     }
   }, [selectedConversation, broadcastStopTyping]);
 
-  // Entering /messages from bottom tab should always land on inbox list
-  // unless an explicit conversation deep-link/startConversation is provided.
+  // Explicit reset requested by bottom navigation: always show inbox list.
   useEffect(() => {
-    if (location.pathname !== "/messages") return;
-    if (conversationParam || startConversationParam) return;
+    const resetConversation = Boolean((location.state as { resetConversation?: boolean } | null)?.resetConversation);
+    if (!resetConversation) return;
     if (selectedConversation) {
       setSelectedConversation(null);
     }
     setHideBottomNav(false);
-  }, [location.pathname, conversationParam, startConversationParam, selectedConversation, setHideBottomNav]);
+    navigate("/messages", { replace: true, state: {} });
+  }, [location.state, navigate, selectedConversation, setHideBottomNav]);
 
   const isLoading = loading || cameraLoading;
 
