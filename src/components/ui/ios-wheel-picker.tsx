@@ -7,23 +7,18 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const PAD_ROWS = Math.floor(VISIBLE_ITEMS / 2);
 const MODAL_ROOT_CLASS =
-  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(5.75rem,calc(var(--safe-area-bottom)+4.5rem))]";
+  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))]";
 const MODAL_PANEL_CLASS =
-  "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-2xl bg-card pb-[var(--safe-area-bottom)] shadow-2xl";
+  "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-3xl bg-card pb-[max(0.5rem,var(--safe-area-bottom))] shadow-2xl";
 
 type WheelOption = { value: string; label: string };
-
-type PickerPreset = {
-  id: string;
-  label: string;
-  apply: () => void;
-};
 
 interface PickerColumnProps {
   items: WheelOption[];
   value: string;
   onChange: (next: string) => void;
   suffix?: string;
+  disabled?: boolean;
 }
 
 interface PickerHeaderProps {
@@ -37,11 +32,6 @@ interface PickerOverlayProps {
   accentColor: string;
 }
 
-interface PickerPresetsProps {
-  presets: PickerPreset[];
-  onReset: () => void;
-}
-
 interface SmartPerformancePickerProps {
   open: boolean;
   onClose: () => void;
@@ -53,8 +43,6 @@ interface SmartPerformancePickerProps {
     suffix?: string;
   }>;
   onConfirm: () => void;
-  presets?: PickerPreset[];
-  onReset?: () => void;
 }
 
 interface WheelValuePickerModalProps {
@@ -153,16 +141,16 @@ export function PickerOverlay({ accentColor }: PickerOverlayProps) {
   return (
     <>
       <div
-        className="pointer-events-none absolute inset-x-0 z-10 border-y bg-secondary/35"
+        className="pointer-events-none absolute inset-x-0 z-10 rounded-lg border-y bg-primary/5"
         style={{ top: PAD_ROWS * ITEM_HEIGHT, height: ITEM_HEIGHT, borderColor: `${accentColor}66` }}
       />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-card via-card/70 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-card via-card/70 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-gradient-to-b from-card via-card/85 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-card via-card/85 to-transparent" />
     </>
   );
 }
 
-export function PickerColumn({ items, value, onChange, suffix }: PickerColumnProps) {
+export function PickerColumn({ items, value, onChange, suffix, disabled = false }: PickerColumnProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const snapTimerRef = useRef<number | null>(null);
@@ -220,19 +208,22 @@ export function PickerColumn({ items, value, onChange, suffix }: PickerColumnPro
     <div className="relative min-w-0 flex-1">
       <div
         ref={containerRef}
-        className="no-scrollbar relative overflow-y-auto overscroll-contain py-[88px]"
-        style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}
-        onScroll={handleScroll}
-        onTouchEnd={applyNearest}
-        onMouseUp={applyNearest}
-        onWheel={handleScroll}
+        className={cn("no-scrollbar relative py-[88px]", disabled ? "overflow-hidden" : "overflow-y-auto overscroll-contain")}
+        onScroll={disabled ? undefined : handleScroll}
+        onTouchEnd={disabled ? undefined : applyNearest}
+        onMouseUp={disabled ? undefined : applyNearest}
+        onWheel={disabled ? undefined : handleScroll}
+        onTouchMove={(e) => e.stopPropagation()}
+        onWheelCapture={(e) => e.stopPropagation()}
+        data-wheel-column="true"
+        style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS, touchAction: disabled ? "none" : "pan-y" }}
       >
         {items.map((item) => (
           <button
             type="button"
             key={item.value}
-            onClick={() => onChange(item.value)}
-            className="block w-full"
+            onClick={() => !disabled && onChange(item.value)}
+            className={cn("block w-full", disabled && "cursor-default")}
           >
             <PickerValue active={item.value === value} label={item.label} suffix={suffix} />
           </button>
@@ -258,41 +249,12 @@ export function PickerHeader({ title, onCancel, onConfirm, accentColor }: Picker
   );
 }
 
-export function PickerPresets({ presets, onReset }: PickerPresetsProps) {
-  if (presets.length === 0) return null;
-  return (
-    <div className="border-b border-border/40 px-4 py-2">
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        {presets.map((preset) => (
-          <button
-            key={preset.id}
-            type="button"
-            onClick={preset.apply}
-            className="shrink-0 rounded-full border border-border bg-secondary px-2.5 py-1 text-[12px] font-medium text-foreground active:scale-95"
-          >
-            {preset.label}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={onReset}
-          className="ml-auto shrink-0 rounded-full border border-border px-2.5 py-1 text-[12px] font-medium text-muted-foreground"
-        >
-          Reset
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function SmartPerformancePicker({
   open,
   onClose,
   title,
   columns,
   onConfirm,
-  presets = [],
-  onReset,
 }: SmartPerformancePickerProps) {
   useBodyScrollLock(open);
   if (!open) return null;
@@ -302,14 +264,11 @@ export function SmartPerformancePicker({
     <div
       className={MODAL_ROOT_CLASS}
       onClick={onClose}
-      onWheel={(e) => e.preventDefault()}
-      onTouchMove={(e) => e.preventDefault()}
     >
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm dark:bg-black/65" />
       <div className={cn(MODAL_PANEL_CLASS, "border border-border/60 dark:bg-[#0a0a0a]")} onClick={(e) => e.stopPropagation()}>
         <PickerHeader title={title} onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
-        <PickerPresets presets={presets} onReset={onReset || (() => undefined)} />
-        <div className="relative px-4 py-2">
+        <div className="relative px-4 py-3">
           <PickerOverlay accentColor={accentColor} />
           <div className="relative z-0 flex items-center gap-1">
             {columns.map((column, idx) => (
@@ -319,6 +278,7 @@ export function SmartPerformancePicker({
                 value={column.value}
                 onChange={column.onChange}
                 suffix={column.suffix}
+                disabled={column.items.length <= 1}
               />
             ))}
           </div>
@@ -330,69 +290,7 @@ export function SmartPerformancePicker({
   return createPortal(modal, document.body);
 }
 
-function buildDefaultPresets(
-  title: string,
-  columns: WheelValuePickerModalProps["columns"]
-): { presets: PickerPreset[]; onReset?: () => void } {
-  const key = title.toLowerCase();
-  const first = columns[0];
-  if (!first || first.items.length === 0) return { presets: [] };
-  const initial = columns.map((column) => column.value);
-
-  const setByStep = (columnIndex: number, step: number) => {
-    const col = columns[columnIndex];
-    if (!col) return;
-    const currentIdx = Math.max(0, col.items.findIndex((item) => item.value === col.value));
-    const nextIdx = clamp(currentIdx + step, 0, col.items.length - 1);
-    col.onChange(col.items[nextIdx].value);
-  };
-
-  const presets: PickerPreset[] = [];
-  if (key.includes("durée") || key.includes("temps")) {
-    presets.push(
-      { id: "p5", label: "+5 min", apply: () => setByStep(0, 5) },
-      { id: "p10", label: "+10 min", apply: () => setByStep(0, 10) },
-      { id: "p30", label: "+30 min", apply: () => setByStep(0, 30) }
-    );
-  } else if (key.includes("allure")) {
-    presets.push(
-      { id: "p-5", label: "-5 sec", apply: () => setByStep(0, -5) },
-      { id: "p+5", label: "+5 sec", apply: () => setByStep(0, 5) },
-      { id: "p+10", label: "+10 sec", apply: () => setByStep(0, 10) }
-    );
-  } else if (key.includes("puissance")) {
-    presets.push(
-      { id: "p+10w", label: "+10 W", apply: () => setByStep(0, 10) },
-      { id: "p+20w", label: "+20 W", apply: () => setByStep(0, 20) }
-    );
-  } else if (key.includes("vitesse")) {
-    presets.push(
-      { id: "p+1kmh", label: "+1 km/h", apply: () => setByStep(0, 1) },
-      { id: "p+2kmh", label: "+2 km/h", apply: () => setByStep(0, 2) }
-    );
-  } else if (key.includes("distance")) {
-    presets.push(
-      { id: "p+100m", label: "+100 m", apply: () => setByStep(0, 1) },
-      { id: "p+500m", label: "+500 m", apply: () => setByStep(0, 5) }
-    );
-  } else if (key.includes("répétitions") || key.includes("repet")) {
-    presets.push(
-      { id: "p+1", label: "+1", apply: () => setByStep(0, 1) },
-      { id: "p+2", label: "+2", apply: () => setByStep(0, 2) }
-    );
-  }
-
-  const onReset = () => {
-    columns.forEach((column, idx) => {
-      column.onChange(initial[idx]);
-    });
-  };
-
-  return { presets, onReset };
-}
-
 export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm }: WheelValuePickerModalProps) {
-  const { presets, onReset } = useMemo(() => buildDefaultPresets(title, columns), [title, columns]);
   return (
     <SmartPerformancePicker
       open={open}
@@ -400,8 +298,6 @@ export function WheelValuePickerModal({ open, onClose, title, columns, onConfirm
       title={title}
       columns={columns}
       onConfirm={onConfirm}
-      presets={presets}
-      onReset={onReset}
     />
   );
 }
@@ -440,17 +336,6 @@ export function TimePickerModal({ open, onClose, onConfirm, initialSeconds = 0, 
       onClose={onClose}
       title="Durée"
       columns={columns}
-      presets={[
-        { id: "t+5", label: "+5 min", apply: () => setM((prev) => clamp(prev + 5, 0, 59)) },
-        { id: "t+10", label: "+10 min", apply: () => setM((prev) => clamp(prev + 10, 0, 59)) },
-        { id: "t+30", label: "+30 min", apply: () => setM((prev) => clamp(prev + 30, 0, 59)) },
-      ]}
-      onReset={() => {
-        const t = Math.max(0, Math.round(initialSeconds));
-        setH(Math.floor(t / 3600));
-        setM(Math.floor((t % 3600) / 60));
-        setS(t % 60);
-      }}
       onConfirm={() => {
         const totalSec = h * 3600 + m * 60 + s;
         const formatted = showHours && h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
@@ -475,6 +360,7 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
   const columns = [
     { items: PACE_MIN.map((x) => ({ value: x, label: x })), value: PACE_MIN[m] ?? "00", onChange: (next: string) => setM(Number(next)), suffix: "min" },
     { items: PACE_SEC.map((x) => ({ value: x, label: x })), value: PACE_SEC[s] ?? "00", onChange: (next: string) => setS(Number(next)), suffix: "s" },
+    { items: [{ value: "/km", label: "/km" }], value: "/km", onChange: () => undefined },
   ];
 
   return (
@@ -483,16 +369,6 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
       onClose={onClose}
       title="Allure"
       columns={columns}
-      presets={[
-        { id: "p-5", label: "-5 sec", apply: () => setS((prev) => clamp(prev - 5, 0, 59)) },
-        { id: "p+5", label: "+5 sec", apply: () => setS((prev) => clamp(prev + 5, 0, 59)) },
-        { id: "p+10", label: "+10 sec", apply: () => setS((prev) => clamp(prev + 10, 0, 59)) },
-      ]}
-      onReset={() => {
-        const t = Math.max(0, Math.round(initialSecondsPerKm));
-        setM(Math.min(29, Math.floor(t / 60)));
-        setS(t % 60);
-      }}
       onConfirm={() => {
         const totalSec = m * 60 + s;
         onConfirm(`${m}:${String(s).padStart(2, "0")}/km`, totalSec);

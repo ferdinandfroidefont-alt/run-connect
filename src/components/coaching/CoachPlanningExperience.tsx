@@ -34,6 +34,7 @@ import type { SessionModelItem } from "@/components/coaching/models/types";
 import { parseRCC } from "@/lib/rccParser";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
+import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -324,6 +325,7 @@ export function CoachPlanningExperience() {
   const [clubAvatarUrl, setClubAvatarUrl] = useState<string | null>(null);
   const [plannedSessionsCount, setPlannedSessionsCount] = useState(0);
   const [validatedSessionsCount, setValidatedSessionsCount] = useState(0);
+  const [trackingSelectedAthleteId, setTrackingSelectedAthleteId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
@@ -1072,8 +1074,46 @@ export function CoachPlanningExperience() {
     (user?.user_metadata?.display_name as string | undefined) ||
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.email ? user.email.split("@")[0] : "Coach");
+  const sectionTitle =
+    activeMenuKey === "planning"
+      ? "Planification"
+      : activeMenuKey === "tracking"
+      ? "Suivi athlète"
+      : activeMenuKey === "templates"
+      ? "Modèles"
+      : activeMenuKey === "club"
+      ? "Gérer le club"
+      : activeMenuKey === "dashboard"
+      ? "Tableau de bord"
+      : "Coaching";
+  const sectionSubtitle =
+    activeMenuKey === "planning"
+      ? `Semaine de ${targetLabel}`
+      : activeMenuKey === "tracking"
+      ? "Vue athlètes et séances réalisées"
+      : activeMenuKey === "templates"
+      ? "Créez et réutilisez vos séances premium"
+      : activeMenuKey === "club"
+      ? "Administration du club et des membres"
+      : "Espace coaching RunConnect";
 
   const handleDrawerSelect = (key: CoachMenuKey) => {
+    if (key === "athletes") {
+      setActiveMenuKey("tracking");
+      setTrackingSelectedAthleteId(null);
+      setDrawerOpen(false);
+      return;
+    }
+    if (key === "library") {
+      setActiveMenuKey("templates");
+      setDrawerOpen(false);
+      return;
+    }
+    if (key === "groups") {
+      setActiveMenuKey("club");
+      setDrawerOpen(false);
+      return;
+    }
     setActiveMenuKey(key);
     setDrawerOpen(false);
     if (key === "planning") {
@@ -1088,7 +1128,14 @@ export function CoachPlanningExperience() {
       navigate("/profile/edit");
       return;
     }
-    // Keep in-coaching sections in place (dashboard, athletes, groups, etc.)
+    if (key === "tracking") {
+      setTrackingSelectedAthleteId(null);
+    }
+    if (key === "templates") {
+      setCoachingTab("planning");
+      return;
+    }
+    // Keep in-coaching sections in place
     setCoachingTab("planning");
   };
 
@@ -1218,8 +1265,8 @@ export function CoachPlanningExperience() {
         >
           <div className="space-y-4 px-ios-4 pb-ios-6">
             <div className="pt-1">
-              <h1 className="text-[32px] font-bold tracking-tight text-foreground">Planification</h1>
-              <p className="text-[13px] text-muted-foreground">Semaine de {targetLabel}</p>
+              <h1 className="text-[32px] font-bold tracking-tight text-foreground">{sectionTitle}</h1>
+              <p className="text-[13px] text-muted-foreground">{sectionSubtitle}</p>
             </div>
 
             {activeMenuKey === "planning" && clubs.length > 1 && (
@@ -1337,6 +1384,32 @@ export function CoachPlanningExperience() {
                   })}
                 </div>
               </>
+            ) : activeMenuKey === "tracking" ? (
+              activeClubId ? (
+                <WeeklyTrackingView
+                  clubId={activeClubId}
+                  onClose={() => undefined}
+                  selectedAthleteId={trackingSelectedAthleteId}
+                  onSelectAthlete={setTrackingSelectedAthleteId}
+                />
+              ) : (
+                <div className="ios-card rounded-2xl border border-border/70 bg-card p-4">
+                  <p className="text-[16px] font-semibold text-foreground">Suivi athlète</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher le suivi.</p>
+                </div>
+              )
+            ) : activeMenuKey === "templates" ? (
+              <ModelsPage
+                weekDays={weekDays}
+                existingSessionsByDay={existingSessionsByDay}
+                myModels={myModels}
+                baseModels={BASE_MODELS}
+                onCreateModel={() => void createModelFromDraft()}
+                onAddToPlanning={(model, day, replaceExisting) => void addModelToPlanning(model, day, replaceExisting)}
+                onEditModel={editModel}
+                onDuplicateModel={(model) => void duplicateModel(model)}
+                onDeleteModel={(model) => void deleteModel(model)}
+              />
             ) : activeMenuKey === "club" ? (
               <ClubManagementPage
                 clubName={activeClubName || "RunConnect Club"}
