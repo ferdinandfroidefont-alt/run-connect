@@ -1641,8 +1641,10 @@ export type Database = {
           caption: string | null
           created_at: string
           expires_at: string
+          hide_from: string[]
           id: string
           media_url: string | null
+          privacy: string
           session_id: string | null
         }
         Insert: {
@@ -1650,8 +1652,10 @@ export type Database = {
           caption?: string | null
           created_at?: string
           expires_at?: string
+          hide_from?: string[]
           id?: string
           media_url?: string | null
+          privacy?: string
           session_id?: string | null
         }
         Update: {
@@ -1659,8 +1663,10 @@ export type Database = {
           caption?: string | null
           created_at?: string
           expires_at?: string
+          hide_from?: string[]
           id?: string
           media_url?: string | null
+          privacy?: string
           session_id?: string | null
         }
         Relationships: [
@@ -1811,6 +1817,41 @@ export type Database = {
             columns: ["route_id"]
             isOneToOne: false
             referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_media: {
+        Row: {
+          created_at: string
+          id: string
+          media_type: string
+          media_url: string
+          metadata: Json
+          story_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          media_type: string
+          media_url: string
+          metadata?: Json
+          story_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          metadata?: Json
+          story_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_media_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "session_stories"
             referencedColumns: ["id"]
           },
         ]
