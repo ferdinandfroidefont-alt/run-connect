@@ -182,7 +182,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 <div
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
-                    left: '30%',
+                    left: '32%',
                     top: '50.7%',
                     transform: 'translate(-50%, 0)',
                     fontSize: 'clamp(10px, 3cqw, 13px)',
