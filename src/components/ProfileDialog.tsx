@@ -898,7 +898,7 @@ export const ProfileDialog = ({
                       {[
                         { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
                         { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
-                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: MapIcon, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
                         { icon: MapPin, label: 'Mes itinéraires', color: 'text-blue-500', action: () => { onOpenChange(false); navigate('/itinerary/my-routes'); } },
                         isPremiumUser
                           ? {
