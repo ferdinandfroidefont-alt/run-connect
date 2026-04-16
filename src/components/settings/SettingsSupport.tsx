@@ -286,13 +286,6 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
             </div>
           </div>
 
-          {user && (
-            <div className="space-y-2 px-0">
-              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
-                <ProfileSharePanel active compact />
-              </div>
-            </div>
-          )}
 
           {/* Danger Zone */}
           <div className="space-y-2">
