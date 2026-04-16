@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video, Gift } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -214,7 +214,7 @@ export const ProfileDialog = ({
           .in("story_id", storyIds)
           .order("created_at", { ascending: true })
       : { data: [] };
-    const mediaByStory = new Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }>();
+    const mediaByStory: Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }> = new Map();
     for (const row of (mediaRows ?? []) as Array<any>) {
       if (mediaByStory.has(row.story_id)) continue;
       const sec = Number(row?.metadata?.duration_sec ?? row?.metadata?.duration ?? 0);
@@ -898,7 +898,7 @@ export const ProfileDialog = ({
                       {[
                         { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
                         { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
-                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: MapIcon, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
                         { icon: MapPin, label: 'Mes itinéraires', color: 'text-blue-500', action: () => { onOpenChange(false); navigate('/itinerary/my-routes'); } },
                         isPremiumUser
                           ? {

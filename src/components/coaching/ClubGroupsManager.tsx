@@ -54,7 +54,7 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
 
       const { data: memberIds } = await supabase
         .from("group_members")
-        .select("user_id")
+        .select("user_id, is_coach")
         .eq("conversation_id", clubId);
 
       if (memberIds && memberIds.length > 0) {

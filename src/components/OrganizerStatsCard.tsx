@@ -31,7 +31,7 @@ export const OrganizerStatsCard = ({ weeklyOnly = false }: { weeklyOnly?: boolea
       // Fetch all sessions created by user
       const { data: sessions, error } = await supabase
         .from('sessions')
-        .select('id, scheduled_at, current_participants, max_participants')
+        .select('id, scheduled_at, created_at, current_participants, max_participants')
         .eq('organizer_id', user.id);
 
       if (error) throw error;

@@ -247,7 +247,7 @@ export default function MySessions() {
         base.location_lat = lat;
         base.location_lng = lng;
       }
-      setSessionForShare(base as Parameters<typeof buildSessionSharePayload>[0]);
+      setSessionForShare(base as unknown as Parameters<typeof buildSessionSharePayload>[0]);
       setShowSessionShare(true);
     } catch (e) {
       console.error(e);
