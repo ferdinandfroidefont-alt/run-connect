@@ -214,7 +214,7 @@ export const ProfileDialog = ({
           .in("story_id", storyIds)
           .order("created_at", { ascending: true })
       : { data: [] };
-    const mediaByStory = new Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }>();
+    const mediaByStory: Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }> = new Map();
     for (const row of (mediaRows ?? []) as Array<any>) {
       if (mediaByStory.has(row.story_id)) continue;
       const sec = Number(row?.metadata?.duration_sec ?? row?.metadata?.duration ?? 0);
