@@ -35,10 +35,23 @@ export function ProfileSharePanel({ compact = false }: Props) {
   };
 
   // Sépare ville / drapeau pour positionnement à gauche
+  const codeToFlag = (code: string) =>
+    code.length === 2
+      ? String.fromCodePoint(...code.toUpperCase().split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
+      : '';
+
   const locationParts = (() => {
     if (!payload?.locationLine) return { text: '', flag: '' };
+    // 1) Drapeau emoji déjà présent
     const match = payload.locationLine.match(/^(.*?)([\u{1F1E6}-\u{1F1FF}]{2})\s*$/u);
     if (match) return { text: match[1].replace(/[, ]+$/, '').trim(), flag: match[2] };
+    // 2) Code ISO type "FR" → conversion en emoji drapeau
+    const iso = payload.locationLine.match(/\b([A-Z]{2})\b/);
+    if (iso) {
+      const flag = codeToFlag(iso[1]);
+      const text = payload.locationLine.replace(iso[0], '').replace(/[, ]+/g, ' ').trim();
+      return { text, flag };
+    }
     return { text: payload.locationLine, flag: '' };
   })();
 
