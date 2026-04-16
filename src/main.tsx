@@ -103,6 +103,14 @@ const initializeCapacitorPlugins = async () => {
   } catch (_) {
     // Plugin preload failed — non-critical
   }
+
+  try {
+    const { Keyboard } = await import('@capacitor/keyboard');
+    await Keyboard.setAccessoryBarVisible({ isVisible: false });
+    await Keyboard.setScroll({ isDisabled: true });
+  } catch (_) {
+    // Keyboard plugin not available on this platform
+  }
   
   const detectedPlatform = (window as any).detectedPlatform || 'android';
   window.dispatchEvent(new CustomEvent('capacitorReady', { 

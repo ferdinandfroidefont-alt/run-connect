@@ -149,6 +149,8 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
         .from("conversations")
         .select("id, group_name, group_description, group_avatar_url, club_code, created_by, location")
         .eq("is_group", true)
+        .not("club_code", "is", null)
+        .neq("club_code", "")
         .eq("club_code", codeQuery)
         .limit(5);
 
@@ -214,6 +216,8 @@ export const ClubsTab = ({ searchQuery }: { searchQuery: string }) => {
         .from("conversations")
         .select("id, group_name, group_description, group_avatar_url, club_code, created_by, location")
         .eq("is_group", true)
+        .not("club_code", "is", null)
+        .neq("club_code", "")
         .eq("is_private", false)
         .order("created_at", { ascending: false });
 

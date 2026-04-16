@@ -190,8 +190,8 @@ export const OrganizerStatsCard = () => {
           <TrendingUp className="h-4.5 w-4.5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[21px] font-bold leading-none text-foreground">Statistiques organisateur</p>
-          <p className="mt-0.5 text-[13px] text-muted-foreground">Performance globale</p>
+          <p className="text-[17px] font-semibold leading-none text-foreground">Statistiques organisateur</p>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">Performance globale</p>
         </div>
         <span
           className={cn(
@@ -212,8 +212,8 @@ export const OrganizerStatsCard = () => {
               <div className={cn("mb-2 inline-flex h-7 w-7 items-center justify-center rounded-lg", item.iconBg)}>
                 <Icon className="h-4 w-4" />
               </div>
-              <p className={cn("text-[38px] font-black leading-none", item.tone)}>{item.value}</p>
-              <p className="mt-1 text-[14px] font-semibold leading-tight text-foreground">{item.label}</p>
+              <p className={cn("text-[28px] font-bold leading-none", item.tone)}>{item.value}</p>
+              <p className="mt-1 text-[12px] font-semibold leading-tight text-foreground">{item.label}</p>
             </div>
           );
         })}
@@ -227,8 +227,8 @@ export const OrganizerStatsCard = () => {
               <div className={cn("mb-1 inline-flex h-6 w-6 items-center justify-center rounded-md", item.iconBg)}>
                 <Icon className="h-3.5 w-3.5" />
               </div>
-              <p className="text-[31px] font-black leading-none text-foreground">{item.value}</p>
-              <p className="mt-0.5 text-[13px] font-medium text-muted-foreground">{item.label}</p>
+              <p className="text-[24px] font-bold leading-none text-foreground">{item.value}</p>
+              <p className="mt-0.5 text-[12px] font-medium text-muted-foreground">{item.label}</p>
             </div>
           );
         })}
@@ -236,7 +236,7 @@ export const OrganizerStatsCard = () => {
 
       <div className="mb-3 rounded-2xl border border-border/50 bg-card p-2.5">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-[15px] font-semibold text-foreground">Séances créées par semaine</p>
+          <p className="text-[13px] font-semibold text-foreground">Séances créées par semaine</p>
           <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">6 dernières semaines</span>
         </div>
         <div className="grid grid-cols-6 items-end gap-2">
@@ -259,11 +259,11 @@ export const OrganizerStatsCard = () => {
       </div>
 
       <div className="rounded-2xl border border-blue-500/15 bg-blue-500/5 p-2.5">
-        <p className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-primary">
+        <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
           <Sparkles className="h-4 w-4" />
           Analyse
         </p>
-        <p className="mt-1 text-[13px] text-foreground">{analysisText}</p>
+        <p className="mt-1 text-[12px] text-foreground">{analysisText}</p>
       </div>
     </div>
   );

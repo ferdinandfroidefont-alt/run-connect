@@ -1,6 +1,5 @@
 import { forwardRef } from 'react';
 import {
-  Activity,
   Bike,
   Calendar,
   Clock,
@@ -13,61 +12,114 @@ import { templateDimensions } from '@/lib/sessionSharePayload';
 
 const RC_BLUE = '#2563eb';
 
-function ActivityGlyph({ type }: { type: string }) {
-  const t = type.toLowerCase();
-  if (t === 'cycling' || t === 'velo' || t === 'mtb') return <Bike className="h-7 w-7" style={{ color: RC_BLUE }} />;
-  if (t === 'swimming') return <Waves className="h-7 w-7" style={{ color: RC_BLUE }} />;
-  return <Activity className="h-7 w-7" style={{ color: RC_BLUE }} />;
-}
-
-function PinAvatar({
-  avatarUrl,
-  initials,
-  size = 72,
-}: {
-  avatarUrl: string | null;
-  initials: string;
-  size?: number;
-}) {
-  const s = { width: size, height: size };
+function RunnerIcon({ size = 28 }: { size?: number }) {
   return (
-    <div
-      className="flex items-center justify-center overflow-hidden rounded-full border-[3px] border-white shadow-md"
-      style={{ ...s, background: '#e5e7eb' }}
-    >
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
-      ) : (
-        <span className="text-[22px] font-bold text-slate-600">{initials}</span>
-      )}
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.5 7.5 0 0 0 19 13v-2a5.4 5.4 0 0 1-4.4-2.2l-1-1.6a2 2 0 0 0-1.7-1 2 2 0 0 0-.8.2L6 9v5h2V10.1l1.8-.7"
+        fill={RC_BLUE}
+      />
+    </svg>
   );
 }
 
-function CtaBar({ publicUrl: _url }: { publicUrl: string }) {
-  void _url;
+function ActivityGlyph({ type }: { type: string }) {
+  const t = type.toLowerCase();
+  if (t === 'cycling' || t === 'velo' || t === 'mtb') return <Bike style={{ width: 28, height: 28, color: RC_BLUE }} />;
+  if (t === 'swimming') return <Waves style={{ width: 28, height: 28, color: RC_BLUE }} />;
+  return <RunnerIcon size={28} />;
+}
+
+function BluePinMarker() {
+  return (
+    <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M28 0C12.536 0 0 12.536 0 28c0 21 28 44 28 44s28-23 28-44C56 12.536 43.464 0 28 0Z"
+        fill={RC_BLUE}
+      />
+      <circle cx="28" cy="28" r="12" fill="white" />
+    </svg>
+  );
+}
+
+function CtaBar({ publicUrl }: { publicUrl: string }) {
+  void publicUrl;
   return (
     <div
-      className="flex items-center justify-between gap-3 rounded-2xl px-6 py-4 text-white"
-      style={{ background: RC_BLUE }}
+      style={{
+        background: RC_BLUE,
+        borderRadius: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '20px 24px',
+        gap: 16,
+      }}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <img src="/brand/runconnect-splash-icon.png" alt="" className="h-10 w-10 shrink-0 rounded-xl object-contain" />
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium leading-tight text-white/90">Retrouve cette séance sur</p>
-          <p className="truncate text-lg font-bold leading-tight">RunConnect</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            background: 'rgba(255,255,255,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"
+              fill="white"
+            />
+            <circle cx="12" cy="9" r="8" stroke="white" strokeWidth="1.5" fill="none" opacity="0.4" />
+            <circle cx="12" cy="9" r="11" stroke="white" strokeWidth="1" fill="none" opacity="0.2" />
+          </svg>
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)', lineHeight: 1.3, margin: 0 }}>
+            Retrouve cette séance sur
+          </p>
+          <p style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', lineHeight: 1.2, margin: 0 }}>
+            RunConnect
+          </p>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2.5 text-slate-900 shadow-sm">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: '#ffffff',
+          borderRadius: 50,
+          padding: '12px 20px',
+          flexShrink: 0,
+        }}
+      >
         <div
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white"
-          style={{ background: RC_BLUE }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: RC_BLUE,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <span className="text-lg font-bold">→</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
-        <div className="text-left">
-          <p className="text-[14px] font-bold leading-tight">Ouvrir</p>
-          <p className="text-[10px] text-slate-500">Dans l&apos;app</p>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', lineHeight: 1.2, margin: 0, whiteSpace: 'nowrap' }}>
+            Ouvrir avec RunConnect
+          </p>
+          <p style={{ fontSize: 11, fontWeight: 500, color: '#64748b', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap' }}>
+            Rejoins la séance dans l&apos;app
+          </p>
         </div>
       </div>
     </div>
@@ -86,144 +138,177 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const isDark = templateId === 'dark_premium';
     const isMinimal = templateId === 'minimal';
     const isStory = templateId === 'instagram_story';
-    const forceRoute = templateId === 'light_route';
 
-    const bg = isDark ? '#0f172a' : '#ffffff';
+    const cardBg = isDark ? '#0f172a' : '#f5f7fa';
     const fg = isDark ? '#f8fafc' : '#0f172a';
     const muted = isDark ? '#94a3b8' : '#64748b';
-
-    const showRoute = (payload.hasRoute && !isMinimal) || forceRoute;
+    const cardInnerBg = isDark ? 'rgba(30,41,59,0.85)' : '#ffffff';
+    const dividerColor = isDark ? '#334155' : '#e2e8f0';
 
     const mapSection = (
-      <div className="relative h-full min-h-0 flex-1 overflow-hidden">
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {mapImageUrl ? (
           <img
             src={mapImageUrl}
             alt=""
             crossOrigin="anonymous"
-            className="absolute inset-0 h-full w-full object-cover"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <div className="absolute inset-0 bg-slate-200" />
+          <div style={{ position: 'absolute', inset: 0, background: '#e2e8f0' }} />
         )}
         {!isDark && (
           <div
-            className="pointer-events-none absolute inset-0"
             style={{
-              background: 'linear-gradient(90deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.75) 38%, rgba(255,255,255,0.1) 100%)',
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.6) 30%, rgba(245,247,250,0) 55%)',
             }}
           />
         )}
         {isDark && (
           <div
-            className="pointer-events-none absolute inset-0"
             style={{
-              background: 'linear-gradient(90deg, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.2) 100%)',
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.5) 35%, rgba(15,23,42,0) 60%)',
             }}
           />
         )}
-        {showRoute && (
-          <div className="pointer-events-none absolute bottom-[18%] right-[12%] flex flex-col items-center">
-            <div
-              className="flex h-[88px] w-[88px] items-center justify-center rounded-full shadow-lg ring-4 ring-white/30"
-              style={{ background: RC_BLUE }}
-            >
-              <PinAvatar avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} size={76} />
-            </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: '32%',
+            right: '28%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 8 }}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
+              {payload.locationTitle}
+            </p>
+            {payload.locationSubtitle && (
+              <p style={{ fontSize: 14, fontWeight: 500, color: muted, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
+                {payload.locationSubtitle}
+              </p>
+            )}
           </div>
-        )}
-        {!showRoute && (
-          <div className="pointer-events-none absolute bottom-[16%] right-[14%] flex flex-col items-center">
-            <div
-              className="flex h-[96px] w-[96px] items-center justify-center rounded-full shadow-xl ring-4 ring-white/40"
-              style={{ background: RC_BLUE }}
-            >
-              <PinAvatar avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} size={82} />
-            </div>
-            <div className="mt-2 h-3 w-3 rotate-45 bg-white/90 shadow" />
-          </div>
-        )}
+          <BluePinMarker />
+        </div>
       </div>
     );
 
     const leftColumn = (
-      <div className="flex min-w-0 flex-col gap-3 px-10 pt-10">
-        <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '44px 0 0 44px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <ActivityGlyph type={payload.activityType} />
-          <span className="text-[13px] font-bold uppercase tracking-wide" style={{ color: RC_BLUE }}>
+          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', color: RC_BLUE, textTransform: 'uppercase' as const }}>
             {payload.activityHeader}
           </span>
         </div>
+
         <h1
-          className="text-balance font-bold leading-[1.05] tracking-tight"
-          style={{ color: fg, fontSize: isStory ? 52 : 56 }}
+          style={{
+            fontSize: isStory ? 48 : 54,
+            fontWeight: 800,
+            color: fg,
+            lineHeight: 1.05,
+            letterSpacing: '-0.02em',
+            margin: 0,
+          }}
         >
           {payload.title}
         </h1>
+
         {payload.structureBadge && !isMinimal && (
           <div
-            className="inline-flex w-fit rounded-full px-4 py-2 text-[15px] font-semibold text-white"
-            style={{ background: RC_BLUE }}
+            style={{
+              display: 'inline-flex',
+              width: 'fit-content',
+              borderRadius: 50,
+              padding: '10px 22px',
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#ffffff',
+              background: RC_BLUE,
+              letterSpacing: '0.01em',
+            }}
           >
             {payload.structureBadge}
           </div>
         )}
-        {(payload.pacePrimary || payload.structureBadge) && !isMinimal && (
-          <div className="mt-1 flex flex-col gap-0.5">
-            {payload.pacePrimary && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 shrink-0" style={{ color: RC_BLUE }} />
-                <span className="text-[22px] font-bold" style={{ color: fg }}>
-                  {payload.pacePrimary}
-                </span>
-              </div>
-            )}
+
+        {payload.pacePrimary && !isMinimal && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
+              <span style={{ fontSize: 24, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
+            </div>
             {payload.paceSecondary && (
-              <span className="pl-7 text-[13px]" style={{ color: muted }}>
-                {payload.paceSecondary}
-              </span>
+              <span style={{ paddingLeft: 32, fontSize: 13, color: muted }}>{payload.paceSecondary}</span>
             )}
           </div>
         )}
-        <div className="my-2 h-px w-full max-w-[280px] bg-slate-200/80" style={isDark ? { background: '#334155' } : undefined} />
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 shrink-0" style={{ color: RC_BLUE }} />
-            <span className="text-[19px] font-semibold capitalize" style={{ color: fg }}>
+
+        <div style={{ height: 1, width: '70%', maxWidth: 280, background: dividerColor, margin: '4px 0' }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Calendar style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 20, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
               {payload.dateLabel}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 shrink-0" style={{ color: RC_BLUE }} />
-            <span className="text-[19px] font-semibold" style={{ color: fg }}>
-              {payload.timeLabel}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 20, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
           </div>
         </div>
+
         {!isMinimal && (
           <div
-            className="mt-4 w-full max-w-[420px] rounded-2xl border border-black/5 bg-white/90 p-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]"
-            style={isDark ? { background: 'rgba(30,41,59,0.85)', borderColor: 'rgba(148,163,184,0.25)' } : undefined}
+            style={{
+              marginTop: 16,
+              width: '100%',
+              maxWidth: 420,
+              borderRadius: 18,
+              border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(0,0,0,0.06)',
+              background: cardInnerBg,
+              padding: 18,
+              boxShadow: isDark ? 'none' : '0 4px 24px rgba(15,23,42,0.06)',
+            }}
           >
-            <div className="flex gap-2">
-              <MapPin className="mt-0.5 h-5 w-5 shrink-0" style={{ color: RC_BLUE }} />
-              <div className="min-w-0">
-                <p className="text-[17px] font-bold leading-snug" style={{ color: fg }}>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <MapPin style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0 }}>
                   {payload.locationTitle}
                 </p>
                 {payload.locationSubtitle && (
-                  <p className="text-[14px] leading-snug" style={{ color: muted }}>
+                  <p style={{ fontSize: 14, color: muted, lineHeight: 1.3, margin: 0 }}>
                     {payload.locationSubtitle}
                   </p>
                 )}
               </div>
             </div>
             {payload.audienceLine && (
-              <div className="mt-3 flex items-center gap-2 border-t border-black/5 pt-3" style={isDark ? { borderColor: '#334155' } : undefined}>
-                <Users className="h-5 w-5 shrink-0" style={{ color: RC_BLUE }} />
-                <span className="text-[15px] font-medium" style={{ color: fg }}>
-                  {payload.audienceLine}
-                </span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginTop: 14,
+                  paddingTop: 14,
+                  borderTop: `1px solid ${dividerColor}`,
+                }}
+              >
+                <Users style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
+                <span style={{ fontSize: 16, fontWeight: 500, color: fg }}>{payload.audienceLine}</span>
               </div>
             )}
           </div>
@@ -233,17 +318,35 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
 
     const bottomCta = <CtaBar publicUrl={payload.publicUrl} />;
 
+    const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+
     if (isStory) {
       return (
         <div
           ref={ref}
-          className="relative flex flex-col overflow-hidden"
-          style={{ width: w, height: h, background: bg, fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+          style={{
+            width: w,
+            height: h,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: cardBg,
+            fontFamily: fontStack,
+          }}
         >
-          <div className="relative min-h-0 flex-[1.15]">{mapSection}</div>
-          <div className="relative z-[1] flex min-h-0 flex-[0.85] flex-col bg-white">
+          <div style={{ position: 'relative', flex: '1.15 1 0%', minHeight: 0 }}>{mapSection}</div>
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              flex: '0.85 1 0%',
+              display: 'flex',
+              flexDirection: 'column',
+              background: cardBg,
+            }}
+          >
             {leftColumn}
-            <div className="mt-auto px-6 pb-8 pt-4">{bottomCta}</div>
+            <div style={{ marginTop: 'auto', padding: '16px 32px 40px' }}>{bottomCta}</div>
           </div>
         </div>
       );
@@ -252,12 +355,28 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     return (
       <div
         ref={ref}
-        className="relative flex overflow-hidden"
-        style={{ width: w, height: h, background: bg, fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+        style={{
+          width: w,
+          height: h,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: cardBg,
+          borderRadius: 28,
+          fontFamily: fontStack,
+        }}
       >
-        <div className="relative z-[2] flex w-[52%] min-w-0 flex-col pb-44">{leftColumn}</div>
-        <div className="relative z-[1] min-w-0 flex-[1]">{mapSection}</div>
-        <div className="absolute bottom-0 left-0 right-0 z-[3] px-8 pb-8 pt-4">{bottomCta}</div>
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          <div style={{ position: 'relative', zIndex: 2, width: '52%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            {leftColumn}
+          </div>
+          <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
+            {mapSection}
+          </div>
+        </div>
+        <div style={{ position: 'relative', zIndex: 3, padding: '0 32px 32px', flexShrink: 0 }}>
+          {bottomCta}
+        </div>
       </div>
     );
   }

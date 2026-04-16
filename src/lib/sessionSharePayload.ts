@@ -64,6 +64,7 @@ interface SessionLike {
   session_type?: string | null;
   session_blocks?: unknown;
   routes?: { coordinates?: unknown[] } | null;
+  distance_km?: number | null;
 }
 
 function buildStructureBadge(s: SessionLike): string | null {
@@ -79,6 +80,10 @@ function buildStructureBadge(s: SessionLike): string | null {
     const dist =
       d < 1 ? `${Math.round(d * 1000)} m` : `${String(d).replace('.', ',')} km`;
     return `${s.interval_count} × ${dist}`;
+  }
+  if (s.distance_km && (s.session_type === 'footing' || s.session_type === 'sortie_longue')) {
+    const km = s.distance_km;
+    return km < 1 ? `${Math.round(km * 1000)} m` : `${String(km).replace('.', ',')} km`;
   }
   return null;
 }

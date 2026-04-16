@@ -1948,7 +1948,6 @@ const Messages = () => {
         <div className="max-w-md mx-auto flex min-h-0 w-full flex-1 flex-col">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
-            forcePin
             headerWrapperClassName="z-50 bg-card border-b border-border/50"
             header={
             <div className="flex items-center px-ios-2 py-ios-2">
@@ -2157,7 +2156,7 @@ const Messages = () => {
                 )}
               </div>
             )}
-            <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
+            <div className="flex-1 px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? visibleMessages[index - 1] : null;
@@ -2654,6 +2653,8 @@ const Messages = () => {
                   <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
                     <input
                       type="text"
+                      enterKeyHint="send"
+                      autoComplete="off"
                       placeholder="iMessage"
                       value={newMessage}
                       onChange={(e) => {
