@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { SupportInbox } from "@/components/settings/SupportInbox";
-import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
+
 
 interface SettingsSupportProps {
   onBack: () => void;
@@ -286,13 +286,6 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
             </div>
           </div>
 
-          {user && (
-            <div className="space-y-2 px-0">
-              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
-                <ProfileSharePanel active compact />
-              </div>
-            </div>
-          )}
 
           {/* Danger Zone */}
           <div className="space-y-2">

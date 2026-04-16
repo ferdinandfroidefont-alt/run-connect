@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -331,6 +332,13 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   }}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Partage de profil */}
+          <div className="space-y-2 px-0">
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+              <ProfileSharePanel active compact />
             </div>
           </div>
         </div>
