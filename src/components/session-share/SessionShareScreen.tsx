@@ -165,6 +165,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               <SessionSharePreviewCarousel
                 payload={payload}
                 mapImageUrl={mapImageUrl}
+                qrDataUrl={qrDataUrl}
                 activeTemplateId={templateId}
                 onTemplateChange={(id) => setTemplateId(id)}
               />
@@ -204,6 +205,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               payload={payload}
               templateId={templateId}
               mapImageUrl={mapImageUrl}
+              qrDataUrl={qrDataUrl}
             />
           </div>
         )}

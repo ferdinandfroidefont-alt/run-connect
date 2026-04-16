@@ -21,6 +21,7 @@ const TEMPLATE_META: { id: SessionShareTemplateId; label: string }[] = [
 type Props = {
   payload: SessionSharePayload;
   mapImageUrl: string | null;
+  qrDataUrl?: string | null;
   activeTemplateId: SessionShareTemplateId;
   onTemplateChange: (id: SessionShareTemplateId, index: number) => void;
 };
@@ -28,6 +29,7 @@ type Props = {
 export function SessionSharePreviewCarousel({
   payload,
   mapImageUrl,
+  qrDataUrl,
   activeTemplateId,
   onTemplateChange,
 }: Props) {
@@ -103,6 +105,7 @@ export function SessionSharePreviewCarousel({
                         payload={payload}
                         templateId={meta.id}
                         mapImageUrl={mapImageUrl}
+                        qrDataUrl={qrDataUrl ?? null}
                       />
                     </div>
                   </div>
