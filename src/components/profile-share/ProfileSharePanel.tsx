@@ -93,7 +93,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 <div
                   className="absolute overflow-hidden rounded-full"
                   style={{
-                    left: '50%',
+                    left: '50.1%',
                     top: '17.1%',
                     width: '20%',
                     aspectRatio: '1 / 1',
