@@ -584,3 +584,5 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
         </div>
       </div>
     );
+  }
+);
