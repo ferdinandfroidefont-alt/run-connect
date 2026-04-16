@@ -35,7 +35,6 @@ export async function generateSessionShareImage(
     height: h,
     pixelRatio: 1,
     cacheBust: true,
-    useCORS: true,
     backgroundColor: bg,
     filter: (node) => {
       if (node instanceof HTMLElement && node.dataset?.shareIgnore === 'true') return false;
