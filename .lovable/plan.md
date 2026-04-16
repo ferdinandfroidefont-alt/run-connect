@@ -1,83 +1,47 @@
 
 
-## Remplacer "Gérer le club" par une page de gestion complète style iOS Settings
+## Plan: Refine `light_card` template in ProfileShareArtboard to match mockup
 
-### Constat actuel
-Le bouton "Gérer le club" ouvre `ClubInfoDialog` — un dialog plein écran avec des onglets (Membres/Entraînements/Groupes) et un design ancien, incohérent avec le style iOS premium du reste de la page Coaching. Il y a aussi `EditClubDialog` qui s'ouvre en cascade depuis `ClubInfoDialog`. Les deux sont redondants et mal intégrés.
+The current `light_card` template (lines 402-497) is already close but needs visual refinements to precisely match the reference image.
 
-### Ce qui va changer
+### Changes needed (single file: `src/components/profile-share/ProfileShareArtboard.tsx`)
 
-**Supprimer** : `ClubInfoDialog` et `EditClubDialog` ne seront plus utilisés depuis la page Coaching. On retire les imports lazy, les states (`showClubInfo`, `showEditClub`, `clubInfoData`), et le rendu `<Suspense>` correspondant dans `Coaching.tsx`.
+**1. Avatar ring** — Increase `innerSize` from 188 to ~220. The blue ring + white border thickness looks correct already.
 
-**Créer** : Un nouveau composant `ClubManagementDialog` en plein écran, style iOS Settings (fond `bg-secondary`, sections `IOSListGroup` avec titres en majuscules), qui regroupe tout en un seul écran scrollable :
+**2. Display name + verified badge** — Increase font size from 44px to ~50px. The verified badge should be a blue circle with checkmark (matching the mockup's style), not the current gradient pill.
 
-### Structure de la nouvelle page
+**3. Username** — Increase from 18px to ~22px, keep gray color.
 
-```text
-┌─────────────────────────────┐
-│  ← Retour     Gérer le club │
-├─────────────────────────────┤
-│                             │
-│  [Avatar du club]           │
-│  Nom du club                │
-│  Description                │
-│                             │
-│  INFORMATIONS               │
-│  ┌─────────────────────────┐│
-│  │ Nom du club      [Edit] ││
-│  │ Description      [Edit] ││
-│  │ Photo de profil  [Chg]  ││
-│  └─────────────────────────┘│
-│                             │
-│  CODE D'INVITATION          │
-│  ┌─────────────────────────┐│
-│  │ ABC123         [Copier] ││
-│  └─────────────────────────┘│
-│                             │
-│  MEMBRES (12)               │
-│  ┌─────────────────────────┐│
-│  │ Inviter des membres   > ││
-│  │ @alice  Admin  Coach    ││
-│  │ @bob    Membre    [⚙]  ││
-│  │ @charlie Membre   [⚙]  ││
-│  └─────────────────────────┘│
-│                             │
-│  ZONE DANGER                │
-│  ┌─────────────────────────┐│
-│  │ Supprimer le club       ││
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
-```
+**4. Role/club pill** — Already close. Ensure the icon is a group/users icon, text is bold blue, secondary line is slightly smaller. Looks good as-is.
 
-### Fonctionnalités intégrées
+**5. Location + sport line** — Already close. Keep MapPin + location, separator, sport icon + label. Increase font slightly if needed to ~17px.
 
-1. **Modifier nom/description/avatar** — inline, avec sauvegarde directe (reprend la logique d'`EditClubDialog`)
-2. **Code d'invitation** — affiché avec bouton copier (visible uniquement pour le créateur/admin)
-3. **Liste des membres** — avec badges Admin/Coach, actions par membre :
-   - Promouvoir/rétrograder coach (toggle)
-   - Retirer du club (avec confirmation AlertDialog)
-4. **Inviter des membres** — recherche utilisateurs intégrée (dialog léger ou section inline)
-5. **Supprimer le club** — section danger en bas, avec AlertDialog de confirmation
+**6. Stats row (critical)** — Keep 4 cards on ONE line (already the case). Refine:
+   - Each card: icon on top, big bold number, small label below
+   - Ensure min-height and proportions match mockup (~130px height is fine)
+   - Icons should be distinct: Calendar for "Séances créées", Users for "Séances rejointes", User for "Abonnés", UserPlus for "Abonnements"
 
-### Détails techniques
+**7. Presence badge** — Already present and close. Keep the pill style with blue border.
 
-**Fichiers créés :**
-- `src/components/coaching/ClubManagementDialog.tsx` — nouveau composant unique (~400 lignes), utilisant `IOSListGroup`, `IOSListItem`, `IosFixedPageHeaderShell`, `CoachingFullscreenHeader`
+**8. Footer CTA banner** — Already implemented as `LightCardFooter`. Refinements:
+   - RunConnect icon (white/inverted) on the left with "Rejoins-moi sur" + "RunConnect" text
+   - "Ouvrir avec RunConnect" button with arrow icon
+   - QR code on the right with a vertical separator
+   - Profile URL below QR code
+   - The topo pattern in background is a nice touch, keep it
 
-**Fichiers modifiés :**
-- `src/pages/Coaching.tsx` :
-  - Supprimer les imports lazy de `ClubInfoDialog` et `EditClubDialog`
-  - Supprimer les states `clubInfoData`, `showClubInfo`, `showEditClub`
-  - Supprimer la fonction `openClubManagement` (fetch conversation)
-  - Supprimer le bloc `<Suspense>` avec les deux dialogs
-  - Ajouter un state `showClubManagement` et le nouveau `<ClubManagementDialog>`
-  - Le bouton "Gérer le club" appellera simplement `setShowClubManagement(true)`
+**9. Map background** — Already using `ShareMapBackdropImg` with white gradient overlay. Increase overlay opacity slightly to make it more subtle/light as in the mockup (currently 0.78 top → could go to 0.82-0.85).
 
-**Fichiers NON supprimés** (utilisés ailleurs, depuis Messages/ClubProfileDialog) :
-- `ClubInfoDialog.tsx` — reste en place
-- `EditClubDialog.tsx` — reste en place
+### Technical details
 
-### Logique métier reprise
-Toute la logique Supabase (load members, toggle coach, remove member, invite, delete club, upload avatar, update name/description) est copiée depuis `ClubInfoDialog` + `EditClubDialog` et consolidée dans le nouveau composant.
+- All changes are in **one file**: `src/components/profile-share/ProfileShareArtboard.tsx`
+- Only the `light_card` branch (lines 402-497) and its helper components (`LightCardAvatarRing`, `LightCardStatsRow`, `LightCardFooter`, `VerifiedPremiumBadge`) need updates
+- No payload/data model changes needed — all fields already exist in `ProfileSharePayload`
+- The `useCORS` build error in `profileShareService.ts` also needs fixing (rename to valid option or remove)
+- The `sessionShareService.ts` has the same `useCORS` error
+
+### Build error fixes (bonus)
+
+- `src/services/profileShareService.ts` line 72: remove `useCORS: true` (not a valid `html-to-image` option — the correct option is handled differently)
+- `src/services/sessionShareService.ts` line 38: same fix
 
