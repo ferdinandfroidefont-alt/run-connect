@@ -421,7 +421,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
       </div>
     );
 
-    const bottomCta = <CtaBar publicUrl={payload.publicUrl} />;
+    const bottomCta = <CtaBar publicUrl={payload.publicUrl} qrDataUrl={qrDataUrl} />;
 
     const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 
