@@ -56,6 +56,31 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
 
   const publicUrl = session ? getSessionPublicUrl(session.id) : '';
 
+  // Génère le QR code pour la barre de partage en bas (style profil)
+  useEffect(() => {
+    if (!open || !publicUrl) {
+      setQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { default: QRCode } = await import('qrcode');
+        const url = await QRCode.toDataURL(publicUrl, {
+          width: 220,
+          margin: 1,
+          color: { dark: '#0f172a', light: '#ffffff' },
+        });
+        if (!cancelled) setQrDataUrl(url);
+      } catch {
+        if (!cancelled) setQrDataUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, publicUrl]);
+
   const payload = useMemo(() => {
     if (!session) return null;
     return buildSessionSharePayload(session, {
