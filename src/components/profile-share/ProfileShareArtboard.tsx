@@ -18,23 +18,26 @@ const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
 
-function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
+function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: number }) {
+  const s = size ?? (compact ? 32 : 36);
   return (
     <span
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full text-white shadow-md',
-        compact ? 'h-8 w-8' : 'h-9 w-9'
-      )}
-      style={{ background: 'linear-gradient(135deg, #3897f0 0%, #1877f2 100%)' }}
+      className="inline-flex shrink-0 items-center justify-center rounded-full text-white"
+      style={{
+        width: s,
+        height: s,
+        background: RC_LIGHT,
+        boxShadow: '0 2px 8px rgba(0, 102, 255, 0.35)',
+      }}
       title="Premium"
       aria-hidden
     >
       <svg
         viewBox="0 0 24 24"
-        className={compact ? 'h-4 w-4' : 'h-5 w-5'}
+        style={{ width: s * 0.52, height: s * 0.52 }}
         fill="none"
         stroke="currentColor"
-        strokeWidth="2.8"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -161,11 +164,11 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
       {items.map((row) => (
         <div
           key={row.label}
-          className="flex min-h-[130px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-[14px] border border-slate-200/80 bg-white px-1 py-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.07)]"
+          className="flex min-h-[128px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[16px] border border-slate-200/70 bg-white/95 px-1 py-4 shadow-[0_4px_20px_rgba(15,23,42,0.06)]"
         >
-          <row.icon className="h-[24px] w-[24px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
-          <span className="text-[35px] font-extrabold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
-          <span className="max-w-[100%] px-1 text-center text-[11px] font-semibold leading-[1.2] text-slate-500">{row.label}</span>
+          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
+          <span className="text-[36px] font-extrabold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
+          <span className="max-w-[100%] px-1 text-center text-[10.5px] font-semibold uppercase leading-[1.2] tracking-wide text-slate-500">{row.label}</span>
         </div>
       ))}
     </div>
@@ -421,7 +424,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           style={{
             zIndex: 1,
             background:
-              'linear-gradient(to bottom, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.72) 40%, rgba(255,255,255,0.45) 70%, rgba(255,255,255,0.18) 100%)',
+              'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.82) 40%, rgba(255,255,255,0.55) 70%, rgba(255,255,255,0.25) 100%)',
           }}
         />
         <div
@@ -438,16 +441,16 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
 
         <div className="relative z-[2] flex h-full min-h-0 flex-col">
           <div className="flex min-h-0 flex-1 flex-col items-center px-10 pb-3 pt-[72px]">
-            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={188} />
+            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={220} />
 
-            <div className="mt-4 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-2.5">
-              <h1 className="max-w-full text-center text-[44px] font-extrabold leading-[1.06] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+            <div className="mt-5 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-3">
+              <h1 className="max-w-full text-center text-[50px] font-extrabold leading-[1.04] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
                 {payload.displayName}
               </h1>
-              {payload.isPremium ? <VerifiedPremiumBadge compact /> : null}
+              {payload.isPremium ? <VerifiedPremiumBadge size={38} /> : null}
             </div>
 
-            <p className="mt-1.5 max-w-[90%] truncate text-center text-[18px] text-slate-500">@{payload.username}</p>
+            <p className="mt-2 max-w-[90%] truncate text-center text-[22px] text-slate-500">@{payload.username}</p>
 
             <div className="mt-3.5 flex max-w-[94%] items-start gap-3 rounded-full bg-sky-100/95 px-6 py-3 shadow-sm">
               <Users className="mt-0.5 h-[26px] w-[26px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
@@ -463,14 +466,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               </div>
             </div>
 
-            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[16px] font-semibold text-slate-800">
+            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[17px] font-semibold text-slate-800">
               <span className="inline-flex min-w-0 items-center gap-2">
-                <MapPin className="h-[18px] w-[18px] shrink-0 text-slate-900" strokeWidth={2.3} />
+                <MapPin className="h-[19px] w-[19px] shrink-0 text-slate-900" strokeWidth={2.3} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.locationLine}</span>
               </span>
               <span className="inline-block h-5 w-px shrink-0 bg-slate-300" aria-hidden />
               <span className="inline-flex min-w-0 items-center gap-2">
-                <Footprints className="h-[18px] w-[18px] shrink-0 text-slate-900" strokeWidth={2.3} />
+                <Footprints className="h-[19px] w-[19px] shrink-0 text-slate-900" strokeWidth={2.3} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.sportLabel}</span>
               </span>
             </div>
