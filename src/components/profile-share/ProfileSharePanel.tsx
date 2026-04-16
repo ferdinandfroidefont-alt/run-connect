@@ -35,24 +35,32 @@ export function ProfileSharePanel({ compact = false }: Props) {
   };
 
   // Sépare ville / drapeau pour positionnement à gauche
-  const codeToFlag = (code: string) =>
-    code.length === 2
-      ? String.fromCodePoint(...code.toUpperCase().split('').map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
-      : '';
+  // Extrait le code ISO 2 lettres (FR, BE, …) depuis profile.country
+  // payload.locationLine vaut typiquement "France, 🇫🇷" — on récupère le code via le drapeau emoji
+  const flagToIso = (flag: string): string | null => {
+    const cps = Array.from(flag).map((c) => c.codePointAt(0) || 0);
+    if (cps.length !== 2) return null;
+    const a = cps[0] - 0x1f1e6;
+    const b = cps[1] - 0x1f1e6;
+    if (a < 0 || a > 25 || b < 0 || b > 25) return null;
+    return String.fromCharCode(65 + a, 65 + b).toLowerCase();
+  };
 
   const locationParts = (() => {
-    if (!payload?.locationLine) return { text: '', flag: '' };
-    // 1) Drapeau emoji déjà présent
+    if (!payload?.locationLine) return { text: '', isoCode: '' };
+    // 1) Drapeau emoji présent → extrait code ISO
     const match = payload.locationLine.match(/^(.*?)([\u{1F1E6}-\u{1F1FF}]{2})\s*$/u);
-    if (match) return { text: match[1].replace(/[, ]+$/, '').trim(), flag: match[2] };
-    // 2) Code ISO type "FR" → conversion en emoji drapeau
-    const iso = payload.locationLine.match(/\b([A-Z]{2})\b/);
-    if (iso) {
-      const flag = codeToFlag(iso[1]);
-      const text = payload.locationLine.replace(iso[0], '').replace(/[, ]+/g, ' ').trim();
-      return { text, flag };
+    if (match) {
+      const iso = flagToIso(match[2]) || '';
+      return { text: match[1].replace(/[, ]+$/, '').trim(), isoCode: iso };
     }
-    return { text: payload.locationLine, flag: '' };
+    // 2) Code ISO type "FR" → utilisé directement
+    const iso = payload.locationLine.match(/\b([A-Za-z]{2})\b/);
+    if (iso) {
+      const text = payload.locationLine.replace(iso[0], '').replace(/[, ]+/g, ' ').trim();
+      return { text, isoCode: iso[1].toLowerCase() };
+    }
+    return { text: payload.locationLine, isoCode: '' };
   })();
 
   return (
@@ -174,7 +182,14 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   }}
                 >
                   <span className="truncate">{locationParts.text || '—'}</span>
-                  {locationParts.flag && <span>{locationParts.flag}</span>}
+                  {locationParts.isoCode && (
+                    <img
+                      src={`https://flagcdn.com/${locationParts.isoCode}.svg`}
+                      alt=""
+                      className="inline-block rounded-[2px]"
+                      style={{ width: '1.4em', height: '1em', objectFit: 'cover' }}
+                    />
+                  )}
                 </div>
               )}
 
