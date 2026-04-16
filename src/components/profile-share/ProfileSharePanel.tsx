@@ -253,9 +253,9 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 <div
                   className="absolute overflow-hidden rounded-[6px] bg-white"
                   style={{
-                    left: '80%',
-                    top: '87%',
-                    width: '12%',
+                    left: '78%',
+                    top: '88.5%',
+                    width: '14%',
                     aspectRatio: '1 / 1',
                     transform: 'translate(-50%, -50%)',
                   }}
