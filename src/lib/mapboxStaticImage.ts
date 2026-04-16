@@ -4,18 +4,19 @@ import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
+const STYLE_RELIEF = 'mapbox/outdoors-v12';
 
 /** Bleu RunConnect (proche primary) */
 const ROUTE_COLOR = '2563eb';
-const PIN_COLOR = '2563eb';
 
 function joinOverlays(parts: string[]): string {
   return parts.filter(Boolean).join(',');
 }
 
 /**
- * Image statique Mapbox (carte + éventuel tracé + pin).
- * Utilise le mode `auto` pour cadrer tracé + marqueur.
+ * Image statique Mapbox (carte relief + éventuel tracé).
+ * Le pin est rendu côté React (BluePinMarker) pour rester identique à la carte d'accueil.
+ * Si pas de tracé : centre/zoom explicite (légèrement dézoomé) pour montrer le contexte.
  */
 export function buildSessionStaticMapUrl(options: {
   routePath: MapboxStaticPoint[];
@@ -28,7 +29,7 @@ export function buildSessionStaticMapUrl(options: {
   if (!token) return null;
 
   const { routePath, pin, width, height } = options;
-  const padding = options.padding ?? 64;
+  const padding = options.padding ?? 96;
 
   const overlays: string[] = [];
 
@@ -39,12 +40,17 @@ export function buildSessionStaticMapUrl(options: {
     }
   }
 
-  overlays.push(`pin-l+${PIN_COLOR}(${pin.lng},${pin.lat})`);
-
   const overlay = joinOverlays(overlays);
-  // Ne pas encoder tout l’overlay : certains clients / Mapbox attendent le segment tel quel (sinon image 400).
-  // Le polyline Mapbox est en alphabet restreint ; si besoin, encoder seulement des caractères problématiques à la source.
-  const path = `/styles/v1/${STYLE_LIGHT}/static/${overlay}/auto/${width}x${height}`;
+
+  let path: string;
+  if (routePath.length >= 2 && overlay) {
+    // Cadrage automatique sur le tracé, padding élargi (dézoom).
+    path = `/styles/v1/${STYLE_RELIEF}/static/${overlay}/auto/${width}x${height}`;
+  } else {
+    // Pas de tracé : centre sur le pin avec zoom modéré (dézoomé)
+    const zoom = 13.2;
+    path = `/styles/v1/${STYLE_RELIEF}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
+  }
 
   const params = new URLSearchParams({
     padding: String(padding),
