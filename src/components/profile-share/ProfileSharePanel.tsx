@@ -132,8 +132,8 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
           >
             <div
               ref={scrollRef}
-              className="flex w-full max-w-full snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-[calc(50%-var(--card-half))] pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ '--card-half': `${previewScale(TEMPLATES[0].id).boxW / 2}px` } as CSSProperties}
+              className="flex w-full max-w-full snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ justifyContent: TEMPLATES.length === 1 ? 'center' : undefined }}
             >
               {TEMPLATES.map((meta, i) => {
                 const { scale, boxW, boxH } = previewScale(meta.id);
@@ -144,7 +144,7 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
                     ref={(el) => {
                       cardRefs.current[i] = el;
                     }}
-                    className="shrink-0 snap-center"
+                    className="shrink-0 snap-center first:ml-auto last:mr-auto"
                     style={{ width: boxW }}
                   >
                     <div
