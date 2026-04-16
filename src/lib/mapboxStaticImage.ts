@@ -4,7 +4,8 @@ import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
-const STYLE_RELIEF = 'mapbox/outdoors-v12';
+/** Style aligné avec la carte du Feed (MiniMapPreview) — streets-v12, même rendu. */
+const STYLE_RELIEF = 'mapbox/streets-v12';
 
 /** Bleu RunConnect (proche primary) */
 const ROUTE_COLOR = '2563eb';
