@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { buildProfileSharePayloadFromData } from '@/lib/profileSharePayload';
 import { getProfilePublicUrl } from '@/lib/appLinks';
+import { buildProfileShareMapBackgroundUrl } from '@/lib/mapboxStaticImage';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 
 async function fetchPrimaryClubName(userId: string): Promise<string | null> {
@@ -78,12 +79,19 @@ export async function fetchProfileSharePayload(userId: string, referralCode?: st
     qrDataUrl = null;
   }
 
+  const mapBackgroundUrl = buildProfileShareMapBackgroundUrl({
+    countryCode: profile.country,
+    width: 1080,
+    height: 1080,
+  });
+
   return buildProfileSharePayloadFromData({
     display_name: profile.display_name,
     username,
     avatar_url: profile.avatar_url,
     favorite_sport: profile.favorite_sport,
     country: profile.country,
+    city: null,
     is_premium: profile.is_premium,
     clubName,
     isCoach,
@@ -94,5 +102,6 @@ export async function fetchProfileSharePayload(userId: string, referralCode?: st
     presenceRate,
     publicUrl,
     qrDataUrl,
+    mapBackgroundUrl,
   });
 }

@@ -52,6 +52,46 @@ export function buildSessionStaticMapUrl(options: {
   return `https://api.mapbox.com${path}?${params.toString()}`;
 }
 
+/** Centre approximatif (lat/lng) pour une carte de fond très légère (partage profil). */
+const PROFILE_MAP_CENTER_BY_COUNTRY: Record<string, { lat: number; lng: number }> = {
+  FR: { lat: 46.5, lng: 2.5 },
+  BE: { lat: 50.5, lng: 4.5 },
+  CH: { lat: 46.8, lng: 8.2 },
+  CA: { lat: 56.1, lng: -96.0 },
+  LU: { lat: 49.8, lng: 6.1 },
+  MA: { lat: 31.8, lng: -7.1 },
+  TN: { lat: 34.0, lng: 9.0 },
+  DZ: { lat: 28.0, lng: 3.0 },
+  SN: { lat: 14.5, lng: -14.5 },
+  CI: { lat: 7.5, lng: -5.5 },
+  ES: { lat: 40.4, lng: -3.7 },
+  PT: { lat: 39.4, lng: -8.2 },
+  DE: { lat: 51.2, lng: 10.4 },
+  IT: { lat: 42.8, lng: 12.6 },
+  GB: { lat: 54.0, lng: -2.5 },
+  US: { lat: 39.8, lng: -98.5 },
+};
+
+/**
+ * Carte Mapbox light statique sans pin (fond discret pour carte de partage).
+ */
+export function buildProfileShareMapBackgroundUrl(options: {
+  countryCode: string | null | undefined;
+  width: number;
+  height: number;
+}): string | null {
+  const token = getMapboxAccessToken();
+  if (!token) return null;
+
+  const code = (options.countryCode || 'FR').trim().toUpperCase();
+  const c = PROFILE_MAP_CENTER_BY_COUNTRY[code] ?? PROFILE_MAP_CENTER_BY_COUNTRY.FR;
+  const zoom = 10;
+  const { width, height } = options;
+  const path = `/styles/v1/${STYLE_LIGHT}/static/${c.lng},${c.lat},${zoom},0,0/${width}x${height}`;
+  const params = new URLSearchParams({ access_token: token });
+  return `https://api.mapbox.com${path}?${params.toString()}`;
+}
+
 export function normalizeRouteCoordinates(raw: unknown[] | undefined | null): MapboxStaticPoint[] {
   if (!raw?.length) return [];
   const out: MapboxStaticPoint[] = [];

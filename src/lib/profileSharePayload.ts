@@ -1,5 +1,5 @@
 import { PROFILE_SPORT_LABELS, type ProfileSportKey } from '@/lib/profileSports';
-import { getCountryLabel } from '@/lib/countryLabels';
+import { formatProfileShareLocationRow } from '@/lib/countryLabels';
 
 export type ProfileShareTemplateId = 'light_card' | 'organizer_focus' | 'minimal_story';
 
@@ -8,12 +8,16 @@ export interface ProfileSharePayload {
   username: string;
   avatarUrl: string | null;
   initials: string;
-  /** Badge texte type pilule : Coach / Athlète / Coach • Nom du club */
-  rolePillLabel: string;
+  /** Ligne 1 du bloc rôle (ex. « Rôle (Coach) »). */
+  roleLinePrimary: string;
+  /** Ligne 2 optionnelle (ex. « Dans le club … »). */
+  roleLineSecondary: string | null;
   /** Libellé sport en français, sans emoji */
   sportLabel: string;
-  /** Ex. « 🇫🇷 France » — jamais « FR France » */
+  /** Ex. « Lyon, 🇫🇷 » ou « France, 🇫🇷 » — jamais « FR France » */
   locationLine: string;
+  /** URL Mapbox light en fond (1080×1080) ou null si pas de token */
+  mapBackgroundUrl: string | null;
   sessionsCreated: number;
   sessionsJoined: number;
   followersCount: number;
@@ -30,29 +34,11 @@ export function templateDimensions(id: ProfileShareTemplateId): { w: number; h: 
   return { w: 1080, h: 1080 };
 }
 
-/** Localisation pour le visuel de partage (drapeau + nom pays, cohérent FR). */
-export function formatProfileShareLocation(country: string | null | undefined): string {
-  if (!country?.trim()) return 'RunConnect';
-  const code = country.trim().toUpperCase();
-  return getCountryLabel(code) ?? country;
-}
-
 function sportLabelFromProfile(favoriteSport: string | null | undefined): string {
   if (!favoriteSport?.trim()) return 'Sport';
   const first = favoriteSport.split(',')[0].trim() as ProfileSportKey;
   if (first in PROFILE_SPORT_LABELS) return PROFILE_SPORT_LABELS[first as ProfileSportKey].label;
   return favoriteSport.split(',')[0].trim();
-}
-
-/**
- * Coach si modèles coaching ou séances coaching club ; sinon Athlète.
- * Avec club : « Coach • Nom » ou « Athlète • Nom » (jamais « Administrateur »).
- */
-export function buildRolePillLabel(input: { isCoach: boolean; clubName: string | null }): string {
-  const role = input.isCoach ? 'Coach' : 'Athlète';
-  const club = input.clubName?.trim();
-  if (club) return `${role} • ${club}`;
-  return role;
 }
 
 export function buildProfileSharePayloadFromData(input: {
@@ -61,6 +47,8 @@ export function buildProfileSharePayloadFromData(input: {
   avatar_url: string | null;
   favorite_sport: string | null;
   country: string | null;
+  /** Ville optionnelle (si absente en base, rester null). */
+  city: string | null;
   is_premium: boolean | null;
   clubName: string | null;
   isCoach: boolean;
@@ -71,6 +59,7 @@ export function buildProfileSharePayloadFromData(input: {
   presenceRate: number | null;
   publicUrl: string;
   qrDataUrl: string | null;
+  mapBackgroundUrl: string | null;
 }): ProfileSharePayload {
   const displayName = input.display_name?.trim() || input.username;
   const initials =
@@ -82,16 +71,22 @@ export function buildProfileSharePayloadFromData(input: {
       .join('') || input.username.slice(0, 2).toUpperCase();
 
   const sportLabel = sportLabelFromProfile(input.favorite_sport);
-  const locationLine = formatProfileShareLocation(input.country);
+  const locationLine = formatProfileShareLocationRow(input.city, input.country);
+  const roleShort = input.isCoach ? 'Coach' : 'Athlète';
+  const club = input.clubName?.trim();
+  const roleLinePrimary = `Rôle (${roleShort})`;
+  const roleLineSecondary = club ? `Dans le club ${club}` : null;
 
   return {
     displayName,
     username: input.username,
     avatarUrl: input.avatar_url,
     initials,
-    rolePillLabel: buildRolePillLabel({ isCoach: input.isCoach, clubName: input.clubName }),
+    roleLinePrimary,
+    roleLineSecondary,
     sportLabel,
     locationLine,
+    mapBackgroundUrl: input.mapBackgroundUrl,
     sessionsCreated: input.sessionsCreated,
     sessionsJoined: input.sessionsJoined,
     followersCount: input.followersCount,

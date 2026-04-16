@@ -1,20 +1,40 @@
 import { forwardRef } from 'react';
-import { Activity, MapPin, Radio, Timer, UserCheck } from 'lucide-react';
+import {
+  Activity,
+  Calendar,
+  ChevronRight,
+  Footprints,
+  MapPin,
+  Timer,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { templateDimensions } from '@/lib/profileSharePayload';
 
 const RC = '#2563eb';
 
-function VerifiedPremiumBadge() {
+function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
   return (
     <span
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-md"
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full text-white shadow-md',
+        compact ? 'h-8 w-8' : 'h-9 w-9'
+      )}
       style={{ background: 'linear-gradient(135deg, #3897f0 0%, #1877f2 100%)' }}
       title="Premium"
       aria-hidden
     >
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        viewBox="0 0 24 24"
+        className={compact ? 'h-4 w-4' : 'h-5 w-5'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <polyline points="20 6 9 17 4 12" />
       </svg>
     </span>
@@ -52,7 +72,43 @@ function AvatarRing({
   );
 }
 
-/** Une stat : chiffre au-dessus, libellé court en dessous — une seule ligne visuelle par colonne. */
+/** Avatar + anneau bleu épais (carte claire). */
+function LightCardAvatarRing({
+  avatarUrl,
+  initials,
+  innerSize,
+}: {
+  avatarUrl: string | null;
+  initials: string;
+  innerSize: number;
+}) {
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full p-[7px]"
+      style={{
+        background: RC,
+        boxShadow: '0 16px 48px rgba(37,99,235,0.32)',
+      }}
+    >
+      <div className="rounded-full bg-white p-[3px] shadow-inner">
+        <div
+          className="flex items-center justify-center overflow-hidden rounded-full bg-slate-200"
+          style={{ width: innerSize, height: innerSize }}
+        >
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
+          ) : (
+            <span className="font-bold text-slate-600" style={{ fontSize: innerSize * 0.28 }}>
+              {initials}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Une stat : chiffre au-dessus, libellé court en dessous — templates sombres. */
 function StatQuad({ value, label }: { value: number | string; label: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-slate-200/90 bg-white/90 px-1 py-2.5 text-center shadow-sm">
@@ -77,30 +133,78 @@ function RunConnectBrandHeader({ dark = false }: { dark?: boolean }) {
   );
 }
 
-function CtaFooter({ payload }: { payload: ProfileSharePayload }) {
+function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
+  const items = [
+    { icon: Calendar, value: payload.sessionsCreated, label: 'Séances créées' },
+    { icon: Users, value: payload.sessionsJoined, label: 'Séances rejointes' },
+    { icon: Users, value: payload.followersCount, label: 'Abonnés' },
+    { icon: UserPlus, value: payload.followingCount, label: 'Abonnements' },
+  ] as const;
+
+  return (
+    <div className="mt-5 flex w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
+      {items.map((row, idx) => (
+        <div
+          key={row.label}
+          className={cn(
+            'flex min-h-[112px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-3',
+            idx < items.length - 1 ? 'border-r border-slate-200/90' : ''
+          )}
+        >
+          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.25} style={{ color: RC }} />
+          <span className="text-[31px] font-bold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
+          <span className="max-w-[100%] px-1 text-center text-[10px] font-semibold leading-[1.2] text-slate-500">{row.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
   return (
     <div
-      className="flex items-center gap-4 rounded-2xl px-5 py-4 text-white shadow-lg"
+      className="flex w-full shrink-0 items-center justify-between gap-5 px-8 pb-8 pt-7"
       style={{
-        background: `linear-gradient(135deg, ${RC} 0%, #1d4ed8 100%)`,
-        boxShadow: '0 10px 36px rgba(37, 99, 235, 0.35)',
+        background: `linear-gradient(118deg, ${RC} 0%, #1d4ed8 48%, #1e3a8a 100%)`,
+        boxShadow: '0 -12px 40px rgba(37, 99, 235, 0.12)',
       }}
     >
-      <div className="relative shrink-0">
-        <img src="/brand/runconnect-splash-icon.png" alt="" className="relative z-[1] h-14 w-14 rounded-2xl bg-white/10 p-1.5" />
-        <span className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-[#1d4ed8] shadow">
-          <Radio className="h-3.5 w-3.5" strokeWidth={2.5} />
-        </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <img
+            src="/brand/runconnect-splash-icon.png"
+            alt=""
+            className="h-[68px] w-[68px] shrink-0 brightness-0 invert drop-shadow-md"
+          />
+          <p className="min-w-0 text-[19px] font-semibold leading-snug text-white">
+            Rejoins-moi sur <span className="font-extrabold">RunConnect</span>
+          </p>
+        </div>
+        <a
+          href={payload.publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold shadow-lg transition-opacity hover:opacity-95"
+          style={{ color: RC }}
+        >
+          Ouvrir avec RunConnect
+          <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.8} style={{ color: RC }} />
+        </a>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[17px] font-bold leading-snug">Rejoins-moi sur RunConnect</p>
-        <p className="mt-0.5 truncate text-[12px] font-medium text-white/90">{payload.publicUrlDisplay}</p>
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        {payload.qrDataUrl ? (
+          <img
+            src={payload.qrDataUrl}
+            alt=""
+            className="h-[124px] w-[124px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
+          />
+        ) : (
+          <div className="h-[124px] w-[124px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
+        )}
+        <p className="max-w-[210px] text-right text-[10px] font-medium leading-tight text-white/90 [word-break:break-all]">
+          {payload.publicUrlDisplay}
+        </p>
       </div>
-      {payload.qrDataUrl ? (
-        <img src={payload.qrDataUrl} alt="" className="h-[88px] w-[88px] shrink-0 rounded-xl border-2 border-white/90 bg-white p-1.5 shadow-md" />
-      ) : (
-        <div className="h-[88px] w-[88px] shrink-0 rounded-xl border-2 border-white/40 bg-white/10" />
-      )}
     </div>
   );
 }
@@ -116,8 +220,6 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
 
     const ctaText = 'Ajoute-moi sur RunConnect';
-
-    const footerBlue = <CtaFooter payload={payload} />;
 
     if (templateId === 'organizer_focus') {
       return (
@@ -156,10 +258,13 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
 
           <div className="relative z-[1] mt-6 px-10">
             <div
-              className="inline-flex rounded-full px-5 py-2 text-[15px] font-semibold text-white"
+              className="inline-flex flex-col items-start rounded-full px-5 py-2.5 text-left text-[15px] font-semibold text-white"
               style={{ background: RC }}
             >
-              {payload.rolePillLabel}
+              <span>{payload.roleLinePrimary}</span>
+              {payload.roleLineSecondary ? (
+                <span className="mt-0.5 text-[12px] font-medium text-white/90">{payload.roleLineSecondary}</span>
+              ) : null}
             </div>
           </div>
 
@@ -174,9 +279,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             {[
               { icon: MapPin, text: payload.locationLine },
               { icon: Activity, text: payload.sportLabel },
-              ...(presence
-                ? [{ icon: Timer, text: `${presence} présence` }]
-                : []),
+              ...(presence ? [{ icon: Timer, text: `${presence} présence` }] : []),
             ].map((row, i) => (
               <div key={i} className="flex items-center gap-3 rounded-xl bg-slate-800/80 px-4 py-3">
                 <row.icon className="h-6 w-6 shrink-0" style={{ color: RC }} />
@@ -217,8 +320,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               {payload.isPremium ? <VerifiedPremiumBadge /> : null}
             </div>
             <p className="mt-2 text-[21px] text-slate-400">@{payload.username}</p>
-            <div className="mt-4 rounded-full px-5 py-2 text-[15px] font-semibold text-white" style={{ background: RC }}>
-              {payload.rolePillLabel}
+            <div
+              className="mt-4 inline-flex flex-col items-center rounded-full px-5 py-2 text-center text-[15px] font-semibold text-white"
+              style={{ background: RC }}
+            >
+              <span>{payload.roleLinePrimary}</span>
+              {payload.roleLineSecondary ? (
+                <span className="mt-0.5 text-[12px] font-medium text-white/90">{payload.roleLineSecondary}</span>
+              ) : null}
             </div>
           </div>
 
@@ -245,74 +354,88 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
       );
     }
 
-    // light_card (default) — 1080×1080, dense, premium
+    // light_card — 1080×1080, aligné maquette partage
     return (
       <div
         ref={ref}
-        className="relative flex flex-col overflow-hidden"
+        className="relative flex flex-col overflow-hidden rounded-[36px]"
         style={{
           width: w,
           height: h,
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          background: 'linear-gradient(165deg, #f8fafc 0%, #ffffff 38%, #f1f5f9 100%)',
+          boxShadow: '0 24px 64px rgba(15, 23, 42, 0.12)',
         }}
       >
+        {payload.mapBackgroundUrl ? (
+          <img
+            src={payload.mapBackgroundUrl}
+            alt=""
+            crossOrigin="anonymous"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.06] object-cover opacity-[0.38]"
+          />
+        ) : null}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.94] via-white/[0.91] to-white/[0.95]" />
         <div
-          className="pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
-            background:
-              'radial-gradient(ellipse 90% 55% at 50% -5%, rgba(37,99,235,0.07), transparent 50%), radial-gradient(ellipse 70% 40% at 100% 100%, rgba(37,99,235,0.05), transparent 45%)',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`,
           }}
         />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.4]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")`,
-          }}
-        />
 
-        <div className="relative z-[2] flex h-full min-h-0 flex-col px-10 pb-8 pt-5">
-          <div className="flex shrink-0 justify-end">
-            <RunConnectBrandHeader />
-          </div>
+        <div className="absolute left-10 top-8 z-20">
+          <RunConnectBrandHeader />
+        </div>
 
-          <div className="mt-2 flex flex-col items-center">
-            <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={208} />
-            <div className="mt-3 flex items-center justify-center gap-2.5">
-              <h1 className="text-center text-[42px] font-bold leading-[1.05] tracking-tight text-slate-900">{payload.displayName}</h1>
-              {payload.isPremium ? <VerifiedPremiumBadge /> : null}
+        <div className="relative z-10 flex h-full min-h-0 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col items-center px-10 pb-3 pt-[72px]">
+            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={200} />
+
+            <div className="mt-4 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-2.5">
+              <h1 className="max-w-full text-center text-[40px] font-bold leading-[1.08] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+                {payload.displayName}
+              </h1>
+              {payload.isPremium ? <VerifiedPremiumBadge compact /> : null}
             </div>
-            <p className="mt-1 text-[18px] text-slate-500">@{payload.username}</p>
-            <div
-              className="mt-3 max-w-[92%] truncate rounded-full px-5 py-2 text-[14px] font-semibold text-white shadow-md"
-              style={{ background: RC }}
-            >
-              {payload.rolePillLabel}
-            </div>
-            <p className="mt-4 text-center text-[17px] leading-snug text-slate-700">
-              <span className="font-medium">{payload.locationLine}</span>
-              <span className="mx-2 text-slate-300">·</span>
-              <span className="font-medium">{payload.sportLabel}</span>
-            </p>
-          </div>
 
-          <div className="mt-5 grid w-full grid-cols-4 gap-2.5">
-            <StatQuad value={payload.sessionsCreated} label="Séances créées" />
-            <StatQuad value={payload.sessionsJoined} label="Séances rejointes" />
-            <StatQuad value={payload.followersCount} label="Abonnés" />
-            <StatQuad value={payload.followingCount} label="Abonnements" />
-          </div>
+            <p className="mt-1 max-w-[90%] truncate text-center text-[17px] text-slate-500">@{payload.username}</p>
 
-          {payload.presenceRate != null ? (
-            <div className="mt-4 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 shadow-sm">
-                <UserCheck className="h-4 w-4" style={{ color: RC }} />
-                <span className="text-[14px] font-semibold text-slate-700">{payload.presenceRate}% présence</span>
+            <div className="mt-3 flex max-w-[94%] items-start gap-2.5 rounded-full bg-sky-100 px-5 py-2.5 shadow-sm">
+              <Users className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: RC }} />
+              <div className="min-w-0 text-left">
+                <p className="text-[15px] font-bold leading-tight" style={{ color: RC }}>
+                  {payload.roleLinePrimary}
+                </p>
+                {payload.roleLineSecondary ? (
+                  <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-slate-800">{payload.roleLineSecondary}</p>
+                ) : null}
               </div>
             </div>
-          ) : null}
 
-          <div className="mt-auto min-h-0 pt-5">{footerBlue}</div>
+            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[15px] font-semibold text-slate-800">
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <MapPin className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
+                <span className="min-w-0 [overflow-wrap:anywhere]">{payload.locationLine}</span>
+              </span>
+              <span className="inline-block h-4 w-px shrink-0 bg-slate-300" aria-hidden />
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <Footprints className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
+                <span className="min-w-0 [overflow-wrap:anywhere]">{payload.sportLabel}</span>
+              </span>
+            </div>
+
+            <LightCardStatsRow payload={payload} />
+
+            {payload.presenceRate != null ? (
+              <div className="mt-3.5 inline-flex items-center gap-2 rounded-full bg-sky-100 px-4 py-1.5 shadow-sm">
+                <Users className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
+                <span className="text-[14px] font-bold" style={{ color: RC }}>
+                  {payload.presenceRate}% présence
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          <LightCardFooter payload={payload} />
         </div>
       </div>
     );
