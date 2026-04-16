@@ -42,8 +42,9 @@ export function buildSessionStaticMapUrl(options: {
   overlays.push(`pin-l+${PIN_COLOR}(${pin.lng},${pin.lat})`);
 
   const overlay = joinOverlays(overlays);
-  // Caractères du polyline / parenthèses : encoder le segment overlay (doc Mapbox Static Images).
-  const path = `/styles/v1/${STYLE_LIGHT}/static/${encodeURIComponent(overlay)}/auto/${width}x${height}`;
+  // Ne pas encoder tout l’overlay : certains clients / Mapbox attendent le segment tel quel (sinon image 400).
+  // Le polyline Mapbox est en alphabet restreint ; si besoin, encoder seulement des caractères problématiques à la source.
+  const path = `/styles/v1/${STYLE_LIGHT}/static/${overlay}/auto/${width}x${height}`;
 
   const params = new URLSearchParams({
     padding: String(padding),

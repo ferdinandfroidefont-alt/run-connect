@@ -12,12 +12,11 @@ import {
 import { cn } from '@/lib/utils';
 import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { templateDimensions } from '@/lib/profileSharePayload';
+import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 
 const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
-/** Fond local si pas de token Mapbox ou chargement échoué (jamais de file:// — invalide dans le navigateur). */
-const PROFILE_MAP_FALLBACK_SRC = '/share/profile-map-fallback.svg';
 
 function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
   return (
@@ -251,8 +250,6 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
   function ProfileShareArtboard({ payload, templateId }, ref) {
     const { w, h } = templateDimensions(templateId);
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
-    const mapBgSrc = payload.mapBackgroundUrl?.trim() || PROFILE_MAP_FALLBACK_SRC;
-
     const ctaText = 'Ajoute-moi sur RunConnect';
 
     if (templateId === 'organizer_focus') {
@@ -267,10 +264,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           }}
         >
-          <img
-            src={mapBgSrc}
-            alt=""
-            crossOrigin="anonymous"
+          <ShareMapBackdropImg
+            mapUrl={payload.mapBackgroundUrl}
             className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
             style={{ zIndex: 0 }}
           />
@@ -279,7 +274,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             style={{
               zIndex: 1,
               background:
-                'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.6) 70%, rgba(255,255,255,0.3) 100%)',
+                'linear-gradient(to bottom, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.72) 40%, rgba(255,255,255,0.45) 70%, rgba(255,255,255,0.18) 100%)',
             }}
           />
           <div
@@ -416,10 +411,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           boxShadow: '0 24px 64px rgba(15, 23, 42, 0.12)',
         }}
       >
-        <img
-          src={mapBgSrc}
-          alt=""
-          crossOrigin="anonymous"
+        <ShareMapBackdropImg
+          mapUrl={payload.mapBackgroundUrl}
           className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
           style={{ zIndex: 0 }}
         />
@@ -428,7 +421,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           style={{
             zIndex: 1,
             background:
-              'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.6) 70%, rgba(255,255,255,0.3) 100%)',
+              'linear-gradient(to bottom, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.72) 40%, rgba(255,255,255,0.45) 70%, rgba(255,255,255,0.18) 100%)',
           }}
         />
         <div
