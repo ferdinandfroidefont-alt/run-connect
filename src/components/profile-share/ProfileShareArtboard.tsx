@@ -101,7 +101,7 @@ function LightCardAvatarRing({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: '50%',
-        padding: 6,
+        padding: 8,
         background: RC_LIGHT,
         boxShadow: '0 18px 52px rgba(0, 102, 255, 0.26)',
         flexShrink: 0,
