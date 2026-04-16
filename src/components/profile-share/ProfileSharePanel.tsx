@@ -115,10 +115,6 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
 
   return (
     <div className="min-w-0 max-w-full">
-      <div className={cn('px-4 ios-shell:px-2.5', compact ? 'pb-2 pt-1' : 'py-2')}>
-        <h3 className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Partager mon profil</h3>
-        <p className="mt-1 text-[13px] text-muted-foreground">Aperçu story, même rendu qu’à l’export.</p>
-      </div>
 
       <div className="flex min-h-0 flex-col">
         {loading && (
