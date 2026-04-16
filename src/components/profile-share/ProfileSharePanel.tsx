@@ -86,7 +86,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center justify-center gap-1.5"
                   style={{
                     left: '50%',
-                    top: '32.5%',
+                    top: '30%',
                     transform: 'translate(-50%, 0)',
                     width: '90%',
                   }}
@@ -113,7 +113,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute text-center text-slate-400 font-medium"
                   style={{
                     left: '50%',
-                    top: '38.5%',
+                    top: '36%',
                     transform: 'translate(-50%, 0)',
                     width: '90%',
                     fontSize: 'clamp(11px, 3.6cqw, 16px)',
@@ -123,33 +123,28 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* E. Pill rôle + club */}
+              {/* E. Pill rôle + club — tient sur 1 ligne dans la pill bleue */}
               {payload && (
                 <div
-                  className="absolute flex flex-col items-center justify-center text-center"
+                  className="absolute flex items-center justify-center text-center"
                   style={{
                     left: '50%',
-                    top: '44.6%',
+                    top: '43.6%',
                     transform: 'translate(-50%, 0)',
-                    width: '64%',
-                    paddingLeft: '12%',
-                    paddingRight: '6%',
+                    width: '58%',
+                    paddingLeft: '10%',
+                    paddingRight: '4%',
+                    height: '5.6%',
                   }}
                 >
                   <span
                     className="font-bold text-[#0A84FF] leading-tight truncate max-w-full"
-                    style={{ fontSize: 'clamp(11px, 3.5cqw, 15px)' }}
+                    style={{ fontSize: 'clamp(10px, 3.1cqw, 13px)' }}
                   >
-                    {payload.roleLinePrimary}
+                    {payload.roleLineSecondary
+                      ? `${payload.roleLinePrimary.replace(/^Rôle \((.*)\)$/, '$1')} · ${payload.roleLineSecondary.replace(/^Dans le club /i, '')}`
+                      : payload.roleLinePrimary}
                   </span>
-                  {payload.roleLineSecondary && (
-                    <span
-                      className="text-slate-700 leading-tight truncate max-w-full"
-                      style={{ fontSize: 'clamp(10px, 3cqw, 13px)' }}
-                    >
-                      {payload.roleLineSecondary}
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -159,7 +154,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '30%',
-                    top: '54.2%',
+                    top: '52%',
                     transform: 'translate(-50%, 0)',
                     fontSize: 'clamp(11px, 3.4cqw, 15px)',
                     whiteSpace: 'nowrap',
@@ -176,7 +171,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute text-slate-900 font-bold truncate"
                   style={{
                     left: '70%',
-                    top: '54.2%',
+                    top: '52%',
                     transform: 'translate(-50%, 0)',
                     maxWidth: '36%',
                     fontSize: 'clamp(11px, 3.4cqw, 15px)',
@@ -197,10 +192,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </>
               )}
 
-              {/* I. Présence */}
+              {/* I. Présence — uniquement le pourcentage entre l'icône et le texte du template */}
               {payload?.presenceRate != null && (
                 <div
-                  className="absolute flex items-center justify-center gap-1.5"
+                  className="absolute flex items-center justify-center"
                   style={{
                     left: '50%',
                     top: '76.2%',
@@ -212,12 +207,6 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     style={{ fontSize: 'clamp(13px, 4cqw, 18px)' }}
                   >
                     {payload.presenceRate}%
-                  </span>
-                  <span
-                    className="font-medium text-slate-700"
-                    style={{ fontSize: 'clamp(12px, 3.6cqw, 16px)' }}
-                  >
-                    présence
                   </span>
                 </div>
               )}
