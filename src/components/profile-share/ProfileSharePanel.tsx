@@ -57,7 +57,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   // Cercle centré horizontalement, légèrement vers le haut.
                   // Mesuré sur l'image 1254×1254 : centre ≈ (50%, 16.7%), diamètre ≈ 20.5%.
                   left: '50%',
-                  top: '16.7%',
+                  top: '17.3%',
                   width: '20.5%',
                   aspectRatio: '1 / 1',
                   transform: 'translate(-50%, -50%)',
