@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
+import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -350,6 +351,12 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
                       <p className="text-[15px]">Aucun paramètre trouvé</p>
                     </div>
                   )}
+
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+                      <ProfileSharePanel active compact />
+                    </div>
+                  </div>
 
                 </div>
               </ScrollArea>
