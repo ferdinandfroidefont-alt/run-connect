@@ -13,20 +13,25 @@ type Props = {
 export function ProfileSharePanel({ compact = false }: Props) {
   const { user } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (!user?.id) {
       setAvatarUrl(null);
+      setDisplayName(null);
       return;
     }
     (async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, display_name, username')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (!cancelled) setAvatarUrl(data?.avatar_url ?? null);
+      if (!cancelled) {
+        setAvatarUrl(data?.avatar_url ?? null);
+        setDisplayName(data?.display_name?.trim() || data?.username?.trim() || null);
+      }
     })();
     return () => {
       cancelled = true;
@@ -54,8 +59,6 @@ export function ProfileSharePanel({ compact = false }: Props) {
               <div
                 className="absolute overflow-hidden rounded-full"
                 style={{
-                  // Cercle centré horizontalement, légèrement vers le haut.
-                  // Mesuré sur l'image 1254×1254 : centre ≈ (50%, 16.7%), diamètre ≈ 20.5%.
                   left: '50%',
                   top: '16.7%',
                   width: '20.5%',
@@ -69,6 +72,27 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="h-full w-full object-cover"
                   crossOrigin="anonymous"
                 />
+              </div>
+            )}
+            {displayName && (
+              <div
+                className="absolute flex items-center justify-center"
+                style={{
+                  // Masque blanc sur "Prénom Nom" (centre ≈ 33% Y, hauteur ≈ 8%),
+                  // en laissant le badge bleu visible à droite.
+                  left: '14%',
+                  right: '24%',
+                  top: '29%',
+                  height: '8%',
+                  background: '#ffffff',
+                }}
+              >
+                <span
+                  className="truncate text-center font-extrabold tracking-tight text-[hsl(222_47%_11%)]"
+                  style={{ fontSize: 'clamp(16px, 7cqi, 30px)', lineHeight: 1 }}
+                >
+                  {displayName}
+                </span>
               </div>
             )}
           </div>
