@@ -18,13 +18,6 @@ type NavItem = {
 };
 
 const ITEM_GAP_PX = 12;
-/** Nombre de cases visibles ; l’index central = actif (2 à gauche, 2 à droite). */
-const VISIBLE_SLOTS = 5;
-const CENTER_SLOT = 2;
-
-function mod(n: number, m: number) {
-  return ((n % m) + m) % m;
-}
 
 export const BottomNavigation = () => {
   const location = useLocation();
@@ -38,6 +31,7 @@ export const BottomNavigation = () => {
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
+  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages → Itinéraires */
   const navItems = useMemo<NavItem[]>(
     () => [
       { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
@@ -47,6 +41,12 @@ export const BottomNavigation = () => {
         label: t("navigation.mySessions"),
         tutorialId: "nav-sessions",
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
+      },
+      {
+        path: "/coaching",
+        icon: GraduationCap,
+        label: t("navigation.coaching"),
+        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
       },
       {
         path: "/messages",
@@ -63,32 +63,9 @@ export const BottomNavigation = () => {
         tutorialId: "nav-itinerary",
         isActive: (p) => p === "/route-create" || p === "/route-creation",
       },
-      {
-        path: "/coaching",
-        icon: GraduationCap,
-        label: t("navigation.coaching"),
-        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
-      },
     ],
     [t]
   );
-
-  const N = navItems.length;
-
-  const activeIndex = useMemo(
-    () => navItems.findIndex((item) => item.isActive(pathname)),
-    [navItems, pathname]
-  );
-
-  /** Index utilisé pour la fenêtre circulaire (fallback accueil si route hors menu). */
-  const windowCenterIndex = activeIndex >= 0 ? activeIndex : 0;
-
-  const visibleRow = useMemo(() => {
-    return Array.from({ length: VISIBLE_SLOTS }, (_, slot) => {
-      const itemIdx = mod(windowCenterIndex + slot - CENTER_SLOT, N);
-      return { slot, item: navItems[itemIdx], itemIdx };
-    });
-  }, [N, navItems, windowCenterIndex]);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -175,23 +152,21 @@ export const BottomNavigation = () => {
             paddingRight: "0.5rem",
           }}
         >
-          {visibleRow.map(({ slot, item }) => {
+          {navItems.map((item) => {
             const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-            const isCenter = slot === CENTER_SLOT;
             const isActive = item.isActive(pathname);
             const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
 
             return (
               <button
-                key={`slot-${slot}`}
+                key={item.path}
                 type="button"
                 onClick={() => handleNavClick(item.path)}
                 data-tutorial={tutorialId}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
-                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]",
-                  !isCenter && "opacity-[0.92]"
+                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
                 )}
               >
                 <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">

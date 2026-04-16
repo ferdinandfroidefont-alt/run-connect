@@ -16,7 +16,7 @@ import {
 import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePreviewCarousel } from './SessionSharePreviewCarousel';
 import { SessionShareActionsGrid } from './SessionShareActionsGrid';
-import { Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SessionLike = Parameters<typeof buildSessionSharePayload>[0];
@@ -121,14 +121,16 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
         className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none"
         stackNested
       >
-        <header className="flex shrink-0 items-center justify-between border-b border-border px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <Button type="button" variant="ghost" className="text-[15px] font-medium" onClick={onClose}>
-            Fermer
-          </Button>
-          <h2 className="pointer-events-none absolute left-1/2 top-[max(0.75rem,env(safe-area-inset-top))] -translate-x-1/2 text-[17px] font-semibold">
-            Partager la séance
-          </h2>
-          <span className="w-16" aria-hidden />
+        <header className="relative flex shrink-0 items-center justify-center border-b border-border/60 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-[16px] font-medium text-primary transition-opacity active:opacity-70"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+            <span>Retour</span>
+          </button>
+          <h2 className="text-[17px] font-semibold text-foreground">Partager la séance</h2>
         </header>
 
         <ScrollArea className="min-h-0 flex-1">

@@ -168,7 +168,7 @@ const Messages = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  const { setHideBottomNav } = useAppContext();
+  const { setBottomNavSuppressed } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
@@ -294,9 +294,9 @@ const Messages = () => {
     if (selectedConversation) {
       setSelectedConversation(null);
     }
-    setHideBottomNav(false);
+    setBottomNavSuppressed("messages-thread", false);
     navigate("/messages", { replace: true, state: {} });
-  }, [location.state, navigate, selectedConversation, setHideBottomNav]);
+  }, [location.state, navigate, selectedConversation, setBottomNavSuppressed]);
 
   const isLoading = loading || cameraLoading;
 
@@ -324,7 +324,7 @@ const Messages = () => {
   useEffect(() => {
     const onMessagesPage = location.pathname.startsWith("/messages");
     const inThread = onMessagesPage && !!selectedConversation;
-    setHideBottomNav(inThread);
+    setBottomNavSuppressed("messages-thread", inThread);
 
     const root = document.documentElement;
     const hslVar = (name: string) => {
@@ -345,10 +345,10 @@ const Messages = () => {
       }
     }
     return () => {
-      setHideBottomNav(false);
+      setBottomNavSuppressed("messages-thread", false);
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
-  }, [selectedConversation, setHideBottomNav, location.pathname]);
+  }, [selectedConversation, setBottomNavSuppressed, location.pathname]);
 
   // Fetch user notification settings
   useEffect(() => {

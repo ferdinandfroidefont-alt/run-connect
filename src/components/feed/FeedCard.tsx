@@ -226,6 +226,7 @@ export const FeedCard = ({
               lng={session.location_lng}
               sessionId={session.id}
               onOpenSession={handleOpenDetails}
+              avatarUrl={session.organizer.avatar_url}
             />
           </div>
         </div>

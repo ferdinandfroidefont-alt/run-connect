@@ -1849,7 +1849,7 @@ export const InteractiveMap = ({
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
               <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
                 <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
-                  {t('navigation.home')}
+                  RunConnect
                 </span>
 
                 {userProfile && (
@@ -2312,7 +2312,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]",
+          "bottom-[calc(var(--layout-bottom-inset)+1.25rem+var(--home-bottom-stack-gap))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >

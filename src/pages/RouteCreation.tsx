@@ -89,7 +89,7 @@ export const RouteCreation = () => {
   const { pathname: routeCreationPathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { setHideBottomNav } = useAppContext();
+  const { setBottomNavSuppressed } = useAppContext();
   const { formatKm, unit } = useDistanceUnits();
 
   const { getCurrentPosition } = useGeolocation();
@@ -145,9 +145,9 @@ export const RouteCreation = () => {
   const previousWaypointCountRef = useRef(0);
 
   useEffect(() => {
-    setHideBottomNav(true);
-    return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
+    setBottomNavSuppressed("route-creation", true);
+    return () => setBottomNavSuppressed("route-creation", false);
+  }, [setBottomNavSuppressed]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;

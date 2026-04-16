@@ -17,7 +17,7 @@ interface OrganizerStats {
   weeklyCreated: number[];
 }
 
-export const OrganizerStatsCard = () => {
+export const OrganizerStatsCard = ({ weeklyOnly = false }: { weeklyOnly?: boolean }) => {
   const { user } = useAuth();
   const [stats, setStats] = useState<OrganizerStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,6 +183,36 @@ export const OrganizerStatsCard = () => {
   ] as const;
 
   const maxWeekly = Math.max(1, ...stats.weeklyCreated);
+  if (weeklyOnly) {
+    return (
+      <div className="ios-card rounded-2xl border border-border/60 bg-card p-3 shadow-[var(--shadow-card)]">
+        <div className="rounded-2xl border border-border/50 bg-card p-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[13px] font-semibold text-foreground">Séances créées par semaine</p>
+            <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">6 dernières semaines</span>
+          </div>
+          <div className="grid grid-cols-6 items-end gap-2">
+            {stats.weeklyCreated.map((value, idx) => {
+              const h = Math.max(12, Math.round((value / maxWeekly) * 84));
+              const weekDate = addWeeks(startOfWeek(new Date(), { weekStartsOn: 1 }), idx - 5);
+              return (
+                <div key={`${idx}-${value}`} className="flex flex-col items-center gap-1">
+                  <span className="text-[11px] font-semibold text-foreground">{value}</span>
+                  <div className="w-7 rounded-md bg-violet-500/20" style={{ height: `${h}px` }}>
+                    <div className="h-full w-full rounded-md bg-violet-500/75" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    {idx === 5 ? "S" : format(weekDate, "'S-'w", { locale: fr })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ios-card rounded-2xl border border-border/60 bg-card p-3 shadow-[var(--shadow-card)]">
       <div className="mb-3 flex items-center gap-3">

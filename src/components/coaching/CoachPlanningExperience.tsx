@@ -291,13 +291,14 @@ const BASE_MODELS: SessionModelItem[] = [
 export function CoachPlanningExperience() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { setHideBottomNav } = useAppContext();
+  const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
   const [isCoachMode, setIsCoachMode] = useState(true);
+  const [viewAsAthlete, setViewAsAthlete] = useState(false);
   const [athletes, setAthletes] = useState<AthleteEntry[]>([]);
   const [groups, setGroups] = useState<GroupEntry[]>([]);
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
@@ -334,6 +335,7 @@ export function CoachPlanningExperience() {
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
   const [copiedWeekSessions, setCopiedWeekSessions] = useState<TrainingSession[] | null>(null);
   const [copiedFromAthleteId, setCopiedFromAthleteId] = useState<string | null>(null);
+  const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
 
   const rotateActiveClub = () => {
     if (!clubs.length) return;
@@ -345,16 +347,16 @@ export function CoachPlanningExperience() {
   };
 
   useEffect(() => {
-    setHideBottomNav(coachingTab === "create");
-    return () => setHideBottomNav(false);
-  }, [coachingTab, setHideBottomNav]);
+    setBottomNavSuppressed("coaching-create", coachingTab === "create");
+    return () => setBottomNavSuppressed("coaching-create", false);
+  }, [coachingTab, setBottomNavSuppressed]);
 
   useEffect(() => {
-    if (!user || isCoachMode) return;
+    if (!user || !effectiveAthleteMode) return;
     setActiveAthleteId(user.id);
     setActiveGroupId(undefined);
     setActiveMenuKey((prev) => (prev === "my-plan" ? prev : "my-plan"));
-  }, [isCoachMode, user]);
+  }, [effectiveAthleteMode, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -602,7 +604,7 @@ export function CoachPlanningExperience() {
         .eq("club_id", activeClubId)
         .gte("scheduled_at", weekAnchor.toISOString())
         .lt("scheduled_at", weekEnd.toISOString());
-      if (isCoachMode) {
+      if (!effectiveAthleteMode) {
         query = query.eq("coach_id", user.id);
         if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
         if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
@@ -665,7 +667,7 @@ export function CoachPlanningExperience() {
     return () => {
       ignore = true;
     };
-  }, [activeClubId, activeAthleteId, activeGroupId, isCoachMode, user, weekAnchor, toast]);
+  }, [activeClubId, activeAthleteId, activeGroupId, effectiveAthleteMode, user, weekAnchor, toast]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),
@@ -1150,10 +1152,11 @@ export function CoachPlanningExperience() {
       ? "Tableau de bord"
       : "Coaching";
   const handleDrawerSelect = (key: CoachMenuKey) => {
-    if (!isCoachMode && key !== "my-plan") return;
+    if (effectiveAthleteMode && !isCoachMode && key !== "my-plan") return;
     setActiveMenuKey(key);
     setDrawerOpen(false);
     if (key === "planning" || key === "my-plan") {
+      setViewAsAthlete(key === "my-plan");
       setCoachingTab("planning");
       return;
     }
@@ -1394,9 +1397,9 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" && isCoachMode && <PlanningSearchBar value={search} onChange={setSearch} />}
+            {activeMenuKey === "planning" && !effectiveAthleteMode && <PlanningSearchBar value={search} onChange={setSearch} />}
 
-            {activeMenuKey === "planning" && isCoachMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
+            {activeMenuKey === "planning" && !effectiveAthleteMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
               <div className="divide-y divide-border border-b border-border bg-card">
                 {searchResults.groups.map((group) => (
                   <button
@@ -1440,13 +1443,6 @@ export function CoachPlanningExperience() {
                   indicatorsByDate={dayIndicatorsByDate}
                 />
 
-                {!activeAthleteId ? (
-                  <div className="border-t border-border bg-secondary/30 px-4 py-8 text-center">
-                    <p className="text-[16px] font-semibold text-foreground">Aucune séance dans le plan</p>
-                    <p className="mt-1 text-[13px] text-muted-foreground">Aucun athlète sélectionné.</p>
-                  </div>
-                ) : (
-                  <>
                 <div className="flex flex-col border-t border-border">
                   {weekDays.map((day) => {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
@@ -1495,12 +1491,12 @@ export function CoachPlanningExperience() {
                     onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
                     onDelete={session ? () => void removeSession(session.id) : undefined}
                     onUnsend={session ? () => void unsendSession(session.id) : undefined}
-                    allowSessionActions={isCoachMode}
+                    allowSessionActions={!effectiveAthleteMode}
                   />
                 );
                   })}
                 </div>
-                {isCoachMode && (
+                {!effectiveAthleteMode && (
                   <div className="border-t border-border bg-card px-4 py-3">
                     <div className="grid grid-cols-2 gap-2">
                       <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
@@ -1517,8 +1513,6 @@ export function CoachPlanningExperience() {
                       </Button>
                     </div>
                   </div>
-                )}
-                  </>
                 )}
               </>
             ) : activeMenuKey === "dashboard" ? (
@@ -1642,7 +1636,7 @@ export function CoachPlanningExperience() {
         coachName={coachName}
         clubName={activeClubName}
         clubAvatarUrl={clubAvatarUrl}
-        userMode={isCoachMode ? "coach" : "athlete"}
+        userMode={effectiveAthleteMode ? "athlete" : "coach"}
         otherClubsCount={Math.max(clubs.length - 1, 0)}
         onPressClubSwitcher={rotateActiveClub}
       />

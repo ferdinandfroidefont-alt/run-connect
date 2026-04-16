@@ -163,6 +163,14 @@ export function AppDrawer({
             ],
       },
       ...(isAthleteMode
+        ? []
+        : [
+            {
+              title: "Vu athlète",
+              items: [{ key: "my-plan", label: "Mon plan", icon: FolderKanban }],
+            },
+          ]),
+      ...(isAthleteMode
         ? [
             {
               title: "Vu coach",

@@ -30,15 +30,45 @@ function ActivityGlyph({ type }: { type: string }) {
   return <RunnerIcon size={28} />;
 }
 
-function BluePinMarker() {
+function BluePinMarker({
+  avatarUrl,
+  initials,
+}: {
+  avatarUrl?: string | null;
+  initials?: string;
+}) {
   return (
-    <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M28 0C12.536 0 0 12.536 0 28c0 21 28 44 28 44s28-23 28-44C56 12.536 43.464 0 28 0Z"
-        fill={RC_BLUE}
-      />
-      <circle cx="28" cy="28" r="12" fill="white" />
-    </svg>
+    <div style={{ position: 'relative', width: 56, height: 72 }}>
+      <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M28 0C12.536 0 0 12.536 0 28c0 21 28 44 28 44s28-23 28-44C56 12.536 43.464 0 28 0Z"
+          fill={RC_BLUE}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 16,
+          transform: 'translateX(-50%)',
+          width: 24,
+          height: 24,
+          borderRadius: '999px',
+          overflow: 'hidden',
+          border: '2px solid #ffffff',
+          background: '#e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#334155' }}>{(initials || 'RC').slice(0, 2)}</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -163,7 +193,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.6) 30%, rgba(245,247,250,0) 55%)',
+              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.78) 28%, rgba(245,247,250,0.42) 52%, rgba(245,247,250,0.08) 75%, rgba(245,247,250,0) 100%)',
             }}
           />
         )}
@@ -181,7 +211,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           style={{
             position: 'absolute',
             top: '32%',
-            right: '28%',
+            right: '20%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -198,7 +228,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               </p>
             )}
           </div>
-          <BluePinMarker />
+          <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} />
         </div>
       </div>
     );

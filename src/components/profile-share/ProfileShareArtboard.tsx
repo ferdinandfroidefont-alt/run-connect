@@ -16,6 +16,8 @@ import { templateDimensions } from '@/lib/profileSharePayload';
 const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
+const PROFILE_SHARE_STATIC_MAP_BG =
+  'file:///C:/Users/ordi2322802/.cursor/projects/c-Users-ordi2322802-Documents-GitHub-run-connect/assets/c__Users_ordi2322802_AppData_Roaming_Cursor_User_workspaceStorage_c7b610c73ddfadf724820de171903ea1_images_80644E0E-A4A4-4599-AF08-65C195DB5695-a900b254-cbbf-423d-9a55-55d55dff682c.png';
 
 function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
   return (
@@ -264,14 +266,29 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           }}
         >
+          <img
+            src={PROFILE_SHARE_STATIC_MAP_BG}
+            alt=""
+            className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
+            style={{ zIndex: 0 }}
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              zIndex: 1,
+              background:
+                'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.6) 70%, rgba(255,255,255,0.3) 100%)',
+            }}
+          />
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.08]"
             style={{
+              zIndex: 2,
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60 L60 0' stroke='%23fff' stroke-width='0.5' fill='none'/%3E%3C/svg%3E")`,
               backgroundSize: '48px 48px',
             }}
           />
-          <div className="relative z-[1] flex items-start justify-between px-10 pt-8">
+          <div className="relative z-[2] flex items-start justify-between px-10 pt-8">
             <div className="min-w-0">
               <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Profil organisateur</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -283,11 +300,11 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             <RunConnectBrandHeader dark />
           </div>
 
-          <div className="relative z-[1] mt-5 flex justify-center">
+          <div className="relative z-[2] mt-5 flex justify-center">
             <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={148} />
           </div>
 
-          <div className="relative z-[1] mt-6 px-10">
+          <div className="relative z-[2] mt-6 px-10">
             <div
               className="inline-flex flex-col items-start rounded-full px-5 py-2.5 text-left text-[15px] font-semibold text-white"
               style={{ background: RC }}
@@ -299,14 +316,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             </div>
           </div>
 
-          <div className="relative z-[1] mt-6 grid grid-cols-4 gap-2 px-10">
+          <div className="relative z-[2] mt-6 grid grid-cols-4 gap-2 px-10">
             <StatQuad value={payload.sessionsCreated} label="Séances créées" />
             <StatQuad value={payload.sessionsJoined} label="Séances rejointes" />
             <StatQuad value={payload.followersCount} label="Abonnés" />
             <StatQuad value={payload.followingCount} label="Abonnements" />
           </div>
 
-          <div className="relative z-[1] mt-5 space-y-3 px-10">
+          <div className="relative z-[2] mt-5 space-y-3 px-10">
             {[
               { icon: MapPin, text: payload.locationLine },
               { icon: Activity, text: payload.sportLabel },
@@ -319,7 +336,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             ))}
           </div>
 
-          <div className="relative z-[1] mt-auto px-10 pb-10 pt-6">
+          <div className="relative z-[2] mt-auto px-10 pb-10 pt-6">
             <div className="rounded-2xl bg-black px-6 py-4 text-white">
               <p className="text-center text-[16px] font-semibold">{ctaText}</p>
               <p className="mt-1 text-center text-[12px] text-slate-400">{payload.publicUrlDisplay}</p>
@@ -397,27 +414,33 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           boxShadow: '0 24px 64px rgba(15, 23, 42, 0.12)',
         }}
       >
-        {payload.mapBackgroundUrl ? (
-          <img
-            src={payload.mapBackgroundUrl}
-            alt=""
-            crossOrigin="anonymous"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.06] object-cover opacity-[0.44]"
-          />
-        ) : null}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.92] via-white/[0.88] to-white/[0.93]" />
+        <img
+          src={PROFILE_SHARE_STATIC_MAP_BG}
+          alt=""
+          className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
+          style={{ zIndex: 0 }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            zIndex: 1,
+            background:
+              'linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.6) 70%, rgba(255,255,255,0.3) 100%)',
+          }}
+        />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
+            zIndex: 1,
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`,
           }}
         />
 
-        <div className="absolute left-10 top-9 z-20">
+        <div className="absolute left-10 top-9 z-[2]">
           <RunConnectBrandHeader large />
         </div>
 
-        <div className="relative z-10 flex h-full min-h-0 flex-col">
+        <div className="relative z-[2] flex h-full min-h-0 flex-col">
           <div className="flex min-h-0 flex-1 flex-col items-center px-10 pb-3 pt-[72px]">
             <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={188} />
 

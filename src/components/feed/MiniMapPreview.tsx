@@ -10,9 +10,10 @@ interface MiniMapPreviewProps {
   lng: number;
   sessionId?: string;
   onOpenSession?: () => void;
+  avatarUrl?: string | null;
 }
 
-export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession }: MiniMapPreviewProps) => {
+export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }: MiniMapPreviewProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -63,8 +64,8 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession }: MiniMapPr
         const el = document.createElement('button');
         el.type = 'button';
         el.className = 'cursor-pointer';
-        el.style.width = '42px';
-        el.style.height = '54px';
+        el.style.width = '50px';
+        el.style.height = '64px';
         el.style.border = '0';
         el.style.padding = '0';
         el.style.background = 'transparent';
@@ -73,36 +74,48 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession }: MiniMapPr
         const pinCircle = document.createElement('span');
         pinCircle.style.position = 'absolute';
         pinCircle.style.left = '50%';
-        pinCircle.style.top = '0';
-        pinCircle.style.width = '36px';
-        pinCircle.style.height = '36px';
+        pinCircle.style.top = '2px';
+        pinCircle.style.width = '44px';
+        pinCircle.style.height = '44px';
         pinCircle.style.transform = 'translateX(-50%)';
         pinCircle.style.borderRadius = '999px';
         pinCircle.style.background = '#2563EB';
-        pinCircle.style.boxShadow = '0 8px 18px rgba(15, 23, 42, 0.28)';
-
-        const pinCenter = document.createElement('span');
-        pinCenter.style.position = 'absolute';
-        pinCenter.style.left = '50%';
-        pinCenter.style.top = '11px';
-        pinCenter.style.width = '14px';
-        pinCenter.style.height = '14px';
-        pinCenter.style.transform = 'translateX(-50%)';
-        pinCenter.style.borderRadius = '999px';
-        pinCenter.style.background = '#fff';
+        pinCircle.style.boxShadow = '0 7px 18px rgba(15,23,42,0.3)';
 
         const pinTip = document.createElement('span');
         pinTip.style.position = 'absolute';
         pinTip.style.left = '50%';
-        pinTip.style.top = '33px';
-        pinTip.style.width = '14px';
-        pinTip.style.height = '14px';
-        pinTip.style.transform = 'translateX(-50%) rotate(45deg)';
+        pinTip.style.top = '48px';
+        pinTip.style.width = '18px';
+        pinTip.style.height = '16px';
+        pinTip.style.transform = 'translateX(-50%)';
+        pinTip.style.clipPath = 'polygon(50% 100%, 0 0, 100% 0)';
         pinTip.style.background = '#2563EB';
+        pinTip.style.filter = 'drop-shadow(0 3px 5px rgba(15,23,42,0.28))';
+
+        const avatarRing = document.createElement('span');
+        avatarRing.style.position = 'absolute';
+        avatarRing.style.left = '50%';
+        avatarRing.style.top = '8px';
+        avatarRing.style.width = '30px';
+        avatarRing.style.height = '30px';
+        avatarRing.style.transform = 'translateX(-50%)';
+        avatarRing.style.borderRadius = '999px';
+        avatarRing.style.border = '2px solid #fff';
+        avatarRing.style.overflow = 'hidden';
+        avatarRing.style.zIndex = '1';
+        const avatarImg = document.createElement('img');
+        avatarImg.src = avatarUrl || '/placeholder.svg';
+        avatarImg.alt = '';
+        avatarImg.draggable = false;
+        avatarImg.style.width = '100%';
+        avatarImg.style.height = '100%';
+        avatarImg.style.objectFit = 'cover';
+        avatarRing.appendChild(avatarImg);
 
         el.appendChild(pinCircle);
         el.appendChild(pinTip);
-        el.appendChild(pinCenter);
+        el.appendChild(avatarRing);
 
         const mapboxgl = await loadMapboxGl();
         markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
@@ -128,7 +141,7 @@ export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession }: MiniMapPr
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
-  }, [lat, lng, handleMapClick]);
+  }, [lat, lng, handleMapClick, avatarUrl]);
 
   if (error) {
     return (

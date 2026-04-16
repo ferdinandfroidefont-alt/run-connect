@@ -1,4 +1,5 @@
 export { ProfileShareScreen } from './ProfileShareScreen';
+export { ProfileSharePanel } from './ProfileSharePanel';
 export { ProfileShareArtboard } from './ProfileShareArtboard';
 export { ProfileSharePreviewCarousel } from './ProfileSharePreviewCarousel';
 export { ProfileShareActionsGrid } from './ProfileShareActionsGrid';

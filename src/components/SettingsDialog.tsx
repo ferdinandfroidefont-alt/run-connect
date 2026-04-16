@@ -1,5 +1,4 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,6 @@ import {
   Loader2,
   ArrowLeft,
   Search,
-  Share2,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,7 +18,6 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
-import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import {
   TUTORIAL_REPLAY_DEFINITIONS,
   requestTutorialReplay,
@@ -118,7 +115,6 @@ function getMatchingItems(items: string[], query: string): string[] {
 }
 
 export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
@@ -138,8 +134,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
     window.setTimeout(() => notifyTutorialReplayQueued(), 60);
   };
   
-  const [showProfileShare, setShowProfileShare] = useState(false);
-
   useEffect(() => {
     if (initialSearch) {
       setSearchQuery(initialSearch);
@@ -357,26 +351,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
                     </div>
                   )}
 
-                  {user && (
-                    <div className="box-border w-full min-w-0 max-w-full px-4 ios-shell:px-2">
-                      <div className="ios-card overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setShowProfileShare(true)}
-                          className="flex w-full min-w-0 items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-secondary/60 ios-shell:px-2.5"
-                        >
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                            <Share2 className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[15px] font-semibold text-foreground">Partager mon profil</p>
-                            <p className="text-[13px] text-muted-foreground">Story, lien, modèles…</p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </ScrollArea>
               </IosFixedPageHeaderShell>
@@ -392,7 +366,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
         </AnimatePresence>
       </DialogContent>
     </Dialog>
-    <ProfileShareScreen open={showProfileShare} onClose={() => setShowProfileShare(false)} />
     </>
   );
 };
