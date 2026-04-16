@@ -94,8 +94,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute overflow-hidden rounded-full"
                   style={{
                     left: '50%',
-                    top: '17.3%',
-                    width: '22%',
+                    top: '17.1%',
+                    width: '20%',
                     aspectRatio: '1 / 1',
                     transform: 'translate(-50%, -50%)',
                   }}
