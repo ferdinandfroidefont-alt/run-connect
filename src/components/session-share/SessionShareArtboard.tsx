@@ -177,7 +177,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const dividerColor = isDark ? '#334155' : '#e2e8f0';
 
     const mapSection = (
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         <ShareMapBackdropImg
           mapUrl={mapImageUrl}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
@@ -188,7 +188,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.78) 28%, rgba(245,247,250,0.42) 52%, rgba(245,247,250,0.08) 75%, rgba(245,247,250,0) 100%)',
+              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.92) 38%, rgba(245,247,250,0.55) 58%, rgba(245,247,250,0.05) 80%, rgba(245,247,250,0) 100%)',
             }}
           />
         )}
@@ -198,31 +198,20 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.5) 35%, rgba(15,23,42,0) 60%)',
+              background: 'linear-gradient(90deg, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.85) 38%, rgba(15,23,42,0.4) 60%, rgba(15,23,42,0) 80%)',
             }}
           />
         )}
+        {/* Pin centré sur la zone visible droite (≈ 75% horizontal) */}
         <div
           style={{
             position: 'absolute',
-            top: '32%',
-            right: '20%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            top: '50%',
+            left: '75%',
+            transform: 'translate(-50%, -100%)',
             pointerEvents: 'none',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: 8 }}>
-            <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
-              {payload.locationTitle}
-            </p>
-            {payload.locationSubtitle && (
-              <p style={{ fontSize: 14, fontWeight: 500, color: muted, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
-                {payload.locationSubtitle}
-              </p>
-            )}
-          </div>
           <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} />
         </div>
       </div>
@@ -383,6 +372,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         style={{
           width: w,
           height: h,
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -391,12 +381,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           fontFamily: fontStack,
         }}
       >
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          <div style={{ position: 'relative', zIndex: 2, width: '52%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Carte en fond, occupe toute la largeur jusqu'au bord gauche */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          {mapSection}
+        </div>
+        {/* Contenu textuel par-dessus à gauche */}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0 }}>
+          <div style={{ width: '58%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             {leftColumn}
-          </div>
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
-            {mapSection}
           </div>
         </div>
         <div style={{ position: 'relative', zIndex: 3, padding: '0 32px 32px', flexShrink: 0 }}>
