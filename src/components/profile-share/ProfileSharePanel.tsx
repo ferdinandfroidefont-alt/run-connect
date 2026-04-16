@@ -55,10 +55,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 className="absolute overflow-hidden rounded-full"
                 style={{
                   // Cercle intérieur (sans recouvrir l'anneau bleu).
-                  // Mesuré : centre ≈ (50%, 16.2%), diamètre intérieur ≈ 18.8%.
+                  // Mesuré : centre ≈ (50%, 18.9%), diamètre intérieur ≈ 23%.
                   left: '50%',
-                  top: '16.2%',
-                  width: '18.8%',
+                  top: '18.9%',
+                  width: '23%',
                   aspectRatio: '1 / 1',
                   transform: 'translate(-50%, -50%)',
                 }}
