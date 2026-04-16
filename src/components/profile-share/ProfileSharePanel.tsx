@@ -8,7 +8,7 @@ import { Loader2, Share } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import profileShareCardImg from '@/assets/profile-share-card.png';
+import { templateDimensions } from '@/lib/profileSharePayload';
 
 const TEMPLATES: { id: ProfileShareTemplateId; label: string }[] = [
   { id: 'light_card', label: 'Carte claire' },
@@ -87,14 +87,8 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
             'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
             compact ? 'pt-2' : 'pt-4'
           )}>
-            {/* Static preview image */}
-            <div className="w-full max-w-sm mx-auto">
-              <img
-                src={profileShareCardImg}
-                alt="Aperçu carte de partage"
-                className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
-              />
-            </div>
+            {/* Live preview — scaled-down version of the exported artboard */}
+            <ScaledArtboardPreview payload={payload} templateId={templateId} />
 
             <button
               type="button"
