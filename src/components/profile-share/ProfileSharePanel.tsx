@@ -123,3 +123,39 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     </div>
   );
 }
+
+function ScaledArtboardPreview({
+  payload,
+  templateId,
+}: {
+  payload: NonNullable<Awaited<ReturnType<typeof fetchProfileSharePayload>>>;
+  templateId: ProfileShareTemplateId;
+}) {
+  const { w, h } = templateDimensions(templateId);
+  return (
+    <div className="w-full max-w-sm mx-auto">
+      <div
+        className="relative w-full overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
+        style={{ aspectRatio: `${w} / ${h}` }}
+      >
+        <div
+          ref={(el) => {
+            if (!el) return;
+            const parent = el.parentElement!;
+            const update = () => {
+              const scale = parent.clientWidth / w;
+              el.style.transform = `scale(${scale})`;
+            };
+            update();
+            const ro = new ResizeObserver(update);
+            ro.observe(parent);
+          }}
+          className="absolute left-0 top-0 origin-top-left"
+          style={{ width: w, height: h }}
+        >
+          <ProfileShareArtboard payload={payload} templateId={templateId} />
+        </div>
+      </div>
+    </div>
+  );
+}
