@@ -66,7 +66,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 <img
                   src={avatarUrl}
                   alt="Photo de profil"
-                  className="h-full w-full object-cover mx-0 py-0 mr-0 my-0 mb-0"
+                  className="h-full w-full object-cover"
                   crossOrigin="anonymous"
                 />
               </div>
