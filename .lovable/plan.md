@@ -1,18 +1,35 @@
 
-L'utilisateur indique que la photo de profil superposée sur la carte n'est pas bien alignée avec le cercle de la maquette. Je dois ajuster les coordonnées CSS dans `ProfileSharePanel.tsx`.
 
-Sans pouvoir mesurer exactement la nouvelle image, je vais demander à l'utilisateur de préciser dans quel sens ajuster (trop haut/bas, trop grand/petit), ou tenter un ajustement basé sur des valeurs typiques.
+## Plan: Rewrite `light_card` template to precisely match mockup
 
-## Plan
+The current implementation uses Tailwind classes which may not render correctly in the html-to-image capture context, and the proportions/colors don't match the reference. I'll rewrite the `light_card` section using **pure inline styles** (like `SessionShareArtboard` already does) for reliable rendering.
 
-**Fichier:** `src/components/profile-share/ProfileSharePanel.tsx`
+### Key visual differences to fix
 
-Ajuster les coordonnées de superposition de l'avatar pour qu'il corresponde précisément au cercle de la nouvelle maquette :
+1. **Map background overlay** — too opaque, map barely visible. Mockup shows map clearly through a light white veil
+2. **Stats icons** — currently blue (`RC_LIGHT`), mockup shows **dark navy/slate** icons
+3. **Stats numbers** — should be very dark navy, bold, large
+4. **Avatar ring** — blue ring should be thicker/more visible as in mockup
+5. **Footer CTA** — the "Ouvrir avec RunConnect" button should have an arrow circle icon (like in SessionShareArtboard), not a chevron
+6. **Overall Tailwind→inline** — convert all Tailwind classes to inline styles for reliable image export
 
-- Repositionner verticalement (probablement plus bas, vers `top: 18%` au lieu de `14.7%`)
-- Ajuster la taille du cercle (probablement `width: 17%` au lieu de `19%`)
-- Garder le centrage horizontal à `left: 50%`
+### Changes (single file)
 
-Je vais procéder par itérations visuelles : appliquer un ajustement, puis te demander si c'est mieux ou s'il faut bouger encore (haut/bas/gauche/droite, plus grand/petit).
+**`src/components/profile-share/ProfileShareArtboard.tsx`** — lines 405-499 (the `light_card` return block):
 
-Si tu peux me préciser dans quel sens c'est décalé (par ex. "trop haut", "trop gros", "trop à gauche"), je calerai en un seul coup.
+- Rewrite entire `light_card` block using **inline styles only** (matching the pattern in `SessionShareArtboard.tsx`)
+- **Map overlay**: reduce opacity to `rgba(255,255,255,0.72)` top → `rgba(255,255,255,0.15)` bottom so map is visible
+- **Stats row**: change icon color from `RC_LIGHT` to `#0f172a` (dark navy like mockup), keep numbers as `#0f172a`
+- **Avatar ring**: increase blue ring thickness from 4px to 6px, white inner border from 11px to 8px
+- **Footer**: use arrow-circle icon like SessionShareArtboard's CtaBar, not ChevronRight
+- **Presence badge**: use dark navy icon color matching mockup
+- **All elements**: convert from Tailwind classes to inline `style={}` for consistent html-to-image rendering
+
+### Also update helper components to use inline styles
+
+- `LightCardAvatarRing` — convert from Tailwind to inline styles
+- `LightCardStatsRow` — convert from Tailwind to inline styles, fix icon colors
+- `LightCardFooter` — convert from Tailwind to inline styles, fix button icon
+
+No other files need changes.
+
