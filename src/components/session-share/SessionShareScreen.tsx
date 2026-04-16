@@ -35,6 +35,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
   const [templateId, setTemplateId] = useState<SessionShareTemplateId>('light_pin');
   const [exporting, setExporting] = useState(false);
   const [lastImage, setLastImage] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,6 +55,31 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
   }, [open, user?.id]);
 
   const publicUrl = session ? getSessionPublicUrl(session.id) : '';
+
+  // Génère le QR code pour la barre de partage en bas (style profil)
+  useEffect(() => {
+    if (!open || !publicUrl) {
+      setQrDataUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { default: QRCode } = await import('qrcode');
+        const url = await QRCode.toDataURL(publicUrl, {
+          width: 220,
+          margin: 1,
+          color: { dark: '#0f172a', light: '#ffffff' },
+        });
+        if (!cancelled) setQrDataUrl(url);
+      } catch {
+        if (!cancelled) setQrDataUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, publicUrl]);
 
   const payload = useMemo(() => {
     if (!session) return null;
@@ -139,6 +165,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               <SessionSharePreviewCarousel
                 payload={payload}
                 mapImageUrl={mapImageUrl}
+                qrDataUrl={qrDataUrl}
                 activeTemplateId={templateId}
                 onTemplateChange={(id) => setTemplateId(id)}
               />
@@ -178,6 +205,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               payload={payload}
               templateId={templateId}
               mapImageUrl={mapImageUrl}
+              qrDataUrl={qrDataUrl}
             />
           </div>
         )}

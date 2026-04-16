@@ -105,83 +105,141 @@ function BluePinMarker({
   );
 }
 
-function CtaBar({ publicUrl }: { publicUrl: string }) {
-  void publicUrl;
+/** Icône RunConnect : pin de localisation avec ondes radio (identique au partage profil) */
+function RunConnectPinIcon({ size = 44, color = '#ffffff' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M24 4C16.27 4 10 10.27 10 18c0 11 14 26 14 26s14-15 14-26c0-7.73-6.27-14-14-14Zm0 19a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"
+        fill={color}
+      />
+      <path d="M34.5 10.5c2.5 2.8 4 6.5 4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M37.5 7.5c3.2 3.8 5 8.7 5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+      <path d="M13.5 10.5c-2.5 2.8-4 6.5-4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M10.5 7.5c-3.2 3.8-5 8.7-5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+    </svg>
+  );
+}
+
+/** Motif topographique discret (côté droit du bandeau) — repris du partage profil */
+const FOOTER_TOPO_SVG = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" preserveAspectRatio="none"><path fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1" d="M0 120 Q100 100 200 130 T400 110"/><path fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1" d="M0 140 Q120 125 240 150 T400 130"/><path fill="none" stroke="white" stroke-opacity="0.08" stroke-width="1" d="M0 80 Q80 60 160 90 T320 70 T400 85"/><path fill="none" stroke="white" stroke-opacity="0.09" stroke-width="1" d="M200 0 Q220 80 180 160"/></svg>'
+);
+
+/** Footer QR — strictement aligné sur la barre du partage profil. */
+function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string | null }) {
+  const RC_LIGHT = '#0066ff';
+  const publicUrlDisplay = publicUrl.replace(/^https?:\/\//, '');
   return (
     <div
       style={{
-        background: RC_BLUE,
-        borderRadius: 20,
+        position: 'relative',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '20px 24px',
-        gap: 16,
+        width: '100%',
+        flexShrink: 0,
+        alignItems: 'stretch',
+        overflow: 'hidden',
+        borderRadius: 24,
+        background: `linear-gradient(115deg, ${RC_LIGHT} 0%, #0052d4 42%, #0039a3 100%)`,
+        boxShadow: '0 -12px 40px rgba(0, 82, 212, 0.15)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 14,
-            background: 'rgba(255,255,255,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"
-              fill="white"
-            />
-            <circle cx="12" cy="9" r="8" stroke="white" strokeWidth="1.5" fill="none" opacity="0.4" />
-            <circle cx="12" cy="9" r="11" stroke="white" strokeWidth="1" fill="none" opacity="0.2" />
-          </svg>
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)', lineHeight: 1.3, margin: 0 }}>
-            Retrouve cette séance sur
-          </p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', lineHeight: 1.2, margin: 0 }}>
-            RunConnect
-          </p>
-        </div>
-      </div>
       <div
         style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: '55%',
+          pointerEvents: 'none',
+          opacity: 0.9,
+          backgroundImage: `url("data:image/svg+xml,${FOOTER_TOPO_SVG}")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right bottom',
+          backgroundSize: 'cover',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
           display: 'flex',
+          width: '100%',
+          minHeight: 200,
           alignItems: 'center',
-          gap: 10,
-          background: '#ffffff',
-          borderRadius: 50,
-          padding: '12px 20px',
-          flexShrink: 0,
+          gap: 24,
+          padding: '28px 28px',
         }}
       >
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: RC_BLUE,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'start', gap: 14 }}>
+            <RunConnectPinIcon size={64} color="#ffffff" />
+            <div style={{ minWidth: 0, paddingTop: 4 }}>
+              <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>
+                Rejoins-moi sur
+              </p>
+              <p style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#ffffff', margin: '4px 0 0 0' }}>
+                RunConnect
+              </p>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              background: '#ffffff',
+              borderRadius: 50,
+              padding: '10px 20px',
+              width: 'fit-content',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: RC_LIGHT,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>
+              Ouvrir avec RunConnect
+            </span>
+          </div>
         </div>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', lineHeight: 1.2, margin: 0, whiteSpace: 'nowrap' }}>
-            Ouvrir avec RunConnect
-          </p>
-          <p style={{ fontSize: 11, fontWeight: 500, color: '#64748b', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap' }}>
-            Rejoins la séance dans l&apos;app
+
+        <div style={{ height: 140, width: 1, flexShrink: 0, background: 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
+          {qrDataUrl ? (
+            <img
+              src={qrDataUrl}
+              alt=""
+              crossOrigin="anonymous"
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 10,
+                border: '3px solid #ffffff',
+                background: '#ffffff',
+                padding: 6,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              }}
+            />
+          ) : (
+            <div style={{ width: 120, height: 120, borderRadius: 10, border: '3px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)' }} />
+          )}
+          <p style={{ maxWidth: 200, textAlign: 'right', fontSize: 11, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.9)', wordBreak: 'break-all', margin: 0 }}>
+            {publicUrlDisplay}
           </p>
         </div>
       </div>
@@ -193,10 +251,11 @@ export type SessionShareArtboardProps = {
   payload: SessionSharePayload;
   templateId: SessionShareTemplateId;
   mapImageUrl: string | null;
+  qrDataUrl?: string | null;
 };
 
 export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtboardProps>(
-  function SessionShareArtboard({ payload, templateId, mapImageUrl }, ref) {
+  function SessionShareArtboard({ payload, templateId, mapImageUrl, qrDataUrl = null }, ref) {
     const { w, h } = templateDimensions(templateId);
     const isDark = templateId === 'dark_premium';
     const isMinimal = templateId === 'minimal';
@@ -362,7 +421,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
       </div>
     );
 
-    const bottomCta = <CtaBar publicUrl={payload.publicUrl} />;
+    const bottomCta = <CtaBar publicUrl={payload.publicUrl} qrDataUrl={qrDataUrl} />;
 
     const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 
