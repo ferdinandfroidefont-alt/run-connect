@@ -1616,13 +1616,13 @@ export function CoachPlanningExperience() {
             ) : (
               <div className="border-b border-border bg-secondary/30 px-4 py-6">
                 <p className="text-[16px] font-semibold text-foreground">
-                  {activeMenuKey === "dashboard" && "Tableau de bord coach"}
+                  {(activeMenuKey as string) === "dashboard" && "Tableau de bord coach"}
                   {activeMenuKey === "athletes" && "Athlètes"}
-                  {activeMenuKey === "groups" && "Groupes"}
-                  {activeMenuKey === "tracking" && "Suivi athlète"}
+                  {(activeMenuKey as string) === "groups" && "Groupes"}
+                  {(activeMenuKey as string) === "tracking" && "Suivi athlète"}
                   {activeMenuKey === "library" && "Bibliothèque de séances"}
-                  {activeMenuKey === "templates" && "Modèles"}
-                  {activeMenuKey === "club" && "Gérer le club"}
+                  {(activeMenuKey as string) === "templates" && "Modèles"}
+                  {(activeMenuKey as string) === "club" && "Gérer le club"}
                 </p>
                 <p className="mt-1 text-[13px] text-muted-foreground">
                   Section prête dans le drawer coach. La navigation latérale est active et ce module peut être enrichi ensuite.
