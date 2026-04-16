@@ -372,6 +372,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         style={{
           width: w,
           height: h,
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -380,12 +381,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           fontFamily: fontStack,
         }}
       >
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          <div style={{ position: 'relative', zIndex: 2, width: '52%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Carte en fond, occupe toute la largeur jusqu'au bord gauche */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          {mapSection}
+        </div>
+        {/* Contenu textuel par-dessus à gauche */}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0 }}>
+          <div style={{ width: '58%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             {leftColumn}
-          </div>
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
-            {mapSection}
           </div>
         </div>
         <div style={{ position: 'relative', zIndex: 3, padding: '0 32px 32px', flexShrink: 0 }}>
