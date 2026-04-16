@@ -36,8 +36,8 @@ export function DayPlanningRow({
   return (
     <div
       className={cn(
-        "ios-card rounded-2xl border border-border/70 bg-card px-3 py-2.5 transition-all",
-        isSelected && "ring-2 ring-[#2563EB]/25"
+        "-mx-ios-4 border-b border-border/70 bg-card px-ios-4 py-2.5 transition-colors",
+        isSelected && "border-l-4 border-l-primary bg-secondary/25"
       )}
     >
       <div className="grid grid-cols-[80px_minmax(0,1fr)_44px] items-center gap-2.5">

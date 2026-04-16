@@ -14,7 +14,7 @@ interface ModelCardProps {
 
 export function ModelCard({ model, summaryLine, previewLine, accentColor, onOpen, onAdd, onMenu }: ModelCardProps) {
   return (
-    <div className="ios-card overflow-hidden border border-border/60 bg-card shadow-[var(--shadow-card)]">
+    <div className="overflow-hidden border border-border/60 bg-card">
       <div className="flex">
         <div className="w-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
         <div className="min-w-0 flex-1 p-3">
@@ -24,12 +24,12 @@ export function ModelCard({ model, summaryLine, previewLine, accentColor, onOpen
             <p className="mt-1 truncate text-[12px] text-foreground/80">{previewLine}</p>
           </button>
           <div className="mt-3 flex items-center gap-2">
-            <Button type="button" className="h-9 flex-1 rounded-xl text-[13px] font-semibold" onClick={onAdd}>
+            <Button type="button" className="h-9 flex-1 rounded-lg text-[13px] font-semibold" onClick={onAdd}>
               <Plus className="mr-1.5 h-4 w-4" />
               Ajouter au planning
             </Button>
             {onMenu ? (
-              <Button type="button" variant="secondary" size="icon" className="h-9 w-9 rounded-xl" onClick={onMenu}>
+              <Button type="button" variant="secondary" size="icon" className="h-9 w-9 rounded-lg" onClick={onMenu}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             ) : null}

@@ -117,7 +117,7 @@ export function DashboardAlertCard({
   onClick: () => void;
 }) {
   return (
-    <div className="ios-card rounded-2xl border border-red-500/25 bg-red-500/5 p-3">
+    <div className="border-b border-red-500/30 bg-red-500/[0.06] px-ios-4 py-3">
       <div className="flex items-center gap-2.5">
         <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-sm">
           <AlertCircle className="h-4.5 w-4.5" />
@@ -148,8 +148,8 @@ export function DashboardWeekProgress({
 }) {
   const pct = planned > 0 ? Math.round((done / planned) * 100) : 0;
   return (
-    <div className="grid grid-cols-2 gap-2.5">
-      <div className="ios-card rounded-2xl border border-border/60 bg-card p-3">
+    <div className="grid grid-cols-2 gap-px border-b border-border bg-border/50">
+      <div className="bg-card px-ios-3 py-3">
         <p className="text-[13px] font-semibold text-foreground">Cette semaine</p>
         <div className="mt-2 flex items-center gap-2">
           <ProgressRing pct={pct} />
@@ -165,7 +165,7 @@ export function DashboardWeekProgress({
           </div>
         </div>
       </div>
-      <div className="ios-card rounded-2xl border border-border/60 bg-card p-3">
+      <div className="bg-card px-ios-3 py-3">
         <p className="text-[13px] font-semibold text-foreground">Évolution hebdomadaire</p>
         <div className="mt-3 h-[105px]">
           <svg viewBox="0 0 100 60" className="h-full w-full">
@@ -209,7 +209,7 @@ export function DashboardTodayCard({
   const nonePct = Math.max(0, 100 - donePct - pendingPct - missedPct);
 
   return (
-    <div className="ios-card rounded-2xl border border-border/60 bg-card p-3">
+    <div className="border-b border-border bg-card px-ios-4 py-3">
       <div className="mb-2 flex items-center gap-2">
         <CalendarCheck2 className="h-4.5 w-4.5 text-primary" />
         <p className="text-[18px] font-bold leading-none text-foreground">Aujourd'hui</p>
@@ -283,7 +283,7 @@ export function DashboardAthleteWatch({
   onOpen: () => void;
 }) {
   return (
-    <div className="ios-card rounded-2xl border border-border/60 bg-card p-3">
+    <div className="h-full border border-border/50 bg-card px-ios-3 py-3">
       <p className="text-[17px] font-bold text-foreground">Athlètes à surveiller</p>
       <div className="mt-2 space-y-1.5">
         {rows.slice(0, 3).map((row) => (
@@ -317,7 +317,7 @@ export function DashboardActivityFeed({
   onOpenMessages: () => void;
 }) {
   return (
-    <div className="ios-card rounded-2xl border border-border/60 bg-card p-3">
+    <div className="h-full border border-border/50 bg-card px-ios-3 py-3">
       <p className="text-[17px] font-bold text-foreground">Activité récente</p>
       <div className="mt-2 space-y-1.5">
         {rows.slice(0, 3).map((row) => (
@@ -364,11 +364,11 @@ export function DashboardStatsRow({
     { value: `${trend >= 0 ? "+" : ""}${trend}%`, label: "vs semaine dernière", tone: trend >= 0 ? "text-violet-500" : "text-red-500", icon: TrendingUp },
   ] as const;
   return (
-    <div>
+    <div className="border-b border-border bg-card px-ios-4 py-3">
       <p className="mb-2 text-[17px] font-bold text-foreground">Aperçu rapide</p>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-lg border border-border/50 bg-border/40">
         {cards.map((card) => (
-          <div key={card.label} className="ios-card rounded-xl border border-border/60 bg-card px-2 py-2">
+          <div key={card.label} className="bg-card px-2 py-2">
             <card.icon className={cn("mb-1 h-4 w-4", card.tone)} />
             <p className={cn("text-[18px] font-black leading-none", card.tone)}>{card.value}</p>
             <p className="text-[10px] text-muted-foreground">{card.label}</p>
@@ -389,18 +389,18 @@ export function DashboardQuickActions({
   onMessage: () => void;
 }) {
   return (
-    <div>
+    <div className="border-b border-border bg-card px-ios-4 py-3">
       <p className="mb-2 text-[17px] font-bold text-foreground">Actions rapides</p>
-      <div className="grid grid-cols-3 gap-1.5">
-        <Button type="button" className="h-10 justify-start rounded-xl text-[12px] font-semibold" onClick={onCreate}>
+      <div className="grid grid-cols-3 gap-2">
+        <Button type="button" className="h-10 justify-start rounded-lg text-[12px] font-semibold" onClick={onCreate}>
           <CalendarCheck2 className="mr-2 h-4.5 w-4.5" />
           Créer une séance
         </Button>
-        <Button type="button" variant="secondary" className="h-10 justify-start rounded-xl bg-emerald-500/10 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300" onClick={onTemplate}>
+        <Button type="button" variant="secondary" className="h-10 justify-start rounded-lg bg-emerald-500/10 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300" onClick={onTemplate}>
           <BookOpen className="mr-2 h-4.5 w-4.5" />
           Ajouter un modèle
         </Button>
-        <Button type="button" variant="secondary" className="h-10 justify-start rounded-xl bg-violet-500/10 text-[12px] font-semibold text-violet-700 hover:bg-violet-500/15 dark:text-violet-300" onClick={onMessage}>
+        <Button type="button" variant="secondary" className="h-10 justify-start rounded-lg bg-violet-500/10 text-[12px] font-semibold text-violet-700 hover:bg-violet-500/15 dark:text-violet-300" onClick={onMessage}>
           <MessageCircle className="mr-2 h-4.5 w-4.5" />
           Envoyer un message
         </Button>
@@ -606,16 +606,16 @@ export function CoachDashboardPage({
 
   if (loading || !data) {
     return (
-      <div className="space-y-2">
+      <div className="-mx-ios-4 space-y-px border-y border-border bg-border/30">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="ios-card h-20 animate-pulse rounded-2xl border border-border/50 bg-card" />
+          <div key={i} className="h-20 animate-pulse bg-card" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="-mx-ios-4 space-y-0">
       <DashboardAlertCard
         lateAthletesCount={data.lateAthletesCount}
         lateTodayCount={data.lateTodayCount}
@@ -623,7 +623,7 @@ export function CoachDashboardPage({
       />
       <DashboardWeekProgress done={data.weekDone} planned={data.weekPlanned} trendPct={data.trendPct} points={data.graphPoints} />
       <DashboardTodayCard data={data} />
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-px border-b border-border bg-border/50">
         <DashboardAthleteWatch rows={data.watchAthletes} onOpen={onOpenLateAthletes} />
         <DashboardActivityFeed rows={data.activityFeed} onOpenMessages={onOpenMessages} />
       </div>

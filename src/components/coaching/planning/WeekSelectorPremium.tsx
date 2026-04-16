@@ -44,7 +44,7 @@ export function WeekSelectorPremium({
 
   return (
     <div
-      className="ios-card rounded-2xl border border-border/70 bg-card p-3"
+      className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-3"
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
@@ -61,7 +61,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onPreviousWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-secondary"
           aria-label="Semaine précédente"
         >
           <ChevronLeft className="h-4.5 w-4.5 text-foreground" />
@@ -75,7 +75,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onNextWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-secondary"
           aria-label="Semaine suivante"
         >
           <ChevronRight className="h-4.5 w-4.5 text-foreground" />
@@ -89,7 +89,7 @@ export function WeekSelectorPremium({
             type="button"
             onClick={() => onSelectDate(day.date)}
             className={cn(
-              "flex min-w-[44px] flex-1 flex-col items-center rounded-2xl px-1.5 py-2 transition-all",
+              "flex min-w-[44px] flex-1 flex-col items-center rounded-lg px-1.5 py-2 transition-all",
               day.isSelected ? "bg-[#2563EB] text-white" : "bg-secondary text-foreground"
             )}
           >

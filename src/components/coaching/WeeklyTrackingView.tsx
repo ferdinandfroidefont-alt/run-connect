@@ -406,13 +406,12 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   // ==================== MODE LISTE ====================
   if (!selectedAthlete) {
     return (
-      <div className="space-y-4">
-        {/* Reminder button */}
-        <div className="px-4">
+      <div className="-mx-ios-4 space-y-0">
+        <div className="border-b border-border bg-card px-ios-4 py-3">
           <Button
             variant="outline"
             size="sm"
-            className="w-full rounded-xl h-10 gap-2 text-[13px] font-semibold"
+            className="h-10 w-full gap-2 rounded-lg text-[13px] font-semibold"
             onClick={handleSendReminder}
             disabled={sendingReminder}
           >
@@ -420,42 +419,45 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             Relancer les athlètes en retard
           </Button>
         </div>
-        {/* Search */}
-        <div className="relative px-4">
-          <Search className="absolute left-7.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un athlète..."
-            className="pl-10 bg-card border-border/30 rounded-2xl h-11 text-[15px]"
-          />
+        <div className="border-b border-border bg-card px-ios-4 py-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un athlète..."
+              className="h-11 rounded-lg border-border/40 bg-secondary/40 pl-10 text-[15px]"
+            />
+          </div>
         </div>
 
         {loading ? (
-          <div className="space-y-2 px-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="ios-card h-16 animate-pulse border border-border/60" />
-            ))}
+          <div className="border-b border-border bg-card px-ios-4 py-2">
+            <div className="space-y-0 divide-y divide-border/60">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-14 animate-pulse bg-secondary/30" />
+              ))}
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
-            <p className="text-[16px] font-semibold text-foreground mb-1">
+          <div className="border-b border-border bg-card px-ios-4 py-10 text-center">
+            <p className="text-[16px] font-semibold text-foreground">
               {search ? "Aucun athlète trouvé" : "Aucun athlète"}
             </p>
-            <p className="text-[13px] text-muted-foreground">
+            <p className="mt-1 text-[13px] text-muted-foreground">
               {search ? "Essayez un autre nom" : "Aucun membre dans ce club"}
             </p>
           </div>
         ) : (
-          <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+          <div className="border-b border-border bg-card">
             {filtered.map((athlete, idx) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
                 <div key={athlete.userId}>
-                  {idx > 0 && <div className="h-px bg-border/30 ml-[60px]" />}
+                  {idx > 0 && <div className="h-px bg-border/50" />}
                   <button
                     onClick={() => onSelectAthlete(athlete.userId)}
-                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors text-left"
+                    className="flex w-full items-center gap-3 px-ios-4 py-3 text-left transition-colors active:bg-secondary/50"
                   >
                     {/* Avatar */}
                     <div className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">

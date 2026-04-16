@@ -37,7 +37,7 @@ export function AthleteSessionCard({
   onOpen,
 }: AthleteSessionCardProps) {
   return (
-    <div className="ios-card overflow-hidden border border-border/60 bg-card shadow-[var(--shadow-card)]">
+    <div className="overflow-hidden border border-border/60 bg-card">
       <div className="flex">
         <div className={cn("w-1.5 shrink-0", STATUS_ACCENT[status])} />
         <div className="min-w-0 flex-1 px-3 py-2.5">

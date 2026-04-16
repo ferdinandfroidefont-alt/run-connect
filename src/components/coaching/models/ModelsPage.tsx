@@ -94,29 +94,35 @@ export function ModelsPage({
 
   return (
     <>
-      <div className="space-y-3 px-4 pb-6">
-        <div className="flex items-center justify-between">
+      <div className="-mx-ios-4 space-y-0 pb-6">
+        <div className="flex items-center justify-between border-b border-border bg-card px-ios-4 py-3">
           <p className="text-[18px] font-bold text-foreground">Modèles</p>
-          <Button type="button" variant="secondary" size="sm" className="h-9 rounded-xl text-[12px] font-semibold" onClick={onCreateModel}>
+          <Button type="button" variant="secondary" size="sm" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onCreateModel}>
             <Plus className="mr-1.5 h-4 w-4" />
             Créer un modèle
           </Button>
         </div>
 
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un modèle"
-            className="h-11 rounded-2xl border-border bg-card pl-9 text-[14px]"
-          />
+        <div className="border-b border-border bg-card px-ios-4 py-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un modèle"
+              className="h-11 rounded-lg border-border/50 bg-secondary/40 pl-9 text-[14px]"
+            />
+          </div>
         </div>
 
-        <ModelFilters value={filter} onChange={setFilter} />
-        <ModelTabs value={activeTab} onChange={setActiveTab} />
+        <div className="border-b border-border bg-card px-ios-4 py-2">
+          <ModelFilters value={filter} onChange={setFilter} />
+        </div>
+        <div className="border-b border-border bg-card px-ios-4 py-2">
+          <ModelTabs value={activeTab} onChange={setActiveTab} />
+        </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 px-ios-4 pt-3">
           {filtered.map((model) => {
             const parsed = parseRCC(model.rccCode);
             const summary = computeRCCSummary(parsed.blocks);
@@ -144,7 +150,7 @@ export function ModelsPage({
             );
           })}
           {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card px-3 py-8 text-center">
+            <div className="border border-dashed border-border/70 bg-secondary/20 px-3 py-8 text-center">
               <p className="text-[14px] font-semibold text-foreground">Aucun modèle trouvé</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Affinez votre recherche ou changez de filtre.</p>
             </div>
