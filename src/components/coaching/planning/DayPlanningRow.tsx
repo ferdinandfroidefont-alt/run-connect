@@ -17,6 +17,8 @@ interface DayPlanningRowProps {
   onSend?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
+  onUnsend?: () => void;
+  allowSessionActions?: boolean;
 }
 
 export function DayPlanningRow({
@@ -32,6 +34,8 @@ export function DayPlanningRow({
   onSend,
   onDuplicate,
   onDelete,
+  onUnsend,
+  allowSessionActions = true,
 }: DayPlanningRowProps) {
   return (
     <div
@@ -56,16 +60,22 @@ export function DayPlanningRow({
 
         <div className="flex items-center justify-end">
           {!session ? (
-            <SessionStatusAction mode="add" onAdd={onAdd} />
+            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+              <SessionStatusAction mode="add" onAdd={onAdd} />
+            </div>
           ) : isSent ? (
-            <SessionStatusAction mode="sent" />
+            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+              <SessionStatusAction mode="sent" onSentClick={onUnsend} />
+            </div>
           ) : (
-            <SessionActionMenu
-              onEdit={onEdit || onOpen || onAdd}
-              onSend={onSend || onAdd}
-              onDuplicate={onDuplicate || onAdd}
-              onDelete={onDelete || onAdd}
-            />
+            <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
+              <SessionActionMenu
+                onEdit={onEdit || onOpen || onAdd}
+                onSend={onSend || onAdd}
+                onDuplicate={onDuplicate || onAdd}
+                onDelete={onDelete || onAdd}
+              />
+            </div>
           )}
         </div>
       </div>

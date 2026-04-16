@@ -319,17 +319,19 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Show tab bar on inbox list, hide it only inside a conversation thread.
+  // Single effect for tab bar visibility + chrome color.
+  // Tab bar visible on inbox list, hidden only inside a conversation thread.
   useEffect(() => {
+    const onMessagesPage = location.pathname.startsWith("/messages");
+    const inThread = onMessagesPage && !!selectedConversation;
+    setHideBottomNav(inThread);
+
     const root = document.documentElement;
     const hslVar = (name: string) => {
       const t = getComputedStyle(root).getPropertyValue(name).trim();
       return t ? `hsl(${t})` : '';
     };
-
-    const shouldHideBottomNav = location.pathname.startsWith("/messages") && !!selectedConversation;
-    setHideBottomNav(shouldHideBottomNav);
-    if (selectedConversation) {
+    if (inThread) {
       const sec = hslVar('--secondary');
       if (sec) {
         root.style.backgroundColor = sec;
@@ -343,17 +345,10 @@ const Messages = () => {
       }
     }
     return () => {
-      // Always restore tab bar when leaving Messages page.
       setHideBottomNav(false);
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setHideBottomNav, location.pathname]);
-
-  useEffect(() => {
-    if (!location.pathname.startsWith("/messages")) {
-      setHideBottomNav(false);
-    }
-  }, [location.pathname, setHideBottomNav]);
 
   // Fetch user notification settings
   useEffect(() => {
@@ -2876,7 +2871,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-[17px] font-semibold text-center">{t("navigation.messages")}</h1>
+                <h1 className="text-ios-title2 font-bold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}

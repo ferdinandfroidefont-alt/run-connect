@@ -198,9 +198,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     findLatestWeek();
   }, [clubId]);
 
-  useEffect(() => { loadTracking(); }, [clubId, currentWeek]);
-
-  const loadTracking = async () => {
+  const loadTracking = useCallback(async () => {
     setLoading(true);
     try {
       const { data: clubMembers } = await supabase
@@ -285,7 +283,11 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     } finally {
       setLoading(false);
     }
-  };
+  }, [clubId, currentWeek]);
+
+  useEffect(() => {
+    void loadTracking();
+  }, [loadTracking]);
 
   useEffect(() => {
     if (!user) return;
@@ -294,6 +296,13 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "coaching_participations" },
+        () => {
+          void loadTracking();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "coaching_sessions", filter: `club_id=eq.${clubId}` },
         () => {
           void loadTracking();
         }
@@ -310,7 +319,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [clubId, user, currentWeek]);
+  }, [clubId, user, loadTracking]);
 
   // Load 4-week volume stats for selected athlete
   useEffect(() => {

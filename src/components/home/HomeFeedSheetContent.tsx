@@ -14,6 +14,7 @@ import { SessionStoriesStrip } from "@/components/stories/SessionStoriesStrip";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import type { FeedSession } from "@/hooks/useFeed";
 
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
@@ -45,6 +46,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
   const [selectedDiscoverSession, setSelectedDiscoverSession] = useState<Record<string, unknown> | null>(
     null,
   );
+  const [selectedFriendsSession, setSelectedFriendsSession] = useState<Record<string, unknown> | null>(null);
   const [pullDistance, setPullDistance] = useState(0);
   const [storyAuthorId, setStoryAuthorId] = useState<string | null>(null);
   const [storiesRefreshToken, setStoriesRefreshToken] = useState(0);
@@ -261,6 +263,20 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                       onUnlike={unlikeSession}
                       onAddComment={addComment}
                       onJoinSession={handleJoinSession}
+                      onOpenDetails={(s) => {
+                        const feedSession = s as FeedSession;
+                        setSelectedFriendsSession({
+                          ...feedSession,
+                          session_type: feedSession.activity_type,
+                          intensity: "moderate",
+                          organizer_id: feedSession.organizer.user_id,
+                          profiles: {
+                            username: feedSession.organizer.username,
+                            display_name: feedSession.organizer.display_name,
+                            avatar_url: feedSession.organizer.avatar_url || undefined,
+                          },
+                        });
+                      }}
                       index={index}
                     />
                   ))}
@@ -337,6 +353,12 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         session={selectedDiscoverSession as any}
         onClose={() => setSelectedDiscoverSession(null)}
         onSessionUpdated={() => refreshDiscover()}
+      />
+
+      <SessionDetailsDialog
+        session={selectedFriendsSession as any}
+        onClose={() => setSelectedFriendsSession(null)}
+        onSessionUpdated={() => refreshFriends()}
       />
 
       <SessionStoryDialog

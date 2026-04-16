@@ -1,16 +1,12 @@
 import { useMemo } from "react";
 import {
-  BarChart3,
-  BookOpen,
   Building2,
-  FolderKanban,
+  ChevronDown,
   LayoutDashboard,
-  MessageCircle,
-  Settings,
-  Users,
   UsersRound,
   Activity,
   CalendarDays,
+  FolderKanban,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -18,6 +14,7 @@ import { cn } from "@/lib/utils";
 export type CoachMenuKey =
   | "dashboard"
   | "planning"
+  | "my-plan"
   | "athletes"
   | "groups"
   | "tracking"
@@ -34,7 +31,10 @@ interface AppDrawerProps {
   onSelect: (key: CoachMenuKey) => void;
   coachName?: string;
   clubName?: string;
-  messageBadge?: number;
+  clubAvatarUrl?: string | null;
+  userMode?: "coach" | "athlete";
+  otherClubsCount?: number;
+  onPressClubSwitcher?: () => void;
 }
 
 type DrawerItemDef = {
@@ -49,24 +49,40 @@ type DrawerSectionDef = {
   items: DrawerItemDef[];
 };
 
-function DrawerHeader({ coachName, clubName }: { coachName?: string; clubName?: string }) {
-  const initials = (coachName || "Coach")
-    .split(" ")
-    .map((part) => part[0] || "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function DrawerHeader({
+  coachName,
+  clubName,
+  clubAvatarUrl,
+  otherClubsCount = 0,
+  onPressClubSwitcher,
+}: {
+  coachName?: string;
+  clubName?: string;
+  clubAvatarUrl?: string | null;
+  otherClubsCount?: number;
+  onPressClubSwitcher?: () => void;
+}) {
+  const fallbackInitial = (clubName || "Club").slice(0, 1).toUpperCase();
+  const otherClubLabel = `${otherClubsCount} autre club${otherClubsCount > 1 ? "s" : ""}`;
   return (
     <div className="border-b border-border/60 px-4 pb-4 pt-[max(1rem,var(--safe-area-top))]">
-      <div className="flex items-center gap-3">
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary">
-          {initials}
+      <button type="button" onClick={onPressClubSwitcher} className="flex w-full items-center gap-3 text-left">
+        <div className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-primary/12 text-[14px] font-semibold text-primary">
+          {clubAvatarUrl ? (
+            <img src={clubAvatarUrl} alt={clubName || "Club"} className="h-full w-full object-cover" />
+          ) : (
+            fallbackInitial
+          )}
         </div>
         <div className="min-w-0">
           <p className="truncate text-[16px] font-semibold text-foreground">{coachName || "Coach RunConnect"}</p>
-          <p className="truncate text-[12px] text-muted-foreground">{clubName || "Espace coaching"}</p>
+          <p className="flex items-center gap-1 truncate text-[12px] text-muted-foreground">
+            <span className="truncate">{clubName || "Espace coaching"}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            <span className="shrink-0">{otherClubLabel}</span>
+          </p>
         </div>
-      </div>
+      </button>
     </div>
   );
 }
@@ -76,11 +92,13 @@ function DrawerSection({
   items,
   activeKey,
   onSelect,
+  disableAll,
 }: {
   title: string;
   items: DrawerItemDef[];
   activeKey: CoachMenuKey;
   onSelect: (key: CoachMenuKey) => void;
+  disableAll?: boolean;
 }) {
   return (
     <section className="space-y-1.5">
@@ -88,14 +106,17 @@ function DrawerSection({
       <div className="space-y-1">
         {items.map((item) => {
           const active = item.key === activeKey;
+          const disabled = Boolean(disableAll);
           return (
             <button
               key={item.key}
               type="button"
+              disabled={disabled}
               onClick={() => onSelect(item.key)}
               className={cn(
                 "relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                active ? "bg-primary/10 text-primary" : "text-foreground active:bg-secondary"
+                active ? "bg-primary/10 text-primary" : "text-foreground active:bg-secondary",
+                disabled && "cursor-not-allowed opacity-45"
               )}
             >
               {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary" />}
@@ -121,43 +142,42 @@ export function AppDrawer({
   onSelect,
   coachName,
   clubName,
-  messageBadge = 0,
+  clubAvatarUrl,
+  userMode = "coach",
+  otherClubsCount = 0,
+  onPressClubSwitcher,
 }: AppDrawerProps) {
+  const isAthleteMode = userMode === "athlete";
   const sections = useMemo<DrawerSectionDef[]>(
     () => [
       {
-        title: "Coaching",
-        items: [
-          { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-          { key: "planning", label: "Planification", icon: CalendarDays },
-          { key: "athletes", label: "Athlètes", icon: Users },
-          { key: "groups", label: "Groupes", icon: UsersRound },
-          { key: "tracking", label: "Suivi athlète", icon: Activity },
-        ],
+        title: isAthleteMode ? "Vu athlète" : "Coaching",
+        items: isAthleteMode
+          ? [{ key: "my-plan", label: "Mon plan", icon: FolderKanban }]
+          : [
+              { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+              { key: "planning", label: "Planification", icon: CalendarDays },
+              { key: "groups", label: "Groupes", icon: UsersRound },
+              { key: "tracking", label: "Suivi athlète", icon: Activity },
+              { key: "club", label: "Gérer le club", icon: Building2 },
+            ],
       },
-      {
-        title: "Contenu",
-        items: [
-          { key: "library", label: "Bibliothèque", icon: BookOpen },
-          { key: "templates", label: "Modèles", icon: FolderKanban },
-        ],
-      },
-      {
-        title: "Organisation",
-        items: [
-          { key: "club", label: "Gérer le club", icon: Building2 },
-          { key: "messages", label: "Messages", icon: MessageCircle, badge: messageBadge },
-        ],
-      },
-      {
-        title: "Compte",
-        items: [
-          { key: "settings", label: "Paramètres", icon: Settings },
-          { key: "dashboard", label: "Notifications", icon: BarChart3 },
-        ],
-      },
+      ...(isAthleteMode
+        ? [
+            {
+              title: "Vu coach",
+              items: [
+                { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+                { key: "planning", label: "Planification", icon: CalendarDays },
+                { key: "groups", label: "Groupes", icon: UsersRound },
+                { key: "tracking", label: "Suivi athlète", icon: Activity },
+                { key: "club", label: "Gérer le club", icon: Building2 },
+              ],
+            },
+          ]
+        : []),
     ],
-    [messageBadge]
+    [isAthleteMode]
   );
 
   return (
@@ -168,15 +188,22 @@ export function AppDrawer({
         overlayClassName="!bg-black/45 backdrop-blur-[2px]"
         className="h-[100dvh] w-[86vw] max-w-[360px] border-r border-border/70 bg-card p-0"
       >
-        <DrawerHeader coachName={coachName} clubName={clubName} />
+        <DrawerHeader
+          coachName={coachName}
+          clubName={clubName}
+          clubAvatarUrl={clubAvatarUrl}
+          otherClubsCount={otherClubsCount}
+          onPressClubSwitcher={onPressClubSwitcher}
+        />
         <div className="no-scrollbar space-y-5 overflow-y-auto px-3 pb-[max(1rem,var(--safe-area-bottom))] pt-3">
-          {sections.map((section) => (
+          {sections.map((section, index) => (
             <DrawerSection
               key={section.title}
               title={section.title}
               items={section.items}
               activeKey={activeKey}
               onSelect={onSelect}
+              disableAll={isAthleteMode && index > 0}
             />
           ))}
         </div>

@@ -895,7 +895,7 @@ export default function MySessions() {
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
-            <h1 className="text-[17px] font-semibold text-center">{t("navigation.mySessions")}</h1>
+            <h1 className="text-ios-title2 font-bold text-center">{t("navigation.mySessions")}</h1>
           </div>
           
           {/* iOS Segmented Control - Two columns layout */}

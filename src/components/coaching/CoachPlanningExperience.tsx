@@ -9,7 +9,6 @@ import {
   Leaf,
   Minus,
   Plus,
-  SwatchBook,
   Waves,
   Zap,
 } from "lucide-react";
@@ -298,6 +297,7 @@ export function CoachPlanningExperience() {
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
+  const [isCoachMode, setIsCoachMode] = useState(true);
   const [athletes, setAthletes] = useState<AthleteEntry[]>([]);
   const [groups, setGroups] = useState<GroupEntry[]>([]);
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
@@ -306,7 +306,7 @@ export function CoachPlanningExperience() {
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
   const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
-  const [editorTab, setEditorTab] = useState<"build" | "library" | "templates">("build");
+  const [editorTab, setEditorTab] = useState<"build">("build");
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(() => emptyDraft(new Date().toISOString()));
   const [blockSheetOpen, setBlockSheetOpen] = useState(false);
@@ -332,43 +332,29 @@ export function CoachPlanningExperience() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [copiedWeekSessions, setCopiedWeekSessions] = useState<TrainingSession[] | null>(null);
+  const [copiedFromAthleteId, setCopiedFromAthleteId] = useState<string | null>(null);
+
+  const rotateActiveClub = () => {
+    if (!clubs.length) return;
+    setActiveClubId((prev) => {
+      const currentIndex = clubs.findIndex((club) => club.id === prev);
+      const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % clubs.length;
+      return clubs[nextIndex]?.id ?? prev ?? null;
+    });
+  };
 
   useEffect(() => {
-    setHideBottomNav(false);
+    setHideBottomNav(coachingTab === "create");
     return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
-
-  useEffect(() => {
-    setHideBottomNav(false);
   }, [coachingTab, setHideBottomNav]);
 
   useEffect(() => {
-    if (!user) return;
-    let ignore = false;
-    const loadUnread = async () => {
-      const { data: conversations } = await supabase
-        .from("conversations")
-        .select("id")
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`);
-      const conversationIds = (conversations || []).map((conv) => conv.id);
-      if (!conversationIds.length) {
-        if (!ignore) setUnreadMessages(0);
-        return;
-      }
-      const { count } = await supabase
-        .from("messages")
-        .select("*", { count: "exact", head: true })
-        .in("conversation_id", conversationIds)
-        .neq("sender_id", user.id)
-        .is("read_at", null);
-      if (!ignore) setUnreadMessages(count || 0);
-    };
-    void loadUnread();
-    return () => {
-      ignore = true;
-    };
-  }, [user]);
+    if (!user || isCoachMode) return;
+    setActiveAthleteId(user.id);
+    setActiveGroupId(undefined);
+    setActiveMenuKey((prev) => (prev === "my-plan" ? prev : "my-plan"));
+  }, [isCoachMode, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -409,13 +395,15 @@ export function CoachPlanningExperience() {
         .from("group_members")
         .select("conversation_id, is_coach")
         .eq("user_id", user.id);
-      const clubIds = (memberships || [])
-        .filter((entry) => entry.is_coach)
-        .map((entry) => entry.conversation_id);
+      const coachMemberships = (memberships || []).filter((entry) => entry.is_coach);
+      const athleteMemberships = (memberships || []).filter((entry) => !entry.is_coach);
+      const isCoach = coachMemberships.length > 0;
+      const clubIds = (isCoach ? coachMemberships : athleteMemberships).map((entry) => entry.conversation_id);
       if (!clubIds.length) {
         if (!ignore) {
           setClubs([]);
           setActiveClubId(null);
+          setIsCoachMode(true);
         }
         return;
       }
@@ -429,6 +417,7 @@ export function CoachPlanningExperience() {
         id: club.id,
         name: club.group_name || "Club",
       }));
+      setIsCoachMode(isCoach);
       setClubs(nextClubs);
       setActiveClubId((prev) => prev ?? nextClubs[0]?.id ?? null);
     };
@@ -611,11 +600,15 @@ export function CoachPlanningExperience() {
         .from("coaching_sessions")
         .select("id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks")
         .eq("club_id", activeClubId)
-        .eq("coach_id", user.id)
         .gte("scheduled_at", weekAnchor.toISOString())
         .lt("scheduled_at", weekEnd.toISOString());
-      if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
-      if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
+      if (isCoachMode) {
+        query = query.eq("coach_id", user.id);
+        if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
+        if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
+      } else {
+        query = query.contains("target_athletes", [user.id]).eq("status", "sent");
+      }
       const { data, error } = await query.order("scheduled_at", { ascending: true });
       if (!ignore) {
         if (error) {
@@ -672,7 +665,7 @@ export function CoachPlanningExperience() {
     return () => {
       ignore = true;
     };
-  }, [activeClubId, activeAthleteId, activeGroupId, user, weekAnchor, toast]);
+  }, [activeClubId, activeAthleteId, activeGroupId, isCoachMode, user, weekAnchor, toast]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),
@@ -865,6 +858,77 @@ export function CoachPlanningExperience() {
     }
     setSessions((prev) => prev.map((entry) => (entry.id === sessionId ? { ...entry, sent: true } : entry)));
     toast.success("Séance envoyée");
+  };
+
+  const unsendSession = async (sessionId: string) => {
+    const { error: sessionError } = await supabase.from("coaching_sessions").update({ status: "draft" }).eq("id", sessionId);
+    if (sessionError) {
+      toast.error("Annulation impossible", sessionError.message);
+      return;
+    }
+    const { error: partError } = await supabase
+      .from("coaching_participations")
+      .delete()
+      .eq("coaching_session_id", sessionId)
+      .eq("status", "sent");
+    if (partError) {
+      toast.error("Annulation partielle", partError.message);
+      return;
+    }
+    setSessions((prev) => prev.map((entry) => (entry.id === sessionId ? { ...entry, sent: false } : entry)));
+    toast.success("Envoi annulé");
+  };
+
+  const copyAthleteWeek = () => {
+    if (!activeAthleteId) return;
+    const source = filteredSessions
+      .filter((session) => session.athleteId === activeAthleteId)
+      .map((session) => ({ ...session, blocks: session.blocks.map((b) => ({ ...b })) }));
+    if (!source.length) {
+      toast.info("Aucune séance à copier pour cet athlète");
+      return;
+    }
+    setCopiedWeekSessions(source);
+    setCopiedFromAthleteId(activeAthleteId);
+    toast.success("Semaine copiée");
+  };
+
+  const pasteAthleteWeek = async () => {
+    if (!activeAthleteId || !copiedWeekSessions?.length || !activeClubId || !user) return;
+    const copied = copiedWeekSessions;
+    for (const session of copied) {
+      const payload = {
+        club_id: activeClubId,
+        coach_id: user.id,
+        title: session.title,
+        objective: session.title,
+        activity_type: session.sport,
+        scheduled_at: session.assignedDate,
+        target_group_id: session.groupId || null,
+        target_athletes: [activeAthleteId],
+        send_mode: session.groupId ? "group" : "club",
+        status: session.sent ? "sent" : "draft",
+        session_blocks: session.blocks,
+        distance_km:
+          session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000 || null,
+      };
+      const { data, error } = await supabase.from("coaching_sessions").insert(payload).select("id").single();
+      if (error) {
+        toast.error("Collage impossible", error.message);
+        return;
+      }
+      setSessions((prev) => [
+        ...prev,
+        {
+          ...session,
+          id: data.id,
+          dbId: data.id,
+          athleteId: activeAthleteId,
+          blocks: session.blocks.map((b) => ({ ...b, id: uid() })),
+        },
+      ]);
+    }
+    toast.success("Semaine collée");
   };
 
   const createModelFromDraft = async () => {
@@ -1072,7 +1136,9 @@ export function CoachPlanningExperience() {
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.email ? user.email.split("@")[0] : "Coach");
   const sectionTitle =
-    activeMenuKey === "planning"
+    activeMenuKey === "my-plan"
+      ? "Mon plan"
+      : activeMenuKey === "planning"
       ? "Planification"
       : activeMenuKey === "tracking"
       ? "Suivi athlète"
@@ -1084,20 +1150,10 @@ export function CoachPlanningExperience() {
       ? "Tableau de bord"
       : "Coaching";
   const handleDrawerSelect = (key: CoachMenuKey) => {
-    if (key === "athletes") {
-      setActiveMenuKey("tracking");
-      setTrackingSelectedAthleteId(null);
-      setDrawerOpen(false);
-      return;
-    }
-    if (key === "library") {
-      setActiveMenuKey("templates");
-      setDrawerOpen(false);
-      return;
-    }
+    if (!isCoachMode && key !== "my-plan") return;
     setActiveMenuKey(key);
     setDrawerOpen(false);
-    if (key === "planning") {
+    if (key === "planning" || key === "my-plan") {
       setCoachingTab("planning");
       return;
     }
@@ -1111,10 +1167,6 @@ export function CoachPlanningExperience() {
     }
     if (key === "tracking") {
       setTrackingSelectedAthleteId(null);
-    }
-    if (key === "templates") {
-      setCoachingTab("planning");
-      return;
     }
     // Keep in-coaching sections in place
     setCoachingTab("planning");
@@ -1321,7 +1373,7 @@ export function CoachPlanningExperience() {
           scrollClassName="bg-secondary pb-24"
         >
           <div className="space-y-0 pb-6">
-            {activeMenuKey === "planning" && clubs.length > 1 && (
+            {(activeMenuKey === "planning" || activeMenuKey === "my-plan") && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
                 <div className="divide-y divide-border">
@@ -1342,9 +1394,9 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" && <PlanningSearchBar value={search} onChange={setSearch} />}
+            {activeMenuKey === "planning" && isCoachMode && <PlanningSearchBar value={search} onChange={setSearch} />}
 
-            {activeMenuKey === "planning" && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
+            {activeMenuKey === "planning" && isCoachMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
               <div className="divide-y divide-border border-b border-border bg-card">
                 {searchResults.groups.map((group) => (
                   <button
@@ -1377,7 +1429,7 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" ? (
+            {activeMenuKey === "planning" || activeMenuKey === "my-plan" ? (
               <>
                 <WeekSelectorPremium
                   weekStart={weekAnchor}
@@ -1388,6 +1440,13 @@ export function CoachPlanningExperience() {
                   indicatorsByDate={dayIndicatorsByDate}
                 />
 
+                {!activeAthleteId ? (
+                  <div className="border-t border-border bg-secondary/30 px-4 py-8 text-center">
+                    <p className="text-[16px] font-semibold text-foreground">Aucune séance dans le plan</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">Aucun athlète sélectionné.</p>
+                  </div>
+                ) : (
+                  <>
                 <div className="flex flex-col border-t border-border">
                   {weekDays.map((day) => {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
@@ -1428,13 +1487,39 @@ export function CoachPlanningExperience() {
                     onAdd={() => openCreateForDate(day)}
                     onOpen={session ? () => openEditSession(session.id) : undefined}
                     onEdit={session ? () => openEditSession(session.id) : undefined}
-                    onSend={session ? () => void sendSession(session.id) : undefined}
+                    onSend={
+                      session
+                        ? () => void (session.sent ? unsendSession(session.id) : sendSession(session.id))
+                        : undefined
+                    }
                     onDuplicate={session ? () => void duplicateSession(session, addDays(day, 1)) : undefined}
                     onDelete={session ? () => void removeSession(session.id) : undefined}
+                    onUnsend={session ? () => void unsendSession(session.id) : undefined}
+                    allowSessionActions={isCoachMode}
                   />
                 );
                   })}
                 </div>
+                {isCoachMode && (
+                  <div className="border-t border-border bg-card px-4 py-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
+                        Copier la semaine
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="h-10 rounded-xl"
+                        onClick={() => void pasteAthleteWeek()}
+                        disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
+                      >
+                        Coller la semaine
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                  </>
+                )}
               </>
             ) : activeMenuKey === "dashboard" ? (
               activeClubId ? (
@@ -1556,7 +1641,10 @@ export function CoachPlanningExperience() {
         onSelect={handleDrawerSelect}
         coachName={coachName}
         clubName={activeClubName}
-        messageBadge={unreadMessages}
+        clubAvatarUrl={clubAvatarUrl}
+        userMode={isCoachMode ? "coach" : "athlete"}
+        otherClubsCount={Math.max(clubs.length - 1, 0)}
+        onPressClubSwitcher={rotateActiveClub}
       />
 
       <InviteMembersDialog
@@ -1598,24 +1686,10 @@ export function CoachPlanningExperience() {
                     </button>
                   }
                 />
-                <div className="grid grid-cols-3 gap-1 px-4 pb-2">
-                  {[
-                    { id: "build", label: "Construire" },
-                    { id: "library", label: "Bibliothèque" },
-                    { id: "templates", label: "Modèles" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setEditorTab(tab.id as typeof editorTab)}
-                      className={cn(
-                        "rounded-xl py-2 text-[13px] font-semibold",
-                        editorTab === tab.id ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                      )}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                <div className="px-4 pb-2">
+                  <div className="rounded-xl bg-primary py-2 text-center text-[13px] font-semibold text-primary-foreground">
+                    Construire
+                  </div>
                 </div>
               </div>
             }
@@ -1740,29 +1814,7 @@ export function CoachPlanningExperience() {
                   )}
                 </div>
               </div>
-            ) : editorTab === "templates" ? (
-              <ModelsPage
-                weekDays={weekDays}
-                existingSessionsByDay={existingSessionsByDay}
-                myModels={myModels}
-                baseModels={BASE_MODELS}
-                onCreateModel={() => void createModelFromDraft()}
-                onAddToPlanning={(model, day, replaceExisting) => void addModelToPlanning(model, day, replaceExisting)}
-                onEditModel={editModel}
-                onDuplicateModel={(model) => void duplicateModel(model)}
-                onDeleteModel={(model) => void deleteModel(model)}
-              />
-            ) : (
-              <div className="px-4 py-10 text-center">
-                <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <SwatchBook className="h-6 w-6" />
-                </div>
-                <p className="text-[16px] font-semibold text-foreground">Bibliothèque bientôt disponible</p>
-                <p className="mt-1 text-[13px] text-muted-foreground">
-                  Enregistre des séances prêtes à réutiliser d'un tap.
-                </p>
-              </div>
-            )}
+            ) : null}
           </IosFixedPageHeaderShell>
         </div>
       )}

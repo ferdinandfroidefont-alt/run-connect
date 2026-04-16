@@ -4,14 +4,20 @@ import { cn } from "@/lib/utils";
 interface SessionStatusActionProps {
   mode: "add" | "sent";
   onAdd?: () => void;
+  onSentClick?: () => void;
 }
 
-export function SessionStatusAction({ mode, onAdd }: SessionStatusActionProps) {
+export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusActionProps) {
   if (mode === "sent") {
     return (
-      <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+      <button
+        type="button"
+        onClick={onSentClick}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 transition-transform active:scale-95"
+        aria-label="Annuler l'envoi"
+      >
         <Check className="h-4.5 w-4.5" />
-      </div>
+      </button>
     );
   }
 
