@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,11 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { storyMusicProvider, type StoryMusicTrack } from "@/lib/storyMusicProvider";
+import { SessionShareArtboard } from "@/components/session-share/SessionShareArtboard";
+import { buildSessionSharePayload } from "@/lib/sessionSharePayload";
+import { getSessionPublicUrl } from "@/lib/appLinks";
+import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
+import { generateSessionShareImage } from "@/services/sessionShareService";
 import {
   ArrowLeft, Camera, Image, Type, Music, Smile,
   Pencil, Plus, Minus, RefreshCw, Zap, Video, CalendarPlus, Check,
@@ -191,6 +197,11 @@ export default function StoryCreate() {
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const drawHistoryRef = useRef<ImageData[]>([]);
 
+  // Pinch-to-zoom on image
+  const [imageScale, setImageScale] = useState(1);
+  const [imageTranslate, setImageTranslate] = useState({ x: 0, y: 0 });
+  const imagePinchRef = useRef<{ startDist: number; startMid: { x: number; y: number }; baseScale: number; baseTx: number; baseTy: number } | null>(null);
+
   // Share
   const [sharing, setSharing] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -236,8 +247,16 @@ export default function StoryCreate() {
   useEffect(() => {
     if (emojiSticker) {
       upsertKindLayer("emoji", { x: 120, y: 220, scale: 1, rotation: 0, label: emojiSticker });
+      requestAnimationFrame(() => {
+        setDynamicLayers((prev) => {
+          const layer = prev.find((l) => l.kind === "emoji");
+          if (layer) setSelectedDynamicLayerId(layer.id);
+          return prev;
+        });
+      });
     } else {
       removeKindLayer("emoji");
+      setSelectedDynamicLayerId(null);
     }
   }, [emojiSticker]);
 
@@ -1032,120 +1051,77 @@ export default function StoryCreate() {
     return raw || "Impossible de partager la story.";
   };
 
-  const createSessionStoryImage = async (session: ScheduledSession): Promise<File | null> => {
+  const createSessionStoryImage = useCallback(async (session: ScheduledSession): Promise<File | null> => {
     try {
-      const w = 1080;
-      const h = 1920;
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
+      const sessionLike = {
+        id: session.id,
+        title: session.title,
+        activity_type: "running",
+        scheduled_at: session.scheduled_at,
+        location_name: session.location_name,
+        location_lat: session.location_lat ?? 48.8566,
+        location_lng: session.location_lng ?? 2.3522,
+        route_id: session.route_id ?? null,
+        routes: session.route_coordinates?.length
+          ? { coordinates: session.route_coordinates }
+          : null,
+      };
 
-      // Fond carte clair
-      ctx.fillStyle = "#f6f7fb";
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = "#e3e7f0";
-      ctx.lineWidth = 2;
-      for (let x = 0; x < w; x += 80) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-      }
-      for (let y = 0; y < h; y += 80) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-      }
+      const publicUrl = getSessionPublicUrl(session.id);
+      const payload = buildSessionSharePayload(sessionLike, {
+        publicUrl,
+        sharerDisplayName: user?.email ?? null,
+        sharerAvatarUrl: null,
+        formatKm: (n) => `${n.toFixed(1)} km`,
+      });
 
-      let pinX = w / 2;
-      let pinY = h / 2 - 140;
+      const mapImageUrl = buildSessionStaticMapUrl({
+        routePath: payload.routePath,
+        pin: payload.mapPin,
+        width: 1080,
+        height: 1920,
+        padding: payload.hasRoute ? 72 : 48,
+      });
 
-      // Itinéraire si disponible
-      const route = session.route_coordinates ?? [];
-      if (route.length >= 2) {
-        const minLat = Math.min(...route.map((p) => p.lat));
-        const maxLat = Math.max(...route.map((p) => p.lat));
-        const minLng = Math.min(...route.map((p) => p.lng));
-        const maxLng = Math.max(...route.map((p) => p.lng));
-        const dx = Math.max(1e-6, maxLng - minLng);
-        const dy = Math.max(1e-6, maxLat - minLat);
-        const pad = 120;
-        const mapTop = 200;
-        const mapBottom = h - 420;
-        const mapH = mapBottom - mapTop;
-        const mapW = w - pad * 2;
-        const toX = (lng: number) => pad + ((lng - minLng) / dx) * mapW;
-        const toY = (lat: number) => mapBottom - ((lat - minLat) / dy) * mapH;
-        ctx.strokeStyle = "#2563EB";
-        ctx.lineWidth = 14;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-        route.forEach((p, i) => {
-          const x = toX(p.lng);
-          const y = toY(p.lat);
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
+      const host = document.createElement("div");
+      host.style.cssText = "position:fixed;left:-12000px;top:0;pointer-events:none;overflow:hidden;";
+      document.body.appendChild(host);
 
-        if (typeof session.location_lat === "number" && typeof session.location_lng === "number") {
-          pinX = toX(session.location_lng);
-          pinY = toY(session.location_lat);
-        } else {
-          const last = route[route.length - 1]!;
-          pinX = toX(last.lng);
-          pinY = toY(last.lat);
-        }
+      const root = createRoot(host);
+      const artboardRef: { current: HTMLDivElement | null } = { current: null };
+
+      await new Promise<void>((resolve) => {
+        root.render(
+          <SessionShareArtboard
+            ref={(el) => { artboardRef.current = el; }}
+            payload={payload}
+            templateId="instagram_story"
+            mapImageUrl={mapImageUrl}
+          />
+        );
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+      await new Promise((r) => setTimeout(r, 300));
+
+      if (!artboardRef.current) {
+        root.unmount();
+        document.body.removeChild(host);
+        return null;
       }
 
-      // Pin position
-      ctx.fillStyle = "#2563EB";
-      ctx.beginPath();
-      ctx.arc(pinX, pinY, 28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#FFFFFF";
-      ctx.beginPath();
-      ctx.arc(pinX, pinY, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#2563EB";
-      ctx.beginPath();
-      ctx.moveTo(pinX, pinY + 28);
-      ctx.lineTo(pinX - 18, pinY + 70);
-      ctx.lineTo(pinX + 18, pinY + 70);
-      ctx.closePath();
-      ctx.fill();
+      const dataUrl = await generateSessionShareImage(artboardRef.current, "instagram_story");
+      root.unmount();
+      document.body.removeChild(host);
 
-      // Cartouche infos séance
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.beginPath();
-      ctx.roundRect(72, h - 360, w - 144, 250, 34);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(37,99,235,0.15)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      ctx.fillStyle = "#2563EB";
-      ctx.font = "700 58px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
-      ctx.fillText("SEANCE", 120, h - 285);
-
-      ctx.fillStyle = "#111827";
-      ctx.font = "700 44px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
-      ctx.fillText((session.title || "Session").slice(0, 32), 120, h - 220);
-
-      ctx.fillStyle = "#4b5563";
-      ctx.font = "600 34px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif";
-      ctx.fillText(`📍 ${session.location_name || "Lieu a definir"}`.slice(0, 42), 120, h - 165);
-      const dt = new Date(session.scheduled_at);
-      ctx.fillText(
-        dt.toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
-        120,
-        h - 120,
-      );
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.98));
-      if (!blob) return null;
-      return new File([blob], `session-story-${session.id}-${Date.now()}.jpg`, { type: "image/jpeg" });
-    } catch {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      return new File([blob], `session-story-${session.id}-${Date.now()}.png`, { type: "image/png" });
+    } catch (err) {
+      console.error("[StoryCreate] createSessionStoryImage error", err);
       return null;
     }
-  };
+  }, [user?.email]);
 
   useEffect(() => {
     if (autoSessionShareDoneRef.current) return;
@@ -1419,6 +1395,42 @@ export default function StoryCreate() {
       setTextDragging(false);
       setTextSnapGuides({ centerX: false, topThird: false, midY: false, bottomThird: false });
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
+    }
+  };
+
+  const onImageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2) return;
+    if (editorMode !== "idle" || selectedLayer || selectedDynamicLayerId) return;
+    const [a, b] = [e.touches[0], e.touches[1]];
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    imagePinchRef.current = {
+      startDist: dist,
+      startMid: { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 },
+      baseScale: imageScale,
+      baseTx: imageTranslate.x,
+      baseTy: imageTranslate.y,
+    };
+  };
+  const onImageTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 2 || !imagePinchRef.current) return;
+    const [a, b] = [e.touches[0], e.touches[1]];
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+    const ratio = dist / Math.max(1, imagePinchRef.current.startDist);
+    const newScale = Math.max(1, Math.min(4, +(imagePinchRef.current.baseScale * ratio).toFixed(3)));
+    const midX = (a.clientX + b.clientX) / 2;
+    const midY = (a.clientY + b.clientY) / 2;
+    setImageScale(newScale);
+    setImageTranslate({
+      x: imagePinchRef.current.baseTx + (midX - imagePinchRef.current.startMid.x),
+      y: imagePinchRef.current.baseTy + (midY - imagePinchRef.current.startMid.y),
+    });
+  };
+  const onImageTouchEnd = () => {
+    if (!imagePinchRef.current) return;
+    imagePinchRef.current = null;
+    if (imageScale < 1.05) {
+      setImageScale(1);
+      setImageTranslate({ x: 0, y: 0 });
     }
   };
 
@@ -2068,33 +2080,51 @@ export default function StoryCreate() {
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-black">
       {/* Preview fullscreen */}
       <div
-        className="relative flex-1"
+        className="relative flex-1 overflow-hidden"
         ref={drawHostRef}
         onClick={(e) => {
-          if (editorMode !== "text") {
-            setSelectedLayer(null);
-            setSelectedDynamicLayerId(null);
+          if (showMusicPicker || showStickerPicker || showSessionPicker) {
+            closeEditorMode();
             return;
           }
-          const host = drawHostRef.current;
-          if (!host) return;
-          const rect = host.getBoundingClientRect();
-          setTextPos({
-            x: Math.max(8, e.clientX - rect.left),
-            y: Math.max(8, e.clientY - rect.top),
-          });
-          if (!textOverlay) setShowTextInput(true);
+          if (editorMode === "text") {
+            closeEditorMode();
+            return;
+          }
+          if (editorMode !== "idle") return;
+          setSelectedLayer(null);
+          setSelectedDynamicLayerId(null);
         }}
+        onTouchStart={onImageTouchStart}
+        onTouchMove={onImageTouchMove}
+        onTouchEnd={onImageTouchEnd}
+        onTouchCancel={onImageTouchEnd}
       >
         {previewUrl && (
           isVideo ? (
-            <video src={previewUrl} className="h-full w-full object-cover" autoPlay loop muted playsInline />
+            <video
+              src={previewUrl}
+              className="h-full w-full object-cover"
+              style={{
+                transform: `scale(${imageScale}) translate(${imageTranslate.x / imageScale}px, ${imageTranslate.y / imageScale}px)`,
+                transition: imagePinchRef.current ? "none" : "transform 200ms ease-out",
+              }}
+              autoPlay loop muted playsInline
+            />
           ) : (
-            <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+            <img
+              src={previewUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              style={{
+                transform: `scale(${imageScale}) translate(${imageTranslate.x / imageScale}px, ${imageTranslate.y / imageScale}px)`,
+                transition: imagePinchRef.current ? "none" : "transform 200ms ease-out",
+              }}
+            />
           )
         )}
         {editorMode !== "idle" && (
-          <div className="pointer-events-none absolute inset-0 z-[6] bg-black/30 transition-opacity duration-200" />
+          <div className="pointer-events-none absolute inset-0 z-[6] bg-black/20 transition-opacity duration-200" />
         )}
         {textDragging && (
           <>
@@ -2139,6 +2169,7 @@ export default function StoryCreate() {
                 ref={textInputRef}
                 value={textOverlay}
                 onChange={(e) => setTextOverlay(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
                 placeholder="Ecrire ici..."
                 className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
                 style={{
@@ -2147,6 +2178,7 @@ export default function StoryCreate() {
                   textAlign,
                   fontSize: `${Math.max(30, textSize)}px`,
                   color: textColor,
+                  caretColor: textColor,
                 }}
               />
             ) : (
@@ -2323,12 +2355,15 @@ export default function StoryCreate() {
         {editorMode === "idle" && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18] bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-14">
             <div className="pointer-events-auto">
-              <Input
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Ajouter une légende..."
-                className="h-10 rounded-full border-white/20 bg-black/35 text-white placeholder:text-white/65 backdrop-blur-md focus-visible:ring-white/30"
-              />
+              <div className="relative">
+                <Type className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+                <Input
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Ajouter une légende..."
+                  className="h-12 rounded-full border-white/20 bg-black/35 pl-10 text-[15px] text-white placeholder:text-white/60 backdrop-blur-md focus-visible:ring-white/30"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -2360,7 +2395,7 @@ export default function StoryCreate() {
                 }
                 void onShare();
               }}
-              className="justify-self-end h-9 rounded-full bg-white/20 px-4 text-xs font-semibold text-white"
+              className="justify-self-end h-9 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md"
             >
               {sharing ? "Envoi..." : editorMode === "idle" ? "Partager" : "Terminé"}
             </Button>
@@ -2462,13 +2497,13 @@ export default function StoryCreate() {
               type="button"
               onClick={tool.onClick}
               className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/45 text-white shadow-lg backdrop-blur-md transition-all duration-200 ease-out active:scale-[0.92]",
+                "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-black/50 text-white shadow-lg backdrop-blur-xl transition-all duration-200 ease-out active:scale-[0.92]",
                 tool.active && "bg-primary text-primary-foreground",
               )}
               aria-label={tool.label}
               title={tool.label}
             >
-              <tool.icon className="h-4 w-4" />
+              <tool.icon className="h-5 w-5" />
             </button>
           ))}
         </div>
@@ -2476,7 +2511,7 @@ export default function StoryCreate() {
 
       {/* Session picker */}
         {showSessionPicker && (
-          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
+          <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
             {sessions.length === 0 ? (
               <p className="px-3 py-4 text-center text-sm text-muted-foreground">
                 Aucune séance disponible
@@ -2511,7 +2546,7 @@ export default function StoryCreate() {
 
       {/* Emoji sticker picker */}
         {showStickerPicker && (
-          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 rounded-2xl border bg-card p-3">
+          <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 rounded-2xl border bg-card p-3">
             <p className="mb-2 text-xs font-semibold text-muted-foreground">Choisir un sticker</p>
             <div className="mb-2 flex flex-wrap gap-2">
               <button
@@ -2551,8 +2586,18 @@ export default function StoryCreate() {
                   key={emoji}
                   type="button"
                   onClick={() => {
-                    setEmojiSticker(emojiSticker === emoji ? null : emoji);
-                    setSelectedLayer(emojiSticker === emoji ? null : "emoji");
+                    const toggling = emojiSticker === emoji;
+                    setEmojiSticker(toggling ? null : emoji);
+                    if (toggling) {
+                      setSelectedLayer(null);
+                      setSelectedDynamicLayerId(null);
+                    } else {
+                      setSelectedLayer(null);
+                      const existing = dynamicLayers.find((l) => l.kind === "emoji");
+                      if (existing) {
+                        setSelectedDynamicLayerId(existing.id);
+                      }
+                    }
                     setShowStickerPicker(false);
                   }}
                   className={cn(
@@ -2582,7 +2627,7 @@ export default function StoryCreate() {
 
       {/* Draw controls */}
         {drawMode && (
-          <div className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 flex items-center justify-between rounded-2xl border bg-card p-3">
+          <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 flex items-center justify-between rounded-2xl border bg-card p-3">
             <div className="flex items-center gap-2">
               {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B"].map((color) => (
                 <button
@@ -2620,6 +2665,7 @@ export default function StoryCreate() {
         <div
           className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
           style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 0px) + ${keyboardHeight + 8}px))` }}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
@@ -2685,7 +2731,7 @@ export default function StoryCreate() {
       )}
 
       {showMusicPicker && (
-        <div className="absolute inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-white/15 bg-black/90 px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3 backdrop-blur-xl transition-all duration-300 ease-out animate-in slide-in-from-bottom-3">
+        <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-0 bottom-0 z-40 rounded-t-3xl border-t border-white/15 bg-black/90 px-4 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3 backdrop-blur-xl transition-all duration-300 ease-out animate-in slide-in-from-bottom-3">
           <div className="mx-auto mb-2 h-1 w-12 rounded-full bg-white/25" />
           <div className="mb-3 flex items-center justify-between">
             <p className="text-base font-semibold text-white">Musique</p>
