@@ -88,13 +88,13 @@ function LightCardAvatarRing({
 }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full p-[3px]"
+      className="flex shrink-0 items-center justify-center rounded-full p-[4px]"
       style={{
         background: RC_LIGHT,
-        boxShadow: '0 18px 52px rgba(0, 102, 255, 0.28)',
+        boxShadow: '0 18px 52px rgba(0, 102, 255, 0.26)',
       }}
     >
-      <div className="rounded-full bg-white p-[10px] shadow-inner">
+      <div className="rounded-full bg-white p-[11px]">
         <div
           className="flex items-center justify-center overflow-hidden rounded-full bg-slate-200"
           style={{ width: innerSize, height: innerSize }}
@@ -126,11 +126,21 @@ function StatQuad({ value, label }: { value: number | string; label: string }) {
   );
 }
 
-function RunConnectBrandHeader({ dark = false }: { dark?: boolean }) {
+function RunConnectBrandHeader({ dark = false, large = false }: { dark?: boolean; large?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <img src="/brand/runconnect-splash-icon.png" alt="" className="h-9 w-9 shrink-0 drop-shadow-sm" />
-      <span className={cn('text-[18px] font-bold tracking-tight', dark ? 'text-white' : 'text-slate-900')}>
+      <img
+        src="/brand/runconnect-splash-icon.png"
+        alt=""
+        className={cn('shrink-0 drop-shadow-sm', large ? 'h-11 w-11' : 'h-9 w-9')}
+      />
+      <span
+        className={cn(
+          'font-bold tracking-tight',
+          large ? 'text-[21px]' : 'text-[18px]',
+          dark ? 'text-white' : 'text-slate-900',
+        )}
+      >
         RunConnect
       </span>
     </div>
@@ -146,15 +156,15 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
   ] as const;
 
   return (
-    <div className="mt-5 flex w-full min-w-0 gap-2.5">
+    <div className="mt-5 flex w-full min-w-0 gap-3">
       {items.map((row) => (
         <div
           key={row.label}
-          className="flex min-h-[118px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-[14px] border border-slate-200/90 bg-white px-1 py-3 shadow-[0_3px_14px_rgba(15,23,42,0.07)]"
+          className="flex min-h-[130px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-[14px] border border-slate-200/80 bg-white px-1 py-3.5 shadow-[0_4px_16px_rgba(15,23,42,0.07)]"
         >
-          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.25} style={{ color: RC_LIGHT }} />
-          <span className="text-[31px] font-bold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
-          <span className="max-w-[100%] px-1 text-center text-[10px] font-semibold leading-[1.2] text-slate-500">{row.label}</span>
+          <row.icon className="h-[24px] w-[24px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
+          <span className="text-[35px] font-extrabold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
+          <span className="max-w-[100%] px-1 text-center text-[11px] font-semibold leading-[1.2] text-slate-500">{row.label}</span>
         </div>
       ))}
     </div>
@@ -184,24 +194,24 @@ function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
           backgroundSize: 'cover',
         }}
       />
-      <div className="relative z-[1] flex min-h-[200px] w-full items-center gap-6 px-7 pb-8 pt-8">
+      <div className="relative z-[1] flex min-h-[224px] w-full items-center gap-6 px-8 pb-8 pt-8">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex items-start gap-4">
             <img
               src="/brand/runconnect-splash-icon.png"
               alt=""
-              className="h-[76px] w-[76px] shrink-0 brightness-0 invert drop-shadow-md"
+              className="h-[80px] w-[80px] shrink-0 brightness-0 invert drop-shadow-md"
             />
-            <div className="min-w-0 pt-0.5">
-              <p className="text-[15px] font-medium leading-tight text-white/95">Rejoins-moi sur</p>
-              <p className="mt-0.5 text-[26px] font-extrabold leading-none tracking-tight text-white">RunConnect</p>
+            <div className="min-w-0 pt-1">
+              <p className="text-[16px] font-medium leading-tight text-white/95">Rejoins-moi sur</p>
+              <p className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-white">RunConnect</p>
             </div>
           </div>
           <a
             href={payload.publicUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold shadow-lg transition-opacity hover:opacity-95"
+            className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-bold shadow-lg transition-opacity hover:opacity-95"
             style={{ color: RC_LIGHT }}
           >
             Ouvrir avec RunConnect
@@ -209,19 +219,19 @@ function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
           </a>
         </div>
 
-        <div className="h-[148px] w-px shrink-0 bg-white/45" aria-hidden />
+        <div className="h-[156px] w-px shrink-0 bg-white/40" aria-hidden />
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">
+        <div className="flex shrink-0 flex-col items-end gap-2 self-center">
           {payload.qrDataUrl ? (
             <img
               src={payload.qrDataUrl}
               alt=""
-              className="h-[128px] w-[128px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
+              className="h-[132px] w-[132px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
             />
           ) : (
-            <div className="h-[128px] w-[128px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
+            <div className="h-[132px] w-[132px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
           )}
-          <p className="max-w-[220px] text-right text-[10px] font-medium leading-tight text-white/90 [word-break:break-all]">
+          <p className="max-w-[220px] text-right text-[11px] font-medium leading-tight text-white/90 [word-break:break-all]">
             {payload.publicUrlDisplay}
           </p>
         </div>
@@ -403,8 +413,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           }}
         />
 
-        <div className="absolute left-10 top-8 z-20">
-          <RunConnectBrandHeader />
+        <div className="absolute left-10 top-9 z-20">
+          <RunConnectBrandHeader large />
         </div>
 
         <div className="relative z-10 flex h-full min-h-0 flex-col">
@@ -412,36 +422,36 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={188} />
 
             <div className="mt-4 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-2.5">
-              <h1 className="max-w-full text-center text-[40px] font-bold leading-[1.08] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+              <h1 className="max-w-full text-center text-[44px] font-extrabold leading-[1.06] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
                 {payload.displayName}
               </h1>
               {payload.isPremium ? <VerifiedPremiumBadge compact /> : null}
             </div>
 
-            <p className="mt-1 max-w-[90%] truncate text-center text-[17px] text-slate-500">@{payload.username}</p>
+            <p className="mt-1.5 max-w-[90%] truncate text-center text-[18px] text-slate-500">@{payload.username}</p>
 
-            <div className="mt-3 flex max-w-[94%] items-start gap-2.5 rounded-full bg-sky-100/95 px-5 py-2.5 shadow-sm">
-              <Users className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: RC_LIGHT }} />
+            <div className="mt-3.5 flex max-w-[94%] items-start gap-3 rounded-full bg-sky-100/95 px-6 py-3 shadow-sm">
+              <Users className="mt-0.5 h-[26px] w-[26px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
               <div className="min-w-0 text-left">
-                <p className="text-[15px] font-bold leading-tight" style={{ color: RC_LIGHT }}>
+                <p className="text-[16px] font-bold leading-tight" style={{ color: RC_LIGHT }}>
                   {payload.roleLinePrimary}
                 </p>
                 {payload.roleLineSecondary ? (
-                  <p className="mt-0.5 text-[13px] font-normal leading-snug" style={{ color: '#1d4ed8' }}>
+                  <p className="mt-0.5 text-[13.5px] font-normal leading-snug" style={{ color: '#1d4ed8' }}>
                     {payload.roleLineSecondary}
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[15px] font-semibold text-slate-800">
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <MapPin className="h-4 w-4 shrink-0 text-slate-900" strokeWidth={2.4} />
+            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[16px] font-semibold text-slate-800">
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <MapPin className="h-[18px] w-[18px] shrink-0 text-slate-900" strokeWidth={2.3} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.locationLine}</span>
               </span>
-              <span className="inline-block h-4 w-px shrink-0 bg-slate-300" aria-hidden />
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <Footprints className="h-4 w-4 shrink-0 text-slate-900" strokeWidth={2.4} />
+              <span className="inline-block h-5 w-px shrink-0 bg-slate-300" aria-hidden />
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <Footprints className="h-[18px] w-[18px] shrink-0 text-slate-900" strokeWidth={2.3} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.sportLabel}</span>
               </span>
             </div>
@@ -450,11 +460,11 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
 
             {payload.presenceRate != null ? (
               <div
-                className="mt-3.5 inline-flex items-center gap-2 rounded-full border-2 bg-white px-4 py-1.5 shadow-sm"
+                className="mt-4 inline-flex items-center gap-2 rounded-full border-2 bg-white px-5 py-2 shadow-sm"
                 style={{ borderColor: RC_LIGHT }}
               >
-                <Users className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC_LIGHT }} />
-                <span className="text-[14px] font-bold" style={{ color: RC_LIGHT }}>
+                <Users className="h-[18px] w-[18px] shrink-0" strokeWidth={2.3} style={{ color: RC_LIGHT }} />
+                <span className="text-[15px] font-bold" style={{ color: RC_LIGHT }}>
                   {payload.presenceRate}% présence
                 </span>
               </div>

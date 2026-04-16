@@ -97,13 +97,27 @@ export async function shareProfileToChannel(
   const text = `${displayName} sur RunConnect\n${publicUrl}`;
 
   switch (channel) {
-    case 'instagram_story':
-      if (imageDataUrl) {
+    case 'instagram_story': {
+      if (!imageDataUrl) { toast.error('Image indisponible'); return; }
+      try {
+        const { shareToInstagramStory } = await import('@/lib/instagramStories');
+        const result = await shareToInstagramStory({
+          imageDataUrl,
+          contentUrl: publicUrl,
+        });
+        if (result.ok) {
+          if (result.method === 'download') {
+            toast.info('Image enregistrée — ouvre Instagram et ajoute-la à ta story.');
+          }
+        } else {
+          toast.error('Partage Instagram échoué');
+        }
+      } catch (e) {
+        console.warn('[profileShare] instagram_story failed, falling back', e);
         await shareProfileImageToSystem(imageDataUrl, displayName);
-        return;
       }
-      toast.error('Image indisponible');
       return;
+    }
 
     case 'whatsapp':
     case 'messages':

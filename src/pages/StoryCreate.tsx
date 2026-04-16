@@ -564,6 +564,46 @@ export default function StoryCreate() {
     [mediaFile, caption, textOverlay, selectedMusic, selectedSession, emojiSticker, dynamicLayers, proceedExit]
   );
 
+  const exitDraftDialog = (
+    <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Si tu quittes maintenant, ta story peut être enregistrée pour la reprendre plus tard.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel
+            onClick={() => {
+              const target = pendingExitTarget;
+              setPendingExitTarget(null);
+              if (target) proceedExit(target);
+            }}
+          >
+            Quitter sans enregistrer
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={async () => {
+              try {
+                await saveDraft();
+                toast({ title: "Brouillon enregistré", description: "Tu pourras le reprendre plus tard." });
+              } catch {
+                toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
+              } finally {
+                const target = pendingExitTarget;
+                setPendingExitTarget(null);
+                if (target) proceedExit(target);
+              }
+            }}
+          >
+            Enregistrer et quitter
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let removed = false;
@@ -1875,43 +1915,7 @@ export default function StoryCreate() {
           </div>
         )}
       </div>
-      <AlertDialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Si tu quittes maintenant, ta story peut être enregistrée pour la reprendre plus tard.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                const target = pendingExitTarget;
-                setPendingExitTarget(null);
-                if (target) proceedExit(target);
-              }}
-            >
-              Quitter sans enregistrer
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                try {
-                  await saveDraft();
-                  toast({ title: "Brouillon enregistré", description: "Tu pourras le reprendre plus tard." });
-                } catch {
-                  toast({ title: "Erreur", description: "Impossible d'enregistrer le brouillon.", variant: "destructive" });
-                } finally {
-                  const target = pendingExitTarget;
-                  setPendingExitTarget(null);
-                  if (target) proceedExit(target);
-                }
-              }}
-            >
-              Enregistrer et quitter
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {exitDraftDialog}
       </>
     );
   }
@@ -2050,6 +2054,7 @@ export default function StoryCreate() {
             )}
           </div>
         </div>
+      {exitDraftDialog}
       </div>
     );
   }
@@ -2801,6 +2806,7 @@ export default function StoryCreate() {
             </button>
           </div>
         )}
+      {exitDraftDialog}
     </div>
   );
 }

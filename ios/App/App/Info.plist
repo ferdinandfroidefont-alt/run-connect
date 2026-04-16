@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>RunConnect</string>
+	<string>RunConnect</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -63,6 +63,23 @@
 		</dict>
 	</array>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>RunConnect utilise cet identifiant pour mesurer et afficher des publicités récompensées dans l’app.</string>
+	<string>RunConnect utilise cet identifiant pour mesurer et afficher des publicités récompensées dans l'app.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+		<string>instagram</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.ferdi.runconnect</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>runconnect</string>
+				<string>app.runconnect</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

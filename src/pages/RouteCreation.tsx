@@ -119,6 +119,7 @@ export const RouteCreation = () => {
   const [isManualMode, setIsManualMode] = useState(false);
   const [waypointCount, setWaypointCount] = useState(0);
   const [elevationLoading, setElevationLoading] = useState(false);
+  const [elevationAutoExpandToken, setElevationAutoExpandToken] = useState(0);
   const elevationRequestId = useRef(0);
   const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
   const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export const RouteCreation = () => {
   }, [isManualMode]);
 
   const addWaypointRef = useRef<(latLng: MapCoord) => Promise<void>>(async () => {});
+  const previousWaypointCountRef = useRef(0);
 
   useEffect(() => {
     setHideBottomNav(true);
@@ -747,6 +749,13 @@ export const RouteCreation = () => {
     setWaypointCount(0);
   };
 
+  useEffect(() => {
+    if (waypointCount >= 2 && waypointCount > previousWaypointCountRef.current) {
+      setElevationAutoExpandToken((t) => t + 1);
+    }
+    previousWaypointCountRef.current = waypointCount;
+  }, [waypointCount]);
+
   const getWaypointModes = useCallback((): Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }> => {
     return waypoints.current.map((wp, index) => {
       const mode = index > 0 && index - 1 < segments.current.length ? segments.current[index - 1]!.mode : 'manual';
@@ -1130,10 +1139,7 @@ export const RouteCreation = () => {
 
       <div
         className={cn(
-          'absolute right-ios-4 z-10 flex flex-col gap-ios-2 transition-[bottom] duration-200 ease-out',
-          waypointCount >= 2
-            ? 'bottom-[max(13.25rem,calc(env(safe-area-inset-bottom)+12rem))]'
-            : 'bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+4.25rem))]'
+          'absolute right-ios-4 top-[calc(env(safe-area-inset-top)+7.75rem)] z-10 flex flex-col gap-ios-2'
         )}
       >
         <Button
@@ -1215,6 +1221,7 @@ export const RouteCreation = () => {
               formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
               isLoadingElevation={elevationLoading}
               defaultExpanded={false}
+              autoExpandToken={elevationAutoExpandToken}
               onScrub={handleElevationScrub}
             />
           )}

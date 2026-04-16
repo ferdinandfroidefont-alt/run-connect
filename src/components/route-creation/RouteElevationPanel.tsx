@@ -25,6 +25,7 @@ type Props = {
   className?: string;
   onScrub: (meta: RouteElevationScrubMeta | null) => void;
   defaultExpanded?: boolean;
+  autoExpandToken?: number;
 };
 
 const VB_W = 332;
@@ -98,7 +99,7 @@ function lerpColor(a: string, b: string, t: number): string {
 }
 
 function gradeColor(gradePct: number): string {
-  // Descente -> vert, 0-3% jaune, 3-6% orange, 6-10% rouge, >10% rouge trËs sombre.
+  // Descente -> vert, 0-3% jaune, 3-6% orange, 6-10% rouge, >10% rouge trùs sombre.
   if (gradePct <= -2) return '#16a34a';
   if (gradePct < 0) return lerpColor('#16a34a', '#84cc16', (gradePct + 2) / 2);
   if (gradePct <= 3) return lerpColor('#fde047', '#facc15', gradePct / 3);
@@ -120,6 +121,7 @@ export function RouteElevationPanel({
   className,
   onScrub,
   defaultExpanded = false,
+  autoExpandToken,
 }: Props) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [scrubDistM, setScrubDistM] = useState<number | null>(null);
@@ -147,6 +149,11 @@ export function RouteElevationPanel({
       onScrub(null);
     }
   }, [expanded, onScrub]);
+
+  useEffect(() => {
+    if (autoExpandToken == null) return;
+    setExpanded(true);
+  }, [autoExpandToken]);
 
   const smoothElevations = useMemo(() => {
     if (!seriesOk) return [] as number[];
@@ -204,9 +211,6 @@ export function RouteElevationPanel({
     }
     return out;
   }, [curvePoints]);
-
-  const minElev = Math.round(minElevRaw);
-  const maxElev = Math.round(maxElevRaw);
 
   const yTicks = useMemo(() => {
     if (!seriesOk) return [] as Array<{ y: number; label: string }>;
@@ -294,19 +298,17 @@ export function RouteElevationPanel({
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] leading-tight tabular-nums text-foreground">
             <span className="font-semibold">{formatDistanceKm(totalDistanceM / 1000)}</span>
-            <span className="text-muted-foreground">∑</span>
+            <span className="text-muted-foreground">ù</span>
             {isLoadingElevation ? (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden />
-                <span className="text-[11px]">DÈnivelÈÖ</span>
+                <span className="text-[11px]">Dùnivelù</span>
               </span>
             ) : (
               <>
                 <span className="text-emerald-600 dark:text-emerald-400">D+ {Math.round(elevationGain)} m</span>
-                <span className="text-muted-foreground">∑</span>
+                <span className="text-muted-foreground">ù</span>
                 <span className="text-rose-600 dark:text-rose-400">D- {Math.round(elevationLoss)} m</span>
-                <span className="text-muted-foreground">∑</span>
-                <span className="text-muted-foreground">min/max {minElev}/{maxElev} m</span>
               </>
             )}
           </p>
@@ -321,7 +323,7 @@ export function RouteElevationPanel({
               {isLoadingElevation ? (
                 <>
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden />
-                  <span>Calcul du profilÖ</span>
+                  <span>Calcul du profilù</span>
                 </>
               ) : (
                 <span>Profil indisponible.</span>
@@ -339,7 +341,7 @@ export function RouteElevationPanel({
                     </span>
                   </>
                 ) : (
-                  <span className="text-[10px] leading-tight text-muted-foreground/90">Glissez sur le profil ó distance, altitude et pente</span>
+                  <span className="text-[10px] leading-tight text-muted-foreground/90">Glissez sur le profil ù distance, altitude et pente</span>
                 )}
               </div>
 
@@ -348,7 +350,7 @@ export function RouteElevationPanel({
                 className="w-full touch-none select-none"
                 style={{ maxHeight: VB_H }}
                 role="img"
-                aria-label="Profil d'ÈlÈvation"
+                aria-label="Profil d'ùlùvation"
                 onPointerDown={(e) => {
                   e.currentTarget.setPointerCapture(e.pointerId);
                   activePointer.current = e.pointerId;

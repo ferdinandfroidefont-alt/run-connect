@@ -14,5 +14,8 @@
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": ["YOUR_TEAM_ID.com.ferdi.runconnect"]
   }
 }

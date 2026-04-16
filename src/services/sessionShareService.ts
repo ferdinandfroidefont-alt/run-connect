@@ -126,7 +126,28 @@ export async function shareSessionToChannel(
   const text = `${sessionTitle}\n${publicUrl}`;
 
   switch (channel) {
-    case 'instagram_story':
+    case 'instagram_story': {
+      if (!imageDataUrl) { toast.error('Image indisponible'); return; }
+      try {
+        const { shareToInstagramStory } = await import('@/lib/instagramStories');
+        const result = await shareToInstagramStory({
+          imageDataUrl,
+          contentUrl: publicUrl,
+        });
+        if (result.ok) {
+          if (result.method === 'download') {
+            toast.info('Image enregistrée — ouvre Instagram et ajoute-la à ta story.');
+          }
+        } else {
+          toast.error('Partage Instagram échoué');
+        }
+      } catch (e) {
+        console.warn('[sessionShare] instagram_story failed, falling back', e);
+        await shareSessionImageToSystem(imageDataUrl, sessionTitle);
+      }
+      return;
+    }
+
     case 'instagram_messages':
       if (imageDataUrl) {
         await shareSessionImageToSystem(imageDataUrl, sessionTitle);
