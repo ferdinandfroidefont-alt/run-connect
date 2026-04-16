@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserRound } from "lucide-react";
 import { MessageShortcutButton } from "@/components/coaching/tracking/MessageShortcutButton";
@@ -60,11 +59,6 @@ export function AthleteHeader({
             >
               {STATUS_LABEL[status]}
             </span>
-            {groupName ? (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 rounded-md">
-                {groupName}
-              </Badge>
-            ) : null}
           </div>
         </div>
       </div>

@@ -566,27 +566,6 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       />
 
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <ProgressRing percent={pct} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
-            <p className="text-[34px] font-black leading-none text-emerald-500">
-              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
-              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
-            </p>
-            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
-            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {trendPct >= 0 ? "+" : ""}
-              {trendPct}%
-            </p>
-            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
@@ -626,6 +605,27 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               </div>
             );
           })}
+        </div>
+      </div>
+
+      <div className="border-b border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-3">
+          <ProgressRing percent={pct} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
+            <p className="text-[34px] font-black leading-none text-emerald-500">
+              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
+              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
+            </p>
+            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
+            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {trendPct >= 0 ? "+" : ""}
+              {trendPct}%
+            </p>
+            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
+          </div>
         </div>
       </div>
 
