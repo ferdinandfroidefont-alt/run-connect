@@ -255,7 +255,7 @@ function StatNumber({ value, leftPct }: { value: number; leftPct: number }) {
         left: `${leftPct}%`,
         top: '63.6%',
         transform: 'translate(-50%, -50%)',
-        fontSize: 'clamp(18px, 6.2cqw, 30px)',
+        fontSize: 'clamp(14px, 5cqw, 24px)',
         lineHeight: 1,
       }}
     >
