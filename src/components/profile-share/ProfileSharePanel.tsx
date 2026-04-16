@@ -185,7 +185,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     left: '30%',
                     top: '50.3%',
                     transform: 'translate(-50%, 0)',
-                    fontSize: 'clamp(11px, 3.4cqw, 15px)',
+                    fontSize: 'clamp(10px, 3cqw, 13px)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -210,7 +210,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     top: '50.3%',
                     transform: 'translate(-50%, 0)',
                     maxWidth: '36%',
-                    fontSize: 'clamp(11px, 3.4cqw, 15px)',
+                    fontSize: 'clamp(10px, 3cqw, 13px)',
                     whiteSpace: 'nowrap',
                   }}
                 >
