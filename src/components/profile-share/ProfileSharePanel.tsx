@@ -86,7 +86,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center justify-center gap-1.5"
                   style={{
                     left: '50%',
-                    top: '30%',
+                    top: '28.5%',
                     transform: 'translate(-50%, 0)',
                     width: '90%',
                   }}
@@ -154,7 +154,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '30%',
-                    top: '52%',
+                    top: '50.3%',
                     transform: 'translate(-50%, 0)',
                     fontSize: 'clamp(11px, 3.4cqw, 15px)',
                     whiteSpace: 'nowrap',
@@ -171,7 +171,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute text-slate-900 font-bold truncate"
                   style={{
                     left: '70%',
-                    top: '52%',
+                    top: '50.3%',
                     transform: 'translate(-50%, 0)',
                     maxWidth: '36%',
                     fontSize: 'clamp(11px, 3.4cqw, 15px)',
@@ -192,21 +192,21 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </>
               )}
 
-              {/* I. Présence — uniquement le pourcentage entre l'icône et le texte du template */}
+              {/* I. Présence — uniquement le nombre, sans % */}
               {payload?.presenceRate != null && (
                 <div
                   className="absolute flex items-center justify-center"
                   style={{
                     left: '50%',
-                    top: '76.2%',
+                    top: '74.4%',
                     transform: 'translate(-50%, 0)',
                   }}
                 >
                   <span
                     className="font-extrabold text-[#0A84FF]"
-                    style={{ fontSize: 'clamp(13px, 4cqw, 18px)' }}
+                    style={{ fontSize: 'clamp(11px, 3.2cqw, 15px)' }}
                   >
-                    {payload.presenceRate}%
+                    {payload.presenceRate}
                   </span>
                 </div>
               )}
