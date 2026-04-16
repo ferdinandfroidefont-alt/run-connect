@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileShareTemplateId } from '@/lib/profileSharePayload';
-import { templateDimensions } from '@/lib/profileSharePayload';
 import { generateProfileShareImage, shareProfileImageToSystem } from '@/services/profileShareService';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
 import { Loader2, Share } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import profileShareCardImg from '@/assets/profile-share-card.png';
 
 const TEMPLATES: { id: ProfileShareTemplateId; label: string }[] = [
   { id: 'light_card', label: 'Carte claire' },
@@ -24,12 +24,9 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
   const [payload, setPayload] = useState<Awaited<ReturnType<typeof fetchProfileSharePayload>>>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [previewWidth, setPreviewWidth] = useState(360);
-  const previewWrapRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const templateId = TEMPLATES[0]?.id ?? 'light_card';
-  const { w: artW, h: artH } = templateDimensions(templateId);
 
   useEffect(() => {
     if (!active || !user?.id) return;
@@ -48,17 +45,6 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     })();
     return () => { cancelled = true; };
   }, [active, user?.id]);
-
-  // Mesure dynamique de la largeur du conteneur pour scaler l'artboard 1080x1080
-  useEffect(() => {
-    if (!previewWrapRef.current) return;
-    const el = previewWrapRef.current;
-    const update = () => setPreviewWidth(el.clientWidth);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [payload]);
 
   const handleShare = useCallback(async () => {
     if (!exportRef.current || !payload) return;
@@ -87,8 +73,6 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     }
   }, [payload, templateId]);
 
-  const scale = previewWidth > 0 ? previewWidth / artW : 1;
-
   return (
     <div className="min-w-0 max-w-full">
       <div className="flex min-h-0 flex-col">
@@ -103,32 +87,13 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
             'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
             compact ? 'pt-2' : 'pt-4'
           )}>
-            {/* Live dynamic preview of the share card (scaled artboard) */}
-            <div ref={previewWrapRef} className="w-full max-w-sm mx-auto">
-              <div
-                style={{
-                  width: '100%',
-                  height: artH * scale,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  borderRadius: 20,
-                  boxShadow: '0 8px 32px rgba(15,23,42,0.13)',
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: artW,
-                    height: artH,
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top left',
-                  }}
-                >
-                  <ProfileShareArtboard payload={payload} templateId={templateId} />
-                </div>
-              </div>
+            {/* Static preview image */}
+            <div className="w-full max-w-sm mx-auto">
+              <img
+                src={profileShareCardImg}
+                alt="Aperçu carte de partage"
+                className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
+              />
             </div>
 
             <button
@@ -155,7 +120,7 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         )}
       </div>
 
-      {/* Hidden artboard for export at full resolution */}
+      {/* Hidden artboard for export */}
       {payload && (
         <div className="pointer-events-none fixed -left-[12000px] top-0 z-0 overflow-hidden" aria-hidden>
           <ProfileShareArtboard ref={exportRef} payload={payload} templateId={templateId} />
