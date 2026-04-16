@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Share } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import profileShareCardImg from '@/assets/profile-share-card.png';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 type Props = {
   active?: boolean;
@@ -8,6 +11,28 @@ type Props = {
 };
 
 export function ProfileSharePanel({ compact = false }: Props) {
+  const { user } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setAvatarUrl(null);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!cancelled) setAvatarUrl(data?.avatar_url ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const handleShare = () => {
     // Partage de l'image statique à implémenter
   };
@@ -25,6 +50,27 @@ export function ProfileSharePanel({ compact = false }: Props) {
               alt="Aperçu carte de partage"
               className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
             />
+            {avatarUrl && (
+              <div
+                className="absolute overflow-hidden rounded-full"
+                style={{
+                  // Cercle de l'avatar dans la nouvelle image (mesuré sur 1254×1254) :
+                  // centre ≈ (50%, 14.7%), diamètre ≈ 19%.
+                  left: '50%',
+                  top: '14.7%',
+                  width: '19%',
+                  aspectRatio: '1 / 1',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt="Photo de profil"
+                  className="h-full w-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              </div>
+            )}
           </div>
 
           <button
