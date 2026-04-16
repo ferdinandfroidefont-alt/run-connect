@@ -92,21 +92,34 @@ function LightCardAvatarRing({
 }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full p-[4px]"
       style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '50%',
+        padding: 6,
         background: RC_LIGHT,
         boxShadow: '0 18px 52px rgba(0, 102, 255, 0.26)',
+        flexShrink: 0,
       }}
     >
-      <div className="rounded-full bg-white p-[11px]">
+      <div style={{ borderRadius: '50%', background: '#ffffff', padding: 8 }}>
         <div
-          className="flex items-center justify-center overflow-hidden rounded-full bg-slate-200"
-          style={{ width: innerSize, height: innerSize }}
+          style={{
+            width: innerSize,
+            height: innerSize,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: '#e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
+            <img src={avatarUrl} alt="" crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span className="font-bold text-slate-600" style={{ fontSize: innerSize * 0.28 }}>
+            <span style={{ fontSize: innerSize * 0.28, fontWeight: 700, color: '#475569' }}>
               {initials}
             </span>
           )}
@@ -160,15 +173,29 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
   ] as const;
 
   return (
-    <div className="mt-5 flex w-full min-w-0 gap-3">
+    <div style={{ display: 'flex', width: '100%', gap: 12, marginTop: 20 }}>
       {items.map((row) => (
         <div
           key={row.label}
-          className="flex min-h-[128px] min-w-0 flex-1 flex-col items-center justify-center gap-2 rounded-[16px] border border-slate-200/70 bg-white/95 px-1 py-4 shadow-[0_4px_20px_rgba(15,23,42,0.06)]"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 128,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            borderRadius: 16,
+            border: '1px solid rgba(226,232,240,0.7)',
+            background: 'rgba(255,255,255,0.95)',
+            padding: '16px 4px',
+            boxShadow: '0 4px 20px rgba(15,23,42,0.06)',
+          }}
         >
-          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
-          <span className="text-[36px] font-extrabold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
-          <span className="max-w-[100%] px-1 text-center text-[10.5px] font-semibold uppercase leading-[1.2] tracking-wide text-slate-500">{row.label}</span>
+          <row.icon style={{ width: 22, height: 22, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.2} />
+          <span style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{row.value}</span>
+          <span style={{ fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', lineHeight: 1.2, color: '#64748b', textAlign: 'center', maxWidth: '100%', padding: '0 4px' }}>{row.label}</span>
         </div>
       ))}
     </div>
@@ -183,59 +210,110 @@ const FOOTER_TOPO_SVG = encodeURIComponent(
 function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
   return (
     <div
-      className="relative flex w-full shrink-0 items-stretch overflow-hidden rounded-b-[36px]"
       style={{
+        position: 'relative',
+        display: 'flex',
+        width: '100%',
+        flexShrink: 0,
+        alignItems: 'stretch',
+        overflow: 'hidden',
+        borderRadius: '0 0 36px 36px',
         background: `linear-gradient(115deg, ${RC_LIGHT} 0%, #0052d4 42%, #0039a3 100%)`,
         boxShadow: '0 -12px 40px rgba(0, 82, 212, 0.15)',
       }}
     >
       <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-[55%] opacity-90"
         style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: '55%',
+          pointerEvents: 'none',
+          opacity: 0.9,
           backgroundImage: `url("data:image/svg+xml,${FOOTER_TOPO_SVG}")`,
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'right bottom',
           backgroundSize: 'cover',
         }}
       />
-      <div className="relative z-[1] flex min-h-[224px] w-full items-center gap-6 px-8 pb-8 pt-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <div className="flex items-start gap-4">
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          width: '100%',
+          minHeight: 224,
+          alignItems: 'center',
+          gap: 24,
+          padding: '32px 32px 32px 32px',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
             <img
               src="/brand/runconnect-splash-icon.png"
               alt=""
-              className="h-[80px] w-[80px] shrink-0 brightness-0 invert drop-shadow-md"
+              style={{ width: 80, height: 80, flexShrink: 0, filter: 'brightness(0) invert(1)', objectFit: 'contain' }}
             />
-            <div className="min-w-0 pt-1">
-              <p className="text-[16px] font-medium leading-tight text-white/95">Rejoins-moi sur</p>
-              <p className="mt-1 text-[28px] font-extrabold leading-none tracking-tight text-white">RunConnect</p>
+            <div style={{ minWidth: 0, paddingTop: 4 }}>
+              <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>Rejoins-moi sur</p>
+              <p style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#ffffff', margin: '4px 0 0 0' }}>RunConnect</p>
             </div>
           </div>
-          <a
-            href={payload.publicUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[14px] font-bold shadow-lg transition-opacity hover:opacity-95"
-            style={{ color: RC_LIGHT }}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              background: '#ffffff',
+              borderRadius: 50,
+              padding: '10px 20px',
+              width: 'fit-content',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            }}
           >
-            Ouvrir avec RunConnect
-            <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.8} style={{ color: RC_LIGHT }} />
-          </a>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: RC_LIGHT,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>Ouvrir avec RunConnect</span>
+          </div>
         </div>
 
-        <div className="h-[156px] w-px shrink-0 bg-white/40" aria-hidden />
+        <div style={{ height: 156, width: 1, flexShrink: 0, background: 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
 
-        <div className="flex shrink-0 flex-col items-end gap-2 self-center">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
           {payload.qrDataUrl ? (
             <img
               src={payload.qrDataUrl}
               alt=""
-              className="h-[132px] w-[132px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
+              style={{
+                width: 132,
+                height: 132,
+                borderRadius: 10,
+                border: '3px solid #ffffff',
+                background: '#ffffff',
+                padding: 6,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              }}
             />
           ) : (
-            <div className="h-[132px] w-[132px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
+            <div style={{ width: 132, height: 132, borderRadius: 10, border: '3px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)' }} />
           )}
-          <p className="max-w-[220px] text-right text-[11px] font-medium leading-tight text-white/90 [word-break:break-all]">
+          <p style={{ maxWidth: 220, textAlign: 'right', fontSize: 11, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.9)', wordBreak: 'break-all', margin: 0 }}>
             {payload.publicUrlDisplay}
           </p>
         </div>
@@ -403,92 +481,101 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
     }
 
     // light_card — 1080×1080, aligné maquette partage
+    const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+
     return (
       <div
         ref={ref}
-        className="relative flex flex-col overflow-hidden rounded-[36px]"
         style={{
+          position: 'relative',
           width: w,
           height: h,
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          borderRadius: 36,
+          fontFamily: fontStack,
           boxShadow: '0 24px 64px rgba(15, 23, 42, 0.12)',
         }}
       >
         <ShareMapBackdropImg
           mapUrl={payload.mapBackgroundUrl}
-          className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
-          style={{ zIndex: 0 }}
+          style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}
         />
         <div
-          className="pointer-events-none absolute inset-0"
           style={{
+            position: 'absolute',
+            inset: 0,
             zIndex: 1,
-            background:
-              'linear-gradient(to bottom, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.82) 40%, rgba(255,255,255,0.55) 70%, rgba(255,255,255,0.25) 100%)',
+            pointerEvents: 'none',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.68) 40%, rgba(255,255,255,0.40) 70%, rgba(255,255,255,0.15) 100%)',
           }}
         />
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
+            position: 'absolute',
+            inset: 0,
             zIndex: 1,
+            pointerEvents: 'none',
+            opacity: 0.35,
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`,
           }}
         />
 
-        <div className="absolute left-10 top-9 z-[2]">
-          <RunConnectBrandHeader large />
+        {/* RunConnect brand header */}
+        <div style={{ position: 'absolute', left: 40, top: 36, zIndex: 2, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/brand/runconnect-splash-icon.png" alt="" style={{ width: 44, height: 44, flexShrink: 0 }} />
+          <span style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.01em', color: '#0f172a' }}>RunConnect</span>
         </div>
 
-        <div className="relative z-[2] flex h-full min-h-0 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col items-center px-10 pb-3 pt-[72px]">
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minHeight: 0, padding: '72px 40px 12px' }}>
             <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={220} />
 
-            <div className="mt-5 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-3">
-              <h1 className="max-w-full text-center text-[50px] font-extrabold leading-[1.04] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
+            {/* Name + badge */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 20, maxWidth: 920, width: '100%' }}>
+              <h1 style={{ fontSize: 50, fontWeight: 800, lineHeight: 1.04, letterSpacing: '-0.02em', color: '#0f172a', textAlign: 'center', margin: 0, overflowWrap: 'anywhere', maxWidth: '100%' }}>
                 {payload.displayName}
               </h1>
               {payload.isPremium ? <VerifiedPremiumBadge size={38} /> : null}
             </div>
 
-            <p className="mt-2 max-w-[90%] truncate text-center text-[22px] text-slate-500">@{payload.username}</p>
+            {/* Username */}
+            <p style={{ marginTop: 8, fontSize: 22, color: '#64748b', textAlign: 'center', maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '8px 0 0 0' }}>
+              @{payload.username}
+            </p>
 
-            <div className="mt-3.5 flex max-w-[94%] items-start gap-3 rounded-full bg-sky-100/95 px-6 py-3 shadow-sm">
-              <Users className="mt-0.5 h-[26px] w-[26px] shrink-0" strokeWidth={2.2} style={{ color: RC_LIGHT }} />
-              <div className="min-w-0 text-left">
-                <p className="text-[16px] font-bold leading-tight" style={{ color: RC_LIGHT }}>
-                  {payload.roleLinePrimary}
-                </p>
+            {/* Role pill */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 14, maxWidth: '94%', borderRadius: 50, background: 'rgba(224,242,254,0.95)', padding: '12px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <Users style={{ width: 26, height: 26, flexShrink: 0, marginTop: 2, color: RC_LIGHT }} strokeWidth={2.2} />
+              <div style={{ minWidth: 0, textAlign: 'left' }}>
+                <p style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.3, color: RC_LIGHT, margin: 0 }}>{payload.roleLinePrimary}</p>
                 {payload.roleLineSecondary ? (
-                  <p className="mt-0.5 text-[13.5px] font-normal leading-snug" style={{ color: '#1d4ed8' }}>
-                    {payload.roleLineSecondary}
-                  </p>
+                  <p style={{ fontSize: 13.5, fontWeight: 400, lineHeight: 1.4, color: '#1d4ed8', margin: '2px 0 0 0' }}>{payload.roleLineSecondary}</p>
                 ) : null}
               </div>
             </div>
 
-            <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[17px] font-semibold text-slate-800">
-              <span className="inline-flex min-w-0 items-center gap-2">
-                <MapPin className="h-[19px] w-[19px] shrink-0 text-slate-900" strokeWidth={2.3} />
-                <span className="min-w-0 [overflow-wrap:anywhere]">{payload.locationLine}</span>
+            {/* Location + sport */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '4px 20px', marginTop: 16, maxWidth: '96%', fontSize: 17, fontWeight: 600, color: '#1e293b' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <MapPin style={{ width: 19, height: 19, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.3} />
+                <span style={{ minWidth: 0, overflowWrap: 'anywhere' as const }}>{payload.locationLine}</span>
               </span>
-              <span className="inline-block h-5 w-px shrink-0 bg-slate-300" aria-hidden />
-              <span className="inline-flex min-w-0 items-center gap-2">
-                <Footprints className="h-[19px] w-[19px] shrink-0 text-slate-900" strokeWidth={2.3} />
-                <span className="min-w-0 [overflow-wrap:anywhere]">{payload.sportLabel}</span>
+              <span style={{ display: 'inline-block', height: 20, width: 1, flexShrink: 0, background: '#cbd5e1' }} aria-hidden="true" />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <Footprints style={{ width: 19, height: 19, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.3} />
+                <span style={{ minWidth: 0, overflowWrap: 'anywhere' as const }}>{payload.sportLabel}</span>
               </span>
             </div>
 
             <LightCardStatsRow payload={payload} />
 
+            {/* Presence badge */}
             {payload.presenceRate != null ? (
-              <div
-                className="mt-4 inline-flex items-center gap-2 rounded-full border-2 bg-white px-5 py-2 shadow-sm"
-                style={{ borderColor: RC_LIGHT }}
-              >
-                <Users className="h-[18px] w-[18px] shrink-0" strokeWidth={2.3} style={{ color: RC_LIGHT }} />
-                <span className="text-[15px] font-bold" style={{ color: RC_LIGHT }}>
-                  {payload.presenceRate}% présence
-                </span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, borderRadius: 50, border: `2px solid ${RC_LIGHT}`, background: '#ffffff', padding: '8px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <Users style={{ width: 18, height: 18, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.3} />
+                <span style={{ fontSize: 15, fontWeight: 700, color: RC_LIGHT }}>{payload.presenceRate}% présence</span>
               </div>
             ) : null}
           </div>
