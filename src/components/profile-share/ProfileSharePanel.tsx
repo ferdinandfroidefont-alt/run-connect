@@ -234,8 +234,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 <div
                   className="absolute flex items-center justify-center"
                   style={{
-                    left: '50%',
-                    top: '74.4%',
+                    left: '47%',
+                    top: '73.6%',
                     transform: 'translate(-50%, 0)',
                   }}
                 >
