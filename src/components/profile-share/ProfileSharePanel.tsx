@@ -1,23 +1,21 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileShareTemplateId } from '@/lib/profileSharePayload';
-import { templateDimensions } from '@/lib/profileSharePayload';
 import { generateProfileShareImage, shareProfileImageToSystem } from '@/services/profileShareService';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
 import { Loader2, Share } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import profileShareCardImg from '@/assets/profile-share-card.png';
 
 const TEMPLATES: { id: ProfileShareTemplateId; label: string }[] = [
   { id: 'light_card', label: 'Carte claire' },
 ];
 
 type Props = {
-  /** Charge les données seulement quand true (ex. onglet paramètres visible). */
   active?: boolean;
-  /** Section compacte dans les réglages (pas de marge hero). */
   compact?: boolean;
 };
 
@@ -25,13 +23,10 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
   const { user } = useAuth();
   const [payload, setPayload] = useState<Awaited<ReturnType<typeof fetchProfileSharePayload>>>(null);
   const [loading, setLoading] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
   const [exporting, setExporting] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const templateId = TEMPLATES[activeIndex]?.id ?? 'light_card';
+  const templateId = TEMPLATES[0]?.id ?? 'light_card';
 
   useEffect(() => {
     if (!active || !user?.id) return;
@@ -45,36 +40,11 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         .maybeSingle();
       const referral = refRow?.referral_code ?? null;
       const data = await fetchProfileSharePayload(user.id, referral);
-      if (!cancelled) {
-        setPayload(data);
-        setActiveIndex(0);
-      }
+      if (!cancelled) setPayload(data);
       if (!cancelled) setLoading(false);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [active, user?.id]);
-
-  useEffect(() => {
-    if (!scrollRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.55) {
-            const idx = cardRefs.current.indexOf(entry.target as HTMLDivElement);
-            if (idx >= 0) setActiveIndex(idx);
-          }
-        }
-      },
-      { root: scrollRef.current, threshold: 0.55 }
-    );
-
-    for (const el of cardRefs.current) {
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [payload]);
 
   const handleShare = useCallback(async () => {
     if (!exportRef.current || !payload) return;
@@ -93,9 +63,7 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
           }
           return;
         }
-      } catch {
-        /* fallback */
-      }
+      } catch { /* fallback */ }
       await shareProfileImageToSystem(dataUrl, payload.displayName);
     } catch (e) {
       console.error(e);
@@ -105,16 +73,8 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     }
   }, [payload, templateId]);
 
-  const previewScale = (id: ProfileShareTemplateId) => {
-    const { w, h } = templateDimensions(id);
-    const targetH = compact ? 320 : 420;
-    const s = targetH / h;
-    return { scale: s, boxW: Math.round(w * s), boxH: Math.round(h * s) };
-  };
-
   return (
     <div className="min-w-0 max-w-full">
-
       <div className="flex min-h-0 flex-col">
         {loading && (
           <div className="flex justify-center py-10">
@@ -123,59 +83,17 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         )}
 
         {!loading && payload && (
-          <div
-            className={cn(
-              'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-              compact ? 'pt-2' : 'pt-4'
-            )}
-          >
-            <div
-              ref={scrollRef}
-              className="flex w-full max-w-full snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ justifyContent: TEMPLATES.length === 1 ? 'center' : undefined }}
-            >
-              {TEMPLATES.map((meta, i) => {
-                const { scale, boxW, boxH } = previewScale(meta.id);
-                const dim = templateDimensions(meta.id);
-                return (
-                  <div
-                    key={meta.id}
-                    ref={(el) => {
-                      cardRefs.current[i] = el;
-                    }}
-                    className="shrink-0 snap-center first:ml-auto last:mr-auto"
-                    style={{ width: boxW }}
-                  >
-                    <div
-                      className="overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
-                      style={{ width: boxW, height: boxH }}
-                    >
-                      <div
-                        style={{
-                          width: dim.w,
-                          height: dim.h,
-                          transform: `scale(${scale})`,
-                          transformOrigin: 'top left',
-                        }}
-                      >
-                        <ProfileShareArtboard payload={payload} templateId={meta.id} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-1.5">
-              {TEMPLATES.map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'h-[7px] rounded-full transition-all duration-300',
-                    i === activeIndex ? 'w-6 bg-primary' : 'w-[7px] bg-muted-foreground/30'
-                  )}
-                />
-              ))}
+          <div className={cn(
+            'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+            compact ? 'pt-2' : 'pt-4'
+          )}>
+            {/* Static preview image */}
+            <div className="w-full max-w-sm mx-auto">
+              <img
+                src={profileShareCardImg}
+                alt="Aperçu carte de partage"
+                className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
+              />
             </div>
 
             <button
@@ -202,6 +120,7 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         )}
       </div>
 
+      {/* Hidden artboard for export */}
       {payload && (
         <div className="pointer-events-none fixed -left-[12000px] top-0 z-0 overflow-hidden" aria-hidden>
           <ProfileShareArtboard ref={exportRef} payload={payload} templateId={templateId} />
