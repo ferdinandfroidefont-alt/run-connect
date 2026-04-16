@@ -50,7 +50,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
           compact ? 'pt-2' : 'pt-4'
         )}>
           {/* Card: image template figée + overlay */}
-          <div className="relative w-full max-w-sm mx-auto">
+          <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
             <img
               src={profileShareCardImg}
               alt="Aperçu carte de partage"
