@@ -14,6 +14,8 @@ import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileS
 import { templateDimensions } from '@/lib/profileSharePayload';
 
 const RC = '#2563eb';
+/** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
+const RC_LIGHT = '#0066ff';
 
 function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
   return (
@@ -72,7 +74,9 @@ function AvatarRing({
   );
 }
 
-/** Avatar + anneau bleu épais (carte claire). */
+/**
+ * Maquette : bordure blanche épaisse autour de la photo, puis fin anneau bleu vif (pas l’inverse).
+ */
 function LightCardAvatarRing({
   avatarUrl,
   initials,
@@ -84,13 +88,13 @@ function LightCardAvatarRing({
 }) {
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full p-[7px]"
+      className="flex shrink-0 items-center justify-center rounded-full p-[3px]"
       style={{
-        background: RC,
-        boxShadow: '0 16px 48px rgba(37,99,235,0.32)',
+        background: RC_LIGHT,
+        boxShadow: '0 18px 52px rgba(0, 102, 255, 0.28)',
       }}
     >
-      <div className="rounded-full bg-white p-[3px] shadow-inner">
+      <div className="rounded-full bg-white p-[10px] shadow-inner">
         <div
           className="flex items-center justify-center overflow-hidden rounded-full bg-slate-200"
           style={{ width: innerSize, height: innerSize }}
@@ -142,16 +146,13 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
   ] as const;
 
   return (
-    <div className="mt-5 flex w-full min-w-0 rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_rgba(15,23,42,0.06)]">
-      {items.map((row, idx) => (
+    <div className="mt-5 flex w-full min-w-0 gap-2.5">
+      {items.map((row) => (
         <div
           key={row.label}
-          className={cn(
-            'flex min-h-[112px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 px-1 py-3',
-            idx < items.length - 1 ? 'border-r border-slate-200/90' : ''
-          )}
+          className="flex min-h-[118px] min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-[14px] border border-slate-200/90 bg-white px-1 py-3 shadow-[0_3px_14px_rgba(15,23,42,0.07)]"
         >
-          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.25} style={{ color: RC }} />
+          <row.icon className="h-[22px] w-[22px] shrink-0" strokeWidth={2.25} style={{ color: RC_LIGHT }} />
           <span className="text-[31px] font-bold tabular-nums leading-none tracking-tight text-slate-900">{row.value}</span>
           <span className="max-w-[100%] px-1 text-center text-[10px] font-semibold leading-[1.2] text-slate-500">{row.label}</span>
         </div>
@@ -160,50 +161,70 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
   );
 }
 
+/** Motif topographique discret (côté droit du bandeau), comme la maquette. */
+const FOOTER_TOPO_SVG = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" preserveAspectRatio="none"><path fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1" d="M0 120 Q100 100 200 130 T400 110"/><path fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1" d="M0 140 Q120 125 240 150 T400 130"/><path fill="none" stroke="white" stroke-opacity="0.08" stroke-width="1" d="M0 80 Q80 60 160 90 T320 70 T400 85"/><path fill="none" stroke="white" stroke-opacity="0.09" stroke-width="1" d="M200 0 Q220 80 180 160"/></svg>'
+);
+
 function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
   return (
     <div
-      className="flex w-full shrink-0 items-center justify-between gap-5 px-8 pb-8 pt-7"
+      className="relative flex w-full shrink-0 items-stretch overflow-hidden rounded-b-[36px]"
       style={{
-        background: `linear-gradient(118deg, ${RC} 0%, #1d4ed8 48%, #1e3a8a 100%)`,
-        boxShadow: '0 -12px 40px rgba(37, 99, 235, 0.12)',
+        background: `linear-gradient(115deg, ${RC_LIGHT} 0%, #0052d4 42%, #0039a3 100%)`,
+        boxShadow: '0 -12px 40px rgba(0, 82, 212, 0.15)',
       }}
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            src="/brand/runconnect-splash-icon.png"
-            alt=""
-            className="h-[68px] w-[68px] shrink-0 brightness-0 invert drop-shadow-md"
-          />
-          <p className="min-w-0 text-[19px] font-semibold leading-snug text-white">
-            Rejoins-moi sur <span className="font-extrabold">RunConnect</span>
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 w-[55%] opacity-90"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,${FOOTER_TOPO_SVG}")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right bottom',
+          backgroundSize: 'cover',
+        }}
+      />
+      <div className="relative z-[1] flex min-h-[200px] w-full items-center gap-6 px-7 pb-8 pt-8">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex items-start gap-4">
+            <img
+              src="/brand/runconnect-splash-icon.png"
+              alt=""
+              className="h-[76px] w-[76px] shrink-0 brightness-0 invert drop-shadow-md"
+            />
+            <div className="min-w-0 pt-0.5">
+              <p className="text-[15px] font-medium leading-tight text-white/95">Rejoins-moi sur</p>
+              <p className="mt-0.5 text-[26px] font-extrabold leading-none tracking-tight text-white">RunConnect</p>
+            </div>
+          </div>
+          <a
+            href={payload.publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold shadow-lg transition-opacity hover:opacity-95"
+            style={{ color: RC_LIGHT }}
+          >
+            Ouvrir avec RunConnect
+            <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.8} style={{ color: RC_LIGHT }} />
+          </a>
+        </div>
+
+        <div className="h-[148px] w-px shrink-0 bg-white/45" aria-hidden />
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">
+          {payload.qrDataUrl ? (
+            <img
+              src={payload.qrDataUrl}
+              alt=""
+              className="h-[128px] w-[128px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
+            />
+          ) : (
+            <div className="h-[128px] w-[128px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
+          )}
+          <p className="max-w-[220px] text-right text-[10px] font-medium leading-tight text-white/90 [word-break:break-all]">
+            {payload.publicUrlDisplay}
           </p>
         </div>
-        <a
-          href={payload.publicUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex w-max max-w-full items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-bold shadow-lg transition-opacity hover:opacity-95"
-          style={{ color: RC }}
-        >
-          Ouvrir avec RunConnect
-          <ChevronRight className="h-4 w-4 shrink-0" strokeWidth={2.8} style={{ color: RC }} />
-        </a>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
-        {payload.qrDataUrl ? (
-          <img
-            src={payload.qrDataUrl}
-            alt=""
-            className="h-[124px] w-[124px] rounded-[10px] border-[3px] border-white bg-white p-1.5 shadow-lg"
-          />
-        ) : (
-          <div className="h-[124px] w-[124px] rounded-[10px] border-[3px] border-white/35 bg-white/10" />
-        )}
-        <p className="max-w-[210px] text-right text-[10px] font-medium leading-tight text-white/90 [word-break:break-all]">
-          {payload.publicUrlDisplay}
-        </p>
       </div>
     </div>
   );
@@ -371,10 +392,10 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             src={payload.mapBackgroundUrl}
             alt=""
             crossOrigin="anonymous"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.06] object-cover opacity-[0.38]"
+            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.06] object-cover opacity-[0.44]"
           />
         ) : null}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.94] via-white/[0.91] to-white/[0.95]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.92] via-white/[0.88] to-white/[0.93]" />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
@@ -388,7 +409,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
 
         <div className="relative z-10 flex h-full min-h-0 flex-col">
           <div className="flex min-h-0 flex-1 flex-col items-center px-10 pb-3 pt-[72px]">
-            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={200} />
+            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={188} />
 
             <div className="mt-4 flex w-full max-w-[920px] flex-wrap items-center justify-center gap-2.5">
               <h1 className="max-w-full text-center text-[40px] font-bold leading-[1.08] tracking-tight text-slate-900 [overflow-wrap:anywhere]">
@@ -399,26 +420,28 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
 
             <p className="mt-1 max-w-[90%] truncate text-center text-[17px] text-slate-500">@{payload.username}</p>
 
-            <div className="mt-3 flex max-w-[94%] items-start gap-2.5 rounded-full bg-sky-100 px-5 py-2.5 shadow-sm">
-              <Users className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: RC }} />
+            <div className="mt-3 flex max-w-[94%] items-start gap-2.5 rounded-full bg-sky-100/95 px-5 py-2.5 shadow-sm">
+              <Users className="mt-0.5 h-6 w-6 shrink-0" strokeWidth={2.25} style={{ color: RC_LIGHT }} />
               <div className="min-w-0 text-left">
-                <p className="text-[15px] font-bold leading-tight" style={{ color: RC }}>
+                <p className="text-[15px] font-bold leading-tight" style={{ color: RC_LIGHT }}>
                   {payload.roleLinePrimary}
                 </p>
                 {payload.roleLineSecondary ? (
-                  <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-slate-800">{payload.roleLineSecondary}</p>
+                  <p className="mt-0.5 text-[13px] font-normal leading-snug" style={{ color: '#1d4ed8' }}>
+                    {payload.roleLineSecondary}
+                  </p>
                 ) : null}
               </div>
             </div>
 
             <div className="mt-4 flex max-w-[96%] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[15px] font-semibold text-slate-800">
               <span className="inline-flex min-w-0 items-center gap-1.5">
-                <MapPin className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
+                <MapPin className="h-4 w-4 shrink-0 text-slate-900" strokeWidth={2.4} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.locationLine}</span>
               </span>
               <span className="inline-block h-4 w-px shrink-0 bg-slate-300" aria-hidden />
               <span className="inline-flex min-w-0 items-center gap-1.5">
-                <Footprints className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
+                <Footprints className="h-4 w-4 shrink-0 text-slate-900" strokeWidth={2.4} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{payload.sportLabel}</span>
               </span>
             </div>
@@ -426,9 +449,12 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             <LightCardStatsRow payload={payload} />
 
             {payload.presenceRate != null ? (
-              <div className="mt-3.5 inline-flex items-center gap-2 rounded-full bg-sky-100 px-4 py-1.5 shadow-sm">
-                <Users className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC }} />
-                <span className="text-[14px] font-bold" style={{ color: RC }}>
+              <div
+                className="mt-3.5 inline-flex items-center gap-2 rounded-full border-2 bg-white px-4 py-1.5 shadow-sm"
+                style={{ borderColor: RC_LIGHT }}
+              >
+                <Users className="h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: RC_LIGHT }} />
+                <span className="text-[14px] font-bold" style={{ color: RC_LIGHT }}>
                   {payload.presenceRate}% présence
                 </span>
               </div>
