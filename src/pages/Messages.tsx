@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo, us
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { applyWebChromeForTheme } from "@/lib/iosStatusBarTheme";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -160,6 +161,7 @@ interface Message {
 
 const Messages = () => {
   const { user, subscriptionInfo } = useAuth();
+  const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -2874,7 +2876,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <h1 className="text-[17px] font-semibold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}

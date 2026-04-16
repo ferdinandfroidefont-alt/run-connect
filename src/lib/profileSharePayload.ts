@@ -8,15 +8,16 @@ export interface ProfileSharePayload {
   username: string;
   avatarUrl: string | null;
   initials: string;
-  roleLabel: string;
+  /** Badge texte type pilule : Coach / Athlète / Coach • Nom du club */
+  rolePillLabel: string;
+  /** Libellé sport en français, sans emoji */
   sportLabel: string;
+  /** Ex. « 🇫🇷 France » — jamais « FR France » */
   locationLine: string;
-  clubLine: string | null;
   sessionsCreated: number;
   sessionsJoined: number;
-  modelsCount: number;
-  routesPublished: number;
-  participationsReceived: number;
+  followersCount: number;
+  followingCount: number;
   presenceRate: number | null;
   publicUrl: string;
   publicUrlDisplay: string;
@@ -29,24 +30,29 @@ export function templateDimensions(id: ProfileShareTemplateId): { w: number; h: 
   return { w: 1080, h: 1080 };
 }
 
-function sportLabelFromProfile(favoriteSport: string | null | undefined): string {
-  if (!favoriteSport?.trim()) return 'Sport';
-  const key = favoriteSport.trim() as ProfileSportKey;
-  if (key in PROFILE_SPORT_LABELS) return PROFILE_SPORT_LABELS[key].label;
-  return favoriteSport;
+/** Localisation pour le visuel de partage (drapeau + nom pays, cohérent FR). */
+export function formatProfileShareLocation(country: string | null | undefined): string {
+  if (!country?.trim()) return 'RunConnect';
+  const code = country.trim().toUpperCase();
+  return getCountryLabel(code) ?? country;
 }
 
-export function buildRoleLabel(input: {
-  isAdmin: boolean;
-  sessionsCreated: number;
-  modelsCount: number;
-}): string {
-  if (input.isAdmin) return 'Administrateur';
-  const parts: string[] = [];
-  if (input.modelsCount > 0) parts.push('Coach');
-  if (input.sessionsCreated > 0) parts.push('Organisateur');
-  if (parts.length === 0) return 'Membre RunConnect';
-  return [...new Set(parts)].join(' • ');
+function sportLabelFromProfile(favoriteSport: string | null | undefined): string {
+  if (!favoriteSport?.trim()) return 'Sport';
+  const first = favoriteSport.split(',')[0].trim() as ProfileSportKey;
+  if (first in PROFILE_SPORT_LABELS) return PROFILE_SPORT_LABELS[first as ProfileSportKey].label;
+  return favoriteSport.split(',')[0].trim();
+}
+
+/**
+ * Coach si modèles coaching ou séances coaching club ; sinon Athlète.
+ * Avec club : « Coach • Nom » ou « Athlète • Nom » (jamais « Administrateur »).
+ */
+export function buildRolePillLabel(input: { isCoach: boolean; clubName: string | null }): string {
+  const role = input.isCoach ? 'Coach' : 'Athlète';
+  const club = input.clubName?.trim();
+  if (club) return `${role} • ${club}`;
+  return role;
 }
 
 export function buildProfileSharePayloadFromData(input: {
@@ -56,48 +62,40 @@ export function buildProfileSharePayloadFromData(input: {
   favorite_sport: string | null;
   country: string | null;
   is_premium: boolean | null;
-  is_admin: boolean | null;
   clubName: string | null;
+  isCoach: boolean;
   sessionsCreated: number;
   sessionsJoined: number;
-  modelsCount: number;
-  routesPublished: number;
-  participationsReceived: number;
+  followersCount: number;
+  followingCount: number;
   presenceRate: number | null;
   publicUrl: string;
   qrDataUrl: string | null;
 }): ProfileSharePayload {
   const displayName = input.display_name?.trim() || input.username;
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase())
-    .join('') || input.username.slice(0, 2).toUpperCase();
+  const initials =
+    displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase())
+      .join('') || input.username.slice(0, 2).toUpperCase();
 
   const sportLabel = sportLabelFromProfile(input.favorite_sport);
-  const locationLine = input.country
-    ? getCountryLabel(input.country) ?? input.country
-    : 'RunConnect';
+  const locationLine = formatProfileShareLocation(input.country);
 
   return {
     displayName,
     username: input.username,
     avatarUrl: input.avatar_url,
     initials,
-    roleLabel: buildRoleLabel({
-      isAdmin: !!input.is_admin,
-      sessionsCreated: input.sessionsCreated,
-      modelsCount: input.modelsCount,
-    }),
+    rolePillLabel: buildRolePillLabel({ isCoach: input.isCoach, clubName: input.clubName }),
     sportLabel,
     locationLine,
-    clubLine: input.clubName,
     sessionsCreated: input.sessionsCreated,
     sessionsJoined: input.sessionsJoined,
-    modelsCount: input.modelsCount,
-    routesPublished: input.routesPublished,
-    participationsReceived: input.participationsReceived,
+    followersCount: input.followersCount,
+    followingCount: input.followingCount,
     presenceRate: input.presenceRate,
     publicUrl: input.publicUrl,
     publicUrlDisplay: input.publicUrl.replace(/^https?:\/\//, ''),

@@ -116,10 +116,10 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
 type UiDayStatus = "done" | "missed" | "pending" | "none";
 
 const STATUS_CHIP_BY_DAY: Record<UiDayStatus, { short: string; className: string }> = {
-  done: { short: "Fait", className: "rounded-md bg-emerald-500 text-white" },
-  missed: { short: "Non fait", className: "rounded-md bg-red-500 text-white" },
-  pending: { short: "En attente", className: "rounded-md bg-orange-400 text-white" },
-  none: { short: "Aucune", className: "rounded-md bg-zinc-300 text-white dark:bg-zinc-600" },
+  done: { short: "Fait", className: "bg-emerald-500 text-white" },
+  missed: { short: "Non fait", className: "bg-red-500 text-white" },
+  pending: { short: "En attente", className: "bg-orange-400 text-white" },
+  none: { short: "Aucune", className: "bg-zinc-300 text-white dark:bg-zinc-600" },
 };
 
 const toUiStatus = (status?: string): UiDayStatus => {
@@ -406,8 +406,9 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   // ==================== MODE LISTE ====================
   if (!selectedAthlete) {
     return (
-      <div className="-mx-ios-4 space-y-0">
-        <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div className="space-y-0">
+        {/* Reminder button */}
+        <div className="border-b border-border bg-card px-4 py-2.5">
           <Button
             variant="outline"
             size="sm"
@@ -419,45 +420,43 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             Relancer les athlètes en retard
           </Button>
         </div>
-        <div className="border-b border-border bg-card px-ios-4 py-3">
+        {/* Search */}
+        <div className="border-b border-border bg-card px-4 py-2.5">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un athlète..."
-              className="h-11 rounded-lg border-border/40 bg-secondary/40 pl-10 text-[15px]"
+              className="h-10 rounded-lg border-border/60 bg-background pl-9 text-[15px]"
             />
           </div>
         </div>
 
         {loading ? (
-          <div className="border-b border-border bg-card px-ios-4 py-2">
-            <div className="space-y-0 divide-y divide-border/60">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-14 animate-pulse bg-secondary/30" />
-              ))}
-            </div>
+          <div className="divide-y divide-border border-b border-border bg-card">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-14 animate-pulse bg-secondary/40" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="border-b border-border bg-card px-ios-4 py-10 text-center">
-            <p className="text-[16px] font-semibold text-foreground">
+          <div className="border-b border-border bg-secondary/30 px-4 py-10 text-center">
+            <p className="mb-1 text-[16px] font-semibold text-foreground">
               {search ? "Aucun athlète trouvé" : "Aucun athlète"}
             </p>
-            <p className="mt-1 text-[13px] text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               {search ? "Essayez un autre nom" : "Aucun membre dans ce club"}
             </p>
           </div>
         ) : (
-          <div className="border-b border-border bg-card">
+          <div className="divide-y divide-border border-b border-border bg-card">
             {filtered.map((athlete, idx) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
                 <div key={athlete.userId}>
-                  {idx > 0 && <div className="h-px bg-border/50" />}
                   <button
                     onClick={() => onSelectAthlete(athlete.userId)}
-                    className="flex w-full items-center gap-3 px-ios-4 py-3 text-left transition-colors active:bg-secondary/50"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/60"
                   >
                     {/* Avatar */}
                     <div className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -555,7 +554,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   };
 
   return (
-    <div className="-mx-ios-4 space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
+    <div className="space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
       <AthleteHeader
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
@@ -566,30 +565,49 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         onViewProfile={() => navigate(`/profile/${selectedAthlete.userId}`)}
       />
 
-      <div className="bg-card border-b border-border px-ios-4 py-3">
-        <div className="flex items-center justify-between gap-2">
+      <div className="border-b border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-3">
+          <ProgressRing percent={pct} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
+            <p className="text-[34px] font-black leading-none text-emerald-500">
+              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
+              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
+            </p>
+            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
+            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {trendPct >= 0 ? "+" : ""}
+              {trendPct}%
+            </p>
+            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-border bg-card px-4 py-3">
+        <div className="flex items-center justify-between">
           <button
-            type="button"
             onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 active:bg-secondary/80"
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
             aria-label="Semaine précédente"
           >
             <ChevronLeft className="h-4 w-4 text-primary" />
           </button>
-          <p className="inline-flex min-w-0 items-center justify-center gap-1.5 truncate text-[15px] font-semibold text-foreground">
+          <p className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-foreground">
             {weekLabel}
-            <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
           </p>
           <button
-            type="button"
             onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 active:bg-secondary/80"
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
             aria-label="Semaine suivante"
           >
             <ChevronRight className="h-4 w-4 text-primary" />
           </button>
         </div>
-        <div className="mt-3 grid grid-cols-7 gap-1">
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
           {weekDays.map((day) => {
             const dayKey = format(day, "yyyy-MM-dd");
             const dayData = selectedAthlete.days[dayKey];
@@ -600,50 +618,27 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                 <p className="text-[11px] font-semibold text-foreground">{format(day, "EEE", { locale: fr }).slice(0, 3)}</p>
                 <p className="text-[10px] text-muted-foreground">{format(day, "d", { locale: fr })}</p>
                 <div className="mt-1 flex justify-center">
-                  <span
-                    className={`inline-flex h-6 w-6 items-center justify-center text-[10px] font-semibold ${conf.className}`}
-                  >
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold shadow-sm ${conf.className}`}>
                     {status === "done" ? "✓" : status === "missed" ? "✕" : status === "pending" ? "⏳" : "–"}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">{conf.short}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">{conf.short}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      <div className="bg-card border-b border-border px-ios-4 py-3">
-        <div className="flex items-center gap-3">
-          <ProgressRing percent={pct} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold text-foreground">Cette semaine</p>
-            <p className="text-[28px] font-black leading-none text-emerald-500">
-              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
-              <span className="ml-1 text-[18px] font-semibold text-foreground/70">séances</span>
-            </p>
-            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
-          </div>
-          <div className="shrink-0 border-l border-border/60 pl-3 text-right">
-            <p className={`text-[15px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {trendPct >= 0 ? "+" : ""}
-              {trendPct}%
-            </p>
-            <p className="text-[11px] text-muted-foreground">vs sem. dernière</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-ios-4 pt-4">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[20px] font-bold leading-tight tracking-tight text-foreground">Séances de la semaine</p>
-          <button type="button" className="shrink-0 text-[13px] font-semibold text-primary">
+      <div className="border-b border-border bg-card px-4 pb-3 pt-2">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[17px] font-semibold leading-tight text-foreground">Séances de la semaine</p>
+          <button type="button" className="text-[13px] font-semibold text-primary">
             Tout voir
           </button>
         </div>
-        <div className="space-y-2.5">
+        <div className="flex flex-col divide-y divide-border border-t border-border">
           {sessionsForWeek.length === 0 ? (
-            <div className="border border-border/60 bg-card px-3 py-4 text-center">
+            <div className="bg-secondary/20 px-3 py-6 text-center">
               <p className="text-[13px] text-muted-foreground">Aucune séance planifiée cette semaine.</p>
             </div>
           ) : (
@@ -666,11 +661,11 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 px-ios-4 pt-3">
+      <div className="grid grid-cols-3 gap-px border-b border-border bg-border pt-0">
         <Button
           type="button"
           variant="outline"
-          className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5"
+          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
           onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
         >
           <MessageCircle className="mr-1.5 h-4 w-4" />
@@ -679,7 +674,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         <Button
           type="button"
           variant="outline"
-          className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5"
+          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
           onClick={() =>
             onOpenPlanForAthlete?.(
               selectedAthlete.userId,
@@ -692,13 +687,13 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           <ClipboardList className="mr-1.5 h-4 w-4" />
           Modifier semaine
         </Button>
-        <Button type="button" variant="outline" className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5" onClick={() => void handleResendSession()}>
+        <Button type="button" variant="outline" className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card" onClick={() => void handleResendSession()}>
           <Send className="mr-1.5 h-4 w-4" />
           Renvoyer séance
         </Button>
       </div>
       {completionStreak > 0 ? (
-        <p className="px-ios-4 pb-1 text-center text-[11px] font-medium text-muted-foreground">
+        <p className="border-b border-border bg-secondary/20 px-4 py-2 text-center text-[11px] font-medium text-muted-foreground">
           Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
         </p>
       ) : null}

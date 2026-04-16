@@ -1,5 +1,7 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserRound, MessageCircle } from "lucide-react";
+import { UserRound } from "lucide-react";
+import { MessageShortcutButton } from "@/components/coaching/tracking/MessageShortcutButton";
 import { cn } from "@/lib/utils";
 
 interface AthleteHeaderProps {
@@ -34,56 +36,52 @@ export function AthleteHeader({
   onViewProfile,
 }: AthleteHeaderProps) {
   return (
-    <div className="bg-card border-b border-border px-ios-4 pt-5 pb-4">
-      <div className="flex items-start gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary ring-[3px] ring-primary/20">
+    <div className="border-b border-border bg-card px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="h-14 w-14 rounded-full bg-secondary overflow-hidden flex items-center justify-center">
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="text-2xl font-bold text-muted-foreground">{displayName.charAt(0).toUpperCase()}</span>
+            <span className="text-[18px] font-bold text-muted-foreground">{displayName.charAt(0).toUpperCase()}</span>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[16px] font-bold leading-tight text-foreground">{displayName}</h2>
-          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+          <p className="truncate text-[17px] font-semibold text-foreground">{displayName}</p>
+          <p className="truncate text-[12px] text-muted-foreground">
             {username ? `@${username}` : "Athlète"}
-            {groupName ? ` · ${groupName}` : ""}
+            {groupName ? ` • ${groupName}` : ""}
           </p>
-          <div className="mt-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
               className={cn(
-                "inline-flex items-center rounded-lg px-2.5 py-1 text-[12px] font-semibold",
-                STATUS_CLASS[status],
+                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                STATUS_CLASS[status]
               )}
             >
               {STATUS_LABEL[status]}
             </span>
+            {groupName ? (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 rounded-md">
+                {groupName}
+              </Badge>
+            ) : null}
           </div>
         </div>
       </div>
-
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <MessageShortcutButton onClick={onMessage} variant="primary" />
         <Button
           type="button"
-          variant="default"
           size="sm"
-          className="h-9 flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
-          onClick={onMessage}
-        >
-          <MessageCircle className="h-4 w-4 shrink-0" />
-          Message
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="h-9 flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
+          variant="outline"
+          className="h-9 rounded-full px-3 text-[12px] font-semibold"
           onClick={onViewProfile}
         >
-          <UserRound className="h-4 w-4 shrink-0" />
-          Profil
+          <UserRound className="mr-1.5 h-4 w-4" />
+          Voir profil
         </Button>
       </div>
     </div>
   );
 }
+

@@ -44,7 +44,7 @@ export function WeekSelectorPremium({
 
   return (
     <div
-      className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-3"
+      className="border-b border-border bg-card px-4 py-3"
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
@@ -61,7 +61,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onPreviousWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-secondary"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
           aria-label="Semaine précédente"
         >
           <ChevronLeft className="h-4.5 w-4.5 text-foreground" />
@@ -75,7 +75,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onNextWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-secondary"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
           aria-label="Semaine suivante"
         >
           <ChevronRight className="h-4.5 w-4.5 text-foreground" />

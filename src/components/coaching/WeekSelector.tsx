@@ -49,7 +49,7 @@ export function WeekSelector({
 
   return (
     <div
-      className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-3"
+      className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-3"
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}

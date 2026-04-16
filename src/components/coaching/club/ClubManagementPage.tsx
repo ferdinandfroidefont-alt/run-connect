@@ -112,10 +112,10 @@ export function ClubManagementPage({
   onCancelInvitation,
 }: ClubManagementPageProps) {
   return (
-    <div className="-mx-ios-4 space-y-0">
-      <div className="border-b border-border bg-card px-ios-4 py-4">
+    <div className="space-y-4">
+      <div className="ios-card rounded-2xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card)]">
         <div className="flex items-start gap-3">
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-secondary">
             {clubAvatarUrl ? (
               <img src={clubAvatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -135,23 +135,23 @@ export function ClubManagementPage({
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <Button variant="secondary" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onEditClub}>Modifier</Button>
-          <Button variant="secondary" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onInviteAthlete}>Inviter</Button>
-          <Button variant="secondary" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onViewGroups}>Groupes</Button>
+          <Button variant="secondary" className="h-9 rounded-xl text-[12px] font-semibold" onClick={onEditClub}>Modifier</Button>
+          <Button variant="secondary" className="h-9 rounded-xl text-[12px] font-semibold" onClick={onInviteAthlete}>Inviter</Button>
+          <Button variant="secondary" className="h-9 rounded-xl text-[12px] font-semibold" onClick={onViewGroups}>Groupes</Button>
         </div>
       </div>
 
-      <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div>
         <p className="mb-2 text-[13px] font-semibold text-foreground">Actions rapides</p>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" className="h-12 justify-start rounded-lg text-[12px] font-semibold" onClick={onInviteAthlete}><UserPlus className="mr-2 h-4 w-4" />Inviter un athlète</Button>
-          <Button variant="secondary" className="h-12 justify-start rounded-lg text-[12px] font-semibold" onClick={onInviteCoach}><Shield className="mr-2 h-4 w-4" />Inviter un coach</Button>
-          <Button variant="secondary" className="h-12 justify-start rounded-lg text-[12px] font-semibold" onClick={onCreateGroup}><FolderPlus className="mr-2 h-4 w-4" />Créer un groupe</Button>
-          <Button variant="secondary" className="h-12 justify-start rounded-lg text-[12px] font-semibold" onClick={onEditClub}><WandSparkles className="mr-2 h-4 w-4" />Modifier le club</Button>
+          <Button variant="secondary" className="h-12 justify-start rounded-xl text-[12px] font-semibold" onClick={onInviteAthlete}><UserPlus className="mr-2 h-4 w-4" />Inviter un athlète</Button>
+          <Button variant="secondary" className="h-12 justify-start rounded-xl text-[12px] font-semibold" onClick={onInviteCoach}><Shield className="mr-2 h-4 w-4" />Inviter un coach</Button>
+          <Button variant="secondary" className="h-12 justify-start rounded-xl text-[12px] font-semibold" onClick={onCreateGroup}><FolderPlus className="mr-2 h-4 w-4" />Créer un groupe</Button>
+          <Button variant="secondary" className="h-12 justify-start rounded-xl text-[12px] font-semibold" onClick={onEditClub}><WandSparkles className="mr-2 h-4 w-4" />Modifier le club</Button>
         </div>
       </div>
 
-      <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div className="ios-card rounded-2xl border border-border/70 bg-card p-3">
         <p className="mb-2 text-[13px] font-semibold text-foreground">Membres ({members.length})</p>
         {members.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-4 text-center">
@@ -192,7 +192,7 @@ export function ClubManagementPage({
         )}
       </div>
 
-      <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div className="ios-card rounded-2xl border border-border/70 bg-card p-3">
         <p className="mb-2 text-[13px] font-semibold text-foreground">Groupes ({groups.length})</p>
         {groups.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-4 text-center">
@@ -226,7 +226,7 @@ export function ClubManagementPage({
         )}
       </div>
 
-      <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div className="ios-card rounded-2xl border border-border/70 bg-card p-3">
         <p className="mb-2 text-[13px] font-semibold text-foreground">Invitations ({invitations.length})</p>
         {invitations.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-4 text-center">
@@ -258,7 +258,7 @@ export function ClubManagementPage({
         )}
       </div>
 
-      <div className="border-b border-border bg-card px-ios-4 py-3">
+      <div className="ios-card rounded-2xl border border-border/70 bg-card p-3">
         <p className="mb-2 text-[13px] font-semibold text-foreground">Paramètres du club</p>
         <div className="space-y-1">
           {[
@@ -268,7 +268,7 @@ export function ClubManagementPage({
             "Identité visuelle",
             "Paramètres de communication",
           ].map((entry) => (
-            <button key={entry} type="button" onClick={onEditClub} className="flex w-full items-center justify-between rounded-lg border border-border/50 bg-secondary/50 px-3 py-2 text-left">
+            <button key={entry} type="button" onClick={onEditClub} className="flex w-full items-center justify-between rounded-xl bg-secondary/60 px-3 py-2 text-left">
               <span className="text-[13px] font-medium text-foreground">{entry}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -276,20 +276,20 @@ export function ClubManagementPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-px border-b border-border bg-border/40">
-        <div className="bg-card px-ios-3 py-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border border-border/70 bg-card p-3">
           <p className="text-[11px] text-muted-foreground">Athlètes</p>
           <p className="text-[18px] font-bold text-foreground">{athletesCount}</p>
         </div>
-        <div className="bg-card px-ios-3 py-3">
+        <div className="rounded-2xl border border-border/70 bg-card p-3">
           <p className="text-[11px] text-muted-foreground">Coachs</p>
           <p className="text-[18px] font-bold text-foreground">{coachesCount}</p>
         </div>
-        <div className="bg-card px-ios-3 py-3">
+        <div className="rounded-2xl border border-border/70 bg-card p-3">
           <p className="text-[11px] text-muted-foreground">Séances planifiées</p>
           <p className="text-[18px] font-bold text-foreground">{plannedSessionsCount}</p>
         </div>
-        <div className="bg-card px-ios-3 py-3">
+        <div className="rounded-2xl border border-border/70 bg-card p-3">
           <p className="text-[11px] text-muted-foreground">Séances validées</p>
           <p className="text-[18px] font-bold text-foreground">{validatedSessionsCount}</p>
         </div>

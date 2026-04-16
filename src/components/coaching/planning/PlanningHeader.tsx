@@ -4,9 +4,11 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 
 interface PlanningHeaderProps {
   onOpenMenu: () => void;
+  /** Titre de l’écran (remplace la marque dans la barre du haut). */
+  title: string;
 }
 
-export function PlanningHeader({ onOpenMenu }: PlanningHeaderProps) {
+export function PlanningHeader({ onOpenMenu, title }: PlanningHeaderProps) {
   return (
     <div className="pt-[var(--safe-area-top)]">
       <IosPageHeaderBar
@@ -20,7 +22,7 @@ export function PlanningHeader({ onOpenMenu }: PlanningHeaderProps) {
             <ListChecks className="h-5 w-5" />
           </button>
         }
-        title={<span className="text-[17px] font-semibold">RunConnect</span>}
+        title={<span className="text-[17px] font-semibold">{title}</span>}
         right={<NotificationCenter />}
       />
     </div>

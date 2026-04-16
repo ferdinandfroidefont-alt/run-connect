@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -83,6 +84,7 @@ interface OrganizerProfile {
 
 export default function MySessions() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -893,7 +895,7 @@ export default function MySessions() {
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
-            <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
+            <h1 className="text-[17px] font-semibold text-center">{t("navigation.mySessions")}</h1>
           </div>
           
           {/* iOS Segmented Control - Two columns layout */}

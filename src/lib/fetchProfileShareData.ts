@@ -3,12 +3,25 @@ import { buildProfileSharePayloadFromData } from '@/lib/profileSharePayload';
 import { getProfilePublicUrl } from '@/lib/appLinks';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 
+async function fetchPrimaryClubName(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('conversations(group_name, club_code)')
+    .eq('user_id', userId);
+
+  if (error || !data?.length) return null;
+
+  for (const row of data as { conversations: { group_name: string | null; club_code: string | null } | null }[]) {
+    const c = row.conversations;
+    if (c?.club_code && c.group_name?.trim()) return c.group_name.trim();
+  }
+  return null;
+}
+
 export async function fetchProfileSharePayload(userId: string, referralCode?: string | null): Promise<ProfileSharePayload | null> {
   const { data: profile, error: pErr } = await supabase
     .from('profiles')
-    .select(
-      'username, display_name, avatar_url, favorite_sport, country, is_premium, is_admin, user_id'
-    )
+    .select('username, display_name, avatar_url, favorite_sport, country, is_premium, user_id')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -18,42 +31,37 @@ export async function fetchProfileSharePayload(userId: string, referralCode?: st
 
   const [
     sessionsRes,
-    routesRes,
     joinedRes,
     tmplRes,
     weekTmplRes,
     statsRes,
     coachSessionsRes,
+    followersRes,
+    followingRes,
+    clubName,
   ] = await Promise.all([
     supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('organizer_id', userId),
-    supabase
-      .from('routes')
-      .select('id', { count: 'exact', head: true })
-      .eq('created_by', userId)
-      .eq('is_public', true),
     supabase.from('session_participants').select('id', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('coaching_templates').select('id', { count: 'exact', head: true }).eq('coach_id', userId),
     supabase.from('coaching_week_templates').select('id', { count: 'exact', head: true }).eq('coach_id', userId),
     supabase.from('user_stats').select('reliability_rate').eq('user_id', userId).maybeSingle(),
     supabase.from('coaching_sessions').select('id').eq('coach_id', userId),
+    supabase.from('user_follows').select('id', { count: 'exact', head: true }).eq('following_id', userId),
+    supabase.from('user_follows').select('id', { count: 'exact', head: true }).eq('follower_id', userId),
+    fetchPrimaryClubName(userId),
   ]);
 
   const sessionsCreated = sessionsRes.count ?? 0;
-  const routesPublished = routesRes.count ?? 0;
   const sessionsJoined = joinedRes.count ?? 0;
   const modelsCount = (tmplRes.count ?? 0) + (weekTmplRes.count ?? 0);
+  const coachSessionCount = coachSessionsRes.data?.length ?? 0;
+  const isCoach = modelsCount > 0 || coachSessionCount > 0;
+
   const presenceRate =
     statsRes.data?.reliability_rate != null ? Math.round(Number(statsRes.data.reliability_rate)) : null;
 
-  const sessionIds = (coachSessionsRes.data ?? []).map((r) => r.id);
-  let participationsReceived = 0;
-  if (sessionIds.length > 0) {
-    const { count } = await supabase
-      .from('coaching_participations')
-      .select('id', { count: 'exact', head: true })
-      .in('coaching_session_id', sessionIds);
-    participationsReceived = count ?? 0;
-  }
+  const followersCount = followersRes.count ?? 0;
+  const followingCount = followingRes.count ?? 0;
 
   const publicUrl = getProfilePublicUrl(username, referralCode ?? undefined);
 
@@ -61,7 +69,7 @@ export async function fetchProfileSharePayload(userId: string, referralCode?: st
   try {
     const { default: QRCode } = await import('qrcode');
     qrDataUrl = await QRCode.toDataURL(publicUrl, {
-      width: 200,
+      width: 220,
       margin: 1,
       color: { dark: '#0f172a', light: '#ffffff' },
       errorCorrectionLevel: 'M',
@@ -77,13 +85,12 @@ export async function fetchProfileSharePayload(userId: string, referralCode?: st
     favorite_sport: profile.favorite_sport,
     country: profile.country,
     is_premium: profile.is_premium,
-    is_admin: profile.is_admin,
-    clubName: null,
+    clubName,
+    isCoach,
     sessionsCreated,
     sessionsJoined,
-    modelsCount,
-    routesPublished,
-    participationsReceived,
+    followersCount,
+    followingCount,
     presenceRate,
     publicUrl,
     qrDataUrl,

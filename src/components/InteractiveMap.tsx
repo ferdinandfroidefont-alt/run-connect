@@ -1845,11 +1845,11 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
-            {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
+            {/* Même rangée que Feed : titre | avatar centré | cloche + paramètres */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
               <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
                 <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
-                  RunConnect
+                  {t('navigation.home')}
                 </span>
 
                 {userProfile && (

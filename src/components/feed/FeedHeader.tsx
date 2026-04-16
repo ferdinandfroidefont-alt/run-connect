@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const NotificationCenter = lazy(() =>
   import('@/components/NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -24,6 +25,8 @@ interface FeedHeaderProps {
   sheetSnap?: 1 | 2;
   /** Remplace navigation vers / quand défini (ex. replier la sheet). */
   onBrandClick?: () => void;
+  /** Titre à gauche (défaut : libellé « Accueil »). */
+  brandTitle?: string;
 }
 
 export const FeedHeader = ({
@@ -34,7 +37,10 @@ export const FeedHeader = ({
   layoutVariant = "page",
   sheetSnap = 2,
   onBrandClick,
+  brandTitle,
 }: FeedHeaderProps) => {
+  const { t } = useLanguage();
+  const resolvedBrandTitle = brandTitle ?? t('navigation.home');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
@@ -71,7 +77,7 @@ export const FeedHeader = ({
           : "pt-[var(--safe-area-top)]",
       )}
     >
-      {/* Top row: RunConnect + centered avatar + bell + settings */}
+      {/* Top row: titre de page + avatar centré + cloche + réglages */}
       <div
         className={cn(
           "relative flex items-center justify-between gap-2 px-4 pb-3",
@@ -83,7 +89,7 @@ export const FeedHeader = ({
           onClick={() => (onBrandClick ? onBrandClick() : navigate("/"))}
           className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary transition-opacity touch-manipulation active:opacity-70"
         >
-          RunConnect
+          {resolvedBrandTitle}
         </button>
 
         {/* Centered profile avatar */}

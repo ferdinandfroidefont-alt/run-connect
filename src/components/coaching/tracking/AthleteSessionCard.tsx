@@ -37,10 +37,10 @@ export function AthleteSessionCard({
   onOpen,
 }: AthleteSessionCardProps) {
   return (
-    <div className="overflow-hidden border border-border/60 bg-card">
+    <div className="overflow-hidden bg-card">
       <div className="flex">
-        <div className={cn("w-1.5 shrink-0", STATUS_ACCENT[status])} />
-        <div className="min-w-0 flex-1 px-3 py-2.5">
+        <div className={cn("w-1 shrink-0", STATUS_ACCENT[status])} />
+        <div className="min-w-0 flex-1 px-4 py-3">
           <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-2.5">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">{dayLabel}</p>

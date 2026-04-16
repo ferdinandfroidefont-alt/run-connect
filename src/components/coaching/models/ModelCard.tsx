@@ -14,10 +14,10 @@ interface ModelCardProps {
 
 export function ModelCard({ model, summaryLine, previewLine, accentColor, onOpen, onAdd, onMenu }: ModelCardProps) {
   return (
-    <div className="overflow-hidden border border-border/60 bg-card">
+    <div className="overflow-hidden bg-card">
       <div className="flex">
-        <div className="w-1.5 shrink-0" style={{ backgroundColor: accentColor }} />
-        <div className="min-w-0 flex-1 p-3">
+        <div className="w-1 shrink-0" style={{ backgroundColor: accentColor }} />
+        <div className="min-w-0 flex-1 p-4">
           <button type="button" className="w-full text-left" onClick={onOpen}>
             <p className="truncate text-[15px] font-semibold text-foreground">{model.title}</p>
             <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{summaryLine}</p>

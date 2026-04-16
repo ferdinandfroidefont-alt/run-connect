@@ -1040,12 +1040,6 @@ export function CoachPlanningExperience() {
     });
   };
 
-  const targetLabel = activeAthleteId
-    ? athletes.find((a) => a.id === activeAthleteId)?.name
-    : activeGroupId
-    ? groups.find((g) => g.id === activeGroupId)?.name
-    : "Tous les athlètes";
-
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
     filteredSessions.forEach((session) => {
@@ -1089,21 +1083,6 @@ export function CoachPlanningExperience() {
       : activeMenuKey === "dashboard"
       ? "Tableau de bord"
       : "Coaching";
-  const sectionSubtitle =
-    activeMenuKey === "planning"
-      ? `Semaine de ${targetLabel}`
-      : activeMenuKey === "dashboard"
-      ? "Vue d’ensemble de votre coaching"
-      : activeMenuKey === "tracking"
-      ? trackingSelectedAthleteId
-        ? ""
-        : "Vue athlètes et séances réalisées"
-      : activeMenuKey === "templates"
-      ? "Créez et réutilisez vos séances premium"
-      : activeMenuKey === "club"
-      ? "Administration du club et des membres"
-      : "Espace coaching RunConnect";
-
   const handleDrawerSelect = (key: CoachMenuKey) => {
     if (key === "athletes") {
       setActiveMenuKey("tracking");
@@ -1338,29 +1317,22 @@ export function CoachPlanningExperience() {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
-          header={<PlanningHeader onOpenMenu={() => setDrawerOpen(true)} />}
+          header={<PlanningHeader onOpenMenu={() => setDrawerOpen(true)} title={sectionTitle} />}
           scrollClassName="bg-secondary pb-24"
         >
-          <div className="space-y-4 px-ios-4 pb-ios-6">
-            <div className="pt-1">
-              <h1 className="text-[32px] font-bold tracking-tight text-foreground">{sectionTitle}</h1>
-              {sectionSubtitle ? (
-                <p className="text-[13px] text-muted-foreground">{sectionSubtitle}</p>
-              ) : null}
-            </div>
-
+          <div className="space-y-0 pb-6">
             {activeMenuKey === "planning" && clubs.length > 1 && (
-              <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-3">
-                <p className="pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
-                <div className="grid grid-cols-1 gap-1">
+              <div className="border-b border-border bg-card">
+                <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
+                <div className="divide-y divide-border">
                   {clubs.map((club) => (
                     <button
                       key={club.id}
                       type="button"
                       onClick={() => setActiveClubId(club.id)}
                       className={cn(
-                        "rounded-lg px-3 py-2 text-left text-[13px] font-medium",
-                        activeClubId === club.id ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                        "w-full px-4 py-3 text-left text-[15px] font-medium transition-colors active:bg-secondary/80",
+                        activeClubId === club.id ? "bg-primary text-primary-foreground" : "text-foreground"
                       )}
                     >
                       {club.name}
@@ -1373,33 +1345,33 @@ export function CoachPlanningExperience() {
             {activeMenuKey === "planning" && <PlanningSearchBar value={search} onChange={setSearch} />}
 
             {activeMenuKey === "planning" && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
-              <div className="-mx-ios-4 border-b border-border bg-card px-ios-2 py-1">
+              <div className="divide-y divide-border border-b border-border bg-card">
                 {searchResults.groups.map((group) => (
                   <button
                     key={group.id}
-                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left active:bg-secondary"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
                     onClick={() => {
                       setActiveGroupId(group.id);
                       setActiveAthleteId(undefined);
                       setSearch("");
                     }}
                   >
-                    <span className="text-[14px] font-medium text-foreground">{group.name}</span>
-                    <span className="text-[12px] text-muted-foreground">Groupe</span>
+                    <span className="text-[15px] font-medium text-foreground">{group.name}</span>
+                    <span className="text-[13px] text-muted-foreground">Groupe</span>
                   </button>
                 ))}
                 {searchResults.athletes.map((athlete) => (
                   <button
                     key={athlete.id}
-                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left active:bg-secondary"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
                     onClick={() => {
                       setActiveAthleteId(athlete.id);
                       setActiveGroupId(undefined);
                       setSearch("");
                     }}
                   >
-                    <span className="text-[14px] font-medium text-foreground">{athlete.name}</span>
-                    <span className="text-[12px] text-muted-foreground">Athlète</span>
+                    <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
+                    <span className="text-[13px] text-muted-foreground">Athlète</span>
                   </button>
                 ))}
               </div>
@@ -1416,7 +1388,7 @@ export function CoachPlanningExperience() {
                   indicatorsByDate={dayIndicatorsByDate}
                 />
 
-                <div className="space-y-0">
+                <div className="flex flex-col border-t border-border">
                   {weekDays.map((day) => {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
@@ -1483,7 +1455,7 @@ export function CoachPlanningExperience() {
                   }}
                 />
               ) : (
-                <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-4">
+                <div className="border-b border-border bg-secondary/30 px-4 py-6">
                   <p className="text-[16px] font-semibold text-foreground">Tableau de bord</p>
                   <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher le dashboard.</p>
                 </div>
@@ -1497,7 +1469,7 @@ export function CoachPlanningExperience() {
                   onSelectAthlete={setTrackingSelectedAthleteId}
                 />
               ) : (
-                <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-4">
+                <div className="border-b border-border bg-secondary/30 px-4 py-6">
                   <p className="text-[16px] font-semibold text-foreground">Suivi athlète</p>
                   <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher le suivi.</p>
                 </div>
@@ -1516,14 +1488,14 @@ export function CoachPlanningExperience() {
               />
             ) : activeMenuKey === "groups" ? (
               activeClubId ? (
-                <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-3">
+                <div className="border-b border-border bg-card">
                   <ClubGroupsManager
                     clubId={activeClubId}
                     onMessageGroup={(group) => void openOrCreateGroupConversation(group)}
                   />
                 </div>
               ) : (
-                <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-4">
+                <div className="border-b border-border bg-secondary/30 px-4 py-6">
                   <p className="text-[16px] font-semibold text-foreground">Groupes</p>
                   <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher les groupes.</p>
                 </div>
@@ -1558,7 +1530,7 @@ export function CoachPlanningExperience() {
                 onCancelInvitation={(invitationId) => void cancelInvitation(invitationId)}
               />
             ) : (
-              <div className="-mx-ios-4 border-b border-border bg-card px-ios-4 py-4">
+              <div className="border-b border-border bg-secondary/30 px-4 py-6">
                 <p className="text-[16px] font-semibold text-foreground">
                   {activeMenuKey === "dashboard" && "Tableau de bord coach"}
                   {activeMenuKey === "athletes" && "Athlètes"}
