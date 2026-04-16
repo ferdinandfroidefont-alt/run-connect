@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Share } from 'lucide-react';
+import { Share, BadgeCheck, MapPin, Footprints, Calendar, Users, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import profileShareCardImg from '@/assets/profile-share-card.png';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
+import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 
 type Props = {
   active?: boolean;
@@ -12,21 +13,17 @@ type Props = {
 
 export function ProfileSharePanel({ compact = false }: Props) {
   const { user } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [payload, setPayload] = useState<ProfileSharePayload | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (!user?.id) {
-      setAvatarUrl(null);
+      setPayload(null);
       return;
     }
     (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('avatar_url')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (!cancelled) setAvatarUrl(data?.avatar_url ?? null);
+      const data = await fetchProfileSharePayload(user.id);
+      if (!cancelled) setPayload(data);
     })();
     return () => {
       cancelled = true;
@@ -37,6 +34,14 @@ export function ProfileSharePanel({ compact = false }: Props) {
     // Partage de l'image statique à implémenter
   };
 
+  // Sépare ville / drapeau pour positionnement à gauche
+  const locationParts = (() => {
+    if (!payload?.locationLine) return { text: '', flag: '' };
+    const match = payload.locationLine.match(/^(.*?)([\u{1F1E6}-\u{1F1FF}]{2})\s*$/u);
+    if (match) return { text: match[1].replace(/[, ]+$/, '').trim(), flag: match[2] };
+    return { text: payload.locationLine, flag: '' };
+  })();
+
   return (
     <div className="min-w-0 max-w-full">
       <div className="flex min-h-0 flex-col">
@@ -44,33 +49,195 @@ export function ProfileSharePanel({ compact = false }: Props) {
           'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
           compact ? 'pt-2' : 'pt-4'
         )}>
-          <div className="relative w-full max-w-sm mx-auto">
+          {/* Card: image template figée + overlay */}
+          <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
             <img
               src={profileShareCardImg}
               alt="Aperçu carte de partage"
-              className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
+              className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
             />
-            {avatarUrl && (
-              <div
-                className="absolute overflow-hidden rounded-full"
-                style={{
-                  // Cercle centré horizontalement, légèrement vers le haut.
-                  // Mesuré sur l'image 1254×1254 : centre ≈ (50%, 16.7%), diamètre ≈ 20.5%.
-                  left: '50%',
-                  top: '17.3%',
-                  width: '20.5%',
-                  aspectRatio: '1 / 1',
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <img
-                  src={avatarUrl}
-                  alt="Photo de profil"
-                  className="h-full w-full object-cover"
-                  crossOrigin="anonymous"
-                />
-              </div>
-            )}
+
+            {/* Overlay absolu - toutes positions en % du template 1254x1254 */}
+            <div className="absolute inset-0 pointer-events-none select-none">
+              {/* A. Avatar */}
+              {payload?.avatarUrl && (
+                <div
+                  className="absolute overflow-hidden rounded-full"
+                  style={{
+                    left: '50%',
+                    top: '17.3%',
+                    width: '20.5%',
+                    aspectRatio: '1 / 1',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <img
+                    src={payload.avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                </div>
+              )}
+
+              {/* B + C. Nom + badge vérifié */}
+              {payload && (
+                <div
+                  className="absolute flex items-center justify-center gap-1.5"
+                  style={{
+                    left: '50%',
+                    top: '32.5%',
+                    transform: 'translate(-50%, 0)',
+                    width: '90%',
+                  }}
+                >
+                  <span
+                    className="truncate font-extrabold text-slate-900 leading-none"
+                    style={{ fontSize: 'clamp(20px, 7.2cqw, 32px)' }}
+                  >
+                    {payload.displayName}
+                  </span>
+                  {payload.isPremium && (
+                    <BadgeCheck
+                      className="shrink-0 fill-[#0A84FF] text-white"
+                      style={{ width: 'clamp(18px, 5.5cqw, 26px)', height: 'clamp(18px, 5.5cqw, 26px)' }}
+                      strokeWidth={2.4}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* D. Username */}
+              {payload && (
+                <div
+                  className="absolute text-center text-slate-400 font-medium"
+                  style={{
+                    left: '50%',
+                    top: '38.5%',
+                    transform: 'translate(-50%, 0)',
+                    width: '90%',
+                    fontSize: 'clamp(11px, 3.6cqw, 16px)',
+                  }}
+                >
+                  <span className="truncate inline-block max-w-full">@{payload.username}</span>
+                </div>
+              )}
+
+              {/* E. Pill rôle + club */}
+              {payload && (
+                <div
+                  className="absolute flex flex-col items-center justify-center text-center"
+                  style={{
+                    left: '50%',
+                    top: '44.6%',
+                    transform: 'translate(-50%, 0)',
+                    width: '64%',
+                    paddingLeft: '12%',
+                    paddingRight: '6%',
+                  }}
+                >
+                  <span
+                    className="font-bold text-[#0A84FF] leading-tight truncate max-w-full"
+                    style={{ fontSize: 'clamp(11px, 3.5cqw, 15px)' }}
+                  >
+                    {payload.roleLinePrimary}
+                  </span>
+                  {payload.roleLineSecondary && (
+                    <span
+                      className="text-slate-700 leading-tight truncate max-w-full"
+                      style={{ fontSize: 'clamp(10px, 3cqw, 13px)' }}
+                    >
+                      {payload.roleLineSecondary}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* F. Ville + drapeau (gauche de la ligne) */}
+              {payload && (
+                <div
+                  className="absolute flex items-center gap-1 text-slate-900 font-bold"
+                  style={{
+                    left: '30%',
+                    top: '54.2%',
+                    transform: 'translate(-50%, 0)',
+                    fontSize: 'clamp(11px, 3.4cqw, 15px)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span className="truncate">{locationParts.text || '—'}</span>
+                  {locationParts.flag && <span>{locationParts.flag}</span>}
+                </div>
+              )}
+
+              {/* G. Sport (droite de la ligne) */}
+              {payload && (
+                <div
+                  className="absolute text-slate-900 font-bold truncate"
+                  style={{
+                    left: '70%',
+                    top: '54.2%',
+                    transform: 'translate(-50%, 0)',
+                    maxWidth: '36%',
+                    fontSize: 'clamp(11px, 3.4cqw, 15px)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {payload.sportLabel}
+                </div>
+              )}
+
+              {/* H. Stats — 4 cartes */}
+              {payload && (
+                <>
+                  <StatNumber value={payload.sessionsCreated} leftPct={16.5} />
+                  <StatNumber value={payload.sessionsJoined} leftPct={39.2} />
+                  <StatNumber value={payload.followersCount} leftPct={61.2} />
+                  <StatNumber value={payload.followingCount} leftPct={83.5} />
+                </>
+              )}
+
+              {/* I. Présence */}
+              {payload?.presenceRate != null && (
+                <div
+                  className="absolute flex items-center justify-center gap-1.5"
+                  style={{
+                    left: '50%',
+                    top: '76.2%',
+                    transform: 'translate(-50%, 0)',
+                  }}
+                >
+                  <span
+                    className="font-extrabold text-[#0A84FF]"
+                    style={{ fontSize: 'clamp(13px, 4cqw, 18px)' }}
+                  >
+                    {payload.presenceRate}%
+                  </span>
+                  <span
+                    className="font-medium text-slate-700"
+                    style={{ fontSize: 'clamp(12px, 3.6cqw, 16px)' }}
+                  >
+                    présence
+                  </span>
+                </div>
+              )}
+
+              {/* J. QR Code */}
+              {payload?.qrDataUrl && (
+                <div
+                  className="absolute overflow-hidden rounded-[6px] bg-white"
+                  style={{
+                    left: '78.5%',
+                    top: '88%',
+                    width: '14%',
+                    aspectRatio: '1 / 1',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  <img src={payload.qrDataUrl} alt="" className="h-full w-full object-contain" />
+                </div>
+              )}
+            </div>
           </div>
 
           <button
@@ -87,6 +254,23 @@ export function ProfileSharePanel({ compact = false }: Props) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatNumber({ value, leftPct }: { value: number; leftPct: number }) {
+  return (
+    <div
+      className="absolute font-extrabold text-slate-900 text-center"
+      style={{
+        left: `${leftPct}%`,
+        top: '63.6%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: 'clamp(18px, 6.2cqw, 30px)',
+        lineHeight: 1,
+      }}
+    >
+      {value}
     </div>
   );
 }
