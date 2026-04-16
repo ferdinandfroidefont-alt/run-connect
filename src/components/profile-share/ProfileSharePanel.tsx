@@ -5,6 +5,14 @@ import profileShareCardImg from '@/assets/profile-share-card.png';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
+import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
+
+const sportEmojiFromLabel = (label: string): string => {
+  const found = Object.values(PROFILE_SPORT_LABELS).find(
+    (s) => s.label.toLowerCase() === label.toLowerCase()
+  );
+  return found?.emoji ?? '🏃';
+};
 
 type Props = {
   active?: boolean;
