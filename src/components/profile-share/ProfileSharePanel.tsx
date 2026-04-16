@@ -185,9 +185,9 @@ export function ProfileSharePanel({ compact = false }: Props) {
               {/* H. Stats — 4 cartes */}
               {payload && (
                 <>
-                  <StatNumber value={payload.sessionsCreated} leftPct={16.5} />
-                  <StatNumber value={payload.sessionsJoined} leftPct={39.2} />
-                  <StatNumber value={payload.followersCount} leftPct={61.2} />
+                  <StatNumber value={payload.sessionsCreated} leftPct={15.5} />
+                  <StatNumber value={payload.sessionsJoined} leftPct={38.2} />
+                  <StatNumber value={payload.followersCount} leftPct={60.2} />
                   <StatNumber value={payload.followingCount} leftPct={83.5} />
                 </>
               )}
@@ -253,7 +253,7 @@ function StatNumber({ value, leftPct }: { value: number; leftPct: number }) {
       className="absolute font-extrabold text-slate-900 text-center"
       style={{
         left: `${leftPct}%`,
-        top: '63.6%',
+        top: '64.6%',
         transform: 'translate(-50%, -50%)',
         fontSize: 'clamp(14px, 5cqw, 24px)',
         lineHeight: 1,
