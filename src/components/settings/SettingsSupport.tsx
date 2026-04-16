@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { SupportInbox } from "@/components/settings/SupportInbox";
-import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
+
 
 interface SettingsSupportProps {
   onBack: () => void;
