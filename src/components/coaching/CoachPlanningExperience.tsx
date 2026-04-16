@@ -1095,7 +1095,9 @@ export function CoachPlanningExperience() {
       : activeMenuKey === "dashboard"
       ? "Vue d’ensemble de votre coaching"
       : activeMenuKey === "tracking"
-      ? "Vue athlètes et séances réalisées"
+      ? trackingSelectedAthleteId
+        ? ""
+        : "Vue athlètes et séances réalisées"
       : activeMenuKey === "templates"
       ? "Créez et réutilisez vos séances premium"
       : activeMenuKey === "club"
@@ -1342,7 +1344,9 @@ export function CoachPlanningExperience() {
           <div className="space-y-4 px-ios-4 pb-ios-6">
             <div className="pt-1">
               <h1 className="text-[32px] font-bold tracking-tight text-foreground">{sectionTitle}</h1>
-              <p className="text-[13px] text-muted-foreground">{sectionSubtitle}</p>
+              {sectionSubtitle ? (
+                <p className="text-[13px] text-muted-foreground">{sectionSubtitle}</p>
+              ) : null}
             </div>
 
             {activeMenuKey === "planning" && clubs.length > 1 && (

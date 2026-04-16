@@ -116,10 +116,10 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
 type UiDayStatus = "done" | "missed" | "pending" | "none";
 
 const STATUS_CHIP_BY_DAY: Record<UiDayStatus, { short: string; className: string }> = {
-  done: { short: "Fait", className: "bg-emerald-500 text-white" },
-  missed: { short: "Non fait", className: "bg-red-500 text-white" },
-  pending: { short: "En attente", className: "bg-orange-400 text-white" },
-  none: { short: "Aucune", className: "bg-zinc-300 text-white dark:bg-zinc-600" },
+  done: { short: "Fait", className: "rounded-md bg-emerald-500 text-white" },
+  missed: { short: "Non fait", className: "rounded-md bg-red-500 text-white" },
+  pending: { short: "En attente", className: "rounded-md bg-orange-400 text-white" },
+  none: { short: "Aucune", className: "rounded-md bg-zinc-300 text-white dark:bg-zinc-600" },
 };
 
 const toUiStatus = (status?: string): UiDayStatus => {
@@ -553,66 +553,41 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   };
 
   return (
-    <div className="space-y-3.5 px-4 pb-[calc(1.25rem+var(--safe-area-bottom))]">
-      <div className="pt-1.5">
-        <h2 className="text-[38px] font-black leading-[0.95] tracking-tight text-foreground">Suivi athlète</h2>
-        <p className="mt-1 text-[13px] text-muted-foreground">Vue athlètes et séances réalisées</p>
-      </div>
-
+    <div className="-mx-ios-4 space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
       <AthleteHeader
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
         username={selectedAthlete.username}
         groupName={selectedAthlete.groupName}
-        age={selectedAthlete.age}
         status={pct >= 70 ? "active" : "late"}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
         onViewProfile={() => navigate(`/profile/${selectedAthlete.userId}`)}
       />
 
-      <div className="ios-card rounded-2xl border border-border/60 bg-card px-3 py-3 shadow-[var(--shadow-card)]">
-        <div className="flex items-center gap-3">
-          <ProgressRing percent={pct} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
-            <p className="text-[34px] font-black leading-none text-emerald-500">
-              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
-              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
-            </p>
-            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
-          </div>
-          <div className="rounded-xl border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
-            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {trendPct >= 0 ? "+" : ""}
-              {trendPct}%
-            </p>
-            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="ios-card rounded-2xl border border-border/60 bg-card px-3 py-3 shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between">
+      <div className="bg-card border-b border-border px-ios-4 py-3">
+        <div className="flex items-center justify-between gap-2">
           <button
+            type="button"
             onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 active:bg-secondary/80"
             aria-label="Semaine précédente"
           >
             <ChevronLeft className="h-4 w-4 text-primary" />
           </button>
-          <p className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-foreground">
+          <p className="inline-flex min-w-0 items-center justify-center gap-1.5 truncate text-[15px] font-semibold text-foreground">
             {weekLabel}
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
           </p>
           <button
+            type="button"
             onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 active:bg-secondary/80"
             aria-label="Semaine suivante"
           >
             <ChevronRight className="h-4 w-4 text-primary" />
           </button>
         </div>
-        <div className="mt-3 grid grid-cols-7 gap-1.5">
+        <div className="mt-3 grid grid-cols-7 gap-1">
           {weekDays.map((day) => {
             const dayKey = format(day, "yyyy-MM-dd");
             const dayData = selectedAthlete.days[dayKey];
@@ -623,27 +598,50 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                 <p className="text-[11px] font-semibold text-foreground">{format(day, "EEE", { locale: fr }).slice(0, 3)}</p>
                 <p className="text-[10px] text-muted-foreground">{format(day, "d", { locale: fr })}</p>
                 <div className="mt-1 flex justify-center">
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold shadow-sm ${conf.className}`}>
+                  <span
+                    className={`inline-flex h-6 w-6 items-center justify-center text-[10px] font-semibold ${conf.className}`}
+                  >
                     {status === "done" ? "✓" : status === "missed" ? "✕" : status === "pending" ? "⏳" : "–"}
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] text-muted-foreground">{conf.short}</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">{conf.short}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      <div className="pt-1">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-[27px] font-black leading-none tracking-tight text-foreground">Séances de la semaine</p>
-          <button type="button" className="text-[13px] font-semibold text-primary">
+      <div className="bg-card border-b border-border px-ios-4 py-3">
+        <div className="flex items-center gap-3">
+          <ProgressRing percent={pct} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-foreground">Cette semaine</p>
+            <p className="text-[28px] font-black leading-none text-emerald-500">
+              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
+              <span className="ml-1 text-[18px] font-semibold text-foreground/70">séances</span>
+            </p>
+            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
+          </div>
+          <div className="shrink-0 border-l border-border/60 pl-3 text-right">
+            <p className={`text-[15px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {trendPct >= 0 ? "+" : ""}
+              {trendPct}%
+            </p>
+            <p className="text-[11px] text-muted-foreground">vs sem. dernière</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-ios-4 pt-4">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-[20px] font-bold leading-tight tracking-tight text-foreground">Séances de la semaine</p>
+          <button type="button" className="shrink-0 text-[13px] font-semibold text-primary">
             Tout voir
           </button>
         </div>
         <div className="space-y-2.5">
           {sessionsForWeek.length === 0 ? (
-            <div className="ios-card border border-border/60 bg-card p-4 text-center">
+            <div className="border border-border/60 bg-card px-3 py-4 text-center">
               <p className="text-[13px] text-muted-foreground">Aucune séance planifiée cette semaine.</p>
             </div>
           ) : (
@@ -666,11 +664,11 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 pt-1">
+      <div className="grid grid-cols-3 gap-2 px-ios-4 pt-3">
         <Button
           type="button"
           variant="outline"
-          className="h-11 rounded-xl text-[12px] font-semibold bg-card"
+          className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5"
           onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
         >
           <MessageCircle className="mr-1.5 h-4 w-4" />
@@ -679,7 +677,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         <Button
           type="button"
           variant="outline"
-          className="h-11 rounded-xl text-[12px] font-semibold bg-card"
+          className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5"
           onClick={() =>
             onOpenPlanForAthlete?.(
               selectedAthlete.userId,
@@ -692,13 +690,13 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           <ClipboardList className="mr-1.5 h-4 w-4" />
           Modifier semaine
         </Button>
-        <Button type="button" variant="outline" className="h-11 rounded-xl text-[12px] font-semibold bg-card" onClick={() => void handleResendSession()}>
+        <Button type="button" variant="outline" className="h-10 rounded-lg text-[11px] font-semibold leading-tight bg-card px-1.5" onClick={() => void handleResendSession()}>
           <Send className="mr-1.5 h-4 w-4" />
           Renvoyer séance
         </Button>
       </div>
       {completionStreak > 0 ? (
-        <p className="text-center text-[11px] font-medium text-muted-foreground">
+        <p className="px-ios-4 pb-1 text-center text-[11px] font-medium text-muted-foreground">
           Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
         </p>
       ) : null}
