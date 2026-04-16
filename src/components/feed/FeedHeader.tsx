@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 const NotificationCenter = lazy(() =>
   import('@/components/NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -25,7 +24,7 @@ interface FeedHeaderProps {
   sheetSnap?: 1 | 2;
   /** Remplace navigation vers / quand défini (ex. replier la sheet). */
   onBrandClick?: () => void;
-  /** Titre à gauche (défaut : libellé « Accueil »). */
+  /** Titre à gauche (défaut : libellé « RunConnect »). */
   brandTitle?: string;
 }
 
@@ -39,8 +38,7 @@ export const FeedHeader = ({
   onBrandClick,
   brandTitle,
 }: FeedHeaderProps) => {
-  const { t } = useLanguage();
-  const resolvedBrandTitle = brandTitle ?? t('navigation.home');
+  const resolvedBrandTitle = brandTitle ?? 'RunConnect';
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
