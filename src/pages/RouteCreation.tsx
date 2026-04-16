@@ -144,10 +144,13 @@ export const RouteCreation = () => {
   const addWaypointRef = useRef<(latLng: MapCoord) => Promise<void>>(async () => {});
   const previousWaypointCountRef = useRef(0);
 
+  // MainTabsSwipeHost : la page reste montée en arrière-plan — se fier à la route active.
+  const isActiveRouteCreation =
+    routeCreationPathname === "/route-create" || routeCreationPathname === "/route-creation";
   useEffect(() => {
-    setBottomNavSuppressed("route-creation", true);
+    setBottomNavSuppressed("route-creation", isActiveRouteCreation);
     return () => setBottomNavSuppressed("route-creation", false);
-  }, [setBottomNavSuppressed]);
+  }, [isActiveRouteCreation, setBottomNavSuppressed]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;

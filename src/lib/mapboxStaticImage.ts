@@ -42,7 +42,8 @@ export function buildSessionStaticMapUrl(options: {
   overlays.push(`pin-l+${PIN_COLOR}(${pin.lng},${pin.lat})`);
 
   const overlay = joinOverlays(overlays);
-  const path = `/styles/v1/${STYLE_LIGHT}/static/${overlay}/auto/${width}x${height}`;
+  // Caractères du polyline / parenthèses : encoder le segment overlay (doc Mapbox Static Images).
+  const path = `/styles/v1/${STYLE_LIGHT}/static/${encodeURIComponent(overlay)}/auto/${width}x${height}`;
 
   const params = new URLSearchParams({
     padding: String(padding),
@@ -102,9 +103,20 @@ export function normalizeRouteCoordinates(raw: unknown[] | undefined | null): Ma
       const lng = Number(c.lng);
       if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
     } else if (Array.isArray(coord) && coord.length >= 2) {
-      const lat = Number(coord[0]);
-      const lng = Number(coord[1]);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) out.push({ lat, lng });
+      const a = Number(coord[0]);
+      const b = Number(coord[1]);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+      // GeoJSON LineString : [longitude, latitude] — la base peut exposer l’un ou l’autre ordre.
+      if (Math.abs(a) > 90) {
+        out.push({ lat: b, lng: a });
+      } else if (Math.abs(b) > 90) {
+        out.push({ lat: a, lng: b });
+      } else if (a < b && b > 35 && b < 72 && Math.abs(a) < 25) {
+        // GeoJSON [lng, lat] typique Europe occidentale — évite les faux positifs (ex. [10, 20] en lat/lng).
+        out.push({ lat: b, lng: a });
+      } else {
+        out.push({ lat: a, lng: b });
+      }
     }
   }
   return out;

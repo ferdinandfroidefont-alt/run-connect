@@ -11,6 +11,7 @@ import type { SessionSharePayload, SessionShareTemplateId } from '@/lib/sessionS
 import { templateDimensions } from '@/lib/sessionSharePayload';
 
 const RC_BLUE = '#2563eb';
+const SESSION_MAP_FALLBACK = '/share/profile-map-fallback.svg';
 
 function RunnerIcon({ size = 28 }: { size?: number }) {
   return (
@@ -175,18 +176,16 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const cardInnerBg = isDark ? 'rgba(30,41,59,0.85)' : '#ffffff';
     const dividerColor = isDark ? '#334155' : '#e2e8f0';
 
+    const mapBg = mapImageUrl?.trim() || SESSION_MAP_FALLBACK;
+
     const mapSection = (
       <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {mapImageUrl ? (
-          <img
-            src={mapImageUrl}
-            alt=""
-            crossOrigin="anonymous"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ position: 'absolute', inset: 0, background: '#e2e8f0' }} />
-        )}
+        <img
+          src={mapBg}
+          alt=""
+          crossOrigin="anonymous"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
         {!isDark && (
           <div
             style={{

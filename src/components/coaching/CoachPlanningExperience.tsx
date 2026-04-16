@@ -23,7 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useEnhancedToast } from "@/hooks/useEnhancedToast";
 import { useAppContext } from "@/contexts/AppContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
@@ -291,6 +291,9 @@ const BASE_MODELS: SessionModelItem[] = [
 export function CoachPlanningExperience() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isActiveCoachingTab =
+    location.pathname === "/coaching" || location.pathname.startsWith("/coaching/");
   const { setBottomNavSuppressed } = useAppContext();
   const toast = useEnhancedToast();
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -346,10 +349,12 @@ export function CoachPlanningExperience() {
     });
   };
 
+  // MainTabsSwipeHost garde les onglets montés : ne masquer la tab bar que si l’onglet Coaching est réellement visible.
   useEffect(() => {
-    setBottomNavSuppressed("coaching-create", coachingTab === "create");
+    const hideTabBar = isActiveCoachingTab && coachingTab === "create";
+    setBottomNavSuppressed("coaching-create", hideTabBar);
     return () => setBottomNavSuppressed("coaching-create", false);
-  }, [coachingTab, setBottomNavSuppressed]);
+  }, [isActiveCoachingTab, coachingTab, setBottomNavSuppressed]);
 
   useEffect(() => {
     if (!user || !effectiveAthleteMode) return;

@@ -321,6 +321,7 @@ const Messages = () => {
 
   // Single effect for tab bar visibility + chrome color.
   // Tab bar visible on inbox list, hidden only inside a conversation thread.
+  // Ne pas remettre le suppressor à false dans le cleanup : sinon éclair entre deux conversations (liste swipe host).
   useEffect(() => {
     const onMessagesPage = location.pathname.startsWith("/messages");
     const inThread = onMessagesPage && !!selectedConversation;
@@ -345,10 +346,15 @@ const Messages = () => {
       }
     }
     return () => {
-      setBottomNavSuppressed("messages-thread", false);
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
   }, [selectedConversation, setBottomNavSuppressed, location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      setBottomNavSuppressed("messages-thread", false);
+    };
+  }, [setBottomNavSuppressed]);
 
   // Fetch user notification settings
   useEffect(() => {

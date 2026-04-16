@@ -2,6 +2,15 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { normalizeRouteCoordinates, type MapboxStaticPoint } from '@/lib/mapboxStaticImage';
 
+const PARIS_FALLBACK: MapboxStaticPoint = { lat: 48.8566, lng: 2.3522 };
+
+function safeMapPoint(p: MapboxStaticPoint): MapboxStaticPoint {
+  const lat = Number(p.lat);
+  const lng = Number(p.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  return PARIS_FALLBACK;
+}
+
 export const SESSION_ACTIVITY_HEADER: Record<string, string> = {
   running: 'SÉANCE RUNNING',
   trail: 'SÉANCE TRAIL',
@@ -125,9 +134,11 @@ export function buildSessionSharePayload(
   const timeLabel = format(scheduled, 'HH:mm');
   const routePath = normalizeRouteCoordinates(session.routes?.coordinates ?? []);
   const hasRoute = routePath.length >= 2;
-  const mapPin = hasRoute
-    ? routePath[Math.floor(routePath.length / 2)]
-    : { lat: session.location_lat, lng: session.location_lng };
+  const mapPin = safeMapPoint(
+    hasRoute
+      ? routePath[Math.floor(routePath.length / 2)]!
+      : { lat: session.location_lat, lng: session.location_lng }
+  );
 
   const activityHeader =
     SESSION_ACTIVITY_HEADER[session.activity_type] || `SÉANCE ${session.activity_type.toUpperCase()}`;

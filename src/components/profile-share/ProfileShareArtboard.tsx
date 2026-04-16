@@ -16,8 +16,8 @@ import { templateDimensions } from '@/lib/profileSharePayload';
 const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
-const PROFILE_SHARE_STATIC_MAP_BG =
-  'file:///C:/Users/ordi2322802/.cursor/projects/c-Users-ordi2322802-Documents-GitHub-run-connect/assets/c__Users_ordi2322802_AppData_Roaming_Cursor_User_workspaceStorage_c7b610c73ddfadf724820de171903ea1_images_80644E0E-A4A4-4599-AF08-65C195DB5695-a900b254-cbbf-423d-9a55-55d55dff682c.png';
+/** Fond local si pas de token Mapbox ou chargement échoué (jamais de file:// — invalide dans le navigateur). */
+const PROFILE_MAP_FALLBACK_SRC = '/share/profile-map-fallback.svg';
 
 function VerifiedPremiumBadge({ compact }: { compact?: boolean }) {
   return (
@@ -251,6 +251,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
   function ProfileShareArtboard({ payload, templateId }, ref) {
     const { w, h } = templateDimensions(templateId);
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
+    const mapBgSrc = payload.mapBackgroundUrl?.trim() || PROFILE_MAP_FALLBACK_SRC;
 
     const ctaText = 'Ajoute-moi sur RunConnect';
 
@@ -267,8 +268,9 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           }}
         >
           <img
-            src={PROFILE_SHARE_STATIC_MAP_BG}
+            src={mapBgSrc}
             alt=""
+            crossOrigin="anonymous"
             className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
             style={{ zIndex: 0 }}
           />
@@ -415,8 +417,9 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
         }}
       >
         <img
-          src={PROFILE_SHARE_STATIC_MAP_BG}
+          src={mapBgSrc}
           alt=""
+          crossOrigin="anonymous"
           className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
           style={{ zIndex: 0 }}
         />
