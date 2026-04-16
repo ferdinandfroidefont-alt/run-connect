@@ -18,32 +18,36 @@ const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
 
+/** Badge vérifié style dentelé (comme Twitter/X) — bleu avec coche blanche */
 function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: number }) {
   const s = size ?? (compact ? 32 : 36);
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full text-white"
-      style={{
-        width: s,
-        height: s,
-        background: RC_LIGHT,
-        boxShadow: '0 2px 8px rgba(0, 102, 255, 0.35)',
-      }}
+      style={{ display: 'inline-flex', flexShrink: 0, width: s, height: s }}
       title="Premium"
       aria-hidden
     >
-      <svg
-        viewBox="0 0 24 24"
-        style={{ width: s * 0.52, height: s * 0.52 }}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="20 6 9 17 4 12" />
+      <svg viewBox="0 0 24 24" width={s} height={s} fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 1.5c-.5 0-.9.2-1.2.5l-1.1 1.2c-.2.2-.4.3-.7.3h-1.6c-.9 0-1.6.7-1.6 1.6V6.7c0 .3-.1.5-.3.7L4.3 8.5c-.6.6-.6 1.6 0 2.2l1.2 1.1c.2.2.3.4.3.7v1.6c0 .9.7 1.6 1.6 1.6h1.6c.3 0 .5.1.7.3l1.1 1.2c.6.6 1.6.6 2.2 0l1.1-1.2c.2-.2.4-.3.7-.3h1.6c.9 0 1.6-.7 1.6-1.6v-1.6c0-.3.1-.5.3-.7l1.2-1.1c.6-.6.6-1.6 0-2.2l-1.2-1.1c-.2-.2-.3-.4-.3-.7V5.1c0-.9-.7-1.6-1.6-1.6h-1.6c-.3 0-.5-.1-.7-.3L13.2 2c-.3-.3-.7-.5-1.2-.5Z"
+          fill={RC_LIGHT}
+        />
+        <path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
+  );
+}
+
+/** Icône RunConnect : pin de localisation avec ondes radio */
+function RunConnectPinIcon({ size = 44, color = RC_LIGHT }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 4C16.27 4 10 10.27 10 18c0 11 14 26 14 26s14-15 14-26c0-7.73-6.27-14-14-14Zm0 19a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" fill={color} />
+      <path d="M34.5 10.5c2.5 2.8 4 6.5 4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M37.5 7.5c3.2 3.8 5 8.7 5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+      <path d="M13.5 10.5c-2.5 2.8-4 6.5-4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M10.5 7.5c-3.2 3.8-5 8.7-5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+    </svg>
   );
 }
 
@@ -97,7 +101,7 @@ function LightCardAvatarRing({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: '50%',
-        padding: 6,
+        padding: 8,
         background: RC_LIGHT,
         boxShadow: '0 18px 52px rgba(0, 102, 255, 0.26)',
         flexShrink: 0,
@@ -193,7 +197,7 @@ function LightCardStatsRow({ payload }: { payload: ProfileSharePayload }) {
             boxShadow: '0 4px 20px rgba(15,23,42,0.06)',
           }}
         >
-          <row.icon style={{ width: 22, height: 22, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.2} />
+          <row.icon style={{ width: 22, height: 22, flexShrink: 0, color: RC_LIGHT }} strokeWidth={2.2} />
           <span style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{row.value}</span>
           <span style={{ fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', lineHeight: 1.2, color: '#64748b', textAlign: 'center', maxWidth: '100%', padding: '0 4px' }}>{row.label}</span>
         </div>
@@ -251,11 +255,7 @@ function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
-            <img
-              src="/brand/runconnect-splash-icon.png"
-              alt=""
-              style={{ width: 80, height: 80, flexShrink: 0, filter: 'brightness(0) invert(1)', objectFit: 'contain' }}
-            />
+            <RunConnectPinIcon size={72} color="#ffffff" />
             <div style={{ minWidth: 0, paddingTop: 4 }}>
               <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>Rejoins-moi sur</p>
               <p style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#ffffff', margin: '4px 0 0 0' }}>RunConnect</p>
@@ -523,9 +523,9 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
         />
 
         {/* RunConnect brand header */}
-        <div style={{ position: 'absolute', left: 40, top: 36, zIndex: 2, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/brand/runconnect-splash-icon.png" alt="" style={{ width: 44, height: 44, flexShrink: 0 }} />
-          <span style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.01em', color: '#0f172a' }}>RunConnect</span>
+        <div style={{ position: 'absolute', left: 40, top: 36, zIndex: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <RunConnectPinIcon size={48} color={RC_LIGHT} />
+          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.01em', color: '#0f172a' }}>RunConnect</span>
         </div>
 
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -574,7 +574,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             {/* Presence badge */}
             {payload.presenceRate != null ? (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 16, borderRadius: 50, border: `2px solid ${RC_LIGHT}`, background: '#ffffff', padding: '8px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                <Users style={{ width: 18, height: 18, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.3} />
+                <Users style={{ width: 18, height: 18, flexShrink: 0, color: RC_LIGHT }} strokeWidth={2.3} />
                 <span style={{ fontSize: 15, fontWeight: 700, color: RC_LIGHT }}>{payload.presenceRate}% présence</span>
               </div>
             ) : null}
