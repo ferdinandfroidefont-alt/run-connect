@@ -201,10 +201,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* G. Sport (droite de la ligne) */}
+              {/* G. Sport (droite de la ligne) avec emoji */}
               {payload && (
                 <div
-                  className="absolute text-slate-900 font-bold truncate"
+                  className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '70%',
                     top: '50.3%',
@@ -214,7 +214,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {payload.sportLabel}
+                  <span>{sportEmojiFromLabel(payload.sportLabel)}</span>
+                  <span className="truncate">{payload.sportLabel}</span>
                 </div>
               )}
 
