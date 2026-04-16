@@ -1,11 +1,11 @@
 import { encodePolyline } from '@/lib/polylineEncode';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { getHomeMapboxStyleUrl } from '@/lib/mapboxMapStylePreference';
 
 export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
-/** Style aligné avec la carte du Feed (MiniMapPreview) — streets-v12, même rendu. */
-const STYLE_RELIEF = 'mapbox/streets-v12';
+const STATIC_STYLE_FALLBACK = 'mapbox/streets-v12';
 
 /** Bleu RunConnect (proche primary) */
 const ROUTE_COLOR = '2563eb';
@@ -14,10 +14,22 @@ function joinOverlays(parts: string[]): string {
   return parts.filter(Boolean).join(',');
 }
 
+function getSessionShareStaticStyleId(): string {
+  const styleUrl = getHomeMapboxStyleUrl();
+  const match = styleUrl.match(/^mapbox:\/\/styles\/([^/]+)\/([^/?#]+)$/);
+  if (!match) return STATIC_STYLE_FALLBACK;
+
+  const owner = match[1];
+  const styleId = match[2];
+
+  // Fallback prudent pour les styles GL qui peuvent diverger du Static API.
+  if (!owner || !styleId || styleId === 'standard') return STATIC_STYLE_FALLBACK;
+  return `${owner}/${styleId}`;
+}
+
 /**
- * Image statique Mapbox (carte relief + éventuel tracé).
- * Le pin est rendu côté React (BluePinMarker) pour rester identique à la carte d'accueil.
- * Si pas de tracé : centre/zoom explicite (légèrement dézoomé) pour montrer le contexte.
+ * Image statique Mapbox utilisant le même style que la carte Feed/Home.
+ * Le pin est rendu côté React pour rester identique à l'app.
  */
 export function buildSessionStaticMapUrl(options: {
   routePath: MapboxStaticPoint[];
@@ -31,6 +43,7 @@ export function buildSessionStaticMapUrl(options: {
 
   const { routePath, pin, width, height } = options;
   const padding = options.padding ?? 96;
+  const staticStyle = getSessionShareStaticStyleId();
 
   const overlays: string[] = [];
 
@@ -45,12 +58,10 @@ export function buildSessionStaticMapUrl(options: {
 
   let path: string;
   if (routePath.length >= 2 && overlay) {
-    // Cadrage automatique sur le tracé, padding élargi (dézoom).
-    path = `/styles/v1/${STYLE_RELIEF}/static/${overlay}/auto/${width}x${height}`;
+    path = `/styles/v1/${staticStyle}/static/${overlay}/auto/${width}x${height}`;
   } else {
-    // Pas de tracé : centre sur le pin avec zoom aligné sur la carte du Feed
     const zoom = 12;
-    path = `/styles/v1/${STYLE_RELIEF}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
+    path = `/styles/v1/${staticStyle}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
   }
 
   const params = new URLSearchParams({
