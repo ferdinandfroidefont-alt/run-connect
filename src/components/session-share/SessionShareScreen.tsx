@@ -44,7 +44,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
       const { data } = await supabase
         .from('profiles')
         .select('display_name, avatar_url')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
       if (!cancelled && data) setProfile({ display_name: data.display_name, avatar_url: data.avatar_url });
     })();

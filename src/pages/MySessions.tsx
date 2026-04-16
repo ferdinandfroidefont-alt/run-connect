@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -8,7 +7,6 @@ import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
 import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,7 +22,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import ConfirmPresence from '@/pages/ConfirmPresence';
 import { StravaActivitiesPanel } from '@/components/sessions/StravaActivitiesPanel';
-import { buildPreferredSessionShareLink } from '@/lib/appLinks';
+import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
+import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
+import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -51,6 +51,16 @@ interface UserSession {
   image_url?: string;
   organizer_id?: string;
   live_tracking_max_duration?: number;
+  route_id?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  session_blocks?: unknown;
+  interval_count?: number | null;
+  interval_distance?: number | null;
+  interval_pace?: string | null;
+  interval_pace_unit?: string | null;
+  pace_general?: string | null;
+  pace_unit?: string | null;
 }
 
 interface Participant {
@@ -89,7 +99,9 @@ export default function MySessions() {
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [showShareActions, setShowShareActions] = useState(false);
+  const [showSessionShare, setShowSessionShare] = useState(false);
+  const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
+  const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const [focusColumn, setFocusColumn] = useState<'programmed' | 'finished'>('programmed');
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
@@ -211,68 +223,35 @@ export default function MySessions() {
     }
   }, [sessionSource, selectedSession]);
 
-  const buildSessionShareMessage = useCallback(() => {
-    if (!selectedSession) return '';
-    const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
-    const dateLabel = format(new Date(selectedSession.scheduled_at), "EEEE d MMMM 'à' HH:mm", { locale: fr });
-    return `🏃 ${selectedSession.title}
-
-📅 ${dateLabel}
-📍 ${selectedSession.location_name}
-
-Ouvrir avec RunConnect: ${shareUrl}`;
-  }, [selectedSession]);
-
-  const handleCopySessionLink = useCallback(async () => {
+  const openSessionShare = useCallback(async () => {
     if (!selectedSession) return;
     try {
-      const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
-      await navigator.clipboard.writeText(shareUrl);
-      toast({ title: "Lien copié", description: "Le lien de la séance est prêt à être collé." });
-      setShowShareActions(false);
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de copier le lien.", variant: "destructive" });
+      const s = selectedSession as UserSession & Record<string, unknown>;
+      const base: Record<string, unknown> = { ...s };
+      const routeId = s.route_id;
+      if (routeId) {
+        const { data: route, error } = await supabase.from('routes').select('coordinates').eq('id', routeId).maybeSingle();
+        if (error) console.error(error);
+        base.routes = route?.coordinates != null ? { coordinates: route.coordinates } : null;
+      } else {
+        base.routes = (s as { routes?: { coordinates?: unknown } | null }).routes ?? null;
+      }
+      const lat = Number(s.location_lat);
+      const lng = Number(s.location_lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        base.location_lat = 48.8566;
+        base.location_lng = 2.3522;
+      } else {
+        base.location_lat = lat;
+        base.location_lng = lng;
+      }
+      setSessionForShare(base as Parameters<typeof buildSessionSharePayload>[0]);
+      setShowSessionShare(true);
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erreur", description: "Impossible de charger la séance pour le partage.", variant: "destructive" });
     }
   }, [selectedSession, toast]);
-
-  const handleShareToRunConnectStory = useCallback(() => {
-    if (!selectedSession) return;
-    setShowShareActions(false);
-    navigate(`/stories/create?sessionShareId=${encodeURIComponent(selectedSession.id)}`);
-  }, [navigate, selectedSession]);
-
-  const handleShareToInstagram = useCallback(async () => {
-    if (!selectedSession) return;
-    const shareMessage = buildSessionShareMessage();
-    const shareUrl = buildPreferredSessionShareLink(selectedSession.id);
-    try {
-      if (Capacitor.isNativePlatform()) {
-        await Share.share({
-          title: selectedSession.title,
-          text: `${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`,
-          url: shareUrl,
-          dialogTitle: "Partager sur Instagram",
-        });
-      } else if (navigator.share) {
-        await navigator.share({
-          title: selectedSession.title,
-          text: `${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`,
-          url: shareUrl,
-        });
-      } else {
-        await navigator.clipboard.writeText(`${shareMessage}\n\nAjoute ce lien en sticker dans ta story Instagram.`);
-        toast({
-          title: "Texte copié",
-          description: "Colle ce texte dans Instagram et ajoute le lien RunConnect.",
-        });
-      }
-      setShowShareActions(false);
-    } catch (error: any) {
-      if (error?.name !== "AbortError") {
-        toast({ title: "Erreur", description: "Partage Instagram impossible.", variant: "destructive" });
-      }
-    }
-  }, [buildSessionShareMessage, selectedSession, toast]);
 
   const handleTrackingToggle = (checked: boolean) => {
     if (checked) {
@@ -606,7 +585,7 @@ Ouvrir avec RunConnect: ${shareUrl}`;
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setShowShareActions(true)}
+                    onClick={() => void openSessionShare()}
                     className="h-9 w-9"
                   >
                     <Share2 className="h-5 w-5 text-primary" />
@@ -636,7 +615,7 @@ Ouvrir avec RunConnect: ${shareUrl}`;
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setShowShareActions(true)}
+                    onClick={() => void openSessionShare()}
                     className="h-9 w-9"
                   >
                     <Share2 className="h-5 w-5 text-primary" />
@@ -1272,59 +1251,47 @@ Ouvrir avec RunConnect: ${shareUrl}`;
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showShareActions} onOpenChange={setShowShareActions}>
-        <DialogContent
-          stackNested
-          hideCloseButton
-          className="z-[210] rounded-ios-lg max-w-[320px] overflow-hidden p-0"
-          overlayClassName="z-[210]"
-        >
-          <DialogHeader className="p-ios-6 pb-ios-4">
-            <DialogTitle className="text-center text-ios-headline font-semibold">
-              Partager la séance
-            </DialogTitle>
-            <DialogDescription className="text-center text-ios-footnote text-muted-foreground">
-              Choisis comment partager ta séance.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="border-t border-border">
-            <button
-              type="button"
-              onClick={() => void handleCopySessionLink()}
-              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
-            >
-              Copier le lien
-            </button>
-          </div>
-          <div className="border-t border-border">
-            <button
-              type="button"
-              onClick={() => handleShareToRunConnectStory()}
-              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
-            >
-              Publier en story RunConnect
-            </button>
-          </div>
-          <div className="border-t border-border">
-            <button
-              type="button"
-              onClick={() => void handleShareToInstagram()}
-              className="w-full h-[44px] text-center text-primary text-ios-headline font-normal hover:bg-secondary/50"
-            >
-              Partager sur Instagram
-            </button>
-          </div>
-          <div className="border-t border-border">
-            <button
-              type="button"
-              onClick={() => setShowShareActions(false)}
-              className="w-full h-[44px] border-0 rounded-none text-muted-foreground text-ios-headline font-normal hover:bg-secondary/50"
-            >
-              Annuler
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SessionShareScreen
+        open={showSessionShare}
+        onClose={() => {
+          setShowSessionShare(false);
+          setSessionForShare(null);
+        }}
+        session={sessionForShare}
+        onOpenConversationShare={() => {
+          setShowSessionShare(false);
+          setShowShareConversationDialog(true);
+        }}
+      />
+
+      {selectedSession && (
+        <ShareSessionToConversationDialog
+          isOpen={showShareConversationDialog}
+          onClose={() => setShowShareConversationDialog(false)}
+          session={{
+            id: selectedSession.id,
+            title: selectedSession.title,
+            description: selectedSession.description,
+            activity_type: selectedSession.activity_type,
+            scheduled_at: selectedSession.scheduled_at,
+            location_name: selectedSession.location_name,
+            organizer_id: selectedSession.organizer_id ?? '',
+            profiles: selectedSession.organizer_id
+              ? (() => {
+                  const p = organizerProfiles.get(selectedSession.organizer_id!);
+                  return p
+                    ? {
+                        username: p.username,
+                        display_name: p.display_name,
+                        avatar_url: p.avatar_url ?? undefined,
+                      }
+                    : undefined;
+                })()
+              : undefined,
+          }}
+          onSessionShared={() => setShowShareConversationDialog(false)}
+        />
+      )}
 
     </>
   );
