@@ -95,7 +95,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   style={{
                     left: '50%',
                     top: '17.3%',
-                    width: '20.5%',
+                    width: '22%',
                     aspectRatio: '1 / 1',
                     transform: 'translate(-50%, -50%)',
                   }}
