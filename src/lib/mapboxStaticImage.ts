@@ -47,8 +47,8 @@ export function buildSessionStaticMapUrl(options: {
     // Cadrage automatique sur le tracé, padding élargi (dézoom).
     path = `/styles/v1/${STYLE_RELIEF}/static/${overlay}/auto/${width}x${height}`;
   } else {
-    // Pas de tracé : centre sur le pin avec zoom modéré (dézoomé)
-    const zoom = 13.2;
+    // Pas de tracé : centre sur le pin avec zoom aligné sur la carte du Feed
+    const zoom = 12;
     path = `/styles/v1/${STYLE_RELIEF}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
   }
 
