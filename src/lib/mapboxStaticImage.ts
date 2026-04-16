@@ -1,4 +1,3 @@
-import { encodePolyline } from '@/lib/polylineEncode';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import { getHomeMapboxStyleUrl } from '@/lib/mapboxMapStylePreference';
 
@@ -6,13 +5,6 @@ export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
 const STATIC_STYLE_FALLBACK = 'mapbox/streets-v12';
-
-/** Bleu RunConnect (proche primary) */
-const ROUTE_COLOR = '2563eb';
-
-function joinOverlays(parts: string[]): string {
-  return parts.filter(Boolean).join(',');
-}
 
 function getSessionShareStaticStyleId(): string {
   const styleUrl = getHomeMapboxStyleUrl();
@@ -22,14 +14,13 @@ function getSessionShareStaticStyleId(): string {
   const owner = match[1];
   const styleId = match[2];
 
-  // Fallback prudent pour les styles GL qui peuvent diverger du Static API.
   if (!owner || !styleId || styleId === 'standard') return STATIC_STYLE_FALLBACK;
   return `${owner}/${styleId}`;
 }
 
 /**
- * Image statique Mapbox utilisant le même style que la carte Feed/Home.
- * Le pin est rendu côté React pour rester identique à l'app.
+ * Image statique Mapbox alignée visuellement sur la MiniMap du Feed.
+ * Même style, même zoom, centrée sur le lieu ; le pin est rendu en React.
  */
 export function buildSessionStaticMapUrl(options: {
   routePath: MapboxStaticPoint[];
@@ -41,33 +32,11 @@ export function buildSessionStaticMapUrl(options: {
   const token = getMapboxAccessToken();
   if (!token) return null;
 
-  const { routePath, pin, width, height } = options;
-  const padding = options.padding ?? 96;
+  const { pin, width, height } = options;
   const staticStyle = getSessionShareStaticStyleId();
-
-  const overlays: string[] = [];
-
-  if (routePath.length >= 2) {
-    const encoded = encodePolyline(routePath);
-    if (encoded) {
-      overlays.push(`path-5+${ROUTE_COLOR}-0.9(${encoded})`);
-    }
-  }
-
-  const overlay = joinOverlays(overlays);
-
-  let path: string;
-  if (routePath.length >= 2 && overlay) {
-    path = `/styles/v1/${staticStyle}/static/${overlay}/auto/${width}x${height}`;
-  } else {
-    const zoom = 12;
-    path = `/styles/v1/${staticStyle}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
-  }
-
-  const params = new URLSearchParams({
-    padding: String(padding),
-    access_token: token,
-  });
+  const zoom = 12;
+  const path = `/styles/v1/${staticStyle}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
+  const params = new URLSearchParams({ access_token: token });
 
   return `https://api.mapbox.com${path}?${params.toString()}`;
 }
