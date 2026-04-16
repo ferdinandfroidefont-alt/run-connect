@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 
 const TEMPLATES: { id: ProfileShareTemplateId; label: string }[] = [
   { id: 'light_card', label: 'Carte claire' },
-  { id: 'organizer_focus', label: 'Organisateur' },
 ];
 
 type Props = {
