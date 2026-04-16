@@ -183,7 +183,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '30%',
-                    top: '51.2%',
+                    top: '50.7%',
                     transform: 'translate(-50%, 0)',
                     fontSize: 'clamp(10px, 3cqw, 13px)',
                     whiteSpace: 'nowrap',
@@ -207,7 +207,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '70%',
-                    top: '51.2%',
+                    top: '50.7%',
                     transform: 'translate(-50%, 0)',
                     maxWidth: '36%',
                     fontSize: 'clamp(10px, 3cqw, 13px)',
