@@ -255,11 +255,7 @@ function LightCardFooter({ payload }: { payload: ProfileSharePayload }) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'start', gap: 16 }}>
-            <img
-              src="/brand/runconnect-splash-icon.png"
-              alt=""
-              style={{ width: 80, height: 80, flexShrink: 0, filter: 'brightness(0) invert(1)', objectFit: 'contain' }}
-            />
+            <RunConnectPinIcon size={72} color="#ffffff" />
             <div style={{ minWidth: 0, paddingTop: 4 }}>
               <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>Rejoins-moi sur</p>
               <p style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#ffffff', margin: '4px 0 0 0' }}>RunConnect</p>
