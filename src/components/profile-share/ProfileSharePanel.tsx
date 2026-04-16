@@ -1,32 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
-import type { ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { generateProfileShareImage, shareProfileImageToSystem } from '@/services/profileShareService';
-import { ProfileShareArtboard } from './ProfileShareArtboard';
+import { ProfileShareCard } from './ProfileShareCard';
 import { Loader2, Share } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import profileShareCardImg from '@/assets/profile-share-card.png';
-
-const TEMPLATES: { id: ProfileShareTemplateId; label: string }[] = [
-  { id: 'light_card', label: 'Carte claire' },
-];
 
 type Props = {
   active?: boolean;
   compact?: boolean;
 };
 
+const CARD_NATIVE_SIZE = 1080;
+
 export function ProfileSharePanel({ active = true, compact = false }: Props) {
   const { user } = useAuth();
   const [payload, setPayload] = useState<Awaited<ReturnType<typeof fetchProfileSharePayload>>>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(360);
+  const previewWrapRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-
-  const templateId = TEMPLATES[0]?.id ?? 'light_card';
 
   useEffect(() => {
     if (!active || !user?.id) return;
@@ -46,11 +42,23 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     return () => { cancelled = true; };
   }, [active, user?.id]);
 
+  // Mesure la largeur dispo pour scale la carte 1080×1080.
+  useEffect(() => {
+    if (!previewWrapRef.current) return;
+    const el = previewWrapRef.current;
+    const ro = new ResizeObserver(() => {
+      setPreviewWidth(el.clientWidth);
+    });
+    ro.observe(el);
+    setPreviewWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, [payload]);
+
   const handleShare = useCallback(async () => {
     if (!exportRef.current || !payload) return;
     setExporting(true);
     try {
-      const dataUrl = await generateProfileShareImage(exportRef.current, templateId);
+      const dataUrl = await generateProfileShareImage(exportRef.current, 'light_card');
       try {
         const { shareToInstagramStory } = await import('@/lib/instagramStories');
         const result = await shareToInstagramStory({
@@ -71,7 +79,9 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
     } finally {
       setExporting(false);
     }
-  }, [payload, templateId]);
+  }, [payload]);
+
+  const scale = previewWidth > 0 ? previewWidth / CARD_NATIVE_SIZE : 0;
 
   return (
     <div className="min-w-0 max-w-full">
@@ -83,17 +93,40 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         )}
 
         {!loading && payload && (
-          <div className={cn(
-            'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
-            compact ? 'pt-2' : 'pt-4'
-          )}>
-            {/* Static preview image */}
-            <div className="w-full max-w-sm mx-auto">
-              <img
-                src={profileShareCardImg}
-                alt="Aperçu carte de partage"
-                className="w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
-              />
+          <div
+            className={cn(
+              'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+              compact ? 'pt-2' : 'pt-4',
+            )}
+          >
+            {/* Aperçu carte (rendu réel scalé) */}
+            <div ref={previewWrapRef} className="w-full max-w-sm mx-auto">
+              <div
+                style={{
+                  width: '100%',
+                  aspectRatio: '1 / 1',
+                  position: 'relative',
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  boxShadow: '0 8px 32px rgba(15,23,42,0.13)',
+                }}
+              >
+                {scale > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: CARD_NATIVE_SIZE,
+                      height: CARD_NATIVE_SIZE,
+                      transform: `scale(${scale})`,
+                      transformOrigin: 'top left',
+                    }}
+                  >
+                    <ProfileShareCard payload={payload} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
@@ -102,7 +135,7 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
               onClick={() => void handleShare()}
               className={cn(
                 'mt-5 flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl px-6 py-4 text-[16px] font-semibold text-white shadow-lg transition-all duration-200 active:scale-[0.98]',
-                exporting ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'
+                exporting ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90',
               )}
             >
               {exporting ? (
@@ -120,10 +153,10 @@ export function ProfileSharePanel({ active = true, compact = false }: Props) {
         )}
       </div>
 
-      {/* Hidden artboard for export */}
+      {/* Carte cachée pour l'export (taille native 1080×1080) */}
       {payload && (
         <div className="pointer-events-none fixed -left-[12000px] top-0 z-0 overflow-hidden" aria-hidden>
-          <ProfileShareArtboard ref={exportRef} payload={payload} templateId={templateId} />
+          <ProfileShareCard ref={exportRef} payload={payload} />
         </div>
       )}
     </div>
