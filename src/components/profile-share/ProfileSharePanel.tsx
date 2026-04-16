@@ -5,6 +5,14 @@ import profileShareCardImg from '@/assets/profile-share-card.png';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
+import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
+
+const sportEmojiFromLabel = (label: string): string => {
+  const found = Object.values(PROFILE_SPORT_LABELS).find(
+    (s) => s.label.toLowerCase() === label.toLowerCase()
+  );
+  return found?.emoji ?? '🏃';
+};
 
 type Props = {
   active?: boolean;
@@ -193,10 +201,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* G. Sport (droite de la ligne) */}
+              {/* G. Sport (droite de la ligne) avec emoji */}
               {payload && (
                 <div
-                  className="absolute text-slate-900 font-bold truncate"
+                  className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
                     left: '70%',
                     top: '50.3%',
@@ -206,7 +214,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {payload.sportLabel}
+                  <span>{sportEmojiFromLabel(payload.sportLabel)}</span>
+                  <span className="truncate">{payload.sportLabel}</span>
                 </div>
               )}
 
