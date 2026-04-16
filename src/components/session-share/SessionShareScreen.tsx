@@ -35,6 +35,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
   const [templateId, setTemplateId] = useState<SessionShareTemplateId>('light_pin');
   const [exporting, setExporting] = useState(false);
   const [lastImage, setLastImage] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
