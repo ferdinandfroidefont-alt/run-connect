@@ -358,7 +358,7 @@ export const InteractiveMap = ({
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [previewSession, setPreviewSession] = useState<Session | null>(null);  // deprecated, kept to avoid breaking refs
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionPresetRouteId, setSessionPresetRouteId] = useState<string | null>(null);
   const [presetLocation, setPresetLocation] = useState<{
