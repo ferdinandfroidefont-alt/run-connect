@@ -212,6 +212,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const headerMapInstance = useRef<MapboxMap | null>(null);
   const routeMapRef = useRef<HTMLDivElement | null>(null);
   const routeMapInstance = useRef<MapboxMap | null>(null);
+  const [headerMapReady, setHeaderMapReady] = useState(false);
+  const [headerMapFailed, setHeaderMapFailed] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -220,17 +222,27 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     let rafId: number | null = null;
     let attempts = 0;
 
+    setHeaderMapReady(false);
+    setHeaderMapFailed(false);
+
     const init = async (container: HTMLDivElement) => {
       try {
         const map = await createEmbeddedMapboxMap(container, {
           interactive: false,
           center: { lat: session.location_lat, lng: session.location_lng },
           zoom: 14,
+          style: MAPBOX_STREETS_STYLE,
         });
         if (cancelled) { map.remove(); return; }
         headerMapInstance.current = map;
         const doResize = () => { try { map.resize(); } catch {} };
-        map.once('load', doResize);
+        map.once('load', () => {
+          doResize();
+          if (!cancelled) setHeaderMapReady(true);
+        });
+        map.once('error', () => {
+          if (!cancelled) setHeaderMapFailed(true);
+        });
         requestAnimationFrame(doResize);
         setTimeout(doResize, 120);
         setTimeout(doResize, 400);
@@ -241,6 +253,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         }
       } catch (e) {
         console.warn('[SessionDetails] header map error', e);
+        if (!cancelled) setHeaderMapFailed(true);
       }
     };
 
@@ -251,6 +264,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         init(el);
       } else if (attempts++ < 60) {
         rafId = requestAnimationFrame(tryInit);
+      } else {
+        setHeaderMapFailed(true);
       }
     };
     tryInit();
@@ -261,6 +276,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       ro?.disconnect();
       headerMapInstance.current?.remove();
       headerMapInstance.current = null;
+      setHeaderMapReady(false);
     };
   }, [session?.id, session?.location_lat, session?.location_lng]);
 
