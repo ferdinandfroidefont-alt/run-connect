@@ -17,6 +17,16 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
