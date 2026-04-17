@@ -92,10 +92,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
               className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
             />
 
-            {/* Overlay absolu - toutes positions en % du template 1254x1254 */}
+            {/* Overlay absolu - uniquement pour la Carte 1. La Carte 2 est indépendante (image seule). */}
             <div className="absolute inset-0 pointer-events-none select-none">
               {/* A. Avatar */}
-              {payload?.avatarUrl && (
+              {variant === 'v1' && payload?.avatarUrl && (
                 <div
                   className="absolute overflow-hidden rounded-full"
                   style={{
