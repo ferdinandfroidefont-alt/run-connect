@@ -689,12 +689,17 @@ export function CoachPlanningExperience() {
   }, [athletes, groups, search]);
 
   const filteredSessions = useMemo(
-    () => sessions.filter((s) => {
-      if (activeAthleteId && s.athleteId !== activeAthleteId) return false;
-      if (activeGroupId && s.groupId !== activeGroupId) return false;
-      return true;
-    }),
-    [sessions, activeAthleteId, activeGroupId]
+    () => {
+      // En mode coach planning : n'afficher des séances QUE si un athlète ou un groupe est sélectionné.
+      // Évite la surcharge visuelle (séances de tous les athlètes mélangées).
+      if (!effectiveAthleteMode && !activeAthleteId && !activeGroupId) return [];
+      return sessions.filter((s) => {
+        if (activeAthleteId && s.athleteId !== activeAthleteId) return false;
+        if (activeGroupId && s.groupId !== activeGroupId) return false;
+        return true;
+      });
+    },
+    [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode]
   );
 
   const totalDurationSec = useMemo(
