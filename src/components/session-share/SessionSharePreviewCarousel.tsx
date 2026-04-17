@@ -11,11 +11,7 @@ import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePaginationDots } from './SessionSharePaginationDots';
 
 const TEMPLATE_META: { id: SessionShareTemplateId; label: string }[] = [
-  { id: 'light_pin', label: 'Clair · pin' },
-  { id: 'light_route', label: 'Clair · itinéraire' },
-  { id: 'dark_premium', label: 'Sombre' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'instagram_story', label: 'Story 9:16' },
+  { id: 'light_pin', label: 'Partage de séance' },
 ];
 
 type Props = {
