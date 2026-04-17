@@ -204,14 +204,13 @@ export function AppDrawer({
           onPressClubSwitcher={onPressClubSwitcher}
         />
         <div className="no-scrollbar space-y-5 overflow-y-auto px-3 pb-[max(1rem,var(--safe-area-bottom))] pt-3">
-          {sections.map((section, index) => (
+          {sections.map((section) => (
             <DrawerSection
               key={section.title}
               title={section.title}
               items={section.items}
               activeKey={activeKey}
               onSelect={onSelect}
-              disableAll={isAthleteMode && index > 0}
             />
           ))}
         </div>
