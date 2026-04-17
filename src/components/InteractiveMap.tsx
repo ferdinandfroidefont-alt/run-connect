@@ -1004,7 +1004,7 @@ export const InteractiveMap = ({
           fallbackWrap.style.cursor = 'pointer';
           fallbackWrap.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            setPreviewSession(session);
+            setSelectedSession(session);
           });
           const fallbackMarker = new mapboxgl.Marker({ element: fallbackWrap, anchor: 'center' })
             .setLngLat([lng, lat])
