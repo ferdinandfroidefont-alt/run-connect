@@ -6,9 +6,11 @@ interface PlanningHeaderProps {
   onOpenMenu: () => void;
   /** Titre de l’écran (remplace la marque dans la barre du haut). */
   title: string;
+  /** Sous-titre optionnel (ex. vue athlète « Mon plan »). */
+  subtitle?: string;
 }
 
-export function PlanningHeader({ onOpenMenu, title }: PlanningHeaderProps) {
+export function PlanningHeader({ onOpenMenu, title, subtitle }: PlanningHeaderProps) {
   return (
     <div className="pt-[var(--safe-area-top)]">
       <IosPageHeaderBar
@@ -22,7 +24,16 @@ export function PlanningHeader({ onOpenMenu, title }: PlanningHeaderProps) {
             <ListChecks className="h-5 w-5" />
           </button>
         }
-        title={<span className="text-[17px] font-semibold">{title}</span>}
+        title={
+          <span className="flex min-w-0 flex-col items-center gap-0.5 text-center">
+            <span className="text-[17px] font-semibold leading-tight">{title}</span>
+            {subtitle ? (
+              <span className="line-clamp-2 max-w-[280px] text-[12px] font-normal leading-snug text-muted-foreground">
+                {subtitle}
+              </span>
+            ) : null}
+          </span>
+        }
         right={<NotificationCenter />}
       />
     </div>

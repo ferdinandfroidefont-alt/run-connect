@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -37,6 +37,9 @@ import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
+import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
+import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
+import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -299,6 +302,10 @@ export function CoachPlanningExperience() {
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [search, setSearch] = useState("");
   const [clubs, setClubs] = useState<CoachClub[]>([]);
+  const [memberClubIds, setMemberClubIds] = useState<string[]>([]);
+  const [athletePlanSessions, setAthletePlanSessions] = useState<AthletePlanSessionModel[]>([]);
+  const [prevWeekAthleteKm, setPrevWeekAthleteKm] = useState<number | null>(null);
+  const [athletePlanLoading, setAthletePlanLoading] = useState(false);
   const [activeClubId, setActiveClubId] = useState<string | null>(null);
   const [isCoachMode, setIsCoachMode] = useState(true);
   const [viewAsAthlete, setViewAsAthlete] = useState(false);
@@ -402,6 +409,8 @@ export function CoachPlanningExperience() {
         .from("group_members")
         .select("conversation_id, is_coach")
         .eq("user_id", user.id);
+      const allClubIds = Array.from(new Set((memberships || []).map((entry) => entry.conversation_id)));
+      setMemberClubIds(allClubIds);
       const coachMemberships = (memberships || []).filter((entry) => entry.is_coach);
       const athleteMemberships = (memberships || []).filter((entry) => !entry.is_coach);
       const isCoach = coachMemberships.length > 0;
@@ -409,6 +418,7 @@ export function CoachPlanningExperience() {
       if (!clubIds.length) {
         if (!ignore) {
           setClubs([]);
+          setMemberClubIds([]);
           setActiveClubId(null);
           setIsCoachMode(true);
         }
@@ -598,7 +608,7 @@ export function CoachPlanningExperience() {
   }, [activeClubId, weekAnchor]);
 
   useEffect(() => {
-    if (!activeClubId || !user) return;
+    if (effectiveAthleteMode || !activeClubId || !user) return;
     let ignore = false;
     const loadWeekSessions = async () => {
       setLoading(true);
@@ -609,13 +619,9 @@ export function CoachPlanningExperience() {
         .eq("club_id", activeClubId)
         .gte("scheduled_at", weekAnchor.toISOString())
         .lt("scheduled_at", weekEnd.toISOString());
-      if (!effectiveAthleteMode) {
-        query = query.eq("coach_id", user.id);
-        if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
-        if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
-      } else {
-        query = query.contains("target_athletes", [user.id]).eq("status", "sent");
-      }
+      query = query.eq("coach_id", user.id);
+      if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
+      if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
       const { data, error } = await query.order("scheduled_at", { ascending: true });
       if (!ignore) {
         if (error) {
@@ -673,6 +679,144 @@ export function CoachPlanningExperience() {
       ignore = true;
     };
   }, [activeClubId, activeAthleteId, activeGroupId, effectiveAthleteMode, user, weekAnchor, toast]);
+
+  const loadAthleteWeek = useCallback(async () => {
+    if (!user || activeMenuKey !== "my-plan") return;
+    if (!memberClubIds.length) {
+      setAthletePlanSessions([]);
+      setPrevWeekAthleteKm(null);
+      setAthletePlanLoading(false);
+      return;
+    }
+    setAthletePlanLoading(true);
+    const weekEnd = addDays(weekAnchor, 7);
+    const prevWeekStart = subWeeks(weekAnchor, 1);
+    const prevWeekEnd = weekAnchor;
+    try {
+      const { data, error } = await supabase
+        .from("coaching_sessions")
+        .select(
+          "id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks, coach_id, club_id, distance_km, objective, coach_notes, default_location_name, description"
+        )
+        .in("club_id", memberClubIds)
+        .contains("target_athletes", [user.id])
+        .eq("status", "sent")
+        .gte("scheduled_at", weekAnchor.toISOString())
+        .lt("scheduled_at", weekEnd.toISOString())
+        .order("scheduled_at", { ascending: true });
+
+      if (error) {
+        toast.error("Impossible de charger Mon plan");
+        setAthletePlanSessions([]);
+        return;
+      }
+
+      const rows = data || [];
+      const sessionIds = rows.map((r) => r.id);
+
+      const { data: participations } = sessionIds.length
+        ? await supabase
+            .from("coaching_participations")
+            .select("id, coaching_session_id, status, athlete_note, completed_at")
+            .eq("user_id", user.id)
+            .in("coaching_session_id", sessionIds)
+        : { data: [] };
+
+      const partBySession = new Map((participations || []).map((p) => [p.coaching_session_id, p]));
+
+      const coachIds = [...new Set(rows.map((r) => r.coach_id))];
+      const clubIds = [...new Set(rows.map((r) => r.club_id))];
+
+      const [{ data: coachProfiles }, { data: convs }, { data: prevWeekRows }] = await Promise.all([
+        coachIds.length
+          ? supabase.from("profiles").select("user_id, display_name, username, avatar_url").in("user_id", coachIds)
+          : Promise.resolve({ data: [] as Array<{ user_id: string; display_name: string | null; username: string | null; avatar_url: string | null }> }),
+        clubIds.length
+          ? supabase.from("conversations").select("id, group_name").in("id", clubIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; group_name: string | null }> }),
+        supabase
+          .from("coaching_sessions")
+          .select("distance_km")
+          .in("club_id", memberClubIds)
+          .contains("target_athletes", [user.id])
+          .eq("status", "sent")
+          .gte("scheduled_at", prevWeekStart.toISOString())
+          .lt("scheduled_at", prevWeekEnd.toISOString()),
+      ]);
+
+      const coachById = new Map((coachProfiles || []).map((p) => [p.user_id, p]));
+      const clubById = new Map((convs || []).map((c) => [c.id, c.group_name || "Club"]));
+
+      const prevKm = (prevWeekRows || []).reduce((acc, row) => {
+        const dk = row.distance_km;
+        return typeof dk === "number" && dk > 0 ? acc + dk : acc;
+      }, 0);
+      setPrevWeekAthleteKm(prevKm > 0 ? Math.round(prevKm * 10) / 10 : null);
+
+      const mapped: AthletePlanSessionModel[] = rows.map((row) => {
+        const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
+        const blocks = rawBlocks.map((block, index) => {
+          const source = block as Record<string, unknown>;
+          const intensityMode = source.intensityMode === "rpe" ? "rpe" : "zones";
+          const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
+          const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
+          return {
+            id: typeof source.id === "string" ? source.id : uid(),
+            order: typeof source.order === "number" ? source.order : index + 1,
+            type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
+            durationSec: typeof source.durationSec === "number" ? source.durationSec : undefined,
+            distanceM: typeof source.distanceM === "number" ? source.distanceM : undefined,
+            paceSecPerKm: typeof source.paceSecPerKm === "number" ? source.paceSecPerKm : undefined,
+            speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
+            powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
+            repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
+            recoveryDurationSec: typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : undefined,
+            recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
+            recoveryType:
+              source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
+                ? source.recoveryType
+                : undefined,
+            intensityMode,
+            zone,
+            rpe: typeof source.rpe === "number" ? source.rpe : undefined,
+            notes: typeof source.notes === "string" ? source.notes : undefined,
+          };
+        });
+        const part = partBySession.get(row.id);
+        const coach = coachById.get(row.coach_id);
+        const coachName = coach?.display_name || coach?.username || "Coach";
+        const clubName = clubById.get(row.club_id) || "Club";
+        return {
+          id: row.id,
+          title: row.title,
+          sport: parseSport(row.activity_type),
+          assignedDate: row.scheduled_at,
+          blocks,
+          coachId: row.coach_id,
+          coachName,
+          coachAvatarUrl: coach?.avatar_url ?? null,
+          clubId: row.club_id,
+          clubName,
+          participationId: part?.id ?? null,
+          participationStatus: part?.status ?? null,
+          athleteNote: part?.athlete_note ?? null,
+          distanceKm: typeof row.distance_km === "number" ? row.distance_km : null,
+          objective: row.objective,
+          coachNotes: row.coach_notes,
+          locationName: row.default_location_name,
+          description: row.description,
+          hasConflict: false,
+        };
+      });
+      setAthletePlanSessions(mapped);
+    } finally {
+      setAthletePlanLoading(false);
+    }
+  }, [user, activeMenuKey, memberClubIds, weekAnchor, toast]);
+
+  useEffect(() => {
+    void loadAthleteWeek();
+  }, [loadAthleteWeek]);
 
   const weekDays = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),
@@ -1191,6 +1335,79 @@ export function CoachPlanningExperience() {
     }
   };
 
+  const athleteCoachesBrief = useMemo((): AthleteCoachBrief[] => {
+    const m = new Map<string, AthleteCoachBrief>();
+    athletePlanSessions.forEach((s) => {
+      if (!m.has(s.coachId)) {
+        m.set(s.coachId, {
+          id: s.coachId,
+          name: s.coachName,
+          sport: sportLabel(s.sport),
+          avatarUrl: s.coachAvatarUrl,
+          clubName: s.clubName,
+        });
+      } else {
+        const cur = m.get(s.coachId)!;
+        const nextSport = sportLabel(s.sport);
+        if (cur.sport !== nextSport) {
+          m.set(s.coachId, { ...cur, sport: "Plusieurs sports" });
+        }
+      }
+    });
+    return Array.from(m.values());
+  }, [athletePlanSessions]);
+
+  const confirmAthleteSession = async (s: AthletePlanSessionModel) => {
+    if (!s.participationId) {
+      toast.error("Synchronisation en cours. Réessayez dans un instant.");
+      return;
+    }
+    const { error } = await supabase.from("coaching_participations").update({ status: "confirmed" }).eq("id", s.participationId);
+    if (error) {
+      toast.error("Confirmation impossible", error.message);
+      return;
+    }
+    toast.success("Séance confirmée");
+    await loadAthleteWeek();
+  };
+
+  const completeAthleteSession = async (s: AthletePlanSessionModel) => {
+    if (!s.participationId) {
+      toast.error("Synchronisation en cours. Réessayez dans un instant.");
+      return;
+    }
+    const { error } = await supabase
+      .from("coaching_participations")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", s.participationId);
+    if (error) {
+      toast.error("Mise à jour impossible", error.message);
+      return;
+    }
+    toast.success("Séance enregistrée comme réalisée");
+    await loadAthleteWeek();
+  };
+
+  const persistAthleteFeedback = async (
+    s: AthletePlanSessionModel,
+    payload: { note: string; rpe: number | null; felt: "easy" | "ok" | "hard" | null }
+  ) => {
+    if (!s.participationId) {
+      toast.error("Participation introuvable");
+      return;
+    }
+    const { error } = await supabase.from("coaching_participations").update({ athlete_note: payload.note || null }).eq("id", s.participationId);
+    if (error) {
+      toast.error("Enregistrement impossible", error.message);
+      return;
+    }
+    toast.success("Retour enregistré");
+    await loadAthleteWeek();
+  };
+
   const updateMemberRole = async (memberId: string, role: ClubRole) => {
     if (!activeClubId) return;
     const payload = {
@@ -1377,11 +1594,17 @@ export function CoachPlanningExperience() {
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
           headerWrapperClassName="shrink-0 border-b border-border bg-card"
-          header={<PlanningHeader onOpenMenu={() => setDrawerOpen(true)} title={sectionTitle} />}
+          header={
+            <PlanningHeader
+              onOpenMenu={() => setDrawerOpen(true)}
+              title={sectionTitle}
+              subtitle={activeMenuKey === "my-plan" ? "Semaine d'entraînement et séances programmées" : undefined}
+            />
+          }
           scrollClassName="bg-secondary pb-24"
         >
           <div className="space-y-0 pb-6">
-            {(activeMenuKey === "planning" || activeMenuKey === "my-plan") && clubs.length > 1 && (
+            {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
                 <div className="divide-y divide-border">
@@ -1437,7 +1660,29 @@ export function CoachPlanningExperience() {
               </div>
             )}
 
-            {activeMenuKey === "planning" || activeMenuKey === "my-plan" ? (
+            {activeMenuKey === "my-plan" ? (
+              <AthleteMyPlanView
+                loading={athletePlanLoading}
+                weekDays={weekDays}
+                weekStart={weekAnchor}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
+                onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
+                sessions={athletePlanSessions}
+                prevWeekPlannedKm={prevWeekAthleteKm}
+                coaches={athleteCoachesBrief}
+                onConfirmSession={confirmAthleteSession}
+                onCompleteSession={completeAthleteSession}
+                onMessageCoach={(id) => void openDirectMessage(id)}
+                onPersistSessionFeedback={persistAthleteFeedback}
+                onOpenCoaches={() => document.getElementById("athlete-coaches-block")?.scrollIntoView({ behavior: "smooth" })}
+                onOpenMessages={() => navigate("/messages")}
+                onOpenPastSessions={() => setWeekAnchor(startOfWeek(subWeeks(new Date(), 3), { weekStartsOn: 1 }))}
+                onOpenCalendar={() => toast.info("Vue calendrier complet", "Cette navigation arrive bientôt.")}
+                navigateProfile={(userId) => navigate(`/profile/${userId}`)}
+              />
+            ) : activeMenuKey === "planning" ? (
               <>
                 <WeekSelectorPremium
                   weekStart={weekAnchor}
