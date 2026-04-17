@@ -560,7 +560,7 @@ export const ClubProfileDialog = ({
                     onClick={() => setShowDeleteGroupDialog(true)}
                     className="w-full text-center text-[13px] text-destructive active:opacity-70"
                   >
-                    Supprimer le club
+                    Supprimer le {entityLabel}
                   </button>
                 </div>
               )}
