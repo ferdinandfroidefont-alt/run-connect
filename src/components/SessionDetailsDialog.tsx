@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { Map as MapboxMap } from "mapbox-gl";
+import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
+import { ActivityIcon } from "@/lib/activityIcons";
+import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
