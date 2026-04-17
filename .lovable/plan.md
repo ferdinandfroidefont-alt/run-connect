@@ -1,15 +1,21 @@
 
-Make the structure badge (e.g. "6×400") larger and more prominent in the session share artboard.
+The user confirmed integration of the new generated card (`profile-share-card-v2.png`) as a second selectable template in the profile share carousel.
 
-Currently in `SessionShareArtboard.tsx`, the structure badge built from `buildStructureBadge` is rendered as a small chip near the activity header. I'll bump its font size and padding to make it stand out as a key visual element.
+## Plan
 
-## Changes
+**1. Extend template list (`src/lib/profileSharePayload.ts`)**
+- Add `'generated_card'` to `ProfileShareTemplateId` union
+- `templateDimensions('generated_card')` → `{ w: 1080, h: 1080 }`
 
-**`src/components/session-share/SessionShareArtboard.tsx`**
-- Locate the structure badge rendering (small pill showing things like "6×400", "10 km").
-- Increase font size from current ~14-16px to ~28-32px.
-- Increase padding (e.g. `padding: '8px 16px'`), `borderRadius`, and `fontWeight: 800`.
-- Ensure it sits on its own line (or with proper spacing) so it doesn't crowd the title.
-- Apply consistently across `light_pin`, `light_route`, `dark_premium` templates; scale slightly down for `minimal` / `instagram_story` if needed.
+**2. Render new template (`src/components/profile-share/ProfileShareArtboard.tsx`)**
+- Import `profileShareCardV2` from `@/assets/profile-share-card-v2.png`
+- Add a branch for `templateId === 'generated_card'`: render the PNG as full background (1080×1080), then overlay dynamic data (avatar, name, username, role line, location, sport, 4 stats, presence rate, QR code) at absolute positions matching the image's placeholders — same approach as `ProfileSharePanel.tsx` already uses for its static image.
 
-No other files affected.
+**3. Add to carousel (`src/components/profile-share/ProfileSharePreviewCarousel.tsx`)**
+- Append `{ id: 'generated_card', label: 'Carte générée' }` to `META`
+- No other changes needed — existing scaling/preview logic handles new template automatically.
+
+## Result
+User can swipe in the profile share carousel between: Carte claire · Organisateur · Story minimal · **Carte générée** (new). Selecting it and exporting produces a 1080×1080 PNG using the v2 image as background with live profile data overlaid.
+
+No changes to share/export services needed (they're template-agnostic).
