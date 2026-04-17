@@ -524,20 +524,72 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   // Compute timeline blocks
   const timelineBlocks = (session.session_blocks as SessionBlock[] | undefined) || [];
 
-  // Stats card values
-  const totalDistance = session.distance_km ? formatKm(session.distance_km) : (session.routes?.total_distance ? formatMeters(session.routes.total_distance) : '—');
+  // Stats card values — fall back across structured blocks / interval mode / route
+  const blocksAll = (session.session_blocks as SessionBlock[] | undefined) || [];
+  const intervalBlock = blocksAll.find(b => b.type === 'interval');
+
+  // Derive distance: structured > session.distance_km > route
+  let derivedDistanceKm: number | null = session.distance_km ?? null;
+  if (!derivedDistanceKm && intervalBlock?.effortType === 'distance' && intervalBlock.effortDuration) {
+    const m = parseFloat(String(intervalBlock.effortDuration).replace(',', '.'));
+    if (!isNaN(m) && intervalBlock.repetitions) derivedDistanceKm = (m * intervalBlock.repetitions) / 1000;
+  }
+  if (!derivedDistanceKm && session.interval_distance && session.interval_count) {
+    derivedDistanceKm = session.interval_distance * session.interval_count;
+  }
+  const totalDistance = derivedDistanceKm
+    ? formatKm(derivedDistanceKm)
+    : (session.routes?.total_distance ? formatMeters(session.routes.total_distance) : '—');
+
   const elevGain = session.routes?.total_elevation_gain ? `${Math.round(session.routes.total_elevation_gain)} m` : '—';
-  const avgPace = session.pace_general
-    ? (session.activity_type === 'course' ? `${session.pace_general}/km` : session.pace_general)
+
+  // Pace: prefer interval pace if structured/fractionné, else general
+  const rawPace = intervalBlock?.effortPace || session.interval_pace || session.pace_general || null;
+  const avgPace = rawPace
+    ? (session.activity_type === 'course' ? `${rawPace}/km`
+      : session.activity_type === 'natation' ? `${rawPace}/100m`
+      : rawPace)
     : '—';
-  // rough duration estimate (min) from distance + pace if both available
+
+  // Duration estimate (min): if structured, sum block durations; else distance × pace
   const estimatedDuration = (() => {
-    if (!session.distance_km || !session.pace_general) return '—';
-    const m = String(session.pace_general).match(/(\d+)[':](\d+)/);
-    if (!m) return '—';
-    const sec = parseInt(m[1]) * 60 + parseInt(m[2]);
-    const total = Math.round((sec * session.distance_km) / 60);
-    return `${total} min`;
+    if (blocksAll.length) {
+      let totalSec = 0;
+      blocksAll.forEach(b => {
+        if (b.type === 'interval') {
+          const reps = b.repetitions || 1;
+          // effort
+          if (b.effortType === 'time') {
+            totalSec += reps * (parseFloat(String(b.effortDuration || '0').replace(',', '.')) || 0);
+          } else if (b.effortPace) {
+            const pm = String(b.effortPace).match(/(\d+)[':](\d+)/);
+            const dist = parseFloat(String(b.effortDuration || '0').replace(',', '.')) / 1000;
+            if (pm) totalSec += reps * (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
+          }
+          // recovery
+          if (b.recoveryDuration) {
+            totalSec += (reps - 1) * (parseFloat(String(b.recoveryDuration).replace(',', '.')) || 0);
+          }
+        } else {
+          if (b.durationType === 'time') {
+            totalSec += (parseFloat(String(b.duration || '0').replace(',', '.')) || 0) * 60;
+          } else if (b.pace) {
+            const pm = String(b.pace).match(/(\d+)[':](\d+)/);
+            const dist = parseFloat(String(b.duration || '0').replace(',', '.')) / 1000;
+            if (pm) totalSec += (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
+          }
+        }
+      });
+      if (totalSec > 0) return `${Math.round(totalSec / 60)} min`;
+    }
+    if (derivedDistanceKm && rawPace) {
+      const m = String(rawPace).match(/(\d+)[':](\d+)/);
+      if (m) {
+        const sec = parseInt(m[1]) * 60 + parseInt(m[2]);
+        return `${Math.round((sec * derivedDistanceKm) / 60)} min`;
+      }
+    }
+    return '—';
   })();
 
   const calendarEvent = {
