@@ -2160,7 +2160,9 @@ export default function StoryCreate() {
               setActiveTool("text");
               setEditorMode("text");
               setShowTextInput(true);
-                triggerHaptic("light");
+              // Refocus the existing input without repositioning it.
+              window.setTimeout(() => textInputRef.current?.focus({ preventScroll: true }), 0);
+              triggerHaptic("light");
             }}
           >
             {showTextInput ? (
