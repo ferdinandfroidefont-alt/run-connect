@@ -239,9 +239,6 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
           ) : (
             <div style={{ width: 120, height: 120, borderRadius: 10, border: '3px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)' }} />
           )}
-          <p style={{ maxWidth: 200, textAlign: 'right', fontSize: 11, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.9)', wordBreak: 'break-all', margin: 0 }}>
-            {publicUrlDisplay}
-          </p>
         </div>
       </div>
     </div>
