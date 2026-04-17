@@ -158,28 +158,6 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
               </div>
             </div>
 
-            {/* Intensity */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Intensité</Label>
-              <div className="grid grid-cols-5 gap-1">
-                {INTENSITY_LEVELS.map((level) => (
-                  <button
-                    key={level.value}
-                    type="button"
-                    onClick={() => onUpdate({ effortIntensity: level.value })}
-                    className={cn(
-                      "py-1.5 px-1 rounded-lg text-[10px] font-medium transition-all text-center",
-                      block.effortIntensity === level.value
-                        ? `${level.color} text-white`
-                        : "bg-card text-muted-foreground hover:bg-card/80"
-                    )}
-                  >
-                    {level.label.split(' - ')[0]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Recovery */}
             <div className="pt-2 border-t border-border/50">
               <Label className="text-xs text-muted-foreground mb-2 block">Récupération</Label>
