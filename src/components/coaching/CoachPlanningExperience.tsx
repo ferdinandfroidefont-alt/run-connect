@@ -690,7 +690,7 @@ export function CoachPlanningExperience() {
     };
   }, [activeClubId, activeAthleteId, activeGroupId, effectiveAthleteMode, user, weekAnchor, toast]);
 
-  const loadAthleteWeek = useCallback(async () => {
+  const loadAthleteWeek = useCallback(async (opts?: { silent?: boolean }) => {
     if (!user || activeMenuKey !== "my-plan") return;
     if (!memberClubIds.length) {
       setAthletePlanSessions([]);
@@ -698,7 +698,9 @@ export function CoachPlanningExperience() {
       setAthletePlanLoading(false);
       return;
     }
-    setAthletePlanLoading(true);
+    if (!opts?.silent) {
+      setAthletePlanLoading(true);
+    }
     const weekEnd = addDays(weekAnchor, 7);
     const prevWeekStart = subWeeks(weekAnchor, 1);
     const prevWeekEnd = weekAnchor;
@@ -1389,7 +1391,7 @@ export function CoachPlanningExperience() {
       return;
     }
     toast.success("Séance confirmée");
-    await loadAthleteWeek();
+    await loadAthleteWeek({ silent: true });
   };
 
   const completeAthleteSession = async (s: AthletePlanSessionModel) => {
@@ -1409,7 +1411,7 @@ export function CoachPlanningExperience() {
       return;
     }
     toast.success("Séance enregistrée comme réalisée");
-    await loadAthleteWeek();
+    await loadAthleteWeek({ silent: true });
   };
 
   const persistAthleteFeedback = async (
@@ -1426,7 +1428,7 @@ export function CoachPlanningExperience() {
       return;
     }
     toast.success("Retour enregistré");
-    await loadAthleteWeek();
+    await loadAthleteWeek({ silent: true });
   };
 
   const updateMemberRole = async (memberId: string, role: ClubRole) => {

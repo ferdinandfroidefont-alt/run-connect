@@ -12,10 +12,14 @@ type Props = {
 };
 
 export function AthleteCoachesCard({ coaches, onProfile, onMessage, className }: Props) {
-  if (!coaches.length) return null;
   return (
     <div className={cn("rounded-2xl border border-border/80 bg-card p-4 shadow-sm", className)}>
       <p className="mb-3 text-[13px] font-semibold text-foreground">Mes coachs</p>
+      {!coaches.length ? (
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          Les coachs liés à vos séances de la semaine apparaissent ici.
+        </p>
+      ) : (
       <div className="space-y-3">
         {coaches.map((c) => (
           <div key={c.id} className="flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5">
@@ -52,6 +56,7 @@ export function AthleteCoachesCard({ coaches, onProfile, onMessage, className }:
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

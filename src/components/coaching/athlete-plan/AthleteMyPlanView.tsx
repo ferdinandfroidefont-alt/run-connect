@@ -110,7 +110,7 @@ export function AthleteMyPlanView({
         />
       ) : null}
 
-      <div>
+      <div className="min-h-[min(320px,48vh)]">
         <div className="mb-2 flex items-center justify-between px-0.5">
           <p className="text-[13px] font-semibold text-foreground">
             {format(selectedDate, "EEEE d MMMM", { locale: fr })}
@@ -122,33 +122,35 @@ export function AthleteMyPlanView({
           ) : null}
         </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-36 animate-pulse rounded-2xl bg-card shadow-sm" />
-            ))}
-          </div>
-        ) : daySessions.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card/80 px-4 py-8 text-center">
-            <p className="text-[15px] font-medium text-foreground">Aucune séance ce jour</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Changez de jour ou de semaine pour voir votre planning.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {daySessions.map((s) => (
-              <AthletePlanSessionCard
-                key={s.id}
-                session={s}
-                busy={busyDay}
-                onOpen={() => setDetail(s)}
-                onConfirm={() => void onConfirmSession(s)}
-                onComplete={() => void onCompleteSession(s)}
-                onMessageCoach={() => onMessageCoach(s.coachId)}
-                onComment={() => setDetail(s)}
-              />
-            ))}
-          </div>
-        )}
+        <div className="relative">
+          {loading ? (
+            <div className="space-y-3" aria-busy="true" aria-label="Chargement des séances">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-32 animate-pulse rounded-2xl bg-muted/50 shadow-sm" />
+              ))}
+            </div>
+          ) : daySessions.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/80 px-4 py-10 text-center">
+              <p className="text-[15px] font-medium text-foreground">Aucune séance ce jour</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Changez de jour ou de semaine pour voir votre planning.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {daySessions.map((s) => (
+                <AthletePlanSessionCard
+                  key={s.id}
+                  session={s}
+                  busy={busyDay}
+                  onOpen={() => setDetail(s)}
+                  onConfirm={() => void onConfirmSession(s)}
+                  onComplete={() => void onCompleteSession(s)}
+                  onMessageCoach={() => onMessageCoach(s.coachId)}
+                  onComment={() => setDetail(s)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div id="athlete-coaches-block" className="scroll-mt-24">
