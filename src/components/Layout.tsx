@@ -4,7 +4,7 @@ import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, type CSSProperties } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
@@ -23,7 +23,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
-  const { hideBottomNav, homeMapImmersive } = useAppContext();
+  const { removeMainBottomInset, homeMapImmersive } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -32,8 +32,11 @@ export const Layout = ({ children }: LayoutProps) => {
     (location.pathname || '/').replace(/\/+$/, '') || '/';
   const isProfileRoute =
     normalizedPath === '/profile' || normalizedPath.startsWith('/profile/');
-  const showBottomNav = !hideBottomNav && !isProfileRoute;
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
+
+  /** Padding bas du <main> : stable dès le 1er rendu (pas de useEffect) — évite reflow / « remontée » de la zone utile. */
+  const layoutBottomInset =
+    isProfileRoute || removeMainBottomInset ? "0px" : "var(--bottom-nav-offset)";
 
   useEffect(() => {
     if (isHome) setHomeMapPrimed(true);
@@ -61,17 +64,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
 
-  // Réserve l’espace sous le contenu quand la tab bar fixed est visible.
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--layout-bottom-inset',
-      hideBottomNav || isProfileRoute ? '0px' : 'var(--bottom-nav-offset)'
-    );
-    return () => {
-      document.documentElement.style.removeProperty('--layout-bottom-inset');
-    };
-  }, [hideBottomNav, isProfileRoute]);
-  
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -157,7 +149,14 @@ export const Layout = ({ children }: LayoutProps) => {
   }
 
   return (
-    <div className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden">
+    <div
+      className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden"
+      style={
+        {
+          ["--layout-bottom-inset" as string]: layoutBottomInset,
+        } as CSSProperties
+      }
+    >
       {/*
         La tab bar est dans le flux (plus en fixed) : le <main> a une hauteur réelle = viewport − barre.
         Le scroll ne s’étend plus derrière les onglets (plus besoin de ios-nav-padding sur le scroll).
@@ -168,7 +167,7 @@ export const Layout = ({ children }: LayoutProps) => {
       */}
       <main
         className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden"
-        style={{ paddingBottom: 'var(--layout-bottom-inset)' }}
+        style={{ paddingBottom: "var(--layout-bottom-inset)" }}
       >
         {homeMapPrimed && (
           <div
@@ -217,9 +216,10 @@ export const Layout = ({ children }: LayoutProps) => {
       {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
-        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
+        Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
+        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock.
       */}
-      {showBottomNav && <BottomNavigation />}
+      <BottomNavigation isProfileRoute={isProfileRoute} />
     </div>
   );
 };

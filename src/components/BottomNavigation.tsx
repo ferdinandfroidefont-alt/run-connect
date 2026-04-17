@@ -19,7 +19,12 @@ type NavItem = {
 
 const ITEM_GAP_PX = 12;
 
-export const BottomNavigation = () => {
+type BottomNavigationProps = {
+  /** Route profil : tab bar masquée visuellement (overlay plein écran) sans démontage. */
+  isProfileRoute?: boolean;
+};
+
+export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -120,7 +125,8 @@ export const BottomNavigation = () => {
     };
   }, [user, fetchUnreadCount]);
 
-  if (hideBottomNav) return null;
+  /** Toujours montée : masquage visuel uniquement (pas d’animation / pas de translate). */
+  const tabBarHidden = hideBottomNav || isProfileRoute;
 
   const handleNavClick = (path: string) => {
     if (path === "/messages") {
@@ -135,11 +141,17 @@ export const BottomNavigation = () => {
       className={cn(
         "fixed inset-x-0 z-[110] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
-        "pointer-events-auto"
+        tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
+        "[transition:none] motion-reduce:transition-none"
       )}
       role="navigation"
       aria-label="Navigation principale"
-      style={{ paddingBottom: "var(--tab-bar-ground-strip)", bottom: "0px" }}
+      aria-hidden={tabBarHidden}
+      style={{
+        paddingBottom: "var(--tab-bar-ground-strip)",
+        bottom: 0,
+        transition: "none",
+      }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
       {isHome && <FloatingCreateSessionButton />}

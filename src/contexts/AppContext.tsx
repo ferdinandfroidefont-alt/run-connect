@@ -10,6 +10,11 @@ interface AppContextType {
   openCreateRoute: () => void;
   setOpenCreateRoute: (openFunction: () => void) => void;
   hideBottomNav: boolean;
+  /**
+   * True quand le contenu principal doit retirer le padding bas (éditeurs plein écran).
+   * Les overlays (notifications, fil messages) gardent le padding pour éviter tout saut au fermetage.
+   */
+  removeMainBottomInset: boolean;
   /** Masque la tab bar si au moins une raison est active (logique OU — évite les conflits entre écrans). */
   setBottomNavSuppressed: (id: string, suppressed: boolean) => void;
   /** @deprecated Préférer setBottomNavSuppressed avec un id stable. */
@@ -60,6 +65,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     [bottomNavSuppressors]
   );
 
+  const removeMainBottomInset = useMemo(() => {
+    if (bottomNavSuppressors["_legacy"]) return true;
+    return Boolean(bottomNavSuppressors["coaching-create"] || bottomNavSuppressors["route-creation"]);
+  }, [bottomNavSuppressors]);
+
   /** Compat : une seule bascule sans id (écrans legacy). */
   const setHideBottomNav = useCallback(
     (hide: boolean) => {
@@ -103,6 +113,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       openCreateRoute,
       setOpenCreateRoute,
       hideBottomNav,
+      removeMainBottomInset,
       setBottomNavSuppressed,
       setHideBottomNav,
       homeFeedSheetRequest,
