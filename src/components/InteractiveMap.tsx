@@ -980,7 +980,7 @@ export const InteractiveMap = ({
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          setPreviewSession(session);
+          setSelectedSession(session);
         });
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
