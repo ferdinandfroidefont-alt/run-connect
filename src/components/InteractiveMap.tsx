@@ -2387,24 +2387,7 @@ export const InteractiveMap = ({
         onCreateRoute={handleCreateRoute}
       />
 
-      {/* Session Preview Popup */}
-      <SessionPreviewPopup
-        session={previewSession}
-        onClose={() => setPreviewSession(null)}
-        onViewDetails={() => {
-          if (previewSession) {
-            setSelectedSession(previewSession);
-            setPreviewSession(null);
-          }
-        }}
-        isImminent={previewSession ? (() => {
-          const sessionDate = new Date(previewSession.scheduled_at);
-          const now = new Date();
-          const diffMs = sessionDate.getTime() - now.getTime();
-          const diffMinutes = diffMs / 60000;
-          return diffMinutes > 0 && diffMinutes <= 120;
-        })() : false}
-      />
+
 
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
