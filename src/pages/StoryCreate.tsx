@@ -2412,16 +2412,22 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                setActiveTool("text");
-                setEditorMode("text");
-                placeTextEditorAtCenter();
-                setSelectedLayer("text");
-                setSelectedDynamicLayerId(null);
-                setShowTextInput(true);
-                setShowMusicPicker(false);
-                setShowSessionPicker(false);
-                setShowStickerPicker(false);
-                setDrawMode(false);
+                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
+                // dans la même tâche que le geste utilisateur. flushSync force le rendu
+                // synchrone de l'input avant qu'on ne le focus.
+                flushSync(() => {
+                  setActiveTool("text");
+                  setEditorMode("text");
+                  placeTextEditorAtCenter();
+                  setSelectedLayer("text");
+                  setSelectedDynamicLayerId(null);
+                  setShowTextInput(true);
+                  setShowMusicPicker(false);
+                  setShowSessionPicker(false);
+                  setShowStickerPicker(false);
+                  setDrawMode(false);
+                });
+                textInputRef.current?.focus({ preventScroll: true });
                 triggerHaptic("light");
               },
             },
