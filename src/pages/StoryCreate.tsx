@@ -2139,11 +2139,12 @@ export default function StoryCreate() {
         {/* Text overlay on preview (positioned at cursor) */}
         {(textOverlay || showTextInput) && (
           <div
-            className={cn("absolute", selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}
+            className="absolute"
             style={{
               zIndex: layerZ("text"),
-              transform: `translate(${textPos.x}px, ${textPos.y}px) scale(${textScale}) rotate(${textRotation}deg)`,
-              transformOrigin: "top left",
+              left: 0,
+              top: 0,
+              transform: `translate(${textPos.x}px, ${textPos.y}px)`,
               transition: textDragging || textPinching ? "none" : "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
             onPointerDown={startTextDrag}
@@ -2162,47 +2163,58 @@ export default function StoryCreate() {
               setActiveTool("text");
               setEditorMode("text");
               setShowTextInput(true);
-              // Refocus the existing input without repositioning it.
               window.setTimeout(() => textInputRef.current?.focus({ preventScroll: true }), 0);
               triggerHaptic("light");
             }}
           >
             {showTextInput ? (
-              <input
-                ref={textInputRef}
-                value={textOverlay}
-                onChange={(e) => setTextOverlay(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="Ecrire ici..."
-                className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
-                style={{
-                  fontFamily: FONT_MAP[textFont],
-                  fontWeight: textBold ? 800 : 600,
-                  textAlign,
-                  fontSize: `${Math.max(30, textSize)}px`,
-                  color: textColor,
-                  caretColor: textColor,
-                }}
-              />
+              // While editing: NO scale/rotate on the input's parent so the caret is rendered correctly.
+              <div className={cn(selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}>
+                <input
+                  ref={textInputRef}
+                  value={textOverlay}
+                  onChange={(e) => setTextOverlay(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  placeholder="Ecrire ici..."
+                  className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
+                  style={{
+                    fontFamily: FONT_MAP[textFont],
+                    fontWeight: textBold ? 800 : 600,
+                    textAlign,
+                    fontSize: `${Math.max(30, textSize)}px`,
+                    color: textColor,
+                    caretColor: textColor,
+                  }}
+                />
+              </div>
             ) : (
               <div
-                className={cn(
-                  "rounded-xl px-4 py-2 backdrop-blur-sm",
-                  textStyle === "plain" && "bg-transparent",
-                  textStyle === "bubble" && "bg-black/45",
-                  textStyle === "band" && "bg-black/35 border-y border-white/25",
-                  textStyle === "outline" && "bg-transparent",
-                )}
+                className={cn(selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}
                 style={{
-                  fontFamily: FONT_MAP[textFont],
-                  fontWeight: textBold ? 700 : 500,
-                  textAlign,
-                  fontSize: `${textSize}px`,
-                  color: textColor,
-                  WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                  transform: `scale(${textScale}) rotate(${textRotation}deg)`,
+                  transformOrigin: "top left",
                 }}
               >
-                {textOverlay}
+                <div
+                  className={cn(
+                    "rounded-xl px-4 py-2 backdrop-blur-sm",
+                    textStyle === "plain" && "bg-transparent",
+                    textStyle === "bubble" && "bg-black/45",
+                    textStyle === "band" && "bg-black/35 border-y border-white/25",
+                    textStyle === "outline" && "bg-transparent",
+                  )}
+                  style={{
+                    fontFamily: FONT_MAP[textFont],
+                    fontWeight: textBold ? 700 : 500,
+                    textAlign,
+                    fontSize: `${textSize}px`,
+                    color: textColor,
+                    WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                  }}
+                >
+                  {textOverlay}
+                </div>
               </div>
             )}
           </div>
