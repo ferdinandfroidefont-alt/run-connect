@@ -167,7 +167,7 @@ export function AppDrawer({
         : [
             {
               title: "Vu athlète",
-              items: [{ key: "my-plan", label: "Mon plan", icon: FolderKanban }],
+              items: [{ key: "my-plan" as CoachMenuKey, label: "Mon plan", icon: FolderKanban }],
             },
           ]),
       ...(isAthleteMode
@@ -175,11 +175,11 @@ export function AppDrawer({
             {
               title: "Vu coach",
               items: [
-                { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-                { key: "planning", label: "Planification", icon: CalendarDays },
-                { key: "groups", label: "Groupes", icon: UsersRound },
-                { key: "tracking", label: "Suivi athlète", icon: Activity },
-                { key: "club", label: "Gérer le club", icon: Building2 },
+                { key: "dashboard" as CoachMenuKey, label: "Tableau de bord", icon: LayoutDashboard },
+                { key: "planning" as CoachMenuKey, label: "Planification", icon: CalendarDays },
+                { key: "groups" as CoachMenuKey, label: "Groupes", icon: UsersRound },
+                { key: "tracking" as CoachMenuKey, label: "Suivi athlète", icon: Activity },
+                { key: "club" as CoachMenuKey, label: "Gérer le club", icon: Building2 },
               ],
             },
           ]
@@ -204,14 +204,13 @@ export function AppDrawer({
           onPressClubSwitcher={onPressClubSwitcher}
         />
         <div className="no-scrollbar space-y-5 overflow-y-auto px-3 pb-[max(1rem,var(--safe-area-bottom))] pt-3">
-          {sections.map((section, index) => (
+          {sections.map((section) => (
             <DrawerSection
               key={section.title}
               title={section.title}
               items={section.items}
               activeKey={activeKey}
               onSelect={onSelect}
-              disableAll={isAthleteMode && index > 0}
             />
           ))}
         </div>

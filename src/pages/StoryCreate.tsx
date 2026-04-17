@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,7 +151,7 @@ export default function StoryCreate() {
   const [textColor, setTextColor] = useState("#FFFFFF");
   const [textFont, setTextFont] = useState<TextFontMode>("modern");
   const [textAlign, setTextAlign] = useState<TextAlign>("center");
-  const [textStyle, setTextStyle] = useState<TextStyleMode>("bubble");
+  const [textStyle, setTextStyle] = useState<TextStyleMode>("plain");
   const [textSize, setTextSize] = useState(30);
   const [textBold, setTextBold] = useState(true);
   const [textPinching, setTextPinching] = useState(false);
@@ -297,7 +298,7 @@ export default function StoryCreate() {
   };
 
   const selectedObjectType = selectedDynamicLayerId ? "dynamic" : selectedLayer;
-  const editToolbarHeight = editorMode === "text" ? 52 : 0;
+  const editToolbarHeight = editorMode === "text" ? 60 : 0;
   const visibleMusicTracks = useMemo(() => {
     if (musicSheetTab === "forYou") return filteredMusic;
     if (musicSheetTab === "popular") {
@@ -505,7 +506,7 @@ export default function StoryCreate() {
       setTextColor(draft.textColor ?? "#FFFFFF");
       setTextFont(draft.textFont ?? "modern");
       setTextAlign(draft.textAlign ?? "center");
-      setTextStyle(draft.textStyle ?? "bubble");
+      setTextStyle(draft.textStyle ?? "plain");
       setTextSize(typeof draft.textSize === "number" ? draft.textSize : 30);
       setTextBold(draft.textBold ?? true);
       setCaption(draft.caption ?? "");
@@ -1468,13 +1469,15 @@ export default function StoryCreate() {
     if (!host) return null;
     const rect = host.getBoundingClientRect();
     const topBoundary = 92;
-    const bottomBoundary = rect.height - Math.max(24, keyboardHeight + editToolbarHeight + 24);
+    // Stable bottom boundary: reserve space for the text styling toolbar only.
+    // We intentionally DO NOT include keyboardHeight here — the scene must stay fixed.
+    const bottomBoundary = rect.height - Math.max(80, editToolbarHeight + 24);
     return {
       width: rect.width,
       top: Math.max(32, topBoundary),
       bottom: Math.max(topBoundary + 72, bottomBoundary),
     };
-  }, [editToolbarHeight, keyboardHeight]);
+  }, [editToolbarHeight]);
 
   const placeTextEditorAtCenter = useCallback(() => {
     const viewport = getTextEditingViewport();
@@ -1484,36 +1487,34 @@ export default function StoryCreate() {
     setTextPos({ x, y });
   }, [getTextEditingViewport]);
 
+  // Safety clamp ONLY when text tool opens — never reposition on keyboard changes.
+  // This prevents the input from "jumping" while typing.
   useEffect(() => {
     if (!showTextInput) return;
     const viewport = getTextEditingViewport();
     if (!viewport) return;
-    const maxSafeY = Math.max(viewport.top + 8, viewport.bottom - 64);
     const minSafeY = viewport.top + 8;
-    if (textPos.y > maxSafeY || textPos.y < minSafeY) {
-      setTextPos((prev) => ({ ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) }));
-    }
-  }, [getTextEditingViewport, showTextInput, textPos.y]);
-
-  useEffect(() => {
-    if (!showTextInput) return;
-    const viewport = getTextEditingViewport();
-    if (!viewport) return;
-    const targetY = viewport.top + (viewport.bottom - viewport.top) * 0.42;
+    const maxSafeY = Math.max(minSafeY + 64, viewport.bottom - 64);
     setTextPos((prev) => {
-      const nextY = prev.y + (targetY - prev.y) * 0.32;
-      return { ...prev, y: Math.max(viewport.top + 8, Math.min(viewport.bottom - 64, nextY)) };
+      if (prev.y >= minSafeY && prev.y <= maxSafeY) return prev;
+      return { ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) };
     });
-  }, [getTextEditingViewport, keyboardHeight, showTextInput]);
+    // Intentionally NOT depending on keyboardHeight or textPos.y to avoid loops/jumps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTextInput]);
 
+  // Reliable focus with iOS fallback (some iOS Safari builds miss the first focus()).
   useEffect(() => {
     if (!showTextInput) return;
-    placeTextEditorAtCenter();
-    const t = window.setTimeout(() => {
-      textInputRef.current?.focus({ preventScroll: true });
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [placeTextEditorAtCenter, showTextInput]);
+    const focusNow = () => textInputRef.current?.focus({ preventScroll: true });
+    focusNow();
+    const t1 = window.setTimeout(focusNow, 50);
+    const t2 = window.setTimeout(focusNow, 200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [showTextInput]);
 
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 2) return;
@@ -2138,11 +2139,12 @@ export default function StoryCreate() {
         {/* Text overlay on preview (positioned at cursor) */}
         {(textOverlay || showTextInput) && (
           <div
-            className={cn("absolute", selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}
+            className="absolute"
             style={{
               zIndex: layerZ("text"),
-              transform: `translate(${textPos.x}px, ${textPos.y}px) scale(${textScale}) rotate(${textRotation}deg)`,
-              transformOrigin: "top left",
+              left: 0,
+              top: 0,
+              transform: `translate(${textPos.x}px, ${textPos.y}px)`,
               transition: textDragging || textPinching ? "none" : "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
             onPointerDown={startTextDrag}
@@ -2161,45 +2163,52 @@ export default function StoryCreate() {
               setActiveTool("text");
               setEditorMode("text");
               setShowTextInput(true);
-                triggerHaptic("light");
+              window.setTimeout(() => textInputRef.current?.focus({ preventScroll: true }), 0);
+              triggerHaptic("light");
             }}
           >
             {showTextInput ? (
-              <input
-                ref={textInputRef}
-                value={textOverlay}
-                onChange={(e) => setTextOverlay(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="Ecrire ici..."
-                className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
-                style={{
-                  fontFamily: FONT_MAP[textFont],
-                  fontWeight: textBold ? 800 : 600,
-                  textAlign,
-                  fontSize: `${Math.max(30, textSize)}px`,
-                  color: textColor,
-                  caretColor: textColor,
-                }}
-              />
+              // While editing: NO scale/rotate on the input's parent so the caret is rendered correctly.
+              <div>
+                <input
+                  ref={textInputRef}
+                  value={textOverlay}
+                  onChange={(e) => setTextOverlay(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  placeholder=""
+                  className="min-w-[2px] border-none bg-transparent p-0 text-white outline-none"
+                  style={{
+                    fontFamily: FONT_MAP[textFont],
+                    fontWeight: textBold ? 800 : 600,
+                    textAlign,
+                    fontSize: `${Math.max(30, textSize)}px`,
+                    color: textColor,
+                    caretColor: textColor,
+                  }}
+                />
+              </div>
             ) : (
               <div
-                className={cn(
-                  "rounded-xl px-4 py-2 backdrop-blur-sm",
-                  textStyle === "plain" && "bg-transparent",
-                  textStyle === "bubble" && "bg-black/45",
-                  textStyle === "band" && "bg-black/35 border-y border-white/25",
-                  textStyle === "outline" && "bg-transparent",
-                )}
                 style={{
-                  fontFamily: FONT_MAP[textFont],
-                  fontWeight: textBold ? 700 : 500,
-                  textAlign,
-                  fontSize: `${textSize}px`,
-                  color: textColor,
-                  WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                  transform: `scale(${textScale}) rotate(${textRotation}deg)`,
+                  transformOrigin: "top left",
                 }}
               >
-                {textOverlay}
+                <div
+                  className="px-1"
+                  style={{
+                    fontFamily: FONT_MAP[textFont],
+                    fontWeight: textBold ? 700 : 500,
+                    textAlign,
+                    fontSize: `${textSize}px`,
+                    color: textColor,
+                    WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                  }}
+                >
+                  {textOverlay}
+                </div>
               </div>
             )}
           </div>
@@ -2411,16 +2420,22 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                setActiveTool("text");
-                setEditorMode("text");
-                placeTextEditorAtCenter();
-                setSelectedLayer("text");
-                setSelectedDynamicLayerId(null);
-                setShowTextInput(true);
-                setShowMusicPicker(false);
-                setShowSessionPicker(false);
-                setShowStickerPicker(false);
-                setDrawMode(false);
+                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
+                // dans la même tâche que le geste utilisateur. flushSync force le rendu
+                // synchrone de l'input avant qu'on ne le focus.
+                flushSync(() => {
+                  setActiveTool("text");
+                  setEditorMode("text");
+                  placeTextEditorAtCenter();
+                  setSelectedLayer("text");
+                  setSelectedDynamicLayerId(null);
+                  setShowTextInput(true);
+                  setShowMusicPicker(false);
+                  setShowSessionPicker(false);
+                  setShowStickerPicker(false);
+                  setDrawMode(false);
+                });
+                textInputRef.current?.focus({ preventScroll: true });
                 triggerHaptic("light");
               },
             },
@@ -2664,8 +2679,9 @@ export default function StoryCreate() {
       {showTextInput && (
         <div
           className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
-          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 0px) + ${keyboardHeight + 8}px))` }}
+          style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <button
             type="button"

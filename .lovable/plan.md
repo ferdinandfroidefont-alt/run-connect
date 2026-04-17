@@ -1,83 +1,77 @@
 
 
-## Remplacer "Gérer le club" par une page de gestion complète style iOS Settings
+## Refonte visuelle de l'écran "Détail séance" (SessionDetailsDialog)
 
-### Constat actuel
-Le bouton "Gérer le club" ouvre `ClubInfoDialog` — un dialog plein écran avec des onglets (Membres/Entraînements/Groupes) et un design ancien, incohérent avec le style iOS premium du reste de la page Coaching. Il y a aussi `EditClubDialog` qui s'ouvre en cascade depuis `ClubInfoDialog`. Les deux sont redondants et mal intégrés.
+L'objectif est de refondre **uniquement le rendu visuel** de `src/components/SessionDetailsDialog.tsx` pour qu'il corresponde exactement à l'image fournie (style Strava/Apple Fitness premium, mode clair, design RunConnect).
 
-### Ce qui va changer
+Toute la **logique métier existante reste intacte** : auth, requêtes Supabase, rejoindre/quitter, GPS, partage, modération, édition, duplication, notifications, ratings.
 
-**Supprimer** : `ClubInfoDialog` et `EditClubDialog` ne seront plus utilisés depuis la page Coaching. On retire les imports lazy, les states (`showClubInfo`, `showEditClub`, `clubInfoData`), et le rendu `<Suspense>` correspondant dans `Coaching.tsx`.
+### Structure cible (de haut en bas)
 
-**Créer** : Un nouveau composant `ClubManagementDialog` en plein écran, style iOS Settings (fond `bg-secondary`, sections `IOSListGroup` avec titres en majuscules), qui regroupe tout en un seul écran scrollable :
+1. **Header carte plein-width** (h ~280px)
+   - Mini Mapbox (réutilise `createEmbeddedMapboxMap`) centré sur `location_lat/lng`
+   - Pin custom centré : pastille orange/primary #5B7CFF avec icône activité (réutilise `ActivityIcon`)
+   - Boutons flottants ronds blancs (44px, ombre douce) :
+     - Top-left : retour (`ChevronLeft`)
+     - Top-right : partager (`Share2`) + menu (`MoreHorizontal`)
+   - Gradient bas (white→transparent) pour lisibilité
 
-### Structure de la nouvelle page
+2. **Bloc titre** (px-5, pt-4)
+   - Label orange `SÉANCE PISTE` (uppercase, tracking-wide, text-[13px], dérivé de `session_type`)
+   - Titre bold text-[28px] leading-tight (titre généré : `{reps} × {dist}m allure {pace}/km` si structuré, sinon `session.title`)
 
-```text
-┌─────────────────────────────┐
-│  ← Retour     Gérer le club │
-├─────────────────────────────┤
-│                             │
-│  [Avatar du club]           │
-│  Nom du club                │
-│  Description                │
-│                             │
-│  INFORMATIONS               │
-│  ┌─────────────────────────┐│
-│  │ Nom du club      [Edit] ││
-│  │ Description      [Edit] ││
-│  │ Photo de profil  [Chg]  ││
-│  └─────────────────────────┘│
-│                             │
-│  CODE D'INVITATION          │
-│  ┌─────────────────────────┐│
-│  │ ABC123         [Copier] ││
-│  └─────────────────────────┘│
-│                             │
-│  MEMBRES (12)               │
-│  ┌─────────────────────────┐│
-│  │ Inviter des membres   > ││
-│  │ @alice  Admin  Coach    ││
-│  │ @bob    Membre    [⚙]  ││
-│  │ @charlie Membre   [⚙]  ││
-│  └─────────────────────────┘│
-│                             │
-│  ZONE DANGER                │
-│  ┌─────────────────────────┐│
-│  │ Supprimer le club       ││
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
-```
+3. **Ligne organisateur + participants** (px-5, py-3, flex justify-between)
+   - Gauche : avatar 44px + nom + badge vérifié bleu + sous-texte "Voir le profil ›" (cliquable → ProfilePreviewDialog)
+   - Droite : stack de 4 avatars chevauchés -space-x-2 + texte "{n} participants"
 
-### Fonctionnalités intégrées
+4. **Card Date + Lieu** (mx-4, rounded-2xl, border, 2 colonnes)
+   - Gauche : icône calendrier + date (Samedi 25 mai 2024) + heure
+   - Droite : icône pin + nom lieu + adresse (2 lignes max)
+   - Sous le lieu : pill button "Ouvrir dans Google Maps" (logo Google Maps coloré)
+   - Sous la date : pill button "Ajouter à Google Calendar" (réutilise `openGoogleCalendarLink`) — comme demandé par l'utilisateur
 
-1. **Modifier nom/description/avatar** — inline, avec sauvegarde directe (reprend la logique d'`EditClubDialog`)
-2. **Code d'invitation** — affiché avec bouton copier (visible uniquement pour le créateur/admin)
-3. **Liste des membres** — avec badges Admin/Coach, actions par membre :
-   - Promouvoir/rétrograder coach (toggle)
-   - Retirer du club (avec confirmation AlertDialog)
-4. **Inviter des membres** — recherche utilisateurs intégrée (dialog léger ou section inline)
-5. **Supprimer le club** — section danger en bas, avec AlertDialog de confirmation
+5. **Section "DÉTAILS DE LA SÉANCE"** (px-5)
+   - Titre uppercase gris text-[13px]
+   - Layout 2 colonnes : 
+     - Gauche : timeline verticale avec pastilles colorées (vert échauffement / bleu blocs principaux / orange retour au calme), trait vertical 2px gris clair entre les pastilles, texte type + détail en dessous (parsing depuis `session_blocks`)
+     - Droite : grille 2×2 de cards stats (rounded-xl, border, p-3) :
+       - 👟 Distance totale
+       - 🕐 Durée estimée
+       - 📊 Allure moyenne
+       - ⛰️ D+ estimé
 
-### Détails techniques
+6. **Section "PARCOURS"** (si `session.routes` existe)
+   - Card horizontale rounded-2xl border :
+     - Gauche (60%) : MiniMap avec polyline bleue du tracé (réutilise `setOrUpdateLineLayer`) + pin damier d'arrivée
+     - Droite (40%) : distance grosse, "1 tour", min/max altitude, mini sparkline élévation
+   - 2 boutons pleine largeur sous la card : "Voir en plein écran" / "Exporter GPX"
 
-**Fichiers créés :**
-- `src/components/coaching/ClubManagementDialog.tsx` — nouveau composant unique (~400 lignes), utilisant `IOSListGroup`, `IOSListItem`, `IosFixedPageHeaderShell`, `CoachingFullscreenHeader`
+7. **Section "PHOTOS DU LIEU"** (si photos existent)
+   - Scroll horizontal, miniatures 90×90 rounded-xl
+   - Dernière vignette avec overlay sombre + "+{n}" centré
 
-**Fichiers modifiés :**
-- `src/pages/Coaching.tsx` :
-  - Supprimer les imports lazy de `ClubInfoDialog` et `EditClubDialog`
-  - Supprimer les states `clubInfoData`, `showClubInfo`, `showEditClub`
-  - Supprimer la fonction `openClubManagement` (fetch conversation)
-  - Supprimer le bloc `<Suspense>` avec les deux dialogs
-  - Ajouter un state `showClubManagement` et le nouveau `<ClubManagementDialog>`
-  - Le bouton "Gérer le club" appellera simplement `setShowClubManagement(true)`
+8. **CTA principal sticky bas** (px-4, pb-safe)
+   - Grand bouton bleu #5B7CFF (h-14, rounded-2xl) "REJOINDRE LA SÉANCE" + sous-texte blanc/80 "Tu seras visible des autres participants"
+   - À droite (40% width) : bouton secondaire bordé "Envoyer un message"
+   - États dynamiques préservés : déjà inscrit / demande envoyée / organisateur (boutons gérer/supprimer) / passée (noter)
 
-**Fichiers NON supprimés** (utilisés ailleurs, depuis Messages/ClubProfileDialog) :
-- `ClubInfoDialog.tsx` — reste en place
-- `EditClubDialog.tsx` — reste en place
+9. **Footer 4 actions rapides** (au-dessus du CTA, grille 4 colonnes)
+   - Voir profil organisateur · Recevoir rappel · Partager · Ajouter au planning
+   - Icônes fines, labels text-[11px] gris
 
-### Logique métier reprise
-Toute la logique Supabase (load members, toggle coach, remove member, invite, delete club, upload avatar, update name/description) est copiée depuis `ClubInfoDialog` + `EditClubDialog` et consolidée dans le nouveau composant.
+### Contraintes techniques
+
+- Mode **light only**, palette `#5B7CFF` (primary), oranges pour label type, verts/bleus/oranges pour timeline
+- Police SF (déjà via `font-sans`), tailles iOS (text-ios-*)
+- Espacements 8pt grid, `space-y-5` entre sections
+- Safe areas : `pt-[env(safe-area-inset-top)]` header overlay, `pb-[env(safe-area-inset-bottom)]` CTA
+- Aucun overflow horizontal : `min-w-0`, `truncate`
+- Carte Mapbox : utilise `createEmbeddedMapboxMap` + `getMapboxAccessToken` (déjà en place)
+- Génération du titre dynamique à partir de `session_blocks` (helper local `buildSessionTitle`)
+- Préserver tous les states/handlers existants (rejoindre, quitter, supprimer, partager, GPS, rating, edit, duplicate)
+
+### Fichier modifié
+- `src/components/SessionDetailsDialog.tsx` — refonte JSX du `<DialogContent>`, conservation 100% de la logique React/Supabase
+
+Aucun changement de schéma DB, aucune nouvelle dépendance.
 

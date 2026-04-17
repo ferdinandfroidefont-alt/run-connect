@@ -1,7 +1,7 @@
 import { PROFILE_SPORT_LABELS, type ProfileSportKey } from '@/lib/profileSports';
 import { formatProfileShareLocationRow } from '@/lib/countryLabels';
 
-export type ProfileShareTemplateId = 'light_card' | 'organizer_focus' | 'minimal_story';
+export type ProfileShareTemplateId = 'light_card' | 'organizer_focus' | 'minimal_story' | 'generated_card';
 
 export interface ProfileSharePayload {
   displayName: string;

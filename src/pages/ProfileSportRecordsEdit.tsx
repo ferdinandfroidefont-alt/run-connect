@@ -24,7 +24,7 @@ type WizardStep = 1 | 2 | 3 | 4;
 type RunningMode = "time" | "pace";
 type CyclingMode = "speed" | "watts";
 
-const STEP_LABELS = ["Sport", "Distance", "Performance", "Récap"];
+const STEP_LABELS = ["Sport", "Distance", "Performance", "RÃ©cap"];
 
 const DISTANCE_PRESETS: Array<{ id: string; label: string; km: number | null }> = [
   { id: "5k", label: "5 km", km: 5 },
@@ -263,7 +263,7 @@ export default function ProfileSportRecordsEdit() {
       if (error) throw error;
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
       window.dispatchEvent(new Event("profile-records-updated"));
-      toast({ title: "Record ajouté" });
+      toast({ title: "Record ajoutÃ©" });
       resetWizard();
     } catch {
       toast({ title: "Erreur", description: "Impossible d'ajouter le record.", variant: "destructive" });
@@ -280,7 +280,7 @@ export default function ProfileSportRecordsEdit() {
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
       window.dispatchEvent(new Event("profile-records-updated"));
-      toast({ title: "Record supprimé" });
+      toast({ title: "Record supprimÃ©" });
     } catch {
       toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
     } finally {
@@ -309,7 +309,7 @@ export default function ProfileSportRecordsEdit() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             }
-            title="Créer un record"
+            title="CrÃ©er un record"
           />
         </div>
       }
@@ -338,7 +338,7 @@ export default function ProfileSportRecordsEdit() {
           {step === 1 && (
             <div className="rounded-2xl bg-card p-4">
               <h2 className="text-[20px] font-semibold text-foreground">Choisis ton sport</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sélection, puis suivant.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sÃ©lection, puis suivant.</p>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {PROFILE_SPORT_RECORD_KEYS.map((k) => {
                   const SportIcon = SPORT_ICONS[k];
@@ -360,8 +360,8 @@ export default function ProfileSportRecordsEdit() {
 
           {step === 2 && (
             <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Distance / épreuve</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Format guidé, rapide à une main.</p>
+              <h2 className="text-[20px] font-semibold text-foreground">Distance / Ã©preuve</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Format guidÃ©, rapide Ã  une main.</p>
               <div className="mt-4 space-y-2">
                 {DISTANCE_PRESETS.map((d) => (
                   <button
@@ -375,12 +375,12 @@ export default function ProfileSportRecordsEdit() {
                 ))}
               </div>
               <div className="mt-4 rounded-xl border border-border/60 bg-secondary/40 p-3">
-                <p className="text-xs text-muted-foreground">Distance sélectionnée</p>
+                <p className="text-xs text-muted-foreground">Distance sÃ©lectionnÃ©e</p>
                 <p className="text-[17px] font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</p>
                 <Input
                   value={eventLabel}
                   onChange={(e) => setEventLabel(e.target.value)}
-                  placeholder="Nom de l’épreuve"
+                  placeholder="Nom de lÂ’Ã©preuve"
                   className="mt-2 h-10"
                 />
               </div>
@@ -390,7 +390,7 @@ export default function ProfileSportRecordsEdit() {
           {step === 3 && (
             <div className="rounded-2xl bg-card p-4">
               <h2 className="text-[20px] font-semibold text-foreground">Performance</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Sélection précise via roulettes verticales.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">SÃ©lection prÃ©cise via roulettes verticales.</p>
 
               {(sportKey === "running" || sportKey === "walking" || sportKey === "swimming") && (
                 <div className="mt-4 space-y-3">
@@ -440,11 +440,11 @@ export default function ProfileSportRecordsEdit() {
 
           {step === 4 && (
             <div className="rounded-2xl bg-card p-4">
-              <h2 className="text-[20px] font-semibold text-foreground">Récapitulatif</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">Vérifie puis confirme ton record.</p>
+              <h2 className="text-[20px] font-semibold text-foreground">RÃ©capitulatif</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">VÃ©rifie puis confirme ton record.</p>
               <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-secondary/30 p-3">
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Sport</span><span className="font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[sportKey]}</span></div>
-                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Épreuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Ã‰preuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Distance</span><span className="font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</span></div>
                 <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Performance</span><span className="font-semibold text-primary">{recordValue}</span></div>
               </div>

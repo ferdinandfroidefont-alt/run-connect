@@ -15,7 +15,7 @@ import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
-import { SessionPreviewPopup } from './SessionPreviewPopup';
+
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
@@ -358,7 +358,7 @@ export const InteractiveMap = ({
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [previewSession, setPreviewSession] = useState<Session | null>(null);
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionPresetRouteId, setSessionPresetRouteId] = useState<string | null>(null);
   const [presetLocation, setPresetLocation] = useState<{
@@ -896,7 +896,7 @@ export const InteractiveMap = ({
         const sessionDate = new Date(session.scheduled_at);
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
-        const isSelected = previewSession?.id === session.id;
+        const isSelected = selectedSession?.id === session.id;
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -980,7 +980,7 @@ export const InteractiveMap = ({
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          setPreviewSession(session);
+          setSelectedSession(session);
         });
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
@@ -1004,7 +1004,7 @@ export const InteractiveMap = ({
           fallbackWrap.style.cursor = 'pointer';
           fallbackWrap.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            setPreviewSession(session);
+            setSelectedSession(session);
           });
           const fallbackMarker = new mapboxgl.Marker({ element: fallbackWrap, anchor: 'center' })
             .setLngLat([lng, lat])
@@ -1134,7 +1134,7 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [sessions, filters, isMapLoaded, newSessionIds, previewSession?.id]);
+  }, [sessions, filters, isMapLoaded, newSessionIds, selectedSession?.id]);
 
   useEffect(() => {
     const m = map.current;
@@ -2387,24 +2387,7 @@ export const InteractiveMap = ({
         onCreateRoute={handleCreateRoute}
       />
 
-      {/* Session Preview Popup */}
-      <SessionPreviewPopup
-        session={previewSession}
-        onClose={() => setPreviewSession(null)}
-        onViewDetails={() => {
-          if (previewSession) {
-            setSelectedSession(previewSession);
-            setPreviewSession(null);
-          }
-        }}
-        isImminent={previewSession ? (() => {
-          const sessionDate = new Date(previewSession.scheduled_at);
-          const now = new Date();
-          const diffMs = sessionDate.getTime() - now.getTime();
-          const diffMinutes = diffMs / 60000;
-          return diffMinutes > 0 && diffMinutes <= 120;
-        })() : false}
-      />
+
 
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />

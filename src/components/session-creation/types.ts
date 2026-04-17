@@ -22,6 +22,12 @@ export interface SessionBlock {
   rpe?: number;
   /** RPE récup entre répétitions (blocs interval) */
   recoveryRpe?: number;
+  /** Nombre de blocs (groupes de séries) pour les intervalles */
+  blockRepetitions?: number;
+  /** Récup entre blocs (en secondes) */
+  blockRecoveryDuration?: string;
+  /** Type de récup entre blocs */
+  blockRecoveryType?: 'trot' | 'marche' | 'statique';
 }
 
 export type SessionMode = 'simple' | 'structured';

@@ -214,7 +214,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        supabase
+        (supabase as any)
           .from("coaching_sessions")
           .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
@@ -249,7 +249,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await supabase
+        const { data: participations } = await (supabase as any)
           .from("coaching_participations")
           .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);

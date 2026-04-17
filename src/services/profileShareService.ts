@@ -69,7 +69,6 @@ export async function generateProfileShareImage(
     height: h,
     pixelRatio: 1,
     cacheBust: true,
-    useCORS: true,
     backgroundColor: bg,
   });
 }

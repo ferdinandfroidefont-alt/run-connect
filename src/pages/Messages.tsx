@@ -1929,6 +1929,18 @@ const Messages = () => {
     }
   }, [tabParam, setSearchParams]);
 
+  // Deep link : /messages?createClub=1 → ouvre directement la création de club
+  useEffect(() => {
+    if (searchParams.get("createClub") === "1") {
+      setShowCreateGroup(true);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("createClub");
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   if (showNewConversation) {
     return (
       <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
@@ -3221,6 +3233,15 @@ const Messages = () => {
             createdBy={groupInfoData?.created_by || ""}
             createdAt={groupInfoData?.created_at || ""}
             isAdmin={groupInfoData?.created_by === user?.id}
+            isClub={!!groupInfoData?.club_code}
+            isMuted={isMuted}
+            onToggleMute={() => {
+              const newMuted = !isMuted;
+              setIsMuted(newMuted);
+              if (user) {
+                supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+              }
+            }}
             onEditGroup={() => {
               setShowClubProfile(false);
               setTimeout(() => {

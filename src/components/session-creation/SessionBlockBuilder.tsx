@@ -71,18 +71,19 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
     const newBlock: SessionBlock = {
       id: generateBlockId(),
       type,
-      ...(type === 'warmup' && { duration: '15', intensity: 'z2', rpe: 3 }),
-      ...(type === 'cooldown' && { duration: '10', intensity: 'z1', rpe: 2 }),
+      ...(type === 'warmup' && { duration: '15', intensity: 'z2' }),
+      ...(type === 'cooldown' && { duration: '10', intensity: 'z1' }),
       ...(type === 'interval' && {
         repetitions: 10,
         effortDuration: '400',
         effortIntensity: 'z5',
         recoveryDuration: '90',
         recoveryType: 'trot' as const,
-        rpe: 8,
-        recoveryRpe: 3,
+        blockRepetitions: 1,
+        blockRecoveryDuration: '180',
+        blockRecoveryType: 'marche' as const,
       }),
-      ...(type === 'steady' && { duration: '20', intensity: 'z3', rpe: 5 }),
+      ...(type === 'steady' && { duration: '20', intensity: 'z3' }),
     };
     onBlocksChange([...blocks, newBlock]);
     setShowAddMenu(false);

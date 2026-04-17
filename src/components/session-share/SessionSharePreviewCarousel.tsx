@@ -11,16 +11,13 @@ import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePaginationDots } from './SessionSharePaginationDots';
 
 const TEMPLATE_META: { id: SessionShareTemplateId; label: string }[] = [
-  { id: 'light_pin', label: 'Clair · pin' },
-  { id: 'light_route', label: 'Clair · itinéraire' },
-  { id: 'dark_premium', label: 'Sombre' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'instagram_story', label: 'Story 9:16' },
+  { id: 'light_pin', label: 'Partage de séance' },
 ];
 
 type Props = {
   payload: SessionSharePayload;
   mapImageUrl: string | null;
+  qrDataUrl?: string | null;
   activeTemplateId: SessionShareTemplateId;
   onTemplateChange: (id: SessionShareTemplateId, index: number) => void;
 };
@@ -28,6 +25,7 @@ type Props = {
 export function SessionSharePreviewCarousel({
   payload,
   mapImageUrl,
+  qrDataUrl,
   activeTemplateId,
   onTemplateChange,
 }: Props) {
@@ -66,7 +64,9 @@ export function SessionSharePreviewCarousel({
 
   const previewScale = (templateId: SessionShareTemplateId) => {
     const { w, h } = templateDimensions(templateId);
-    const maxW = 300;
+    // Limite la largeur d'aperçu pour rester dans l'écran mobile (évite le débordement)
+    const viewport = typeof window !== 'undefined' ? window.innerWidth : 375;
+    const maxW = Math.min(260, viewport - 80);
     const s = maxW / w;
     return { scale: s, boxW: w * s, boxH: h * s };
   };
@@ -82,7 +82,7 @@ export function SessionSharePreviewCarousel({
           {TEMPLATE_META.map((meta) => {
             const { scale, boxW, boxH } = previewScale(meta.id);
             return (
-              <CarouselItem key={meta.id} className="pl-2 basis-[88%] sm:basis-[75%] md:basis-[55%]">
+              <CarouselItem key={meta.id} className="pl-2 basis-[80%] sm:basis-[70%] md:basis-[55%]">
                 <div className="flex flex-col items-center">
                   <p className="mb-2 text-center text-[11px] font-medium text-muted-foreground">{meta.label}</p>
                   <div
@@ -101,6 +101,7 @@ export function SessionSharePreviewCarousel({
                         payload={payload}
                         templateId={meta.id}
                         mapImageUrl={mapImageUrl}
+                        qrDataUrl={qrDataUrl ?? null}
                       />
                     </div>
                   </div>

@@ -38,119 +38,207 @@ function BluePinMarker({
   avatarUrl?: string | null;
   initials?: string;
 }) {
+  // Pin identique à celui du Feed (MiniMapPreview) : cercle bleu + pointe + avatar rond.
   return (
-    <div style={{ position: 'relative', width: 56, height: 72 }}>
-      <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path
-          d="M28 0C12.536 0 0 12.536 0 28c0 21 28 44 28 44s28-23 28-44C56 12.536 43.464 0 28 0Z"
-          fill={RC_BLUE}
-        />
-      </svg>
+    <div style={{ position: 'relative', width: 100, height: 128 }}>
+      {/* Cercle bleu */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 4,
+          width: 88,
+          height: 88,
+          transform: 'translateX(-50%)',
+          borderRadius: '999px',
+          background: RC_BLUE,
+          boxShadow: '0 14px 36px rgba(15,23,42,0.30)',
+        }}
+      />
+      {/* Pointe triangulaire */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 96,
+          width: 36,
+          height: 32,
+          transform: 'translateX(-50%)',
+          clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
+          background: RC_BLUE,
+          filter: 'drop-shadow(0 6px 10px rgba(15,23,42,0.28))',
+        }}
+      />
+      {/* Avatar rond avec bord blanc */}
       <div
         style={{
           position: 'absolute',
           left: '50%',
           top: 16,
+          width: 60,
+          height: 60,
           transform: 'translateX(-50%)',
-          width: 24,
-          height: 24,
           borderRadius: '999px',
+          border: '4px solid #ffffff',
           overflow: 'hidden',
-          border: '2px solid #ffffff',
           background: '#e2e8f0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          zIndex: 1,
         }}
       >
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" crossOrigin="anonymous" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img
+            src={avatarUrl}
+            alt=""
+            crossOrigin="anonymous"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         ) : (
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#334155' }}>{(initials || 'RC').slice(0, 2)}</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: '#334155' }}>
+            {(initials || 'RC').slice(0, 2)}
+          </span>
         )}
       </div>
     </div>
   );
 }
 
-function CtaBar({ publicUrl }: { publicUrl: string }) {
-  void publicUrl;
+/** Icône RunConnect : pin de localisation avec ondes radio (identique au partage profil) */
+function RunConnectPinIcon({ size = 44, color = '#ffffff' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M24 4C16.27 4 10 10.27 10 18c0 11 14 26 14 26s14-15 14-26c0-7.73-6.27-14-14-14Zm0 19a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"
+        fill={color}
+      />
+      <path d="M34.5 10.5c2.5 2.8 4 6.5 4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M37.5 7.5c3.2 3.8 5 8.7 5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+      <path d="M13.5 10.5c-2.5 2.8-4 6.5-4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+      <path d="M10.5 7.5c-3.2 3.8-5 8.7-5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+    </svg>
+  );
+}
+
+/** Motif topographique discret (côté droit du bandeau) — repris du partage profil */
+const FOOTER_TOPO_SVG = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" preserveAspectRatio="none"><path fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1" d="M0 120 Q100 100 200 130 T400 110"/><path fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1" d="M0 140 Q120 125 240 150 T400 130"/><path fill="none" stroke="white" stroke-opacity="0.08" stroke-width="1" d="M0 80 Q80 60 160 90 T320 70 T400 85"/><path fill="none" stroke="white" stroke-opacity="0.09" stroke-width="1" d="M200 0 Q220 80 180 160"/></svg>'
+);
+
+/** Footer QR — strictement aligné sur la barre du partage profil. */
+function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string | null }) {
+  const RC_LIGHT = '#0066ff';
+  const publicUrlDisplay = publicUrl.replace(/^https?:\/\//, '');
   return (
     <div
       style={{
-        background: RC_BLUE,
-        borderRadius: 20,
+        position: 'relative',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '20px 24px',
-        gap: 16,
+        width: '100%',
+        flexShrink: 0,
+        alignItems: 'stretch',
+        overflow: 'hidden',
+        borderRadius: 24,
+        background: `linear-gradient(115deg, ${RC_LIGHT} 0%, #0052d4 42%, #0039a3 100%)`,
+        boxShadow: '0 -12px 40px rgba(0, 82, 212, 0.15)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 14,
-            background: 'rgba(255,255,255,0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"
-              fill="white"
-            />
-            <circle cx="12" cy="9" r="8" stroke="white" strokeWidth="1.5" fill="none" opacity="0.4" />
-            <circle cx="12" cy="9" r="11" stroke="white" strokeWidth="1" fill="none" opacity="0.2" />
-          </svg>
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.85)', lineHeight: 1.3, margin: 0 }}>
-            Retrouve cette séance sur
-          </p>
-          <p style={{ fontSize: 22, fontWeight: 800, color: '#ffffff', lineHeight: 1.2, margin: 0 }}>
-            RunConnect
-          </p>
-        </div>
-      </div>
       <div
         style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 0,
+          width: '55%',
+          pointerEvents: 'none',
+          opacity: 0.9,
+          backgroundImage: `url("data:image/svg+xml,${FOOTER_TOPO_SVG}")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right bottom',
+          backgroundSize: 'cover',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
           display: 'flex',
+          width: '100%',
+          minHeight: 200,
           alignItems: 'center',
-          gap: 10,
-          background: '#ffffff',
-          borderRadius: 50,
-          padding: '12px 20px',
-          flexShrink: 0,
+          gap: 24,
+          padding: '28px 28px',
         }}
       >
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: RC_BLUE,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minWidth: 0, paddingLeft: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+            <RunConnectPinIcon size={140} color="#ffffff" />
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: 'rgba(255,255,255,0.95)', margin: 0 }}>
+                Rejoins-moi sur
+              </p>
+              <p style={{ fontSize: 42, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: '#ffffff', margin: '6px 0 0 0' }}>
+                RunConnect
+              </p>
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 12,
+              background: '#ffffff',
+              borderRadius: 60,
+              padding: '14px 26px',
+              width: 'fit-content',
+              marginLeft: 162,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+            }}
+          >
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                background: RC_LIGHT,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>
+              Ouvrir avec RunConnect
+            </span>
+          </div>
         </div>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', lineHeight: 1.2, margin: 0, whiteSpace: 'nowrap' }}>
-            Ouvrir avec RunConnect
-          </p>
-          <p style={{ fontSize: 11, fontWeight: 500, color: '#64748b', lineHeight: 1.3, margin: 0, whiteSpace: 'nowrap' }}>
-            Rejoins la séance dans l&apos;app
-          </p>
+
+        <div style={{ height: 140, width: 1, flexShrink: 0, background: 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0, alignSelf: 'center' }}>
+          {qrDataUrl ? (
+            <img
+              src={qrDataUrl}
+              alt=""
+              crossOrigin="anonymous"
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 10,
+                border: '3px solid #ffffff',
+                background: '#ffffff',
+                padding: 6,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              }}
+            />
+          ) : (
+            <div style={{ width: 120, height: 120, borderRadius: 10, border: '3px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)' }} />
+          )}
         </div>
       </div>
     </div>
@@ -161,10 +249,11 @@ export type SessionShareArtboardProps = {
   payload: SessionSharePayload;
   templateId: SessionShareTemplateId;
   mapImageUrl: string | null;
+  qrDataUrl?: string | null;
 };
 
 export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtboardProps>(
-  function SessionShareArtboard({ payload, templateId, mapImageUrl }, ref) {
+  function SessionShareArtboard({ payload, templateId, mapImageUrl, qrDataUrl = null }, ref) {
     const { w, h } = templateDimensions(templateId);
     const isDark = templateId === 'dark_premium';
     const isMinimal = templateId === 'minimal';
@@ -177,7 +266,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const dividerColor = isDark ? '#334155' : '#e2e8f0';
 
     const mapSection = (
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         <ShareMapBackdropImg
           mapUrl={mapImageUrl}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
@@ -188,7 +277,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.78) 28%, rgba(245,247,250,0.42) 52%, rgba(245,247,250,0.08) 75%, rgba(245,247,250,0) 100%)',
+              background: 'linear-gradient(90deg, rgba(245,247,250,0.98) 0%, rgba(245,247,250,0.92) 38%, rgba(245,247,250,0.55) 58%, rgba(245,247,250,0.05) 80%, rgba(245,247,250,0) 100%)',
             }}
           />
         )}
@@ -198,48 +287,37 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.5) 35%, rgba(15,23,42,0) 60%)',
+              background: 'linear-gradient(90deg, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.85) 38%, rgba(15,23,42,0.4) 60%, rgba(15,23,42,0) 80%)',
             }}
           />
         )}
+        {/* Pin centré sur la zone visible droite (≈ 75% horizontal) */}
         <div
           style={{
             position: 'absolute',
-            top: '32%',
-            right: '20%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            top: '50%',
+            left: '75%',
+            transform: 'translate(-50%, -100%)',
             pointerEvents: 'none',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: 8 }}>
-            <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
-              {payload.locationTitle}
-            </p>
-            {payload.locationSubtitle && (
-              <p style={{ fontSize: 14, fontWeight: 500, color: muted, lineHeight: 1.3, margin: 0, textShadow: isDark ? 'none' : '0 1px 4px rgba(255,255,255,0.8)' }}>
-                {payload.locationSubtitle}
-              </p>
-            )}
-          </div>
           <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} />
         </div>
       </div>
     );
 
     const leftColumn = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '44px 0 0 44px', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '44px 0 0 44px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ActivityGlyph type={payload.activityType} />
-          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', color: RC_BLUE, textTransform: 'uppercase' as const }}>
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.08em', color: RC_BLUE, textTransform: 'uppercase' as const }}>
             {payload.activityHeader}
           </span>
         </div>
 
         <h1
           style={{
-            fontSize: isStory ? 48 : 54,
+            fontSize: isStory ? 60 : 68,
             fontWeight: 800,
             color: fg,
             lineHeight: 1.05,
@@ -251,89 +329,81 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         </h1>
 
         {payload.structureBadge && !isMinimal && (
-          <div
-            style={{
-              display: 'inline-flex',
-              width: 'fit-content',
-              borderRadius: 50,
-              padding: '10px 22px',
-              fontSize: 16,
-              fontWeight: 700,
-              color: '#ffffff',
-              background: RC_BLUE,
-              letterSpacing: '0.01em',
-            }}
-          >
-            {payload.structureBadge}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                width: 'fit-content',
+                borderRadius: 60,
+                padding: '16px 36px',
+                fontSize: isStory ? 36 : 40,
+                fontWeight: 800,
+                color: '#ffffff',
+                background: RC_BLUE,
+                letterSpacing: '0.01em',
+                lineHeight: 1,
+                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
+              }}
+            >
+              {payload.structureBadge}
+            </div>
+            {payload.pacePrimary && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+                <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>
+                  {payload.pacePrimary} <span style={{ color: muted, fontWeight: 500 }}>· allure cible</span>
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {payload.pacePrimary && !isMinimal && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-              <span style={{ fontSize: 24, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
+        {payload.pacePrimary && !isMinimal && !payload.structureBadge && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+              <span style={{ fontSize: 30, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
             </div>
             {payload.paceSecondary && (
-              <span style={{ paddingLeft: 32, fontSize: 13, color: muted }}>{payload.paceSecondary}</span>
+              <span style={{ paddingLeft: 40, fontSize: 16, color: muted }}>{payload.paceSecondary}</span>
             )}
           </div>
         )}
 
         <div style={{ height: 1, width: '70%', maxWidth: 280, background: dividerColor, margin: '4px 0' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Calendar style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-            <span style={{ fontSize: 20, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Calendar style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 26, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
               {payload.dateLabel}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-            <span style={{ fontSize: 20, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
           </div>
         </div>
 
         {!isMinimal && (
-          <div
-            style={{
-              marginTop: 16,
-              width: '100%',
-              maxWidth: 420,
-              borderRadius: 18,
-              border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(0,0,0,0.06)',
-              background: cardInnerBg,
-              padding: 18,
-              boxShadow: isDark ? 'none' : '0 4px 24px rgba(15,23,42,0.06)',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 10 }}>
-              <MapPin style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 460 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <MapPin style={{ width: 28, height: 28, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0 }}>
+                <p style={{ fontSize: 26, fontWeight: 600, color: fg, lineHeight: 1.3, margin: 0 }}>
                   {payload.locationTitle}
                 </p>
                 {payload.locationSubtitle && (
-                  <p style={{ fontSize: 14, color: muted, lineHeight: 1.3, margin: 0 }}>
+                  <p style={{ fontSize: 20, color: muted, lineHeight: 1.3, margin: '2px 0 0 0' }}>
                     {payload.locationSubtitle}
                   </p>
                 )}
               </div>
             </div>
             {payload.audienceLine && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  marginTop: 14,
-                  paddingTop: 14,
-                  borderTop: `1px solid ${dividerColor}`,
-                }}
-              >
-                <Users style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-                <span style={{ fontSize: 16, fontWeight: 500, color: fg }}>{payload.audienceLine}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Users style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+                <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>{payload.audienceLine}</span>
               </div>
             )}
           </div>
@@ -341,7 +411,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
       </div>
     );
 
-    const bottomCta = <CtaBar publicUrl={payload.publicUrl} />;
+    const bottomCta = <CtaBar publicUrl={payload.publicUrl} qrDataUrl={qrDataUrl} />;
 
     const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 
@@ -383,6 +453,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         style={{
           width: w,
           height: h,
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -391,15 +462,17 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           fontFamily: fontStack,
         }}
       >
-        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          <div style={{ position: 'relative', zIndex: 2, width: '52%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Carte en fond, occupe toute la largeur jusqu'au bord gauche */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          {mapSection}
+        </div>
+        {/* Contenu textuel par-dessus à gauche */}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0 }}>
+          <div style={{ width: '58%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             {leftColumn}
           </div>
-          <div style={{ position: 'relative', zIndex: 1, flex: 1, minWidth: 0 }}>
-            {mapSection}
-          </div>
         </div>
-        <div style={{ position: 'relative', zIndex: 3, padding: '0 32px 32px', flexShrink: 0 }}>
+        <div style={{ position: 'relative', zIndex: 3, padding: '0 64px 32px', flexShrink: 0 }}>
           {bottomCta}
         </div>
       </div>

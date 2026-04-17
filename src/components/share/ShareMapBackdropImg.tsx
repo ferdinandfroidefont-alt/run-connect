@@ -27,9 +27,15 @@ export function ShareMapBackdropImg({ mapUrl, className, style }: Props) {
       alt=""
       draggable={false}
       {...(isMapbox ? { crossOrigin: 'anonymous' as const } : {})}
-      onError={() =>
-        setSrc((current) => (current === SHARE_MAP_FALLBACK_URL ? current : SHARE_MAP_FALLBACK_URL))
-      }
+      onError={(e) => {
+        console.warn('[ShareMapBackdropImg] image load failed →', (e.currentTarget as HTMLImageElement).src);
+        setSrc((current) => (current === SHARE_MAP_FALLBACK_URL ? current : SHARE_MAP_FALLBACK_URL));
+      }}
+      onLoad={() => {
+        if (src.startsWith('https://api.mapbox.com')) {
+          console.info('[ShareMapBackdropImg] Mapbox image loaded ✓');
+        }
+      }}
       className={className}
       style={style}
     />

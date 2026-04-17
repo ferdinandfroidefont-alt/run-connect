@@ -1,21 +1,26 @@
-import { encodePolyline } from '@/lib/polylineEncode';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { getHomeMapboxStyleUrl } from '@/lib/mapboxMapStylePreference';
 
 export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
+const STATIC_STYLE_FALLBACK = 'mapbox/streets-v12';
 
-/** Bleu RunConnect (proche primary) */
-const ROUTE_COLOR = '2563eb';
-const PIN_COLOR = '2563eb';
+function getSessionShareStaticStyleId(): string {
+  const styleUrl = getHomeMapboxStyleUrl();
+  const match = styleUrl.match(/^mapbox:\/\/styles\/([^/]+)\/([^/?#]+)$/);
+  if (!match) return STATIC_STYLE_FALLBACK;
 
-function joinOverlays(parts: string[]): string {
-  return parts.filter(Boolean).join(',');
+  const owner = match[1];
+  const styleId = match[2];
+
+  if (!owner || !styleId || styleId === 'standard') return STATIC_STYLE_FALLBACK;
+  return `${owner}/${styleId}`;
 }
 
 /**
- * Image statique Mapbox (carte + éventuel tracé + pin).
- * Utilise le mode `auto` pour cadrer tracé + marqueur.
+ * Image statique Mapbox alignée visuellement sur la MiniMap du Feed.
+ * Même style, même zoom, centrée sur le lieu ; le pin est rendu en React.
  */
 export function buildSessionStaticMapUrl(options: {
   routePath: MapboxStaticPoint[];
@@ -27,29 +32,11 @@ export function buildSessionStaticMapUrl(options: {
   const token = getMapboxAccessToken();
   if (!token) return null;
 
-  const { routePath, pin, width, height } = options;
-  const padding = options.padding ?? 64;
-
-  const overlays: string[] = [];
-
-  if (routePath.length >= 2) {
-    const encoded = encodePolyline(routePath);
-    if (encoded) {
-      overlays.push(`path-5+${ROUTE_COLOR}-0.9(${encoded})`);
-    }
-  }
-
-  overlays.push(`pin-l+${PIN_COLOR}(${pin.lng},${pin.lat})`);
-
-  const overlay = joinOverlays(overlays);
-  // Ne pas encoder tout l’overlay : certains clients / Mapbox attendent le segment tel quel (sinon image 400).
-  // Le polyline Mapbox est en alphabet restreint ; si besoin, encoder seulement des caractères problématiques à la source.
-  const path = `/styles/v1/${STYLE_LIGHT}/static/${overlay}/auto/${width}x${height}`;
-
-  const params = new URLSearchParams({
-    padding: String(padding),
-    access_token: token,
-  });
+  const { pin, width, height } = options;
+  const staticStyle = getSessionShareStaticStyleId();
+  const zoom = 12;
+  const path = `/styles/v1/${staticStyle}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
+  const params = new URLSearchParams({ access_token: token });
 
   return `https://api.mapbox.com${path}?${params.toString()}`;
 }

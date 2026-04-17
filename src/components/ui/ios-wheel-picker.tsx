@@ -7,7 +7,7 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const PAD_ROWS = Math.floor(VISIBLE_ITEMS / 2);
 const MODAL_ROOT_CLASS =
-  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))]";
+  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))] pointer-events-auto";
 const MODAL_PANEL_CLASS =
   "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-3xl bg-card pb-[max(0.5rem,var(--safe-area-bottom))] shadow-2xl";
 
@@ -94,7 +94,6 @@ function useBodyScrollLock(active: boolean) {
     };
 
     body.style.overflow = "hidden";
-    body.style.touchAction = "none";
     body.style.position = "fixed";
     body.style.top = `-${scrollY}px`;
     body.style.width = "100%";
@@ -164,44 +163,65 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const snapTimerRef = useRef<number | null>(null);
-  const lastHapticValue = useRef<string>(value);
+  const lastHapticIndex = useRef<number>(-1);
+  const lastHapticTime = useRef<number>(0);
+  const isSnappingRef = useRef(false);
+  const [displayValue, setDisplayValue] = useState(value);
   const selectedIndex = useMemo(() => Math.max(0, items.findIndex((item) => item.value === value)), [items, value]);
+
+  // Sync local display when external value changes
+  useEffect(() => {
+    setDisplayValue(value);
+    lastHapticIndex.current = selectedIndex;
+  }, [value, selectedIndex]);
 
   const scrollToIndex = useCallback((idx: number, behavior: ScrollBehavior) => {
     const el = containerRef.current;
     if (!el) return;
+    if (behavior === "smooth") isSnappingRef.current = true;
     el.scrollTo({ top: idx * ITEM_HEIGHT, behavior });
+    if (behavior === "smooth") {
+      window.setTimeout(() => {
+        isSnappingRef.current = false;
+      }, 220);
+    }
   }, []);
 
-  const applyNearest = useCallback(() => {
+  const commitNearest = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const idx = clamp(Math.round(el.scrollTop / ITEM_HEIGHT), 0, items.length - 1);
-    const next = items[idx]?.value ?? value;
+    const next = items[idx]?.value;
+    if (!next) return;
     scrollToIndex(idx, "smooth");
-    if (next !== value) {
-      onChange(next);
-    }
+    if (next !== value) onChange(next);
   }, [items, onChange, scrollToIndex, value]);
 
   const handleScroll = useCallback(() => {
-    cancelAnimationFrame(rafRef.current);
+    if (isSnappingRef.current) return;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const el = containerRef.current;
       if (!el) return;
       const idx = clamp(Math.round(el.scrollTop / ITEM_HEIGHT), 0, items.length - 1);
       const next = items[idx]?.value;
-      if (next && next !== value) {
-        onChange(next);
-      }
-      if (next && next !== lastHapticValue.current) {
-        lastHapticValue.current = next;
+      if (!next) return;
+
+      // Update local UI instantly without re-rendering parent on every frame
+      setDisplayValue((prev) => (prev === next ? prev : next));
+
+      // Throttled haptic feedback
+      const now = performance.now();
+      if (idx !== lastHapticIndex.current && now - lastHapticTime.current > 35) {
+        lastHapticIndex.current = idx;
+        lastHapticTime.current = now;
         void lightHaptic();
       }
+
       if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current);
-      snapTimerRef.current = window.setTimeout(() => applyNearest(), 120);
+      snapTimerRef.current = window.setTimeout(commitNearest, 90);
     });
-  }, [applyNearest, items, onChange, value]);
+  }, [commitNearest, items]);
 
   useEffect(() => {
     scrollToIndex(selectedIndex, "auto");
@@ -209,7 +229,7 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
 
   useEffect(() => {
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current);
     };
   }, []);
@@ -220,23 +240,34 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
         ref={containerRef}
         className={cn("no-scrollbar relative py-[88px]", disabled ? "overflow-hidden" : "overflow-y-auto overscroll-contain")}
         onScroll={disabled ? undefined : handleScroll}
-        onTouchEnd={disabled ? undefined : applyNearest}
-        onMouseUp={disabled ? undefined : applyNearest}
+        onTouchEnd={disabled ? undefined : commitNearest}
+        onMouseUp={disabled ? undefined : commitNearest}
         onWheel={disabled ? undefined : handleScroll}
         onTouchMove={(e) => e.stopPropagation()}
         onWheelCapture={(e) => e.stopPropagation()}
         data-wheel-column="true"
-        style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS, touchAction: disabled ? "none" : "pan-y" }}
+        style={{
+          height: ITEM_HEIGHT * VISIBLE_ITEMS,
+          touchAction: disabled ? "none" : "pan-y",
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
+          willChange: "scroll-position",
+        }}
       >
         {items.map((item) => (
           <button
             type="button"
             key={item.value}
-            onClick={() => !disabled && onChange(item.value)}
+            onClick={() => {
+              if (disabled) return;
+              const idx = items.findIndex((it) => it.value === item.value);
+              if (idx >= 0) scrollToIndex(idx, "smooth");
+              onChange(item.value);
+            }}
             className={cn("block w-full", disabled && "cursor-default")}
             style={{ touchAction: "manipulation" }}
           >
-            <PickerValue active={item.value === value} label={item.label} suffix={suffix} />
+            <PickerValue active={item.value === displayValue} label={item.label} suffix={suffix} />
           </button>
         ))}
       </div>
