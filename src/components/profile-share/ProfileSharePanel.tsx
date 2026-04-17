@@ -92,10 +92,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
               className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
             />
 
-            {/* Overlay absolu - toutes positions en % du template 1254x1254 */}
+            {/* Overlay absolu - uniquement pour la Carte 1. La Carte 2 est indépendante (image seule). */}
             <div className="absolute inset-0 pointer-events-none select-none">
               {/* A. Avatar */}
-              {payload?.avatarUrl && (
+              {variant === 'v1' && payload?.avatarUrl && (
                 <div
                   className="absolute overflow-hidden rounded-full"
                   style={{
@@ -116,7 +116,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* B + C. Nom + badge vérifié */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center justify-center gap-1.5"
                   style={{
@@ -143,7 +143,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* D. Username */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <div
                   className="absolute text-center text-slate-400 font-medium"
                   style={{
@@ -159,7 +159,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* E. Pill rôle + club — tient sur 1 ligne dans la pill bleue */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center justify-center text-center"
                   style={{
@@ -184,7 +184,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* F. Ville + drapeau (gauche de la ligne) */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
@@ -208,7 +208,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* G. Sport (droite de la ligne) avec emoji */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
@@ -226,7 +226,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* H. Stats — 4 cartes */}
-              {payload && (
+              {variant === 'v1' && payload && (
                 <>
                   <StatNumber value={payload.sessionsCreated} leftPct={14.5} />
                   <StatNumber value={payload.sessionsJoined} leftPct={38.2} />
@@ -236,7 +236,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* I. Présence — uniquement le nombre, sans % */}
-              {payload?.presenceRate != null && (
+              {variant === 'v1' && payload?.presenceRate != null && (
                 <div
                   className="absolute flex items-center justify-center"
                   style={{
@@ -255,7 +255,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               )}
 
               {/* J. QR Code */}
-              {payload?.qrDataUrl && (
+              {variant === 'v1' && payload?.qrDataUrl && (
                 <div
                   className="absolute overflow-hidden rounded-[6px] bg-white"
                   style={{
