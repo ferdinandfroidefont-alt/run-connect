@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { templateDimensions } from '@/lib/profileSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
+import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
 
 const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
@@ -332,6 +333,97 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
     const { w, h } = templateDimensions(templateId);
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
     const ctaText = 'Ajoute-moi sur RunConnect';
+
+    if (templateId === 'generated_card') {
+      const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+      return (
+        <div
+          ref={ref}
+          style={{
+            position: 'relative',
+            width: w,
+            height: h,
+            overflow: 'hidden',
+            fontFamily: fontStack,
+            background: '#ffffff',
+          }}
+        >
+          <img
+            src={profileShareCardV2}
+            alt=""
+            crossOrigin="anonymous"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+          />
+
+          {/* Avatar */}
+          <div style={{ position: 'absolute', top: 140, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={200} />
+          </div>
+
+          {/* Name + premium badge */}
+          <div style={{ position: 'absolute', top: 360, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 60px' }}>
+            <h1 style={{ fontSize: 56, fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em', textAlign: 'center' }}>
+              {payload.displayName}
+            </h1>
+            {payload.isPremium ? <VerifiedPremiumBadge size={42} /> : null}
+          </div>
+
+          {/* Username */}
+          <p style={{ position: 'absolute', top: 440, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 26, color: '#64748b', margin: 0 }}>
+            @{payload.username}
+          </p>
+
+          {/* Role + location */}
+          <div style={{ position: 'absolute', top: 500, left: 0, right: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: RC_LIGHT }}>{payload.roleLinePrimary}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 20, color: '#1e293b', fontWeight: 600 }}>
+              <MapPin style={{ width: 22, height: 22, color: '#0f172a' }} strokeWidth={2.3} />
+              {payload.locationLine}
+              <span style={{ display: 'inline-block', width: 1, height: 18, background: '#cbd5e1', margin: '0 6px' }} />
+              <Footprints style={{ width: 22, height: 22, color: '#0f172a' }} strokeWidth={2.3} />
+              {payload.sportLabel}
+            </span>
+          </div>
+
+          {/* Stats grid 4 */}
+          <div style={{ position: 'absolute', top: 640, left: 60, right: 60, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            {[
+              { value: payload.sessionsCreated, label: 'Créées' },
+              { value: payload.sessionsJoined, label: 'Rejointes' },
+              { value: payload.followersCount, label: 'Abonnés' },
+              { value: payload.followingCount, label: 'Suivis' },
+            ].map((s) => (
+              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.8)', boxShadow: '0 4px 16px rgba(15,23,42,0.06)' }}>
+                <span style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
+                <span style={{ marginTop: 8, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Presence */}
+          {presence ? (
+            <div style={{ position: 'absolute', top: 850, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 50, background: '#ffffff', border: `2px solid ${RC_LIGHT}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                <Users style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.3} />
+                <span style={{ fontSize: 18, fontWeight: 700, color: RC_LIGHT }}>{presence} présence</span>
+              </div>
+            </div>
+          ) : null}
+
+          {/* QR + URL */}
+          <div style={{ position: 'absolute', bottom: 50, left: 0, right: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            {payload.qrDataUrl ? (
+              <img
+                src={payload.qrDataUrl}
+                alt=""
+                style={{ width: 150, height: 150, borderRadius: 14, padding: 8, background: '#ffffff', boxShadow: '0 6px 20px rgba(0,0,0,0.12)' }}
+              />
+            ) : null}
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#475569', margin: 0 }}>{payload.publicUrlDisplay}</p>
+          </div>
+        </div>
+      );
+    }
 
     if (templateId === 'organizer_focus') {
       return (
