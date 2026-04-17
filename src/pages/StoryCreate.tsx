@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { useCamera } from "@/hooks/useCamera";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -120,6 +121,7 @@ export default function StoryCreate() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
   const { toast } = useToast();
   const { takePicture, checkPermissions, requestPermissions } = useCamera();
 
@@ -1170,6 +1172,14 @@ export default function StoryCreate() {
 
   const onShare = async () => {
     if (!user?.id || !mediaFile) return;
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Publication désactivée — aucune story ni fichier envoyé.",
+        variant: "destructive",
+      });
+      return;
+    }
     setSharing(true);
     let createdStoryId: string | null = null;
     let uploadedStoragePath: string | null = null;
