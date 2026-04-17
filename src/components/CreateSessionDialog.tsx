@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
 import { useAdMob } from "@/hooks/useAdMob";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -39,7 +41,9 @@ interface CreateSessionDialogProps {
 
 export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, presetLocation, onCreateRoute }: CreateSessionDialogProps) => {
   const { formatMeters } = useDistanceUnits();
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterSessionCreation } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -375,6 +379,15 @@ export const CreateSessionDialog = ({ isOpen, onClose, onSessionCreated, map, pr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedLocation) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La création de séance est désactivée. Aucune donnée n’est envoyée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Vérifier si l'utilisateur essaie de créer une séance publique sans abonnement premium
     if (!formData.friends_only && !subscriptionInfo?.subscribed) {

@@ -1,7 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { withTimeout } from '@/lib/promiseUtils';
+import { useAppPreview } from '@/contexts/AppPreviewContext';
+import { mergePreviewIntoProfile } from '@/lib/previewIdentity';
 
 export interface UserProfile {
   id: string;
@@ -35,6 +37,11 @@ export interface UserProfile {
   updated_at: string;
   /** km | mi — affichage des distances (données toujours en km côté API) */
   distance_unit?: string | null;
+  favorite_sport?: string | null;
+  country?: string | null;
+  /** Ville (partage profil, certaines vues) */
+  city?: string | null;
+  organizer_avg_rating?: number | null;
 }
 
 interface UserProfileContextType {
@@ -48,14 +55,23 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 
 export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   const { user, session } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { isPreviewMode, previewIdentity } = useAppPreview();
+  const [baseProfile, setBaseProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const userProfile = useMemo(() => {
+    if (!baseProfile) return null;
+    if (isPreviewMode && previewIdentity) {
+      return mergePreviewIntoProfile(baseProfile, previewIdentity);
+    }
+    return baseProfile;
+  }, [baseProfile, isPreviewMode, previewIdentity]);
 
   const loadProfile = async (retryCount = 0): Promise<void> => {
     if (!user?.id) {
       console.log('🔍 [UserProfile] No user ID, skipping profile load');
-      setUserProfile(null);
+      setBaseProfile(null);
       setLoading(false);
       return;
     }
@@ -80,7 +96,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         if (msg.includes('TIMEOUT')) {
           console.error('❌ [UserProfile] Timeout chargement profil (réseau lent)');
           setError('Connexion trop lente — impossible de charger le profil pour le moment');
-          setUserProfile(null);
+          setBaseProfile(null);
           return;
         }
         throw timeoutErr;
@@ -96,14 +112,14 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         
         console.error('❌ [UserProfile] Error loading profile:', fetchError);
         setError('Impossible de charger le profil');
-        setUserProfile(null);
+        setBaseProfile(null);
         return;
       }
 
       if (!data) {
         console.error('❌ [UserProfile] No profile data found');
         setError('Profil non trouvé');
-        setUserProfile(null);
+        setBaseProfile(null);
         return;
       }
 
@@ -116,12 +132,12 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
         phone: data.phone ? 'present' : 'missing'
       });
 
-      setUserProfile(data as UserProfile);
+      setBaseProfile(data as UserProfile);
       setError(null);
     } catch (err: any) {
       console.error('❌ [UserProfile] Unexpected error:', err);
       setError(err.message || 'Erreur inconnue');
-      setUserProfile(null);
+      setBaseProfile(null);
     } finally {
       setLoading(false);
     }
@@ -141,7 +157,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       void loadProfile();
       return;
     }
-    setUserProfile(null);
+    setBaseProfile(null);
     setLoading(false);
     setError(null);
   }, [user?.id, session]);
@@ -166,7 +182,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
           console.log('🔄 [UserProfile] Profile updated via real-time:', payload);
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
             const incoming = payload.new as UserProfile;
-            setUserProfile((prev) => {
+            setBaseProfile((prev) => {
               if (payload.eventType === 'UPDATE' && prev) {
                 const merged: UserProfile = { ...prev, ...incoming };
                 if (
@@ -180,7 +196,7 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
               return incoming;
             });
           } else if (payload.eventType === 'DELETE') {
-            setUserProfile(null);
+            setBaseProfile(null);
           }
         }
       )

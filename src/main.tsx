@@ -17,6 +17,7 @@ import { primeHomeMapAtAppEntry } from '@/lib/homeMapPrefetch'
 import { isIosAppShell } from '@/lib/iosAppShell'
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
+import { AppPreviewProvider } from "@/contexts/AppPreviewContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BootErrorBoundary } from "@/components/BootErrorBoundary";
@@ -130,13 +131,15 @@ if (!rootElement) {
     createRoot(rootElement).render(
       <BootErrorBoundary>
         <AuthProvider>
-          <UserProfileProvider>
-            <DistanceUnitsProvider>
-              <LanguageProvider>
-                <App />
-              </LanguageProvider>
-            </DistanceUnitsProvider>
-          </UserProfileProvider>
+          <AppPreviewProvider>
+            <UserProfileProvider>
+              <DistanceUnitsProvider>
+                <LanguageProvider>
+                  <App />
+                </LanguageProvider>
+              </DistanceUnitsProvider>
+            </UserProfileProvider>
+          </AppPreviewProvider>
         </AuthProvider>
       </BootErrorBoundary>
     );

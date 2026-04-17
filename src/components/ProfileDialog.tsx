@@ -1,5 +1,8 @@
 import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,8 +77,10 @@ export const ProfileDialog = ({
 }: ProfileDialogProps) => {
   const {
     user,
-    subscriptionInfo
   } = useAuth();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
+  const { isPreviewMode, previewIdentity } = useAppPreview();
+  const { userProfile } = useUserProfile();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,14 +185,54 @@ export const ProfileDialog = ({
     loading: cameraLoading
   } = useCamera();
   useEffect(() => {
-    if (user && open) {
-      setLoading(true);
-      fetchProfile();
-      fetchFollowCounts();
-      fetchReliabilityStats();
-      void fetchStoriesAndHighlights();
+    if (!user || !open) return;
+    setLoading(true);
+    if (isPreviewMode && userProfile && previewIdentity) {
+      const data = userProfile as unknown as Profile;
+      setProfile(data);
+      setFormData(data);
+      const defaultRecords = {
+        walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        running: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
+        swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' },
+      };
+      setRecordsData({
+        walking: data.walking_records && typeof data.walking_records === "object"
+          ? { ...defaultRecords.walking, ...data.walking_records } : defaultRecords.walking,
+        running: data.running_records && typeof data.running_records === "object"
+          ? { ...defaultRecords.running, ...data.running_records } : defaultRecords.running,
+        cycling: data.cycling_records && typeof data.cycling_records === "object"
+          ? { ...defaultRecords.cycling, ...data.cycling_records } : defaultRecords.cycling,
+        swimming: data.swimming_records && typeof data.swimming_records === "object"
+          ? { ...defaultRecords.swimming, ...data.swimming_records } : defaultRecords.swimming,
+      });
+      setFollowerCount(previewIdentity.followerCount ?? 0);
+      setFollowingCount(previewIdentity.followingCount ?? 0);
+      setPendingRequestsCount(0);
+      const ms = previewIdentity.mockStats;
+      if (ms) {
+        setReliabilityRate(ms.reliability_rate ?? 100);
+        setTotalSessionsJoined(ms.total_sessions_joined ?? 0);
+        setTotalSessionsCompleted(ms.total_sessions_completed ?? 0);
+        setTotalSessionsCreated(ms.sessions_created ?? 0);
+      } else {
+        setReliabilityRate(100);
+        setTotalSessionsJoined(0);
+        setTotalSessionsCompleted(0);
+        setTotalSessionsCreated(0);
+      }
+      setOwnStories([]);
+      setStoryHighlights([]);
+      setHighlightPickOrder([]);
+      setLoading(false);
+      return;
     }
-  }, [user, open]);
+    void fetchProfile();
+    void fetchFollowCounts();
+    void fetchReliabilityStats();
+    void fetchStoriesAndHighlights();
+  }, [user, open, isPreviewMode, userProfile, previewIdentity]);
   const fetchStoriesAndHighlights = async () => {
     if (!user) return;
     const [{ data: stories }, { data: highlights }] = await Promise.all([
@@ -485,6 +530,13 @@ export const ProfileDialog = ({
     }
   };
   const updateProfile = async () => {
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Les modifications ne sont pas enregistrées. Quittez l’aperçu pour retrouver votre compte réel.",
+      });
+      return;
+    }
     try {
       setLoading(true);
       let avatarUrl = formData.avatar_url;

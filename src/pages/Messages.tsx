@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -160,7 +161,8 @@ interface Message {
 }
 
 const Messages = () => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
   const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
@@ -878,6 +880,15 @@ const Messages = () => {
   // Send a message
   const sendMessage = async () => {
     if (!user || !selectedConversation || !newMessage.trim()) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "L’envoi de messages est désactivé.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const messageContent = newMessage.trim();
     const currentReplyTo = replyTo;

@@ -40,6 +40,10 @@ import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn } from '@/lib/utils';
 import {
+  createSessionPinButton,
+  resolveSessionPinVariant,
+} from '@/lib/mapSessionPin';
+import {
   getPersistedHomeMapPosition,
   HOME_HOT_PREFETCH_MAX_AGE_MS,
   HOME_MAP_GEO_CACHE_MAX_AGE_MS,
@@ -323,7 +327,6 @@ export const InteractiveMap = ({
   const HOME_PROFILE_CACHE_KEY = "runconnect_home_profile_cache_v1";
   const {
     user,
-    subscriptionInfo
   } = useAuth();
   const {
     setRefreshSessions,
@@ -904,7 +907,6 @@ export const InteractiveMap = ({
           isSelected && 'is-selected',
           isPastSession && 'is-past'
         );
-        wrap.style.setProperty('--rc-pin-color', '#2563EB');
         wrap.style.position = 'relative';
         // Anchor point must remain a true map coordinate (1x1),
         // pin visual is rendered above it to avoid zoom/dezoom drift.
@@ -912,70 +914,11 @@ export const InteractiveMap = ({
         wrap.style.height = '1px';
         wrap.style.overflow = 'visible';
 
-        const pin = document.createElement('button');
-        pin.type = 'button';
-        pin.className = 'rc-session-pin__shape';
-        pin.setAttribute('aria-label', session.title || 'Séance');
-        pin.style.display = 'block';
-        pin.style.position = 'absolute';
-        pin.style.left = '50%';
-        pin.style.top = '0';
-        pin.style.transform = 'translate(-50%, -100%)';
-        pin.style.width = '50px';
-        pin.style.height = '64px';
-        pin.style.border = '0';
-        pin.style.padding = '0';
-        pin.style.background = 'transparent';
-        pin.style.cursor = 'pointer';
-
-        // Structure explicite (plus fiable que des pseudo-éléments seuls selon WebView/device)
-        const pinCircle = document.createElement('span');
-        pinCircle.className = 'rc-session-pin__circle';
-        pinCircle.style.position = 'absolute';
-        pinCircle.style.left = '50%';
-        pinCircle.style.top = '2px';
-        pinCircle.style.width = '44px';
-        pinCircle.style.height = '44px';
-        pinCircle.style.transform = 'translateX(-50%)';
-        pinCircle.style.borderRadius = '999px';
-        pinCircle.style.background = '#2563EB';
-        pinCircle.style.boxShadow = '0 7px 18px rgba(15,23,42,0.3)';
-        const pinTip = document.createElement('span');
-        pinTip.className = 'rc-session-pin__tip';
-        pinTip.style.position = 'absolute';
-        pinTip.style.left = '50%';
-        pinTip.style.top = '48px';
-        pinTip.style.width = '18px';
-        pinTip.style.height = '16px';
-        pinTip.style.transform = 'translateX(-50%)';
-        pinTip.style.clipPath = 'polygon(50% 100%, 0 0, 100% 0)';
-        pinTip.style.background = '#2563EB';
-        pinTip.style.filter = 'drop-shadow(0 3px 5px rgba(15,23,42,0.28))';
-        pin.appendChild(pinCircle);
-        pin.appendChild(pinTip);
-
-        const avatarRing = document.createElement('span');
-        avatarRing.className = 'rc-session-pin__avatar-ring';
-        avatarRing.style.position = 'absolute';
-        avatarRing.style.left = '50%';
-        avatarRing.style.top = '8px';
-        avatarRing.style.width = '30px';
-        avatarRing.style.height = '30px';
-        avatarRing.style.transform = 'translateX(-50%)';
-        avatarRing.style.borderRadius = '999px';
-        avatarRing.style.border = '2px solid #fff';
-        avatarRing.style.overflow = 'hidden';
-        avatarRing.style.zIndex = '1';
-        const avatarImg = document.createElement('img');
-        avatarImg.className = 'rc-session-pin__avatar';
-        avatarImg.src = session.profiles?.avatar_url || '/placeholder.svg';
-        avatarImg.alt = '';
-        avatarImg.draggable = false;
-        avatarImg.style.width = '100%';
-        avatarImg.style.height = '100%';
-        avatarImg.style.objectFit = 'cover';
-        avatarRing.appendChild(avatarImg);
-        pin.appendChild(avatarRing);
+        const pin = createSessionPinButton({
+          avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
+          ariaLabel: session.title || 'Séance',
+          variant: resolveSessionPinVariant(),
+        });
 
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {

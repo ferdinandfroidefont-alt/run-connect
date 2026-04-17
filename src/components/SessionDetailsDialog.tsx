@@ -6,6 +6,8 @@ import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -136,7 +138,9 @@ const SettingsSeparator = () => (
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
   const { unit, formatKm, formatMeters, formatSpeed } = useDistanceUnits();
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
@@ -358,6 +362,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const handleRequestJoin = async () => {
     if (!user || !isScheduled) return;
 
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Les demandes et notifications sont désactivées.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: existingRequest } = await supabase
@@ -434,6 +447,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const handleCancelRequest = async () => {
     if (!user) return;
 
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Action désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -457,6 +479,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleGPSValidation = async () => {
     if (!user || !session) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La validation GPS est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const result = await validatePresence(
       session.id,
@@ -484,6 +515,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleLeaveSession = async () => {
     if (!user) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Action désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -518,6 +558,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleDeleteSession = async () => {
     if (!user || !isOrganizer) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La suppression est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {

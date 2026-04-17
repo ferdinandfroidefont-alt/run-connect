@@ -3,6 +3,8 @@ import type { Map as MapboxMap } from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveSubscriptionInfo } from '@/hooks/useEffectiveSubscription';
+import { useAppPreview } from '@/contexts/AppPreviewContext';
 import { useAdMob } from '@/hooks/useAdMob';
 import { supabase } from '@/integrations/supabase/client';
 import { useSendNotification } from '@/hooks/useSendNotification';
@@ -67,7 +69,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   coachingSession,
   onCoachingScheduled,
 }) => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterSessionCreation, showRewardedBoostAd } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -166,6 +170,15 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   const handleSubmit = async () => {
     if (!user || !wizard.selectedLocation) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La création ou modification de séance est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { formData, selectedLocation, selectedImage, selectedRoute, routeMode } = wizard;
     const isPremiumUser = !!subscriptionInfo?.subscribed;

@@ -3,6 +3,8 @@ import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
+import { useAppPreview } from '@/contexts/AppPreviewContext';
+import { PreviewModeBanner } from '@/components/preview/PreviewModeBanner';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect, type CSSProperties } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
@@ -23,6 +25,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
+  const { isPreviewMode } = useAppPreview();
   const { removeMainBottomInset, homeMapImmersive } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -165,9 +168,15 @@ export const Layout = ({ children }: LayoutProps) => {
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
         partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
       */}
+      <PreviewModeBanner />
       <main
         className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden"
-        style={{ paddingBottom: "var(--layout-bottom-inset)" }}
+        style={{
+          paddingBottom: "var(--layout-bottom-inset)",
+          paddingTop: isPreviewMode
+            ? "calc(44px + env(safe-area-inset-top, 0px))"
+            : undefined,
+        }}
       >
         {homeMapPrimed && (
           <div
