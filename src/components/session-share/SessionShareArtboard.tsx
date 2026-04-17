@@ -171,14 +171,14 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
           padding: '28px 28px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'start', gap: 14 }}>
-            <RunConnectPinIcon size={64} color="#ffffff" />
-            <div style={{ minWidth: 0, paddingTop: 4 }}>
-              <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minWidth: 0, paddingLeft: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <RunConnectPinIcon size={104} color="#ffffff" />
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: 'rgba(255,255,255,0.95)', margin: 0 }}>
                 Rejoins-moi sur
               </p>
-              <p style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.01em', color: '#ffffff', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: 42, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: '#ffffff', margin: '6px 0 0 0' }}>
                 RunConnect
               </p>
             </div>
@@ -187,18 +187,18 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 10,
+              gap: 12,
               background: '#ffffff',
-              borderRadius: 50,
-              padding: '10px 20px',
+              borderRadius: 60,
+              padding: '14px 26px',
               width: 'fit-content',
               boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
             }}
           >
             <div
               style={{
-                width: 30,
-                height: 30,
+                width: 38,
+                height: 38,
                 borderRadius: '50%',
                 background: RC_LIGHT,
                 display: 'flex',
@@ -207,11 +207,11 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
                 flexShrink: 0,
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>
               Ouvrir avec RunConnect
             </span>
           </div>
