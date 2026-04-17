@@ -536,7 +536,7 @@ export const ClubProfileDialog = ({
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Settings className="h-4 w-4 text-primary" />
                       </div>
-                      <span className="text-[15px] text-foreground">Paramètres du club</span>
+                      <span className="text-[15px] text-foreground">Paramètres du {entityLabel}</span>
                     </button>
                     <div className="h-px bg-border/50 ml-[60px]" />
 
