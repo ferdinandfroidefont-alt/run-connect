@@ -2169,7 +2169,7 @@ export default function StoryCreate() {
           >
             {showTextInput ? (
               // While editing: NO scale/rotate on the input's parent so the caret is rendered correctly.
-              <div className={cn(selectedLayer === "text" && "rounded ring-1 ring-white/40")}>
+              <div>
                 <input
                   ref={textInputRef}
                   value={textOverlay}
