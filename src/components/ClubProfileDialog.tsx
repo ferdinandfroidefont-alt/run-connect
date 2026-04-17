@@ -372,8 +372,8 @@ export const ClubProfileDialog = ({
                 </div>
               )}
 
-              {/* 2️⃣ Code d'invitation */}
-              {clubCode && (
+              {/* 2️⃣ Code d'invitation - clubs uniquement */}
+              {isClub && clubCode && (
                 <div className="mx-4">
                   <p className="ios-section-header px-0">Code d'invitation</p>
                   <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
