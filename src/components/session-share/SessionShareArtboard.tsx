@@ -335,13 +335,16 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             style={{
               display: 'inline-flex',
               width: 'fit-content',
-              borderRadius: 50,
-              padding: '12px 26px',
-              fontSize: 20,
-              fontWeight: 700,
+              borderRadius: 60,
+              padding: '16px 36px',
+              fontSize: isStory ? 36 : 40,
+              fontWeight: 800,
               color: '#ffffff',
               background: RC_BLUE,
               letterSpacing: '0.01em',
+              lineHeight: 1,
+              boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
+              marginTop: 4,
             }}
           >
             {payload.structureBadge}
