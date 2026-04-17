@@ -388,44 +388,24 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         </div>
 
         {!isMinimal && (
-          <div
-            style={{
-              marginTop: 16,
-              width: '100%',
-              maxWidth: 460,
-              borderRadius: 18,
-              border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(0,0,0,0.06)',
-              background: cardInnerBg,
-              padding: 22,
-              boxShadow: isDark ? 'none' : '0 4px 24px rgba(15,23,42,0.06)',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 460 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
               <MapPin style={{ width: 28, height: 28, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 22, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0 }}>
+                <p style={{ fontSize: 26, fontWeight: 600, color: fg, lineHeight: 1.3, margin: 0 }}>
                   {payload.locationTitle}
                 </p>
                 {payload.locationSubtitle && (
-                  <p style={{ fontSize: 17, color: muted, lineHeight: 1.3, margin: '2px 0 0 0' }}>
+                  <p style={{ fontSize: 20, color: muted, lineHeight: 1.3, margin: '2px 0 0 0' }}>
                     {payload.locationSubtitle}
                   </p>
                 )}
               </div>
             </div>
             {payload.audienceLine && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  marginTop: 16,
-                  paddingTop: 16,
-                  borderTop: `1px solid ${dividerColor}`,
-                }}
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Users style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
-                <span style={{ fontSize: 20, fontWeight: 500, color: fg }}>{payload.audienceLine}</span>
+                <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>{payload.audienceLine}</span>
               </div>
             )}
           </div>
