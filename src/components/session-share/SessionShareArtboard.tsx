@@ -472,7 +472,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             {leftColumn}
           </div>
         </div>
-        <div style={{ position: 'relative', zIndex: 3, padding: '0 32px 32px', flexShrink: 0 }}>
+        <div style={{ position: 'relative', zIndex: 3, padding: '0 64px 32px', flexShrink: 0 }}>
           {bottomCta}
         </div>
       </div>
