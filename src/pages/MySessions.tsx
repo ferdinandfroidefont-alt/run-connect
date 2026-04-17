@@ -884,6 +884,48 @@ export default function MySessions() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        <SessionShareScreen
+          open={showSessionShare}
+          onClose={() => {
+            setShowSessionShare(false);
+            setSessionForShare(null);
+          }}
+          session={sessionForShare}
+          onOpenConversationShare={() => {
+            setShowSessionShare(false);
+            setShowShareConversationDialog(true);
+          }}
+        />
+
+        {selectedSession && (
+          <ShareSessionToConversationDialog
+            isOpen={showShareConversationDialog}
+            onClose={() => setShowShareConversationDialog(false)}
+            session={{
+              id: selectedSession.id,
+              title: selectedSession.title,
+              description: selectedSession.description,
+              activity_type: selectedSession.activity_type,
+              scheduled_at: selectedSession.scheduled_at,
+              location_name: selectedSession.location_name,
+              organizer_id: selectedSession.organizer_id ?? '',
+              profiles: selectedSession.organizer_id
+                ? (() => {
+                    const p = organizerProfiles.get(selectedSession.organizer_id!);
+                    return p
+                      ? {
+                          username: p.username,
+                          display_name: p.display_name,
+                          avatar_url: p.avatar_url ?? undefined,
+                        }
+                      : undefined;
+                  })()
+                : undefined,
+            }}
+            onSessionShared={() => setShowShareConversationDialog(false)}
+          />
+        )}
       </>
     );
   }
