@@ -2689,7 +2689,6 @@ export default function StoryCreate() {
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-        >
           <button
             type="button"
             className={cn("rounded-lg border border-white/20 p-1.5", textStyle === "bubble" && "bg-primary text-primary-foreground")}
