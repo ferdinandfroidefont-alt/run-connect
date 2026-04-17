@@ -20,7 +20,10 @@ import {
   Shield,
   AlertTriangle,
   UserMinus,
+  Bell,
+  BellOff,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import {
