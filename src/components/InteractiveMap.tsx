@@ -896,7 +896,7 @@ export const InteractiveMap = ({
         const sessionDate = new Date(session.scheduled_at);
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
-        const isSelected = previewSession?.id === session.id;
+        const isSelected = selectedSession?.id === session.id;
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
