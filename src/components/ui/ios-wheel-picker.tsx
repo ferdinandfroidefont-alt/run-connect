@@ -225,7 +225,12 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
         onTouchMove={(e) => e.stopPropagation()}
         onWheelCapture={(e) => e.stopPropagation()}
         data-wheel-column="true"
-        style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS, touchAction: disabled ? "none" : "pan-y" }}
+        style={{
+          height: ITEM_HEIGHT * VISIBLE_ITEMS,
+          touchAction: disabled ? "none" : "pan-y",
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
+        }}
       >
         {items.map((item) => (
           <button
