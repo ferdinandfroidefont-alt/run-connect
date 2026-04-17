@@ -151,7 +151,7 @@ export default function StoryCreate() {
   const [textColor, setTextColor] = useState("#FFFFFF");
   const [textFont, setTextFont] = useState<TextFontMode>("modern");
   const [textAlign, setTextAlign] = useState<TextAlign>("center");
-  const [textStyle, setTextStyle] = useState<TextStyleMode>("bubble");
+  const [textStyle, setTextStyle] = useState<TextStyleMode>("plain");
   const [textSize, setTextSize] = useState(30);
   const [textBold, setTextBold] = useState(true);
   const [textPinching, setTextPinching] = useState(false);
@@ -506,7 +506,7 @@ export default function StoryCreate() {
       setTextColor(draft.textColor ?? "#FFFFFF");
       setTextFont(draft.textFont ?? "modern");
       setTextAlign(draft.textAlign ?? "center");
-      setTextStyle(draft.textStyle ?? "bubble");
+      setTextStyle(draft.textStyle ?? "plain");
       setTextSize(typeof draft.textSize === "number" ? draft.textSize : 30);
       setTextBold(draft.textBold ?? true);
       setCaption(draft.caption ?? "");
