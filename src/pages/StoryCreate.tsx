@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -2170,6 +2171,7 @@ export default function StoryCreate() {
                 value={textOverlay}
                 onChange={(e) => setTextOverlay(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
+                autoFocus
                 placeholder="Ecrire ici..."
                 className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
                 style={{
@@ -2411,16 +2413,22 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                setActiveTool("text");
-                setEditorMode("text");
-                placeTextEditorAtCenter();
-                setSelectedLayer("text");
-                setSelectedDynamicLayerId(null);
-                setShowTextInput(true);
-                setShowMusicPicker(false);
-                setShowSessionPicker(false);
-                setShowStickerPicker(false);
-                setDrawMode(false);
+                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
+                // dans la même tâche que le geste utilisateur. flushSync force le rendu
+                // synchrone de l'input avant qu'on ne le focus.
+                flushSync(() => {
+                  setActiveTool("text");
+                  setEditorMode("text");
+                  placeTextEditorAtCenter();
+                  setSelectedLayer("text");
+                  setSelectedDynamicLayerId(null);
+                  setShowTextInput(true);
+                  setShowMusicPicker(false);
+                  setShowSessionPicker(false);
+                  setShowStickerPicker(false);
+                  setDrawMode(false);
+                });
+                textInputRef.current?.focus({ preventScroll: true });
                 triggerHaptic("light");
               },
             },
