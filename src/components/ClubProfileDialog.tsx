@@ -20,7 +20,10 @@ import {
   Shield,
   AlertTriangle,
   UserMinus,
+  Bell,
+  BellOff,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import {
@@ -68,6 +71,10 @@ interface ClubProfileDialogProps {
   createdAt?: string;
   onEditGroup: () => void;
   onOpenCoachView?: () => void;
+  /** True quand la conversation est un vrai club (avec code d'invitation). False = simple groupe. */
+  isClub?: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
 }
 
 export const ClubProfileDialog = ({
@@ -83,6 +90,9 @@ export const ClubProfileDialog = ({
   createdAt,
   onEditGroup,
   onOpenCoachView,
+  isClub = true,
+  isMuted = false,
+  onToggleMute,
 }: ClubProfileDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -212,7 +222,7 @@ export const ClubProfileDialog = ({
         .eq('conversation_id', conversationId)
         .eq('user_id', userId);
       if (error) throw error;
-      toast({ title: "Membre retiré du club" });
+      toast({ title: isClub ? "Membre retiré du club" : "Membre retiré du groupe" });
       setMemberToDelete(null); setShowDeleteDialog(false);
       loadGroupMembers();
     } catch (error: any) {
@@ -277,6 +287,9 @@ export const ClubProfileDialog = ({
 
   const createdDate = createdAt ? format(new Date(createdAt), "d MMMM yyyy", { locale: fr }) : null;
 
+  const entityLabel = isClub ? "club" : "groupe";
+  const entityLabelCap = isClub ? "Club" : "Groupe";
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -291,7 +304,7 @@ export const ClubProfileDialog = ({
               <span className="text-[15px] font-normal">Retour</span>
             </button>
             <span className="flex-1 text-center text-[17px] font-semibold text-foreground">
-              Profil du club
+              {isClub ? "Profil du club" : "Profil du groupe"}
             </span>
             <div className="min-w-[70px]" />
           </div>
@@ -310,18 +323,20 @@ export const ClubProfileDialog = ({
                   </Avatar>
                   <h2 className="text-[22px] font-bold text-foreground">{groupName}</h2>
                   
-                  {/* Role badge */}
-                  <div className="mt-1.5">
-                    {currentUserIsCoach ? (
-                      <Badge className="bg-primary/12 text-primary border-0 text-[12px] px-2 py-0.5">
-                        Coach principal
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-secondary text-foreground border-0 text-[12px] px-2 py-0.5">
-                        Membre
-                      </Badge>
-                    )}
-                  </div>
+                  {/* Role badge - only for clubs */}
+                  {isClub && (
+                    <div className="mt-1.5">
+                      {currentUserIsCoach ? (
+                        <Badge className="bg-primary/12 text-primary border-0 text-[12px] px-2 py-0.5">
+                          Coach principal
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-secondary text-foreground border-0 text-[12px] px-2 py-0.5">
+                          Membre
+                        </Badge>
+                      )}
+                    </div>
+                  )}
 
                   {groupDescription && (
                     <p className="text-[13px] text-muted-foreground mt-2 max-w-[280px]">{groupDescription}</p>
@@ -334,8 +349,31 @@ export const ClubProfileDialog = ({
                 </div>
               </div>
 
-              {/* 2️⃣ Code d'invitation */}
-              {clubCode && (
+              {/* Notifications - mute toggle (groupe & club) */}
+              {onToggleMute && (
+                <div className="mx-4">
+                  <p className="ios-section-header px-0">Notifications</p>
+                  <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <div className={`h-[30px] w-[30px] rounded-[7px] flex items-center justify-center ${isMuted ? 'bg-muted' : 'bg-primary'}`}>
+                        {isMuted
+                          ? <BellOff className="h-[18px] w-[18px] text-muted-foreground" />
+                          : <Bell className="h-[18px] w-[18px] text-primary-foreground" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[15px] text-foreground">Mettre en sourdine</p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {isMuted ? "Notifications désactivées" : "Notifications actives"}
+                        </p>
+                      </div>
+                      <Switch checked={isMuted} onCheckedChange={onToggleMute} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 2️⃣ Code d'invitation - clubs uniquement */}
+              {isClub && clubCode && (
                 <div className="mx-4">
                   <p className="ios-section-header px-0">Code d'invitation</p>
                   <div className="bg-card rounded-[10px] overflow-hidden border border-border shadow-sm">
@@ -476,7 +514,7 @@ export const ClubProfileDialog = ({
                     </button>
                     <div className="h-px bg-border/50 ml-[60px]" />
 
-                    {currentUserIsCoach && onOpenCoachView && (
+                    {isClub && currentUserIsCoach && onOpenCoachView && (
                       <>
                         <button
                           onClick={() => { onClose(); setTimeout(() => onOpenCoachView?.(), 150); }}
@@ -498,7 +536,7 @@ export const ClubProfileDialog = ({
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Settings className="h-4 w-4 text-primary" />
                       </div>
-                      <span className="text-[15px] text-foreground">Paramètres du club</span>
+                      <span className="text-[15px] text-foreground">Paramètres du {entityLabel}</span>
                     </button>
                     <div className="h-px bg-border/50 ml-[60px]" />
 
@@ -522,7 +560,7 @@ export const ClubProfileDialog = ({
                     onClick={() => setShowDeleteGroupDialog(true)}
                     className="w-full text-center text-[13px] text-destructive active:opacity-70"
                   >
-                    Supprimer le club
+                    Supprimer le {entityLabel}
                   </button>
                 </div>
               )}
@@ -611,7 +649,7 @@ export const ClubProfileDialog = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Supprimer le club ?
+              Supprimer le {entityLabel} ?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Êtes-vous sûr de vouloir supprimer définitivement le club <strong>{groupName}</strong> ?
