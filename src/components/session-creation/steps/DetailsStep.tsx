@@ -81,6 +81,21 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, selectedLocation]);
 
+  // Auto-compute distance from structured blocks
+  const isStructured = formData.session_mode === 'structured';
+  const computedDistanceKm = React.useMemo(
+    () => (isStructured ? computeBlocksDistanceKm(formData.blocks) : null),
+    [isStructured, formData.blocks]
+  );
+  useEffect(() => {
+    if (!isStructured || computedDistanceKm == null) return;
+    const formatted = formatDistanceForInput(computedDistanceKm);
+    if (formatted !== formData.distance_km) {
+      onFormDataChange({ distance_km: formatted });
+    }
+  }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
+
+
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
   const showTerrainField = isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
   const showElevationField = showTerrainField;
