@@ -214,6 +214,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   useEffect(() => {
     if (!session || !headerMapRef.current || headerMapInstance.current) return;
     let cancelled = false;
+    let ro: ResizeObserver | null = null;
     (async () => {
       try {
         const map = await createEmbeddedMapboxMap(headerMapRef.current!, {
@@ -223,12 +224,23 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         });
         if (cancelled) { map.remove(); return; }
         headerMapInstance.current = map;
+        // Force resize once style + layout are settled (Dialog opens after mount)
+        const doResize = () => { try { map.resize(); } catch {} };
+        map.once('load', doResize);
+        requestAnimationFrame(doResize);
+        setTimeout(doResize, 120);
+        setTimeout(doResize, 400);
+        if (typeof ResizeObserver !== 'undefined' && headerMapRef.current) {
+          ro = new ResizeObserver(doResize);
+          ro.observe(headerMapRef.current);
+        }
       } catch (e) {
         console.warn('[SessionDetails] header map error', e);
       }
     })();
     return () => {
       cancelled = true;
+      ro?.disconnect();
       headerMapInstance.current?.remove();
       headerMapInstance.current = null;
     };
