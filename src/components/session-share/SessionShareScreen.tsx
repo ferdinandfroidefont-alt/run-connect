@@ -145,6 +145,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
         fullScreen
         hideCloseButton
         className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none"
+        overlayClassName="bg-background"
         stackNested
       >
         <header className="relative flex shrink-0 items-center justify-center border-b border-border/60 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
