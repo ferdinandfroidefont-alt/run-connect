@@ -1485,34 +1485,33 @@ export default function StoryCreate() {
     setTextPos({ x, y });
   }, [getTextEditingViewport]);
 
+  // Safety clamp ONLY when text tool opens — never reposition on keyboard changes.
+  // This prevents the input from "jumping" while typing.
   useEffect(() => {
     if (!showTextInput) return;
     const viewport = getTextEditingViewport();
     if (!viewport) return;
-    const maxSafeY = Math.max(viewport.top + 8, viewport.bottom - 64);
     const minSafeY = viewport.top + 8;
-    if (textPos.y > maxSafeY || textPos.y < minSafeY) {
-      setTextPos((prev) => ({ ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) }));
-    }
-  }, [getTextEditingViewport, showTextInput, textPos.y]);
-
-  useEffect(() => {
-    if (!showTextInput) return;
-    const viewport = getTextEditingViewport();
-    if (!viewport) return;
-    const targetY = viewport.top + (viewport.bottom - viewport.top) * 0.42;
+    const maxSafeY = Math.max(minSafeY + 64, viewport.bottom - 64);
     setTextPos((prev) => {
-      const clampedY = Math.max(viewport.top + 8, Math.min(viewport.bottom - 64, targetY));
-      return { ...prev, y: clampedY };
+      if (prev.y >= minSafeY && prev.y <= maxSafeY) return prev;
+      return { ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) };
     });
-  }, [getTextEditingViewport, keyboardHeight, showTextInput]);
+    // Intentionally NOT depending on keyboardHeight or textPos.y to avoid loops/jumps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTextInput]);
 
+  // Reliable focus with iOS fallback (some iOS Safari builds miss the first focus()).
   useEffect(() => {
     if (!showTextInput) return;
-    const t = window.setTimeout(() => {
-      textInputRef.current?.focus({ preventScroll: true });
-    }, 0);
-    return () => window.clearTimeout(t);
+    const focusNow = () => textInputRef.current?.focus({ preventScroll: true });
+    focusNow();
+    const t1 = window.setTimeout(focusNow, 50);
+    const t2 = window.setTimeout(focusNow, 200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [showTextInput]);
 
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
