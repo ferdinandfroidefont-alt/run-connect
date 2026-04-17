@@ -537,63 +537,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     organizer: session.profiles.username || session.profiles.display_name,
   };
 
-  // Header map
-  const headerMapRef = useRef<HTMLDivElement | null>(null);
-  const headerMapInstance = useRef<MapboxMap | null>(null);
-  useEffect(() => {
-    if (!headerMapRef.current || headerMapInstance.current) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const map = await createEmbeddedMapboxMap(headerMapRef.current!, {
-          interactive: false,
-          center: { lat: session.location_lat, lng: session.location_lng },
-          zoom: 14,
-        });
-        if (cancelled) { map.remove(); return; }
-        headerMapInstance.current = map;
-      } catch (e) {
-        console.warn('[SessionDetails] header map error', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      headerMapInstance.current?.remove();
-      headerMapInstance.current = null;
-    };
-  }, [session.id, session.location_lat, session.location_lng]);
-
-  // Route map
-  const routeMapRef = useRef<HTMLDivElement | null>(null);
-  const routeMapInstance = useRef<MapboxMap | null>(null);
-  useEffect(() => {
-    if (!session.routes || !routeMapRef.current || routeMapInstance.current) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const coords = (session.routes!.coordinates as Array<{ lat: number; lng: number }>).map(c => ({ lat: c.lat, lng: c.lng }));
-        if (!coords.length) return;
-        const center = coords[Math.floor(coords.length / 2)];
-        const map = await createEmbeddedMapboxMap(routeMapRef.current!, {
-          interactive: false,
-          center,
-          zoom: 13,
-        });
-        if (cancelled) { map.remove(); return; }
-        routeMapInstance.current = map;
-        map.once('load', () => {
-          setOrUpdateLineLayer(map, 'route-src', 'route-line', coords, { color: 'hsl(var(--primary))', width: 4 });
-        });
-      } catch (e) {
-        console.warn('[SessionDetails] route map error', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      routeMapInstance.current?.remove();
-      routeMapInstance.current = null;
-    };
-  }, [session.routes?.id]);
+  // (header & route map refs/effects are declared at the top of the component)
 
   const handleExportGPX = async () => {
     if (!session.routes) return;
