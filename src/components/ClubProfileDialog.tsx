@@ -514,7 +514,7 @@ export const ClubProfileDialog = ({
                     </button>
                     <div className="h-px bg-border/50 ml-[60px]" />
 
-                    {currentUserIsCoach && onOpenCoachView && (
+                    {isClub && currentUserIsCoach && onOpenCoachView && (
                       <>
                         <button
                           onClick={() => { onClose(); setTimeout(() => onOpenCoachView?.(), 150); }}
