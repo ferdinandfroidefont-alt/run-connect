@@ -94,7 +94,6 @@ function useBodyScrollLock(active: boolean) {
     };
 
     body.style.overflow = "hidden";
-    body.style.touchAction = "none";
     body.style.position = "fixed";
     body.style.top = `-${scrollY}px`;
     body.style.width = "100%";
