@@ -3233,6 +3233,15 @@ const Messages = () => {
             createdBy={groupInfoData?.created_by || ""}
             createdAt={groupInfoData?.created_at || ""}
             isAdmin={groupInfoData?.created_by === user?.id}
+            isClub={!!groupInfoData?.club_code}
+            isMuted={isMuted}
+            onToggleMute={() => {
+              const newMuted = !isMuted;
+              setIsMuted(newMuted);
+              if (user) {
+                supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+              }
+            }}
             onEditGroup={() => {
               setShowClubProfile(false);
               setTimeout(() => {
