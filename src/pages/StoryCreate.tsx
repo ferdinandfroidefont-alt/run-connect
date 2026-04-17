@@ -2169,15 +2169,15 @@ export default function StoryCreate() {
           >
             {showTextInput ? (
               // While editing: NO scale/rotate on the input's parent so the caret is rendered correctly.
-              <div className={cn(selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}>
+              <div className={cn(selectedLayer === "text" && "rounded ring-1 ring-white/40")}>
                 <input
                   ref={textInputRef}
                   value={textOverlay}
                   onChange={(e) => setTextOverlay(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
-                  placeholder="Ecrire ici..."
-                  className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
+                  placeholder=""
+                  className="min-w-[2px] border-none bg-transparent p-0 text-white outline-none"
                   style={{
                     fontFamily: FONT_MAP[textFont],
                     fontWeight: textBold ? 800 : 600,
