@@ -7,7 +7,7 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const PAD_ROWS = Math.floor(VISIBLE_ITEMS / 2);
 const MODAL_ROOT_CLASS =
-  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))]";
+  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))] pointer-events-auto";
 const MODAL_PANEL_CLASS =
   "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-3xl bg-card pb-[max(0.5rem,var(--safe-area-bottom))] shadow-2xl";
 
