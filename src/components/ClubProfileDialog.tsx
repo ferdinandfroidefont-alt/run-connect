@@ -222,7 +222,7 @@ export const ClubProfileDialog = ({
         .eq('conversation_id', conversationId)
         .eq('user_id', userId);
       if (error) throw error;
-      toast({ title: "Membre retiré du club" });
+      toast({ title: isClub ? "Membre retiré du club" : "Membre retiré du groupe" });
       setMemberToDelete(null); setShowDeleteDialog(false);
       loadGroupMembers();
     } catch (error: any) {
