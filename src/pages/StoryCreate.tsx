@@ -1469,13 +1469,15 @@ export default function StoryCreate() {
     if (!host) return null;
     const rect = host.getBoundingClientRect();
     const topBoundary = 92;
-    const bottomBoundary = rect.height - Math.max(24, keyboardHeight + editToolbarHeight + 24);
+    // Stable bottom boundary: reserve space for the text styling toolbar only.
+    // We intentionally DO NOT include keyboardHeight here — the scene must stay fixed.
+    const bottomBoundary = rect.height - Math.max(80, editToolbarHeight + 24);
     return {
       width: rect.width,
       top: Math.max(32, topBoundary),
       bottom: Math.max(topBoundary + 72, bottomBoundary),
     };
-  }, [editToolbarHeight, keyboardHeight]);
+  }, [editToolbarHeight]);
 
   const placeTextEditorAtCenter = useCallback(() => {
     const viewport = getTextEditingViewport();
