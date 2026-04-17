@@ -151,7 +151,7 @@ export default function StoryCreate() {
   const [textColor, setTextColor] = useState("#FFFFFF");
   const [textFont, setTextFont] = useState<TextFontMode>("modern");
   const [textAlign, setTextAlign] = useState<TextAlign>("center");
-  const [textStyle, setTextStyle] = useState<TextStyleMode>("bubble");
+  const [textStyle, setTextStyle] = useState<TextStyleMode>("plain");
   const [textSize, setTextSize] = useState(30);
   const [textBold, setTextBold] = useState(true);
   const [textPinching, setTextPinching] = useState(false);
