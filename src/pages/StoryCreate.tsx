@@ -506,7 +506,7 @@ export default function StoryCreate() {
       setTextColor(draft.textColor ?? "#FFFFFF");
       setTextFont(draft.textFont ?? "modern");
       setTextAlign(draft.textAlign ?? "center");
-      setTextStyle(draft.textStyle ?? "bubble");
+      setTextStyle(draft.textStyle ?? "plain");
       setTextSize(typeof draft.textSize === "number" ? draft.textSize : 30);
       setTextBold(draft.textBold ?? true);
       setCaption(draft.caption ?? "");
