@@ -192,6 +192,7 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
               borderRadius: 60,
               padding: '14px 26px',
               width: 'fit-content',
+              marginLeft: 162,
               boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
             }}
           >
