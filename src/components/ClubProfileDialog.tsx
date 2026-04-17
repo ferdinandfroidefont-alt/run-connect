@@ -649,7 +649,7 @@ export const ClubProfileDialog = ({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Supprimer le club ?
+              Supprimer le {entityLabel} ?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Êtes-vous sûr de vouloir supprimer définitivement le club <strong>{groupName}</strong> ?
