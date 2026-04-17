@@ -331,27 +331,38 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         </h1>
 
         {payload.structureBadge && !isMinimal && (
-          <div
-            style={{
-              display: 'inline-flex',
-              width: 'fit-content',
-              borderRadius: 60,
-              padding: '16px 36px',
-              fontSize: isStory ? 36 : 40,
-              fontWeight: 800,
-              color: '#ffffff',
-              background: RC_BLUE,
-              letterSpacing: '0.01em',
-              lineHeight: 1,
-              boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
-              marginTop: 4,
-            }}
-          >
-            {payload.structureBadge}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                width: 'fit-content',
+                borderRadius: 60,
+                padding: '16px 36px',
+                fontSize: isStory ? 36 : 40,
+                fontWeight: 800,
+                color: '#ffffff',
+                background: RC_BLUE,
+                letterSpacing: '0.01em',
+                lineHeight: 1,
+                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
+              }}
+            >
+              {payload.structureBadge}
+            </div>
+            {payload.pacePrimary && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4, marginTop: 6 }}>
+                <span style={{ fontSize: 32, fontWeight: 800, color: fg, lineHeight: 1.1 }}>
+                  {payload.pacePrimary}
+                </span>
+                <span style={{ fontSize: 16, fontWeight: 500, color: muted, letterSpacing: '0.02em' }}>
+                  allure cible
+                </span>
+              </div>
+            )}
           </div>
         )}
 
-        {payload.pacePrimary && !isMinimal && (
+        {payload.pacePrimary && !isMinimal && !payload.structureBadge && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
