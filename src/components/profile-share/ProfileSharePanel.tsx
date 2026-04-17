@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 import { Share, BadgeCheck, MapPin, Footprints, Calendar, Users, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import profileShareCardImg from '@/assets/profile-share-card.png';
+import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
+
+type CardVariant = 'v1' | 'v2';
+const CARD_IMAGES: Record<CardVariant, string> = { v1: profileShareCardImg, v2: profileShareCardV2 };
+
 
 const sportEmojiFromLabel = (label: string): string => {
   const found = Object.values(PROFILE_SPORT_LABELS).find(
@@ -22,6 +27,7 @@ type Props = {
 export function ProfileSharePanel({ compact = false }: Props) {
   const { user } = useAuth();
   const [payload, setPayload] = useState<ProfileSharePayload | null>(null);
+  const [variant, setVariant] = useState<CardVariant>('v1');
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +87,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
           {/* Card: image template figée + overlay */}
           <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
             <img
-              src={profileShareCardImg}
+              src={CARD_IMAGES[variant]}
               alt="Aperçu carte de partage"
               className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
             />
@@ -266,10 +272,30 @@ export function ProfileSharePanel({ compact = false }: Props) {
             </div>
           </div>
 
+          {/* Sélecteur de template */}
+          <div className="mt-4 inline-flex rounded-full border border-border bg-muted/40 p-1">
+            {([
+              { id: 'v1' as const, label: 'Carte 1' },
+              { id: 'v2' as const, label: 'Carte 2' },
+            ]).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setVariant(opt.id)}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors',
+                  variant === opt.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={handleShare}
-            className="mt-5 flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-4 text-[16px] font-semibold text-white shadow-lg transition-all duration-200 hover:bg-primary/90 active:scale-[0.98]"
+            className="mt-4 flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-4 text-[16px] font-semibold text-white shadow-lg transition-all duration-200 hover:bg-primary/90 active:scale-[0.98]"
           >
             <Share className="h-5 w-5" strokeWidth={2.2} />
             Partager mon profil
