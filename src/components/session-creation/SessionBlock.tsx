@@ -193,11 +193,8 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
               value={block.rpe}
               onChange={(rpe) => onUpdate({ rpe })}
             />
-            <RpeTenPicker
-              label="RPE récup (entre répétitions)"
-              value={block.recoveryRpe}
-              onChange={(recoveryRpe) => onUpdate({ recoveryRpe })}
-            />
+
+
           </>
         ) : (
           /* Warmup / Cooldown / Steady Block */
