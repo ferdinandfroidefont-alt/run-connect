@@ -664,6 +664,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   };
 
   const participantsCount = session.current_participants || 0;
+  const headerStaticMapUrl = buildSessionStaticMapUrl({
+    routePath: [],
+    pin: { lat: session.location_lat, lng: session.location_lng },
+    width: 1200,
+    height: 560,
+  });
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
@@ -671,8 +677,20 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         <ScrollArea className="flex-1 bg-white">
           <div className="pb-[140px]">
             {/* ==== HEADER MAP ==== */}
-            <div className="relative w-full h-[280px] bg-secondary">
-              <div ref={headerMapRef} className="absolute inset-0" />
+            <div className="relative w-full h-[280px] bg-secondary overflow-hidden">
+              {headerStaticMapUrl ? (
+                <img
+                  src={headerStaticMapUrl}
+                  alt="Carte du lieu de la séance"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
+                />
+              ) : null}
+              <div
+                ref={headerMapRef}
+                className="absolute inset-0"
+                style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
+              />
               {/* Centered pin (avatar + tip) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative -translate-y-3 flex flex-col items-center">
