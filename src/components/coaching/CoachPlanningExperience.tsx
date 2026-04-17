@@ -1667,6 +1667,28 @@ export function CoachPlanningExperience() {
         onPressClubSwitcher={rotateActiveClub}
       />
 
+      <AlertDialog open={showCoachRequiredDialog} onOpenChange={setShowCoachRequiredDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vous n'êtes pas coach dans ce club</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette section est réservée aux coachs. Créez votre propre club pour devenir coach et accéder à la planification, au suivi et aux groupes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Plus tard</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCoachRequiredDialog(false);
+                navigate("/messages?createClub=1");
+              }}
+            >
+              Créer un club
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <InviteMembersDialog
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
