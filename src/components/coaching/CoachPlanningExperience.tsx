@@ -1171,8 +1171,14 @@ export function CoachPlanningExperience() {
       : activeMenuKey === "dashboard"
       ? "Tableau de bord"
       : "Coaching";
+  const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
   const handleDrawerSelect = (key: CoachMenuKey) => {
-    if (effectiveAthleteMode && !isCoachMode && key !== "my-plan") return;
+    // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
+    if (!isCoachMode && key !== "my-plan") {
+      setDrawerOpen(false);
+      setShowCoachRequiredDialog(true);
+      return;
+    }
     setActiveMenuKey(key);
     setDrawerOpen(false);
     if (key === "planning" || key === "my-plan") {
