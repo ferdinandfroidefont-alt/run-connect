@@ -2171,7 +2171,6 @@ export default function StoryCreate() {
                 value={textOverlay}
                 onChange={(e) => setTextOverlay(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
-                autoFocus
                 placeholder="Ecrire ici..."
                 className="min-w-[220px] rounded-xl border border-white/25 bg-black/20 px-3 py-2 text-white outline-none backdrop-blur-md placeholder:text-white/70"
                 style={{
