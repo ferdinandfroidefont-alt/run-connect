@@ -620,10 +620,29 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             {/* ==== HEADER MAP ==== */}
             <div className="relative w-full h-[280px] bg-secondary">
               <div ref={headerMapRef} className="absolute inset-0" />
-              {/* Centered pin */}
+              {/* Centered pin (avatar + tip) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="-translate-y-2">
-                  <ActivityIcon activityType={session.activity_type} size="lg" className="ring-4 ring-white shadow-xl" />
+                <div className="relative -translate-y-3 flex flex-col items-center">
+                  {/* Avatar circle */}
+                  <div className="relative h-[72px] w-[72px] rounded-full bg-primary p-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+                    <Avatar className="h-full w-full ring-2 ring-white">
+                      <AvatarImage src={session.profiles.avatar_url} className="object-cover" />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-[22px] font-semibold">
+                        {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Activity badge */}
+                    <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white shadow-md ring-1 ring-black/5 flex items-center justify-center">
+                      <ActivityIcon activityType={session.activity_type} size="sm" className="!h-6 !w-6 !rounded-full" />
+                    </div>
+                  </div>
+                  {/* Tip glued to circle */}
+                  <div
+                    className="-mt-[6px] h-3 w-3 bg-primary rotate-45 shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+                    aria-hidden
+                  />
+                  {/* Ground shadow */}
+                  <div className="mt-1 h-1.5 w-8 rounded-full bg-black/20 blur-sm" aria-hidden />
                 </div>
               </div>
               {/* Bottom gradient */}
