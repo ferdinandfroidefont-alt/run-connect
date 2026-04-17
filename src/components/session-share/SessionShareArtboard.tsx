@@ -309,17 +309,17 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     );
 
     const leftColumn = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '44px 0 0 44px', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '44px 0 0 44px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ActivityGlyph type={payload.activityType} />
-          <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', color: RC_BLUE, textTransform: 'uppercase' as const }}>
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.08em', color: RC_BLUE, textTransform: 'uppercase' as const }}>
             {payload.activityHeader}
           </span>
         </div>
 
         <h1
           style={{
-            fontSize: isStory ? 48 : 54,
+            fontSize: isStory ? 60 : 68,
             fontWeight: 800,
             color: fg,
             lineHeight: 1.05,
@@ -336,8 +336,8 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               display: 'inline-flex',
               width: 'fit-content',
               borderRadius: 50,
-              padding: '10px 22px',
-              fontSize: 16,
+              padding: '12px 26px',
+              fontSize: 20,
               fontWeight: 700,
               color: '#ffffff',
               background: RC_BLUE,
@@ -349,29 +349,29 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         )}
 
         {payload.pacePrimary && !isMinimal && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-              <span style={{ fontSize: 24, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+              <span style={{ fontSize: 30, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
             </div>
             {payload.paceSecondary && (
-              <span style={{ paddingLeft: 32, fontSize: 13, color: muted }}>{payload.paceSecondary}</span>
+              <span style={{ paddingLeft: 40, fontSize: 16, color: muted }}>{payload.paceSecondary}</span>
             )}
           </div>
         )}
 
         <div style={{ height: 1, width: '70%', maxWidth: 280, background: dividerColor, margin: '4px 0' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Calendar style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-            <span style={{ fontSize: 20, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Calendar style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 26, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
               {payload.dateLabel}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Clock style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-            <span style={{ fontSize: 20, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+            <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
           </div>
         </div>
 
@@ -380,22 +380,22 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             style={{
               marginTop: 16,
               width: '100%',
-              maxWidth: 420,
+              maxWidth: 460,
               borderRadius: 18,
               border: isDark ? '1px solid rgba(148,163,184,0.25)' : '1px solid rgba(0,0,0,0.06)',
               background: cardInnerBg,
-              padding: 18,
+              padding: 22,
               boxShadow: isDark ? 'none' : '0 4px 24px rgba(15,23,42,0.06)',
             }}
           >
-            <div style={{ display: 'flex', gap: 10 }}>
-              <MapPin style={{ width: 22, height: 22, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
+            <div style={{ display: 'flex', gap: 12 }}>
+              <MapPin style={{ width: 28, height: 28, flexShrink: 0, marginTop: 2, color: RC_BLUE }} />
               <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0 }}>
+                <p style={{ fontSize: 22, fontWeight: 700, color: fg, lineHeight: 1.3, margin: 0 }}>
                   {payload.locationTitle}
                 </p>
                 {payload.locationSubtitle && (
-                  <p style={{ fontSize: 14, color: muted, lineHeight: 1.3, margin: 0 }}>
+                  <p style={{ fontSize: 17, color: muted, lineHeight: 1.3, margin: '2px 0 0 0' }}>
                     {payload.locationSubtitle}
                   </p>
                 )}
@@ -406,14 +406,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
-                  marginTop: 14,
-                  paddingTop: 14,
+                  gap: 12,
+                  marginTop: 16,
+                  paddingTop: 16,
                   borderTop: `1px solid ${dividerColor}`,
                 }}
               >
-                <Users style={{ width: 22, height: 22, flexShrink: 0, color: RC_BLUE }} />
-                <span style={{ fontSize: 16, fontWeight: 500, color: fg }}>{payload.audienceLine}</span>
+                <Users style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+                <span style={{ fontSize: 20, fontWeight: 500, color: fg }}>{payload.audienceLine}</span>
               </div>
             )}
           </div>
