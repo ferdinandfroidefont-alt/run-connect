@@ -1502,19 +1502,18 @@ export default function StoryCreate() {
     if (!viewport) return;
     const targetY = viewport.top + (viewport.bottom - viewport.top) * 0.42;
     setTextPos((prev) => {
-      const nextY = prev.y + (targetY - prev.y) * 0.32;
-      return { ...prev, y: Math.max(viewport.top + 8, Math.min(viewport.bottom - 64, nextY)) };
+      const clampedY = Math.max(viewport.top + 8, Math.min(viewport.bottom - 64, targetY));
+      return { ...prev, y: clampedY };
     });
   }, [getTextEditingViewport, keyboardHeight, showTextInput]);
 
   useEffect(() => {
     if (!showTextInput) return;
-    placeTextEditorAtCenter();
     const t = window.setTimeout(() => {
       textInputRef.current?.focus({ preventScroll: true });
     }, 0);
     return () => window.clearTimeout(t);
-  }, [placeTextEditorAtCenter, showTextInput]);
+  }, [showTextInput]);
 
   const onTextTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length !== 2) return;
