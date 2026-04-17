@@ -1134,7 +1134,7 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [sessions, filters, isMapLoaded, newSessionIds, previewSession?.id]);
+  }, [sessions, filters, isMapLoaded, newSessionIds, selectedSession?.id]);
 
   useEffect(() => {
     const m = map.current;
