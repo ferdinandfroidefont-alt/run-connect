@@ -17,6 +17,16 @@ import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -1161,8 +1171,14 @@ export function CoachPlanningExperience() {
       : activeMenuKey === "dashboard"
       ? "Tableau de bord"
       : "Coaching";
+  const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
   const handleDrawerSelect = (key: CoachMenuKey) => {
-    if (effectiveAthleteMode && !isCoachMode && key !== "my-plan") return;
+    // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
+    if (!isCoachMode && key !== "my-plan") {
+      setDrawerOpen(false);
+      setShowCoachRequiredDialog(true);
+      return;
+    }
     setActiveMenuKey(key);
     setDrawerOpen(false);
     if (key === "planning" || key === "my-plan") {
@@ -1650,6 +1666,28 @@ export function CoachPlanningExperience() {
         otherClubsCount={Math.max(clubs.length - 1, 0)}
         onPressClubSwitcher={rotateActiveClub}
       />
+
+      <AlertDialog open={showCoachRequiredDialog} onOpenChange={setShowCoachRequiredDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vous n'êtes pas coach dans ce club</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette section est réservée aux coachs. Créez votre propre club pour devenir coach et accéder à la planification, au suivi et aux groupes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Plus tard</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCoachRequiredDialog(false);
+                navigate("/messages?createClub=1");
+              }}
+            >
+              Créer un club
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <InviteMembersDialog
         open={inviteDialogOpen}
