@@ -212,34 +212,50 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const routeMapInstance = useRef<MapboxMap | null>(null);
 
   useEffect(() => {
-    if (!session || !headerMapRef.current || headerMapInstance.current) return;
+    if (!session) return;
     let cancelled = false;
     let ro: ResizeObserver | null = null;
-    (async () => {
+    let rafId: number | null = null;
+    let attempts = 0;
+
+    const init = async (container: HTMLDivElement) => {
       try {
-        const map = await createEmbeddedMapboxMap(headerMapRef.current!, {
+        const map = await createEmbeddedMapboxMap(container, {
           interactive: false,
           center: { lat: session.location_lat, lng: session.location_lng },
           zoom: 14,
         });
         if (cancelled) { map.remove(); return; }
         headerMapInstance.current = map;
-        // Force resize once style + layout are settled (Dialog opens after mount)
         const doResize = () => { try { map.resize(); } catch {} };
         map.once('load', doResize);
         requestAnimationFrame(doResize);
         setTimeout(doResize, 120);
         setTimeout(doResize, 400);
-        if (typeof ResizeObserver !== 'undefined' && headerMapRef.current) {
+        setTimeout(doResize, 800);
+        if (typeof ResizeObserver !== 'undefined') {
           ro = new ResizeObserver(doResize);
-          ro.observe(headerMapRef.current);
+          ro.observe(container);
         }
       } catch (e) {
         console.warn('[SessionDetails] header map error', e);
       }
-    })();
+    };
+
+    const tryInit = () => {
+      if (cancelled || headerMapInstance.current) return;
+      const el = headerMapRef.current;
+      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        init(el);
+      } else if (attempts++ < 60) {
+        rafId = requestAnimationFrame(tryInit);
+      }
+    };
+    tryInit();
+
     return () => {
       cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
       ro?.disconnect();
       headerMapInstance.current?.remove();
       headerMapInstance.current = null;
@@ -247,29 +263,48 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   }, [session?.id, session?.location_lat, session?.location_lng]);
 
   useEffect(() => {
-    if (!session?.routes || !routeMapRef.current || routeMapInstance.current) return;
+    if (!session?.routes) return;
     let cancelled = false;
-    (async () => {
+    let rafId: number | null = null;
+    let attempts = 0;
+
+    const init = async (container: HTMLDivElement) => {
       try {
         const coords = (session.routes!.coordinates as Array<{ lat: number; lng: number }>).map(c => ({ lat: c.lat, lng: c.lng }));
         if (!coords.length) return;
         const center = coords[Math.floor(coords.length / 2)];
-        const map = await createEmbeddedMapboxMap(routeMapRef.current!, {
+        const map = await createEmbeddedMapboxMap(container, {
           interactive: false,
           center,
           zoom: 13,
         });
         if (cancelled) { map.remove(); return; }
         routeMapInstance.current = map;
+        const doResize = () => { try { map.resize(); } catch {} };
         map.once('load', () => {
+          doResize();
           setOrUpdateLineLayer(map, 'route-src', 'route-line', coords, { color: 'hsl(var(--primary))', width: 4 });
         });
+        setTimeout(doResize, 200);
       } catch (e) {
         console.warn('[SessionDetails] route map error', e);
       }
-    })();
+    };
+
+    const tryInit = () => {
+      if (cancelled || routeMapInstance.current) return;
+      const el = routeMapRef.current;
+      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        init(el);
+      } else if (attempts++ < 60) {
+        rafId = requestAnimationFrame(tryInit);
+      }
+    };
+    tryInit();
+
     return () => {
       cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
       routeMapInstance.current?.remove();
       routeMapInstance.current = null;
     };
