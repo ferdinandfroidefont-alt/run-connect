@@ -171,9 +171,9 @@ function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string
           padding: '28px 28px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minWidth: 0, paddingLeft: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <RunConnectPinIcon size={104} color="#ffffff" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minWidth: 0, paddingLeft: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+            <RunConnectPinIcon size={140} color="#ffffff" />
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2, color: 'rgba(255,255,255,0.95)', margin: 0 }}>
                 Rejoins-moi sur
