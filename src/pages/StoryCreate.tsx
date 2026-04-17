@@ -2197,13 +2197,7 @@ export default function StoryCreate() {
                 }}
               >
                 <div
-                  className={cn(
-                    "rounded-xl px-4 py-2 backdrop-blur-sm",
-                    textStyle === "plain" && "bg-transparent",
-                    textStyle === "bubble" && "bg-black/45",
-                    textStyle === "band" && "bg-black/35 border-y border-white/25",
-                    textStyle === "outline" && "bg-transparent",
-                  )}
+                  className="px-1"
                   style={{
                     fontFamily: FONT_MAP[textFont],
                     fontWeight: textBold ? 700 : 500,
@@ -2211,6 +2205,7 @@ export default function StoryCreate() {
                     fontSize: `${textSize}px`,
                     color: textColor,
                     WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.35)",
                   }}
                 >
                   {textOverlay}
