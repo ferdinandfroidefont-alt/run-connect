@@ -298,7 +298,7 @@ export default function StoryCreate() {
   };
 
   const selectedObjectType = selectedDynamicLayerId ? "dynamic" : selectedLayer;
-  const editToolbarHeight = editorMode === "text" ? 52 : 0;
+  const editToolbarHeight = editorMode === "text" ? 60 : 0;
   const visibleMusicTracks = useMemo(() => {
     if (musicSheetTab === "forYou") return filteredMusic;
     if (musicSheetTab === "popular") {
