@@ -350,12 +350,10 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               {payload.structureBadge}
             </div>
             {payload.pacePrimary && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4, marginTop: 6 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: fg, lineHeight: 1.1 }}>
-                  {payload.pacePrimary}
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 500, color: muted, letterSpacing: '0.02em' }}>
-                  allure cible
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                <Clock style={{ width: 28, height: 28, flexShrink: 0, color: RC_BLUE }} />
+                <span style={{ fontSize: 26, fontWeight: 600, color: fg }}>
+                  {payload.pacePrimary} <span style={{ color: muted, fontWeight: 500 }}>· allure cible</span>
                 </span>
               </div>
             )}
