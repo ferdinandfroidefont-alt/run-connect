@@ -37,6 +37,7 @@ import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
 import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
+import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
 
 interface DetailsStepProps {
   formData: SessionFormData;
