@@ -98,14 +98,22 @@ function buildStructureBadge(s: SessionLike): string | null {
 }
 
 function buildPace(s: SessionLike, _formatKm: (n: number) => string): { primary: string | null; secondary: string | null } {
-  if (s.interval_pace) {
-    const u = s.interval_pace_unit === 'power' ? ' W' : '/km';
+  // Cherche aussi dans les session_blocks (fractionné stocké en JSON)
+  const blocks = s.session_blocks as Array<{ type?: string; effortPace?: string; effortPaceUnit?: string }> | undefined;
+  const intervalBlock = blocks?.find((b) => b.type === 'interval');
+  const blockPace = intervalBlock?.effortPace;
+  const blockPaceUnit = intervalBlock?.effortPaceUnit;
+
+  if (s.interval_pace || blockPace) {
+    const pace = s.interval_pace || blockPace!;
+    const unit = s.interval_pace_unit || blockPaceUnit;
+    const u = unit === 'power' ? ' W' : '/km';
     return {
-      primary: s.interval_pace_unit === 'power' ? `${s.interval_pace}${u}` : `${s.interval_pace}${u}`,
+      primary: `${pace}${u}`,
       secondary: 'allure cible',
     };
   }
-  if (s.pace_general && (s.session_type === 'footing' || s.session_type === 'sortie_longue')) {
+  if (s.pace_general) {
     const u = s.pace_unit === 'power' ? ' W' : '/km';
     return { primary: `${s.pace_general}${u}`, secondary: 'allure' };
   }
