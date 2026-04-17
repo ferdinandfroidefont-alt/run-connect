@@ -2190,7 +2190,6 @@ export default function StoryCreate() {
               </div>
             ) : (
               <div
-                className={cn(selectedLayer === "text" && "ring-2 ring-white/60 rounded-xl")}
                 style={{
                   transform: `scale(${textScale}) rotate(${textRotation}deg)`,
                   transformOrigin: "top left",
