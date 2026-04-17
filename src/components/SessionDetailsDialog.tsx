@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
+import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
+import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
@@ -210,6 +212,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const headerMapInstance = useRef<MapboxMap | null>(null);
   const routeMapRef = useRef<HTMLDivElement | null>(null);
   const routeMapInstance = useRef<MapboxMap | null>(null);
+  const [headerMapReady, setHeaderMapReady] = useState(false);
+  const [headerMapFailed, setHeaderMapFailed] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -218,17 +222,27 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     let rafId: number | null = null;
     let attempts = 0;
 
+    setHeaderMapReady(false);
+    setHeaderMapFailed(false);
+
     const init = async (container: HTMLDivElement) => {
       try {
         const map = await createEmbeddedMapboxMap(container, {
           interactive: false,
           center: { lat: session.location_lat, lng: session.location_lng },
           zoom: 14,
+          style: MAPBOX_STREETS_STYLE,
         });
         if (cancelled) { map.remove(); return; }
         headerMapInstance.current = map;
         const doResize = () => { try { map.resize(); } catch {} };
-        map.once('load', doResize);
+        map.once('load', () => {
+          doResize();
+          if (!cancelled) setHeaderMapReady(true);
+        });
+        map.once('error', () => {
+          if (!cancelled) setHeaderMapFailed(true);
+        });
         requestAnimationFrame(doResize);
         setTimeout(doResize, 120);
         setTimeout(doResize, 400);
@@ -239,6 +253,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         }
       } catch (e) {
         console.warn('[SessionDetails] header map error', e);
+        if (!cancelled) setHeaderMapFailed(true);
       }
     };
 
@@ -249,6 +264,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         init(el);
       } else if (attempts++ < 60) {
         rafId = requestAnimationFrame(tryInit);
+      } else {
+        setHeaderMapFailed(true);
       }
     };
     tryInit();
@@ -259,6 +276,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       ro?.disconnect();
       headerMapInstance.current?.remove();
       headerMapInstance.current = null;
+      setHeaderMapReady(false);
     };
   }, [session?.id, session?.location_lat, session?.location_lng]);
 
@@ -646,6 +664,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   };
 
   const participantsCount = session.current_participants || 0;
+  const headerStaticMapUrl = buildSessionStaticMapUrl({
+    routePath: [],
+    pin: { lat: session.location_lat, lng: session.location_lng },
+    width: 1200,
+    height: 560,
+  });
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
@@ -653,8 +677,20 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         <ScrollArea className="flex-1 bg-white">
           <div className="pb-[140px]">
             {/* ==== HEADER MAP ==== */}
-            <div className="relative w-full h-[280px] bg-secondary">
-              <div ref={headerMapRef} className="absolute inset-0" />
+            <div className="relative w-full h-[280px] bg-secondary overflow-hidden">
+              {headerStaticMapUrl ? (
+                <img
+                  src={headerStaticMapUrl}
+                  alt="Carte du lieu de la séance"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
+                />
+              ) : null}
+              <div
+                ref={headerMapRef}
+                className="absolute inset-0"
+                style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
+              />
               {/* Centered pin (avatar + tip) */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="relative -translate-y-3 flex flex-col items-center">
