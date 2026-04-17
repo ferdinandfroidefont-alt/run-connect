@@ -71,6 +71,10 @@ interface ClubProfileDialogProps {
   createdAt?: string;
   onEditGroup: () => void;
   onOpenCoachView?: () => void;
+  /** True quand la conversation est un vrai club (avec code d'invitation). False = simple groupe. */
+  isClub?: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
 }
 
 export const ClubProfileDialog = ({
@@ -86,6 +90,9 @@ export const ClubProfileDialog = ({
   createdAt,
   onEditGroup,
   onOpenCoachView,
+  isClub = true,
+  isMuted = false,
+  onToggleMute,
 }: ClubProfileDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
