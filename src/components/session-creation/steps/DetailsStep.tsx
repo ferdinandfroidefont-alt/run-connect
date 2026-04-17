@@ -262,15 +262,29 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 <Label htmlFor="distance_km" className="text-sm font-medium flex items-center gap-1.5">
                   <Ruler className="w-4 h-4 text-primary" />
                   Distance ({distanceUnit})
+                  {isStructured && (
+                    <span className="ml-auto text-[10px] font-normal text-muted-foreground uppercase tracking-wide">
+                      auto
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="distance_km"
                   value={formData.distance_km}
                   readOnly
-                  onClick={openDistancePicker}
-                  placeholder={isSwimmingActivity(formData.activity_type) ? "1500" : "10"}
-                  className="h-11 mt-1.5 cursor-pointer"
+                  onClick={isStructured ? undefined : openDistancePicker}
+                  placeholder={isStructured ? '—' : (isSwimmingActivity(formData.activity_type) ? "1500" : "10")}
+                  className={cn(
+                    "h-11 mt-1.5",
+                    isStructured ? "cursor-not-allowed bg-muted/50" : "cursor-pointer"
+                  )}
+                  title={isStructured ? "Calculée automatiquement à partir de la structure de la séance" : undefined}
                 />
+                {isStructured && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Calculée à partir de la structure
+                  </p>
+                )}
               </div>
               {showElevationField && (
                 <div>
