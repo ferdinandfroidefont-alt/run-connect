@@ -15,7 +15,7 @@ import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
-import { SessionPreviewPopup } from './SessionPreviewPopup';
+
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
 
