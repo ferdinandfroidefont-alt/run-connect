@@ -175,8 +175,8 @@ export function AthleteMyPlanView({
         session={detail}
         open={detail != null}
         onOpenChange={(o) => !o && setDetail(null)}
-        onConfirm={() => detail && void onConfirmSession(detail).then(() => setDetail(null))}
-        onComplete={() => detail && void onCompleteSession(detail).then(() => setDetail(null))}
+        onConfirm={() => { if (detail) { Promise.resolve(onConfirmSession(detail)).then(() => setDetail(null)); } }}
+        onComplete={() => { if (detail) { Promise.resolve(onCompleteSession(detail)).then(() => setDetail(null)); } }}
         onMessageCoach={() => detail && onMessageCoach(detail.coachId)}
         saving={savingFeedback}
         onSaveFeedback={async (payload) => {

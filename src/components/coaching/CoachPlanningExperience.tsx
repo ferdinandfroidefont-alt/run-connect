@@ -769,7 +769,7 @@ export function CoachPlanningExperience() {
         const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
         const blocks = rawBlocks.map((block, index) => {
           const source = block as Record<string, unknown>;
-          const intensityMode = source.intensityMode === "rpe" ? "rpe" : "zones";
+          const intensityMode: "rpe" | "zones" = source.intensityMode === "rpe" ? "rpe" : "zones";
           const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
           const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
           return {
@@ -786,7 +786,7 @@ export function CoachPlanningExperience() {
             recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
             recoveryType:
               source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                ? source.recoveryType
+                ? (source.recoveryType as "walk" | "jog" | "easy")
                 : undefined,
             intensityMode,
             zone,

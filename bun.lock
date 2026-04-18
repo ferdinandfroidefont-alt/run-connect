@@ -21,6 +21,7 @@
         "@capacitor/haptics": "^7.0.5",
         "@capacitor/inappbrowser": "^2.5.1",
         "@capacitor/ios": "^8.3.0",
+        "@capacitor/keyboard": "^8.0.3",
         "@capacitor/push-notifications": "^7.0.2",
         "@capacitor/share": "^7.0.2",
         "@capacitor/status-bar": "^7.0.5",
@@ -68,6 +69,7 @@
         "exifr": "^7.1.3",
         "framer-motion": "^12.23.24",
         "gltf-pipeline": "^4.3.0",
+        "html-to-image": "^1.11.13",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.462.0",
         "mapbox-gl": "^3.20.0",
@@ -161,6 +163,8 @@
     "@capacitor/inappbrowser": ["@capacitor/inappbrowser@2.5.1", "", { "peerDependencies": { "@capacitor/core": ">=7.0.0" } }, "sha512-5X5vi4SBlNi/Eo7SHd+5Z43XbMtuPLuavV30HrbIHo42F91nthTBglOOGBQAps1fCuPZ9hrzgIX/WTRQxzWKIQ=="],
 
     "@capacitor/ios": ["@capacitor/ios@8.3.0", "", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-5Rtwv8SITKlYTt8lAZG+khnVIdzPtqbocH3eP+JkEmX1vpSMwx4TOKtT8OBz8gpQ+pUJDRp7DBYOv3U6l/obCw=="],
+
+    "@capacitor/keyboard": ["@capacitor/keyboard@8.0.3", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-27Bv5/2w1Ss2njguBgTS98O0Bb8DRJhAARyzXYib0JlT/n6BrJw/EZ0CokM4C8GFUjFDjJnEKF1Ie01buTMEXQ=="],
 
     "@capacitor/push-notifications": ["@capacitor/push-notifications@7.0.2", "", { "peerDependencies": { "@capacitor/core": ">=7.0.0" } }, "sha512-naw1R61V0qlEBa4CsF7+w3ay7V1PdZ4bQ1cJum+lgZB/yz3ASb6fRHm5GPjJFgTR9ET8zN0Q9y7lfgMTBgDOiA=="],
 
@@ -1131,6 +1135,8 @@
     "hls.js": ["hls.js@1.6.13", "", {}, "sha512-hNEzjZNHf5bFrUNvdS4/1RjIanuJ6szpWNfTaX5I6WfGynWXGT7K/YQLYtemSvFExzeMdgdE4SsyVLJbd5PcZA=="],
 
     "hosted-git-info": ["hosted-git-info@4.1.0", "", { "dependencies": { "lru-cache": "^6.0.0" } }, "sha512-kyCuEOWjJqZuDbRHzL8V93NzQhwIB71oFWSyzVo+KPZI+pnQPPxucdkrOZvkLRnrf5URsQM+IJ09Dw29cRALIA=="],
+
+    "html-to-image": ["html-to-image@1.11.13", "", {}, "sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg=="],
 
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
