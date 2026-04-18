@@ -797,58 +797,17 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 className="absolute inset-0"
                 style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
               />
-              {/* Centered pin (avatar + tip) */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative -translate-y-3 flex flex-col items-center">
-                  {/* Avatar circle */}
-                  <div className="relative h-[72px] w-[72px] rounded-full bg-primary p-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
-                    <Avatar className="h-full w-full ring-2 ring-white">
-                      <AvatarImage src={session.profiles.avatar_url} className="object-cover" />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-[22px] font-semibold">
-                        {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {/* Activity badge */}
-                    <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white shadow-md ring-1 ring-black/5 flex items-center justify-center">
-                      <ActivityIcon activityType={session.activity_type} size="sm" className="!h-6 !w-6 !rounded-full" />
-                    </div>
-                  </div>
-                  {/* Tip glued to circle */}
-                  <div
-                    className="-mt-[6px] h-3 w-3 bg-primary rotate-45 shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
-                    aria-hidden
-                  />
-                  {/* Ground shadow */}
-                  <div className="mt-1 h-1.5 w-8 rounded-full bg-black/20 blur-sm" aria-hidden />
-                </div>
-              </div>
               {/* Bottom gradient */}
               <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-              {/* Top buttons */}
-              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+              {/* Top: back button only (style standard app) */}
+              <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-[max(env(safe-area-inset-top),12px)]">
                 <button
                   onClick={onClose}
-                  className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
+                  className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
                   aria-label="Retour"
                 >
                   <ChevronLeft className="h-5 w-5 text-foreground" />
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowSessionShare(true)}
-                    className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
-                    aria-label="Partager"
-                  >
-                    <Share2 className="h-5 w-5 text-foreground" />
-                  </button>
-                  <button
-                    onClick={() => isOrganizer ? setShowEditDialog(true) : setShowOrganizerProfile(true)}
-                    className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
-                    aria-label="Plus"
-                  >
-                    <MoreHorizontal className="h-5 w-5 text-foreground" />
-                  </button>
-                </div>
               </div>
             </div>
 
