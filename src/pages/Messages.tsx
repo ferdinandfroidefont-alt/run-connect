@@ -2153,6 +2153,201 @@ const Messages = () => {
             </div>
             }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            footer={
+              <div
+                className={cn(
+                  "keyboard-input-container z-40 w-full shrink-0 border-t border-border bg-background px-ios-2 py-ios-1",
+                  "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
+                )}
+                style={{
+                  paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+                }}
+              >
+                {replyTo && (
+                  <ReplyPreview
+                    replyTo={replyTo}
+                    onCancel={() => setReplyTo(null)}
+                  />
+                )}
+                {showEmojiPicker && (
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-full mb-ios-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+                  >
+                    <div className="bg-card rounded-ios-lg shadow-xl border border-border">
+                      <EmojiPicker
+                        onEmojiSelect={(emoji) => {
+                          setNewMessage((prev) => prev + emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {uploadProgress !== null && (
+                  <div className="flex items-center gap-ios-2 px-ios-3 py-ios-2">
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-ios-2">
+                  {!isRecording && (
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                            disabled={isLoading}
+                          >
+                            <Plus className="h-6 w-6" strokeWidth={2} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() => fileInputRef.current?.click()}
+                            className="py-ios-3"
+                          >
+                            <Paperclip className="h-4 w-4 mr-ios-3 text-[#007AFF]" />
+                            Document
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const file = await takePicture();
+                                if (file) uploadFile(file);
+                              } catch (error) {
+                                toast({
+                                  title: "Erreur",
+                                  description: "Impossible d'accéder à la caméra",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="py-ios-3"
+                          >
+                            <Camera className="h-4 w-4 mr-ios-3 text-[#FF3B30]" />
+                            Caméra
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const file = await selectFromGallery();
+                                if (file) uploadFile(file);
+                              } catch (error) {
+                                toast({
+                                  title: "Erreur",
+                                  description: "Impossible d'accéder à la galerie",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="py-ios-3"
+                          >
+                            <Image className="h-4 w-4 mr-ios-3 text-[#34C759]" />
+                            Photo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="py-ios-3"
+                          >
+                            <Smile className="h-4 w-4 mr-ios-3 text-[#FF9500]" />
+                            Emoji
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setTimeout(() => setShowCreatePoll(true), 300);
+                            }}
+                            className="py-ios-3"
+                          >
+                            <BarChart3 className="h-4 w-4 mr-ios-3 text-[#5856D6]" />
+                            Sondage
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="*/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 50 * 1024 * 1024) {
+                              toast({
+                                title: "Fichier trop volumineux",
+                                description: "La taille maximale est de 50 MB",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            uploadFile(file);
+                          }
+                        }}
+                        className="hidden"
+                        disabled={isLoading}
+                      />
+                      <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
+                        <input
+                          type="text"
+                          enterKeyHint="send"
+                          autoComplete="off"
+                          placeholder="iMessage"
+                          value={newMessage}
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            handleTyping();
+                          }}
+                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                          className="flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
+                          disabled={isLoading}
+                        />
+                      </div>
+                      {newMessage.trim() ? (
+                        <button
+                          onClick={sendMessage}
+                          disabled={loading || !newMessage.trim()}
+                          className="w-8 h-8 flex items-center justify-center bg-primary rounded-full shrink-0 disabled:opacity-50"
+                        >
+                          <Send className="h-4 w-4 text-white" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleVoiceRecording}
+                          disabled={loading}
+                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                        >
+                          <Mic className="h-6 w-6" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {isRecording && (
+                    <div className="flex-1 flex items-center gap-ios-3">
+                      <div className="flex-1 flex items-center gap-ios-2 bg-destructive/10 border border-destructive/30 rounded-full px-ios-4 py-ios-2">
+                        <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+                        <span className="text-[15px] font-medium text-destructive">
+                          {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                        </span>
+                        <span className="text-[13px] text-muted-foreground flex-1">
+                          Enregistrement...
+                        </span>
+                      </div>
+                      <button
+                        onClick={cancelRecording}
+                        className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={handleVoiceRecording}
+                        className="w-8 h-8 flex items-center justify-center bg-destructive rounded-full"
+                      >
+                        <Square className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            }
           >
             {threadSearchOpen && (
               <div className="shrink-0 border-b border-border/50 bg-card px-ios-3 py-ios-2">
