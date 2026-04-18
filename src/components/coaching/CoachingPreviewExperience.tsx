@@ -257,10 +257,10 @@ export function CoachingPreviewExperience({ identity }: Props) {
               sessions={mockAthleteSessions}
               prevWeekPlannedKm={42}
               coaches={mockCoaches}
-              onConfirmSession={previewAction}
-              onCompleteSession={previewAction}
+              onConfirmSession={() => { previewAction(); }}
+              onCompleteSession={() => { previewAction(); }}
               onMessageCoach={() => previewAction()}
-              onPersistSessionFeedback={async () => previewAction()}
+              onPersistSessionFeedback={async () => { previewAction(); }}
               onOpenCoaches={() => previewAction()}
               onOpenMessages={() => previewAction()}
               onOpenPastSessions={() => previewAction()}
