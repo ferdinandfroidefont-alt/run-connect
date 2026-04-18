@@ -813,7 +813,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
             {/* ==== TITLE BLOCK ==== */}
             <div className="px-5 pt-4">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-[#FF9500]">
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-primary">
                 SÉANCE {sessionTypeBadge}
               </p>
               <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
