@@ -41,7 +41,7 @@ export function createSessionPinButton(opts: {
   pin.style.margin = "0";
   pin.style.background = "transparent";
   pin.style.cursor = "pointer";
-  pin.style.webkitTapHighlightColor = "transparent";
+  (pin.style as CSSStyleDeclaration & { webkitTapHighlightColor?: string }).webkitTapHighlightColor = "transparent";
 
   const ground = document.createElement("span");
   ground.className = "rc-session-pin__ground";
