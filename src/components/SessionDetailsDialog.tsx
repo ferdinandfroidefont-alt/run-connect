@@ -742,7 +742,33 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     await shareOrDownloadGPX(session.routes.name, gpx, { title: session.routes.name });
   };
 
-  const participantsCount = session.current_participants || 0;
+  const openParticipants = async () => {
+    setShowParticipantsDialog(true);
+    if (participantsList.length > 0) return;
+    setParticipantsLoading(true);
+    try {
+      const { data: parts } = await supabase
+        .from('session_participants')
+        .select('user_id')
+        .eq('session_id', session.id);
+      const ids = (parts || []).map(p => p.user_id);
+      const allIds = Array.from(new Set([session.organizer_id, ...ids]));
+      if (allIds.length === 0) { setParticipantsList([]); return; }
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', allIds);
+      setParticipantsList((profiles || []).map(p => ({
+        user_id: p.user_id!,
+        profile: { username: p.username || '', display_name: p.display_name || '', avatar_url: p.avatar_url || null },
+      })));
+    } catch (e) {
+      console.warn('[SessionDetails] participants load failed', e);
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
   const headerStaticMapUrl = buildSessionStaticMapUrl({
     routePath: [],
     pin: { lat: session.location_lat, lng: session.location_lng },
