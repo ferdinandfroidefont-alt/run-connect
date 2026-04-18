@@ -2176,8 +2176,8 @@ const Messages = () => {
                   >
                     <div className="bg-card rounded-ios-lg shadow-xl border border-border">
                       <EmojiPicker
-                        onEmojiSelect={(emoji) => {
-                          setNewMessage((prev) => prev + emoji);
+                        onEmojiClick={(emojiData: EmojiClickData) => {
+                          setNewMessage((prev) => prev + emojiData.emoji);
                           setShowEmojiPicker(false);
                         }}
                       />
