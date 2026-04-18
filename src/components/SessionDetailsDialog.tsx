@@ -249,7 +249,28 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         const doResize = () => { try { map.resize(); } catch {} };
         map.once('load', () => {
           doResize();
-          if (!cancelled) setHeaderMapReady(true);
+          if (cancelled) return;
+          // Add the same DOM pin used on Home (avatar + tip)
+          try {
+            const wrap = document.createElement('div');
+            wrap.className = 'rc-session-pin rc-session-pin-pop';
+            wrap.style.position = 'relative';
+            wrap.style.width = '1px';
+            wrap.style.height = '1px';
+            wrap.style.overflow = 'visible';
+            const pin = createSessionPinButton({
+              avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
+              ariaLabel: session.title || 'Séance',
+              variant: resolveSessionPinVariant(),
+            });
+            wrap.appendChild(pin);
+            new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+              .setLngLat([session.location_lng, session.location_lat])
+              .addTo(map);
+          } catch (err) {
+            console.warn('[SessionDetails] pin creation failed', err);
+          }
+          setHeaderMapReady(true);
         });
         map.once('error', () => {
           if (!cancelled) setHeaderMapFailed(true);
