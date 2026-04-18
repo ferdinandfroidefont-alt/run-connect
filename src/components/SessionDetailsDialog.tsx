@@ -909,7 +909,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {/* Timeline */}
-                <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => timelineBlocks.length > 0 && setShowBlocksDialog(true)}
+                  className={`relative text-left ${timelineBlocks.length > 0 ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
+                >
                   {timelineBlocks.length > 0 ? (
                     <div className="relative pl-1">
                       <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
@@ -938,26 +942,38 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                           );
                         })}
                       </div>
+                      <p className="mt-2 text-[11px] text-primary font-medium">Voir détail ›</p>
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-border p-3 text-[12px] text-muted-foreground">
                       Séance simple, pas de découpage.
                     </div>
                   )}
-                </div>
+                </button>
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { icon: Footprints, label: 'Distance', value: totalDistance },
-                    { icon: Clock, label: 'Durée', value: estimatedDuration },
-                    { icon: Zap, label: 'Allure', value: avgPace },
-                    { icon: Mountain, label: 'D+', value: elevGain },
+                    { icon: Footprints, label: 'Distance', value: totalDistance, onClick: undefined as undefined | (() => void) },
+                    {
+                      icon: Clock,
+                      label: showDurationAsEndTime ? 'Fin estimée' : 'Durée',
+                      value: showDurationAsEndTime ? endTimeLabel : estimatedDuration,
+                      onClick: () => setShowDurationAsEndTime(v => !v),
+                    },
+                    { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
+                    { icon: Mountain, label: 'D+', value: elevGain, onClick: undefined },
                   ].map((s, i) => (
-                    <div key={i} className="rounded-xl border border-border bg-white p-2.5 shadow-sm">
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={s.onClick}
+                      disabled={!s.onClick}
+                      className={`text-left rounded-xl border border-border bg-white p-2.5 shadow-sm ${s.onClick ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
+                    >
                       <s.icon className="h-3.5 w-3.5 text-muted-foreground mb-1" />
                       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
                       <p className="text-[13px] font-bold text-foreground truncate">{s.value}</p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
