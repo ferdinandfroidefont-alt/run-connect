@@ -786,7 +786,7 @@ export function CoachPlanningExperience() {
             recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
             recoveryType:
               source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                ? source.recoveryType
+                ? (source.recoveryType as "walk" | "jog" | "easy")
                 : undefined,
             intensityMode,
             zone,
