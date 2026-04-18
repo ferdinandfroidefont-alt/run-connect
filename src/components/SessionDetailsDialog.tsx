@@ -3,6 +3,8 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
+import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
+import mapboxgl from "mapbox-gl";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
@@ -162,6 +164,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(true);
+  const [showBlocksDialog, setShowBlocksDialog] = useState(false);
+  const [showParticipantsDialog, setShowParticipantsDialog] = useState(false);
+  const [participantsList, setParticipantsList] = useState<Array<{ user_id: string; profile: { username: string; display_name: string; avatar_url: string | null } }>>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
 
 
   useEffect(() => {
@@ -242,7 +249,28 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         const doResize = () => { try { map.resize(); } catch {} };
         map.once('load', () => {
           doResize();
-          if (!cancelled) setHeaderMapReady(true);
+          if (cancelled) return;
+          // Add the same DOM pin used on Home (avatar + tip)
+          try {
+            const wrap = document.createElement('div');
+            wrap.className = 'rc-session-pin rc-session-pin-pop';
+            wrap.style.position = 'relative';
+            wrap.style.width = '1px';
+            wrap.style.height = '1px';
+            wrap.style.overflow = 'visible';
+            const pin = createSessionPinButton({
+              avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
+              ariaLabel: session.title || 'Séance',
+              variant: resolveSessionPinVariant(),
+            });
+            wrap.appendChild(pin);
+            new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+              .setLngLat([session.location_lng, session.location_lat])
+              .addTo(map);
+          } catch (err) {
+            console.warn('[SessionDetails] pin creation failed', err);
+          }
+          setHeaderMapReady(true);
         });
         map.once('error', () => {
           if (!cancelled) setHeaderMapFailed(true);
@@ -654,13 +682,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     : '—';
 
   // Duration estimate (min): if structured, sum block durations; else distance × pace
-  const estimatedDuration = (() => {
+  const estimatedDurationMin = (() => {
     if (blocksAll.length) {
       let totalSec = 0;
       blocksAll.forEach(b => {
         if (b.type === 'interval') {
           const reps = b.repetitions || 1;
-          // effort
           if (b.effortType === 'time') {
             totalSec += reps * (parseFloat(String(b.effortDuration || '0').replace(',', '.')) || 0);
           } else if (b.effortPace) {
@@ -668,7 +695,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             const dist = parseFloat(String(b.effortDuration || '0').replace(',', '.')) / 1000;
             if (pm) totalSec += reps * (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
           }
-          // recovery
           if (b.recoveryDuration) {
             totalSec += (reps - 1) * (parseFloat(String(b.recoveryDuration).replace(',', '.')) || 0);
           }
@@ -682,17 +708,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           }
         }
       });
-      if (totalSec > 0) return `${Math.round(totalSec / 60)} min`;
+      if (totalSec > 0) return Math.round(totalSec / 60);
     }
     if (derivedDistanceKm && rawPace) {
       const m = String(rawPace).match(/(\d+)[':](\d+)/);
       if (m) {
         const sec = parseInt(m[1]) * 60 + parseInt(m[2]);
-        return `${Math.round((sec * derivedDistanceKm) / 60)} min`;
+        return Math.round((sec * derivedDistanceKm) / 60);
       }
     }
-    return '—';
+    return null;
   })();
+  const estimatedDuration = estimatedDurationMin != null ? `${estimatedDurationMin} min` : '—';
+  const endTimeLabel = estimatedDurationMin != null
+    ? format(new Date(new Date(session.scheduled_at).getTime() + estimatedDurationMin * 60_000), 'HH:mm', { locale: fr })
+    : '—';
 
   const calendarEvent = {
     title: session.title,
@@ -710,6 +740,33 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     const coords = (session.routes.coordinates as Array<{ lat: number; lng: number; elevation?: number }>);
     const gpx = exportToGPX(session.routes.name, coords, session.description);
     await shareOrDownloadGPX(session.routes.name, gpx, { title: session.routes.name });
+  };
+
+  const openParticipants = async () => {
+    setShowParticipantsDialog(true);
+    if (participantsList.length > 0) return;
+    setParticipantsLoading(true);
+    try {
+      const { data: parts } = await supabase
+        .from('session_participants')
+        .select('user_id')
+        .eq('session_id', session.id);
+      const ids = (parts || []).map(p => p.user_id);
+      const allIds = Array.from(new Set([session.organizer_id, ...ids]));
+      if (allIds.length === 0) { setParticipantsList([]); return; }
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', allIds);
+      setParticipantsList((profiles || []).map(p => ({
+        user_id: p.user_id!,
+        profile: { username: p.username || '', display_name: p.display_name || '', avatar_url: p.avatar_url || null },
+      })));
+    } catch (e) {
+      console.warn('[SessionDetails] participants load failed', e);
+    } finally {
+      setParticipantsLoading(false);
+    }
   };
 
   const participantsCount = session.current_participants || 0;
@@ -740,64 +797,23 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 className="absolute inset-0"
                 style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
               />
-              {/* Centered pin (avatar + tip) */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="relative -translate-y-3 flex flex-col items-center">
-                  {/* Avatar circle */}
-                  <div className="relative h-[72px] w-[72px] rounded-full bg-primary p-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
-                    <Avatar className="h-full w-full ring-2 ring-white">
-                      <AvatarImage src={session.profiles.avatar_url} className="object-cover" />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-[22px] font-semibold">
-                        {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {/* Activity badge */}
-                    <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white shadow-md ring-1 ring-black/5 flex items-center justify-center">
-                      <ActivityIcon activityType={session.activity_type} size="sm" className="!h-6 !w-6 !rounded-full" />
-                    </div>
-                  </div>
-                  {/* Tip glued to circle */}
-                  <div
-                    className="-mt-[6px] h-3 w-3 bg-primary rotate-45 shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
-                    aria-hidden
-                  />
-                  {/* Ground shadow */}
-                  <div className="mt-1 h-1.5 w-8 rounded-full bg-black/20 blur-sm" aria-hidden />
-                </div>
-              </div>
               {/* Bottom gradient */}
               <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-              {/* Top buttons */}
-              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+              {/* Top: back button only (style standard app) */}
+              <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-[max(env(safe-area-inset-top),12px)]">
                 <button
                   onClick={onClose}
-                  className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
+                  className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
                   aria-label="Retour"
                 >
                   <ChevronLeft className="h-5 w-5 text-foreground" />
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowSessionShare(true)}
-                    className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
-                    aria-label="Partager"
-                  >
-                    <Share2 className="h-5 w-5 text-foreground" />
-                  </button>
-                  <button
-                    onClick={() => isOrganizer ? setShowEditDialog(true) : setShowOrganizerProfile(true)}
-                    className="h-11 w-11 rounded-full bg-white shadow-md flex items-center justify-center active:scale-95 transition-transform"
-                    aria-label="Plus"
-                  >
-                    <MoreHorizontal className="h-5 w-5 text-foreground" />
-                  </button>
-                </div>
               </div>
             </div>
 
             {/* ==== TITLE BLOCK ==== */}
             <div className="px-5 pt-4">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-[#FF9500]">
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-primary">
                 SÉANCE {sessionTypeBadge}
               </p>
               <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
@@ -827,7 +843,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
                 </div>
               </button>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={openParticipants}
+                className="flex items-center gap-2 flex-shrink-0 active:opacity-70"
+                aria-label="Voir les participants"
+              >
                 <div className="flex -space-x-2">
                   {Array.from({ length: Math.min(4, Math.max(1, participantsCount)) }).map((_, i) => (
                     <Avatar key={i} className="h-7 w-7 ring-2 ring-white">
@@ -837,8 +858,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     </Avatar>
                   ))}
                 </div>
-                <span className="text-[12px] text-muted-foreground">{participantsCount} part.</span>
-              </div>
+                <span className="text-[12px] text-muted-foreground">{participantsCount} part. ›</span>
+              </button>
             </div>
 
             {/* ==== DATE + LIEU CARD ==== */}
@@ -888,7 +909,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {/* Timeline */}
-                <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => timelineBlocks.length > 0 && setShowBlocksDialog(true)}
+                  className={`relative text-left ${timelineBlocks.length > 0 ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
+                >
                   {timelineBlocks.length > 0 ? (
                     <div className="relative pl-1">
                       <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
@@ -917,26 +942,38 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                           );
                         })}
                       </div>
+                      <p className="mt-2 text-[11px] text-primary font-medium">Voir détail ›</p>
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-border p-3 text-[12px] text-muted-foreground">
                       Séance simple, pas de découpage.
                     </div>
                   )}
-                </div>
+                </button>
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { icon: Footprints, label: 'Distance', value: totalDistance },
-                    { icon: Clock, label: 'Durée', value: estimatedDuration },
-                    { icon: Zap, label: 'Allure', value: avgPace },
-                    { icon: Mountain, label: 'D+', value: elevGain },
+                    { icon: Footprints, label: 'Distance', value: totalDistance, onClick: undefined as undefined | (() => void) },
+                    {
+                      icon: Clock,
+                      label: showDurationAsEndTime ? 'Fin estimée' : 'Durée',
+                      value: showDurationAsEndTime ? endTimeLabel : estimatedDuration,
+                      onClick: () => setShowDurationAsEndTime(v => !v),
+                    },
+                    { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
+                    { icon: Mountain, label: 'D+', value: elevGain, onClick: undefined },
                   ].map((s, i) => (
-                    <div key={i} className="rounded-xl border border-border bg-white p-2.5 shadow-sm">
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={s.onClick}
+                      disabled={!s.onClick}
+                      className={`text-left rounded-xl border border-border bg-white p-2.5 shadow-sm ${s.onClick ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
+                    >
                       <s.icon className="h-3.5 w-3.5 text-muted-foreground mb-1" />
                       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
                       <p className="text-[13px] font-bold text-foreground truncate">{s.value}</p>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1283,6 +1320,110 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         editSession={duplicateSessionData}
         isEditMode={false}
       />
+
+      {/* ==== Blocks Detail Dialog ==== */}
+      <Dialog open={showBlocksDialog} onOpenChange={setShowBlocksDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowBlocksDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Découpage de la séance</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {timelineBlocks.map((b, idx) => {
+                const color =
+                  b.type === 'warmup' ? 'bg-[#34C759]' :
+                  b.type === 'cooldown' ? 'bg-[#FF9500]' :
+                  b.type === 'interval' ? 'bg-primary' : 'bg-[#007AFF]';
+                const label =
+                  b.type === 'warmup' ? 'Échauffement' :
+                  b.type === 'cooldown' ? 'Retour au calme' :
+                  b.type === 'interval' ? 'Bloc principal (intervalles)' : 'Bloc constant';
+                return (
+                  <div key={b.id || idx} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`h-3 w-3 rounded-full ${color}`} />
+                      <p className="text-[14px] font-semibold text-foreground">{label}</p>
+                    </div>
+                    {b.type === 'interval' ? (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Répétitions :</span> <strong>{b.repetitions || 1}</strong></p>
+                        <p><span className="text-muted-foreground">Effort :</span> <strong>{b.effortDuration || 0}{b.effortType === 'time' ? ' s' : ' m'}</strong>{b.effortPace ? ` @ ${b.effortPace}/km` : ''}</p>
+                        {b.recoveryDuration && (
+                          <p><span className="text-muted-foreground">Récup :</span> <strong>{b.recoveryDuration} s</strong>{b.recoveryType ? ` (${b.recoveryType})` : ''}</p>
+                        )}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE effort :</span> <strong>{b.rpe}/10</strong></p> : null}
+                        {b.recoveryRpe ? <p><span className="text-muted-foreground">RPE récup :</span> <strong>{b.recoveryRpe}/10</strong></p> : null}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Durée :</span> <strong>{b.duration || 0}{b.durationType === 'time' ? ' min' : ' m'}</strong></p>
+                        {b.pace && <p><span className="text-muted-foreground">Allure :</span> <strong>{b.pace}</strong></p>}
+                        {b.intensity && <p><span className="text-muted-foreground">Intensité :</span> <strong>{b.intensity}</strong></p>}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE :</span> <strong>{b.rpe}/10</strong></p> : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==== Participants List Dialog ==== */}
+      <Dialog open={showParticipantsDialog} onOpenChange={setShowParticipantsDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowParticipantsDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Participants ({participantsList.length})</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {participantsLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : participantsList.length === 0 ? (
+                <p className="text-center text-[13px] text-muted-foreground py-8">Aucun participant pour le moment.</p>
+              ) : (
+                participantsList.map((p) => {
+                  const isOrg = p.user_id === session.organizer_id;
+                  return (
+                    <button
+                      key={p.user_id}
+                      onClick={() => { setShowParticipantsDialog(false); setShowOrganizerProfile(false); navigate(`/profile/${p.user_id}`); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-secondary"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={p.profile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-[13px]">
+                          {(p.profile.username || p.profile.display_name || '?').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-[14px] font-semibold text-foreground truncate">
+                          {p.profile.display_name || p.profile.username || 'Utilisateur'}
+                        </p>
+                        {p.profile.username && (
+                          <p className="text-[12px] text-muted-foreground truncate">@{p.profile.username}</p>
+                        )}
+                      </div>
+                      {isOrg && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Orga</span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
