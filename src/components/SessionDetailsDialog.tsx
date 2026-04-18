@@ -1320,6 +1320,110 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         editSession={duplicateSessionData}
         isEditMode={false}
       />
+
+      {/* ==== Blocks Detail Dialog ==== */}
+      <Dialog open={showBlocksDialog} onOpenChange={setShowBlocksDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowBlocksDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Découpage de la séance</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {timelineBlocks.map((b, idx) => {
+                const color =
+                  b.type === 'warmup' ? 'bg-[#34C759]' :
+                  b.type === 'cooldown' ? 'bg-[#FF9500]' :
+                  b.type === 'interval' ? 'bg-primary' : 'bg-[#007AFF]';
+                const label =
+                  b.type === 'warmup' ? 'Échauffement' :
+                  b.type === 'cooldown' ? 'Retour au calme' :
+                  b.type === 'interval' ? 'Bloc principal (intervalles)' : 'Bloc constant';
+                return (
+                  <div key={b.id || idx} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`h-3 w-3 rounded-full ${color}`} />
+                      <p className="text-[14px] font-semibold text-foreground">{label}</p>
+                    </div>
+                    {b.type === 'interval' ? (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Répétitions :</span> <strong>{b.repetitions || 1}</strong></p>
+                        <p><span className="text-muted-foreground">Effort :</span> <strong>{b.effortDuration || 0}{b.effortType === 'time' ? ' s' : ' m'}</strong>{b.effortPace ? ` @ ${b.effortPace}/km` : ''}</p>
+                        {b.recoveryDuration && (
+                          <p><span className="text-muted-foreground">Récup :</span> <strong>{b.recoveryDuration} s</strong>{b.recoveryType ? ` (${b.recoveryType})` : ''}</p>
+                        )}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE effort :</span> <strong>{b.rpe}/10</strong></p> : null}
+                        {b.recoveryRpe ? <p><span className="text-muted-foreground">RPE récup :</span> <strong>{b.recoveryRpe}/10</strong></p> : null}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Durée :</span> <strong>{b.duration || 0}{b.durationType === 'time' ? ' min' : ' m'}</strong></p>
+                        {b.pace && <p><span className="text-muted-foreground">Allure :</span> <strong>{b.pace}</strong></p>}
+                        {b.intensity && <p><span className="text-muted-foreground">Intensité :</span> <strong>{b.intensity}</strong></p>}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE :</span> <strong>{b.rpe}/10</strong></p> : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==== Participants List Dialog ==== */}
+      <Dialog open={showParticipantsDialog} onOpenChange={setShowParticipantsDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowParticipantsDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Participants ({participantsList.length})</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {participantsLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : participantsList.length === 0 ? (
+                <p className="text-center text-[13px] text-muted-foreground py-8">Aucun participant pour le moment.</p>
+              ) : (
+                participantsList.map((p) => {
+                  const isOrg = p.user_id === session.organizer_id;
+                  return (
+                    <button
+                      key={p.user_id}
+                      onClick={() => { setShowParticipantsDialog(false); setShowOrganizerProfile(false); navigate(`/profile/${p.user_id}`); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-secondary"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={p.profile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-[13px]">
+                          {(p.profile.username || p.profile.display_name || '?').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-[14px] font-semibold text-foreground truncate">
+                          {p.profile.display_name || p.profile.username || 'Utilisateur'}
+                        </p>
+                        {p.profile.username && (
+                          <p className="text-[12px] text-muted-foreground truncate">@{p.profile.username}</p>
+                        )}
+                      </div>
+                      {isOrg && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Orga</span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
