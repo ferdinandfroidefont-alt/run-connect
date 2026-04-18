@@ -164,6 +164,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(true);
+  const [showBlocksDialog, setShowBlocksDialog] = useState(false);
+  const [showParticipantsDialog, setShowParticipantsDialog] = useState(false);
+  const [participantsList, setParticipantsList] = useState<Array<{ user_id: string; profile: { username: string; display_name: string; avatar_url: string | null } }>>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
 
 
   useEffect(() => {
