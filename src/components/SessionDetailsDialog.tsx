@@ -682,13 +682,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     : '—';
 
   // Duration estimate (min): if structured, sum block durations; else distance × pace
-  const estimatedDuration = (() => {
+  const estimatedDurationMin = (() => {
     if (blocksAll.length) {
       let totalSec = 0;
       blocksAll.forEach(b => {
         if (b.type === 'interval') {
           const reps = b.repetitions || 1;
-          // effort
           if (b.effortType === 'time') {
             totalSec += reps * (parseFloat(String(b.effortDuration || '0').replace(',', '.')) || 0);
           } else if (b.effortPace) {
@@ -696,7 +695,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             const dist = parseFloat(String(b.effortDuration || '0').replace(',', '.')) / 1000;
             if (pm) totalSec += reps * (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
           }
-          // recovery
           if (b.recoveryDuration) {
             totalSec += (reps - 1) * (parseFloat(String(b.recoveryDuration).replace(',', '.')) || 0);
           }
@@ -710,17 +708,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
           }
         }
       });
-      if (totalSec > 0) return `${Math.round(totalSec / 60)} min`;
+      if (totalSec > 0) return Math.round(totalSec / 60);
     }
     if (derivedDistanceKm && rawPace) {
       const m = String(rawPace).match(/(\d+)[':](\d+)/);
       if (m) {
         const sec = parseInt(m[1]) * 60 + parseInt(m[2]);
-        return `${Math.round((sec * derivedDistanceKm) / 60)} min`;
+        return Math.round((sec * derivedDistanceKm) / 60);
       }
     }
-    return '—';
+    return null;
   })();
+  const estimatedDuration = estimatedDurationMin != null ? `${estimatedDurationMin} min` : '—';
+  const endTimeLabel = estimatedDurationMin != null
+    ? format(new Date(new Date(session.scheduled_at).getTime() + estimatedDurationMin * 60_000), 'HH:mm', { locale: fr })
+    : '—';
 
   const calendarEvent = {
     title: session.title,
