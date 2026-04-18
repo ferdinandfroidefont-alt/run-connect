@@ -769,6 +769,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     }
   };
 
+  const participantsCount = session.current_participants || 0;
   const headerStaticMapUrl = buildSessionStaticMapUrl({
     routePath: [],
     pin: { lat: session.location_lat, lng: session.location_lng },
