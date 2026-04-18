@@ -3,6 +3,8 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
 import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
+import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
+import mapboxgl from "mapbox-gl";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
