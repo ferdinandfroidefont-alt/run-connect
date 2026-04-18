@@ -2879,7 +2879,7 @@ const Messages = () => {
           className="min-h-0 flex-1"
           headerWrapperClassName="z-50 border-b border-border bg-card"
           header={
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button
@@ -2905,7 +2905,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-ios-title2 font-bold text-center">{t("navigation.messages")}</h1>
+                <h1 className="text-ios-title1 font-bold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
