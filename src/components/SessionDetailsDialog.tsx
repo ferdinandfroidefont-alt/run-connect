@@ -843,7 +843,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
                 </div>
               </button>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={openParticipants}
+                className="flex items-center gap-2 flex-shrink-0 active:opacity-70"
+                aria-label="Voir les participants"
+              >
                 <div className="flex -space-x-2">
                   {Array.from({ length: Math.min(4, Math.max(1, participantsCount)) }).map((_, i) => (
                     <Avatar key={i} className="h-7 w-7 ring-2 ring-white">
@@ -853,8 +858,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     </Avatar>
                   ))}
                 </div>
-                <span className="text-[12px] text-muted-foreground">{participantsCount} part.</span>
-              </div>
+                <span className="text-[12px] text-muted-foreground">{participantsCount} part. ›</span>
+              </button>
             </div>
 
             {/* ==== DATE + LIEU CARD ==== */}
