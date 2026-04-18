@@ -38,6 +38,7 @@ import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
 import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
+import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -49,6 +50,8 @@ interface DetailsStepProps {
   onImageRemove: () => void;
   onNext: () => void;
   onBack: () => void;
+  /** Création rapide : pied combiné dans FinalizeStep */
+  hideNavigation?: boolean;
 }
 
 export const DetailsStep: React.FC<DetailsStepProps> = ({
@@ -61,6 +64,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onImageRemove,
   onNext,
   onBack,
+  hideNavigation = false,
 }) => {
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
   const [openPicker, setOpenPicker] = useState<null | 'pace' | 'distance' | 'elevation' | 'participants'>(null);
@@ -73,11 +77,13 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   // Auto-generate title suggestion
   useEffect(() => {
     if (!formData.title && formData.activity_type && selectedLocation) {
-      const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
-      const locationShort = selectedLocation.name.split(',')[0];
-      const activityLabel = activity?.label?.replace(/^[^\s]+\s/, '');
-      const suggestion = `${activityLabel || 'Séance'} à ${locationShort}`;
-      onFormDataChange({ title: suggestion });
+      onFormDataChange({
+        title: resolveSessionTitle({
+          title: '',
+          activity_type: formData.activity_type,
+          locationName: selectedLocation.name,
+        }),
+      });
     }
   }, [formData.activity_type, selectedLocation]);
 
@@ -157,18 +163,18 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex min-h-0 w-full flex-1 flex-col"
+      className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
     >
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      <div className={cn('space-y-4', hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4')}>
         {/* Title - Always first */}
         <div className="bg-card rounded-2xl p-4 space-y-3">
           <div>
-            <Label htmlFor="title" className="text-sm font-medium">Titre de la séance *</Label>
+            <Label htmlFor="title" className="text-sm font-medium">Titre (optionnel)</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => onFormDataChange({ title: e.target.value })}
-              placeholder="ex: Footing matinal au parc"
+              placeholder="Généré automatiquement si vide"
               className="h-12 mt-1.5"
               required
             />
@@ -513,20 +519,21 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         }}
       />
 
-      {/* Navigation */}
-      <div className="flex gap-3 mt-auto pt-4">
-        <Button variant="outline" onClick={onBack} className="h-14 px-5">
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <Button
-          onClick={onNext}
-          disabled={!formData.title}
-          className="flex-1 h-14 text-lg font-semibold"
-        >
-          Aperçu
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </Button>
-      </div>
+      {!hideNavigation && (
+        <div className="flex gap-3 mt-auto pt-4">
+          <Button variant="outline" onClick={onBack} className="h-14 px-5">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={!formData.activity_type || !selectedLocation}
+            className="flex-1 h-14 text-lg font-semibold"
+          >
+            Aperçu
+            <ChevronRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

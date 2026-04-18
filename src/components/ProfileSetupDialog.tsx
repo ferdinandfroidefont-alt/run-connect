@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -75,7 +75,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
   const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
-  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { t, language, languageManuallySet, suggestLanguageFromCountry } = useLanguage();
@@ -406,16 +405,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password.trim()) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
-      return;
-    }
-    if (!acceptedPolicies) {
-      toast({
-        title: t('common.error'),
-        description: t('profileSetup.toastLegalRequired'),
-        variant: "destructive",
-      });
       return;
     }
 
@@ -466,11 +457,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       if (country) profileData.country = country;
       profileData.preferred_language = language;
       profileData.language_manually_set = languageManuallySet;
-      /* Aligné sur l’écran « Avant de commencer » : évite un second bloc consentement si déjà coché ici */
-      if (acceptedPolicies) {
-        profileData.rgpd_accepted = true;
-        profileData.security_rules_accepted = true;
-      }
+      /* Consentement déjà donné à l’inscription (CGU, confidentialité / RGPD, ECTS) */
+      profileData.rgpd_accepted = true;
+      profileData.security_rules_accepted = true;
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
@@ -913,37 +902,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 </div>
               </div>
 
-              {/* Engagements légaux (première inscription) */}
-              <div className="space-y-2">
-                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profileSetup.sectionLegal')}
-                </h3>
-                <div className="ios-card overflow-hidden">
-                  <label
-                    htmlFor="profile-setup-legal"
-                    className="flex cursor-pointer items-start gap-3 px-4 py-3.5 active:bg-secondary/50"
-                  >
-                    <Checkbox
-                      id="profile-setup-legal"
-                      checked={acceptedPolicies}
-                      onCheckedChange={(c) => setAcceptedPolicies(c === true)}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <span className="text-left text-[13px] leading-relaxed text-muted-foreground">
-                      {t('profileSetup.legalIntro')}
-                      <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
-                        {t('profileSetup.legalTermsLink')}
-                      </Link>
-                      {t('profileSetup.legalMid')}
-                      <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
-                        {t('profileSetup.legalPrivacyLink')}
-                      </Link>
-                      {t('profileSetup.legalOutro')}
-                    </span>
-                  </label>
-                </div>
-              </div>
-
               {/* Submit Button */}
               <Button
                 type="submit"
@@ -955,9 +913,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   !birthDate ||
                   calculatedAge < 13 ||
                   !bio.trim() ||
-                  !password ||
-                  password.length < 6 ||
-                  !acceptedPolicies
+                  !password.trim()
                 }
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

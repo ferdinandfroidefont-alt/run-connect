@@ -80,9 +80,26 @@ export interface SelectedLocation {
   name: string;
 }
 
-export type WizardStep = 'location' | 'activity' | 'datetime' | 'details' | 'confirm';
+export type WizardStep =
+  | 'location'
+  | 'activity'
+  | 'datetime'
+  | 'details'
+  | 'confirm'
+  | 'essentials'
+  | 'finalize';
 
-export const WIZARD_STEPS: WizardStep[] = ['location', 'activity', 'datetime', 'details', 'confirm'];
+/** Assistant classique (5 étapes) — édition, coaching */
+export const WIZARD_STEPS_FULL: WizardStep[] = ['location', 'activity', 'datetime', 'details', 'confirm'];
+
+/** Création rapide (2 étapes) */
+export const WIZARD_STEPS_QUICK: WizardStep[] = ['essentials', 'finalize'];
+
+export const getWizardSteps = (flow: 'quick' | 'full'): WizardStep[] =>
+  flow === 'quick' ? WIZARD_STEPS_QUICK : WIZARD_STEPS_FULL;
+
+/** @deprecated préférer WIZARD_STEPS_FULL ou getWizardSteps */
+export const WIZARD_STEPS = WIZARD_STEPS_FULL;
 
 export const ACTIVITY_TYPES = [
   { value: 'course', label: '🏃 Course à pied', icon: '🏃' },

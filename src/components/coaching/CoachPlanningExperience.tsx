@@ -327,7 +327,7 @@ export function CoachPlanningExperience() {
   const [activeAthleteId, setActiveAthleteId] = useState<string | undefined>(undefined);
   const [activeGroupId, setActiveGroupId] = useState<string | undefined>(undefined);
   const [coachingTab, setCoachingTab] = useState<"planning" | "create">("planning");
-  const [editorTab, setEditorTab] = useState<"build">("build");
+  const [editorTab, setEditorTab] = useState<"build" | "models">("build");
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(() => emptyDraft(new Date().toISOString()));
   const [blockSheetOpen, setBlockSheetOpen] = useState(false);
@@ -1131,8 +1131,8 @@ export function CoachPlanningExperience() {
     toast.success("Modèle créé");
   };
 
-  const addModelToPlanning = async (model: SessionModelItem, day: Date, replaceExisting: boolean) => {
-    if (!activeClubId || !user) return;
+  const addModelToPlanning = async (model: SessionModelItem, day: Date, replaceExisting: boolean): Promise<boolean> => {
+    if (!activeClubId || !user) return false;
     const dayIso = day.toISOString();
     const existing = sessions.find((session) => isSameDay(new Date(session.assignedDate), day));
     if (existing && replaceExisting) {
@@ -1159,7 +1159,7 @@ export function CoachPlanningExperience() {
     const { data, error } = await supabase.from("coaching_sessions").insert(payload).select("id").single();
     if (error) {
       toast.error("Ajout au planning impossible", error.message);
-      return;
+      return false;
     }
     const created: TrainingSession = {
       id: data.id,
@@ -1174,6 +1174,7 @@ export function CoachPlanningExperience() {
     };
     setSessions((prev) => [...prev.filter((s) => !(replaceExisting && existing && s.id === existing.id)), created]);
     toast.success("Séance ajoutée au planning");
+    return true;
   };
 
   const editModel = (model: SessionModelItem) => {
@@ -1962,23 +1963,44 @@ export function CoachPlanningExperience() {
                   }
                   title="Créer une séance"
                   right={
-                    <button
-                      type="button"
-                      onClick={() => void saveSession()}
-                      disabled={draft.blocks.length === 0}
-                      className={cn(
-                        "text-[16px] font-semibold",
-                        draft.blocks.length ? "text-primary" : "text-muted-foreground"
-                      )}
-                    >
-                      Enregistrer
-                    </button>
+                    editorTab === "build" ? (
+                      <button
+                        type="button"
+                        onClick={() => void saveSession()}
+                        disabled={draft.blocks.length === 0}
+                        className={cn(
+                          "text-[16px] font-semibold",
+                          draft.blocks.length ? "text-primary" : "text-muted-foreground"
+                        )}
+                      >
+                        Enregistrer
+                      </button>
+                    ) : (
+                      <span className="inline-block w-14" aria-hidden />
+                    )
                   }
                 />
-                <div className="px-4 pb-2">
-                  <div className="rounded-xl bg-primary py-2 text-center text-[13px] font-semibold text-primary-foreground">
+                <div className="grid grid-cols-2 gap-2 px-4 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab("build")}
+                    className={cn(
+                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
+                      editorTab === "build" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                    )}
+                  >
                     Construire
-                  </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditorTab("models")}
+                    className={cn(
+                      "rounded-xl py-2 text-center text-[13px] font-semibold transition-colors",
+                      editorTab === "models" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+                    )}
+                  >
+                    Modèles
+                  </button>
                 </div>
               </div>
             }
@@ -2103,7 +2125,24 @@ export function CoachPlanningExperience() {
                   )}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <ModelsPage
+                weekDays={weekDays}
+                existingSessionsByDay={existingSessionsByDay}
+                myModels={myModels}
+                baseModels={BASE_MODELS}
+                onCreateModel={() => void createModelFromDraft()}
+                onAddToPlanning={async (model, day, replaceExisting) => {
+                  const ok = await addModelToPlanning(model, day, replaceExisting);
+                  if (ok) setCoachingTab("planning");
+                }}
+                onEditModel={(model) => {
+                  editModel(model);
+                }}
+                onDuplicateModel={(model) => void duplicateModel(model)}
+                onDeleteModel={(model) => void deleteModel(model)}
+              />
+            )}
           </IosFixedPageHeaderShell>
         </div>
       )}

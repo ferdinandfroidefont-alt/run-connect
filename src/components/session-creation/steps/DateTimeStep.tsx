@@ -11,6 +11,8 @@ interface DateTimeStepProps {
   onScheduledAtChange: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
+  /** Masque en-tête large + navigation (création rapide) */
+  hideNavigation?: boolean;
 }
 
 // Popular time slots
@@ -28,6 +30,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   onScheduledAtChange,
   onNext,
   onBack,
+  hideNavigation = false,
 }) => {
   const selectedDate = scheduledAt ? scheduledAt.split('T')[0] : '';
   const selectedTime = scheduledAt ? scheduledAt.split('T')[1] || '' : '';
@@ -69,18 +72,26 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex min-h-0 w-full flex-1 flex-col"
+      className={cn(
+        'flex w-full flex-col',
+        hideNavigation ? '' : 'min-h-0 flex-1'
+      )}
     >
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-          <Calendar className="w-8 h-8 text-primary" />
+      {!hideNavigation && (
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+            <Calendar className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">Quand ?</h2>
+          <p className="text-muted-foreground mt-2">Choisissez la date et l'heure de votre séance</p>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Quand ?</h2>
-        <p className="text-muted-foreground mt-2">Choisissez la date et l'heure de votre séance</p>
-      </div>
+      )}
 
-      <div className="flex-1 overflow-y-auto space-y-6">
+      {hideNavigation && (
+        <h3 className="text-[15px] font-semibold text-foreground mb-3">Date et heure</h3>
+      )}
+
+      <div className={cn('space-y-6', hideNavigation ? '' : 'flex-1 overflow-y-auto')}>
         {/* Quick date selection */}
         <div>
           <Label className="text-sm font-medium text-muted-foreground mb-3 block">Date</Label>
@@ -180,20 +191,21 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
         )}
       </div>
 
-      {/* Navigation */}
-      <div className="flex gap-3 mt-auto pt-4">
-        <Button variant="outline" onClick={onBack} className="h-14">
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <Button
-          onClick={onNext}
-          disabled={!scheduledAt}
-          className="flex-1 h-14 text-lg font-semibold"
-        >
-          Continuer
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </Button>
-      </div>
+      {!hideNavigation && (
+        <div className="flex gap-3 mt-auto pt-4">
+          <Button variant="outline" onClick={onBack} className="h-14">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={!scheduledAt}
+            className="flex-1 h-14 text-lg font-semibold"
+          >
+            Continuer
+            <ChevronRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

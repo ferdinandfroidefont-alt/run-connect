@@ -112,6 +112,11 @@ export const CoachingMessageCard = ({ coachingSessionId, currentUserId }: Coachi
           coach_notes: session.coach_notes,
           scheduled_at: session.scheduled_at,
           suggestedDate: participation?.suggested_date,
+          objective: session.objective ?? null,
+          default_location_lat: session.default_location_lat ?? null,
+          default_location_lng: session.default_location_lng ?? null,
+          default_location_name: session.default_location_name ?? null,
+          rcc_code: session.rcc_code ?? null,
         } as CoachingSessionPrefill : null}
         onCoachingScheduled={loadData}
       />

@@ -54,6 +54,10 @@ interface CoachingSession {
   rpe?: number | null;
   rpe_phases?: unknown;
   rcc_code?: string | null;
+  objective?: string | null;
+  default_location_lat?: number | null;
+  default_location_lng?: number | null;
+  default_location_name?: string | null;
 }
 
 interface Participation {
@@ -761,6 +765,11 @@ export const CoachingSessionDetail = ({
           coach_notes: session.coach_notes,
           scheduled_at: session.scheduled_at,
           suggestedDate: myParticipation?.suggested_date,
+          objective: session.objective ?? null,
+          default_location_lat: session.default_location_lat ?? null,
+          default_location_lng: session.default_location_lng ?? null,
+          default_location_name: session.default_location_name ?? null,
+          rcc_code: session.rcc_code ?? null,
         } as CoachingSessionPrefill : null}
         onCoachingScheduled={loadParticipations}
       />

@@ -97,9 +97,24 @@ type StoryDraftPayload = {
   dynamicLayers: DynamicLayer[];
   emojiSticker: string | null;
   layerOrder: LayerKind[];
+  /** Transform média (éditeur plein écran) — optionnel pour brouillons anciens */
+  storyPan?: { x: number; y: number };
+  storyScale?: number;
+  storyRotation?: number;
 };
 
 const STORY_DRAFT_STORAGE_KEY = "runconnect_story_create_draft_v1";
+
+/** Zoom média éditeur story (approx. Instagram : dézoom pour voir le cadre) */
+const STORY_MEDIA_MIN_SCALE = 0.38;
+const STORY_MEDIA_MAX_SCALE = 5.5;
+
+function twoFingerMetrics(a: { clientX: number; clientY: number }, b: { clientX: number; clientY: number }) {
+  const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+  const mid = { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+  const ang = Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+  return { dist: Math.max(8, dist), mid, ang };
+}
 
 function parseSessionTimestamp(value: string | null | undefined): number {
   if (!value) return Number.NaN;
@@ -200,10 +215,22 @@ export default function StoryCreate() {
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const drawHistoryRef = useRef<ImageData[]>([]);
 
-  // Pinch-to-zoom on image
-  const [imageScale, setImageScale] = useState(1);
-  const [imageTranslate, setImageTranslate] = useState({ x: 0, y: 0 });
-  const imagePinchRef = useRef<{ startDist: number; startMid: { x: number; y: number }; baseScale: number; baseTx: number; baseTy: number } | null>(null);
+  // Média plein écran : pan + pinch + rotation (comme Instagram Stories)
+  const [storyScale, setStoryScale] = useState(1);
+  const [storyRotation, setStoryRotation] = useState(0);
+  const [storyPan, setStoryPan] = useState({ x: 0, y: 0 });
+  const [storyGestureActive, setStoryGestureActive] = useState(false);
+  const mediaPointersRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
+  const mediaTwoFingerRef = useRef<{
+    startDist: number;
+    startAngle: number;
+    startMid: { x: number; y: number };
+    baseScale: number;
+    baseRotation: number;
+    basePan: { x: number; y: number };
+  } | null>(null);
+  const mediaPanRef = useRef<{ startX: number; startY: number; basePan: { x: number; y: number } } | null>(null);
+  const mediaTransformLiveRef = useRef({ storyScale: 1, storyRotation: 0, storyPan: { x: 0, y: 0 } });
 
   // Share
   const [sharing, setSharing] = useState(false);
@@ -220,6 +247,9 @@ export default function StoryCreate() {
 
   const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => {
+    mediaTransformLiveRef.current = { storyScale, storyRotation, storyPan };
+  }, [storyScale, storyRotation, storyPan]);
   useEffect(() => {
     let mounted = true;
     void (async () => {
@@ -396,6 +426,13 @@ export default function StoryCreate() {
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
     }
+    setStoryScale(1);
+    setStoryRotation(0);
+    setStoryPan({ x: 0, y: 0 });
+    mediaPointersRef.current.clear();
+    mediaTwoFingerRef.current = null;
+    mediaPanRef.current = null;
+    setStoryGestureActive(false);
   }, []);
 
   const fileToDataUrl = useCallback((file: File): Promise<string> => {
@@ -448,6 +485,9 @@ export default function StoryCreate() {
       dynamicLayers,
       emojiSticker,
       layerOrder,
+      storyPan,
+      storyScale,
+      storyRotation,
     };
     window.localStorage.setItem(STORY_DRAFT_STORAGE_KEY, JSON.stringify(payload));
     setHasDraft(true);
@@ -473,6 +513,9 @@ export default function StoryCreate() {
     dynamicLayers,
     emojiSticker,
     layerOrder,
+    storyPan,
+    storyScale,
+    storyRotation,
   ]);
 
   const clearDraft = useCallback(() => {
@@ -518,6 +561,13 @@ export default function StoryCreate() {
       setDynamicLayers(Array.isArray(draft.dynamicLayers) ? draft.dynamicLayers : []);
       setEmojiSticker(draft.emojiSticker ?? null);
       setLayerOrder(Array.isArray(draft.layerOrder) ? draft.layerOrder : ["session", "music", "emoji", "text"]);
+      setStoryPan(
+        draft.storyPan && typeof draft.storyPan.x === "number" && typeof draft.storyPan.y === "number"
+          ? draft.storyPan
+          : { x: 0, y: 0 },
+      );
+      setStoryScale(typeof draft.storyScale === "number" && Number.isFinite(draft.storyScale) ? draft.storyScale : 1);
+      setStoryRotation(typeof draft.storyRotation === "number" && Number.isFinite(draft.storyRotation) ? draft.storyRotation : 0);
       if (draft.mediaDataUrl && draft.mediaType) {
         const restoredFile = dataUrlToFile(draft.mediaDataUrl, draft.mediaName || "story-draft", draft.mediaType);
         setMediaFile(restoredFile);
@@ -1189,7 +1239,13 @@ export default function StoryCreate() {
         : "image";
       let fileToUpload = mediaFile;
       if (mediaType === "image") {
+        const mediaTransformed =
+          Math.abs(storyScale - 1) > 0.02 ||
+          Math.abs(storyRotation) > 0.35 ||
+          Math.abs(storyPan.x) > 0.5 ||
+          Math.abs(storyPan.y) > 0.5;
         const hasOverlays =
+          mediaTransformed ||
           !!textOverlay.trim() ||
           !!selectedMusic ||
           !!selectedSession ||
@@ -1409,39 +1465,124 @@ export default function StoryCreate() {
     }
   };
 
-  const onImageTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 2) return;
-    if (editorMode !== "idle" || selectedLayer || selectedDynamicLayerId) return;
-    const [a, b] = [e.touches[0], e.touches[1]];
-    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-    imagePinchRef.current = {
-      startDist: dist,
-      startMid: { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 },
-      baseScale: imageScale,
-      baseTx: imageTranslate.x,
-      baseTy: imageTranslate.y,
-    };
+  const onMediaPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (step !== "edit" || editorMode !== "idle" || drawMode) return;
+    if (showMusicPicker || showStickerPicker || showSessionPicker) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    mediaPointersRef.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    if (mediaPointersRef.current.size === 2) {
+      mediaPanRef.current = null;
+      const pts = [...mediaPointersRef.current.values()];
+      if (pts.length >= 2) {
+        const { dist, mid, ang } = twoFingerMetrics(pts[0], pts[1]);
+        const live = mediaTransformLiveRef.current;
+        mediaTwoFingerRef.current = {
+          startDist: dist,
+          startAngle: ang,
+          startMid: mid,
+          baseScale: live.storyScale,
+          baseRotation: live.storyRotation,
+          basePan: { ...live.storyPan },
+        };
+      }
+      setStoryGestureActive(true);
+    } else if (mediaPointersRef.current.size === 1) {
+      if (!(selectedLayer || selectedDynamicLayerId)) {
+        const live = mediaTransformLiveRef.current;
+        mediaPanRef.current = {
+          startX: e.clientX,
+          startY: e.clientY,
+          basePan: { ...live.storyPan },
+        };
+        setStoryGestureActive(true);
+      }
+    }
   };
-  const onImageTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length !== 2 || !imagePinchRef.current) return;
-    const [a, b] = [e.touches[0], e.touches[1]];
-    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
-    const ratio = dist / Math.max(1, imagePinchRef.current.startDist);
-    const newScale = Math.max(1, Math.min(4, +(imagePinchRef.current.baseScale * ratio).toFixed(3)));
-    const midX = (a.clientX + b.clientX) / 2;
-    const midY = (a.clientY + b.clientY) / 2;
-    setImageScale(newScale);
-    setImageTranslate({
-      x: imagePinchRef.current.baseTx + (midX - imagePinchRef.current.startMid.x),
-      y: imagePinchRef.current.baseTy + (midY - imagePinchRef.current.startMid.y),
-    });
+
+  const onMediaPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!mediaPointersRef.current.has(e.pointerId)) return;
+    mediaPointersRef.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+    if (mediaPointersRef.current.size >= 2) {
+      if (!mediaTwoFingerRef.current) {
+        const pts = [...mediaPointersRef.current.values()];
+        if (pts.length >= 2) {
+          const { dist, mid, ang } = twoFingerMetrics(pts[0], pts[1]);
+          const live = mediaTransformLiveRef.current;
+          mediaTwoFingerRef.current = {
+            startDist: dist,
+            startAngle: ang,
+            startMid: mid,
+            baseScale: live.storyScale,
+            baseRotation: live.storyRotation,
+            basePan: { ...live.storyPan },
+          };
+        }
+      }
+      const g = mediaTwoFingerRef.current;
+      if (g) {
+        const pts = [...mediaPointersRef.current.values()];
+        if (pts.length < 2) return;
+        const { dist, mid, ang } = twoFingerMetrics(pts[0], pts[1]);
+        const ratio = dist / g.startDist;
+        let nextScale = g.baseScale * ratio;
+        nextScale = Math.min(STORY_MEDIA_MAX_SCALE, Math.max(STORY_MEDIA_MIN_SCALE, nextScale));
+        const deltaRad = ang - g.startAngle;
+        const nextRotation = g.baseRotation + (deltaRad * 180) / Math.PI;
+        const nextPan = {
+          x: g.basePan.x + (mid.x - g.startMid.x),
+          y: g.basePan.y + (mid.y - g.startMid.y),
+        };
+        setStoryScale(+nextScale.toFixed(5));
+        setStoryRotation(+nextRotation.toFixed(4));
+        setStoryPan(nextPan);
+      }
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+
+    if (
+      mediaPointersRef.current.size === 1 &&
+      mediaPanRef.current &&
+      !mediaTwoFingerRef.current &&
+      !(selectedLayer || selectedDynamicLayerId)
+    ) {
+      const r = mediaPanRef.current;
+      setStoryPan({
+        x: r.basePan.x + e.clientX - r.startX,
+        y: r.basePan.y + e.clientY - r.startY,
+      });
+      if (e.cancelable) e.preventDefault();
+    }
   };
-  const onImageTouchEnd = () => {
-    if (!imagePinchRef.current) return;
-    imagePinchRef.current = null;
-    if (imageScale < 1.05) {
-      setImageScale(1);
-      setImageTranslate({ x: 0, y: 0 });
+
+  const onMediaPointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!mediaPointersRef.current.has(e.pointerId)) return;
+    mediaPointersRef.current.delete(e.pointerId);
+
+    if (mediaPointersRef.current.size < 2) {
+      mediaTwoFingerRef.current = null;
+    }
+
+    if (mediaPointersRef.current.size === 1) {
+      const pts = [...mediaPointersRef.current.entries()];
+      const first = pts[0];
+      if (first && !(selectedLayer || selectedDynamicLayerId)) {
+        const [, pt] = first;
+        const live = mediaTransformLiveRef.current;
+        mediaPanRef.current = {
+          startX: pt.clientX,
+          startY: pt.clientY,
+          basePan: { ...live.storyPan },
+        };
+      }
+    }
+
+    if (mediaPointersRef.current.size === 0) {
+      mediaPanRef.current = null;
+      setStoryGestureActive(false);
     }
   };
 
@@ -1663,19 +1804,9 @@ export default function StoryCreate() {
       const hostH = Math.max(1, hostRect.height);
       const imgW = Math.max(1, img.naturalWidth);
       const imgH = Math.max(1, img.naturalHeight);
-      const coverScale = Math.max(hostW / imgW, hostH / imgH);
-      const shownW = imgW * coverScale;
-      const shownH = imgH * coverScale;
-      const offsetX = (hostW - shownW) / 2;
-      const offsetY = (hostH - shownH) / 2;
 
-      const srcX = Math.max(0, (-offsetX) / coverScale);
-      const srcY = Math.max(0, (-offsetY) / coverScale);
-      const srcW = Math.max(1, hostW / coverScale);
-      const srcH = Math.max(1, hostH / coverScale);
-
-      const outW = Math.max(1, Math.round(srcW));
-      const outH = Math.max(1, Math.round(srcH));
+      const outW = Math.max(1, Math.round(hostW));
+      const outH = Math.max(1, Math.round(hostH));
       const out = document.createElement("canvas");
       out.width = outW;
       out.height = outH;
@@ -1684,7 +1815,24 @@ export default function StoryCreate() {
 
       const sx = outW / hostW;
       const sy = outH / hostH;
-      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, outW, outH);
+
+      const coverScale = Math.max(outW / imgW, outH / imgH);
+      const shownW = imgW * coverScale;
+      const shownH = imgH * coverScale;
+      const offsetX = (outW - shownW) / 2;
+      const offsetY = (outH - shownH) / 2;
+
+      ctx.save();
+      ctx.translate(outW / 2, outH / 2);
+      ctx.translate(storyPan.x * sx, storyPan.y * sy);
+      ctx.rotate((storyRotation * Math.PI) / 180);
+      ctx.scale(storyScale, storyScale);
+      ctx.translate(-outW / 2, -outH / 2);
+      ctx.drawImage(img, 0, 0, imgW, imgH, offsetX, offsetY, shownW, shownH);
+      ctx.restore();
 
       const drawCanvas = drawCanvasRef.current;
       if (drawCanvas) {
@@ -1819,6 +1967,10 @@ export default function StoryCreate() {
     textScale,
     textSize,
     textStyle,
+    storyPan.x,
+    storyPan.y,
+    storyRotation,
+    storyScale,
   ]);
 
   // ═══════════════════════════════════════
@@ -2106,33 +2258,41 @@ export default function StoryCreate() {
           setSelectedLayer(null);
           setSelectedDynamicLayerId(null);
         }}
-        onTouchStart={onImageTouchStart}
-        onTouchMove={onImageTouchMove}
-        onTouchEnd={onImageTouchEnd}
-        onTouchCancel={onImageTouchEnd}
       >
-        {previewUrl && (
-          isVideo ? (
-            <video
-              src={previewUrl}
-              className="h-full w-full object-cover"
-              style={{
-                transform: `scale(${imageScale}) translate(${imageTranslate.x / imageScale}px, ${imageTranslate.y / imageScale}px)`,
-                transition: imagePinchRef.current ? "none" : "transform 200ms ease-out",
-              }}
-              autoPlay loop muted playsInline
-            />
-          ) : (
-            <img
-              src={previewUrl}
-              alt=""
-              className="h-full w-full object-cover"
-              style={{
-                transform: `scale(${imageScale}) translate(${imageTranslate.x / imageScale}px, ${imageTranslate.y / imageScale}px)`,
-                transition: imagePinchRef.current ? "none" : "transform 200ms ease-out",
-              }}
-            />
-          )
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black">
+          <div
+            className="h-full w-full will-change-transform"
+            style={{
+              transform: `translate(${storyPan.x}px, ${storyPan.y}px) rotate(${storyRotation}deg) scale(${storyScale})`,
+              transformOrigin: "50% 50%",
+              transition: storyGestureActive ? "none" : "transform 210ms cubic-bezier(0.25, 0.82, 0.25, 1)",
+            }}
+          >
+            {previewUrl &&
+              (isVideo ? (
+                <video
+                  src={previewUrl}
+                  className="h-full w-full select-none object-cover pointer-events-none"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ) : (
+                <img src={previewUrl} alt="" draggable={false} className="h-full w-full select-none object-cover pointer-events-none" />
+              ))}
+          </div>
+        </div>
+
+        {editorMode === "idle" && !drawMode && (
+          <div
+            className="absolute inset-0 z-[3]"
+            style={{ touchAction: "none" }}
+            onPointerDown={onMediaPointerDown}
+            onPointerMove={onMediaPointerMove}
+            onPointerUp={onMediaPointerUpOrCancel}
+            onPointerCancel={onMediaPointerUpOrCancel}
+          />
         )}
         {editorMode !== "idle" && (
           <div className="pointer-events-none absolute inset-0 z-[6] bg-black/20 transition-opacity duration-200" />
@@ -2372,38 +2532,45 @@ export default function StoryCreate() {
         />
 
         {editorMode === "idle" && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18] bg-gradient-to-t from-black/55 via-black/25 to-transparent px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-14">
-            <div className="pointer-events-auto">
-              <div className="relative">
-                <Type className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-                <Input
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Ajouter une légende..."
-                  className="h-12 rounded-full border-white/20 bg-black/35 pl-10 text-[15px] text-white placeholder:text-white/60 backdrop-blur-md focus-visible:ring-white/30"
-                />
-              </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[18]">
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t from-black/70 via-black/22 to-transparent"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-auto relative px-4 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-20"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <label htmlFor="story-caption-input" className="sr-only">
+                Légende de la story
+              </label>
+              <Input
+                id="story-caption-input"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Ajouter une légende…"
+                autoComplete="off"
+                autoCorrect="off"
+                className="h-auto min-h-[44px] border-0 border-b border-white/12 bg-white/[0.05] px-2.5 py-2.5 text-[16px] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)] placeholder:text-white/55 focus-visible:border-white/25 focus-visible:bg-white/[0.07] focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+                style={{
+                  textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
+                }}
+              />
             </div>
           </div>
         )}
 
-        {/* Top bar */}
-        <div
-          className={cn(
-            "fixed inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl transition-colors duration-200",
-            editorMode === "idle" ? "border-b border-white/15 bg-black/35" : "border-b border-white/10 bg-black/25"
-          )}
-        >
-          <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-2.5">
+        {/* Barre du haut : boutons flottants, sans bandeau opaque (type Instagram) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-30 pt-[max(8px,env(safe-area-inset-top,8px))]">
+          <div className="pointer-events-auto flex items-center justify-between gap-2 px-3">
             <button
               type="button"
               onClick={() => void requestExitWithDraftPrompt("back")}
-              className="justify-self-start inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-white active:opacity-70"
+              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full border border-white/15 bg-black/22 px-2.5 py-2 text-[15px] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md transition active:scale-[0.97] active:opacity-85"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
+              <ArrowLeft className="h-5 w-5 shrink-0" />
+              <span className="pr-0.5">Retour</span>
             </button>
-            <h1 className="truncate px-2 text-center text-[17px] font-semibold text-white">Créer une story</h1>
             <Button
               type="button"
               disabled={sharing || (editorMode === "idle" && !mediaFile)}
@@ -2414,15 +2581,15 @@ export default function StoryCreate() {
                 }
                 void onShare();
               }}
-              className="justify-self-end h-9 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-md"
+              className="h-10 shrink-0 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition active:scale-[0.98]"
             >
-              {sharing ? "Envoi..." : editorMode === "idle" ? "Partager" : "Terminé"}
+              {sharing ? "Envoi…" : editorMode === "idle" ? "Partager" : "Terminé"}
             </Button>
           </div>
         </div>
 
-        {/* Vertical tool rail (iOS map controls style) */}
-        <div className="absolute right-4 top-[max(5.25rem,calc(env(safe-area-inset-top)+4.25rem))] z-20 flex flex-col gap-2">
+        {/* Outils à droite : intégration type éditeur natif */}
+        <div className="absolute right-[max(12px,env(safe-area-inset-right,0px))] top-[max(4.5rem,calc(env(safe-area-inset-top)+3.75rem))] z-20 flex flex-col gap-2.5">
           {[
             {
               id: "text",
@@ -2522,8 +2689,8 @@ export default function StoryCreate() {
               type="button"
               onClick={tool.onClick}
               className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-black/50 text-white shadow-lg backdrop-blur-xl transition-all duration-200 ease-out active:scale-[0.92]",
-                tool.active && "bg-primary text-primary-foreground",
+                "flex h-12 w-12 items-center justify-center rounded-2xl border border-white/18 bg-black/38 text-white shadow-[0_6px_28px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-all duration-200 ease-out active:scale-[0.93]",
+                tool.active && "border-primary/35 bg-primary text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.38)]",
               )}
               aria-label={tool.label}
               title={tool.label}

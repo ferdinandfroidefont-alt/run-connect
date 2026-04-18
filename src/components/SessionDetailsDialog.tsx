@@ -5,7 +5,6 @@ import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
 import mapboxgl from "mapbox-gl";
-import { ActivityIcon } from "@/lib/activityIcons";
 import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, Bell, Bookmark, MessageCircle, Download, Maximize2 } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, Maximize2, ChevronDown } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -34,9 +33,15 @@ import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
+import type { SessionLevel } from '@/lib/sessionLevelCalculator';
+import { estimateSessionDurationMinutes, DEFAULT_SESSION_CALENDAR_DURATION_MIN } from '@/lib/estimateSessionDurationMinutes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { RateSessionDialog } from './RateSessionDialog';
-import { OrganizerRatingBadge } from './OrganizerRatingBadge';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 interface SessionBlock {
   id: string;
@@ -164,7 +169,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(true);
+  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(false);
   const [showBlocksDialog, setShowBlocksDialog] = useState(false);
   const [showParticipantsDialog, setShowParticipantsDialog] = useState(false);
   const [participantsList, setParticipantsList] = useState<Array<{ user_id: string; profile: { username: string; display_name: string; avatar_url: string | null } }>>([]);
@@ -646,7 +651,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     return session.title;
   };
 
-  const sessionTypeBadge = getSessionTypeLabel(session.session_type).toUpperCase();
+  const sessionTypeLabel = getSessionTypeLabel(session.session_type);
   const dynamicTitle = buildSessionTitle();
   const dateFmt = format(new Date(session.scheduled_at), "EEEE d MMMM yyyy", { locale: fr });
   const timeFmt = format(new Date(session.scheduled_at), "HH:mm", { locale: fr });
@@ -671,7 +676,8 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     ? formatKm(derivedDistanceKm)
     : (session.routes?.total_distance ? formatMeters(session.routes.total_distance) : '—');
 
-  const elevGain = session.routes?.total_elevation_gain ? `${Math.round(session.routes.total_elevation_gain)} m` : '—';
+  const showElevationTile = session.routes?.total_elevation_gain != null;
+  const elevGain = showElevationTile ? `${Math.round(session.routes!.total_elevation_gain)} m` : '—';
 
   // Pace: prefer interval pace if structured/fractionné, else general
   const rawPace = intervalBlock?.effortPace || session.interval_pace || session.pace_general || null;
@@ -681,57 +687,28 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
       : rawPace)
     : '—';
 
-  // Duration estimate (min): if structured, sum block durations; else distance × pace
-  const estimatedDurationMin = (() => {
-    if (blocksAll.length) {
-      let totalSec = 0;
-      blocksAll.forEach(b => {
-        if (b.type === 'interval') {
-          const reps = b.repetitions || 1;
-          if (b.effortType === 'time') {
-            totalSec += reps * (parseFloat(String(b.effortDuration || '0').replace(',', '.')) || 0);
-          } else if (b.effortPace) {
-            const pm = String(b.effortPace).match(/(\d+)[':](\d+)/);
-            const dist = parseFloat(String(b.effortDuration || '0').replace(',', '.')) / 1000;
-            if (pm) totalSec += reps * (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
-          }
-          if (b.recoveryDuration) {
-            totalSec += (reps - 1) * (parseFloat(String(b.recoveryDuration).replace(',', '.')) || 0);
-          }
-        } else {
-          if (b.durationType === 'time') {
-            totalSec += (parseFloat(String(b.duration || '0').replace(',', '.')) || 0) * 60;
-          } else if (b.pace) {
-            const pm = String(b.pace).match(/(\d+)[':](\d+)/);
-            const dist = parseFloat(String(b.duration || '0').replace(',', '.')) / 1000;
-            if (pm) totalSec += (parseInt(pm[1]) * 60 + parseInt(pm[2])) * dist;
-          }
-        }
-      });
-      if (totalSec > 0) return Math.round(totalSec / 60);
-    }
-    if (derivedDistanceKm && rawPace) {
-      const m = String(rawPace).match(/(\d+)[':](\d+)/);
-      if (m) {
-        const sec = parseInt(m[1]) * 60 + parseInt(m[2]);
-        return Math.round((sec * derivedDistanceKm) / 60);
-      }
-    }
-    return null;
-  })();
+  const estimatedDurationMin = estimateSessionDurationMinutes(session);
   const estimatedDuration = estimatedDurationMin != null ? `${estimatedDurationMin} min` : '—';
   const endTimeLabel = estimatedDurationMin != null
     ? format(new Date(new Date(session.scheduled_at).getTime() + estimatedDurationMin * 60_000), 'HH:mm', { locale: fr })
     : '—';
 
+  const calendarDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
   const calendarEvent = {
-    title: session.title,
+    title: dynamicTitle,
     description: session.description || '',
     location: session.location_name,
     startDate: new Date(session.scheduled_at),
-    durationMinutes: 60,
+    durationMinutes: calendarDurationMin,
     organizer: session.profiles.username || session.profiles.display_name,
   };
+
+  const levelBadge =
+    typeof session.calculated_level === 'number' &&
+    session.calculated_level >= 1 &&
+    session.calculated_level <= 6 ? (
+      <SessionLevelBadge level={session.calculated_level as SessionLevel} variant="full" size="sm" />
+    ) : null;
 
   // (header & route map refs/effects are declared at the top of the component)
 
@@ -812,13 +789,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             </div>
 
             {/* ==== TITLE BLOCK ==== */}
-            <div className="px-5 pt-4">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-primary">
-                SÉANCE {sessionTypeBadge}
-              </p>
-              <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
-                {dynamicTitle}
-              </h1>
+            <div className="px-5 pt-4 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-muted-foreground capitalize tracking-wide">
+                  {sessionTypeLabel}
+                </p>
+                <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
+                  {dynamicTitle}
+                </h1>
+              </div>
+              {levelBadge}
             </div>
 
             {/* ==== ORGANIZER + PARTICIPANTS ==== */}
@@ -873,13 +853,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   </div>
                   <p className="text-[14px] font-semibold text-foreground capitalize leading-tight">{dateFmt}</p>
                   <p className="text-[13px] text-muted-foreground">{timeFmt}</p>
-                  <button
-                    onClick={() => { openGoogleCalendarLink(calendarEvent); }}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-foreground active:bg-secondary"
-                  >
-                    <CalendarPlus className="h-3.5 w-3.5 text-[#4285F4]" />
-                    Google Calendar
-                  </button>
                 </div>
                 {/* Lieu */}
                 <div className="min-w-0">
@@ -961,7 +934,9 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       onClick: () => setShowDurationAsEndTime(v => !v),
                     },
                     { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
-                    { icon: Mountain, label: 'D+', value: elevGain, onClick: undefined },
+                    ...(showElevationTile
+                      ? [{ icon: Mountain, label: 'D+', value: elevGain, onClick: undefined }]
+                      : []),
                   ].map((s, i) => (
                     <button
                       key={i}
@@ -992,7 +967,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                       <p className="text-[18px] font-bold text-foreground leading-tight">
                         {formatMeters(session.routes.total_distance)}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">1 boucle</p>
                       <p className="text-[11px] text-muted-foreground mt-1">
                         D+ {Math.round(session.routes.total_elevation_gain)} m
                       </p>
@@ -1037,24 +1011,56 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               </div>
             )}
 
-            {/* ==== FOOTER 4 ACTIONS ==== */}
+            {/* ==== ACTIONS RAPIDES ==== */}
             <div className="px-5 mt-6">
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { icon: User, label: 'Profil', onClick: () => setShowOrganizerProfile(true) },
-                  { icon: Bell, label: 'Rappel', onClick: () => { downloadICSFile(calendarEvent); toast({ title: '.ics téléchargé' }); } },
-                  { icon: Share2, label: 'Partager', onClick: () => setShowSessionShare(true) },
-                  { icon: CalendarPlus, label: 'Planning', onClick: () => openGoogleCalendarLink(calendarEvent) },
-                ].map((a, i) => (
-                  <button
-                    key={i}
-                    onClick={a.onClick}
-                    className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
-                  >
-                    <a.icon className="h-4 w-4 text-foreground" />
-                    <span className="text-[11px] text-muted-foreground">{a.label}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOrganizerProfile(true)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
+                >
+                  <User className="h-4 w-4 text-foreground" />
+                  <span className="text-[11px] text-muted-foreground">Profil</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSessionShare(true)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
+                >
+                  <Share2 className="h-4 w-4 text-foreground" />
+                  <span className="text-[11px] text-muted-foreground">Partager</span>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary w-full"
+                    >
+                      <CalendarPlus className="h-4 w-4 text-foreground" />
+                      <span className="text-[11px] text-muted-foreground inline-flex items-center gap-0.5">
+                        Agenda
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[200px]">
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => openGoogleCalendarLink(calendarEvent)}
+                    >
+                      Ouvrir dans Google&nbsp;Calendar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        downloadICSFile(calendarEvent);
+                        toast({ title: 'Calendrier', description: 'Fichier .ics téléchargé' });
+                      }}
+                    >
+                      Télécharger le fichier .ics
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -1152,7 +1158,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   {loading ? 'ENVOI…' : 'REJOINDRE LA SÉANCE'}
                 </span>
                 <span className="text-[10px] text-primary-foreground/80">
-                  Tu seras visible des autres participants
+                  Visible par les autres participants
                 </span>
               </button>
               <button

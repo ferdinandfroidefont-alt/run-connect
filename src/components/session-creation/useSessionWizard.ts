@@ -1,5 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
-import { SessionFormData, SelectedLocation, WizardStep, WIZARD_STEPS, DEFAULT_FORM_DATA, SessionBlock, SessionMode } from './types';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import {
+  datetimeLocalTomorrowMorning,
+  inferSessionTypeFromCoachData,
+  toDatetimeLocalInput,
+} from '@/lib/coachingSessionPrefill';
+import {
+  SessionFormData,
+  SelectedLocation,
+  WizardStep,
+  DEFAULT_FORM_DATA,
+  SessionBlock,
+  SessionMode,
+  getWizardSteps,
+} from './types';
 
 export interface CoachingSessionPrefill {
   id: string;
@@ -21,16 +34,32 @@ export interface CoachingSessionPrefill {
   suggestedDate?: string | null;
 }
 
+export type WizardFlow = 'quick' | 'full';
+
 interface UseSessionWizardProps {
   presetLocation?: { lat: number; lng: number } | null;
-  initialSession?: any; // Session data for edit mode
+  initialSession?: any;
   isEditMode?: boolean;
   coachingSession?: CoachingSessionPrefill | null;
+  /** `quick` = 2 étapes (création standard). `full` = 5 étapes (édition, coaching). */
+  wizardFlow?: WizardFlow;
 }
 
-export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = false, coachingSession }: UseSessionWizardProps = {}) => {
-  // In edit mode, start at activity step; coaching mode starts at location
-  const [currentStep, setCurrentStep] = useState<WizardStep>(isEditMode ? 'activity' : 'location');
+const initialStepFor = (isEditMode: boolean, flow: WizardFlow): WizardStep => {
+  if (isEditMode) return 'activity';
+  return flow === 'quick' ? 'essentials' : 'location';
+};
+
+export const useSessionWizard = ({
+  presetLocation,
+  initialSession,
+  isEditMode = false,
+  coachingSession,
+  wizardFlow = 'full',
+}: UseSessionWizardProps = {}) => {
+  const wizardSteps = useMemo(() => getWizardSteps(wizardFlow), [wizardFlow]);
+
+  const [currentStep, setCurrentStep] = useState<WizardStep>(() => initialStepFor(isEditMode, wizardFlow));
   const [formData, setFormData] = useState<SessionFormData>(DEFAULT_FORM_DATA);
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -38,53 +67,68 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [routeMode, setRouteMode] = useState<'new' | 'existing'>('new');
 
-  // Initialize with coaching session data (pre-fill everything except location)
   useEffect(() => {
-    if (coachingSession) {
-      const blocks = coachingSession.session_blocks && Array.isArray(coachingSession.session_blocks) 
-        ? coachingSession.session_blocks : [];
-      
-      let scheduledAt = '';
-      if (coachingSession.suggestedDate) {
-        try {
-          const d = new Date(coachingSession.suggestedDate);
-          scheduledAt = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        } catch {}
-      } else if (coachingSession.scheduled_at) {
-        try {
-          const d = new Date(coachingSession.scheduled_at);
-          scheduledAt = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        } catch {}
-      }
+    if (!coachingSession) return;
 
-      setFormData(prev => ({
-        ...prev,
-        title: `📋 ${coachingSession.objective || coachingSession.title}`,
-        description: coachingSession.description || '',
-        activity_type: coachingSession.activity_type || 'course',
-        session_type: 'footing',
-        scheduled_at: scheduledAt,
-        distance_km: coachingSession.distance_km?.toString() || '',
-        pace_general: coachingSession.pace_target || '',
-        club_id: coachingSession.club_id,
-        session_mode: blocks.length > 0 ? 'structured' : 'simple',
-        blocks: blocks,
-        location_name: coachingSession.default_location_name || '',
-        visibility_type: 'club',
-      }));
+    const blocks: SessionBlock[] =
+      coachingSession.session_blocks && Array.isArray(coachingSession.session_blocks)
+        ? (coachingSession.session_blocks as SessionBlock[])
+        : [];
 
-      // Pre-fill location if coach provided one
-      if (coachingSession.default_location_lat && coachingSession.default_location_lng && coachingSession.default_location_name) {
-        setSelectedLocation({
-          lat: coachingSession.default_location_lat,
-          lng: coachingSession.default_location_lng,
-          name: coachingSession.default_location_name,
-        });
-      }
+    const activityType = coachingSession.activity_type || 'course';
+    const sessionType = inferSessionTypeFromCoachData(activityType, blocks);
+
+    let scheduledAt = '';
+    if (coachingSession.suggestedDate) {
+      scheduledAt = toDatetimeLocalInput(coachingSession.suggestedDate);
+    }
+    if (!scheduledAt && coachingSession.scheduled_at) {
+      scheduledAt = toDatetimeLocalInput(coachingSession.scheduled_at);
+    }
+    if (!scheduledAt) {
+      scheduledAt = datetimeLocalTomorrowMorning(9);
+    }
+
+    const descParts: string[] = [];
+    if (coachingSession.description?.trim()) descParts.push(coachingSession.description.trim());
+    if (coachingSession.objective?.trim()) {
+      descParts.push(`Objectif : ${coachingSession.objective.trim()}`);
+    }
+    if (coachingSession.coach_notes?.trim()) {
+      descParts.push(`Note coach : ${coachingSession.coach_notes.trim()}`);
+    }
+    const mergedDescription = descParts.join('\n\n');
+
+    setFormData((prev) => ({
+      ...prev,
+      title: `📋 ${coachingSession.objective?.trim() || coachingSession.title}`,
+      description: mergedDescription,
+      activity_type: activityType,
+      session_type: sessionType,
+      scheduled_at: scheduledAt,
+      distance_km:
+        coachingSession.distance_km != null ? String(coachingSession.distance_km) : '',
+      pace_general: coachingSession.pace_target || '',
+      club_id: coachingSession.club_id,
+      session_mode: blocks.length > 0 ? 'structured' : 'simple',
+      blocks,
+      location_name: coachingSession.default_location_name || '',
+      visibility_type: 'club',
+    }));
+
+    if (
+      coachingSession.default_location_lat != null &&
+      coachingSession.default_location_lng != null &&
+      coachingSession.default_location_name
+    ) {
+      setSelectedLocation({
+        lat: coachingSession.default_location_lat,
+        lng: coachingSession.default_location_lng,
+        name: coachingSession.default_location_name,
+      });
     }
   }, [coachingSession]);
 
-  // Initialize with session data in edit mode
   useEffect(() => {
     if (isEditMode && initialSession) {
       const scheduledDate = new Date(initialSession.scheduled_at);
@@ -138,37 +182,39 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
     }
   }, [isEditMode, initialSession]);
 
-  const currentStepIndex = WIZARD_STEPS.indexOf(currentStep);
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === WIZARD_STEPS.length - 1;
-  const progress = ((currentStepIndex + 1) / WIZARD_STEPS.length) * 100;
+  const currentStepIndex = wizardSteps.indexOf(currentStep);
+  const isFirstStep = currentStepIndex <= 0;
+  const isLastStep = currentStepIndex >= wizardSteps.length - 1;
+  const progress = wizardSteps.length > 0 ? ((currentStepIndex + 1) / wizardSteps.length) * 100 : 0;
 
   const goToNextStep = useCallback(() => {
-    const nextIndex = currentStepIndex + 1;
-    if (nextIndex < WIZARD_STEPS.length) {
-      setCurrentStep(WIZARD_STEPS[nextIndex]);
+    const idx = wizardSteps.indexOf(currentStep);
+    const nextIndex = idx + 1;
+    if (nextIndex < wizardSteps.length) {
+      setCurrentStep(wizardSteps[nextIndex]);
     }
-  }, [currentStepIndex]);
+  }, [currentStep, wizardSteps]);
 
   const goToPreviousStep = useCallback(() => {
-    const prevIndex = currentStepIndex - 1;
+    const idx = wizardSteps.indexOf(currentStep);
+    const prevIndex = idx - 1;
     if (prevIndex >= 0) {
-      setCurrentStep(WIZARD_STEPS[prevIndex]);
+      setCurrentStep(wizardSteps[prevIndex]);
     }
-  }, [currentStepIndex]);
+  }, [currentStep, wizardSteps]);
 
   const goToStep = useCallback((step: WizardStep) => {
     setCurrentStep(step);
   }, []);
 
   const updateFormData = useCallback((updates: Partial<SessionFormData>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
+    setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const updateLocation = useCallback((location: SelectedLocation | null) => {
     setSelectedLocation(location);
     if (location) {
-      setFormData(prev => ({ ...prev, location_name: location.name }));
+      setFormData((prev) => ({ ...prev, location_name: location.name }));
     }
   }, []);
 
@@ -177,22 +223,20 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
     setImagePreview(preview);
   }, []);
 
-  // Block management functions
   const updateBlocks = useCallback((blocks: SessionBlock[]) => {
-    setFormData(prev => ({ ...prev, blocks }));
+    setFormData((prev) => ({ ...prev, blocks }));
   }, []);
 
   const setSessionMode = useCallback((mode: SessionMode) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData((prev) => ({
+      ...prev,
       session_mode: mode,
-      // Clear blocks when switching to simple mode
-      blocks: mode === 'simple' ? [] : prev.blocks
+      blocks: mode === 'simple' ? [] : prev.blocks,
     }));
   }, []);
 
   const resetWizard = useCallback(() => {
-    setCurrentStep(isEditMode ? 'activity' : 'location');
+    setCurrentStep(initialStepFor(isEditMode, wizardFlow));
     if (!isEditMode) {
       setFormData(DEFAULT_FORM_DATA);
       setSelectedLocation(null);
@@ -201,7 +245,7 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
       setSelectedRoute('');
       setRouteMode('new');
     }
-  }, [isEditMode]);
+  }, [isEditMode, wizardFlow]);
 
   const applyExistingRoutePreset = useCallback((routeId: string) => {
     setFormData((prev) => ({ ...prev, route_id: routeId }));
@@ -211,6 +255,10 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
 
   const canProceed = useCallback((): boolean => {
     switch (currentStep) {
+      case 'essentials':
+        return !!selectedLocation && !!formData.scheduled_at && !!formData.activity_type;
+      case 'finalize':
+        return !!formData.activity_type && !!selectedLocation;
       case 'location':
         return selectedLocation !== null;
       case 'activity':
@@ -218,7 +266,7 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
       case 'datetime':
         return !!formData.scheduled_at;
       case 'details':
-        return !!formData.title;
+        return !!formData.activity_type && !!selectedLocation;
       case 'confirm':
         return true;
       default:
@@ -228,6 +276,8 @@ export const useSessionWizard = ({ presetLocation, initialSession, isEditMode = 
 
   return {
     currentStep,
+    wizardSteps,
+    wizardFlow,
     currentStepIndex,
     isFirstStep,
     isLastStep,

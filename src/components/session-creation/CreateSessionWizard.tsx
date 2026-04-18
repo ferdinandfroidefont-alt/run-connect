@@ -16,14 +16,17 @@ import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderS
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
+import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 
-import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
+import { useSessionWizard, CoachingSessionPrefill, type WizardFlow } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
 import { LocationStep } from './steps/LocationStep';
 import { ActivityStep } from './steps/ActivityStep';
 import { DateTimeStep } from './steps/DateTimeStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { ConfirmStep } from './steps/ConfirmStep';
+import { EssentialsStep } from './steps/EssentialsStep';
+import { FinalizeStep } from './steps/FinalizeStep';
 import { BoostSessionDialog } from '@/components/sessions/BoostSessionDialog';
 import {
   FREE_VISIBILITY_RADIUS_KM,
@@ -81,7 +84,15 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [boostDialogOpen, setBoostDialogOpen] = useState(false);
   const [boostingSessionId, setBoostingSessionId] = useState<string | null>(null);
 
-  const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode, coachingSession });
+  /** Coaching : même flux rapide (2 étapes), données préremplies par le coach */
+  const wizardFlow: WizardFlow = isEditMode ? 'full' : 'quick';
+  const wizard = useSessionWizard({
+    presetLocation,
+    initialSession: editSession,
+    isEditMode,
+    coachingSession,
+    wizardFlow,
+  });
   const lastAppliedPresetRouteRef = useRef<string | null>(null);
 
   // Handle preset location
@@ -197,11 +208,17 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         imageUrl = await uploadImage(selectedImage);
       }
 
+      const resolvedTitle = resolveSessionTitle({
+        title: formData.title,
+        activity_type: formData.activity_type,
+        locationName: formData.location_name || selectedLocation.name,
+      });
+
       // Calculate session level automatically (only for endurance sports)
-      const calculatedLevel = calculateSessionLevel(formData);
+      const calculatedLevel = calculateSessionLevel({ ...formData, title: resolvedTitle });
 
       const sessionPayloadCore = {
-        title: formData.title,
+        title: resolvedTitle,
         description: formData.description,
         activity_type: formData.activity_type,
         session_type: formData.session_type,
@@ -290,7 +307,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             sessionsToCreate.push({
               ...sessionPayload,
               scheduled_at: sessionDate.toISOString(),
-              title: i === 0 ? formData.title : `${formData.title} (${i + 1}/${formData.recurrence_count})`,
+              title: i === 0 ? resolvedTitle : `${resolvedTitle} (${i + 1}/${formData.recurrence_count})`,
               organizer_id: user.id,
               current_participants: 0,
             });
@@ -409,11 +426,11 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
               await sendPushNotification(
                 follower.follower_id,
                 'Nouvelle séance d\'ami',
-                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${formData.title}`,
+                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${resolvedTitle}`,
                 'friend_session',
                 {
                   organizer_name: user.email?.split('@')[0] || 'Un ami',
-                  session_title: formData.title,
+                  session_title: resolvedTitle,
                   session_id: sessionData.id,
                   activity_type: formData.activity_type,
                   scheduled_at: formData.scheduled_at
@@ -490,6 +507,34 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
 
   const renderStep = () => {
     switch (wizard.currentStep) {
+      case 'essentials':
+        return (
+          <EssentialsStep
+            map={map}
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            onLocationSelect={(loc) => wizard.updateLocation(loc)}
+            onFormDataChange={wizard.updateFormData}
+            onNext={wizard.goToNextStep}
+            canProceed={wizard.canProceed()}
+          />
+        );
+      case 'finalize':
+        return (
+          <FinalizeStep
+            formData={wizard.formData}
+            selectedLocation={wizard.selectedLocation}
+            imagePreview={wizard.imagePreview}
+            isPremium={subscriptionInfo?.subscribed || false}
+            loading={loading || uploadingImage}
+            isCoachingMode={!!coachingSession}
+            onFormDataChange={wizard.updateFormData}
+            onImageSelect={handleImageSelect}
+            onImageRemove={handleImageRemove}
+            onSubmit={handleSubmit}
+            onBack={wizard.goToPreviousStep}
+          />
+        );
       case 'location':
         return (
           <LocationStep
@@ -577,14 +622,22 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                     isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
                   }
                 />
-                <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
+                <ProgressIndicator
+                  currentStep={wizard.currentStep}
+                  progress={wizard.progress}
+                  steps={wizard.wizardSteps}
+                />
               </>
             }
             scrollClassName="bg-secondary"
           >
             {/* h-full : permet au step « Lieu » de remplir la zone scroll et de centrer le bloc entre header et pied */}
             <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-4">
-              <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
+              <AnimatePresence mode="wait">
+                <div key={wizard.currentStep} className="flex min-h-0 flex-1 flex-col">
+                  {renderStep()}
+                </div>
+              </AnimatePresence>
             </div>
           </IosFixedPageHeaderShell>
         </DialogContent>

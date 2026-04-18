@@ -339,8 +339,8 @@ const Auth = () => {
     e.preventDefault();
     if (view === 'email-signup' && !acceptSignupTerms) {
       toast({
-        title: "Acceptation requise",
-        description: "Cochez la case pour confirmer vos engagements légaux avant de créer un compte.",
+        title: "Confirmation requise",
+        description: "Cochez la case pour confirmer avoir lu les conditions (CGU, confidentialité / RGPD).",
         variant: "destructive",
       });
       return;
@@ -977,12 +977,12 @@ const Auth = () => {
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type={showPassword ? "text" : "password"}
-              placeholder="Mot de passe (min. 6 caractères)"
+              placeholder="Mot de passe du compte (connexion par e-mail)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-11 pr-11 h-12 rounded-[10px] bg-secondary border-0"
               required
-              minLength={6}
+              autoComplete="new-password"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
               {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
@@ -1009,15 +1009,15 @@ const Auth = () => {
               id="auth-signup-terms"
             />
             <span className="text-left text-[13px] leading-snug text-muted-foreground">
-              J’ai lu et j’accepte les{' '}
+              Je confirme avoir lu les{' '}
               <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
                 Conditions d’utilisation
               </Link>{' '}
-              et la{' '}
+              (dont règles ECTS applicables) et la{' '}
               <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
                 Politique de confidentialité
-              </Link>
-              . Je confirme avoir au moins 13 ans.
+              </Link>{' '}
+              (traitement des données — RGPD). J’ai au moins 13 ans.
             </span>
           </label>
 
