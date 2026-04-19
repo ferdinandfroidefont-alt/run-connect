@@ -2923,7 +2923,7 @@ const Messages = () => {
         >
         <div className="space-y-ios-3 pb-ios-2">
           {/* Quick Search Buttons */}
-          <div className="ios-card p-ios-3">
+          <div className="ios-card p-ios-3 !mt-0 !rounded-t-none border-t-0">
             <div className="grid grid-cols-5 gap-ios-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
