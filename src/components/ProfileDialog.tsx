@@ -669,7 +669,7 @@ export const ProfileDialog = ({
           </div>
           
            <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
-             <div className="box-border min-w-0 max-w-full pb-4">
+             <div className="box-border min-w-0 max-w-full">
                 {/* Profile Header - Instagram layout: avatar + stats side by side */}
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
