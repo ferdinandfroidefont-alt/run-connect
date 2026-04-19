@@ -62,21 +62,43 @@ function BluePinMarker({
   avatarUrl?: string | null;
   initials?: string;
 }) {
-  // Pin identique à celui du Feed (MiniMapPreview) : cercle bleu + pointe + avatar rond.
+  // Réplique exacte du pin séance utilisé sur la carte d'accueil (variant "depth").
+  // Dimensions, dégradés, anneau, ombre et pointe : alignés sur `rc-session-pin__*` (src/index.css).
+  const PIN_W = 58;
+  const PIN_H = 72;
+
   return (
-    <div style={{ position: 'relative', width: 100, height: 128 }}>
-      {/* Cercle bleu */}
+    <div style={{ position: 'relative', width: PIN_W, height: PIN_H }}>
+      {/* Ombre au sol */}
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          top: 4,
-          width: 88,
-          height: 88,
+          bottom: 2,
+          width: 32,
+          height: 10,
           transform: 'translateX(-50%)',
-          borderRadius: '999px',
-          background: RC_BLUE,
-          boxShadow: '0 14px 36px rgba(15,23,42,0.30)',
+          borderRadius: 999,
+          background: 'rgba(15, 23, 42, 0.14)',
+          filter: 'blur(5px)',
+          zIndex: 0,
+        }}
+      />
+      {/* Cercle (gradient depth) */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 3,
+          width: 56,
+          height: 56,
+          transform: 'translateX(-50%)',
+          borderRadius: 999,
+          background:
+            'linear-gradient(165deg, hsl(226 100% 68%) 0%, hsl(217 91% 48%) 55%, hsl(221 83% 42%) 100%)',
+          boxShadow:
+            '0 1px 0 rgba(255,255,255,0.38) inset, 0 -1px 0 rgba(15,23,42,0.08) inset, 0 10px 24px rgba(15,23,42,0.16)',
+          zIndex: 1,
         }}
       />
       {/* Pointe triangulaire */}
@@ -84,32 +106,35 @@ function BluePinMarker({
         style={{
           position: 'absolute',
           left: '50%',
-          top: 96,
-          width: 36,
-          height: 32,
+          top: 55,
+          width: 13,
+          height: 10,
           transform: 'translateX(-50%)',
           clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
-          background: RC_BLUE,
-          filter: 'drop-shadow(0 6px 10px rgba(15,23,42,0.28))',
+          background: 'linear-gradient(180deg, hsl(217 91% 49%) 0%, hsl(221 83% 41%) 100%)',
+          filter: 'drop-shadow(0 3px 6px rgba(15,23,42,0.14))',
+          zIndex: 1,
         }}
       />
-      {/* Avatar rond avec bord blanc */}
+      {/* Anneau blanc + avatar */}
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          top: 16,
-          width: 60,
-          height: 60,
+          top: 8,
+          width: 46,
+          height: 46,
           transform: 'translateX(-50%)',
-          borderRadius: '999px',
-          border: '4px solid #ffffff',
+          borderRadius: 999,
+          border: '3px solid rgba(255,255,255,0.98)',
           overflow: 'hidden',
           background: '#e2e8f0',
+          boxShadow: '0 0 0 1px rgba(15,23,42,0.06)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1,
+          zIndex: 2,
+          boxSizing: 'border-box',
         }}
       >
         {avatarUrl ? (
@@ -120,7 +145,7 @@ function BluePinMarker({
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <span style={{ fontSize: 22, fontWeight: 700, color: '#334155' }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: '#334155' }}>
             {(initials || 'RC').slice(0, 2)}
           </span>
         )}
@@ -128,6 +153,7 @@ function BluePinMarker({
     </div>
   );
 }
+
 
 /** Icône RunConnect : pin de localisation avec ondes radio (identique au partage profil) */
 function RunConnectPinIcon({ size = 44, color = '#ffffff' }: { size?: number; color?: string }) {
