@@ -7,9 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
+import { ProfileShareGeneratedPreviewCard } from './ProfileShareGeneratedPreviewCard';
 
-type CardVariant = 'v1' | 'v2';
-const CARD_IMAGES: Record<CardVariant, string> = { v1: profileShareCardImg, v2: profileShareCardV2 };
+type CardVariant = 'v1' | 'v2' | 'v3';
+const CARD_IMAGES: Record<'v1' | 'v2', string> = {
+  v1: profileShareCardImg,
+  v2: profileShareCardV2,
+};
 
 
 const sportEmojiFromLabel = (label: string): string => {
@@ -84,18 +88,22 @@ export function ProfileSharePanel({ compact = false }: Props) {
           'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
           compact ? 'pt-2' : 'pt-4'
         )}>
-          {/* Card: image template figée + overlay */}
+          {/* Carte 1 : PNG + calque. Carte 2 : PNG seul. Carte 3 : composition HTML/CSS (pas de calque carte 1). */}
           <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
-            <img
-              src={CARD_IMAGES[variant]}
-              alt="Aperçu carte de partage"
-              className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
-            />
+            {variant === 'v3' ? (
+              <ProfileShareGeneratedPreviewCard payload={payload} locationParts={locationParts} />
+            ) : (
+              <>
+                <img
+                  src={CARD_IMAGES[variant]}
+                  alt="Aperçu carte de partage"
+                  className="block w-full rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]"
+                />
 
-            {/* Overlay absolu - uniquement pour la Carte 1. La Carte 2 est indépendante (image seule). */}
-            <div className="absolute inset-0 pointer-events-none select-none">
-              {/* A. Avatar */}
-              {variant === 'v1' && payload?.avatarUrl && (
+                {/* Overlay absolu — uniquement carte 1 */}
+                <div className="absolute inset-0 pointer-events-none select-none">
+                  {/* A. Avatar */}
+                  {variant === 'v1' && payload?.avatarUrl && (
                 <div
                   className="absolute overflow-hidden rounded-full"
                   style={{
@@ -115,8 +123,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* B + C. Nom + badge vérifié */}
-              {variant === 'v1' && payload && (
+                  {/* B + C. Nom + badge vérifié */}
+                  {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center justify-center gap-1.5"
                   style={{
@@ -142,8 +150,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* D. Username */}
-              {variant === 'v1' && payload && (
+                  {/* D. Username */}
+                  {variant === 'v1' && payload && (
                 <div
                   className="absolute text-center text-slate-400 font-medium"
                   style={{
@@ -158,8 +166,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* E. Pill rôle + club — tient sur 1 ligne dans la pill bleue */}
-              {variant === 'v1' && payload && (
+                  {/* E. Pill rôle + club — tient sur 1 ligne dans la pill bleue */}
+                  {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center justify-center text-center"
                   style={{
@@ -183,8 +191,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* F. Ville + drapeau (gauche de la ligne) */}
-              {variant === 'v1' && payload && (
+                  {/* F. Ville + drapeau (gauche de la ligne) */}
+                  {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
@@ -207,8 +215,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* G. Sport (droite de la ligne) avec emoji */}
-              {variant === 'v1' && payload && (
+                  {/* G. Sport (droite de la ligne) avec emoji */}
+                  {variant === 'v1' && payload && (
                 <div
                   className="absolute flex items-center gap-1 text-slate-900 font-bold"
                   style={{
@@ -225,8 +233,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* H. Stats — 4 cartes */}
-              {variant === 'v1' && payload && (
+                  {/* H. Stats — 4 cartes */}
+                  {variant === 'v1' && payload && (
                 <>
                   <StatNumber value={payload.sessionsCreated} leftPct={14.5} />
                   <StatNumber value={payload.sessionsJoined} leftPct={38.2} />
@@ -235,8 +243,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </>
               )}
 
-              {/* I. Présence — uniquement le nombre, sans % */}
-              {variant === 'v1' && payload?.presenceRate != null && (
+                  {/* I. Présence — uniquement le nombre, sans % */}
+                  {variant === 'v1' && payload?.presenceRate != null && (
                 <div
                   className="absolute flex items-center justify-center"
                   style={{
@@ -254,8 +262,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 </div>
               )}
 
-              {/* J. QR Code */}
-              {variant === 'v1' && payload?.qrDataUrl && (
+                  {/* J. QR Code */}
+                  {variant === 'v1' && payload?.qrDataUrl && (
                 <div
                   className="absolute overflow-hidden rounded-[6px] bg-white"
                   style={{
@@ -268,8 +276,10 @@ export function ProfileSharePanel({ compact = false }: Props) {
                 >
                   <img src={payload.qrDataUrl} alt="" className="h-full w-full object-contain" />
                 </div>
-              )}
-            </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sélecteur de template */}
@@ -277,6 +287,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
             {([
               { id: 'v1' as const, label: 'Carte 1' },
               { id: 'v2' as const, label: 'Carte 2' },
+              { id: 'v3' as const, label: 'Carte 3' },
             ]).map((opt) => (
               <button
                 key={opt.id}

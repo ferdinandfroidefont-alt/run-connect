@@ -12,6 +12,17 @@ const AuthCallback = () => {
 
     const handleCallback = async () => {
       try {
+        const params = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const code = params.get("code") || hashParams.get("code");
+        if (code) {
+          console.log("[AuthCallback] PKCE code présent — exchange explicite");
+          const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
+          if (exErr) {
+            console.warn("[AuthCallback] exchangeCodeForSession:", exErr.message);
+          }
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
 
         if (session) {

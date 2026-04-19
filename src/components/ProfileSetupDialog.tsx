@@ -37,6 +37,8 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
   /** Retour connexion : déconnexion + navigation / affichage login (obligatoire si onOpenChange est no-op, ex. Index). */
   onRequestSignIn?: () => void | Promise<void>;
+  /** Parcours arrivée (créateur) : formulaire complet, aucune écriture compte / profil / stockage. */
+  arrivalPreview?: boolean;
 }
 
 const COUNTRY_CODES = [
@@ -56,7 +58,7 @@ interface FormState {
   timestamp: number;
 }
 
-export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete, onRequestSignIn }: ProfileSetupDialogProps) => {
+export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete, onRequestSignIn, arrivalPreview }: ProfileSetupDialogProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
@@ -407,6 +409,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     
     if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password.trim()) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
+      return;
+    }
+
+    if (arrivalPreview) {
+      toast({
+        title: "Profil créé (aperçu)",
+        description: "Aucun compte ni donnée enregistrés. Fermez pour revenir aux écrans d’inscription.",
+      });
+      onOpenChange(false);
+      onComplete?.();
       return;
     }
 

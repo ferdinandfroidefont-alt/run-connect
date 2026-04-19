@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
+import { hasCompletedOnboarding } from '@/lib/arrivalFlowStorage';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
@@ -145,6 +146,10 @@ export const Layout = ({ children }: LayoutProps) => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (user.id && !hasCompletedOnboarding(user.id)) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (needsConsent) {

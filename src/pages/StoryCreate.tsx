@@ -116,6 +116,14 @@ function twoFingerMetrics(a: { clientX: number; clientY: number }, b: { clientX:
   return { dist: Math.max(8, dist), mid, ang };
 }
 
+/** Ramène un écart d’angle (rad) dans ]-π, π] pour une rotation 2 doigts continue (pas de saut à ±180°). */
+function unwrapAngleDeltaRad(delta: number): number {
+  let d = delta;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return d;
+}
+
 function parseSessionTimestamp(value: string | null | undefined): number {
   if (!value) return Number.NaN;
   const direct = Date.parse(value);
@@ -223,11 +231,11 @@ export default function StoryCreate() {
   const mediaPointersRef = useRef<Map<number, { clientX: number; clientY: number }>>(new Map());
   const mediaTwoFingerRef = useRef<{
     startDist: number;
-    startAngle: number;
     startMid: { x: number; y: number };
     baseScale: number;
-    baseRotation: number;
     basePan: { x: number; y: number };
+    lastAngle: number;
+    rotationLiveDeg: number;
   } | null>(null);
   const mediaPanRef = useRef<{ startX: number; startY: number; basePan: { x: number; y: number } } | null>(null);
   const mediaTransformLiveRef = useRef({ storyScale: 1, storyRotation: 0, storyPan: { x: 0, y: 0 } });
@@ -1480,11 +1488,11 @@ export default function StoryCreate() {
         const live = mediaTransformLiveRef.current;
         mediaTwoFingerRef.current = {
           startDist: dist,
-          startAngle: ang,
           startMid: mid,
           baseScale: live.storyScale,
-          baseRotation: live.storyRotation,
           basePan: { ...live.storyPan },
+          lastAngle: ang,
+          rotationLiveDeg: live.storyRotation,
         };
       }
       setStoryGestureActive(true);
@@ -1513,11 +1521,11 @@ export default function StoryCreate() {
           const live = mediaTransformLiveRef.current;
           mediaTwoFingerRef.current = {
             startDist: dist,
-            startAngle: ang,
             startMid: mid,
             baseScale: live.storyScale,
-            baseRotation: live.storyRotation,
             basePan: { ...live.storyPan },
+            lastAngle: ang,
+            rotationLiveDeg: live.storyRotation,
           };
         }
       }
@@ -1529,14 +1537,15 @@ export default function StoryCreate() {
         const ratio = dist / g.startDist;
         let nextScale = g.baseScale * ratio;
         nextScale = Math.min(STORY_MEDIA_MAX_SCALE, Math.max(STORY_MEDIA_MIN_SCALE, nextScale));
-        const deltaRad = ang - g.startAngle;
-        const nextRotation = g.baseRotation + (deltaRad * 180) / Math.PI;
+        const deltaRad = unwrapAngleDeltaRad(ang - g.lastAngle);
+        g.lastAngle = ang;
+        g.rotationLiveDeg += (deltaRad * 180) / Math.PI;
         const nextPan = {
           x: g.basePan.x + (mid.x - g.startMid.x),
           y: g.basePan.y + (mid.y - g.startMid.y),
         };
         setStoryScale(+nextScale.toFixed(5));
-        setStoryRotation(+nextRotation.toFixed(4));
+        setStoryRotation(+g.rotationLiveDeg.toFixed(4));
         setStoryPan(nextPan);
       }
       if (e.cancelable) e.preventDefault();
@@ -1805,8 +1814,9 @@ export default function StoryCreate() {
       const imgW = Math.max(1, img.naturalWidth);
       const imgH = Math.max(1, img.naturalHeight);
 
-      const outW = Math.max(1, Math.round(hostW));
-      const outH = Math.max(1, Math.round(hostH));
+      const exportDpr = Math.min(3, Math.max(1, typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1));
+      const outW = Math.max(1, Math.round(hostW * exportDpr));
+      const outH = Math.max(1, Math.round(hostH * exportDpr));
       const out = document.createElement("canvas");
       out.width = outW;
       out.height = outH;

@@ -16,12 +16,18 @@ import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
 import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
+import {
+  finalizeSupabaseOAuthFromDeepLink,
+  isAuthCallbackDeepLink,
+} from "@/lib/oauthMobile";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
 import { MainTabsSwipeHost } from "@/components/MainTabsSwipeHost";
 import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
 const Auth = lazy(() => import("./pages/Auth"));
+const Welcome = lazy(() => import("./pages/Welcome"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
 const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
@@ -184,55 +190,37 @@ const App = () => {
         const { Browser } = await import('@capacitor/browser');
 
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
-          if (import.meta.env.DEV) {
-            console.log('🍎 [GLOBAL] appUrlOpen:', url);
-          } else {
-            console.log('🍎 [GLOBAL] appUrlOpen (redacted in prod)');
-          }
+          console.log('[OAuth/App] appUrlOpen', {
+            scheme: url?.split(':')[0],
+            pathPrefix: url?.slice(0, 48),
+          });
 
-          const isAuthCallback =
-            url.startsWith('runconnect://auth/callback') ||
-            url.startsWith('app.runconnect://auth/callback');
-
-          if (!isAuthCallback) {
+          if (!isAuthCallbackDeepLink(url)) {
             const targetRoute = resolveIncomingAppUrl(url);
             if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
-              console.log('🍎 [GLOBAL] Navigating from deep/universal link to:', targetRoute);
+              console.log('[OAuth/App] deep link → in-app route', targetRoute);
               window.location.href = targetRoute;
             }
             return;
           }
 
           try {
-            const params = new URLSearchParams(url.split('?')[1] || '');
-            const code = params.get('code');
-            const error = params.get('error');
-            const errorDesc = params.get('error_description');
+            try {
+              await Browser.close();
+            } catch {
+              /* Safari déjà fermé */
+            }
 
-            // Close Safari immediately
-            try { await Browser.close(); } catch {}
-
-            if (error) {
-              console.error('🍎 [GLOBAL] OAuth error:', error, errorDesc);
+            const result = await finalizeSupabaseOAuthFromDeepLink(supabase, url);
+            if (!result.ok) {
+              console.warn('[OAuth/App] finalize failed', result.reason);
               return;
             }
 
-            if (!code) {
-              console.error('🍎 [GLOBAL] No authorization code received');
-              return;
-            }
-
-            console.log('🍎 [GLOBAL] Exchanging PKCE code for session...');
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeError) {
-              console.error('🍎 [GLOBAL] Exchange error:', exchangeError);
-              return;
-            }
-
-            console.log('🍎 [GLOBAL] Session established, navigating to /');
-            window.location.href = '/';
+            console.log('[OAuth/App] session OK → reload shell /');
+            window.location.replace(`${window.location.origin}/`);
           } catch (err) {
-            console.error('🍎 [GLOBAL] Deep link handling error:', err);
+            console.error('[OAuth/App] deep link handler error', err);
           }
         });
 
@@ -262,16 +250,32 @@ const App = () => {
     const handleLaunchUrl = async () => {
       try {
         const { App: CapApp } = await import('@capacitor/app');
+        const { Browser } = await import('@capacitor/browser');
         const launchData = await CapApp.getLaunchUrl();
         const incomingUrl = launchData?.url;
         if (!incomingUrl) return;
+
+        if (isAuthCallbackDeepLink(incomingUrl)) {
+          console.log('[OAuth/App] cold start auth callback');
+          try {
+            await Browser.close();
+          } catch {
+            /* no-op */
+          }
+          const result = await finalizeSupabaseOAuthFromDeepLink(supabase, incomingUrl);
+          if (result.ok) {
+            window.location.replace(`${window.location.origin}/`);
+          }
+          return;
+        }
+
         const targetRoute = resolveIncomingAppUrl(incomingUrl);
         if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
-          console.log('🍎 [GLOBAL] Cold start deep/universal link ->', targetRoute);
+          console.log('[OAuth/App] cold start → route', targetRoute);
           window.location.href = targetRoute;
         }
       } catch (e) {
-        console.warn('🍎 [GLOBAL] Could not resolve launch URL:', e);
+        console.warn('[OAuth/App] getLaunchUrl / cold start:', e);
       }
     };
 
@@ -305,8 +309,10 @@ const App = () => {
                 <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <Routes>
+                  <Route path="/welcome" element={<PageTransition><PageSuspense><Welcome /></PageSuspense></PageTransition>} />
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
+                  <Route path="/onboarding" element={<PageTransition><PageSuspense><Onboarding /></PageSuspense></PageTransition>} />
                   <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />

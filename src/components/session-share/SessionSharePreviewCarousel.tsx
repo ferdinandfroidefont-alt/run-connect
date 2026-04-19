@@ -66,7 +66,7 @@ export function SessionSharePreviewCarousel({
     const { w, h } = templateDimensions(templateId);
     // Limite la largeur d'aperçu pour rester dans l'écran mobile (évite le débordement)
     const viewport = typeof window !== 'undefined' ? window.innerWidth : 375;
-    const maxW = Math.min(260, viewport - 80);
+    const maxW = Math.min(288, viewport - 72);
     const s = maxW / w;
     return { scale: s, boxW: w * s, boxH: h * s };
   };
@@ -84,9 +84,9 @@ export function SessionSharePreviewCarousel({
             return (
               <CarouselItem key={meta.id} className="pl-2 basis-[80%] sm:basis-[70%] md:basis-[55%]">
                 <div className="flex flex-col items-center">
-                  <p className="mb-2 text-center text-[11px] font-medium text-muted-foreground">{meta.label}</p>
+                  <p className="mb-2.5 text-center text-[12px] font-semibold tracking-tight text-muted-foreground">{meta.label}</p>
                   <div
-                    className="overflow-hidden rounded-[20px] border border-border bg-muted/30 shadow-[0_12px_40px_rgba(15,23,42,0.12)]"
+                    className="ios-card overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.1)]"
                     style={{ width: boxW, height: boxH }}
                   >
                     <div

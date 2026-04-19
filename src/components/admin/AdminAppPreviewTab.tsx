@@ -1,6 +1,6 @@
 import { useState, useMemo, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Play, MapPin, MessageCircle, GraduationCap, User, Share2, Film, Calendar, LayoutList, Sparkles } from "lucide-react";
+import { Eye, Play, MapPin, MessageCircle, GraduationCap, User, Share2, Film, Calendar, LayoutList, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,8 @@ import {
 } from "@/lib/previewIdentity";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
 import { cn } from "@/lib/utils";
+import { hasCreatorSupportAccess } from "@/lib/creatorSupportAccess";
+import { AUTH_ARRIVAL_PREVIEW_PARAM } from "@/lib/authArrivalPreview";
 
 const SPORT_OPTIONS = [
   { value: "running", label: "Course" },
@@ -123,6 +125,35 @@ export function AdminAppPreviewTab({ onClose }: AdminAppPreviewTabProps) {
           </Button>
         </div>
       )}
+
+      <div className="rounded-[14px] border border-border/60 bg-card/80 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Parcours arrivée (inscription)
+        </p>
+        <p className="mb-2 text-[12px] leading-relaxed text-muted-foreground">
+          Parcourir les écrans d&apos;accueil, e-mail, code et création de profil sans créer de compte ni vous déconnecter.
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-10 w-full rounded-[12px] text-[13px] font-semibold"
+          onClick={() => {
+            if (!hasCreatorSupportAccess(user?.email, userProfile?.username ?? null)) {
+              toast({
+                title: "Accès refusé",
+                description: "Réservé au compte administrateur créateur.",
+                variant: "destructive",
+              });
+              return;
+            }
+            onClose();
+            navigate(`/auth?${AUTH_ARRIVAL_PREVIEW_PARAM}=1`);
+          }}
+        >
+          <UserPlus className="mr-2 h-4 w-4" />
+          Ouvrir le parcours arrivée
+        </Button>
+      </div>
 
       <div>
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Presets</p>

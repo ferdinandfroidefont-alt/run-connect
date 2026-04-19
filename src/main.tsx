@@ -21,6 +21,9 @@ import { AppPreviewProvider } from "@/contexts/AppPreviewContext";
 import { DistanceUnitsProvider } from "@/contexts/DistanceUnitsContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BootErrorBoundary } from "@/components/BootErrorBoundary";
+import { installArrivalFlowDevGlobal } from "@/lib/arrivalFlowDev";
+
+installArrivalFlowDevGlobal();
 
 const detectNativeImmediately = () => {
   const userAgent = navigator.userAgent;

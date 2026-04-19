@@ -1,7 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import { useNavigate, Link, useSearchParams, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { isAuthArrivalPreviewUrl } from "@/lib/authArrivalPreview";
 import { supabase } from "@/integrations/supabase/client";
-import { requireSupabaseUrl } from "@/lib/supabaseEnv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +14,7 @@ import { FcGoogle } from "react-icons/fc";
 import { Loader2, Mail, Lock, KeyRound, User, Eye, EyeOff, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { googleSignIn, isNativeGoogleSignInAvailable, isNativeIOS } from '@/lib/googleSignIn';
 import { Browser } from '@capacitor/browser';
-import { App } from '@capacitor/app';
+import { getIosSupabaseOAuthBridgeRedirectTo } from "@/lib/oauthMobile";
 import { CaptchaWidget, CaptchaWidgetRef } from "@/components/CaptchaWidget";
 import {
   AuthAmbientBackground,
@@ -24,14 +26,30 @@ import {
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
+import { hasCompletedPrivacyGate } from "@/lib/arrivalFlowStorage";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
 
 const AUTH_FORM_VIEWS = new Set<AuthView>(['email-signin-form', 'email-signup', 'otp', 'reset']);
 
+/** UUID factice pour le dialogue profil en parcours arrivée (aucune écriture DB). */
+const ARRIVAL_PREVIEW_FAKE_USER_ID = "00000000-0000-4000-8000-000000000001";
+const ARRIVAL_PREVIEW_EMAIL = "nouveau.compte@exemple.runconnect";
+
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+  const { userProfile, loading: profileLoading } = useUserProfile();
+  const wantsArrivalPreview = useMemo(() => {
+    const v = searchParams.get("arrivalPreview");
+    return v === "1" || v === "true";
+  }, [searchParams]);
+  const authArrivalPreview = useMemo(
+    () => isAuthArrivalPreviewUrl(searchParams, user?.email, userProfile?.username),
+    [searchParams, user?.email, userProfile?.username]
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [view, setView] = useState<AuthView>('landing');
   const [email, setEmail] = useState("");
@@ -68,6 +86,7 @@ const Auth = () => {
       if (timeSinceCreation < 30000) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session) {
+            if (authArrivalPreview) return;
             console.log('🔥 [Auth] Profil créé + session active, redirection vers /');
             navigate('/', { replace: true });
           } else {
@@ -139,6 +158,12 @@ const Auth = () => {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        if (wantsArrivalPreview && profileLoading) {
+          return;
+        }
+        if (authArrivalPreview) {
+          return;
+        }
         try {
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -151,14 +176,9 @@ const Auth = () => {
               console.log('[Auth] Profil en cours de création — pas de déconnexion automatique');
               return;
             }
-            await supabase.auth.signOut({ scope: 'global' });
-            localStorage.clear();
-            sessionStorage.clear();
-            toast({
-              title: "Compte supprimé",
-              description: "Ce compte n'existe plus.",
-              variant: "destructive"
-            });
+            // Nouveau compte OAuth / profil pas encore créé : l’accueil gère l’onboarding — ne pas déconnecter.
+            console.log('[Auth] Session sans ligne profiles — redirection accueil (onboarding / setup)');
+            navigate('/', { replace: true });
             return;
           }
         } catch (error) {
@@ -167,11 +187,19 @@ const Auth = () => {
         navigate('/', { replace: true });
       }
     });
-  }, [toast]);
+  }, [toast, navigate, wantsArrivalPreview, authArrivalPreview, profileLoading]);
 
   // ── All existing handlers (unchanged) ──
 
   const forceCleanSession = async () => {
+    if (authArrivalPreview) {
+      toast({
+        title: "Nettoyage désactivé",
+        description:
+          "En parcours arrivée (aperçu), votre session créateur est conservée. Retirez ?arrivalPreview=1 de l’URL pour un nettoyage normal.",
+      });
+      return;
+    }
     try {
       await supabase.auth.signOut({ scope: 'global' });
       localStorage.clear();
@@ -187,6 +215,20 @@ const Auth = () => {
   };
 
   const handleGoogleAuth = async () => {
+    if (authArrivalPreview) {
+      setIsLoading(true);
+      window.setTimeout(() => {
+        setNewUserId(ARRIVAL_PREVIEW_FAKE_USER_ID);
+        setEmail((prev) => (prev.trim() ? prev : ARRIVAL_PREVIEW_EMAIL));
+        setShowProfileSetup(true);
+        setIsLoading(false);
+        toast({
+          title: "Aperçu — Google",
+          description: "Ouverture de la création de profil comme après une première connexion. Aucune requête OAuth.",
+        });
+      }, 450);
+      return;
+    }
     try {
       setIsLoading(true);
       console.log('🔥 [GOOGLE AUTH] Starting...');
@@ -260,12 +302,13 @@ const Auth = () => {
       }
 
       if (isNativeIOS()) {
-        console.log('🍎 [GOOGLE AUTH] iOS detected, using Browser + appUrlOpen deep link...');
+        const iosBridge = getIosSupabaseOAuthBridgeRedirectTo();
+        console.log('[OAuth/Google] iOS — redirectTo (bridge → runconnect://auth/callback)', iosBridge);
         try {
           const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${requireSupabaseUrl()}/functions/v1/ios-auth-callback`,
+              redirectTo: iosBridge,
               skipBrowserRedirect: true,
               queryParams: { access_type: 'offline', prompt: 'consent' }
             }
@@ -311,24 +354,65 @@ const Auth = () => {
   };
 
   const handleAppleAuth = async () => {
+    if (authArrivalPreview) {
+      setIsLoading(true);
+      window.setTimeout(() => {
+        setNewUserId(ARRIVAL_PREVIEW_FAKE_USER_ID);
+        setEmail((prev) => (prev.trim() ? prev : ARRIVAL_PREVIEW_EMAIL));
+        setShowProfileSetup(true);
+        setIsLoading(false);
+        toast({
+          title: "Aperçu — Apple",
+          description: "Ouverture de la création de profil comme après une première connexion. Aucune requête OAuth.",
+        });
+      }, 450);
+      return;
+    }
     try {
       setIsLoading(true);
-      console.log('🍎 [APPLE AUTH] Starting...');
-      try { await supabase.auth.signOut({ scope: 'local' }); } catch {} // silent cleanup
+      console.log('[OAuth/Apple] Continuer avec Apple — clic');
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        /* silent */
+      }
 
+      if (isNativeIOS()) {
+        const iosBridge = getIosSupabaseOAuthBridgeRedirectTo();
+        console.log('[OAuth/Apple] iOS — redirectTo (bridge → runconnect://auth/callback via ios-callback.html)', iosBridge);
+        const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: iosBridge,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (oauthError || !oauthData?.url) {
+          throw oauthError || new Error('No OAuth URL returned');
+        }
+        console.log('[OAuth/Apple] Browser.open — authorize URL length', oauthData.url.length);
+        await Browser.open({ url: oauthData.url });
+        window.setTimeout(() => {
+          setIsLoading(false);
+        }, 120_000);
+        return;
+      }
+
+      const webRedirect = `${window.location.origin}/auth/callback`;
+      console.log('[OAuth/Apple] web — redirectTo', webRedirect);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: `${window.location.origin}/`,
-        }
+          redirectTo: webRedirect,
+        },
       });
       if (error) throw error;
     } catch (error: any) {
-      console.error('🍎 [APPLE AUTH] Error:', error);
+      console.error('[OAuth/Apple] Error:', error);
       toast({
         title: "Erreur",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -343,6 +427,21 @@ const Auth = () => {
         description: "Cochez la case pour confirmer avoir lu les conditions (CGU, confidentialité / RGPD).",
         variant: "destructive",
       });
+      return;
+    }
+    if (authArrivalPreview && (view === "email-signup" || view === "email-signin-form")) {
+      setIsLoading(true);
+      window.setTimeout(() => {
+        setOtpBackView(view === "email-signup" ? "email-signup" : "email-signin-form");
+        setView("otp");
+        setCaptchaToken(null);
+        captchaRef.current?.resetCaptcha();
+        toast({
+          title: "Aperçu — code e-mail",
+          description: "Aucun e-mail envoyé. Saisissez six chiffres (ex. 123456) pour la suite.",
+        });
+        setIsLoading(false);
+      }, 350);
       return;
     }
     setIsLoading(true);
@@ -412,6 +511,29 @@ const Auth = () => {
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authArrivalPreview) {
+      if (otp.length !== 6) {
+        toast({
+          title: "Code incomplet",
+          description: "Entrez 6 chiffres pour l’aperçu.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsLoading(true);
+      window.setTimeout(() => {
+        setNewUserId(ARRIVAL_PREVIEW_FAKE_USER_ID);
+        setEmail((prev) => (prev.trim() ? prev : ARRIVAL_PREVIEW_EMAIL));
+        setShowProfileSetup(true);
+        setOtp("");
+        setIsLoading(false);
+        toast({
+          title: "Aperçu — code accepté",
+          description: "Ouverture de la création de profil. Aucune vérification serveur.",
+        });
+      }, 400);
+      return;
+    }
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.verifyOtp({
@@ -463,6 +585,13 @@ const Auth = () => {
 
   const handleUsernameOrEmailSignin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authArrivalPreview) {
+      toast({
+        title: "Aperçu — connexion",
+        description: "Aucune requête envoyée. Utilisez le bloc « code e-mail » ou les boutons Google / Apple pour la suite du parcours.",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       console.log('🧹 [AUTH] Cleaning existing session before new login...');
@@ -500,6 +629,13 @@ const Auth = () => {
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authArrivalPreview) {
+      toast({
+        title: "Aperçu",
+        description: "Réinitialisation du mot de passe non exécutée.",
+      });
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast({
         title: "Erreur",
@@ -536,6 +672,13 @@ const Auth = () => {
   };
 
   const resendOtp = async () => {
+    if (authArrivalPreview) {
+      toast({
+        title: "Aperçu",
+        description: "Aucun code renvoyé.",
+      });
+      return;
+    }
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -571,6 +714,13 @@ const Auth = () => {
   };
 
   const handleForgotPassword = async () => {
+    if (authArrivalPreview) {
+      toast({
+        title: "Aperçu",
+        description: "Aucun e-mail de réinitialisation envoyé.",
+      });
+      return;
+    }
     const emailToUse = usernameOrEmail.includes('@') ? usernameOrEmail : undefined;
     if (!emailToUse) {
       toast({
@@ -624,7 +774,10 @@ const Auth = () => {
       {/* Top spacer */}
       <div className="min-h-[40px] flex-1" />
 
-      <AuthBrandMark title="RunConnect" subtitle="Chaque sortie commence ici." />
+      <AuthBrandMark
+        title="Bougez ensemble avec RunConnect"
+        subtitle="Créez votre compte pour découvrir, organiser et rejoindre des séances autour de vous."
+      />
 
       {/* Action buttons */}
       <div className="w-full max-w-[340px] space-y-3.5 relative z-10">
@@ -640,17 +793,19 @@ const Auth = () => {
           Continuer avec Google
         </button>
 
-        {/* Apple */}
-        <button
-          type="button"
-          onClick={handleAppleAuth}
-          disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
-        >
-          <AppleIcon />
-          Continuer avec Apple
-        </button>
+        {/* Apple — iOS natif uniquement (spec produit) */}
+        {isNativeIOS() && (
+          <button
+            type="button"
+            onClick={handleAppleAuth}
+            disabled={isLoading}
+            className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+            style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+          >
+            <AppleIcon />
+            Continuer avec Apple
+          </button>
+        )}
 
         {/* Email */}
         <button
@@ -725,17 +880,18 @@ const Auth = () => {
           Se connecter avec Google
         </button>
 
-        {/* Apple */}
-        <button
-          type="button"
-          onClick={handleAppleAuth}
-          disabled={isLoading}
-          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
-        >
-          <AppleIcon />
-          Se connecter avec Apple
-        </button>
+        {isNativeIOS() && (
+          <button
+            type="button"
+            onClick={handleAppleAuth}
+            disabled={isLoading}
+            className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+            style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+          >
+            <AppleIcon />
+            Se connecter avec Apple
+          </button>
+        )}
 
         {/* Email */}
         <button
@@ -1194,8 +1350,65 @@ const Auth = () => {
   // ══════════════════════════════════════════════
   // ██  MAIN RENDER  ██
   // ══════════════════════════════════════════════
+  const isPasswordResetFlow =
+    searchParams.get("reset") === "true" ||
+    searchParams.get("type") === "recovery" ||
+    searchParams.has("code");
+
+  if (authLoading) {
+    return (
+      <div
+        className="fixed inset-0 flex flex-col items-center justify-center bg-background px-6"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 1.5rem)" }}
+      >
+        <Loader2 className="mb-4 h-9 w-9 animate-spin text-primary" />
+        <p className="text-center text-sm text-muted-foreground">Vérification de la session…</p>
+      </div>
+    );
+  }
+
+  const blockPrivacyGate =
+    authArrivalPreview || wantsArrivalPreview || isPasswordResetFlow;
+  if (!blockPrivacyGate && !user && !hasCompletedPrivacyGate()) {
+    return <Navigate to="/welcome" replace />;
+  }
+
+  if (user && !authArrivalPreview && !wantsArrivalPreview && !isPasswordResetFlow) {
+    console.log("[Auth] Session déjà active — redirection accueil");
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
+      {authArrivalPreview && (
+        <div
+          className="pointer-events-auto z-[200] shrink-0 border-b border-sky-500/30 bg-sky-500/[0.12] px-3 py-2 shadow-sm backdrop-blur-md dark:border-sky-400/25 dark:bg-sky-500/[0.14]"
+          style={{ paddingTop: "max(6px, env(safe-area-inset-top, 6px))" }}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="mx-auto flex max-w-lg items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-sky-950 dark:text-sky-50">
+                Parcours arrivée (aperçu)
+              </p>
+              <p className="text-[13px] text-sky-950/85 dark:text-sky-100/85">
+                Écrans d&apos;inscription sans créer de compte · vous restez connecté en créateur
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 text-[12px]"
+              onClick={() => navigate("/", { replace: true })}
+            >
+              Accueil
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {AUTH_FORM_VIEWS.has(view) ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {view === "email-signin-form" && renderEmailSigninForm()}
@@ -1220,13 +1433,21 @@ const Auth = () => {
           </div>
         </>
       )}
+      </div>
 
       <ProfileSetupDialog
         open={showProfileSetup}
         onOpenChange={setShowProfileSetup}
         userId={newUserId}
         email={email}
+        arrivalPreview={authArrivalPreview}
         onRequestSignIn={async () => {
+          if (authArrivalPreview) {
+            setShowProfileSetup(false);
+            setNewUserId("");
+            setView("email-signin");
+            return;
+          }
           try {
             sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
           } catch {
@@ -1242,6 +1463,16 @@ const Auth = () => {
           setView('email-signin-form');
         }}
         onComplete={() => {
+          if (authArrivalPreview) {
+            setShowProfileSetup(false);
+            setNewUserId("");
+            setView("landing");
+            toast({
+              title: "Parcours arrivée (aperçu)",
+              description: "Vous restez connecté avec votre compte créateur.",
+            });
+            return;
+          }
           console.log('✅ Profil créé - navigation SPA vers /');
           try {
             sessionStorage.removeItem(AUTH_PENDING_PROFILE_SETUP_KEY);
