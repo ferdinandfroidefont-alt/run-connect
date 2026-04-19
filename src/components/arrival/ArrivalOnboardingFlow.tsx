@@ -72,7 +72,7 @@ export function ArrivalOnboardingFlow() {
 
   useEffect(() => {
     if (!userId) return;
-    void supabase
+    supabase
       .from("profiles")
       .select("strava_connected, strava_access_token")
       .eq("user_id", userId)
@@ -80,8 +80,7 @@ export function ArrivalOnboardingFlow() {
       .then(({ data }) => {
         const ok = Boolean(data?.strava_connected && data?.strava_access_token);
         setStravaConnected(ok);
-      })
-      .catch(() => setStravaConnected(false));
+      }, () => setStravaConnected(false));
   }, [userId]);
 
   useEffect(() => {
