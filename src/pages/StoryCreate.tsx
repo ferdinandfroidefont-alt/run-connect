@@ -2688,13 +2688,19 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
-                // dans la même tâche que le geste utilisateur. flushSync force le rendu
-                // synchrone de l'input avant qu'on ne le focus.
+                // Re-clic outil actif → fermer
+                if (editorMode === "text") {
+                  closeEditorMode();
+                  return;
+                }
+                const hasExistingText = textOverlay.trim().length > 0;
                 flushSync(() => {
                   setActiveTool("text");
                   setEditorMode("text");
-                  placeTextEditorAtCenter();
+                  // Garder le texte/position existants si présents, sinon centrer
+                  if (!hasExistingText) {
+                    placeTextEditorAtCenter();
+                  }
                   setSelectedLayer("text");
                   setSelectedDynamicLayerId(null);
                   setShowTextInput(true);
@@ -2713,6 +2719,10 @@ export default function StoryCreate() {
               icon: Music,
               active: editorMode === "music" || !!selectedMusic,
               onClick: () => {
+                if (editorMode === "music") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("music");
                 setEditorMode("music");
                 setShowMusicPicker(true);
@@ -2747,6 +2757,10 @@ export default function StoryCreate() {
               icon: Smile,
               active: editorMode === "sticker" || !!emojiSticker,
               onClick: () => {
+                if (editorMode === "sticker") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("sticker");
                 setEditorMode("sticker");
                 setShowStickerPicker(true);
