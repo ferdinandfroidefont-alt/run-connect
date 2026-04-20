@@ -2958,6 +2958,23 @@ export default function StoryCreate() {
           </div>
         )}
 
+      {/* Drag-to-delete trash zone (Instagram style) */}
+      {dragTrashVisible && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-50 flex -translate-x-1/2 items-center justify-center rounded-full transition-all duration-200"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+            width: dragTrashHover ? 80 : 64,
+            height: dragTrashHover ? 80 : 64,
+            backgroundColor: dragTrashHover ? "rgba(220,38,38,0.9)" : "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <Trash2 className={cn("text-white transition-all", dragTrashHover ? "h-8 w-8" : "h-6 w-6")} />
+        </div>
+      )}
+
       {showTextInput && (
         <div
           className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
