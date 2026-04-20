@@ -4,7 +4,7 @@ import { fr } from "date-fns/locale";
 import { Pencil, CheckCircle2, Clock } from "lucide-react";
 import { parseRCC, computeRCCSummary, type ParsedBlock } from "@/lib/rccParser";
 import { motion, AnimatePresence } from "framer-motion";
-import { aggregateRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import { aggregateRpeFromSessionBlocks, parseBlockRpeFromStorage, rpeChipColor } from "@/lib/sessionBlockRpe";
 
 interface SessionData {
   title: string;
@@ -15,6 +15,7 @@ interface SessionData {
   activity_type?: string;
   pace_target?: string | null;
   rpe?: number | null;
+  rpe_phases?: unknown;
   session_blocks?: unknown;
 }
 
@@ -110,6 +111,13 @@ export const WeeklyPlanCard = ({
       ? Math.round(session.rpe)
       : aggregateRpeFromSessionBlocks(session.session_blocks);
 
+  const blockRpeList = useMemo(() => {
+    if (!session.rcc_code) return [];
+    const { blocks } = parseRCC(session.rcc_code);
+    if (blocks.length === 0) return [];
+    return parseBlockRpeFromStorage(session.rpe_phases, blocks.length);
+  }, [session.rcc_code, session.rpe_phases]);
+
   return (
     <div
       className={`bg-card rounded-xl mx-4 mb-2 overflow-hidden transition-all border ${
@@ -170,7 +178,19 @@ export const WeeklyPlanCard = ({
 
               {/* Duration / distance / RPE badges */}
               <div className="flex items-center gap-1.5 flex-shrink-0 mt-1">
-                {displayRpe != null && displayRpe >= 1 && (
+                {blockRpeList.length > 0 ? (
+                  <div className="flex items-center gap-0.5" title="RPE par bloc">
+                    {blockRpeList.map((n, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] font-bold text-white rounded px-1 py-0.5 min-w-[1.1rem] text-center"
+                        style={{ backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))) }}
+                      >
+                        {n}
+                      </span>
+                    ))}
+                  </div>
+                ) : displayRpe != null && displayRpe >= 1 ? (
                   <span
                     className="text-[11px] font-bold text-white rounded-md px-1.5 py-0.5"
                     style={{
@@ -182,7 +202,7 @@ export const WeeklyPlanCard = ({
                   >
                     RPE {displayRpe}
                   </span>
-                )}
+                ) : null}
                 {estimatedDuration > 0 && (
                   <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground bg-secondary rounded-lg px-2 py-1">
                     <Clock className="h-3 w-3" />

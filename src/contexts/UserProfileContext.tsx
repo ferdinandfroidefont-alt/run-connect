@@ -68,8 +68,8 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
       let data: any = null;
       let fetchError: any = null;
       try {
-        const res = await withTimeout(
-          supabase.from('profiles').select('*').eq('user_id', user.id).single(),
+        const res: any = await withTimeout(
+          supabase.from('profiles').select('*').eq('user_id', user.id).single() as any,
           PROFILE_FETCH_MS,
           'profile_fetch'
         );
@@ -137,20 +137,13 @@ export const UserProfileProvider = ({ children }: { children: ReactNode }) => {
   // Load profile when user changes or session is established
   useEffect(() => {
     if (user && session) {
-      console.log('🔄 [UserProfile] User or session changed, loading profile...');
       setLoading(true);
-      // Small delay to ensure auth is fully established
-      const timer = setTimeout(() => {
-        loadProfile();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    } else {
-      console.log('🔄 [UserProfile] No user/session, clearing profile');
-      setUserProfile(null);
-      setLoading(false);
-      setError(null);
+      void loadProfile();
+      return;
     }
+    setUserProfile(null);
+    setLoading(false);
+    setError(null);
   }, [user?.id, session]);
 
   // Subscribe to profile changes

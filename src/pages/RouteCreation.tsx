@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import mapboxgl from 'mapbox-gl';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import type { Map, Marker } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check } from 'lucide-react';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,9 +31,17 @@ import {
   MAPBOX_NAVIGATION_DAY_STYLE,
   MAPBOX_STYLE_BY_UI_ID,
 } from '@/lib/mapboxConfig';
-import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import {
+  clearMapStyleThemeRollback,
+  getStoredMapStyleId,
+  MAP_STYLE_THEME_SYNC_EVENT,
+  persistMapStyleId,
+} from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
+import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
+import { cn } from '@/lib/utils';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -57,6 +65,7 @@ const ELEV_NOISE_THRESHOLD_M = 2;
 
 export const RouteCreation = () => {
   const navigate = useNavigate();
+  const { pathname: routeCreationPathname, search: routeCreationSearch } = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { formatKm, unit } = useDistanceUnits();
@@ -67,10 +76,10 @@ export const RouteCreation = () => {
   const editRouteDataRef = useRef<EditRouteData | null>(null);
 
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<Map | null>(null);
   const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
-  const waypointMarkers = useRef<mapboxgl.Marker[]>([]);
+  const waypointMarkers = useRef<Marker[]>([]);
   const segmentIdCounterRef = useRef(0);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -79,7 +88,7 @@ export const RouteCreation = () => {
   const [mapStyleId, setMapStyleId] = useState(() => getStoredMapStyleId());
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [routeSaving, setRouteSaving] = useState(false);
-  const scrubMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const scrubMarkerRef = useRef<Marker | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
   const [totalElevationGain, setTotalElevationGain] = useState(0);
   const [totalElevationLoss, setTotalElevationLoss] = useState(0);
@@ -93,7 +102,7 @@ export const RouteCreation = () => {
     Array<{
       waypoint: MapCoord;
       segment: RouteSegment | null;
-      marker: mapboxgl.Marker | null;
+      marker: Marker | null;
       mode: 'manual' | 'guided';
     }>
   >([]);
@@ -140,7 +149,7 @@ export const RouteCreation = () => {
         const wp = savedWaypoints[i]!;
         const latLng: MapCoord = { lat: wp.lat, lng: wp.lng };
         waypoints.current.push(latLng);
-        addWaypointMarker(latLng, i, wp.mode || 'manual');
+        await addWaypointMarker(latLng, i, wp.mode || 'manual');
 
         if (i > 0) {
           const prevWp = savedWaypoints[i - 1]!;
@@ -163,8 +172,8 @@ export const RouteCreation = () => {
 
       waypoints.current.push(latLngs[0]!, latLngs[latLngs.length - 1]!);
 
-      addWaypointMarker(latLngs[0]!, 0, 'manual');
-      addWaypointMarker(latLngs[latLngs.length - 1]!, 1, 'manual');
+      await addWaypointMarker(latLngs[0]!, 0, 'manual');
+      await addWaypointMarker(latLngs[latLngs.length - 1]!, 1, 'manual');
 
       const { layerSourceId, layerId } = allocSegmentLayer();
       setOrUpdateLineLayer(map.current, layerSourceId, layerId, latLngs, {
@@ -183,7 +192,7 @@ export const RouteCreation = () => {
     }
 
     if (waypoints.current.length > 0) {
-      fitMapToCoords(map.current, waypoints.current, 50);
+      await fitMapToCoords(map.current, waypoints.current, 50);
     }
 
     await updateElevationAndStats();
@@ -193,7 +202,10 @@ export const RouteCreation = () => {
   };
 
   useEffect(() => {
-    const initializeMap = () => {
+    let cancelled = false;
+    let roCleanup: (() => void) | undefined;
+
+    void (async () => {
       try {
         const tokenOk = !!getMapboxAccessToken();
         if (!tokenOk) {
@@ -205,18 +217,23 @@ export const RouteCreation = () => {
 
         const initialStyle =
           MAPBOX_STYLE_BY_UI_ID[mapStyleId] ?? MAPBOX_NAVIGATION_DAY_STYLE;
-        const m = createEmbeddedMapboxMap(mapContainer.current, {
+        const m = await createEmbeddedMapboxMap(mapContainer.current, {
           center: { lat: 48.8566, lng: 2.3522 },
           zoom: 13,
           interactive: true,
           style: initialStyle,
         });
+        if (cancelled) {
+          m.remove();
+          return;
+        }
         map.current = m;
 
         const ro = new ResizeObserver(() => {
           map.current?.resize();
         });
         ro.observe(mapContainer.current);
+        roCleanup = () => ro.disconnect();
 
         m.once('load', () => {
           setIsMapLoaded(true);
@@ -241,21 +258,16 @@ export const RouteCreation = () => {
         });
 
         requestAnimationFrame(() => map.current?.resize());
-
-        return () => {
-          ro.disconnect();
-        };
       } catch (error) {
         console.error('Erreur lors du chargement de la carte:', error);
         setMapError(true);
         toast.error('Erreur lors du chargement de la carte');
       }
-    };
-
-    const disposer = initializeMap();
+    })();
 
     return () => {
-      disposer?.();
+      cancelled = true;
+      roCleanup?.();
       scrubMarkerRef.current?.remove();
       scrubMarkerRef.current = null;
       map.current?.remove();
@@ -265,8 +277,10 @@ export const RouteCreation = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode]);
 
-  const addWaypointMarker = (latLng: MapCoord, index: number, mode: 'manual' | 'guided') => {
+  const addWaypointMarker = async (latLng: MapCoord, index: number, mode: 'manual' | 'guided') => {
     if (!map.current) return;
+
+    const mapboxgl = await loadMapboxGl();
 
     const wrap = document.createElement('div');
     wrap.style.display = 'flex';
@@ -311,6 +325,7 @@ export const RouteCreation = () => {
   };
 
   const handleMapStyleChange = useCallback((style: string) => {
+    clearMapStyleThemeRollback();
     setMapStyleId(style);
     persistMapStyleId(style);
     const m = map.current;
@@ -321,6 +336,23 @@ export const RouteCreation = () => {
       replayAllSegments();
       window.setTimeout(() => replayAllSegments(), 160);
     });
+  }, []);
+
+  useEffect(() => {
+    const onThemeMapSync = () => {
+      const id = getStoredMapStyleId();
+      setMapStyleId(id);
+      const m = map.current;
+      if (!m) return;
+      const url = MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+      m.setStyle(url);
+      m.once('style.load', () => {
+        replayAllSegments();
+        window.setTimeout(() => replayAllSegments(), 160);
+      });
+    };
+    window.addEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+    return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
   }, []);
 
   const clearScrubMarker = () => {
@@ -336,16 +368,21 @@ export const RouteCreation = () => {
       return;
     }
     if (!scrubMarkerRef.current) {
-      const el = document.createElement('div');
-      el.style.width = '14px';
-      el.style.height = '14px';
-      el.style.borderRadius = '9999px';
-      el.style.background = '#2563eb';
-      el.style.border = '2px solid white';
-      el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
-      scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([meta.lng, meta.lat])
-        .addTo(m);
+      void (async () => {
+        const mapboxgl = await loadMapboxGl();
+        const mapInst = map.current;
+        if (!mapInst || !meta) return;
+        const el = document.createElement('div');
+        el.style.width = '14px';
+        el.style.height = '14px';
+        el.style.borderRadius = '9999px';
+        el.style.background = '#2563eb';
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.35)';
+        scrubMarkerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([meta.lng, meta.lat])
+          .addTo(mapInst);
+      })();
     } else {
       scrubMarkerRef.current.setLngLat([meta.lng, meta.lat]);
     }
@@ -406,12 +443,12 @@ export const RouteCreation = () => {
 
     if (waypoints.current.length === 0) {
       waypoints.current.push(latLng);
-      addWaypointMarker(latLng, 0, currentMode);
+      await addWaypointMarker(latLng, 0, currentMode);
       setWaypointCount(1);
     } else {
       const lastPoint = waypoints.current[waypoints.current.length - 1]!;
       waypoints.current.push(latLng);
-      addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
+      await addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
 
       let newSegment: RouteSegment | null;
 
@@ -579,7 +616,7 @@ export const RouteCreation = () => {
     waypoints.current.push(lastUndo.waypoint);
 
     const markerIndex = waypoints.current.length - 1;
-    addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
+    await addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
 
     if (waypoints.current.length > 1) {
       const prevPoint = waypoints.current[waypoints.current.length - 2]!;
@@ -656,14 +693,23 @@ export const RouteCreation = () => {
     if (isEditMode && editRouteDataRef.current && user) {
       const elevStats = await updateElevationAndStats();
       try {
+        const elevationsForEdit = routeElevations.length >= 2 ? routeElevations : (elevStats?.elevations ?? []);
+        const coordsWithElev = elevationsForEdit.length >= 2
+          ? buildCoordinatesWithElevation(allCoordinates, elevationsForEdit)
+          : coordinates;
+        const stats = elevationsForEdit.length >= 2
+          ? computeRouteStats(allCoordinates, elevationsForEdit)
+          : null;
         const { error } = await supabase
           .from('routes')
           .update({
-            coordinates,
+            coordinates: coordsWithElev,
             waypoints: waypointsData,
             total_distance: Math.round(pathLengthMeters(allCoordinates)),
-            total_elevation_gain: elevStats?.elevationGain ?? totalElevationGain,
-            total_elevation_loss: elevStats?.elevationLoss ?? totalElevationLoss,
+            total_elevation_gain: stats?.elevationGain ?? elevStats?.elevationGain ?? totalElevationGain,
+            total_elevation_loss: stats?.elevationLoss ?? elevStats?.elevationLoss ?? totalElevationLoss,
+            min_elevation: stats?.minElevation ?? 0,
+            max_elevation: stats?.maxElevation ?? 0,
           })
           .eq('id', editRouteDataRef.current.id)
           .eq('created_by', user.id);
@@ -671,7 +717,9 @@ export const RouteCreation = () => {
         if (error) throw error;
 
         toast.success('Itinéraire modifié avec succès');
-        navigate('/itinerary/my-routes');
+        navigate('/itinerary/my-routes', {
+          state: { itineraryBackTo: routeCreationPathname },
+        });
         return;
       } catch (error) {
         console.error('Erreur mise à jour itinéraire:', error);
@@ -736,13 +784,15 @@ export const RouteCreation = () => {
     setRouteSaving(false);
 
     if (!result.ok) {
-      toast.error(result.message);
+      toast.error((result as any).message);
       return;
     }
 
     toast.success('Itinéraire enregistré');
     setSaveDialogOpen(false);
-    navigate('/itinerary/my-routes');
+    navigate('/itinerary/my-routes', {
+      state: { itineraryBackTo: routeCreationPathname },
+    });
   };
 
   addWaypointRef.current = addWaypoint;
@@ -783,15 +833,6 @@ export const RouteCreation = () => {
             </Button>
           </div>
         </div>
-        <div className="flex justify-end border-t border-border/20 px-ios-3 py-1.5">
-          <button
-            type="button"
-            onClick={() => navigate('/itinerary/my-routes')}
-            className="text-[13px] font-medium text-primary active:opacity-70"
-          >
-            Mes itinéraires
-          </button>
-        </div>
       </div>
 
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -821,8 +862,8 @@ export const RouteCreation = () => {
         </div>
       )}
 
-      <div className="absolute left-ios-4 top-ios-4 z-10">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex gap-ios-1">
+      <div className="absolute left-ios-4 top-ios-4 z-10 max-w-[calc(100vw-2rem)] min-w-0">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-wrap items-center gap-ios-1">
           <Button
             size="sm"
             variant={!isManualMode ? 'default' : 'ghost'}
@@ -840,6 +881,24 @@ export const RouteCreation = () => {
           >
             <MapPin className="w-4 h-4" />
             Manuel
+          </Button>
+          <div
+            className="mx-2 h-5 w-px shrink-0 bg-border/70"
+            aria-hidden
+            role="presentation"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              navigate('/itinerary/my-routes', {
+                state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
+              })
+            }
+            className="gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
+          >
+            <Layers className="h-4 w-4" />
+            Mes itinéraires
           </Button>
         </div>
         <p className="text-ios-footnote text-muted-foreground mt-ios-1 text-center">
@@ -891,11 +950,15 @@ export const RouteCreation = () => {
           <Trash2 className="w-4 h-4" />
         </Button>
 
-        <MapStyleSelector
-          currentStyle={mapStyleId}
-          onStyleChange={handleMapStyleChange}
-          panelAnchor="viewport-left"
-        />
+        {/* Même bottom sheet « Style de carte » que l’accueil ; gabarit h-11 comme les boutons outline */}
+        <div
+          className={cn(
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-ios-lg border border-border/50 bg-background/80 shadow-lg backdrop-blur-md hover:bg-background/90',
+            '[&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:border-0 [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/85 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/85'
+          )}
+        >
+          <MapStyleSelector currentStyle={mapStyleId} onStyleChange={handleMapStyleChange} />
+        </div>
       </div>
 
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 flex flex-col gap-ios-2 pb-4">

@@ -88,6 +88,7 @@ export const AdminPremiumManager = ({
       <DialogContent
         fullScreen
         hideCloseButton
+        stackNested
         className="gap-0 overflow-hidden border-0 bg-secondary p-0"
       >
         <div className="flex h-full min-h-0 flex-col bg-secondary">

@@ -2,11 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logException, logStructured, logStripeRef, logUserRef } from "../_shared/secureLog.ts";
 
-// Helper logging function for enhanced debugging
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CREATE-DONATION] ${step}${detailsStr}`);
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  if (details) logStructured("CREATE-DONATION", step, details);
+  else console.log(`[CREATE-DONATION] ${step}`);
 };
 
 serve(async (req) => {
@@ -32,7 +32,7 @@ serve(async (req) => {
 
     // Parse request body
     const { amount, currency = "eur", donorName, donorEmail, message } = await req.json();
-    logStep("Request parsed", { amount, currency, donorName, donorEmail });
+    logStep("Request parsed", { amount, currency, has_donor_name: !!donorName, has_donor_email: !!donorEmail });
 
     // Validate amount (minimum 1 euro, maximum 10000 euros)
     if (!amount || amount < 100 || amount > 1000000) {
@@ -47,7 +47,7 @@ serve(async (req) => {
         const token = authHeader.replace("Bearer ", "");
         const { data } = await supabaseClient.auth.getUser(token);
         user = data.user;
-        logStep("User authenticated", { userId: user?.id, email: user?.email });
+        logStep("User authenticated", { user: logUserRef(user?.id) });
       }
     } catch (error) {
       logStep("No authenticated user, proceeding as guest donation");
@@ -64,7 +64,7 @@ serve(async (req) => {
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Found existing Stripe customer", { customerId });
+      logStep("Found existing Stripe customer", { customer: logStripeRef(customerId) });
     }
 
     // Create a one-time payment session for donation
@@ -95,7 +95,7 @@ serve(async (req) => {
       }
     });
 
-    logStep("Stripe checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Stripe checkout session created", { session: logStripeRef(session.id) });
 
     // Optional: Record donation in Supabase (using service role key to bypass RLS)
     try {
@@ -108,14 +108,13 @@ serve(async (req) => {
       // You could create a donations table to track donations
       // For now, we'll just log it
       logStep("Donation session recorded", { 
-        sessionId: session.id, 
+        session: logStripeRef(session.id), 
         amount, 
         currency, 
-        donorName, 
-        userId: user?.id 
+        user: logUserRef(user?.id),
       });
     } catch (error) {
-      logStep("Failed to record donation in database", { error: error instanceof Error ? error.message : "Unknown error" });
+      logException("CREATE-DONATION-db", error);
       // Don't fail the request if database recording fails
     }
 
@@ -124,9 +123,8 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in create-donation", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    logException("CREATE-DONATION", error);
+    return new Response(JSON.stringify({ error: "Donation checkout failed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

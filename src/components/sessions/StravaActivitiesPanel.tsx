@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { Link2, MapPin, RefreshCw, Route, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { StravaPoweredBy, StravaConnectButton } from "@/components/strava/StravaBrand";
 import { haversineMeters } from "@/lib/geo";
 import { useStravaActivities, type StravaActivityItem } from "@/hooks/useStravaActivities";
 import { cn } from "@/lib/utils";
@@ -124,15 +125,15 @@ export function StravaActivitiesPanel({
           <Route className="h-10 w-10 text-[#FC4C02]" />
         </div>
         <div className={emptyStateSx.textBlock}>
-          <h3 className="text-ios-title3 font-semibold text-foreground">Strava</h3>
+          <StravaPoweredBy variant="text" label="Compatible avec Strava" />
           <p className="text-ios-subheadline text-muted-foreground max-w-sm leading-relaxed">
-            Connecte Strava pour afficher tes sorties ici, au fil de ce qui apparaît sur Strava, et
-            repérer les séances RunConnect à confirmer (même créneau et lieu proche du RDV).
+            Connecte Strava pour afficher tes sorties ici, au fil de ce qui apparait sur Strava, et
+            reperer les seances RunConnect a confirmer (meme creneau et lieu proche du RDV).
           </p>
         </div>
-        <Button className="w-full max-w-xs" onClick={() => navigate("/profile?tab=settings&focus=strava")}>
-          Connecter Strava
-        </Button>
+        <div className="w-full max-w-xs">
+          <StravaConnectButton onClick={() => navigate("/profile?tab=settings&focus=strava")} />
+        </div>
       </div>
     );
   }
@@ -140,9 +141,12 @@ export function StravaActivitiesPanel({
   return (
     <div className="px-ios-4 pb-ios-6">
       <div className="mb-ios-3 flex items-center justify-between gap-2">
-        <p className="text-[13px] font-medium text-muted-foreground">
-          Activités Strava récentes — actualise après chaque sortie.
-        </p>
+        <div>
+          <p className="text-[13px] font-medium text-muted-foreground">
+            Activites Strava recentes
+          </p>
+          <StravaPoweredBy variant="logo" />
+        </div>
         <button
           type="button"
           onClick={() => void refetch()}

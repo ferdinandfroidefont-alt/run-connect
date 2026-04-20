@@ -5,12 +5,12 @@ import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useNavigate } from 'react-router-dom';
-import { isReallyNative } from '@/lib/nativeDetection';
+import { isReallyNative, getPlatform as getNativePlatform } from '@/lib/nativeDetection';
+import { androidPermissions } from '@/lib/androidPermissions';
+import { requireSupabaseAnonKey, requireSupabaseUrl } from '@/lib/supabaseEnv';
 
 const log = (...args: any[]) => console.log('[PUSH]', ...args);
 const logError = (...args: any[]) => console.error('[PUSH]', ...args);
-
-const SUPABASE_URL = 'https://dbptgehpknjsoisirviz.supabase.co';
 
 interface NotificationPermissionStatus {
   granted: boolean;
@@ -120,8 +120,9 @@ export const usePushNotifications = () => {
     const capPlatform = Capacitor.getPlatform();
     if (capPlatform === 'ios') return 'ios';
     if (capPlatform === 'android') return 'android';
-    if ((window as any).AndroidBridge || (window as any).fcmToken) return 'android';
     if (typeof (window as any).fcmTokenPlatform === 'string') return (window as any).fcmTokenPlatform;
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) return 'ios';
+    if ((window as any).AndroidBridge) return 'android';
     return capPlatform;
   }, []);
 
@@ -149,7 +150,7 @@ export const usePushNotifications = () => {
         headers['Authorization'] = `Bearer ${accessToken}`;
       }
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/save-push-token`, {
+      const response = await fetch(`${requireSupabaseUrl()}/functions/v1/save-push-token`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ user_id: userId, token: pushToken, platform, trace_id: traceId })
@@ -331,10 +332,14 @@ export const usePushNotifications = () => {
   // ─── NOTIFICATION TAP ────────────────────────────────────
 
   const handleNotificationTap = useCallback((data: any) => {
-    const actionData = data?.actionData || data?.data || {};
-    switch (actionData.type) {
+    const raw = data?.actionData ?? data?.data ?? data ?? {};
+    const actionData: Record<string, string | undefined> =
+      raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, string | undefined>) : {};
+    const type = actionData.type;
+    const conversationId = actionData.conversation_id;
+    switch (type) {
       case 'message':
-        navigate(actionData.conversation_id ? `/messages?conversation=${actionData.conversation_id}` : '/messages');
+        navigate(conversationId ? `/messages?conversation=${conversationId}` : '/messages');
         break;
       case 'follow_request':
         navigate('/profile');
@@ -447,12 +452,20 @@ export const usePushNotifications = () => {
       return false;
     }
 
-    const platform = Capacitor.getPlatform();
-    updateDebug({ permissionRequested: true });
+    const capPlatform = Capacitor.getPlatform();
+    const nativePlatform = getNativePlatform();
+    /** Capacitor peut renvoyer "web" dans le WKWebView alors que l’app est iOS native. */
+    const isIosEnv =
+      capPlatform === 'ios' ||
+      nativePlatform === 'ios' ||
+      (isNative && !androidPermissions.isAndroid() && /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-    if (platform === 'ios') {
+    updateDebug({ permissionRequested: true });
+    log('[PERM] capPlatform=', capPlatform, 'nativePlatform=', nativePlatform, 'isIosEnv=', isIosEnv);
+
+    if (isIosEnv) {
       try {
-        log('[PERM] 🍎 Requesting iOS permissions...');
+        log('[PERM] 🍎 Requesting iOS permissions (Capacitor PushNotifications)...');
         const result = await PushNotifications.requestPermissions();
         log('[PERM] 🍎 iOS permission result:', result.receive);
         updateDebug({ permissionResult: result.receive });
@@ -465,24 +478,104 @@ export const usePushNotifications = () => {
           setPermissionStatus({ granted: true, denied: false, prompt: false });
           setIsRegistered(true);
         } else {
-          setPermissionStatus({ granted: false, denied: true, prompt: false });
-          toast({ title: "Notifications désactivées", description: "Activez les notifications dans les réglages iOS", variant: "destructive" });
+          const denied = result.receive === 'denied';
+          setPermissionStatus({
+            granted: false,
+            denied,
+            prompt: !denied && result.receive === 'prompt',
+          });
+          toast({
+            title: "Notifications désactivées",
+            description: denied
+              ? "Réglages iOS → RunConnect → Notifications"
+              : "Répondez à la demande système ou activez les notifications dans les réglages iOS.",
+            variant: "destructive",
+          });
         }
         return granted;
       } catch (e: any) {
         logError('[PERM] iOS error:', e);
         updateDebug({ lastError: 'permission error: ' + e.message });
+        toast({
+          title: "Erreur notifications",
+          description: e?.message || "Impossible de demander les notifications sur iOS.",
+          variant: "destructive",
+        });
         return false;
       }
     }
 
-    const androidState = (window as any).androidPermissions?.notifications;
-    if (androidState === 'granted') {
+    const androidBridgeState = (window as any).androidPermissions?.notifications;
+    if (androidBridgeState === 'granted') {
       await checkPermissionStatus();
+      try {
+        await PushNotifications.register();
+      } catch (e) {
+        logError('[ANDROID] register() after bridge granted:', e);
+      }
       return true;
     }
 
-    toast({ title: "Permission manquante", description: "Les notifications sont demandées au démarrage de l'app.", variant: "destructive" });
+    const isAndroidEnv =
+      capPlatform === 'android' ||
+      nativePlatform === 'android' ||
+      androidPermissions.isAndroid();
+
+    if (isAndroidEnv) {
+      try {
+        log('[PERM] 🤖 Requesting Android push permissions (Capacitor PushNotifications)...');
+        const result = await PushNotifications.requestPermissions();
+        log('[PERM] 🤖 Capacitor result:', result.receive);
+        updateDebug({ permissionResult: result.receive });
+        let granted = result.receive === 'granted';
+
+        if (!granted && typeof window !== 'undefined' && window.PermissionsPlugin?.requestNotificationPermissions) {
+          log('[PERM] 🤖 Capacitor not granted, trying PermissionsPlugin...');
+          const pluginResult = await androidPermissions.requestNotificationPermissions();
+          if (pluginResult.granted) {
+            granted = true;
+          } else if (pluginResult.advice) {
+            toast({ title: "Notifications", description: pluginResult.advice, variant: "destructive" });
+          }
+        }
+
+        if (granted) {
+          log('[REGISTER] Android PushNotifications.register()...');
+          updateDebug({ registerCalled: true });
+          await PushNotifications.register();
+          setPermissionStatus({ granted: true, denied: false, prompt: false });
+          setIsRegistered(true);
+          return true;
+        }
+
+        setPermissionStatus({
+          granted: false,
+          denied: result.receive === 'denied',
+          prompt: result.receive === 'prompt',
+        });
+        toast({
+          title: "Notifications désactivées",
+          description: "Autorisez les notifications dans les paramètres Android (RunConnect → Notifications).",
+          variant: "destructive",
+        });
+        return false;
+      } catch (e: any) {
+        logError('[PERM] Android error:', e);
+        updateDebug({ lastError: 'permission error: ' + (e?.message || String(e)) });
+        toast({
+          title: "Erreur",
+          description: e?.message || "Impossible de demander les notifications.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    toast({
+      title: "Environnement non reconnu",
+      description: "Ouvrez les paramètres système pour activer les notifications RunConnect.",
+      variant: "destructive",
+    });
     return false;
   };
 
@@ -538,19 +631,41 @@ export const usePushNotifications = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('send-push-notification', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
+      const traceId = String(Date.now());
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        apikey: requireSupabaseAnonKey(),
+        Authorization: `Bearer ${session.access_token}`,
+        "x-push-trace-id": traceId,
+      };
+
+      const response = await fetch(`${requireSupabaseUrl()}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
           user_id: user.id,
           title: 'Test RunConnect',
           body: 'Vos notifications fonctionnent parfaitement ! 🎉',
           type: 'test',
           data: { test: true }
-        }
+        }),
       });
 
-      if (error) {
-        toast({ title: "Erreur serveur", description: "Vérifiez les logs Supabase", variant: "destructive" });
+      const raw = await response.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = { message: raw };
+      }
+      if (!response.ok) {
+        const msg = data?.message || data?.error || data?.code || `HTTP ${response.status}`;
+        console.error("[PUSH][TEST] non-2xx", { status: response.status, traceId, data });
+        toast({
+          title: "Erreur push",
+          description: `${msg}${data?.trace_id ? ` (trace: ${data.trace_id})` : ""}`,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -560,18 +675,24 @@ export const usePushNotifications = () => {
         toast({ title: "Token invalide nettoyé", description: "Redémarrez l'app pour régénérer le token push", variant: "destructive" });
       } else {
         const stage = data?.stage || 'unknown';
-        const reason = data?.reason || '';
-        toast({ title: "Notification créée", description: `Non envoyée en push (${stage}: ${reason})`, variant: "destructive" });
+        const reason = data?.message || data?.reason || data?.code || '';
+        console.warn("[PUSH][TEST] non-fcm response", data);
+        toast({ title: "Notification non envoyée", description: `${reason} (${stage})`, variant: "destructive" });
       }
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message || "Une erreur est survenue", variant: "destructive" });
     }
-  }, [user, toast, token, detectPlatform, saveTokenViaEdgeFunction]);
+  }, [user, toast, token, detectPlatform, saveTokenViaEdgeFunction, pushDebug, permissionStatus]);
 
   // ─── useEffect #1: INIT ──────────────────────────────────
 
   useEffect(() => {
     if (!user) return;
+
+    const isIosEnv =
+      Capacitor.getPlatform() === 'ios' ||
+      getNativePlatform() === 'ios' ||
+      /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     const init = async () => {
       await checkPermissionStatus();
@@ -580,10 +701,25 @@ export const usePushNotifications = () => {
         await setupPushListeners();
         await new Promise(resolve => setTimeout(resolve, 300));
 
+        // On iOS, the AppDelegate already called registerForRemoteNotifications() at launch
+        // and may have injected a cached FCM token. Check for it first.
+        if (isIosEnv) {
+          const bridgedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
+          if (bridgedToken && typeof bridgedToken === 'string' && bridgedToken.length > 50 && !isApnsHexToken(bridgedToken)) {
+            log('[INIT] 🍎 Found pre-injected FCM token from AppDelegate, length=' + bridgedToken.length);
+            setToken(bridgedToken);
+            pendingTokenRef.current = bridgedToken;
+            setIsRegistered(true);
+            updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bridgedToken.length, selectedFinalToken: bridgedToken.substring(0, 20) + '...' });
+            savePushToken(bridgedToken);
+            return;
+          }
+        }
+
         try {
           const status = await PushNotifications.checkPermissions();
           const platform = Capacitor.getPlatform();
-          log('[INIT] Permission:', status.receive, '| Platform:', platform);
+          log('[INIT] Permission:', status.receive, '| Platform:', platform, '| isIosEnv:', isIosEnv);
           updateDebug({ permissionResult: status.receive });
 
           if (status.receive === 'granted') {
@@ -613,12 +749,24 @@ export const usePushNotifications = () => {
         } catch (e: any) {
           logError('[INIT] Error:', e);
           updateDebug({ lastError: 'init: ' + e.message });
+
+          // CRITICAL: If Capacitor plugin failed, still try to register on iOS
+          // The AppDelegate handles this natively, but we force a second attempt via Capacitor
+          if (isIosEnv) {
+            log('[INIT] 🍎 Capacitor check failed, forcing register() on iOS...');
+            try {
+              updateDebug({ registerCalled: true });
+              await PushNotifications.register();
+            } catch (e2: any) {
+              logError('[INIT] iOS fallback register() also failed:', e2);
+            }
+          }
         }
       }
     };
 
     init();
-  }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug]);
+  }, [user, isNative, setupPushListeners, checkPermissionStatus, updateDebug, savePushToken]);
 
   // ─── useEffect #2: PENDING TOKEN SAVE (with delayed retry) ────────────────────
 
@@ -707,8 +855,8 @@ export const usePushNotifications = () => {
 
   useEffect(() => {
     if (!user || !isNative) return;
-    const platform = Capacitor.getPlatform();
-    if (platform !== 'ios') return;
+    const isIosEnv = Capacitor.getPlatform() === 'ios' || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isIosEnv) return;
 
     const maxRetries = 3;
     const retryInterval = 8000;
@@ -748,12 +896,13 @@ export const usePushNotifications = () => {
   }, [user, isNative, token, updateDebug]);
 
   // ─── useEffect #5: fcmTokenReady + userAuthenticatedWithFCMToken listeners ────
+  // IMPORTANT: This effect has NO dependency on `user` so the listener is always active,
+  // even before auth resolves. Tokens are buffered and saved as soon as a userId is available.
 
   useEffect(() => {
     /** Save FCM token with dynamic user resolution (bypasses stale closure) */
     const saveTokenDynamic = async (fcmToken: string, knownUserId?: string) => {
-      // Try known userId first, then React state, then fresh session
-      let userId = knownUserId || user?.id || null;
+      let userId = knownUserId || null;
       if (!userId) {
         try {
           const { data: sess } = await supabase.auth.getSession();
@@ -786,11 +935,6 @@ export const usePushNotifications = () => {
           return;
         }
 
-        if (t === token && isRegistered) {
-          log('[EVENT] fcmTokenReady same as current token, skipping');
-          return;
-        }
-
         log('[EVENT] fcmTokenReady — ✅ VALID FCM token, saving as final token');
         setIsNative(true);
         setToken(t);
@@ -802,7 +946,6 @@ export const usePushNotifications = () => {
       }
     };
 
-    // 🔥 FIX: Listen for userAuthenticatedWithFCMToken (dispatched by useAuth after SIGNED_IN)
     const handleAuthWithToken = async (event: Event) => {
       const customEvent = event as CustomEvent<{ token: string; userId: string }>;
       const { token: fcmToken, userId } = customEvent.detail || {};
@@ -834,45 +977,55 @@ export const usePushNotifications = () => {
       saveTokenDynamic(existingToken);
     }
 
-    // Fallback: if no fcmTokenReady after 15s on iOS, actively try to recover
-    const platform = Capacitor.getPlatform();
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    if (platform === 'ios') {
-      fallbackTimer = setTimeout(async () => {
-        // Check if we already have a valid token
-        const currentToken = token || pendingTokenRef.current;
-        if (currentToken && !isApnsHexToken(currentToken)) return;
+    const isIosEnv = Capacitor.getPlatform() === 'ios' || /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let iosPollingInterval: ReturnType<typeof setInterval> | null = null;
+    let pageshowHandler: (() => void) | null = null;
 
-        logError('[FALLBACK] ⚠️ No fcmTokenReady after 15s on iOS — attempting active recovery');
-        updateDebug({ lastError: 'No fcmTokenReady after 15s on iOS. Attempting recovery...' });
+    if (isIosEnv) {
+      // Poll window.fcmToken every 2s for 60s — catches tokens injected
+      // by the AppDelegate at launch, on resume, or via MessagingDelegate
+      let pollCount = 0;
+      const maxPolls = 30; // 2s * 30 = 60s
+      iosPollingInterval = setInterval(async () => {
+        pollCount++;
+        const currentToken = pendingTokenRef.current;
+        if (currentToken && !isApnsHexToken(currentToken)) {
+          log('[IOS-POLL] Valid token already acquired, stopping');
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
+          return;
+        }
 
-        // 1. Re-check window buffers one more time
         const bufferedToken = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         if (bufferedToken && typeof bufferedToken === 'string' && bufferedToken.length > 50 && !isApnsHexToken(bufferedToken)) {
-          log('[FALLBACK] Found buffered FCM token, saving...');
+          log('[IOS-POLL] FCM token found on window at poll #' + pollCount + ', saving...');
+          setIsNative(true);
           setToken(bufferedToken);
           pendingTokenRef.current = bufferedToken;
           setIsRegistered(true);
           updateDebug({ fcmTokenEventReceived: true, fcmTokenLength: bufferedToken.length, selectedFinalToken: bufferedToken.substring(0, 20) + '...' });
           await saveTokenDynamic(bufferedToken);
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
           return;
         }
 
-        // 2. Re-call register() to trigger a fresh APNs→FCM exchange
-        try {
-          const status = await PushNotifications.checkPermissions();
-          if (status.receive === 'granted') {
-            log('[FALLBACK] Re-calling register() on iOS...');
-            updateDebug({ registerCalled: true });
+        // At 10s and 30s, try re-registering to trigger the native flow again
+        if (pollCount === 5 || pollCount === 15) {
+          log('[IOS-POLL] No token at poll #' + pollCount + ', re-calling register()...');
+          try {
             await PushNotifications.register();
+          } catch (e: any) {
+            logError('[IOS-POLL] register() error:', e);
           }
-        } catch (e: any) {
-          logError('[FALLBACK] register() retry error:', e);
         }
-      }, 15000);
 
-      // 3. Also listen for pageshow (back-forward cache restore)
-      const handlePageShow = () => {
+        if (pollCount >= maxPolls) {
+          logError('[IOS-POLL] No FCM token after 60s of polling');
+          updateDebug({ lastError: 'iOS: no FCM token after 60s. Check Firebase config (GoogleService-Info.plist, APNs key in Firebase Console).' });
+          if (iosPollingInterval) clearInterval(iosPollingInterval);
+        }
+      }, 2000);
+
+      pageshowHandler = () => {
         const buffered = (window as any).fcmToken || (window as any).__fcmTokenBuffer;
         if (buffered && typeof buffered === 'string' && buffered.length > 50 && !isApnsHexToken(buffered)) {
           log('[PAGESHOW] FCM token found after page restore');
@@ -882,24 +1035,16 @@ export const usePushNotifications = () => {
           saveTokenDynamic(buffered);
         }
       };
-      window.addEventListener('pageshow', handlePageShow);
-
-      // Cleanup pageshow listener in the return
-      const originalCleanup = () => {
-        window.removeEventListener('pageshow', handlePageShow);
-      };
-      // Store for cleanup
-      (window as any).__pushPageshowCleanup = originalCleanup;
+      window.addEventListener('pageshow', pageshowHandler);
     }
 
     return () => {
       window.removeEventListener('fcmTokenReady', handleFcmTokenReady);
       window.removeEventListener('userAuthenticatedWithFCMToken', handleAuthWithToken);
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      const pageshowCleanup = (window as any).__pushPageshowCleanup;
-      if (pageshowCleanup) { pageshowCleanup(); delete (window as any).__pushPageshowCleanup; }
+      if (iosPollingInterval) clearInterval(iosPollingInterval);
+      if (pageshowHandler) window.removeEventListener('pageshow', pageshowHandler);
     };
-  }, [savePushToken, updateDebug, token, isRegistered, user]);
+  }, [savePushToken, updateDebug]);
 
   // ─── useEffect #6: App resume ────────────────────────────
 

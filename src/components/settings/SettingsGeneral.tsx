@@ -37,7 +37,6 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const { unit, setUnit } = useDistanceUnits();
-
   useEffect(() => {
     setThemeMounted(true);
   }, []);
@@ -222,6 +221,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                   </div>
                 )}
               </div>
+
               </div>
 
               <div className="ios-list-row-inset-sep" />

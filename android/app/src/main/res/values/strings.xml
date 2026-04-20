@@ -4,6 +4,7 @@
     <string name="title_activity_main">RunConnect</string>
     <string name="package_name">app.runconnect</string>
     <string name="custom_url_scheme">app.runconnect</string>
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
     
     <!-- 🔑 Firebase Google Sign-In Web Client ID -->
     <string name="default_web_client_id">220304658307-u0l7i7hbsn4rd1ah8athg84tph0977km.apps.googleusercontent.com</string>

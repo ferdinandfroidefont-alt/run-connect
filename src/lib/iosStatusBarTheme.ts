@@ -130,7 +130,7 @@ export async function applyIosStatusBarForTheme(isDark: boolean): Promise<void> 
       /* Capacitor Style.Dark = texte / icônes clairs sur fond sombre */
       await StatusBar.setStyle({ style: Style.Dark });
       try {
-        const hex = nativeHexFromShadcnTripletVar('--card', '#2c2c2e');
+        const hex = nativeHexFromShadcnTripletVar('--background', '#000000');
         await StatusBar.setBackgroundColor({ color: hex });
       } catch {
         /* iOS peut ignorer setBackgroundColor */

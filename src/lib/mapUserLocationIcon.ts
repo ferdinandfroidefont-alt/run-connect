@@ -1,4 +1,5 @@
-import mapboxgl from "mapbox-gl";
+import type { Marker } from "mapbox-gl";
+import { loadMapboxGl } from "@/lib/mapboxLazy";
 
 /**
  * Couleur primaire runtime (variables Tailwind : `--primary` = "H S% L%" sans préfixe hsl).
@@ -7,7 +8,34 @@ export function getAppPrimaryHslColor(): string {
   if (typeof document === "undefined") return "hsl(212 100% 50%)";
   const raw = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
   if (!raw) return "hsl(212 100% 50%)";
-  return `hsl(${raw})`;
+  return `hsl(${raw.split("/")[0].trim()})`;
+}
+
+/** Luminosité (0–100) d’un triplet CSS type "H S% L%" (ignore la partie / alpha). */
+function cssTripletLightnessPercent(triplet: string): number | null {
+  const base = triplet.trim().split("/")[0].trim();
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length < 3) return null;
+  const l = parseFloat(parts[2].replace("%", ""));
+  return Number.isFinite(l) ? l : null;
+}
+
+/**
+ * Remplissage du point « position actuelle » sur la carte.
+ * Si `--primary` est très clair (peu de contraste avec une bordure blanche), on utilise `--primary-foreground`.
+ */
+export function getUserLocationDotFillColor(): string {
+  if (typeof document === "undefined") return "hsl(212 100% 50%)";
+  const rs = getComputedStyle(document.documentElement);
+  const primaryRaw = rs.getPropertyValue("--primary").trim();
+  const pfRaw = rs.getPropertyValue("--primary-foreground").trim();
+  if (!primaryRaw) return "hsl(212 100% 50%)";
+  const primaryL = cssTripletLightnessPercent(primaryRaw);
+  const primaryHsl = `hsl(${primaryRaw.split("/")[0].trim()})`;
+  if (primaryL !== null && primaryL >= 76 && pfRaw) {
+    return `hsl(${pfRaw.split("/")[0].trim()})`;
+  }
+  return primaryHsl;
 }
 
 /**
@@ -28,7 +56,7 @@ export function createStableUserLocationMarkerElement(): HTMLDivElement {
   dot.style.height = "13px";
   dot.style.borderRadius = "9999px";
   dot.style.boxSizing = "border-box";
-  dot.style.backgroundColor = getAppPrimaryHslColor();
+  dot.style.backgroundColor = getUserLocationDotFillColor();
   dot.style.border = "2.5px solid white";
   dot.style.boxShadow = "0 0 0 1px rgba(0,0,0,0.14)";
 
@@ -45,7 +73,7 @@ export function createUserLocationMapIconDataUrl(): string {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
-  const color = getAppPrimaryHslColor();
+  const color = getUserLocationDotFillColor();
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(size / 2, size / 2, 5.5, 0, 2 * Math.PI);
@@ -61,7 +89,8 @@ export function createUserLocationMapIconDataUrl(): string {
 }
 
 /** Marqueur Mapbox « position utilisateur » (sans l’ajouter à la carte). */
-export function createUserLocationMapboxMarker(lng: number, lat: number): mapboxgl.Marker {
+export async function createUserLocationMapboxMarker(lng: number, lat: number): Promise<Marker> {
+  const mapboxgl = await loadMapboxGl();
   const el = createStableUserLocationMarkerElement();
   return new mapboxgl.Marker({ element: el, anchor: "center" }).setLngLat([lng, lat]);
 }

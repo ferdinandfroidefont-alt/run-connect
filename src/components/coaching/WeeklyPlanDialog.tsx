@@ -9,16 +9,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { WeeklyPlanSessionEditor, type WeekSession } from "./WeeklyPlanSessionEditor";
+import { MonthlyCalendarView, type MonthSessionDot } from "./MonthlyCalendarView";
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
 import { MesocycleView } from "./MesocycleView";
 import { useSendNotification } from "@/hooks/useSendNotification";
-import { format, startOfWeek, addWeeks, subWeeks, addDays } from "date-fns";
+import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { fr } from "date-fns/locale";
-import { parseRCC, rccToSessionBlocks, computeRCCSummary, mergeParsedBlocksByIndex, mergeStoredSessionBlocksIntoParsed } from "@/lib/rccParser";
-import { resolveSessionRpeForInsert, stripPerBlockRpeFromSessionBlocks } from "@/lib/sessionBlockRpe";
+import {
+  parseRCC,
+  rccToSessionBlocks,
+  computeRCCSummary,
+  mergeParsedBlocksByIndex,
+  mergeStoredSessionBlocksIntoParsed,
+  type ParsedBlock,
+} from "@/lib/rccParser";
+import {
+  blockRpeFromCoachingRow,
+  blockRpeToJson,
+  migrateLegacyPhasesToBlockRpe,
+  normalizeBlockRpeLength,
+  normalizeSessionRpePhases,
+  resolveSessionRpeForInsert,
+  stripPerBlockRpeFromSessionBlocks,
+  type SessionRpePhases,
+} from "@/lib/sessionBlockRpe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,9 +73,32 @@ interface WeeklyPlanDialogProps {
   initialGroupId?: string;
   initialAthleteName?: string;
   initialAthleteId?: string;
+  /** Séances à ajouter après chargement (ex. reprogrammation depuis le suivi). */
+  initialSeedSessions?: WeekSession[];
 }
 
 type GroupPlans = Record<string, WeekSession[]>;
+
+function restoreWeekSessionFromDraftOrTemplate(s: Record<string, unknown>): WeekSession {
+  const parsedBlocks = (s.parsedBlocks as ParsedBlock[] | undefined) || [];
+  let blockRpe: number[];
+  if (Array.isArray(s.blockRpe)) {
+    blockRpe = normalizeBlockRpeLength(s.blockRpe as number[], parsedBlocks.length);
+  } else if (s.rpePhases && typeof s.rpePhases === "object") {
+    blockRpe = migrateLegacyPhasesToBlockRpe(
+      normalizeSessionRpePhases(s.rpePhases as Partial<SessionRpePhases>),
+      parsedBlocks.length,
+    );
+  } else {
+    blockRpe = normalizeBlockRpeLength([], parsedBlocks.length);
+  }
+  return {
+    ...(s as unknown as WeekSession),
+    parsedBlocks,
+    athleteOverrides: (s.athleteOverrides as WeekSession["athleteOverrides"]) || {},
+    blockRpe,
+  };
+}
 
 const createEmptySession = (dayIndex: number): WeekSession => ({
   dayIndex,
@@ -69,10 +109,20 @@ const createEmptySession = (dayIndex: number): WeekSession => ({
   coachNotes: "",
   locationName: "",
   athleteOverrides: {},
-  rpe: 5,
+  blockRpe: [],
 });
 
-export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek, initialGroupId, initialAthleteName, initialAthleteId }: WeeklyPlanDialogProps) => {
+export const WeeklyPlanDialog = ({
+  isOpen,
+  onClose,
+  clubId,
+  onSent,
+  initialWeek,
+  initialGroupId,
+  initialAthleteName,
+  initialAthleteId,
+  initialSeedSessions,
+}: WeeklyPlanDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { sendPushNotification } = useSendNotification();
@@ -96,6 +146,27 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   const sessions = groupPlans[activeGroupId] || [];
   const loadVersionRef = useRef(0);
   const isBootstrappedRef = useRef(false);
+  const pendingSeedRef = useRef<WeekSession[] | null>(null);
+
+  const [plannerView, setPlannerView] = useState<"week" | "month">("week");
+  const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
+  const [monthDbSessions, setMonthDbSessions] = useState<MonthSessionDot[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      pendingSeedRef.current = null;
+      return;
+    }
+    if (initialSeedSessions?.length) {
+      pendingSeedRef.current = initialSeedSessions;
+    }
+  }, [isOpen, initialSeedSessions]);
+
+  useEffect(() => {
+    if (plannerView === "month") {
+      setMonthCursor(startOfMonth(currentWeek));
+    }
+  }, [plannerView, weekStart.toISOString()]);
 
   const setSessions = useCallback((updater: (prev: WeekSession[]) => WeekSession[]) => {
     setGroupPlans(prev => ({
@@ -123,6 +194,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     setSelectedIndex(null);
     setAthleteSearch("");
     setDraftSaveStatus("idle");
+    setPlannerView("week");
 
     // Load base data, then resolve athlete & load sessions
     const bootstrap = async () => {
@@ -182,123 +254,158 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     const version = ++loadVersionRef.current;
     const weekEndDate = addDays(weekStartParam, 7);
 
-    if (focusedAthleteIdParam) {
-      const { data: weekSessions } = await supabase
+    try {
+      if (focusedAthleteIdParam) {
+        const { data: weekSessions } = await supabase
+          .from("coaching_sessions")
+          .select("*")
+          .eq("club_id", clubId)
+          .gte("scheduled_at", weekStartParam.toISOString())
+          .lt("scheduled_at", weekEndDate.toISOString());
+
+        if (version !== loadVersionRef.current) return;
+
+        if (!weekSessions || weekSessions.length === 0) {
+          setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+          setSentAt(null);
+          return;
+        }
+
+        const sessionIds = weekSessions.map(s => s.id);
+
+        const { data: participations } = await supabase
+          .from("coaching_participations")
+          .select("coaching_session_id, athlete_overrides")
+          .eq("user_id", focusedAthleteIdParam)
+          .in("coaching_session_id", sessionIds);
+
+        if (version !== loadVersionRef.current) return;
+
+        const participationSessionIds = new Set((participations || []).map(p => p.coaching_session_id));
+        const athleteSessions = weekSessions.filter(s => participationSessionIds.has(s.id));
+
+        if (athleteSessions.length > 0) {
+          const imported: WeekSession[] = athleteSessions.map(cs => {
+            const scheduledDate = new Date(cs.scheduled_at);
+            const dayOfWeek = scheduledDate.getDay();
+            const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            const parsedBlocks = cs.rcc_code
+              ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+              : [];
+            return {
+              dayIndex,
+              activityType: cs.activity_type || "running",
+              objective: cs.objective || cs.title || "",
+              rccCode: cs.rcc_code || "",
+              parsedBlocks,
+              coachNotes: cs.coach_notes || "",
+              locationName: cs.default_location_name || "",
+              athleteOverrides: {},
+              blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
+            };
+          });
+          setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
+          setTargetAthletes([focusedAthleteIdParam]);
+          setSentAt(athleteSessions[0].created_at);
+        } else {
+          setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+          setSentAt(null);
+        }
+        return;
+      }
+
+      let query = supabase
         .from("coaching_sessions")
         .select("*")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStartParam.toISOString())
         .lt("scheduled_at", weekEndDate.toISOString());
 
-      if (version !== loadVersionRef.current) return;
-
-      if (!weekSessions || weekSessions.length === 0) {
-        setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
-        setSentAt(null);
-        return;
+      if (groupIdParam !== "club") {
+        query = query.eq("target_group_id", groupIdParam);
+      } else {
+        query = query.is("target_group_id", null);
       }
 
-      const sessionIds = weekSessions.map(s => s.id);
-
-      const { data: participations } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id, athlete_overrides")
-        .eq("user_id", focusedAthleteIdParam)
-        .in("coaching_session_id", sessionIds);
+      const { data: sentSessions } = await query.order("scheduled_at", { ascending: true });
 
       if (version !== loadVersionRef.current) return;
 
-      const participationSessionIds = new Set((participations || []).map(p => p.coaching_session_id));
-      const athleteSessions = weekSessions.filter(s => participationSessionIds.has(s.id));
-
-      if (athleteSessions.length > 0) {
-        const imported: WeekSession[] = athleteSessions.map(cs => {
+      if (sentSessions && sentSessions.length > 0) {
+        const imported: WeekSession[] = sentSessions.map(cs => {
           const scheduledDate = new Date(cs.scheduled_at);
           const dayOfWeek = scheduledDate.getDay();
           const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-          const rawBlocks = cs.session_blocks;
-          const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
+          const parsedBlocks = cs.rcc_code
+            ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+            : [];
           return {
             dayIndex,
             activityType: cs.activity_type || "running",
             objective: cs.objective || cs.title || "",
             rccCode: cs.rcc_code || "",
-            parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+            parsedBlocks,
             coachNotes: cs.coach_notes || "",
             locationName: cs.default_location_name || "",
             athleteOverrides: {},
-            rpe: rpeResolved ?? undefined,
+            blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
           };
         });
         setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
-        setTargetAthletes([focusedAthleteIdParam]);
-        setSentAt(athleteSessions[0].created_at);
+        setSentAt(sentSessions[0].created_at);
       } else {
         setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
+        setTargetAthletes([]);
         setSentAt(null);
       }
-      return;
-    }
 
-    let query = supabase
-      .from("coaching_sessions")
-      .select("*")
-      .eq("club_id", clubId)
-      .gte("scheduled_at", weekStartParam.toISOString())
-      .lt("scheduled_at", weekEndDate.toISOString());
-
-    if (groupIdParam !== "club") {
-      query = query.eq("target_group_id", groupIdParam);
-    } else {
-      query = query.is("target_group_id", null);
-    }
-
-    const { data: sentSessions } = await query.order("scheduled_at", { ascending: true });
-
-    if (version !== loadVersionRef.current) return;
-
-    if (sentSessions && sentSessions.length > 0) {
-      const imported: WeekSession[] = sentSessions.map(cs => {
-        const scheduledDate = new Date(cs.scheduled_at);
-        const dayOfWeek = scheduledDate.getDay();
-        const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const rawBlocks = cs.session_blocks;
-        const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
-        return {
-          dayIndex,
-          activityType: cs.activity_type || "running",
-          objective: cs.objective || cs.title || "",
-          rccCode: cs.rcc_code || "",
-          parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
-          coachNotes: cs.coach_notes || "",
-          locationName: cs.default_location_name || "",
-          athleteOverrides: {},
-          rpe: rpeResolved ?? undefined,
-        };
-      });
-      setGroupPlans(prev => ({ ...prev, [groupIdParam]: imported }));
-      setSentAt(sentSessions[0].created_at);
-    } else {
-      setGroupPlans(prev => ({ ...prev, [groupIdParam]: [] }));
-      setTargetAthletes([]);
-      setSentAt(null);
-    }
-
-    // Check if a draft exists
-    const weekStartStr = format(weekStartParam, "yyyy-MM-dd");
-    const { data } = await supabase
-      .from("coaching_drafts" as any)
-      .select("id, sent_at")
-      .eq("coach_id", user.id)
-      .eq("club_id", clubId)
-      .eq("week_start", weekStartStr)
-      .eq("group_id", groupIdParam)
-      .is("sent_at", null)
-      .maybeSingle();
-    if (version === loadVersionRef.current) {
-      setHasDraft(!!data);
+      const weekStartStr = format(weekStartParam, "yyyy-MM-dd");
+      const { data } = await supabase
+        .from("coaching_drafts" as any)
+        .select("id, sent_at")
+        .eq("coach_id", user.id)
+        .eq("club_id", clubId)
+        .eq("week_start", weekStartStr)
+        .eq("group_id", groupIdParam)
+        .is("sent_at", null)
+        .maybeSingle();
+      if (version === loadVersionRef.current) {
+        setHasDraft(!!data);
+      }
+    } finally {
+      if (version !== loadVersionRef.current) return;
+      const seed = pendingSeedRef.current;
+      if (seed?.length) {
+        pendingSeedRef.current = null;
+        setGroupPlans(prev => ({
+          ...prev,
+          [groupIdParam]: [...(prev[groupIdParam] || []), ...seed],
+        }));
+      }
     }
   };
+
+  useEffect(() => {
+    if (!isOpen || !user || plannerView !== "month") return;
+    const ms = startOfMonth(monthCursor);
+    const monthAfter = addMonths(ms, 1);
+    let q = supabase
+      .from("coaching_sessions")
+      .select("id, scheduled_at, objective, title, activity_type, target_group_id")
+      .eq("club_id", clubId)
+      .eq("coach_id", user.id)
+      .gte("scheduled_at", ms.toISOString())
+      .lt("scheduled_at", monthAfter.toISOString());
+    if (activeGroupId !== "club") {
+      q = q.eq("target_group_id", activeGroupId);
+    } else {
+      q = q.is("target_group_id", null);
+    }
+    void q.order("scheduled_at", { ascending: true }).then(({ data, error }) => {
+      if (!error && data) setMonthDbSessions(data as MonthSessionDot[]);
+      else setMonthDbSessions([]);
+    });
+  }, [isOpen, user, plannerView, monthCursor, activeGroupId, clubId]);
 
   const loadDraft = async () => {
     if (!user) return;
@@ -314,11 +421,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       .maybeSingle();
     if (data) {
       const draft = data as any;
-      const restored = (draft.sessions || []).map((s: any) => ({
-        ...s,
-        parsedBlocks: s.parsedBlocks || [],
-        athleteOverrides: s.athleteOverrides || {},
-      }));
+      const restored = (draft.sessions || []).map((s: any) => restoreWeekSessionFromDraftOrTemplate(s));
       setGroupPlans(prev => ({ ...prev, [activeGroupId]: restored }));
       setTargetAthletes(draft.target_athletes || []);
       setSentAt(draft.sent_at || null);
@@ -486,11 +589,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
   };
 
   const loadTemplate = (template: WeekTemplate) => {
-    const restored: WeekSession[] = template.sessions.map(s => ({
-      ...s,
-      parsedBlocks: s.parsedBlocks || [],
-      athleteOverrides: s.athleteOverrides || {},
-    }));
+    const restored: WeekSession[] = template.sessions.map((s: any) => restoreWeekSessionFromDraftOrTemplate(s));
     setSessions(() => restored);
     setSelectedIndex(null);
     toast({ title: `"${template.name}" chargé`, description: `${restored.length} séances` });
@@ -569,8 +668,6 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
     const prevWeekStart = subWeeks(weekStart, 1);
     const prevWeekEnd = addDays(prevWeekStart, 7);
     
-    const targetGroupId = activeGroupId !== "club" ? activeGroupId : null;
-    
     let query = supabase
       .from("coaching_sessions")
       .select("*")
@@ -579,8 +676,10 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
       .gte("scheduled_at", prevWeekStart.toISOString())
       .lt("scheduled_at", prevWeekEnd.toISOString());
 
-    if (targetGroupId) {
-      query = query.eq("target_group_id", targetGroupId);
+    if (activeGroupId !== "club") {
+      query = query.eq("target_group_id", activeGroupId);
+    } else {
+      query = query.is("target_group_id", null);
     }
 
     const { data } = await query;
@@ -593,18 +692,19 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
         const scheduledDate = new Date(cs.scheduled_at);
         const dayOfWeek = scheduledDate.getDay();
         const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const rawBlocks = cs.session_blocks;
-        const rpeResolved = resolveSessionRpeForInsert(cs.rpe, rawBlocks);
+        const parsedBlocks = cs.rcc_code
+          ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks)
+          : [];
         return {
           dayIndex,
           activityType: cs.activity_type || "running",
           objective: cs.objective || cs.title || "",
           rccCode: cs.rcc_code || "",
-          parsedBlocks: cs.rcc_code ? mergeStoredSessionBlocksIntoParsed(parseRCC(cs.rcc_code).blocks, cs.session_blocks) : [],
+          parsedBlocks,
           coachNotes: cs.coach_notes || "",
           locationName: cs.default_location_name || "",
           athleteOverrides: {},
-          rpe: rpeResolved ?? undefined,
+          blockRpe: blockRpeFromCoachingRow(cs as { rpe?: number | null; rpe_phases?: unknown }, parsedBlocks.length),
         };
       });
 
@@ -636,7 +736,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           const { blocks: freshBlocks } = parseRCC(session.rccCode);
           const mergedBlocks = mergeParsedBlocksByIndex(freshBlocks, session.parsedBlocks || []);
           const rawBlocks = rccToSessionBlocks(mergedBlocks);
-          const resolvedRpe = resolveSessionRpeForInsert(session.rpe, rawBlocks);
+          const resolvedRpe = resolveSessionRpeForInsert(null, rawBlocks, session.blockRpe);
           const sessionBlocks = stripPerBlockRpeFromSessionBlocks(rawBlocks);
 
           const { data: created, error } = await supabase
@@ -651,12 +751,13 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
               rcc_code: session.rccCode || null,
               objective: session.objective || null,
               coach_notes: session.coachNotes || null,
-              session_blocks: sessionBlocks.length > 0 ? sessionBlocks : null,
+              session_blocks: (sessionBlocks as any[]).length > 0 ? sessionBlocks : null,
               default_location_name: session.locationName || null,
               send_mode: sendMode,
               target_athletes: Object.keys(session.athleteOverrides || {}).length > 0 ? Object.keys(session.athleteOverrides) : [],
               target_group_id: targetGroupDbId,
               rpe: resolvedRpe,
+              rpe_phases: blockRpeToJson(session.blockRpe),
             } as any)
             .select("id")
             .single();
@@ -862,9 +963,44 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
                 </button>
               </div>
 
+              <div className="flex gap-2 px-4 pb-3">
+                <button
+                  type="button"
+                  onClick={() => setPlannerView("week")}
+                  className={`flex-1 rounded-xl py-2 text-[13px] font-semibold transition-colors ${
+                    plannerView === "week" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  Semaine
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlannerView("month")}
+                  className={`flex-1 rounded-xl py-2 text-[13px] font-semibold transition-colors ${
+                    plannerView === "month" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  Mois
+                </button>
+              </div>
             </div>
           </div>
 
+          {plannerView === "month" ? (
+            <div className="mb-3 px-4 space-y-2">
+              <p className="text-[13px] font-semibold text-muted-foreground">Vue mensuelle</p>
+              <MonthlyCalendarView
+                monthDate={monthCursor}
+                sessions={monthDbSessions}
+                onPrevMonth={() => setMonthCursor((d) => addMonths(d, -1))}
+                onNextMonth={() => setMonthCursor((d) => addMonths(d, 1))}
+              />
+              <p className="text-[12px] text-center text-muted-foreground px-2">
+                Séances déjà envoyées (même filtre club / groupe). Pour modifier, passez à Semaine.
+              </p>
+            </div>
+          ) : (
+            <>
           {/* ── Search bar ── */}
           <div className="px-4 mb-3">
             <Input
@@ -1293,7 +1429,11 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
             </div>
           )}
 
+            </>
+          )}
+
           {/* FAB */}
+          {plannerView === "week" && (
           <button
             onClick={() => {
               const todayDow = new Date().getDay();
@@ -1305,6 +1445,7 @@ export const WeeklyPlanDialog = ({ isOpen, onClose, clubId, onSent, initialWeek,
           >
             <Plus className="h-7 w-7" />
           </button>
+          )}
         </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>

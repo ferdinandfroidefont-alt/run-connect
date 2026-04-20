@@ -91,7 +91,7 @@ export default function MySessions() {
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
   const [forcedConfirmSessionId, setForcedConfirmSessionId] = useState<string | null>(null);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
-  const SESSIONS_PER_PAGE = 3;
+  const SESSIONS_PER_PAGE = 4;
 
 
   // Live tracking participant states
@@ -1066,7 +1066,7 @@ export default function MySessions() {
                         <div
                           key={session.id}
                           onClick={() => handleSessionClick(session)}
-                          className="ios-list-row"
+                          className="ios-list-row border border-white dark:border-white/10"
                         >
                           <div className="flex items-start gap-ios-2">
                             <ActivityIcon activityType={session.activity_type} size="md" />
@@ -1142,9 +1142,7 @@ export default function MySessions() {
               {sessionSource === "created" && (
                 <div className="mt-ios-3 pb-ios-6">
                   <Suspense fallback={null}>
-                    <div className="px-ios-4">
-                      <OrganizerStatsCard />
-                    </div>
+                    <OrganizerStatsCard />
                   </Suspense>
                 </div>
               )}

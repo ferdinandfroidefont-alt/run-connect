@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logException, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,22 +10,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
+  const auth = await requireUserJwtCors(req, supabaseAdmin, corsHeaders);
+  if (auth instanceof Response) return auth;
+
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
-
-    // Get user from request
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
-
-    if (!user.user) {
-      throw new Error('Not authenticated')
-    }
-
     const stravaClientId = Deno.env.get('STRAVA_CLIENT_ID')
     if (!stravaClientId) {
       throw new Error('Strava client ID not configured')
@@ -32,7 +28,7 @@ serve(async (req) => {
     // Generate Strava OAuth URL
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/strava-callback`
     const scope = 'read,activity:read_all'
-    const state = user.user.id // Use user ID as state for security
+    const state = auth.user.id // Use user ID as state for security
 
     const authUrl = `https://www.strava.com/oauth/authorize` +
       `?client_id=${stravaClientId}` +
@@ -41,7 +37,7 @@ serve(async (req) => {
       `&scope=${scope}` +
       `&state=${state}`
 
-    console.log('Generated Strava auth URL for user:', user.user.id)
+    console.log('Generated Strava auth URL for user:', auth.user.id)
 
     return new Response(
       JSON.stringify({ authUrl }),
@@ -54,9 +50,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in strava-connect function:', error)
+    logException("strava-connect", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "strava_connect_failed" }),
       { 
         status: 400,
         headers: { 

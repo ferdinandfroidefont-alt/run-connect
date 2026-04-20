@@ -22,7 +22,7 @@ import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
-import mapboxgl from 'mapbox-gl';
+import type { Map, Marker } from 'mapbox-gl';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
@@ -51,8 +51,8 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
   const navigate = useNavigate();
   const { formatMeters } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
-  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
+  const userLocationMarkerRef = useRef<Marker | null>(null);
   const { position } = useGeolocation();
   const [show3DDialog, setShow3DDialog] = useState(false);
 
@@ -73,13 +73,13 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
 
   const handleExportGPX = async () => {
     if (!route.coordinates || !Array.isArray(route.coordinates)) return;
-    const trackPoints: GPXTrackPoint[] = route.coordinates
+    let trackPoints: GPXTrackPoint[] = route.coordinates
       .map((coord: any) => {
         if (coord.lat !== undefined && coord.lng !== undefined) {
           return {
             lat: Number(coord.lat),
             lng: Number(coord.lng),
-            elevation: coord.elevation ? Number(coord.elevation) : undefined,
+            elevation: coord.elevation != null ? Number(coord.elevation) : undefined,
           };
         } else if (Array.isArray(coord) && coord.length >= 2) {
           return {
@@ -92,6 +92,26 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
       })
       .filter((point): point is NonNullable<typeof point> => point !== null);
     if (trackPoints.length === 0) return;
+
+    const allElevMissing = trackPoints.every((p) => p.elevation == null || p.elevation === 0);
+    if (allElevMissing && trackPoints.length >= 2) {
+      try {
+        const { fetchElevationsForCoords } = await import('@/lib/openElevation');
+        const { densifyMapCoords, resamplePathEvenlyMapCoords, pathLengthMeters } = await import('@/lib/geoUtils');
+        const path = trackPoints.map((p) => ({ lat: p.lat, lng: p.lng }));
+        const dens = densifyMapCoords(path, 14);
+        const lenM = pathLengthMeters(dens);
+        const samples = Math.min(4000, Math.max(80, Math.ceil(lenM / 12)));
+        const sampled = resamplePathEvenlyMapCoords(dens, samples);
+        const elevs = await fetchElevationsForCoords(sampled);
+        if (elevs.length === sampled.length && elevs.some((e) => e !== 0)) {
+          trackPoints = sampled.map((c, i) => ({ lat: c.lat, lng: c.lng, elevation: elevs[i]! }));
+        }
+      } catch (e) {
+        console.warn('[GPX] Elevation re-fetch failed:', e);
+      }
+    }
+
     const gpxContent = exportToGPX(route.name, trackPoints, route.description || undefined);
     await shareOrDownloadGPX(route.name, gpxContent, { title: route.name });
   };
@@ -107,39 +127,47 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     mapInstanceRef.current?.remove();
     mapInstanceRef.current = null;
 
-    const path = route.coordinates
-      .map((coord: any) => {
-        if (coord.lat !== undefined && coord.lng !== undefined) {
-          return { lat: Number(coord.lat), lng: Number(coord.lng) } as MapCoord;
-        } else if (Array.isArray(coord) && coord.length >= 2) {
-          return { lat: Number(coord[0]), lng: Number(coord[1]) } as MapCoord;
-        }
-        return null;
-      })
-      .filter((coord): coord is MapCoord => coord !== null);
-    if (path.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      const path = route.coordinates
+        .map((coord: any) => {
+          if (coord.lat !== undefined && coord.lng !== undefined) {
+            return { lat: Number(coord.lat), lng: Number(coord.lng) } as MapCoord;
+          } else if (Array.isArray(coord) && coord.length >= 2) {
+            return { lat: Number(coord[0]), lng: Number(coord[1]) } as MapCoord;
+          }
+          return null;
+        })
+        .filter((coord): coord is MapCoord => coord !== null);
+      if (path.length === 0 || !mapContainer.current) return;
 
-    const m = createEmbeddedMapboxMap(mapContainer.current, {
-      center: path[0],
-      zoom: 10,
-      interactive: false,
-    });
-    mapInstanceRef.current = m;
-
-    const applyRoute = () => {
-      setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
-        color: '#5B7CFF',
-        width: 3,
+      const m = await createEmbeddedMapboxMap(mapContainer.current, {
+        center: path[0],
+        zoom: 10,
+        interactive: false,
       });
-      fitMapToCoords(m, path, 30);
-    };
-    if (m.isStyleLoaded()) applyRoute();
-    else m.once('load', applyRoute);
+      if (cancelled) {
+        m.remove();
+        return;
+      }
+      mapInstanceRef.current = m;
+
+      const applyRoute = () => {
+        setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
+          color: '#5B7CFF',
+          width: 3,
+        });
+        void fitMapToCoords(m, path, 30);
+      };
+      if (m.isStyleLoaded()) applyRoute();
+      else m.once('load', applyRoute);
+    })();
 
     return () => {
+      cancelled = true;
       userLocationMarkerRef.current?.remove();
       userLocationMarkerRef.current = null;
-      m.remove();
+      mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
   }, [route.coordinates]);
@@ -153,7 +181,14 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
       return;
     }
     userLocationMarkerRef.current?.remove();
-    userLocationMarkerRef.current = createUserLocationMapboxMarker(position.lng, position.lat).addTo(m);
+    void (async () => {
+      const mk = await createUserLocationMapboxMarker(position.lng, position.lat);
+      if (mapInstanceRef.current !== m) {
+        mk.remove();
+        return;
+      }
+      userLocationMarkerRef.current = mk.addTo(m);
+    })();
   }, [position, route.coordinates]);
 
   const hasCoordinates = route.coordinates?.length > 0;

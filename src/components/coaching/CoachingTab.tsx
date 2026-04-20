@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { CoachingSessionDetail } from "./CoachingSessionDetail";
 import { CoachingTemplatesDialog } from "./CoachingTemplatesDialog";
 import { CalendarDays, BookOpen, BarChart3, Users, FileText, Sparkles } from "lucide-react";
@@ -13,6 +12,9 @@ import { CoachingDraftsList } from "./CoachingDraftsList";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+import { blockRpeFromCoachingRow, parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
+
 function countSegmentFromRpe(r: number | undefined, volume: { v: number }, intensity: { v: number }, recovery: { v: number }) {
   if (r == null || r < 1) return;
   if (r <= 3) recovery.v++;
@@ -35,7 +37,42 @@ interface CoachingSession {
   objective?: string | null;
   rcc_code?: string | null;
   rpe?: number | null;
+  rpe_phases?: unknown;
   session_blocks?: unknown;
+}
+
+function countPhasesFromRow(
+  s: CoachingSession,
+  V: { v: number },
+  I: { v: number },
+  R: { v: number },
+): boolean {
+  const raw = parseSessionRpePhases(s.rpe_phases);
+  if (!raw) return false;
+  let any = false;
+  for (const k of ["warmup", "main", "cooldown"] as const) {
+    const n = raw[k];
+    if (typeof n === "number" && n >= 1) {
+      countSegmentFromRpe(n, V, I, R);
+      any = true;
+    }
+  }
+  return any;
+}
+
+function countBlockRpeFromRcc(s: CoachingSession, V: { v: number }, I: { v: number }, R: { v: number }): boolean {
+  if (!s.rcc_code) return false;
+  const n = parseRCC(s.rcc_code).blocks.length;
+  if (n === 0) return false;
+  const raw = s.rpe_phases;
+  const hasV2 =
+    raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).v === 2;
+  const hasLegacy = parseSessionRpePhases(raw) != null;
+  const hasGlobal = raw == null && typeof s.rpe === "number" && s.rpe >= 1 && s.rpe <= 10;
+  if (!hasV2 && !hasLegacy && !hasGlobal) return false;
+  const arr = blockRpeFromCoachingRow(s, n);
+  arr.forEach((r) => countSegmentFromRpe(Math.max(1, Math.min(10, r)), V, I, R));
+  return true;
 }
 
 interface CoachingTabProps {
@@ -90,9 +127,9 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
     if (!clubId) return;
     setLoading(true);
     try {
-      const { data: weekSessions } = await supabase
-        .from("coaching_sessions")
-        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks")
+      const { data: weekSessions } = await (supabase
+        .from("coaching_sessions") as any)
+        .select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, rpe_phases, session_blocks")
         .eq("club_id", clubId)
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString())
@@ -190,24 +227,27 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
             countSegmentFromRpe(bl.recoveryRpe, V, I, R);
           }
         });
-        if (!anyBlockRpe && s.rpe) {
-          countSegmentFromRpe(s.rpe, V, I, R);
+        if (!anyBlockRpe) {
+          if (!countBlockRpeFromRcc(s, V, I, R) && !countPhasesFromRow(s, V, I, R)) {
+            if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
+            else {
+              const obj = (s.objective || "").toLowerCase();
+              const title = (s.title || "").toLowerCase();
+              if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
+              else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
+              else V.v++;
+            }
+          }
         }
-        if (!anyBlockRpe && !s.rpe) {
+      } else if (!countBlockRpeFromRcc(s, V, I, R) && !countPhasesFromRow(s, V, I, R)) {
+        if (s.rpe) countSegmentFromRpe(s.rpe, V, I, R);
+        else {
           const obj = (s.objective || "").toLowerCase();
           const title = (s.title || "").toLowerCase();
           if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
           else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
           else V.v++;
         }
-      } else if (s.rpe) {
-        countSegmentFromRpe(s.rpe, V, I, R);
-      } else {
-        const obj = (s.objective || "").toLowerCase();
-        const title = (s.title || "").toLowerCase();
-        if (obj.includes("récup") || obj.includes("recup") || title.includes("récup")) R.v++;
-        else if (obj.includes("vma") || obj.includes("interval") || obj.includes("seuil") || title.includes("vma") || title.includes("fractionné") || title.includes("seuil")) I.v++;
-        else V.v++;
       }
     });
     volume = V.v;
@@ -226,7 +266,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
   if (loading) {
     return (
-      <div className="bg-secondary min-h-[300px] px-ios-4 py-ios-4 space-y-ios-3">
+      <div className="min-h-[300px] space-y-0 bg-secondary px-0 py-ios-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-14 ios-card rounded-ios-lg border border-border animate-pulse" />
         ))}
@@ -242,17 +282,17 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
   ];
 
   return (
-    <div className="bg-secondary -mx-4 -mb-4 pt-ios-2 pb-ios-8 min-h-[400px] overflow-x-hidden px-ios-4">
+    <div className="min-h-[400px] overflow-x-hidden bg-secondary pb-ios-8 pt-ios-2">
       {/* Week label */}
-      <p className="text-ios-footnote text-muted-foreground text-center mb-ios-3">
+      <p className="mb-ios-3 px-ios-4 text-center text-ios-footnote text-muted-foreground">
         Semaine du {weekLabel}
       </p>
 
       {/* === COACH VIEW === */}
       {isCoach && (
         <>
-          {/* Hero Card */}
-          <Card className="ios-card mb-5 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+          {/* Hero — pleine largeur (pas de Card : ombre inline) */}
+          <div className="mb-0 overflow-hidden border-b border-border/60 bg-card">
             <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5">
               {stats.totalSessions === 0 ? (
                 /* Engaging empty state */
@@ -325,10 +365,10 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
                 </>
               )}
             </div>
-          </Card>
+          </div>
 
           {/* Tools Grid 2x2 */}
-          <div className="mb-5 grid grid-cols-2 gap-3 px-4">
+          <div className="mb-ios-4 grid grid-cols-2 gap-3 px-ios-4">
             {tools.map((tool) => (
               <button
                 key={tool.label}
@@ -344,7 +384,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
           </div>
 
           {/* Templates shortcut */}
-          <IOSListGroup className="ios-card mb-0 border border-border/60 shadow-[var(--shadow-card)]">
+          <IOSListGroup flush className="!mb-0 border-b border-border/60 bg-card shadow-none">
             <IOSListItem
               icon={BookOpen}
               iconBgColor="bg-purple-500"
@@ -358,7 +398,7 @@ export const CoachingTab = ({ clubId, isCoach }: CoachingTabProps) => {
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
-        <IOSListGroup header="Prochaines séances" className="mb-ios-4">
+        <IOSListGroup header="Prochaines séances" flush className="!mb-0 border-b border-border/60 bg-card">
           {upcomingSessions.map((s, i) => (
             <IOSListItem
               key={s.id}

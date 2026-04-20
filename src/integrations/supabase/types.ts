@@ -906,6 +906,71 @@ export type Database = {
           },
         ]
       }
+      profile_sport_records: {
+        Row: {
+          created_at: string
+          event_label: string
+          id: string
+          record_value: string
+          sort_order: number
+          sport_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_label: string
+          id?: string
+          record_value: string
+          sort_order?: number
+          sport_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_label?: string
+          id?: string
+          record_value?: string
+          sort_order?: number
+          sport_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profile_story_highlights: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          position: number
+          story_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          position?: number
+          story_id: string
+          title?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          position?: number
+          story_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_story_highlights_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "session_stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           age: number | null
@@ -918,7 +983,6 @@ export type Database = {
           created_at: string
           cycling_records: Json | null
           display_name: string | null
-          distance_unit: string
           favorite_sport: string | null
           id: string
           instagram_access_token: string | null
@@ -930,7 +994,6 @@ export type Database = {
           is_online: boolean | null
           is_premium: boolean | null
           is_private: boolean | null
-          language_manually_set: boolean
           last_seen: string | null
           notif_club_invitation: boolean | null
           notif_follow_request: boolean | null
@@ -978,7 +1041,6 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
-          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
@@ -990,7 +1052,6 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          language_manually_set?: boolean
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
@@ -1038,7 +1099,6 @@ export type Database = {
           created_at?: string
           cycling_records?: Json | null
           display_name?: string | null
-          distance_unit?: string
           favorite_sport?: string | null
           id?: string
           instagram_access_token?: string | null
@@ -1050,7 +1110,6 @@ export type Database = {
           is_online?: boolean | null
           is_premium?: boolean | null
           is_private?: boolean | null
-          language_manually_set?: boolean
           last_seen?: string | null
           notif_club_invitation?: boolean | null
           notif_follow_request?: boolean | null
@@ -1161,6 +1220,27 @@ export type Database = {
           referred_id?: string
           referrer_id?: string
           reward_given?: boolean | null
+        }
+        Relationships: []
+      }
+      restricted_users: {
+        Row: {
+          created_at: string
+          id: string
+          restricted_id: string
+          restricter_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restricted_id: string
+          restricter_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restricted_id?: string
+          restricter_id?: string
         }
         Relationships: []
       }
@@ -1555,6 +1635,44 @@ export type Database = {
         }
         Relationships: []
       }
+      session_stories: {
+        Row: {
+          author_id: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          media_url: string | null
+          session_id: string | null
+        }
+        Insert: {
+          author_id: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          author_id?: string
+          caption?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          media_url?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_stories_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           activity_type: string
@@ -1743,6 +1861,36 @@ export type Database = {
           subscription_status?: string | null
           subscription_tier?: string | null
           trial_end?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          status?: string
+          subject?: string
           updated_at?: string
           user_id?: string
         }

@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+
+export type HomeFeedSheetSnap = 0 | 1 | 2;
 
 interface AppContextType {
   refreshSessions: () => void;
@@ -9,6 +11,16 @@ interface AppContextType {
   setOpenCreateRoute: (openFunction: () => void) => void;
   hideBottomNav: boolean;
   setHideBottomNav: (hide: boolean) => void;
+  /** Ouvre / ajuste la bottom sheet Feed sur l’accueil (0 = bandeau, 1 = mi-hauteur, 2 = quasi plein écran). */
+  requestHomeFeedSheetSnap: (snap: HomeFeedSheetSnap) => void;
+  homeFeedSheetRequest: { snap: HomeFeedSheetSnap; id: number } | null;
+  clearHomeFeedSheetRequest: () => void;
+  /** Carte accueil en plein écran (immersif) : masque le panneau Feed et le FAB création. */
+  homeMapImmersive: boolean;
+  setHomeMapImmersive: (value: boolean) => void;
+  /** État du panneau Feed accueil (0 = replié) — pour masquer le FAB « Programmer une séance ». */
+  homeFeedSheetSnap: HomeFeedSheetSnap;
+  setHomeFeedSheetSnap: (snap: HomeFeedSheetSnap) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,6 +42,20 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [openCreateSession, setOpenCreateSessionState] = useState<() => void>(() => () => {});
   const [openCreateRoute, setOpenCreateRouteState] = useState<() => void>(() => () => {});
   const [hideBottomNav, setHideBottomNav] = useState(false);
+  const [homeFeedSheetRequest, setHomeFeedSheetRequest] = useState<{
+    snap: HomeFeedSheetSnap;
+    id: number;
+  } | null>(null);
+  const [homeMapImmersive, setHomeMapImmersive] = useState(false);
+  const [homeFeedSheetSnap, setHomeFeedSheetSnap] = useState<HomeFeedSheetSnap>(0);
+
+  const requestHomeFeedSheetSnap = useCallback((snap: HomeFeedSheetSnap) => {
+    setHomeFeedSheetRequest({ snap, id: Date.now() });
+  }, []);
+
+  const clearHomeFeedSheetRequest = useCallback(() => {
+    setHomeFeedSheetRequest(null);
+  }, []);
 
   const setRefreshSessions = useCallback((refresh: () => void) => {
     setRefreshSessionsState(() => refresh);
@@ -52,7 +78,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       openCreateRoute,
       setOpenCreateRoute,
       hideBottomNav,
-      setHideBottomNav
+      setHideBottomNav,
+      homeFeedSheetRequest,
+      clearHomeFeedSheetRequest,
+      requestHomeFeedSheetSnap,
+      homeMapImmersive,
+      setHomeMapImmersive,
+      homeFeedSheetSnap,
+      setHomeFeedSheetSnap,
     }}>
       {children}
     </AppContext.Provider>

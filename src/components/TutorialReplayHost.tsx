@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { TutorialStep } from "@/lib/tutorials/types";
 import {
@@ -9,6 +9,7 @@ import {
   pathMatchesTutorial,
   type TutorialReplayId,
 } from "@/lib/tutorials/registry";
+import { useAppContext } from "@/contexts/AppContext";
 
 const InteractiveTutorial = lazy(() =>
   import("@/components/InteractiveTutorial").then((m) => ({ default: m.InteractiveTutorial }))
@@ -45,12 +46,14 @@ const TUTORIAL_REPLAY_EVENT = "runconnect-tutorial-replay";
  */
 export function TutorialReplayHost() {
   const { t } = useLanguage();
+  const { requestHomeFeedSheetSnap } = useAppContext();
   const location = useLocation();
+  const navigate = useNavigate();
   const [replay, setReplay] = useState<{ id: TutorialReplayId; steps: TutorialStep[]; key: number } | null>(
     null
   );
   const keyRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const timerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
   const tryStartPending = useCallback(() => {
@@ -70,6 +73,14 @@ export function TutorialReplayHost() {
     cancelledRef.current = false;
     timerRef.current = window.setTimeout(() => {
       void (async () => {
+        if (def.id === "feed") {
+          requestHomeFeedSheetSnap(1);
+          await new Promise((r) => window.setTimeout(r, 120));
+        }
+        if (def.id === "profile") {
+          navigate("/", { state: { openProfileDialog: true } });
+          await new Promise((r) => window.setTimeout(r, 480));
+        }
         const steps = def.getSteps(t);
         const first = steps[0]?.target;
         if (first) {
@@ -81,7 +92,7 @@ export function TutorialReplayHost() {
         setReplay({ id: pending, steps, key: keyRef.current });
       })();
     }, def.startDelayMs);
-  }, [location.pathname, t]);
+  }, [location.pathname, navigate, requestHomeFeedSheetSnap, t]);
 
   useEffect(() => {
     tryStartPending();

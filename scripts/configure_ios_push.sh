@@ -12,6 +12,11 @@ if [ ! -f "$DELEGATE" ]; then
   exit 0
 fi
 
+if grep -q 'RUNCONNECT_IOS_PUSH_COMPLETE' "$DELEGATE" 2>/dev/null; then
+  echo "ℹ️ AppDelegate already ships FCM bridge (RUNCONNECT_IOS_PUSH_COMPLETE) — skipping configure_ios_push.sh"
+  exit 0
+fi
+
 # ─── 1. Create ObjC Crash Guard (SafeFirebaseInit) ───
 echo "🛡️ Creating SafeFirebaseInit ObjC crash guard..."
 

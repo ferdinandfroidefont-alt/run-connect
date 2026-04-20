@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,31 +10,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
+  const auth = await requireUserJwtCors(req, supabaseClient, corsHeaders);
+  if (auth instanceof Response) return auth;
+
   try {
-    // Initialize Supabase client with service role for admin operations
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    // Get user from request
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
-
-    if (!user.user) {
-      throw new Error('Not authenticated')
-    }
-
     // First, get the current profile to retrieve Strava tokens
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('strava_access_token')
-      .eq('user_id', user.user.id)
+      .eq('user_id', auth.user.id)
       .single()
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError)
+      logDbError("strava-disconnect", profileError);
       throw profileError
     }
 
@@ -48,12 +44,12 @@ serve(async (req) => {
         })
         
         if (!revokeResponse.ok) {
-          console.warn('Failed to revoke Strava token, but continuing with local disconnect')
+          console.warn('[strava-disconnect] strava_revoke_failed_continuing')
         } else {
-          console.log('Successfully revoked Strava authorization')
+          logStructured("strava-disconnect", "strava_revoked", {});
         }
-      } catch (revokeError) {
-        console.warn('Error revoking Strava token:', revokeError, 'but continuing with local disconnect')
+      } catch {
+        console.warn('[strava-disconnect] strava_revoke_exception_continuing')
       }
     }
 
@@ -67,14 +63,14 @@ serve(async (req) => {
         strava_access_token: null,
         strava_refresh_token: null,
       })
-      .eq('user_id', user.user.id)
+      .eq('user_id', auth.user.id)
 
     if (error) {
-      console.error('Error disconnecting Strava:', error)
+      logDbError("strava-disconnect-update", error);
       throw error
     }
 
-    console.log('Successfully disconnected Strava for user:', user.user.id)
+    logStructured("strava-disconnect", "done", { user: logUserRef(auth.user.id) });
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -87,9 +83,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in strava-disconnect function:', error)
+    logException("strava-disconnect", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "strava_disconnect_failed" }),
       { 
         status: 400,
         headers: { 

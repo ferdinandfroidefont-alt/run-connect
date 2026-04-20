@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 interface GeocodeRequest {
@@ -51,6 +53,14 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+  const authResult = await requireUserJwtCors(req, supabaseAdmin, corsHeaders);
+  if (authResult instanceof Response) return authResult;
+
   try {
     const browserApiKey = Deno.env.get("GOOGLE_MAPS_BROWSER_API_KEY");
     const serverApiKey = Deno.env.get("GOOGLE_MAPS_SERVER_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
@@ -97,12 +107,12 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-  } catch (error: any) {
-    console.error("Erreur dans google-maps-proxy:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+  } catch (error: unknown) {
+    console.error("Erreur dans google-maps-proxy");
+    return new Response(JSON.stringify({ error: "Internal error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 

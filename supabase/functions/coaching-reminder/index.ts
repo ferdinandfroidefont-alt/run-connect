@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { getCorsHeaders, verifyCronSecret } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireCron } from "../_shared/auth.ts";
+import { logException, summarizeFcmErrorBody, summarizeGoogleApiError } from "../_shared/secureLog.ts";
 
 interface FirebaseServiceAccount {
   type: string;
@@ -60,7 +62,9 @@ async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<strin
   });
 
   const tokenData = await response.json();
-  if (!response.ok) throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
+  if (!response.ok) {
+    throw new Error(`Token request failed status=${response.status} ${summarizeGoogleApiError(tokenData)}`);
+  }
 
   cachedAccessToken = tokenData.access_token;
   cachedTokenExpiry = Date.now() + 50 * 60 * 1000;
@@ -85,12 +89,12 @@ async function sendFCM(accessToken: string, projectId: string, token: string, ti
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('FCM failed:', response.status, JSON.stringify(err));
+      console.error(`[coaching-reminder] fcm status=${response.status} summary=${summarizeFcmErrorBody(err)}`);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('FCM exception:', e);
+    logException("coaching-reminder-fcm", e);
     return false;
   }
 }
@@ -102,7 +106,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (!verifyCronSecret(req)) {
+  if (!requireCron(req)) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 

@@ -31,7 +31,7 @@ const isAndroidWebView = (): boolean => {
 const isNativeProtocol = (): boolean => {
   try {
     const protocol = window.location.protocol;
-    return protocol === 'capacitor:' || protocol === 'file:' || protocol === 'ionic:';
+    return protocol === 'capacitor:' || protocol === 'file:' || protocol === 'ionic:' || protocol === 'runconnect:';
   } catch {
     return false;
   }

@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException, logHttpUpstream, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,35 +10,19 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+
+  const auth = await requireUserJwtCors(req, supabaseClient, corsHeaders);
+  if (auth instanceof Response) return auth;
+
+  const user = auth.user;
+
   try {
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Get user from the token
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
-    
-    if (userError || !user) {
-      console.error('Authentication error:', userError)
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    console.log('Getting Strava friends for user:', user.id)
+    logStructured("get-strava-friends", "start", { user: logUserRef(user.id) });
 
     // Get user's Strava profile
     const { data: profile, error: profileError } = await supabaseClient
@@ -45,16 +31,8 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    console.log('Profile query result:', {
-      profileFound: !!profile,
-      strava_connected: profile?.strava_connected,
-      has_access_token: !!profile?.strava_access_token,
-      strava_user_id: profile?.strava_user_id,
-      error: profileError
-    })
-
     if (profileError) {
-      console.error('Profile error:', profileError)
+      logDbError("get-strava-friends", profileError);
       return new Response(
         JSON.stringify({ error: 'Database error', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -62,7 +40,6 @@ serve(async (req) => {
     }
 
     if (!profile) {
-      console.log('No profile found for user:', user.id)
       return new Response(
         JSON.stringify({ error: 'Profile not found', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -70,17 +47,11 @@ serve(async (req) => {
     }
 
     if (!profile?.strava_connected || !profile?.strava_access_token) {
-      console.log('Strava not connected for user:', user.id, {
-        strava_connected: profile?.strava_connected,
-        has_access_token: !!profile?.strava_access_token
-      })
       return new Response(
         JSON.stringify({ error: 'Strava not connected', friends: [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    console.log('User has Strava connected, fetching friends...')
 
     // Get Strava friends using the access token - try both following and followers
     const [followingResponse, followersResponse] = await Promise.all([
@@ -100,7 +71,8 @@ serve(async (req) => {
 
     // Check responses
     if (!followingResponse.ok && !followersResponse.ok) {
-      console.error('Both Strava API calls failed:', followingResponse.status, followersResponse.status)
+      logHttpUpstream("get-strava-friends", followingResponse.status, `following`);
+      logHttpUpstream("get-strava-friends", followersResponse.status, `followers`);
       
       if (followingResponse.status === 401 || followersResponse.status === 401) {
         return new Response(
@@ -120,13 +92,11 @@ serve(async (req) => {
     
     if (followingResponse.ok) {
       const following = await followingResponse.json()
-      console.log('Strava following count:', following.length)
       allStravaFriends = [...allStravaFriends, ...following]
     }
     
     if (followersResponse.ok) {
       const followers = await followersResponse.json()
-      console.log('Strava followers count:', followers.length)
       allStravaFriends = [...allStravaFriends, ...followers]
     }
 
@@ -135,20 +105,15 @@ serve(async (req) => {
       index === self.findIndex(f => f.id === friend.id)
     )
     
-    console.log('Total unique Strava friends count:', uniqueFriends.length)
-
     // Extract Strava user IDs
     const stravaUserIds = uniqueFriends.map((friend: any) => friend.id.toString())
 
     if (stravaUserIds.length === 0) {
-      console.log('No Strava friends found')
       return new Response(
         JSON.stringify({ friends: [], message: 'No friends found on Strava' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    console.log('Looking for Strava user IDs in app:', stravaUserIds.slice(0, 5)) // Log first 5 IDs
 
     // Find users in our app who have these Strava IDs
     const { data: appUsers, error: appUsersError } = await supabaseClient
@@ -173,8 +138,6 @@ serve(async (req) => {
       )
     }
 
-    console.log('Found app users with Strava connection:', appUsers?.length || 0)
-
     // Get follower counts for each user
     const friendsWithStats = await Promise.all(
       (appUsers || []).map(async (friend) => {
@@ -193,7 +156,11 @@ serve(async (req) => {
       })
     )
 
-    console.log('Returning', friendsWithStats.length, 'Strava friends with stats')
+    logStructured("get-strava-friends", "done", {
+      user: logUserRef(user.id),
+      strava_contacts: uniqueFriends.length,
+      app_matches: friendsWithStats.length,
+    });
 
     return new Response(
       JSON.stringify({ friends: friendsWithStats }),
@@ -201,7 +168,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in get-strava-friends function:', error)
+    logException("get-strava-friends", error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', friends: [] }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -30,7 +30,7 @@ export type TutorialReplayDefinition = {
 export function pathMatchesTutorial(pathname: string, def: TutorialReplayDefinition): boolean {
   if (pathname === def.path) return true;
   if (def.id === "profile") {
-    return pathname === "/profile" || pathname.startsWith("/profile/");
+    return pathname === "/" || pathname === "/profile" || pathname.startsWith("/profile/");
   }
   if (def.id === "routes") {
     return (
@@ -112,15 +112,16 @@ export const TUTORIAL_REPLAY_DEFINITIONS: Record<TutorialReplayId, TutorialRepla
   },
   feed: {
     id: "feed",
-    path: "/leaderboard",
+    path: "/",
     startDelayMs: 380,
+    waitForTargetExtraMs: 900,
     getSteps: (t) => [
-      introStep('[data-tutorial="nav-leaderboard"]', t, "tutorial.replayPages.leaderboard", "bottom"),
+      introStep('[data-tutorial="tutorial-feed"]', t, "tutorial.replayPages.feed", "bottom"),
     ],
   },
   profile: {
     id: "profile",
-    path: "/profile",
+    path: "/",
     startDelayMs: 480,
     getSteps: (t) => [
       introStep('[data-tutorial="tutorial-profile-page"]', t, "tutorial.replayPages.profile", "bottom"),
@@ -166,6 +167,7 @@ export const TUTORIAL_REPLAY_MENU_ORDER: TutorialReplayId[] = [
   "create",
   "sessions",
   "messages",
+  "feed",
   "profile",
   "notifications",
   "leaderboard",

@@ -1,10 +1,10 @@
-import { useState, useEffect, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
@@ -15,17 +15,26 @@ import { PageTransition } from "@/components/PageTransition";
 import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
 import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
 import { RouteAnalytics } from "@/components/RouteAnalytics";
-import { RoutePageFallback } from "@/components/RoutePageFallback";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
+import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
+import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
+import {
+  getAppShellBootCompleted,
+  setAppShellBootCompleted,
+} from "@/lib/appShellPersistence";
+import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
+const Feed = lazy(() => import("./pages/Feed"));
 const MySessions = lazy(() => import("./pages/MySessions"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Coaching = lazy(() => import("./pages/Coaching"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
-const Profile = lazy(() => import("./pages/Profile"));
+const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
+const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
+const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
 const PublicProfile = lazy(() => import("./pages/PublicProfile"));
 const Subscription = lazy(() => import("./pages/Subscription"));
 const DonationSuccess = lazy(() => import("./pages/DonationSuccess"));
@@ -43,13 +52,25 @@ const Terms = lazy(() => import("./pages/Terms"));
 const About = lazy(() => import("./pages/About"));
 const LegalNotice = lazy(() => import("./pages/LegalNotice"));
 const ConfirmPresence = lazy(() => import("./pages/ConfirmPresence"));
+const ConfirmPresenceHelp = lazy(() => import("./pages/ConfirmPresenceHelp"));
 const TrainingMode = lazy(() => import("./pages/TrainingMode"));
 const SessionTracking = lazy(() => import("./pages/SessionTracking"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const StoryCreate = lazy(() => import("./pages/StoryCreate"));
+const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
-  return <Suspense fallback={<RoutePageFallback />}>{children}</Suspense>;
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[50dvh] items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  );
 }
 
 const queryClient = new QueryClient({
@@ -69,8 +90,96 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Show loading screen on all platforms
-  const [isAppLoaded, setIsAppLoaded] = useState(false);
+  /** Une fois le boot effectué sur l’appareil, ne plus montrer le splash global (reprise + rechargements WebView). */
+  const [isAppLoaded, setIsAppLoaded] = useState(() => getAppShellBootCompleted());
+
+  const handleShellBootComplete = useCallback(() => {
+    setAppShellBootCompleted();
+    setIsAppLoaded(true);
+  }, []);
+
+  // Si le shell a déjà booté (localStorage), rétablit tout de suite le chrome (pas de passage par LoadingScreen).
+  useEffect(() => {
+    if (!isAppLoaded) return;
+    void restoreChromeAfterRuconnectSplash();
+  }, [isAppLoaded]);
+
+  // Route warmup disabled in production/native debug: it eagerly pulled heavy chart pages
+  // and could crash the published boot before the auth/home UI appeared.
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      
+      return;
+    }
+
+    const preload = () => {
+      void Promise.allSettled([
+        import("./pages/Index"),
+        import("./pages/Auth"),
+        import("./pages/Feed"),
+        import("./pages/MySessions"),
+        import("./pages/Messages"),
+        import("./pages/Coaching"),
+        import("./pages/Leaderboard"),
+        import("./pages/ProfileEntry"),
+        import("./pages/ProfileByUserIdPage"),
+        import("./pages/ProfileSportRecordsEdit"),
+        import("./pages/PublicProfile"),
+        import("./pages/Subscription"),
+        import("./pages/DonationSuccess"),
+        import("./pages/DonationCanceled"),
+        import("./pages/NotFound"),
+        import("./pages/Search"),
+        import("./pages/RouteCreation"),
+        import("./pages/ItineraryHub"),
+        import("./pages/ItineraryMyRoutes"),
+        import("./pages/ItineraryRouteDetail"),
+        import("./pages/Itinerary3D"),
+        import("./pages/ItineraryTraining"),
+        import("./pages/Privacy"),
+        import("./pages/Terms"),
+        import("./pages/About"),
+        import("./pages/LegalNotice"),
+        import("./pages/ConfirmPresence"),
+        import("./pages/ConfirmPresenceHelp"),
+        import("./pages/TrainingMode"),
+        import("./pages/SessionTracking"),
+        import("./pages/AuthCallback"),
+        import("./pages/StoryCreate"),
+        import("./pages/StoryDeleteConfirm"),
+      ]);
+    };
+
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+
+    if (ric) {
+      const id = ric(preload, { timeout: 600 });
+      const onFocus = () => preload();
+      const onOnline = () => preload();
+      window.addEventListener("focus", onFocus);
+      window.addEventListener("online", onOnline);
+      return () => {
+        const cic = (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback;
+        cic?.(id);
+        window.removeEventListener("focus", onFocus);
+        window.removeEventListener("online", onOnline);
+      };
+    }
+
+    const timer = window.setTimeout(preload, 0);
+    const onFocus = () => preload();
+    const onOnline = () => preload();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
 
   // 🍎 Global deep link listener for iOS OAuth callback
   useEffect(() => {
@@ -85,7 +194,11 @@ const App = () => {
         const { Browser } = await import('@capacitor/browser');
 
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
-          console.log('🍎 [GLOBAL] appUrlOpen:', url);
+          if (import.meta.env.DEV) {
+            console.log('🍎 [GLOBAL] appUrlOpen:', url);
+          } else {
+            console.log('🍎 [GLOBAL] appUrlOpen (redacted in prod)');
+          }
 
           const isAuthCallback =
             url.startsWith('runconnect://auth/callback') ||
@@ -177,12 +290,17 @@ const App = () => {
 
   /* Pas de ThemeProvider ici : sinon ThemeMetaSync écrase le fond bleu du splash */
   if (!isAppLoaded) {
-    return <LoadingScreen onLoadingComplete={() => setIsAppLoaded(true)} />;
+    return (
+      <>
+        <LoadingScreen onLoadingComplete={handleShellBootComplete} />
+      </>
+    );
   }
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col">
       <QueryClientProvider client={queryClient}>
+        <AppResumeCoordinator />
         <AppErrorBoundary>
           <ThemeProvider>
             <AppProvider>
@@ -194,19 +312,22 @@ const App = () => {
                 <RouteAnalytics />
                 <AnalyticsConsentBanner />
                 <NetworkStatusBanner />
+                <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="sync">
                   <Routes>
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
                   <Route path="/" element={<Layout><PageTransition><PageSuspense><Index /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/feed" element={<Navigate to="/" replace />} />
+                  <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><PageTransition><PageSuspense><MySessions /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Coaching /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><Profile /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
+                  <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
                   <Route path="/itinerary" element={<Layout><PageTransition><PageSuspense><ItineraryHub /></PageSuspense></PageTransition></Layout>} />
@@ -221,11 +342,14 @@ const App = () => {
                   <Route path="/terms" element={<PageTransition><PageSuspense><Terms /></PageSuspense></PageTransition>} />
                   <Route path="/about" element={<PageTransition><PageSuspense><About /></PageSuspense></PageTransition>} />
                   <Route path="/confirm-presence" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/confirm-presence/help" element={<Layout><PageTransition><PageSuspense><ConfirmPresenceHelp /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/confirm-presence/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   {/* /security route removed for production security */}
                   <Route path="/training/route/:routeId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
+                  <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
+                  <Route path="/stories/:storyId/delete" element={<PageTransition><PageSuspense><StoryDeleteConfirm /></PageSuspense></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />
                   <Route path="/donation-canceled" element={<PageTransition><PageSuspense><DonationCanceled /></PageSuspense></PageTransition>} />

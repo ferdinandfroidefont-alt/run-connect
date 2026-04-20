@@ -78,7 +78,7 @@ export function DistanceUnitsProvider({ children }: { children: ReactNode }) {
         return true;
       }
       try {
-        const { error } = await supabase.from("profiles").update({ distance_unit: u }).eq("user_id", user.id);
+        const { error } = await supabase.from("profiles").update({ distance_unit: u } as any).eq("user_id", user.id);
         if (error) {
           console.error("[DistanceUnits] distance_unit update failed:", error.message);
           return false;

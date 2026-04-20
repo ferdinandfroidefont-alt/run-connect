@@ -14,9 +14,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground rounded-ios-lg shadow-sm active:opacity-90",
         outline:
-          "border border-border/80 bg-background/95 text-foreground rounded-ios-lg active:bg-secondary/90",
+          "border border-border/80 bg-background/95 text-foreground rounded-ios-lg active:bg-secondary/90 dark:border-border dark:bg-secondary dark:active:bg-[#1a1a1a]",
         secondary: "bg-secondary text-secondary-foreground rounded-ios-lg active:opacity-90",
-        ghost: "text-primary rounded-ios-lg active:bg-secondary/80",
+        ghost: "text-primary rounded-ios-lg active:bg-secondary/80 dark:active:bg-[#111111]",
         link: "text-primary underline-offset-4 hover:underline active:scale-100 rounded-md",
         tinted: "bg-primary/[0.12] text-primary font-semibold rounded-full active:bg-primary/20",
       },

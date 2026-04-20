@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,14 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { WeeklyBarChart } from "./WeeklyBarChart";
 import { WeeklyPlanCard } from "./WeeklyPlanCard";
+import { AthleteBlockRpeSliders } from "./AthleteBlockRpeSliders";
+import {
+  athleteBlockRpeFeltToJson,
+  blockRpeFromCoachingRow,
+  normalizeBlockRpeLength,
+  parseAthleteBlockRpeFelt,
+} from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 
 interface CoachingSession {
   id: string;
@@ -24,6 +32,7 @@ interface CoachingSession {
   objective?: string | null;
   rcc_code?: string | null;
   rpe?: number | null;
+  rpe_phases?: unknown;
   session_blocks?: unknown;
 }
 
@@ -33,6 +42,7 @@ interface Participation {
   status: string;
   athlete_note: string | null;
   completed_at: string | null;
+  athlete_rpe_felt?: unknown;
 }
 
 interface AthleteWeeklyViewProps {
@@ -48,6 +58,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
   const [participations, setParticipations] = useState<Record<string, Participation>>({});
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const [noteValues, setNoteValues] = useState<Record<string, string>>({});
+  const [feltRpeBySession, setFeltRpeBySession] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState(true);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -60,9 +71,9 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
     setLoading(true);
     try {
       // First fetch participations for this user in this club's sessions for the week
-      const { data: allClubSessions } = await supabase.
-      from("coaching_sessions").
-      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, session_blocks").
+      const { data: allClubSessions } = await (supabase.
+      from("coaching_sessions") as any).
+      select("id, title, scheduled_at, activity_type, distance_km, objective, status, coach_id, club_id, description, pace_target, rcc_code, rpe, rpe_phases, session_blocks").
       eq("club_id", clubId).
       gte("scheduled_at", weekStart.toISOString()).
       lte("scheduled_at", weekEnd.toISOString()).
@@ -72,14 +83,15 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
         setSessions([]);
         setParticipations({});
         setNoteValues({});
+        setFeltRpeBySession({});
         setLoading(false);
         return;
       }
 
       const allSessionIds = allClubSessions.map((s) => s.id);
-      const { data } = await supabase.
-      from("coaching_participations").
-      select("id, coaching_session_id, status, athlete_note, completed_at").
+      const { data } = await (supabase.
+      from("coaching_participations") as any).
+      select("id, coaching_session_id, status, athlete_note, completed_at, athlete_rpe_felt").
       eq("user_id", user.id).
       in("coaching_session_id", allSessionIds);
 
@@ -90,12 +102,22 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       const map: Record<string, Participation> = {};
       const notes: Record<string, string> = {};
+      const felt: Record<string, number[]> = {};
       (data || []).forEach((p) => {
-        map[p.coaching_session_id] = p;
+        map[p.coaching_session_id] = p as Participation;
         notes[p.coaching_session_id] = p.athlete_note || "";
+        const sess = sessionList.find((s) => s.id === p.coaching_session_id);
+        if (sess) {
+          const n = sess.rcc_code ? parseRCC(sess.rcc_code).blocks.length : 0;
+          const rawFelt = parseAthleteBlockRpeFelt((p as Participation).athlete_rpe_felt, n);
+          const hasSaved = (p as Participation).athlete_rpe_felt != null;
+          const fromPlan = blockRpeFromCoachingRow(sess, n);
+          felt[sess.id] = hasSaved ? normalizeBlockRpeLength(rawFelt, n) : fromPlan;
+        }
       });
       setParticipations(map);
       setNoteValues(notes);
+      setFeltRpeBySession(felt);
     } catch (e) {
       console.error("Error loading week:", e);
     } finally {
@@ -147,17 +169,32 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
     const isCompleting = participation.status !== "completed";
     const newStatus = isCompleting ? "completed" : "sent";
+    const n = session.rcc_code ? parseRCC(session.rcc_code).blocks.length : 0;
+    const felt = normalizeBlockRpeLength(
+      feltRpeBySession[session.id] ?? blockRpeFromCoachingRow(session, n),
+      n,
+    );
+    const rpePayload = isCompleting ? athleteBlockRpeFeltToJson(felt) : null;
 
     const { error } = await supabase.
     from("coaching_participations").
-    update({ status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }).
+    update({
+      status: newStatus,
+      completed_at: isCompleting ? new Date().toISOString() : null,
+      athlete_rpe_felt: rpePayload,
+    }).
     eq("id", participation.id);
 
     if (error) {toast.error("Erreur lors de la mise à jour");return;}
 
     setParticipations((prev) => ({
       ...prev,
-      [session.id]: { ...prev[session.id], status: newStatus, completed_at: isCompleting ? new Date().toISOString() : null }
+      [session.id]: {
+        ...prev[session.id],
+        status: newStatus,
+        completed_at: isCompleting ? new Date().toISOString() : null,
+        athlete_rpe_felt: rpePayload,
+      },
     }));
 
     if (isCompleting) toast.success("Séance marquée comme faite ✅");
@@ -184,16 +221,16 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
   if (loading) {
     return (
-      <div className="space-y-3 p-4">
-        {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-card rounded-none animate-pulse" />)}
+      <div className="space-y-0">
+        {[1, 2, 3].map((i) => <div key={i} className="h-20 animate-pulse border-b border-border/40 bg-card" />)}
       </div>);
 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {/* Week navigation — hero style */}
-      <div className="ios-card mx-4 overflow-hidden border border-border/60 px-4 py-5 shadow-[var(--shadow-card)]">
+      <div className="overflow-hidden border-b border-border/60 bg-card px-4 py-5 shadow-none">
         {/* Week switcher */}
         <div className="flex items-center justify-between mb-5">
           <button
@@ -287,7 +324,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Bar chart */}
       {sessions.length > 0 && (
-        <div className="ios-card mx-4 border border-border/60 px-4 py-4 shadow-[var(--shadow-card)]">
+        <div className="border-b border-border/60 bg-card px-4 py-4 shadow-none">
           <WeeklyBarChart
             sessions={sessions.map(s => ({ scheduled_at: s.scheduled_at, rcc_code: s.rcc_code, distance_km: s.distance_km, title: s.title, objective: s.objective }))}
             weekDays={weekDays}
@@ -297,7 +334,7 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
 
       {/* Session list */}
       {sessions.length === 0 ? (
-        <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
+        <div className="border-b border-border/60 bg-card p-8 text-center shadow-none">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/12">
             <CalendarDays className="h-6 w-6 text-primary" />
           </div>
@@ -322,6 +359,16 @@ export const AthleteWeeklyView = ({ clubId, sessions: parentSessions, onSessionC
                   noteValue={participation?.athlete_note || ""}
                   showCheckbox={true}
                 />
+                {!isDone && (
+                  <div className="bg-card px-6 pb-3 border-t border-border/40">
+                    <p className="text-[11px] font-semibold text-muted-foreground mb-2">RPE ressenti</p>
+                    <AthleteBlockRpeSliders
+                      rccCode={session.rcc_code}
+                      values={feltRpeBySession[session.id] ?? blockRpeFromCoachingRow(session, parseRCC(session.rcc_code || "").blocks.length)}
+                      onChange={(v) => setFeltRpeBySession((prev) => ({ ...prev, [session.id]: v }))}
+                    />
+                  </div>
+                )}
                 {isExpanded && (
                   <div className="bg-card px-6 pb-4">
                     <Textarea

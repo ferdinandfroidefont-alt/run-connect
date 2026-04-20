@@ -1,6 +1,16 @@
 import { RouteDialog } from './RouteDialog';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
+import { RUNCONNECT_OPEN_HOME_SETTINGS_EVENT } from '@/lib/homeMapEvents';
+import type {
+  GeoJSONSource,
+  LngLat,
+  Map,
+  MapMouseEvent,
+  MapTouchEvent,
+  Marker,
+  PaddingOptions,
+} from 'mapbox-gl';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
@@ -8,18 +18,20 @@ import { SessionDetailsDialog } from './SessionDetailsDialog';
 import { SessionPreviewPopup } from './SessionPreviewPopup';
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
+import { OffscreenSessionIndicators } from '@/components/map/OffscreenSessionIndicators';
+import { useOffscreenSessionIndicators } from '@/hooks/useOffscreenSessionIndicators';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import type { Position } from '@/types/permissions';
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, Map as MapIcon, LayoutList, PersonStanding, Sunrise, Sun, Moon, Maximize2, ArrowLeft, Settings, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, UserPlus, Calendar } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,6 +42,10 @@ import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
 import { cn } from '@/lib/utils';
 import {
+  getPersistedHomeMapPosition,
+  HOME_HOT_PREFETCH_MAX_AGE_MS,
+  HOME_MAP_GEO_CACHE_MAX_AGE_MS,
+  persistHomeMapPosition,
   takePrefetchedHomeMapPositionIfReady,
   waitForPrefetchedHomeMapPosition,
 } from '@/lib/homeMapPrefetch';
@@ -46,12 +62,20 @@ import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
-import { getStoredMapStyleId, persistMapStyleId } from '@/lib/mapboxMapStylePreference';
+import {
+  clearMapStyleThemeRollback,
+  getStoredMapStyleId,
+  MAP_STYLE_THEME_SYNC_EVENT,
+  persistMapStyleId,
+} from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
-import { ActivityIcon } from '@/lib/activityIcons';
-import { SessionLevelBadge } from '@/components/SessionLevelBadge';
 import { ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
-import type { SessionLevel } from '@/lib/sessionLevelCalculator';
+import {
+  canSessionBeDiscovered,
+  getSessionPriorityScore,
+  getSessionVisualState,
+  type SessionVisibilityVisualState,
+} from '@/lib/sessionVisibility';
 
 const NotificationCenter = lazy(() =>
   import('./NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -79,7 +103,7 @@ const PARIS_FALLBACK: { lng: number; lat: number } = { lng: 2.3522, lat: 48.8566
 function computeHomeMapViewportPadding(opts: {
   immersive: boolean;
   topStackEl: HTMLElement | null;
-}): mapboxgl.PaddingOptions {
+}): PaddingOptions {
   if (opts.immersive) {
     return { top: 80, bottom: 120, left: 14, right: 14 };
   }
@@ -120,6 +144,12 @@ interface Session {
   club_id?: string | null;
   image_url?: string;
   calculated_level?: number;
+  visibility_tier?: string | null;
+  visibility_radius_km?: number | null;
+  boost_expires_at?: string | null;
+  discovery_score?: number | null;
+  visibility_state?: SessionVisibilityVisualState;
+  distance_km?: number;
   profiles: {
     username: string;
     display_name: string;
@@ -132,8 +162,19 @@ interface Session {
     total_distance: number;
     total_elevation_gain: number;
   } | null;
-  friends_only?: boolean;
 }
+
+const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 interface Filter {
   activity_types: string[];
   session_types: string[];
@@ -153,43 +194,6 @@ const TIME_SLOTS = [
   { id: "night" as const, icon: Moon, label: "23h-6h", startHour: 23, endHour: 6 },
 ];
 
-const HOME_VIEW_MODE_STORAGE_KEY = 'runconnect-home-view-mode';
-
-function filterHomeMapSessions(sessions: Session[], filters: Filter): Session[] {
-  const q = (filters.search_query ?? '').trim().toLowerCase();
-  return sessions.filter((session) => {
-    const matchesActivity =
-      filters.activity_types.length === 0 ||
-      filters.activity_types.includes(session.activity_type);
-    const matchesType =
-      filters.session_types.length === 0 ||
-      filters.session_types.includes(session.session_type);
-    const matchesSearch =
-      !q ||
-      (session.title ?? '').toLowerCase().includes(q) ||
-      (session.location_name ?? '').toLowerCase().includes(q) ||
-      (session.description ?? '').toLowerCase().includes(q);
-
-    let matchesTimeSlot = true;
-    if (filters.time_slot) {
-      const slot = TIME_SLOTS.find((s) => s.id === filters.time_slot);
-      if (slot) {
-        const sessionHour = new Date(session.scheduled_at).getHours();
-        if (slot.id === 'night') {
-          matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
-        } else {
-          matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
-        }
-      }
-    }
-
-    const matchesLevel =
-      !filters.level || (session.calculated_level || 3) >= filters.level;
-
-    return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
-  });
-}
-
 /** Couleur d’icône sur fond blanc (état non sélectionné) — sélection = tout en bleu iOS */
 /** Icônes créneaux sur fond blanc : teintes proches des pastilles Réglages (moins saturées que avant) */
 const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night', string> = {
@@ -199,12 +203,13 @@ const TIME_SLOT_ICON_CLASS: Record<'morning' | 'afternoon' | 'evening' | 'night'
   night: 'text-[#3730A3]',
 };
 
-const ACTIVITY_OPTIONS = [
-  { id: 'all', label: 'Tous sports', values: [] as string[] },
-  { id: 'course', label: 'Course', values: ['course'] },
-  { id: 'velo', label: 'Vélo', values: ['velo'] },
-  { id: 'natation', label: 'Natation', values: ['natation'] },
-  { id: 'marche', label: 'Marche', values: ['marche'] },
+const ACTIVITY_OPTIONS: { id: string; label: string; values: string[] }[] = [
+  { id: 'all', label: 'Tous sports', values: [] },
+  ...ACTIVITY_TYPES.map((a) => ({
+    id: a.value,
+    label: a.label,
+    values: [a.value],
+  })),
 ];
 
 const SESSION_TYPE_OPTIONS = [
@@ -214,170 +219,6 @@ const SESSION_TYPE_OPTIONS = [
   { id: 'fractionne', label: 'Fractionné', values: ['fractionne'] },
   { id: 'competition', label: 'Compétition', values: ['competition'] },
 ];
-
-function homeFeedActivityBorderClass(activityType: string): string {
-  switch (activityType) {
-    case 'course':
-    case 'trail':
-      return 'border-l-orange-400';
-    case 'velo':
-    case 'vtt':
-    case 'gravel':
-      return 'border-l-sky-500';
-    case 'natation':
-      return 'border-l-cyan-500';
-    case 'marche':
-      return 'border-l-amber-500';
-    default:
-      return 'border-l-primary';
-  }
-}
-
-function HomeSessionFeedCard({
-  session,
-  index,
-  onOpenDetails,
-  onJoin,
-  joinBusy,
-  isOrganizer,
-  isParticipant,
-  isFull,
-}: {
-  session: Session;
-  index: number;
-  onOpenDetails: () => void;
-  onJoin: () => void;
-  joinBusy: boolean;
-  isOrganizer: boolean;
-  isParticipant: boolean;
-  isFull: boolean;
-}) {
-  const sportLabel =
-    ACTIVITY_TYPES.find((a) => a.value === session.activity_type)?.label ?? session.activity_type;
-  const sessionTypeOpt = SESSION_TYPE_OPTIONS.find(
-    (o) => o.values.length === 1 && o.values[0] === session.session_type
-  );
-  const typeLabel = sessionTypeOpt?.label ?? session.session_type;
-  const orgName =
-    session.profiles?.display_name?.trim() ||
-    session.profiles?.username ||
-    'Organisateur';
-  const distKm = session.routes?.total_distance;
-  const canRequestJoin = !isOrganizer && !isParticipant && !isFull;
-
-  const intensityCls =
-    session.intensity?.toLowerCase() === 'faible'
-      ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
-      : ['modere', 'modérée'].includes(session.intensity?.toLowerCase() ?? '')
-        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200'
-        : ['elevee', 'élevée'].includes(session.intensity?.toLowerCase() ?? '')
-          ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
-          : 'bg-secondary text-muted-foreground';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpenDetails}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpenDetails();
-        }
-      }}
-      className={cn(
-        'ios-card cursor-pointer overflow-hidden border-l-4 text-left transition-colors active:bg-secondary',
-        'animate-fade-in',
-        homeFeedActivityBorderClass(session.activity_type)
-      )}
-      style={{ animationDelay: `${index * 70}ms`, animationFillMode: 'both' }}
-    >
-      <div className="space-y-ios-3 p-ios-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-ios-headline line-clamp-2 font-semibold">{session.title}</h3>
-            <p className="text-ios-footnote mt-1 text-muted-foreground">
-              par <span className="font-medium text-foreground/90">{orgName}</span>
-            </p>
-          </div>
-          {typeof distKm === 'number' && distKm > 0 && (
-            <span className="shrink-0 text-[13px] font-medium text-primary">
-              {distKm < 10 ? `${distKm.toFixed(1)} km` : `${Math.round(distKm)} km`}
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <SessionLevelBadge
-            level={(session.calculated_level || 3) as SessionLevel}
-            variant="compact"
-            size="sm"
-          />
-          <Badge variant="outline" className="flex items-center gap-1.5 rounded-full text-[11px]">
-            <ActivityIcon activityType={session.activity_type} size="sm" />
-            {sportLabel}
-          </Badge>
-          <Badge variant="outline" className="rounded-full text-[11px]">
-            {typeLabel}
-          </Badge>
-          {session.intensity && (
-            <Badge className={cn('rounded-full text-[11px]', intensityCls)}>{session.intensity}</Badge>
-          )}
-          {session.friends_only && (
-            <Badge variant="secondary" className="rounded-full text-[11px]">
-              Amis
-            </Badge>
-          )}
-        </div>
-
-        <div className="space-y-1.5 text-[13px] text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-            <span>{format(new Date(session.scheduled_at), 'EEE d MMM · HH:mm', { locale: fr })}</span>
-          </div>
-          <div className="flex min-w-0 items-center gap-2">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="truncate">{session.location_name || 'Lieu à préciser'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 shrink-0" aria-hidden />
-            <span>
-              {session.current_participants}/{session.max_participants} participants
-            </span>
-          </div>
-        </div>
-
-        {session.description ? (
-          <p className="line-clamp-2 text-[13px] text-muted-foreground">{session.description}</p>
-        ) : null}
-
-        <div className="flex border-t border-foreground/5 pt-3">
-          <Button
-            type="button"
-            size="sm"
-            disabled={!canRequestJoin || joinBusy}
-            className="h-10 flex-1 rounded-full border-0 ios-gradient-btn text-white shadow-lg shadow-primary/25"
-            onClick={(e) => {
-              e.stopPropagation();
-              onJoin();
-            }}
-          >
-            <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-            {isOrganizer
-              ? 'Organisateur'
-              : isParticipant
-                ? 'Inscrit'
-                : isFull
-                  ? 'Complet'
-                  : session.friends_only
-                    ? 'Demander'
-                    : 'Rejoindre'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 type ExpandedFilter =
   | 'activity'
@@ -434,7 +275,7 @@ const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
   geometry: { type: 'LineString', coordinates: [] },
 };
 
-function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
+function ensureInteractiveRouteLayer(map: Map) {
   if (map.getSource(ROUTE_LINE_SOURCE)) return;
   map.addSource(ROUTE_LINE_SOURCE, {
     type: 'geojson',
@@ -453,12 +294,12 @@ function ensureInteractiveRouteLayer(map: mapboxgl.Map) {
   });
 }
 
-function setInteractiveRouteLine(map: mapboxgl.Map | null, points: MapCoord[]) {
+function setInteractiveRouteLine(map: Map | null, points: MapCoord[]) {
   if (!map) return;
   const apply = () => {
     if (!map.isStyleLoaded()) return;
     ensureInteractiveRouteLayer(map);
-    const src = map.getSource(ROUTE_LINE_SOURCE) as mapboxgl.GeoJSONSource;
+    const src = map.getSource(ROUTE_LINE_SOURCE) as GeoJSONSource;
     if (points.length >= 2) {
       src.setData(coordsToLineString(points));
     } else {
@@ -484,6 +325,8 @@ export const InteractiveMap = ({
     setRefreshSessions,
     setOpenCreateSession,
     setOpenCreateRoute,
+    setHomeMapImmersive,
+    homeFeedSheetSnap,
   } = useAppContext();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -493,7 +336,7 @@ export const InteractiveMap = ({
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
 
   // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef<Map<string, string>>(new Map());
+  const markerCache = useRef(new window.Map<string, string>());
 
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -505,10 +348,10 @@ export const InteractiveMap = ({
     getCurrentPosition
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markers = useRef<mapboxgl.Marker[]>([]);
+  const map = useRef<Map | null>(null);
+  const markers = useRef<Marker[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
-  const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -530,7 +373,7 @@ export const InteractiveMap = ({
     time_slot: null,
     level: null
   });
-  const [mapboxMap, setMapboxMap] = useState<mapboxgl.Map | null>(null);
+  const [mapboxMap, setMapboxMap] = useState<Map | null>(null);
   const [userProfile, setUserProfile] = useState<{
     username: string;
     display_name: string;
@@ -548,33 +391,22 @@ export const InteractiveMap = ({
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  useEffect(() => {
+    setHomeMapImmersive(isActive && isImmersiveMode);
+    return () => setHomeMapImmersive(false);
+  }, [isActive, isImmersiveMode, setHomeMapImmersive]);
+
+  useEffect(() => {
+    const openSettings = () => setShowSettingsDialog(true);
+    window.addEventListener(RUNCONNECT_OPEN_HOME_SETTINGS_EVENT, openSettings);
+    return () => window.removeEventListener(RUNCONNECT_OPEN_HOME_SETTINGS_EVENT, openSettings);
+  }, []);
+  const [showMapStyleSelector, setShowMapStyleSelector] = useState(false);
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
-  const [homeDisplayMode, setHomeDisplayModeState] = useState<'map' | 'feed'>(() => {
-    try {
-      const v = sessionStorage.getItem(HOME_VIEW_MODE_STORAGE_KEY);
-      if (v === 'feed' || v === 'map') return v;
-    } catch {
-      /* ignore */
-    }
-    return 'map';
-  });
-  const [feedTopInsetPx, setFeedTopInsetPx] = useState(240);
-  const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(() => new Set());
-  const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
-
-  const setHomeDisplayMode = useCallback((mode: 'map' | 'feed') => {
-    setHomeDisplayModeState(mode);
-    if (mode === 'feed') setIsImmersiveMode(false);
-    try {
-      sessionStorage.setItem(HOME_VIEW_MODE_STORAGE_KEY, mode);
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   const toggleImmersiveMode = () => {
-    if (homeDisplayMode === 'feed') return;
     setIsImmersiveMode(prev => {
       const next = !prev;
       // Ne plus cacher la barre de navigation en mode immersif
@@ -593,6 +425,18 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
+
+  /**
+   * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
+   * réutilisée dans la course au lieu d’un 2e appel au `load`).
+   */
+  const homeFastGeoPromiseRef = useRef<Promise<Position | null> | null>(null);
+  useEffect(() => {
+    homeFastGeoPromiseRef.current = getCurrentPosition(0, { mode: 'fast' });
+    return () => {
+      homeFastGeoPromiseRef.current = null;
+    };
+  }, [getCurrentPosition]);
 
   useEffect(() => {
     const loadClubFilters = async () => {
@@ -661,17 +505,70 @@ export const InteractiveMap = ({
   const activeActivityLabel = ACTIVITY_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.activity_types))?.label || 'Sport';
   const activeSessionTypeLabel = SESSION_TYPE_OPTIONS.find((opt) => JSON.stringify(opt.values) === JSON.stringify(filters.session_types))?.label || 'Type';
 
-  const filteredSessions = useMemo(
-    () => filterHomeMapSessions(sessions, filters),
-    [sessions, filters],
-  );
+  /** Même filtre que les marqueurs — utilisé pour les indicateurs hors écran. */
+  const filteredSessionsForMap = useMemo(() => {
+    const q = (filters.search_query ?? '').trim().toLowerCase();
+    return sessions.filter((session) => {
+      const matchesActivity =
+        filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
+      const matchesType =
+        filters.session_types.length === 0 || filters.session_types.includes(session.session_type);
+      const matchesSearch =
+        !q ||
+        (session.title ?? '').toLowerCase().includes(q) ||
+        (session.location_name ?? '').toLowerCase().includes(q) ||
+        (session.description ?? '').toLowerCase().includes(q);
 
-  const sortedFeedSessions = useMemo(
-    () =>
-      [...filteredSessions].sort(
-        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
-      ),
-    [filteredSessions],
+      let matchesTimeSlot = true;
+      if (filters.time_slot) {
+        const slot = TIME_SLOTS.find((s) => s.id === filters.time_slot);
+        if (slot) {
+          const sessionHour = new Date(session.scheduled_at).getHours();
+          if (slot.id === 'night') {
+            matchesTimeSlot = sessionHour >= slot.startHour || sessionHour < slot.endHour;
+          } else {
+            matchesTimeSlot = sessionHour >= slot.startHour && sessionHour < slot.endHour;
+          }
+        }
+      }
+
+      const matchesLevel =
+        !filters.level || (session.calculated_level || 3) >= filters.level;
+
+      return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
+    });
+  }, [sessions, filters]);
+
+  const offscreenSessionIndicators = useOffscreenSessionIndicators({
+    map: mapboxMap,
+    isMapLoaded,
+    isActive,
+    immersive: isImmersiveMode,
+    sessions: filteredSessionsForMap,
+    mapContainerRef: mapContainer,
+    topStackRef: homeMapTopStackRef,
+    feedSnap: homeFeedSheetSnap,
+  });
+
+  const handleOffscreenIndicatorFlyTo = useCallback(
+    (lng: number, lat: number) => {
+      const m = map.current;
+      if (!m) return;
+      requestAnimationFrame(() => {
+        const padding = computeHomeMapViewportPadding({
+          immersive: isImmersiveMode,
+          topStackEl: homeMapTopStackRef.current,
+        });
+        m.easeTo({
+          center: [lng, lat],
+          zoom: Math.max(m.getZoom(), 13.5),
+          padding,
+          duration: 780,
+          essential: true,
+        });
+      });
+    },
+    [isImmersiveMode],
   );
 
   const routeCoordinates = useRef<MapCoord[]>([]);
@@ -902,14 +799,19 @@ export const InteractiveMap = ({
           : Promise.resolve({ data: [] }),
       ]);
 
-      const profilesMap = new Map((profilesResult.data || []).map(p => [p.user_id, p]));
-      const routesMap = new Map((routesResult.data || []).map(r => [r.id, r]));
+      const profilesMap = new window.Map((profilesResult.data || []).map((p: any) => [p.user_id, p]));
+      const routesMap = new window.Map((routesResult.data || []).map((r: any) => [r.id, r]));
 
       const sessionsWithProfiles = visibleSessions.map(session => {
         const profile = profilesMap.get(session.organizer_id);
         const route = session.route_id ? routesMap.get(session.route_id) || null : null;
+        const distanceKm = userLocation
+          ? calculateDistanceKm(userLocation.lat, userLocation.lng, Number(session.location_lat), Number(session.location_lng))
+          : undefined;
         return {
           ...session,
+          distance_km: distanceKm,
+          visibility_state: getSessionVisualState(session),
           profiles: profile || {
             username: 'Utilisateur',
             display_name: 'Utilisateur',
@@ -928,90 +830,29 @@ export const InteractiveMap = ({
         has_avatar: !!s.profiles?.avatar_url,
         avatar_url: s.profiles?.avatar_url
       })));
-      setSessions(sessionsWithProfiles);
+      const discoverableSessions = sessionsWithProfiles
+        .filter((session) => {
+          if (session.organizer_id === user?.id) return true;
+          if (session.club_id || session.friends_only) return true;
+          if (session.distance_km == null) return true;
+          return canSessionBeDiscovered(session, session.distance_km);
+        })
+        .sort((a, b) => {
+          const aDistance = typeof a.distance_km === 'number' ? a.distance_km : 999999;
+          const bDistance = typeof b.distance_km === 'number' ? b.distance_km : 999999;
+          return getSessionPriorityScore(b, bDistance) - getSessionPriorityScore(a, aDistance);
+        });
+      setSessions(discoverableSessions);
     } catch (error) {
       console.error('Error loading sessions:', error);
       toast.error('Erreur lors du chargement des séances');
     }
   };
 
-  const joinHomeSession = async (session: Session) => {
-    if (!user) {
-      toast.error('Connectez-vous pour rejoindre une séance');
-      return;
-    }
-    if (session.organizer_id === user.id) return;
-    setJoiningSessionId(session.id);
-    try {
-      if (session.friends_only) {
-        const { error: requestError } = await supabase.from('session_requests').insert([
-          {
-            session_id: session.id,
-            user_id: user.id,
-            requester_name:
-              user.user_metadata?.display_name || user.email?.split('@')[0] || 'Utilisateur',
-            requester_avatar: user.user_metadata?.avatar_url || null,
-          },
-        ]);
-        if (requestError) throw requestError;
-        toast.success("Demande envoyée à l'organisateur");
-      } else {
-        const { error } = await supabase.from('session_participants').insert([
-          { session_id: session.id, user_id: user.id },
-        ]);
-        if (error) throw error;
-        await supabase
-          .from('sessions')
-          .update({ current_participants: session.current_participants + 1 })
-          .eq('id', session.id);
-        toast.success('Vous avez rejoint la séance !');
-        setJoinedSessionIds((prev) => new Set(prev).add(session.id));
-        await loadSessions();
-      }
-    } catch (error: unknown) {
-      console.error('Error joining session:', error);
-      const msg = error instanceof Error ? error.message : 'Impossible de rejoindre la séance';
-      toast.error(msg);
-    } finally {
-      setJoiningSessionId(null);
-    }
-  };
-
-  useEffect(() => {
-    const el = homeMapTopStackRef.current;
-    if (!el || isImmersiveMode) return;
-    const apply = () => setFeedTopInsetPx(Math.ceil(el.getBoundingClientRect().height));
-    apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [isImmersiveMode, expandedFilter, homeDisplayMode, filters]);
-
-  useEffect(() => {
-    if (!user?.id || homeDisplayMode !== 'feed') return;
-    const ids = filteredSessions.map((s) => s.id);
-    if (ids.length === 0) {
-      setJoinedSessionIds(new Set());
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from('session_participants')
-        .select('session_id')
-        .eq('user_id', user.id)
-        .in('session_id', ids);
-      if (cancelled) return;
-      setJoinedSessionIds(new Set((data ?? []).map((r) => r.session_id)));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, homeDisplayMode, filteredSessions]);
-
   // Create map markers for sessions
   const createMarkers = async () => {
     if (!map.current) return;
+    const mapboxgl = await loadMapboxGl();
     const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
@@ -1019,6 +860,7 @@ export const InteractiveMap = ({
     sessionPolylines.current = [];
     markers.current = [];
 
+    const filteredSessions = filteredSessionsForMap;
     console.log(`Creating markers for ${filteredSessions.length} sessions`);
     console.log('Sessions with profiles:', filteredSessions.map(s => ({
       id: s.id,
@@ -1056,15 +898,38 @@ export const InteractiveMap = ({
         const lat = Number(session.location_lat);
         const wrap = document.createElement('div');
         wrap.style.cursor = 'pointer';
+        wrap.style.position = 'relative';
         const img = document.createElement('img');
         img.src = markerIcon;
         img.alt = '';
-        img.style.width = '48px';
-        img.style.height = '60px';
+        const isBoosted = session.visibility_state === 'boosted';
+        const isPremium = session.visibility_state === 'premium';
+        img.style.width = isBoosted ? '62px' : isPremium ? '52px' : '48px';
+        img.style.height = isBoosted ? '78px' : isPremium ? '66px' : '60px';
         img.style.display = 'block';
         img.draggable = false;
         if (isNewSession) img.className = 'pulse-marker-animation';
         else if (isImminent) img.className = 'imminent-marker-animation';
+        if (isBoosted) {
+          const halo = document.createElement('div');
+          halo.style.position = 'absolute';
+          halo.style.left = '50%';
+          halo.style.top = '50%';
+          halo.style.transform = 'translate(-50%, -58%)';
+          halo.style.width = '54px';
+          halo.style.height = '54px';
+          halo.style.borderRadius = '999px';
+          halo.style.background = 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(59,130,246,0.08) 55%, rgba(59,130,246,0) 75%)';
+          halo.style.pointerEvents = 'none';
+          halo.animate(
+            [
+              { transform: 'translate(-50%, -58%) scale(0.9)', opacity: 0.7 },
+              { transform: 'translate(-50%, -58%) scale(1.15)', opacity: 0.2 },
+            ],
+            { duration: 1600, iterations: Infinity, easing: 'ease-out' },
+          );
+          wrap.appendChild(halo);
+        }
         wrap.appendChild(img);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -1073,6 +938,7 @@ export const InteractiveMap = ({
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
+        if (isBoosted) marker.setOffset([0, -4]);
         return marker;
       } catch (error) {
         console.error(`Error creating marker for session ${session.id}:`, error);
@@ -1084,8 +950,8 @@ export const InteractiveMap = ({
           const img = document.createElement('img');
           img.src = getFallbackIcon(session.activity_type);
           img.alt = '';
-          img.style.width = '40px';
-          img.style.height = '40px';
+          img.style.width = session.visibility_state === 'boosted' ? '48px' : '40px';
+          img.style.height = session.visibility_state === 'boosted' ? '48px' : '40px';
           wrap.appendChild(img);
           wrap.addEventListener('click', (ev) => {
             ev.stopPropagation();
@@ -1263,11 +1129,6 @@ export const InteractiveMap = ({
   // Update markers when sessions or filters change (léger debounce → moins de regénérations coûteuses lors des rafraîchissements rapides).
   useEffect(() => {
     if (!isMapLoaded || !map.current) return;
-    if (homeDisplayMode !== 'map') {
-      markers.current.forEach((marker) => marker.remove());
-      markers.current = [];
-      return;
-    }
     if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     markersDebounceRef.current = setTimeout(() => {
       markersDebounceRef.current = null;
@@ -1276,7 +1137,7 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [filteredSessions, isMapLoaded, newSessionIds, homeDisplayMode]);
+  }, [sessions, filters, isMapLoaded, newSessionIds]);
 
   /** Suggestions de lieux Mapbox pendant la saisie (monde entier, sans restriction pays). */
   useEffect(() => {
@@ -1325,17 +1186,21 @@ export const InteractiveMap = ({
       return;
     }
 
-    mapboxgl.accessToken = token;
     let cancelled = false;
 
-    const boot = () => {
+    const boot = (mapboxgl: Awaited<ReturnType<typeof loadMapboxGl>>) => {
       try {
         if (!mapContainer.current || cancelled) return;
 
+        mapboxgl.accessToken = token;
+
         const prefImmediate = takePrefetchedHomeMapPositionIfReady();
+        const persistedHint = getPersistedHomeMapPosition();
         const mapCenterLngLat: [number, number] = prefImmediate
           ? [prefImmediate.lng, prefImmediate.lat]
-          : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
+          : persistedHint
+            ? [persistedHint.lng, persistedHint.lat]
+            : [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat];
         const styleUrl = MAPBOX_STYLE_BY_UI_ID[currentStyle] ?? MAPBOX_NAVIGATION_DAY_STYLE;
 
         const mapInstance = new mapboxgl.Map({
@@ -1355,8 +1220,6 @@ export const InteractiveMap = ({
         });
 
         map.current = mapInstance;
-
-        const PREFETCH_MAX_AGE_MS = 45_000;
 
         const easeToUserWithChrome = (lng: number, lat: number, zoom: number, duration: number) => {
           requestAnimationFrame(() => {
@@ -1379,21 +1242,64 @@ export const InteractiveMap = ({
         const runGeoRefinement = () => {
           if (cancelled || !map.current) return;
 
-          const applyFreshPref = (p: { lat: number; lng: number; ts: number }) => {
+          const applyHomePosition = (
+            p: { lat: number; lng: number; ts: number },
+            maxAgeMs: number,
+            easeMs: number,
+          ) => {
             const age = Date.now() - p.ts;
-            if (age >= PREFETCH_MAX_AGE_MS) return false;
+            if (age >= maxAgeMs) return false;
             setUserLocation({ lat: p.lat, lng: p.lng });
-            easeToUserWithChrome(p.lng, p.lat, HOME_MAP_USER_ZOOM, 520);
+            easeToUserWithChrome(p.lng, p.lat, HOME_MAP_USER_ZOOM, easeMs);
             return true;
           };
 
-          if (prefImmediate != null && applyFreshPref(prefImmediate)) {
+          if (prefImmediate != null && applyHomePosition(prefImmediate, HOME_HOT_PREFETCH_MAX_AGE_MS, 260)) {
+            persistHomeMapPosition(prefImmediate);
             return;
           }
 
-          void waitForPrefetchedHomeMapPosition(1600).then((latePref) => {
+          /** Dernière position locale : affichage immédiat, puis course pour rafraîchir. */
+          if (
+            persistedHint != null &&
+            applyHomePosition(persistedHint, HOME_MAP_GEO_CACHE_MAX_AGE_MS, 220)
+          ) {
+            /* ne pas return — on affine avec la course + fallback précis */
+          }
+
+          /** Prefetch splash + promesse « fast » démarrée au montage : premier fix valide gagne. */
+          const raceQuickHomePosition = (): Promise<{ lat: number; lng: number; ts: number } | null> =>
+            new Promise((resolve) => {
+              let settled = false;
+              const finish = (p: { lat: number; lng: number; ts: number }) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(safetyTimer);
+                resolve(p);
+              };
+              void waitForPrefetchedHomeMapPosition(800).then((latePref) => {
+                if (latePref) finish(latePref);
+              });
+              const pFast = homeFastGeoPromiseRef.current;
+              if (pFast) {
+                void pFast
+                  .then((pos) => {
+                    if (pos) finish({ lat: pos.lat, lng: pos.lng, ts: Date.now() });
+                  })
+                  .catch(() => {});
+              }
+              const safetyTimer = setTimeout(() => {
+                if (!settled) {
+                  settled = true;
+                  resolve(null);
+                }
+              }, 4000);
+            });
+
+          void raceQuickHomePosition().then((quick) => {
             if (cancelled || !map.current) return;
-            if (latePref != null && applyFreshPref(latePref)) {
+            if (quick != null && applyHomePosition(quick, HOME_MAP_GEO_CACHE_MAX_AGE_MS, 280)) {
+              persistHomeMapPosition(quick);
               return;
             }
             console.log('🗺️ Début tentative géolocalisation');
@@ -1403,7 +1309,8 @@ export const InteractiveMap = ({
                 console.log('🗺️ Position reçue dans InteractiveMap:', position);
                 if (position) {
                   setUserLocation(position);
-                  easeToUserWithChrome(position.lng, position.lat, HOME_MAP_USER_ZOOM, 700);
+                  easeToUserWithChrome(position.lng, position.lat, HOME_MAP_USER_ZOOM, 620);
+                  persistHomeMapPosition(position);
                   console.log('✅ Carte centrée sur position utilisateur:', position);
                 } else {
                   throw new Error('No position returned');
@@ -1451,7 +1358,16 @@ export const InteractiveMap = ({
       }
     };
 
-    boot();
+    void (async () => {
+      try {
+        const mapboxgl = await loadMapboxGl();
+        if (cancelled) return;
+        boot(mapboxgl);
+      } catch (error) {
+        console.error('Erreur chargement Mapbox GL:', error);
+        toast.error('Erreur lors du chargement de la carte');
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -1481,10 +1397,22 @@ export const InteractiveMap = ({
       return;
     }
 
-    const marker = createUserLocationMapboxMarker(userLocation.lng, userLocation.lat).addTo(map.current);
-    userLocationMarker.current = marker;
+    let cancelled = false;
+    void (async () => {
+      const marker = await createUserLocationMapboxMarker(userLocation.lng, userLocation.lat);
+      if (cancelled || !map.current) {
+        marker.remove();
+        return;
+      }
+      marker.addTo(map.current);
+      userLocationMarker.current = marker;
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [userLocation, isMapLoaded]);
   const handleStyleChange = (style: string) => {
+    clearMapStyleThemeRollback();
     setCurrentStyle(style);
     persistMapStyleId(style);
     const nextStyle = MAPBOX_STYLE_BY_UI_ID[style] ?? MAPBOX_NAVIGATION_DAY_STYLE;
@@ -1516,6 +1444,44 @@ export const InteractiveMap = ({
       }
     });
   };
+
+  useEffect(() => {
+    const onThemeMapSync = () => {
+      const id = getStoredMapStyleId();
+      setCurrentStyle(id);
+      const m = map.current;
+      if (!m || !isMapLoaded) return;
+      const nextStyle = MAPBOX_STYLE_BY_UI_ID[id] ?? MAPBOX_NAVIGATION_DAY_STYLE;
+      m.setStyle(nextStyle);
+      m.once('style.load', () => {
+        if (routeCoordinates.current.length >= 2) {
+          setInteractiveRouteLine(m, routeCoordinates.current);
+        }
+        const pad = computeHomeMapViewportPadding({
+          immersive: isImmersiveMode,
+          topStackEl: homeMapTopStackRef.current,
+        });
+        if (id === 'standard3d') {
+          m.easeTo({
+            pitch: 52,
+            padding: pad,
+            duration: 700,
+            essential: true,
+          });
+        } else {
+          m.easeTo({
+            pitch: 0,
+            padding: pad,
+            duration: 500,
+            essential: true,
+          });
+        }
+      });
+    };
+    window.addEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+    return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
+  }, [isMapLoaded, isImmersiveMode]);
+
   const tryGeocodeSearchFromInput = async () => {
     const q = filters.search_query.trim();
     const m = map.current ?? mapboxMap;
@@ -1673,7 +1639,7 @@ export const InteractiveMap = ({
     });
 
     if (!result.ok) {
-      toast.error(result.message);
+      toast.error((result as any).message);
       return false;
     }
     pendingRouteStatsRef.current = null;
@@ -1724,22 +1690,17 @@ export const InteractiveMap = ({
     if (!map.current) return;
     setInteractiveRouteLine(map.current, routeCoordinates.current);
   };
-  const handleResetView = () => {
-    if (map.current) {
-      map.current.easeTo({
-        center: [PARIS_FALLBACK.lng, PARIS_FALLBACK.lat],
-        zoom: HOME_MAP_BOOT_ZOOM,
-        duration: 800,
-        essential: true,
-      });
-    }
-  };
   const handleLocateMe = async () => {
     if (!map.current) return;
     console.log("🗺️ handleLocateMe");
     try {
-      const position = await getCurrentPosition();
+      let position = await getCurrentPosition(0, { mode: 'fast' });
+      if (!position) {
+        position = await getCurrentPosition();
+      }
       if (position) {
+        setUserLocation(position);
+        persistHomeMapPosition(position);
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             const m = map.current;
@@ -1752,7 +1713,7 @@ export const InteractiveMap = ({
               center: [position.lng, position.lat],
               zoom: 16,
               padding,
-              duration: 900,
+              duration: 620,
               essential: true,
             });
           });
@@ -1765,7 +1726,7 @@ export const InteractiveMap = ({
       toast.error("Impossible de vous localiser");
     }
   };
-  const handleCreateSessionAtLocation = (latLng: mapboxgl.LngLat | null) => {
+  const handleCreateSessionAtLocation = (latLng: LngLat | null) => {
     if (!latLng || !user) {
       toast.error("Connectez-vous pour créer une séance");
       return;
@@ -1789,7 +1750,7 @@ export const InteractiveMap = ({
       }
     };
 
-    const armLongPress = (lngLat: mapboxgl.LngLat | null | undefined) => {
+    const armLongPress = (lngLat: LngLat | null | undefined) => {
       if (!lngLat) return;
       if (localStorage.getItem('enableLongPressCreate') !== 'true') return;
       clearTimer();
@@ -1799,11 +1760,11 @@ export const InteractiveMap = ({
       }, 600);
     };
 
-    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+    const onMouseDown = (e: MapMouseEvent) => {
       if (e.originalEvent instanceof MouseEvent && e.originalEvent.button !== 0) return;
       armLongPress(e.lngLat ?? null);
     };
-    const onTouchStart = (e: mapboxgl.MapTouchEvent) => {
+    const onTouchStart = (e: MapTouchEvent) => {
       armLongPress(e.lngLat ?? null);
     };
     const cancelPress = () => clearTimer();
@@ -1832,10 +1793,7 @@ export const InteractiveMap = ({
       <div className="relative min-h-0 w-full flex-1">
         <div
           ref={mapContainer}
-          className={cn(
-            'relative min-h-0 h-full w-full bg-secondary transition-opacity duration-200 ease-out motion-reduce:transition-none',
-            homeDisplayMode === 'feed' && 'pointer-events-none opacity-0',
-          )}
+          className="relative min-h-0 h-full w-full bg-secondary"
           data-tutorial="map-container"
         />
         <div
@@ -1845,50 +1803,10 @@ export const InteractiveMap = ({
           )}
           aria-hidden
         />
-
-        <div
-          className={cn(
-            'absolute inset-x-0 bottom-0 z-[14] flex flex-col bg-background transition-opacity duration-200 ease-out motion-reduce:transition-none',
-            homeDisplayMode === 'feed'
-              ? 'pointer-events-auto opacity-100'
-              : 'pointer-events-none opacity-0',
-          )}
-          style={{ top: feedTopInsetPx }}
-          aria-hidden={homeDisplayMode !== 'feed'}
-        >
-          <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8 pt-1 [-webkit-overflow-scrolling:touch]">
-            {sortedFeedSessions.length === 0 ? (
-              <div className="ios-card mt-2 p-ios-5 text-center">
-                <p className="text-ios-body text-muted-foreground">
-                  Aucune séance ne correspond à vos filtres pour cette journée.
-                </p>
-              </div>
-            ) : (
-              <div className="mx-auto flex w-full max-w-2xl flex-col gap-ios-3 pb-4">
-                {sortedFeedSessions.map((session, index) => {
-                  const isOrg = !!user && session.organizer_id === user.id;
-                  const isPart = joinedSessionIds.has(session.id);
-                  const full =
-                    session.max_participants > 0 &&
-                    session.current_participants >= session.max_participants;
-                  return (
-                    <HomeSessionFeedCard
-                      key={session.id}
-                      session={session}
-                      index={index}
-                      onOpenDetails={() => setSelectedSession(session)}
-                      onJoin={() => void joinHomeSession(session)}
-                      joinBusy={joiningSessionId === session.id}
-                      isOrganizer={isOrg}
-                      isParticipant={isPart}
-                      isFull={full}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <OffscreenSessionIndicators
+          items={offscreenSessionIndicators}
+          onFlyToSession={handleOffscreenIndicatorFlyTo}
+        />
       </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
@@ -1920,123 +1838,80 @@ export const InteractiveMap = ({
           */}
           <header
             className={cn(
-              "pointer-events-auto relative bg-white dark:bg-background",
-              /* Prolonge le fond blanc sous le header — pas de border-b sur la rangée : évite une couture visuelle avec ce bloc. */
-              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-background",
+              "runconnect-home-top-header home-map-page-header pointer-events-auto relative shrink-0 bg-white dark:bg-black",
+              "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
-            <div className="relative z-[1] flex min-h-[2.75rem] items-center justify-between gap-2 px-4 pb-6 pt-[calc(var(--safe-area-top)+0.5rem)] sm:min-h-[3rem] sm:pb-6 sm:pt-[calc(var(--safe-area-top)+0.625rem)] ios-map-header">
-              <h1 className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary">
-                RunConnect
-              </h1>
+            {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
+            <div className="relative z-[1] pt-[var(--safe-area-top)]">
+              <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
+                <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
+                  RunConnect
+                </span>
 
-              {userProfile && (
-                <div
-                  className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
-                  data-tutorial="profile-avatar"
-                >
+                {userProfile && (
                   <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setShowProfileDialog(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setShowProfileDialog(true);
-                      }
-                    }}
-                    className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                    className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
+                    data-tutorial="profile-avatar"
                   >
-                    {/*
-                      avatar-fixed : évite la règle iOS « compact » sur h fixes.
-                      Tailles via .map-header-profile-avatar — aligné sur le FAB « + » (3.75rem / 4rem sm).
-                    */}
-                    <Avatar className="map-header-profile-avatar avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
-                      <AvatarImage
-                        src={userProfile.avatar_url || undefined}
-                        alt={userProfile.username || userProfile.display_name}
-                        className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
-                      />
-                      <AvatarFallback className="map-header-profile-fallback text-xl font-semibold">
-                        {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {user && (
-                      <div className="absolute -bottom-1 -right-1 scale-75">
-                        <StreakBadge userId={user.id} variant="compact" />
-                      </div>
-                    )}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setShowProfileDialog(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setShowProfileDialog(true);
+                        }
+                      }}
+                      className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                    >
+                      <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+                        <AvatarImage
+                          src={userProfile.avatar_url || undefined}
+                          alt={userProfile.username || userProfile.display_name}
+                          className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
+                        />
+                        <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
+                          {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user && (
+                        <div className="absolute -bottom-1 -right-1 scale-75">
+                          <StreakBadge userId={user.id} variant="compact" />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
-                  <Suspense
-                    fallback={
-                      <div
-                        className="h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-border dark:bg-card"
-                        aria-hidden
-                      />
-                    }
+                <div className="home-map-header-actions flex shrink-0 items-center gap-2">
+                  <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
+                    <Suspense
+                      fallback={
+                        <div
+                          className="home-map-header-notif-fallback h-[40px] w-[40px] shrink-0 rounded-[13px] border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
+                          aria-hidden
+                        />
+                      }
+                    >
+                      <NotificationCenter onSessionUpdated={loadSessions} />
+                    </Suspense>
+                  </div>
+                  <button
+                    type="button"
+                    className={cn(
+                      "home-map-header-icon-btn flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
+                      "border border-transparent dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
+                      "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    )}
+                    aria-label="Paramètres"
+                    onClick={() => setShowSettingsDialog(true)}
                   >
-                    <NotificationCenter onSessionUpdated={loadSessions} />
-                  </Suspense>
+                    <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex h-[40px] w-[40px] shrink-0 touch-manipulation items-center justify-center rounded-[13px] outline-none",
-                    "text-foreground transition-[opacity,transform] duration-200 active:scale-[0.97] active:opacity-80",
-                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  )}
-                  aria-label="Paramètres"
-                  onClick={() => setShowSettingsDialog(true)}
-                >
-                  <Settings className="h-[22px] w-[22px]" strokeWidth={1.85} />
-                </button>
-              </div>
-            </div>
-
-            <div
-              className="pointer-events-auto px-4 pb-3"
-              data-tutorial="home-view-toggle"
-            >
-              <div
-                role="tablist"
-                aria-label="Mode d’affichage accueil"
-                className="flex h-10 w-full rounded-xl bg-muted/90 p-0.5 dark:bg-muted/50"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={homeDisplayMode === 'map'}
-                  className={cn(
-                    'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-semibold transition-colors duration-200 ease-out',
-                    homeDisplayMode === 'map'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground',
-                  )}
-                  onClick={() => setHomeDisplayMode('map')}
-                >
-                  <MapIcon className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                  Carte
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={homeDisplayMode === 'feed'}
-                  className={cn(
-                    'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[10px] text-[15px] font-semibold transition-colors duration-200 ease-out',
-                    homeDisplayMode === 'feed'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground',
-                  )}
-                  onClick={() => setHomeDisplayMode('feed')}
-                >
-                  <LayoutList className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                  Feed
-                </button>
               </div>
             </div>
           </header>
@@ -2097,8 +1972,8 @@ export const InteractiveMap = ({
                     role="listbox"
                     aria-label="Suggestions de lieux"
                     className={cn(
-                      "absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
-                      "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.97)] dark:ring-white/[0.05]",
+                      "home-map-place-suggestions absolute left-0 right-0 top-full z-[60] mt-2 max-h-[min(42vh,19rem)] overflow-y-auto overflow-x-hidden rounded-[1.15rem]",
+                      "border border-black/[0.06] bg-[rgba(252,252,253,0.98)] shadow-[0_20px_48px_-16px_rgba(0,0,0,0.2)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:ring-[#1f1f1f] dark:backdrop-blur-none",
                       "[-webkit-overflow-scrolling:touch]"
                     )}
                   >
@@ -2112,7 +1987,7 @@ export const InteractiveMap = ({
                           role="option"
                           className={cn(
                             "flex w-full min-w-0 items-start gap-3 border-0 px-4 py-3.5 text-left text-[15px] leading-snug outline-none",
-                            "text-foreground/90 transition-colors active:bg-black/[0.045] dark:active:bg-white/[0.06]"
+                            "text-foreground/90 transition-colors active:bg-black/[0.045] dark:active:bg-[#111111]"
                           )}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => applyPlaceSuggestion(row)}
@@ -2430,32 +2305,59 @@ export const InteractiveMap = ({
         </div>
       )}
 
-      {/* Contrôles carte — pile gauche : Plein écran, Localisation, Tracé, Style, Réinitialiser */}
-      {homeDisplayMode === 'map' && (
-      <div className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 ios-map-bottom-buttons">
-        <MapIosColoredFab
-          tone="gray"
-          title="Carte plein écran"
-          onClick={toggleImmersiveMode}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
+      {/* Contrôles carte — au-dessus du FAB et du bandeau Feed replié (--home-map-controls-stack-bottom) */}
+      <div
+        className={cn(
+          "pointer-events-none fixed z-[104] flex flex-col items-end",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+var(--home-map-controls-stack-bottom))]",
+          "right-[max(1rem,env(safe-area-inset-right,0px))]"
+        )}
+      >
+        <div
+          className={cn(
+            "home-map-control-rail pointer-events-auto flex flex-col items-center overflow-hidden rounded-[16px] border",
+            "border-black/[0.08] bg-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.22),0_2px_8px_-4px_rgba(0,0,0,0.08)]",
+            "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
+          )}
         >
-          <Maximize2 className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapIosColoredFab
-          tone="gray"
-          title="Me localiser"
-          onClick={handleLocateMe}
-          className="bg-white text-black shadow-[0_6px_18px_-8px_rgba(0,0,0,0.45)] [&_span]:text-black [&_span_svg]:stroke-black [&_span_svg]:text-black"
-        >
-          <MapPin className="h-[18px] w-[18px]" strokeWidth={2.25} />
-        </MapIosColoredFab>
-
-        <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
-
-        <MapControls onResetView={handleResetView} />
+          <button
+            type="button"
+            title="Créer un itinéraire"
+            aria-label="Créer un itinéraire"
+            onClick={() => navigate("/route-create")}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <PenLine className="h-[17px] w-[17px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
+            <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
+          </div>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <button
+            type="button"
+            title="Me localiser"
+            onClick={handleLocateMe}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <button
+            type="button"
+            title={isImmersiveMode ? "Quitter le plein écran" : "Carte plein écran"}
+            aria-label={isImmersiveMode ? "Quitter le plein écran" : "Afficher la carte en plein écran"}
+            onClick={toggleImmersiveMode}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            {isImmersiveMode ? (
+              <Minimize2 className="h-[17px] w-[17px]" strokeWidth={2} />
+            ) : (
+              <Expand className="h-[17px] w-[17px]" strokeWidth={2} />
+            )}
+          </button>
+        </div>
       </div>
-      )}
       
 
       {/* Create Session Wizard */}

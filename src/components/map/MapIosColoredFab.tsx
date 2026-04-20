@@ -66,7 +66,7 @@ export const MapIosColoredFab = React.forwardRef<HTMLButtonElement, MapIosColore
         </span>
         {showBadge && (
           <span
-            className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-[#5856D6] shadow-md"
+            className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold leading-none text-[#5856D6] shadow-md dark:bg-[#111111] dark:text-primary dark:ring-1 dark:ring-[#1f1f1f]"
             aria-hidden
           >
             {badgeCount! > 9 ? "9+" : badgeCount}

@@ -19,6 +19,8 @@ import com.google.firebase.messaging.RemoteMessage;
  */
 public class MessagingService extends FirebaseMessagingService {
     private static final String TAG = "RunConnect-FCM";
+    /** Même base que MainActivity.START_URL — deep link WebView après tap sur la notif */
+    private static final String APP_WEB_BASE = "https://run-connect.lovable.app";
     private static final String CHANNEL_ID = "high_importance_channel";
     private static final String GROUP_KEY = "runconnect_group";
     private static int notificationCounter = 0;
@@ -113,6 +115,17 @@ public class MessagingService extends FirebaseMessagingService {
         // Ajouter les données à l'intent
         for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
             intent.putExtra(entry.getKey(), entry.getValue());
+        }
+
+        // Deep link messagerie : MainActivity.handleIntent lit getData() (WebView pas encore prête au 1er onCreate)
+        if (data != null && data.containsKey("conversation_id")) {
+            String convId = data.get("conversation_id");
+            String msgType = data.get("type");
+            if (convId != null && !convId.isEmpty() && (msgType == null || "message".equals(msgType))) {
+                String url = APP_WEB_BASE + "/messages?conversation=" + Uri.encode(convId);
+                intent.setData(Uri.parse(url));
+                Log.d(TAG, "🔗 [FCM] Intent data URI pour messagerie: " + url);
+            }
         }
         
         // ✅ FLAG_IMMUTABLE pour Android 12+

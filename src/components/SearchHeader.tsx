@@ -24,7 +24,7 @@ export const SearchHeader = ({
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-ios-3 border-b border-border/60 bg-background/90 px-ios-4 py-ios-3 backdrop-blur-xl">
+    <header className="sticky top-0 z-10 flex items-center gap-ios-3 border-b border-border/60 bg-background/90 px-ios-4 py-ios-3 backdrop-blur-xl dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none">
       {/* Flèche retour */}
       <Button
         variant="ghost"

@@ -81,7 +81,7 @@ export function HomeMapFilterSheet({
               }
             }}
             className={cn(
-              "absolute inset-x-0 bottom-0 flex flex-col overflow-hidden border border-b-0 border-black/[0.08] bg-[rgba(252,252,252,0.98)] shadow-[0_-16px_48px_-20px_rgba(0,0,0,0.2)] supports-[backdrop-filter]:bg-[rgba(252,252,252,0.94)] supports-[backdrop-filter]:backdrop-blur-xl dark:border-white/[0.1] dark:bg-[rgba(28,28,30,0.97)] dark:shadow-[0_-20px_56px_-24px_rgba(0,0,0,0.55)] dark:supports-[backdrop-filter]:bg-[rgba(28,28,30,0.94)]",
+              "absolute inset-x-0 bottom-0 flex flex-col overflow-hidden border border-b-0 border-black/[0.08] bg-[rgba(252,252,252,0.98)] shadow-[0_-16px_48px_-20px_rgba(0,0,0,0.2)] supports-[backdrop-filter]:bg-[rgba(252,252,252,0.94)] supports-[backdrop-filter]:backdrop-blur-xl dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_-20px_56px_-24px_rgba(0,0,0,0.65)] dark:supports-[backdrop-filter]:bg-[#0a0a0a]",
               variant === "tall"
                 ? "max-h-[min(85dvh,720px)] rounded-t-[1.35rem]"
                 : "max-h-[min(72dvh,620px)] rounded-t-[1.35rem]"
@@ -114,7 +114,7 @@ export function HomeMapFilterSheet({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground transition-colors active:bg-black/[0.1] dark:bg-white/[0.1] dark:active:bg-white/[0.15]"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/[0.05] text-foreground transition-colors active:bg-black/[0.1] dark:bg-[#111111] dark:active:bg-[#1a1a1a]"
                 aria-label="Fermer"
               >
                 <X className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -132,7 +132,7 @@ export function HomeMapFilterSheet({
 
             {footer ? (
               <div
-                className="shrink-0 border-t border-black/[0.06] bg-[rgba(252,252,252,0.96)] px-4 py-3 dark:border-white/[0.08] dark:bg-[rgba(28,28,30,0.98)] sm:px-5"
+                className="shrink-0 border-t border-black/[0.06] bg-[rgba(252,252,252,0.96)] px-4 py-3 dark:border-[#1f1f1f] dark:bg-[#0a0a0a] sm:px-5"
                 style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
               >
                 {footer}
@@ -151,7 +151,7 @@ export function HomeMapFilterGroupedList({ children }: { children: React.ReactNo
   return (
     <div
       role="listbox"
-      className="mt-1 divide-y divide-border/70 overflow-hidden rounded-[12px] border border-border/60 bg-card shadow-sm dark:divide-white/[0.08] dark:border-white/[0.1] dark:bg-card/95"
+      className="mt-1 divide-y divide-border/70 overflow-hidden rounded-[12px] border border-border/60 bg-card shadow-sm dark:divide-[#1f1f1f] dark:border-[#1f1f1f] dark:bg-[#0a0a0a]"
     >
       {children}
     </div>
@@ -185,7 +185,7 @@ export function HomeMapFilterRow({
       onClick={onClick}
       className={cn(
         "flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-        "active:bg-black/[0.045] dark:active:bg-white/[0.06]"
+        "active:bg-black/[0.045] dark:active:bg-[#111111]"
       )}
     >
       {leading ? <span className="flex h-9 w-9 shrink-0 items-center justify-center">{leading}</span> : null}

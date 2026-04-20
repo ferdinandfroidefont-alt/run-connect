@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logDbError, logException } from "../_shared/secureLog.ts";
 
 let _corsHeaders: Record<string, string> = {};
 
@@ -71,8 +72,8 @@ Deno.serve(async (req) => {
         { onConflict: "user_id" }
       );
       if (subError) {
-        console.error("Subscriber upsert error:", subError);
-        return json({ error: subError.message }, 500);
+        logDbError("admin-manage-premium", subError);
+        return json({ error: "Subscriber update failed" }, 500);
       }
 
       await admin.from("profiles").update({ is_premium: true }).eq("user_id", target_user_id);
@@ -318,7 +319,7 @@ Deno.serve(async (req) => {
 
     return json({ error: "Invalid action" }, 400);
   } catch (error) {
-    console.error("Error:", error);
-    return json({ error: error.message }, 500);
+    logException("admin-manage-premium", error);
+    return json({ error: "Internal error" }, 500);
   }
 });

@@ -49,8 +49,8 @@ const VISIBILITY_OPTIONS = [
   },
   {
     value: 'public' as VisibilityType,
-    label: 'Tout le monde',
-    description: 'Visible dans Découvrir',
+    label: 'Public',
+    description: 'Visible localement dans Découvrir',
     icon: Globe,
     color: 'bg-orange-500',
     iconColor: 'text-orange-500',
@@ -147,10 +147,6 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   };
 
   const handleVisibilitySelect = (type: VisibilityType) => {
-    // Check premium requirement
-    if (type === 'public' && !isPremium) {
-      return;
-    }
     // Check club requirement
     if (type === 'club' && !clubId) {
       return;
@@ -172,8 +168,7 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
         {VISIBILITY_OPTIONS.map((option) => {
           const isSelected = visibilityType === option.value;
           const isDisabled = 
-            (option.value === 'public' && !isPremium) ||
-            (option.value === 'club' && !clubId);
+            option.value === 'club' && !clubId;
 
           return (
             <button
@@ -209,15 +204,23 @@ export const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
                       Recommandé
                     </Badge>
                   )}
-                  {option.premium && !isPremium && (
+                  {option.value === 'public' && isPremium && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0 flex items-center gap-0.5">
+                      <Crown className="w-2.5 h-2.5" />
+                      Portée illimitée
+                    </Badge>
+                  )}
+                  {option.premium && !isPremium && option.value === 'public' && (
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-amber-500/10 text-amber-600 border-0 flex items-center gap-0.5">
                       <Crown className="w-2.5 h-2.5" />
-                      Premium
+                      Boost ou Premium
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground truncate">
                   {option.description}
+                  {option.value === 'public' && !isPremium && ' (5 km par défaut)'}
+                  {option.value === 'public' && isPremium && ' (illimité avec Premium)'}
                   {option.value === 'club' && !clubId && ' (sélectionnez un club)'}
                 </p>
               </div>

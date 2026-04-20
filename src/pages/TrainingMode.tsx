@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTrainingMode, TurnInstruction } from '@/hooks/useTrainingMode';
-import mapboxgl from 'mapbox-gl';
+import type { GeoJSONSource, Map as MapboxMap, Marker } from 'mapbox-gl';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { ArrowUp, CornerUpLeft, CornerUpRight, RotateCcw, Pause, Play, Square, AlertTriangle, Navigation, Locate, MapPin } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -117,8 +118,8 @@ export default function TrainingMode() {
   } = useTrainingMode(sessionId, routeId);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapboxMapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapboxMapRef = useRef<MapboxMap | null>(null);
+  const markerRef = useRef<Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [nearbyParticipants, setNearbyParticipants] = useState<NearbyParticipant[]>([]);
 
@@ -198,25 +199,34 @@ export default function TrainingMode() {
     if (!mapContainerRef.current) return;
     if (!getMapboxAccessToken()) return;
 
-    const map = createEmbeddedMapboxMap(mapContainerRef.current, {
-      center: { lat: 48.8566, lng: 2.3522 },
-      zoom: 18,
-      interactive: false,
-    });
-    map.setPitch(45);
-    mapboxMapRef.current = map;
+    let cancelled = false;
 
-    const onLoad = () => {
-      setOrUpdateLineLayer(map, TM_TRAV_SRC, TM_TRAV_LAYER, [], { color: TRAVELED_TEAL, width: 5 });
-      setMapReady(true);
-    };
-    if (map.isStyleLoaded()) onLoad();
-    else map.once('load', onLoad);
+    void (async () => {
+      const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
+        center: { lat: 48.8566, lng: 2.3522 },
+        zoom: 18,
+        interactive: false,
+      });
+      if (cancelled) {
+        map.remove();
+        return;
+      }
+      map.setPitch(45);
+      mapboxMapRef.current = map;
+
+      const onLoad = () => {
+        setOrUpdateLineLayer(map, TM_TRAV_SRC, TM_TRAV_LAYER, [], { color: TRAVELED_TEAL, width: 5 });
+        setMapReady(true);
+      };
+      if (map.isStyleLoaded()) onLoad();
+      else map.once('load', onLoad);
+    })();
 
     return () => {
+      cancelled = true;
       markerRef.current?.remove();
       markerRef.current = null;
-      map.remove();
+      mapboxMapRef.current?.remove();
       mapboxMapRef.current = null;
       setMapReady(false);
     };
@@ -282,7 +292,7 @@ export default function TrainingMode() {
   }, []);
 
   const updateMarker = useCallback(
-    (map: mapboxgl.Map, pos: { lat: number; lng: number }, h: number) => {
+    (map: MapboxMap, pos: { lat: number; lng: number }, h: number) => {
       const iconUrl = createDirectionalIcon(0);
       map.easeTo({
         center: [pos.lng, pos.lat],
@@ -301,12 +311,15 @@ export default function TrainingMode() {
         el.style.backgroundSize = 'contain';
         return;
       }
-      const el = document.createElement('div');
-      el.style.width = '64px';
-      el.style.height = '64px';
-      el.style.backgroundImage = `url(${iconUrl})`;
-      el.style.backgroundSize = 'contain';
-      markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
+      void (async () => {
+        const mapboxgl = await loadMapboxGl();
+        const el = document.createElement('div');
+        el.style.width = '64px';
+        el.style.height = '64px';
+        el.style.backgroundImage = `url(${iconUrl})`;
+        el.style.backgroundSize = 'contain';
+        markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]).addTo(map);
+      })();
     },
     [createDirectionalIcon],
   );
@@ -349,7 +362,7 @@ export default function TrainingMode() {
   useEffect(() => {
     const map = mapboxMapRef.current;
     if (!map || !mapReady || !map.getSource(TM_TRAV_SRC)) return;
-    (map.getSource(TM_TRAV_SRC) as mapboxgl.GeoJSONSource).setData(lineStringFeature(traveledPath));
+    (map.getSource(TM_TRAV_SRC) as GeoJSONSource).setData(lineStringFeature(traveledPath));
   }, [traveledPath, mapReady]);
 
   useEffect(() => {

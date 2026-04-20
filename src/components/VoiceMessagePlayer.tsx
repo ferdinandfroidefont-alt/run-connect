@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Pause, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseStorageHost } from '@/lib/supabaseEnv';
 
 interface VoiceMessagePlayerProps {
   src: string;
   isMine?: boolean;
 }
 
-const SUPABASE_STORAGE_BASE = 'dbptgehpknjsoisirviz.supabase.co/storage/v1/object';
+const SUPABASE_STORAGE_BASE = `${supabaseStorageHost()}/storage/v1/object`;
 
 /**
  * Extracts the storage path from a full public URL or returns the path as-is.

@@ -1,3 +1,5 @@
+import { logBlockedOrigin } from "./secureLog.ts";
+
 // Shared CORS configuration for all edge functions
 const EXACT_ORIGINS = [
   'https://run-connect.lovable.app',
@@ -33,7 +35,7 @@ export function getCorsHeaders(req: Request) {
 
   const allowed = isOriginAllowed(origin);
   if (!allowed) {
-    console.warn(`[CORS] Blocked origin: ${origin}`);
+    logBlockedOrigin(origin);
   }
   return {
     'Access-Control-Allow-Origin': allowed ? origin : EXACT_ORIGINS[0],

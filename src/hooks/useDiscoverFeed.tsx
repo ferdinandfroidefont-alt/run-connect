@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { toast } from 'sonner';
+import {
+  canSessionBeDiscovered,
+  getSessionPriorityScore,
+  getSessionVisualState,
+  sortSessionsByDiscovery,
+  type SessionVisibilityVisualState,
+} from '@/lib/sessionVisibility';
 
 export interface DiscoverSession {
   id: string;
@@ -22,6 +29,12 @@ export interface DiscoverSession {
   friends_only: boolean;
   distance_km: number;
   calculated_level?: number;
+  visibility_tier?: string | null;
+  visibility_radius_km?: number | null;
+  boost_expires_at?: string | null;
+  discovery_score?: number | null;
+  visibility_state?: SessionVisibilityVisualState;
+  priority_score?: number;
   organizer: {
     user_id: string;
     username: string;
@@ -134,6 +147,8 @@ export const useDiscoverFeed = () => {
           return {
             ...session,
             distance_km: distanceInKm,
+            visibility_state: getSessionVisualState(session),
+            priority_score: getSessionPriorityScore(session, distanceInKm),
             organizer: organizer || {
               user_id: session.organizer_id,
               username: 'user',
@@ -143,15 +158,18 @@ export const useDiscoverFeed = () => {
           } as DiscoverSession;
         })
         .filter(session => {
-          if (session.distance_km > maxDistance) return false;
+          if (session.friends_only) return false;
+          if (!canSessionBeDiscovered(session, session.distance_km)) return false;
+          const effectiveRadiusCap = Number.isFinite(maxDistance) ? maxDistance : 10;
+          if (session.distance_km > effectiveRadiusCap) return false;
           if (selectedActivities.length > 0 && !selectedActivities.includes(session.activity_type)) {
             return false;
           }
           return true;
         })
-        .sort((a, b) => a.distance_km - b.distance_km);
+        ;
 
-      setSessions(filteredSessions);
+      setSessions(sortSessionsByDiscovery(filteredSessions));
     } catch (error) {
       console.error('Error loading discover sessions:', error);
       toast.error('Erreur lors du chargement des séances');

@@ -2,10 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logException, logStructured, logStripeRef, logUserRef } from "../_shared/secureLog.ts";
 
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  if (details) logStructured("CREATE-CHECKOUT", step, details);
+  else console.log(`[CREATE-CHECKOUT] ${step}`);
 };
 
 serve(async (req) => {
@@ -29,14 +30,14 @@ serve(async (req) => {
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email, planType });
+    logStep("User authenticated", { user: logUserRef(user.id), planType });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2023-10-16" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+      logStep("Found existing customer", { customer: logStripeRef(customerId) });
     } else {
       logStep("Creating new customer");
     }
@@ -54,7 +55,7 @@ serve(async (req) => {
       recurring: { interval: "month" as const },
     };
 
-    logStep("Creating checkout session", { priceData });
+    logStep("Creating checkout session", { plan: planType });
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -81,16 +82,15 @@ serve(async (req) => {
       },
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created", { session: logStripeRef(session.id) });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in create-checkout", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    logException("CREATE-CHECKOUT", error);
+    return new Response(JSON.stringify({ error: "Checkout failed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

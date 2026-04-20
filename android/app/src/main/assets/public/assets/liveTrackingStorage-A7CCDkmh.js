@@ -1,1 +1,0 @@
-const t=e=>`rc-live-share:${e}`;function r(e){try{return localStorage.getItem(t(e))==="1"}catch{return!1}}function c(e,a){try{a?localStorage.setItem(t(e),"1"):localStorage.removeItem(t(e))}catch{}}export{r as g,t as l,c as s};

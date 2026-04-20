@@ -5,11 +5,11 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { ConsentDialog } from './ConsentDialog';
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { AppBootFallback } from '@/components/AppBootFallback';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
-
+import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BLUE } from '@/lib/ruconnectSplashChrome';
+import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
 interface LayoutProps {
@@ -19,7 +19,7 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
-  const { hideBottomNav } = useAppContext();
+  const { hideBottomNav, homeMapImmersive } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -72,6 +72,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const [consentCompleted, setConsentCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
+
   // Vérifier le cache localStorage au montage
   useEffect(() => {
     if (user?.id) {
@@ -107,26 +108,41 @@ export const Layout = ({ children }: LayoutProps) => {
     refreshProfile();
   };
 
-  if (loading) {
-    return <AppBootFallback phase="auth" />;
-  }
-
-  if (profileLoading) {
-    return <AppBootFallback phase="profile" />;
-  }
-
-  if (!user) {
-    console.log('🚨 Layout: No user found, redirecting to auth');
-    return <Navigate to="/auth" replace />;
-  }
-
   const needsConsent = isInitialized && 
-    userProfile && 
+    !!userProfile && 
     !consentCompleted &&
     (!userProfile.rgpd_accepted || !userProfile.security_rules_accepted);
 
+  // Hook "ready" — MUST be before any conditional return
+
+  /* Un seul splash bleu (LoadingScreen) : ne pas bloquer sur profileLoading sinon 2e plein écran après restore StatusBar → barre iOS blanche sur fond bleu. */
+  if (loading) {
+    return (
+      <div
+        className="fixed inset-0 z-[99] flex items-center justify-center px-5"
+        style={{
+          backgroundColor: RUCONNECT_SPLASH_BLUE,
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        <img
+          src={RUCONNECT_LOADING_SCREEN_URL}
+          alt=""
+          draggable={false}
+          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
+          width={473}
+          height={1024}
+        />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
   if (needsConsent) {
-    console.log('📋 [Layout] Affichage dialog consentement');
     return <ConsentDialog userId={user.id} onComplete={handleConsentComplete} />;
   }
 
@@ -185,6 +201,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
         </div>
       </main>
+      {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
         FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).

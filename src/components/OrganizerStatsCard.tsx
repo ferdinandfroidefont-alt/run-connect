@@ -78,9 +78,9 @@ export const OrganizerStatsCard = () => {
 
   if (loading) {
     return (
-      <div className="bg-card rounded-[10px] overflow-hidden">
+      <div className="w-full overflow-hidden border-t border-border/60 bg-card">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div key={i} className="flex items-center gap-3 px-ios-4 py-3">
             <div className="h-[30px] w-[30px] rounded-[7px] bg-secondary animate-pulse" />
             <div className="flex-1 h-5 bg-secondary rounded animate-pulse" />
           </div>
@@ -133,10 +133,10 @@ export const OrganizerStatsCard = () => {
   ];
 
   return (
-    <div className="bg-card rounded-[10px] overflow-hidden">
+    <div className="w-full overflow-hidden border-t border-border/60 bg-card shadow-[var(--shadow-card)]">
       {/* Header - clickable */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-secondary transition-colors"
+        className="flex cursor-pointer items-center gap-3 px-ios-4 py-3 transition-colors active:bg-secondary"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="h-[30px] w-[30px] rounded-[7px] bg-indigo-500 flex items-center justify-center">
@@ -154,7 +154,7 @@ export const OrganizerStatsCard = () => {
             const isLast = index === statItems.length - 1;
             return (
               <div key={index}>
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex items-center gap-3 px-ios-4 py-3">
                   <div className={cn("h-[30px] w-[30px] rounded-[7px] flex items-center justify-center", item.iconBg)}>
                     <Icon className="h-[18px] w-[18px] text-white" />
                   </div>

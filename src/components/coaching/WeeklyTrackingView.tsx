@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList, Bell, TrendingUp, TrendingDown, Flame, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList, Bell, TrendingUp, TrendingDown, Flame, Loader2, CalendarClock } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { toast } from "sonner";
+import { coachingRowToWeekSession } from "@/lib/coachingWeekSessionImport";
+import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
+import { parseBlockRpeFromStorage, parseAthleteBlockRpeFelt, rpeChipColor, parseSessionRpePhases } from "@/lib/sessionBlockRpe";
+import { parseRCC } from "@/lib/rccParser";
 
 const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
@@ -20,7 +24,13 @@ interface WeeklyTrackingViewProps {
   onClose: () => void;
   selectedAthleteId: string | null;
   onSelectAthlete: (id: string | null) => void;
-  onOpenPlanForAthlete?: (athleteId: string, athleteName: string, groupId?: string, weekDate?: Date) => void;
+  onOpenPlanForAthlete?: (
+    athleteId: string,
+    athleteName: string,
+    groupId?: string,
+    weekDate?: Date,
+    seedSessions?: WeekSession[],
+  ) => void;
 }
 
 interface SessionInfo {
@@ -32,6 +42,8 @@ interface SessionInfo {
   activity_type: string;
   objective: string | null;
   pace_target: string | null;
+  rpe: number | null;
+  rpe_phases: unknown;
 }
 
 interface DayData {
@@ -40,6 +52,7 @@ interface DayData {
   sessionTitle: string;
   sessionId: string;
   session: SessionInfo;
+  athleteRpeFelt: unknown;
 }
 
 interface AthleteData {
@@ -108,6 +121,22 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+  const handleRescheduleSession = useCallback(
+    async (sessionId: string) => {
+      if (!onOpenPlanForAthlete || !selectedAthleteId) return;
+      const athlete = athletes.find((a) => a.userId === selectedAthleteId);
+      if (!athlete) return;
+      const { data, error } = await supabase.from("coaching_sessions").select("*").eq("id", sessionId).single();
+      if (error || !data) {
+        toast.error("Impossible de charger la séance");
+        return;
+      }
+      const ws = coachingRowToWeekSession(data);
+      onOpenPlanForAthlete(athlete.userId, athlete.displayName, athlete.groupId || undefined, currentWeek, [ws]);
+    },
+    [onOpenPlanForAthlete, selectedAthleteId, athletes, currentWeek],
+  );
+
   const [initialNavDone, setInitialNavDone] = useState(false);
   useEffect(() => {
     if (initialNavDone) return;
@@ -149,8 +178,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        supabase.from("coaching_sessions")
-          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target")
+        (supabase.from("coaching_sessions") as any)
+          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
           .lte("scheduled_at", weekEnd.toISOString()),
@@ -183,9 +212,9 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await supabase
-          .from("coaching_participations")
-          .select("coaching_session_id, user_id, status, athlete_note, completed_at")
+        const { data: participations } = await (supabase
+          .from("coaching_participations") as any)
+          .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);
 
         (participations || []).forEach(p => {
@@ -193,7 +222,14 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           const session = sessionMap[p.coaching_session_id];
           if (!session) return;
           const dayKey = format(new Date(session.scheduled_at), "yyyy-MM-dd");
-          athleteMap[p.user_id].days[dayKey] = { status: p.status, note: p.athlete_note, sessionTitle: session.title, sessionId: session.id, session };
+          athleteMap[p.user_id].days[dayKey] = {
+            status: p.status,
+            note: p.athlete_note,
+            sessionTitle: session.title,
+            sessionId: session.id,
+            session,
+            athleteRpeFelt: (p as { athlete_rpe_felt?: unknown }).athlete_rpe_felt ?? null,
+          };
           athleteMap[p.user_id].totalCount++;
           athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;
           if (p.status === "completed") athleteMap[p.user_id].completedCount++;
@@ -426,8 +462,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   return (
     <div className="space-y-4">
-      {/* Profile hero */}
-      <div className="bg-card p-4 flex flex-col items-center text-center">
+      {/* Hero profil : espacement léger sous le header (safe-area gérée par IosFixedPageHeaderShell) */}
+      <div className="flex flex-col items-center bg-card px-4 pb-4 pt-2 text-center">
         <div className="h-[72px] w-[72px] rounded-full bg-secondary flex items-center justify-center overflow-hidden mb-3">
           {selectedAthlete.avatarUrl ? (
             <img src={selectedAthlete.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -572,10 +608,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                   <div key={dayKey}>
                     {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
                     <div className="flex items-start gap-3 px-4 py-3">
-                      {/* Activity icon */}
                       <ActivityIcon activityType={dayData.session.activity_type} size="sm" className="mt-0.5" />
 
-                      {/* Session info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-[15px] font-semibold text-foreground truncate">{dayData.sessionTitle}</p>
@@ -587,30 +621,121 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
                         </div>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <Badge className={`text-[10px] px-1.5 py-0 rounded-md border-0 ${getObjectiveColor(dayData.session.objective)}`}>
-                            {DAY_FULL[eachDayOfInterval({ start: weekStart, end: day }).length - 1]}
+                            {DAY_FULL[idx]}
                           </Badge>
                           {dayData.session.objective && (
                             <span className="text-[12px] text-muted-foreground">{dayData.session.objective}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 mt-1">
-                          {dayData.session.distance_km && (
+                          {dayData.session.distance_km ? (
                             <span className="text-[12px] font-medium text-primary tabular-nums">
                               {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
                             </span>
-                          )}
-                          {dayData.session.pace_target && (
-                            <span className="text-[12px] text-muted-foreground">
-                              Allure {dayData.session.pace_target}
-                            </span>
-                          )}
+                          ) : null}
+                          {dayData.session.pace_target ? (
+                            <span className="text-[12px] text-muted-foreground">Allure {dayData.session.pace_target}</span>
+                          ) : null}
                         </div>
-                        {dayData.session.rcc_code && (
-                          <p className="text-[12px] font-mono text-muted-foreground mt-1">
-                            {dayData.session.rcc_code}
-                          </p>
-                        )}
+                        {dayData.session.rcc_code ? (
+                          <p className="text-[12px] font-mono text-muted-foreground mt-1">{dayData.session.rcc_code}</p>
+                        ) : null}
+                        {(() => {
+                          const nBlocks = dayData.session.rcc_code
+                            ? parseRCC(dayData.session.rcc_code).blocks.length
+                            : 0;
+                          const plannedBlocks =
+                            nBlocks > 0
+                              ? parseBlockRpeFromStorage(dayData.session.rpe_phases, nBlocks)
+                              : [];
+                          const feltBlocks = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, nBlocks);
+                          const legacyPhases = parseSessionRpePhases(dayData.session.rpe_phases);
+                          const legacyPk = legacyPhases
+                            ? (["warmup", "main", "cooldown"] as const).filter(
+                                (k) => legacyPhases && typeof legacyPhases[k] === "number",
+                              )
+                            : [];
+                          const legacyRpe =
+                            typeof dayData.session.rpe === "number" && dayData.session.rpe >= 1 && dayData.session.rpe <= 10
+                              ? dayData.session.rpe
+                              : null;
+                          const showPlanned =
+                            plannedBlocks.length > 0 || legacyPk.length > 0 || legacyRpe != null;
+                          const showFelt = feltBlocks.length > 0;
+                          if (!showPlanned && !showFelt) return null;
+                          return (
+                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                              {showPlanned && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="text-[10px] font-medium text-muted-foreground">Prévu</span>
+                                  {plannedBlocks.length > 0
+                                    ? plannedBlocks.map((n, i) => (
+                                        <span
+                                          key={i}
+                                          className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                          style={{
+                                            backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
+                                          }}
+                                        >
+                                          {n}
+                                        </span>
+                                      ))
+                                    : legacyPk.length > 0
+                                      ? legacyPk.map((k) => {
+                                          const n = legacyPhases![k] as number;
+                                          return (
+                                            <span
+                                              key={k}
+                                              className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                              style={{ backgroundColor: rpeChipColor(n) }}
+                                            >
+                                              {n}
+                                            </span>
+                                          );
+                                        })
+                                      : legacyRpe != null && (
+                                          <span
+                                            className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                            style={{ backgroundColor: rpeChipColor(legacyRpe) }}
+                                          >
+                                            {legacyRpe}
+                                          </span>
+                                        )}
+                                </div>
+                              )}
+                              {showFelt && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="text-[10px] font-medium text-muted-foreground">Ressenti</span>
+                                  {feltBlocks.map((n, i) => (
+                                    <span
+                                      key={i}
+                                      className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
+                                      style={{
+                                        backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
+                                      }}
+                                    >
+                                      {n}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
+
+                      {!isDone && onOpenPlanForAthlete ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 rounded-xl h-9 gap-1 px-2.5 text-[11px] font-semibold"
+                          onClick={() => void handleRescheduleSession(dayData.sessionId)}
+                        >
+                          <CalendarClock className="h-3.5 w-3.5" />
+                          Reprogrammer
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 );

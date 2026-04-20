@@ -1,23 +1,40 @@
-import { useState, useEffect, type CSSProperties } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, type CSSProperties } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   RUCONNECT_SPLASH_BLUE,
-  RUCONNECT_SPLASH_ICON_URL,
+  RUCONNECT_LOADING_SCREEN_URL,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
-} from '@/lib/ruconnectSplashChrome';
-import { primeHomeMapDuringSplash } from '@/lib/homeMapPrefetch';
+} from "@/lib/ruconnectSplashChrome";
+import { scheduleHomeMapPrefetch } from "@/lib/homeMapPrefetch";
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
 }
 
+/** Durée minimale d’affichage du splash (identité plein écran). */
+const MIN_SPLASH_MS = 1200;
+/** Plafond d’attente session : doit rester > MIN_SPLASH_MS pour respecter le minimum. */
+const MAX_WAIT_SESSION_MS = 12000;
+
+function waitMs(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
   const [exiting, setExiting] = useState(false);
+  const { t } = useLanguage();
+  const onCompleteRef = useRef(onLoadingComplete);
+  const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  onCompleteRef.current = onLoadingComplete;
 
+  // Dépendances vides : si `t` (LanguageContext) change pendant le boot, un re-run coupait le splash
+  // (cleanup → restoreChrome) et recréait l’effet — ressenti « double chargement » / barre d’état incohérente.
   useEffect(() => {
-    primeHomeMapDuringSplash();
+    scheduleHomeMapPrefetch();
     applyRuconnectSplashWebChrome();
     void applyRuconnectSplashNativeChrome();
 
@@ -28,42 +45,46 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       await restoreChromeAfterRuconnectSplash();
     };
 
-    const exitTimer = setTimeout(() => setExiting(true), 1800);
-    const completeTimer = setTimeout(onLoadingComplete, 2200);
+    let cancelled = false;
+
+    void (async () => {
+      const minElapsed = waitMs(MIN_SPLASH_MS);
+      const sessionPromise = supabase.auth.getSession().then(() => {}).catch(() => {});
+
+      const capped = new Promise<void>((resolve) => {
+        window.setTimeout(resolve, MAX_WAIT_SESSION_MS);
+      });
+
+      await Promise.race([Promise.all([minElapsed, sessionPromise]), capped]);
+
+      if (cancelled) return;
+      setExiting(true);
+      completeTimerRef.current = setTimeout(() => {
+        if (!cancelled) onCompleteRef.current();
+        completeTimerRef.current = null;
+      }, 90);
+    })();
 
     return () => {
-      clearTimeout(exitTimer);
-      clearTimeout(completeTimer);
-      /**
-       * Ne pas retirer les fonds avant la restauration : course avec `ThemeProvider` au premier rendu
-       * (flash / bande basse non bleue). `restoreChromeAfterRuconnectSplash` réapplique html/body/#root.
-       */
+      cancelled = true;
+      if (completeTimerRef.current) {
+        window.clearTimeout(completeTimerRef.current);
+        completeTimerRef.current = null;
+      }
       void restoreAfterSplash();
     };
-  }, [onLoadingComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot unique ; voir commentaire ci-dessus
+  }, []);
 
   const splashLayerStyle: CSSProperties = {
     backgroundColor: RUCONNECT_SPLASH_BLUE,
   };
 
-  /** Même largeur/hauteur que l’icône — le titre se calibre dessus pour ne pas dépasser en largeur. */
-  const logoEdge = 'clamp(10rem, min(72vw, 40dvh), 19rem)';
-
-  const logoBoxStyle: CSSProperties = {
-    width: logoEdge,
-    height: logoEdge,
-    maxWidth: 'min(84vw, 19rem)',
-    maxHeight: 'min(84vw, 19rem)',
-  };
-
-  /**
-   * Taille du wordmark : proportionnelle au bord du logo (≈ largeur visuelle proche sans dépasser).
-   * Pile `font-sans` = SF Pro / Inter comme le reste de l’app (tailwind.config).
-   */
-  const titleStyle: CSSProperties = {
-    fontSize: `clamp(1.18rem, min(calc(${logoEdge} / 6.35), 1.88rem), 1.88rem)`,
-    marginTop: 'clamp(0.45rem, min(1.75dvh, 0.95rem), 1.05rem)',
-    maxWidth: logoEdge,
+  const splashArtStyle: CSSProperties = {
+    width: "auto",
+    height: "auto",
+    maxWidth: "min(92vw, 28rem)",
+    maxHeight: "min(78dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem))",
   };
 
   return (
@@ -71,61 +92,42 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
       {!exiting ? (
         <motion.div
           key="splash"
+          role="status"
+          aria-busy="true"
+          aria-live="polite"
           className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
           style={splashLayerStyle}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
         >
-          {/* Un seul fond bleu (pas de 2e calque coloré = pas de zone « carte » perceptible) */}
+          <span className="sr-only">{t("loading.splashAria")}</span>
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-5"
             style={{
-              paddingTop: 'env(safe-area-inset-top, 0px)',
-              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              paddingTop: "env(safe-area-inset-top, 0px)",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
             }}
           >
-            {/* Remontée optique : le centre géométrique paraît bas à cause du safe-area / indicateur d’accueil */}
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 30,
-                mass: 0.85,
+                type: "spring",
+                stiffness: 320,
+                damping: 32,
+                mass: 0.9,
               }}
               className="flex flex-col items-center"
             >
-              {/* Calque statique : centrage optique (FM contrôle seul le transform du parent) */}
-              <div
-                className="flex flex-col items-center"
-                style={{
-                  // Ajustement "centrage optique" (pas seulement centré techniquement)
-                  transform: 'translateY(calc(-1 * min(2.85dvh, 1.2rem)))',
-                }}
-              >
-                <img
-                  src={RUCONNECT_SPLASH_ICON_URL}
-                  alt=""
-                  draggable={false}
-                  className="block shrink-0 select-none object-contain"
-                  style={logoBoxStyle}
-                />
-                <motion.p
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    delay: 0.06,
-                    type: 'spring',
-                    stiffness: 340,
-                    damping: 32,
-                  }}
-                  className="font-sans text-center font-bold leading-none tracking-[0.03em] text-white antialiased"
-                  style={titleStyle}
-                >
-                  RunConnect
-                </motion.p>
-              </div>
+              <img
+                src={RUCONNECT_LOADING_SCREEN_URL}
+                alt=""
+                draggable={false}
+                className="block shrink-0 select-none object-contain"
+                style={splashArtStyle}
+                width={473}
+                height={1024}
+              />
             </motion.div>
           </div>
         </motion.div>
@@ -136,7 +138,7 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           style={{ backgroundColor: RUCONNECT_SPLASH_BLUE }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.14, ease: [0.32, 0.72, 0, 1] }}
         />
       )}
     </AnimatePresence>

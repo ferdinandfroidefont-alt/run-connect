@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfilePreviewDialog } from '@/components/ProfilePreviewDialog';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
 import { SessionLevelBadge } from '@/components/SessionLevelBadge';
-import { ActivityIcon } from '@/lib/activityIcons';
+import { ActivityIcon, getActivityBorderLeftClass } from '@/lib/activityIcons';
 import { MapPin, Calendar, Users, UserPlus, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { DiscoverSession, ACTIVITY_TYPES } from '@/hooks/useDiscoverFeed';
 import type { SessionLevel } from '@/lib/sessionLevelCalculator';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
+import { getVisibilityBadgeLabel } from '@/lib/sessionVisibility';
 
 interface DiscoverCardProps {
   session: DiscoverSession;
@@ -25,6 +26,7 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
   const { formatKm } = useDistanceUnits();
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const visibilityBadge = getVisibilityBadgeLabel(session);
 
   const getIntensityColor = (intensity: string | null) => {
     switch (intensity?.toLowerCase()) {
@@ -35,29 +37,13 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
     }
   };
 
-  /** Bordure gauche type accent (carte unifiée comme Mes séances) */
-  const getActivityAccentBorder = (activityType: string) => {
-    switch (activityType) {
-      case 'running': return 'border-l-orange-400';
-      case 'trail': return 'border-l-emerald-500';
-      case 'cycling': return 'border-l-sky-500';
-      case 'mtb': return 'border-l-indigo-500';
-      case 'walking': return 'border-l-amber-500';
-      case 'football': return 'border-l-green-600';
-      case 'basketball': return 'border-l-orange-500';
-      case 'swimming': return 'border-l-cyan-500';
-      case 'tennis': return 'border-l-violet-500';
-      case 'petanque': return 'border-l-pink-500';
-      default: return 'border-l-primary';
-    }
-  };
-
   return (
     <>
       <div 
         className={cn(
-          "ios-card overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary transition-colors",
-          getActivityAccentBorder(session.activity_type)
+          "bg-card border-y border-border overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary/80 transition-colors",
+          session.visibility_state === 'boosted' && "ring-2 ring-primary/25",
+          getActivityBorderLeftClass(session.activity_type)
         )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
         onClick={() => onCardClick?.(session)}
@@ -110,6 +96,18 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
             {session.friends_only && (
               <Badge variant="secondary" className="text-[11px] rounded-full">
                 Amis uniquement
+              </Badge>
+            )}
+            {visibilityBadge && (
+              <Badge
+                className={cn(
+                  "text-[11px] rounded-full border-0",
+                  session.visibility_state === 'boosted'
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                )}
+              >
+                {visibilityBadge}
               </Badge>
             )}
           </div>

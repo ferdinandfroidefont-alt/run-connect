@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -6,17 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
+import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route } from "lucide-react";
-import { PersonalRecords } from "@/components/PersonalRecords";
+import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
+import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { RecentActivities } from "@/components/profile/RecentActivities";
+import { getCountryLabel } from "@/lib/countryLabels";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
 import { FollowDialog } from "./FollowDialog";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useShareProfile } from "@/hooks/useShareProfile";
+import { QRShareDialog } from "./QRShareDialog";
+import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 
 interface Profile {
   user_id: string;
@@ -60,6 +64,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [areFriends, setAreFriends] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isRestricted, setIsRestricted] = useState(false);
   const [period, setPeriod] = useState<PeriodFilter>('total');
   const [stats, setStats] = useState({ sessionsCreated: 0, routesCreated: 0, sessionsJoined: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
@@ -67,6 +72,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [followDialogTab, setFollowDialogTab] = useState<'followers' | 'following'>('followers');
   const [showRecordsSheet, setShowRecordsSheet] = useState(false);
   const [showActivitiesSheet, setShowActivitiesSheet] = useState(false);
+  const [reliabilityRate, setReliabilityRate] = useState<number | null>(null);
+  const [reliabilityStats, setReliabilityStats] = useState({ created: 0, joined: 0, completed: 0 });
+  const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [showAboutSheet, setShowAboutSheet] = useState(false);
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
 
   const isOwnProfile = userId === user?.id;
 
@@ -74,13 +86,26 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (userId) {
       fetchProfile();
       fetchFollowCounts();
+      fetchReliability();
+      fetchStoryHighlights();
       if (!isOwnProfile) {
         checkFollowStatus();
         checkFriendStatus();
         checkBlockedStatus();
+        checkRestrictedStatus();
       }
     }
   }, [userId, user, isOwnProfile]);
+
+  const fetchStoryHighlights = async () => {
+    if (!userId) return;
+    const { data } = await (supabase as any)
+      .from("profile_story_highlights")
+      .select("id, story_id, title, position")
+      .eq("owner_id", userId)
+      .order("position", { ascending: true });
+    setStoryHighlights((data ?? []) as Array<{ id: string; story_id: string; title: string }>);
+  };
 
   useEffect(() => {
     if (userId && (isFollowing || isOwnProfile)) {
@@ -104,6 +129,27 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       onClose();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReliability = async () => {
+    if (!userId) return;
+    try {
+      const { data } = await supabase
+        .from('user_stats')
+        .select('reliability_rate, total_sessions_completed, total_sessions_joined')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) {
+        setReliabilityRate(data.reliability_rate);
+        setReliabilityStats({
+          created: 0,
+          joined: data.total_sessions_joined || 0,
+          completed: data.total_sessions_completed || 0,
+        });
+      }
+    } catch {
+      console.error('Error fetching reliability');
     }
   };
 
@@ -219,6 +265,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       await supabase.from('blocked_users').insert({ blocker_id: user.id, blocked_id: userId });
       await supabase.from('user_follows').delete()
         .or(`and(follower_id.eq.${user.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${user.id})`);
+      setIsBlocked(true);
       toast({ title: "Utilisateur bloqué" });
       setIsFollowing(false);
       setFollowRequestSent(false);
@@ -245,10 +292,51 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     }
   };
 
+  const checkRestrictedStatus = async () => {
+    if (!user || !userId || isOwnProfile) return;
+    const { data } = await supabase
+      .from('restricted_users')
+      .select('id')
+      .eq('restricter_id', user.id)
+      .eq('restricted_id', userId)
+      .maybeSingle();
+    setIsRestricted(!!data);
+  };
+
+  const handleRestrictToggle = async () => {
+    if (!user || !userId) return;
+    setActionLoading(true);
+    try {
+      if (isRestricted) {
+        await supabase.from('restricted_users').delete().eq('restricter_id', user.id).eq('restricted_id', userId);
+        setIsRestricted(false);
+        toast({ title: "Restriction levée" });
+      } else {
+        await supabase.from('restricted_users').insert({ restricter_id: user.id, restricted_id: userId });
+        setIsRestricted(true);
+        toast({ title: "Utilisateur restreint", description: "Vos séances seront automatiquement masquées pour cette personne" });
+      }
+    } catch {
+      toast({ title: "Erreur", variant: "destructive" });
+    } finally {
+      setActionLoading(false);
+      setShowActionSheet(false);
+    }
+  };
+
+  const handleShareProfile = () => {
+    if (!profile) return;
+    setShowActionSheet(false);
+    shareProfile({
+      username: profile.username,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url,
+    });
+  };
+
   const handleMessage = async () => {
     if (!user || !userId) return;
     try {
-      // Check for existing conversation
       const { data: existing } = await supabase
         .from('conversations')
         .select('id')
@@ -277,7 +365,6 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   if (!userId) return null;
 
   const canViewContent = isFollowing || isOwnProfile;
-
   const headerTitleText = profile?.display_name?.trim() || profile?.username?.trim() || "Profil";
 
   const periodTabs: { key: PeriodFilter; label: string }[] = [
@@ -286,12 +373,17 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     { key: '7d', label: '7 jours' },
   ];
 
+  // Build meta line: country + age
+  const countryLabel = profile ? getCountryLabel(profile.country) : null;
+  const ageLine = profile?.age ? `${profile.age} ans` : null;
+  const metaParts = [countryLabel, ageLine].filter(Boolean);
+
   return (
     <>
       <Dialog open={!!userId} onOpenChange={() => onClose()}>
-        <DialogContent className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border">
+        <DialogContent hideCloseButton className="flex h-full max-h-full w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-secondary p-0 sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl sm:border">
 
-          {/* Header : 3 zones (retour | titre tronqué | actions) — même principe que les écrans Itinéraire / Paramètres */}
+          {/* ── Header ── */}
           <div className="min-w-0 shrink-0 border-b border-border/50 bg-card pt-[max(env(safe-area-inset-top),12px)]">
             <div className="grid min-w-0 w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 pb-2.5 ios-shell:px-2.5">
               <button
@@ -310,31 +402,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
               </h1>
               <div className="flex w-10 shrink-0 justify-end">
                 {!isOwnProfile ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
-                        aria-label="Plus d’actions"
-                      >
-                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="z-50 rounded-xl border-border bg-background shadow-lg">
-                      {isBlocked ? (
-                        <DropdownMenuItem onClick={handleUnblockUser} className="cursor-pointer text-emerald-600">
-                          <UserPlus className="mr-2 h-4 w-4" /> Débloquer
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={handleBlockUser} className="cursor-pointer text-destructive">
-                          <UserMinus className="mr-2 h-4 w-4" /> Bloquer
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => setShowReportDialog(true)} className="cursor-pointer text-destructive">
-                        <Flag className="mr-2 h-4 w-4" /> Signaler
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <button
+                    type="button"
+                    onClick={() => setShowActionSheet(true)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full active:scale-95 active:bg-secondary/80"
+                    aria-label="Plus d'actions"
+                  >
+                    <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                  </button>
                 ) : (
                   <span className="inline-block w-9" aria-hidden />
                 )}
@@ -348,103 +423,134 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
             </div>
           ) : profile ? (
             <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden [&>div>div[style]]:!overflow-y-auto [&_.scrollbar]:hidden [&>div>div+div]:hidden">
-              <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-1">
-                <div className="mx-auto box-border min-w-0 w-full max-w-full space-y-3 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] ios-shell:px-2.5 sm:max-w-2xl">
+               <div className="min-w-0 max-w-full overflow-x-hidden pb-8 pt-0">
+                <div className="box-border min-w-0 w-full max-w-full space-y-0 pb-[max(2rem,env(safe-area-inset-bottom))]">
 
-                {/* ── Identity Card ── */}
-                <div className="pt-3">
-                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
-                    <div className="flex min-w-0 items-start gap-4">
-                      <div className="relative shrink-0">
-                        <Avatar className="h-20 w-20">
-                          <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-2xl font-bold text-primary-foreground">
-                            {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        {!isOwnProfile && areFriends && (
-                          <OnlineStatus userId={profile.user_id} />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1 overflow-hidden pt-1">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <p
-                            className="min-w-0 flex-1 truncate text-[18px] font-bold text-foreground"
-                            title={profile.display_name || profile.username}
-                          >
-                            {profile.display_name || profile.username}
-                          </p>
-                          {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
-                        </div>
-                        <p
-                          className="min-w-0 truncate text-[14px] text-muted-foreground"
-                          title={`@${profile.username}`}
-                        >
-                          @{profile.username}
-                        </p>
-                      </div>
+                {/* ── Identity - Instagram layout: avatar + stats side by side ── */}
+                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
+                  <div className="flex items-center gap-5">
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
+                        <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                        <AvatarFallback className="text-2xl bg-secondary">
+                          {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {!isOwnProfile && areFriends && (
+                        <OnlineStatus userId={profile.user_id} />
+                      )}
                     </div>
 
-                    {/* Action Buttons */}
-                    {!isOwnProfile && (
-                      <div className="mt-4 flex min-w-0 gap-2.5">
-                        <Button
-                          onClick={handleFollowToggle}
-                          disabled={actionLoading}
-                          variant={isFollowing ? "outline" : "default"}
-                          className={`min-w-0 flex-1 h-10 rounded-xl text-[14px] font-semibold ${
-                            followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
-                          }`}
-                        >
-                          {actionLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
-                            <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
-                          )}
-                        </Button>
-                        {isFollowing && (
-                          <Button variant="outline" onClick={handleMessage} className="h-10 rounded-xl px-4 border-border">
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
+                    {/* Stats à droite de l'avatar */}
+                    <div className="flex flex-1 min-w-0 items-center justify-around">
+                      <div className="text-center">
+                        <p className="text-[18px] font-bold text-foreground leading-none">{stats.sessionsCreated + stats.sessionsJoined}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nom + meta line */}
+                  <div className="mt-3 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
+                        {profile.display_name || profile.username}
+                      </h2>
+                      {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+                    </div>
+                    <p className="truncate text-[13px] text-muted-foreground">
+                      @{profile.username}
+                    </p>
+                    {metaParts.length > 0 && (
+                      <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                        {metaParts.join(" · ")}
+                      </p>
+                    )}
+                    {profile.bio && (
+                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
+                        {profile.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Boutons Abonné / Message */}
+                  {!isOwnProfile && (
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        onClick={handleFollowToggle}
+                        disabled={actionLoading}
+                        variant={isFollowing ? "secondary" : "default"}
+                        size="sm"
+                        className={`flex-1 rounded-lg text-[13px] font-semibold ${
+                          followRequestSent ? "bg-muted text-muted-foreground hover:bg-muted" : ""
+                        }`}
+                      >
+                        {actionLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isFollowing ? "Abonné ✓" : followRequestSent ? "En attente" : (
+                          <><UserPlus className="h-4 w-4 mr-1.5" />Suivre</>
                         )}
+                      </Button>
+                      {isFollowing && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
+                          onClick={handleMessage}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Message
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Stories à la une ── */}
+                <div className="bg-card border-b border-border px-4 py-3">
+                  <div className="flex gap-3 overflow-x-auto pb-1">
+                    {storyHighlights.length > 0 ? (
+                      storyHighlights.map((item) => (
+                        <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                            {item.title.slice(0, 2).toUpperCase()}
+                          </div>
+                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30 bg-secondary/30">
+                          <span className="text-[10px] text-muted-foreground/50">∅</span>
+                        </div>
+                        <p className="w-full truncate text-center text-[10px] text-muted-foreground/60">Aucune</p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* ── Follow Stats ── */}
-                <div>
-                  <div className="ios-card flex min-w-0 overflow-hidden border border-border/60">
-                    <button
-                      onClick={() => { setFollowDialogTab('following'); setShowFollowDialog(true); }}
-                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-l-[10px]"
-                    >
-                      <p className="text-[18px] font-bold text-foreground">{followingCount}</p>
-                      <p className="text-[12px] text-muted-foreground">Suivis</p>
-                    </button>
-                    <div className="w-px bg-border my-2" />
-                    <button
-                      onClick={() => { setFollowDialogTab('followers'); setShowFollowDialog(true); }}
-                      className="flex-1 py-3 text-center active:bg-secondary/80 transition-colors rounded-r-[10px]"
-                    >
-                      <p className="text-[18px] font-bold text-foreground">{followerCount}</p>
-                      <p className="text-[12px] text-muted-foreground">Abonnés</p>
-                    </button>
-                  </div>
-                </div>
-
-                {/* ── Bio ── */}
-                {profile.bio && (
-                  <div className="ios-card min-w-0 overflow-hidden border border-border/60 p-4">
-                      <p className="break-words text-[14px] leading-relaxed text-foreground/80">{profile.bio}</p>
-                  </div>
-                )}
-
                 {/* ── Content (visible if following or own) ── */}
                 {canViewContent ? (
                   <>
                     {/* Period Filter */}
-                    <div>
+                    <div className="border-b border-border/60 bg-card px-4 py-3">
                       <div className="flex min-w-0 rounded-[8px] bg-muted p-0.5">
                         {periodTabs.map(tab => (
                           <button
@@ -462,9 +568,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       </div>
                     </div>
 
-                    {/* Stats */}
-                    <div className="min-w-0">
-                      <IOSListGroup>
+                    {/* Activity Stats */}
+                    <div className="min-w-0 border-b border-border/60 bg-card">
+                      <IOSListGroup flush className="!mb-0">
                         <IOSListItem
                           icon={CalendarDays}
                           iconBgColor="bg-primary"
@@ -491,13 +597,20 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
 
                     {/* Records & Recent */}
-                    <div className="min-w-0">
-                      <IOSListGroup>
+                    <div className="min-w-0 border-b border-border/60 bg-card">
+                      <IOSListGroup flush className="!mb-0">
                         <IOSListItem
                           icon={Trophy}
                           iconBgColor="bg-yellow-500"
                           title="Records sport"
-                          onClick={() => setShowRecordsSheet(true)}
+                          onClick={() => {
+                            if (isOwnProfile) {
+                              navigate("/profile/records");
+                              onClose();
+                            } else {
+                              setShowRecordsSheet(true);
+                            }
+                          }}
                         />
                         <IOSListItem
                           icon={CalendarDays}
@@ -510,11 +623,13 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     </div>
                   </>
                 ) : !isOwnProfile ? (
-                  <div className="pt-2">
-                    <div className="ios-card border border-border/60 p-6 text-center">
-                      <div className="text-4xl mb-3">🔒</div>
-                      <p className="text-[15px] font-semibold text-foreground">Profil privé</p>
-                      <p className="text-[13px] text-muted-foreground mt-1">
+                  <div className="border-b border-border/60 bg-card">
+                    <div className="flex flex-col items-center px-6 py-8">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                        <Lock className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-3 text-[15px] font-semibold text-foreground">Profil privé</p>
+                      <p className="mt-1 text-[13px] text-muted-foreground text-center">
                         Suivez cette personne pour voir ses activités
                       </p>
                     </div>
@@ -526,6 +641,83 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           ) : (
             <div className="text-center flex-1 flex items-center justify-center">
               <p className="text-muted-foreground">Profil non trouvé</p>
+            </div>
+          )}
+
+          {/* Action sheet : doit être *dans* DialogContent (Radix modal bloque les clics hors layer si portail body) */}
+          {showActionSheet && !isOwnProfile && (
+            <div
+              className="pointer-events-auto fixed inset-0 z-[250] flex items-end justify-center"
+              role="presentation"
+              onClick={() => setShowActionSheet(false)}
+            >
+              <div className="absolute inset-0 bg-black/40" aria-hidden />
+              <div
+                className="relative z-10 w-full max-w-md px-2 pb-[max(env(safe-area-inset-bottom),8px)]"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Actions sur le profil"
+              >
+                <div className="mb-2 overflow-hidden rounded-2xl bg-card shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      isBlocked ? handleUnblockUser() : handleBlockUser();
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                  >
+                    <UserMinus className="h-5 w-5 shrink-0" />
+                    {isBlocked ? "Débloquer" : "Bloquer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRestrictToggle}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <ShieldBan className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    {isRestricted ? "Lever la restriction" : "Restreindre"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      setShowReportDialog(true);
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-destructive transition-colors active:bg-secondary/60"
+                  >
+                    <Flag className="h-5 w-5 shrink-0" />
+                    Signaler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleShareProfile}
+                    className="flex w-full items-center gap-3 border-b border-border/40 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <Share2 className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    Partager
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionSheet(false);
+                      setShowAboutSheet(true);
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-[16px] font-normal text-foreground transition-colors active:bg-secondary/60"
+                  >
+                    <Info className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    À propos de ce compte
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowActionSheet(false)}
+                  className="w-full rounded-2xl bg-card py-3.5 text-center text-[17px] font-semibold text-primary shadow-lg transition-colors active:bg-secondary/60"
+                >
+                  Annuler
+                </button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -543,9 +735,19 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         />
       )}
 
+      {/* Reliability Dialog */}
+      <ReliabilityDetailsDialog
+        open={showReliabilityDialog}
+        onOpenChange={setShowReliabilityDialog}
+        reliabilityRate={reliabilityRate ?? 0}
+        totalSessionsCreated={reliabilityStats.created}
+        totalSessionsJoined={reliabilityStats.joined}
+        totalSessionsCompleted={reliabilityStats.completed}
+      />
+
       {/* Records Sheet */}
       <Sheet open={showRecordsSheet} onOpenChange={setShowRecordsSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">Records sport</SheetTitle>
           </SheetHeader>
@@ -570,13 +772,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
 
       {/* Recent Activities Sheet */}
       <Sheet open={showActivitiesSheet} onOpenChange={setShowActivitiesSheet}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
           <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
             <SheetTitle className="text-[17px]">Séances récentes</SheetTitle>
           </SheetHeader>
           <ScrollArea className="h-full pb-8">
             <div className="p-4">
-              {userId && <RecentActivities userId={userId} limit={20} />}
+              {userId && (
+                <RecentActivities userId={userId} viewerUserId={user?.id ?? null} limit={20} />
+              )}
             </div>
           </ScrollArea>
         </SheetContent>
@@ -589,6 +793,40 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           onClose={() => setShowReportDialog(false)}
           reportedUserId={profile.user_id}
           reportedUsername={profile.username}
+        />
+      )}
+
+      {/* About Sheet */}
+      <Sheet open={showAboutSheet} onOpenChange={setShowAboutSheet}>
+        <SheetContent side="bottom" className="rounded-t-2xl p-0 z-[200]" overlayClassName="z-[200]">
+          <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
+            <SheetTitle className="text-[17px]">À propos de ce compte</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 py-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Date de création</span>
+              <span className="text-[14px] font-medium text-foreground">
+                {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) : '–'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] text-muted-foreground">Nom d'utilisateur</span>
+              <span className="text-[14px] font-medium text-foreground">@{profile?.username || '–'}</span>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* QR Share Dialog */}
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
         />
       )}
     </>

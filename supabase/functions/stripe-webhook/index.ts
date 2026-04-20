@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logException, logStripeRef, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2023-10-16",
@@ -11,9 +12,9 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  if (details) logStructured("STRIPE-WEBHOOK", step, details);
+  else console.log(`[STRIPE-WEBHOOK] ${step}`);
 };
 
 const corsHeaders = {
@@ -43,11 +44,10 @@ serve(async (req) => {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      logStep("Webhook event verified", { type: event.type, id: event.id });
+      logStep("Webhook event verified", { type: event.type, event: logStripeRef(event.id) });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      logStep("Webhook signature verification failed", { error: message });
-      return new Response(JSON.stringify({ error: `Webhook Error: ${message}` }), { 
+      logException("stripe-webhook-verify", err);
+      return new Response(JSON.stringify({ error: "Webhook verification failed" }), { 
         status: 400, 
         headers: corsHeaders 
       });
@@ -58,10 +58,11 @@ serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         logStep("Checkout session completed", { 
-          sessionId: session.id, 
-          customerId: session.customer,
-          subscriptionId: session.subscription,
-          metadata: session.metadata
+          session: logStripeRef(session.id), 
+          customer: typeof session.customer === "string" ? logStripeRef(session.customer) : "—",
+          subscription: session.subscription ? logStripeRef(String(session.subscription)) : "—",
+          mode: session.mode ?? "",
+          meta_keys: session.metadata ? Object.keys(session.metadata).join(",") : "",
         });
 
         if (session.mode === "subscription" && session.subscription) {
@@ -75,9 +76,9 @@ serve(async (req) => {
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
         logStep("Subscription updated", { 
-          subscriptionId: subscription.id, 
+          subscription: logStripeRef(subscription.id), 
           status: subscription.status,
-          customerId: subscription.customer
+          customer: typeof subscription.customer === "string" ? logStripeRef(subscription.customer) : "—",
         });
         
         // Get customer email
@@ -89,7 +90,7 @@ serve(async (req) => {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        logStep("Subscription deleted", { subscriptionId: subscription.id });
+        logStep("Subscription deleted", { subscription: logStripeRef(subscription.id) });
         
         const customer = await stripe.customers.retrieve(subscription.customer as string);
         const email = (customer as Stripe.Customer).email;
@@ -106,7 +107,7 @@ serve(async (req) => {
             })
             .eq("email", email);
           
-          logStep("Subscription marked as canceled", { email });
+          logStep("Subscription marked as canceled", { subscriber: "by_email" });
         }
         break;
       }
@@ -114,8 +115,8 @@ serve(async (req) => {
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Invoice payment succeeded", { 
-          invoiceId: invoice.id,
-          subscriptionId: invoice.subscription
+          invoice: logStripeRef(invoice.id),
+          subscription: invoice.subscription ? logStripeRef(String(invoice.subscription)) : "—",
         });
         
         if (invoice.subscription) {
@@ -130,8 +131,8 @@ serve(async (req) => {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Invoice payment failed", { 
-          invoiceId: invoice.id, 
-          customerEmail: invoice.customer_email 
+          invoice: logStripeRef(invoice.id), 
+          has_customer_email: !!invoice.customer_email,
         });
         
         if (invoice.customer_email) {
@@ -155,9 +156,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in stripe-webhook", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), { 
+    logException("stripe-webhook", error);
+    return new Response(JSON.stringify({ error: "Webhook handler error" }), { 
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
@@ -187,7 +187,7 @@ async function updateSubscription(subscription: Stripe.Subscription, email: stri
     last_synced_at: new Date().toISOString(),
   };
 
-  logStep("Updating subscription in database", { email, tier, status: subscription.status });
+  logStep("Updating subscription in database", { tier, status: subscription.status });
 
   // First try to find by email
   const { data: existingSubscriber } = await supabaseAdmin
@@ -214,9 +214,9 @@ async function updateSubscription(subscription: Stripe.Subscription, email: stri
           ...updateData,
           user_id: user.id,
         });
-      logStep("Created new subscriber", { email, userId: user.id });
+      logStep("Created new subscriber", { user: logUserRef(user.id) });
     } else {
-      logStep("User not found in auth, cannot create subscriber", { email });
+      logStep("User not found in auth, cannot create subscriber", {});
     }
   }
 }

@@ -5,10 +5,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { getActivityConfig } from "@/lib/activityIcons";
+import { getActivityConfig, getActivitySolidBgClass } from "@/lib/activityIcons";
 import { SessionLevelBadge } from "./SessionLevelBadge";
 import type { SessionLevel } from "@/lib/sessionLevelCalculator";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import { getVisibilityBadgeLabel } from "@/lib/sessionVisibility";
 
 interface Session {
   id: string;
@@ -39,6 +40,9 @@ interface Session {
     total_distance: number;
     total_elevation_gain: number;
   } | null;
+  visibility_tier?: string | null;
+  visibility_radius_km?: number | null;
+  boost_expires_at?: string | null;
 }
 
 interface SessionPreviewPopupProps {
@@ -47,18 +51,6 @@ interface SessionPreviewPopupProps {
   onViewDetails: () => void;
   isImminent?: boolean;
 }
-
-const getActivityColor = (activityType: string) => {
-  const colors: Record<string, string> = {
-    'course': 'bg-red-500',
-    'trail': 'bg-orange-500',
-    'velo': 'bg-blue-500',
-    'vtt': 'bg-emerald-600',
-    'marche': 'bg-green-500',
-    'natation': 'bg-teal-500'
-  };
-  return colors[activityType] || colors['course'];
-};
 
 const getIntensityLabel = (intensity: string) => {
   const labels: Record<string, string> = {
@@ -93,6 +85,7 @@ export const SessionPreviewPopup = ({
 
   const activityConfig = getActivityConfig(session.activity_type);
   const ActivityIconComponent = activityConfig.icon;
+  const visibilityBadge = getVisibilityBadgeLabel(session);
 
   return (
     <AnimatePresence>
@@ -115,8 +108,7 @@ export const SessionPreviewPopup = ({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed left-4 z-[115]"
             style={{
-              bottom:
-                "max(5rem, calc(var(--layout-bottom-inset) + env(safe-area-inset-bottom, 0px) + 0.75rem))",
+              bottom: "max(5rem, calc(var(--layout-bottom-inset) + 0.75rem))",
               right: "max(1rem, calc(env(safe-area-inset-right, 0px) + 4.25rem))",
             }}
           >
@@ -158,7 +150,7 @@ export const SessionPreviewPopup = ({
                   </div>
                   
                   {/* Activity badge */}
-                  <div className={`${getActivityColor(session.activity_type)} p-2 rounded-xl`}>
+                  <div className={`${getActivitySolidBgClass(session.activity_type)} p-2 rounded-xl`}>
                     <ActivityIconComponent className="h-5 w-5 text-white" />
                   </div>
                 </div>
@@ -202,6 +194,17 @@ export const SessionPreviewPopup = ({
                   {session.routes && (
                     <Badge variant="outline" className="text-xs">
                       📍 {formatMeters(session.routes.total_distance)}
+                    </Badge>
+                  )}
+                  {visibilityBadge && (
+                    <Badge
+                      className={
+                        visibilityBadge === "Boost"
+                          ? "text-xs bg-primary text-primary-foreground"
+                          : "text-xs bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                      }
+                    >
+                      {visibilityBadge}
                     </Badge>
                   )}
                 </div>

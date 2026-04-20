@@ -108,6 +108,7 @@ export default {
     				DEFAULT: 'hsl(var(--card))',
     				foreground: 'hsl(var(--card-foreground))'
     			},
+    			'tab-icon-inactive': 'hsl(var(--tab-icon-inactive))',
     			'map-control': {
     				DEFAULT: 'hsl(var(--map-control-bg))',
     				border: 'hsl(var(--map-control-border))',

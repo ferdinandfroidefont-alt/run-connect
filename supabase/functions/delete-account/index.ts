@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireUserJwt } from "../_shared/auth.ts";
+import { logDbError, logException, logStructured, logUserRef } from "../_shared/secureLog.ts";
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -8,42 +10,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with service role key for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    const authResult = await requireUserJwt(req, supabaseAdmin)
+    if (authResult instanceof Response) {
+      const body = await authResult.text()
+      return new Response(body, {
+        status: authResult.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
+    const { user } = authResult
 
-    // Get the JWT token
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Verify the user from the JWT token
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError)
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
-
-    console.log('Deleting account for user:', user.id)
+    logStructured("delete-account", "start", { user: logUserRef(user.id) });
 
     try {
       // First, delete all user data using the new function
@@ -52,7 +34,7 @@ Deno.serve(async (req) => {
       })
 
       if (deleteDataError) {
-        console.error('Error deleting user data:', deleteDataError)
+        logDbError("delete-account", deleteDataError);
         return new Response(
           JSON.stringify({ error: 'Failed to delete user data' }),
           { 
@@ -66,7 +48,7 @@ Deno.serve(async (req) => {
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
 
       if (deleteError) {
-        console.error('Delete user error:', deleteError)
+        logDbError("delete-account-auth", deleteError);
         return new Response(
           JSON.stringify({ error: 'Failed to delete account' }),
           { 
@@ -76,9 +58,9 @@ Deno.serve(async (req) => {
         )
       }
 
-      console.log('Account successfully deleted for user:', user.id)
+      logStructured("delete-account", "done", { user: logUserRef(user.id) });
     } catch (error) {
-      console.error('Unexpected error during account deletion:', error)
+      logException("delete-account", error);
       return new Response(
         JSON.stringify({ error: 'Failed to delete account' }),
         { 
@@ -97,7 +79,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Function error:', error)
+    logException("delete-account-outer", error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }),
       { 

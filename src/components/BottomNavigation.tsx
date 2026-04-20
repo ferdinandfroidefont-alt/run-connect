@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType }
 
 type NavItem = {
   path: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
+  icon: ComponentType<Record<string, unknown>>;
   label: string;
   tutorialId?: string;
   isActive: (pathname: string) => boolean;
@@ -59,7 +59,7 @@ export const BottomNavigation = () => {
       {
         path: "/leaderboard",
         icon: Trophy,
-        label: t("navigation.leaderboard"),
+        label: t("navigation.leaderboard") || "Classement",
         tutorialId: "nav-leaderboard",
         isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
       },
@@ -148,7 +148,8 @@ export const BottomNavigation = () => {
   return (
     <nav
       className={cn(
-        "relative z-[100] w-full shrink-0 border-t border-border/60 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/85",
+        "relative z-[110] w-full shrink-0 border-t border-border bg-background",
+        "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
         "pointer-events-auto"
       )}
       role="navigation"
@@ -188,11 +189,12 @@ export const BottomNavigation = () => {
                   !isCenter && "opacity-[0.92]"
                 )}
               >
-                <div className="relative shrink-0">
+                <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">
                   <Icon
+                    size={26}
                     className={cn(
-                      "h-[26px] w-[26px] transition-colors duration-300 ease-ios",
-                      isActive ? "text-primary" : "text-muted-foreground"
+                      "transition-colors duration-300 ease-ios",
+                      isActive ? "text-primary" : "text-muted-foreground dark:text-tab-icon-inactive"
                     )}
                     strokeWidth={isActive ? 2.4 : 1.65}
                     aria-hidden
@@ -206,7 +208,9 @@ export const BottomNavigation = () => {
                 <span
                   className={cn(
                     "w-full truncate text-center text-[11px] leading-none tracking-tight transition-colors duration-300 ease-ios",
-                    isActive ? "font-semibold text-primary" : "font-medium text-muted-foreground"
+                    isActive
+                      ? "font-semibold text-primary"
+                      : "font-medium text-muted-foreground dark:text-tab-icon-inactive"
                   )}
                 >
                   {label}

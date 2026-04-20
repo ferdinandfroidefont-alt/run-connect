@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat, Radio, MapPinned } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
 import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, RecurrenceType } from '../types';
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
@@ -57,15 +56,9 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   onBack,
   isCoachingMode = false,
 }) => {
-  const navigate = useNavigate();
   const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
 
   const handleVisibilityChange = (type: VisibilityType) => {
-    // If user selects public and is not premium, redirect to subscription page
-    if (type === 'public' && !isPremium) {
-      navigate('/subscription');
-      return;
-    }
     onFormDataChange({ visibility_type: type });
     // Sync friends_only for backwards compatibility
     onFormDataChange({ friends_only: type === 'friends' });

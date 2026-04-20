@@ -49,10 +49,10 @@ export function IosFixedPageHeaderShell({
 
   useLayoutEffect(() => {
     if (!contentScroll && scrollRef && localScrollRef.current) {
-      scrollRef.current = localScrollRef.current;
+      (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = localScrollRef.current;
     }
     return () => {
-      if (!contentScroll && scrollRef) scrollRef.current = null;
+      if (!contentScroll && scrollRef) (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = null;
     };
   }, [scrollRef, contentScroll]);
 
@@ -86,6 +86,7 @@ export function IosFixedPageHeaderShell({
     <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
       <div
         ref={headerRef}
+        data-ios-pinned-header={pin ? "" : undefined}
         className={cn(pin ? "ios-internal-header-pinned" : "shrink-0", headerWrapperClassName)}
       >
         {header}

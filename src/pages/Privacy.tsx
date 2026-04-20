@@ -10,7 +10,7 @@ export default function Privacy() {
   return (
     <div className="fixed inset-0 bg-background flex flex-col overflow-x-hidden">
       {/* Header fixe */}
-      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50">
+      <div className="sticky top-0 z-10 backdrop-blur-xl bg-background/95 border-b border-border/50 dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none">
         <div className="flex items-center gap-3 p-4">
           <Button
             variant="ghost"
@@ -62,6 +62,10 @@ export default function Privacy() {
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>votre adresse e-mail et votre pseudonyme pour la création du compte ;</li>
                 <li>vos performances sportives (séances, parcours, chronos) ;</li>
+                <li>
+                  après une séance à laquelle vous participez, un retour optionnel (satisfaction, commentaire)
+                  visible par l&apos;organisateur de cette séance ;
+                </li>
                 <li>vos préférences (notifications, langue, paramètres de profil) ;</li>
                 <li>vos données de localisation uniquement pendant l'utilisation des fonctions de carte.</li>
               </ul>
@@ -106,6 +110,11 @@ export default function Privacy() {
               </p>
               <p className="font-medium text-foreground">
                 Aucune donnée n'est vendue, partagée ou transférée à des tiers sans votre consentement explicite.
+              </p>
+              <p>
+                Sur votre appareil, l&apos;application peut enregistrer localement (navigateur ou stockage de
+                l&apos;app) la dernière position utilisée pour centrer la carte d&apos;accueil, afin d&apos;améliorer
+                la réactivité ; ces coordonnées ne sont pas envoyées à nos serveurs pour ce seul usage.
               </p>
             </div>
           </div>

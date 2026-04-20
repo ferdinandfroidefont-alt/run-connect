@@ -1,53 +1,83 @@
 
 
-## Diagnostic
+## Remplacer "Gérer le club" par une page de gestion complète style iOS Settings
 
-Le probleme est clair : la page `ios-callback.html` se charge correctement dans SFSafariViewController, mais quand le JavaScript execute `window.location.href = 'runconnect://auth/callback?code=...'`, **iOS ne reconnait pas le scheme `runconnect://`**. Cela signifie que le scheme n'est pas enregistre dans le `Info.plist` de l'IPA actuellement installee.
+### Constat actuel
+Le bouton "Gérer le club" ouvre `ClubInfoDialog` — un dialog plein écran avec des onglets (Membres/Entraînements/Groupes) et un design ancien, incohérent avec le style iOS premium du reste de la page Coaching. Il y a aussi `EditClubDialog` qui s'ouvre en cascade depuis `ClubInfoDialog`. Les deux sont redondants et mal intégrés.
 
-Deux problemes distincts :
+### Ce qui va changer
 
-1. **Le `grep -c "Dict"` dans le workflow est fragile** — PlistBuddy peut formater differemment selon la version, causant un mauvais calcul d'index et un echec silencieux
-2. **Aucun nouveau build iOS n'a ete lance** depuis le dernier correctif du workflow (ou le build precedent n'avait pas le bon workflow)
+**Supprimer** : `ClubInfoDialog` et `EditClubDialog` ne seront plus utilisés depuis la page Coaching. On retire les imports lazy, les states (`showClubInfo`, `showEditClub`, `clubInfoData`), et le rendu `<Suspense>` correspondant dans `Coaching.tsx`.
 
-## Solution en 2 parties
+**Créer** : Un nouveau composant `ClubManagementDialog` en plein écran, style iOS Settings (fond `bg-secondary`, sections `IOSListGroup` avec titres en majuscules), qui regroupe tout en un seul écran scrollable :
 
-### Partie 1 : Rendre le workflow PlistBuddy infaillible
+### Structure de la nouvelle page
 
-Remplacer le bloc PlistBuddy par `plutil` qui est plus fiable pour inserer dans un tableau :
-
-```bash
-# Utiliser plutil pour ajouter le scheme de maniere fiable
-plutil -insert CFBundleURLTypes.-1 \
-  -json '{"CFBundleURLName":"com.ferdi.runconnect","CFBundleURLSchemes":["runconnect"]}' \
-  ios/App/App/Info.plist
-
-# Verifier
-plutil -p ios/App/App/Info.plist | grep -A5 runconnect
+```text
+┌─────────────────────────────┐
+│  ← Retour     Gérer le club │
+├─────────────────────────────┤
+│                             │
+│  [Avatar du club]           │
+│  Nom du club                │
+│  Description                │
+│                             │
+│  INFORMATIONS               │
+│  ┌─────────────────────────┐│
+│  │ Nom du club      [Edit] ││
+│  │ Description      [Edit] ││
+│  │ Photo de profil  [Chg]  ││
+│  └─────────────────────────┘│
+│                             │
+│  CODE D'INVITATION          │
+│  ┌─────────────────────────┐│
+│  │ ABC123         [Copier] ││
+│  └─────────────────────────┘│
+│                             │
+│  MEMBRES (12)               │
+│  ┌─────────────────────────┐│
+│  │ Inviter des membres   > ││
+│  │ @alice  Admin  Coach    ││
+│  │ @bob    Membre    [⚙]  ││
+│  │ @charlie Membre   [⚙]  ││
+│  └─────────────────────────┘│
+│                             │
+│  ZONE DANGER                │
+│  ┌─────────────────────────┐│
+│  │ Supprimer le club       ││
+│  └─────────────────────────┘│
+│                             │
+└─────────────────────────────┘
 ```
 
-`-1` signifie "ajouter a la fin du tableau", ce qui fonctionne peu importe combien d'entrees Capacitor a deja injectees.
+### Fonctionnalités intégrées
 
-### Partie 2 : Securiser la page bridge
+1. **Modifier nom/description/avatar** — inline, avec sauvegarde directe (reprend la logique d'`EditClubDialog`)
+2. **Code d'invitation** — affiché avec bouton copier (visible uniquement pour le créateur/admin)
+3. **Liste des membres** — avec badges Admin/Coach, actions par membre :
+   - Promouvoir/rétrograder coach (toggle)
+   - Retirer du club (avec confirmation AlertDialog)
+4. **Inviter des membres** — recherche utilisateurs intégrée (dialog léger ou section inline)
+5. **Supprimer le club** — section danger en bas, avec AlertDialog de confirmation
 
-Modifier `ios-callback.html` pour tenter aussi un **iframe invisible** comme methode alternative de declenchement du scheme (certaines versions iOS gerent mieux les iframes que `window.location.href` dans SFSafariViewController) :
+### Détails techniques
 
-```html
-<!-- Methode 1: location.href -->
-<script>window.location.href = deepLink;</script>
+**Fichiers créés :**
+- `src/components/coaching/ClubManagementDialog.tsx` — nouveau composant unique (~400 lignes), utilisant `IOSListGroup`, `IOSListItem`, `IosFixedPageHeaderShell`, `CoachingFullscreenHeader`
 
-<!-- Methode 2: iframe fallback -->
-<iframe src="runconnect://auth/callback?code=..." style="display:none"></iframe>
-```
+**Fichiers modifiés :**
+- `src/pages/Coaching.tsx` :
+  - Supprimer les imports lazy de `ClubInfoDialog` et `EditClubDialog`
+  - Supprimer les states `clubInfoData`, `showClubInfo`, `showEditClub`
+  - Supprimer la fonction `openClubManagement` (fetch conversation)
+  - Supprimer le bloc `<Suspense>` avec les deux dialogs
+  - Ajouter un state `showClubManagement` et le nouveau `<ClubManagementDialog>`
+  - Le bouton "Gérer le club" appellera simplement `setShowClubManagement(true)`
 
-### Fichiers modifies
+**Fichiers NON supprimés** (utilisés ailleurs, depuis Messages/ClubProfileDialog) :
+- `ClubInfoDialog.tsx` — reste en place
+- `EditClubDialog.tsx` — reste en place
 
-1. **`.github/workflows/ios-appstore.yml`** : remplacer le bloc PlistBuddy par `plutil -insert` + verification
-2. **`public/ios-callback.html`** : ajouter iframe invisible comme methode alternative de declenchement du deep link
-
-### Apres le deploy
-
-1. **Lancer un nouveau build GitHub Actions** — c'est obligatoire, le scheme doit etre dans l'IPA
-2. Verifier dans les logs CI que `plutil -p` affiche bien `runconnect` dans les URL types
-3. Installer la nouvelle build TestFlight
-4. Tester le flux Google OAuth
+### Logique métier reprise
+Toute la logique Supabase (load members, toggle coach, remove member, invite, delete club, upload avatar, update name/description) est copiée depuis `ClubInfoDialog` + `EditClubDialog` et consolidée dans le nouveau composant.
 

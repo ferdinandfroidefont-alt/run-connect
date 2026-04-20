@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  logException,
+  logStructured,
+  logUserRef,
+  summarizeFcmErrorBody,
+  summarizeGoogleApiError,
+} from "../_shared/secureLog.ts";
 
 interface NotificationPayload {
   user_id: string;
@@ -9,6 +16,137 @@ interface NotificationPayload {
   data?: any;
   type?: string;
 }
+
+type JsonRecord = Record<string, unknown>;
+
+function withStack(err: unknown): JsonRecord {
+  if (err instanceof Error) {
+    return { name: err.name, message: err.message, stack: err.stack ?? null };
+  }
+  return { message: String(err) };
+}
+
+function jsonResponse(
+  corsHeaders: Record<string, string>,
+  status: number,
+  body: JsonRecord,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function fail(
+  corsHeaders: Record<string, string>,
+  status: number,
+  code: string,
+  message: string,
+  extras: JsonRecord = {},
+): Response {
+  return jsonResponse(corsHeaders, status, {
+    success: false,
+    code,
+    message,
+    ...extras,
+  });
+}
+
+function ok(
+  corsHeaders: Record<string, string>,
+  body: JsonRecord,
+): Response {
+  return jsonResponse(corsHeaders, 200, { success: true, ...body });
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(s: string): boolean {
+  return UUID_RE.test(s.trim());
+}
+
+type ProfileRow = Record<string, unknown>;
+
+/**
+ * PostgREST échoue si une colonne du SELECT n'existe pas en prod.
+ * On essaie du schéma complet au minimal (push_token seul).
+ */
+async function fetchProfileRowsForPush(
+  client: ReturnType<typeof createClient>,
+  userId: string,
+  traceId: string,
+): Promise<{ rows: ProfileRow[]; lastError: { code?: string; message?: string; details?: string } | null }> {
+  const selectAttempts: string[] = [
+    "push_token, push_token_platform, push_token_updated_at, notifications_enabled, notif_boost_nearby, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed",
+    "push_token, push_token_platform, push_token_updated_at, notifications_enabled",
+    "push_token, notifications_enabled",
+    "push_token",
+  ];
+
+  let lastError: { code?: string; message?: string; details?: string } | null = null;
+
+  for (let i = 0; i < selectAttempts.length; i++) {
+    const cols = selectAttempts[i]!;
+    const q = client
+      .from("profiles")
+      .select(cols)
+      .eq("user_id", userId)
+      .limit(5);
+
+    const ordered = cols.includes("push_token_updated_at")
+      ? q.order("push_token_updated_at", { ascending: false, nullsFirst: false })
+      : q;
+
+    const { data, error } = await ordered;
+    if (!error) {
+      logStructured("send-push", "db_fetch_profile_ok", {
+        trace_id: traceId,
+        attempt_index: i,
+        cols_len: cols.length,
+        rows: Array.isArray(data) ? data.length : 0,
+      });
+      return { rows: (data ?? []) as ProfileRow[], lastError: null };
+    }
+    lastError = {
+      code: error.code,
+      message: error.message,
+      details: (error as { details?: string }).details,
+    };
+    logStructured("send-push", "db_fetch_profile_retry", {
+      trace_id: traceId,
+      attempt_index: i,
+      db_code: error.code,
+      hint: "column_missing_or_other",
+    });
+  }
+
+  return { rows: [], lastError };
+}
+
+/** Comparaison constante du secret interne (mitigation timing attacks). */
+function timingSafeEqualString(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+type PushAuthResult =
+  | { ok: true; mode: "internal" }
+  | { ok: true; mode: "user"; callerUserId: string }
+  | { ok: false; response: Response };
+
+type SupabaseAuthAdmin = {
+  auth: {
+    getUser: (jwt: string) => Promise<{
+      data: { user: { id: string } | null };
+      error: { message?: string } | null;
+    }>;
+  };
+};
 
 interface FirebaseServiceAccount {
   type: string;
@@ -62,11 +200,11 @@ async function createFirebaseJWT(sa: FirebaseServiceAccount): Promise<string> {
 async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<string> {
   // Return cached token if still valid (50min margin)
   if (cachedAccessToken && Date.now() < cachedTokenExpiry) {
-    console.log('✅ [AUTH] Using cached Firebase token');
+    logStructured("send-push", "firebase_oauth_cached", {});
     return cachedAccessToken;
   }
 
-  console.log('🔑 [AUTH] Generating new Firebase access token...');
+  logStructured("send-push", "firebase_oauth_refresh", {});
   const jwt = await createFirebaseJWT(sa);
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
@@ -80,14 +218,16 @@ async function getFirebaseAccessToken(sa: FirebaseServiceAccount): Promise<strin
 
   const tokenData = await response.json();
   if (!response.ok) {
-    console.error('❌ [AUTH] OAuth2 failed:', response.status, JSON.stringify(tokenData));
-    throw new Error(`Token request failed: ${JSON.stringify(tokenData)}`);
+    console.error(
+      `[send-push] firebase_oauth status=${response.status} summary=${summarizeGoogleApiError(tokenData)}`,
+    );
+    throw new Error("Token request failed");
   }
 
   cachedAccessToken = tokenData.access_token;
   // Cache for 50 minutes (token valid for 60min)
   cachedTokenExpiry = Date.now() + 50 * 60 * 1000;
-  console.log('✅ [AUTH] Firebase token obtained and cached');
+  logStructured("send-push", "firebase_oauth_ok", {});
 
   return cachedAccessToken!;
 }
@@ -125,7 +265,7 @@ async function sendFCMNotification(
       }
     };
 
-    console.log('🚀 [FCM] Sending to project:', projectId, '| token:', token.substring(0, 20) + '...');
+    logStructured("send-push", "fcm_send", { project_id: projectId, device_token_len: token.length });
 
     const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
       method: 'POST',
@@ -136,19 +276,21 @@ async function sendFCMNotification(
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('❌ [FCM] Failed:', response.status, JSON.stringify(responseData));
+      console.error(
+        `[send-push] fcm_failed status=${response.status} summary=${summarizeFcmErrorBody(responseData)}`,
+      );
 
       // UNREGISTERED or INVALID_ARGUMENT token → clean up
       const errorCode = responseData?.error?.details?.[0]?.errorCode;
       if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
-        console.log(`🗑️ [FCM] Token ${errorCode} → cleanup needed`);
+        logStructured("send-push", "fcm_token_cleanup", { code: String(errorCode) });
         return { unregistered: true, token };
       }
 
       // Retry on transient errors
       if (retryCount < maxRetries && (response.status >= 500 || response.status === 429)) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
-        console.log(`🔄 [FCM] Retry in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        logStructured("send-push", "fcm_retry", { delay_ms: delay, attempt: retryCount + 1, max: maxRetries });
         await new Promise(r => setTimeout(r, delay));
         return sendFCMNotification(accessToken, projectId, token, title, body, data, retryCount + 1, maxRetries);
       }
@@ -156,10 +298,10 @@ async function sendFCMNotification(
       return false;
     }
 
-    console.log('✅ [FCM] Sent:', responseData.name);
+    logStructured("send-push", "fcm_sent", { name_len: typeof responseData?.name === "string" ? responseData.name.length : 0 });
     return true;
   } catch (error) {
-    console.error('❌ [FCM] Exception:', error);
+    logException("send-push-fcm", error);
     if (retryCount < maxRetries) {
       const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
       await new Promise(r => setTimeout(r, delay));
@@ -169,115 +311,248 @@ async function sendFCMNotification(
   }
 }
 
+function unauthorized(corsHeaders: Record<string, string>, code: string, message: string): Response {
+  return new Response(
+    JSON.stringify({ error: "Unauthorized", code, message }),
+    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
+/**
+ * Auth production :
+ * 1) x-internal-push-secret === INTERNAL_PUSH_INVOKE_SECRET → appels serveur uniquement (pg_net, cron) — ne jamais mettre ce secret dans le frontend.
+ * 2) Sinon Authorization: Bearer <JWT utilisateur> valide via auth.getUser().
+ */
+async function authenticatePushRequest(
+  req: Request,
+  supabaseAdmin: SupabaseAuthAdmin,
+  corsHeaders: Record<string, string>,
+): Promise<PushAuthResult> {
+  const configuredInternal = Deno.env.get("INTERNAL_PUSH_INVOKE_SECRET");
+  const providedInternal = req.headers.get("x-internal-push-secret") ?? "";
+
+  if (configuredInternal && providedInternal && timingSafeEqualString(providedInternal, configuredInternal)) {
+    logStructured("send-push", "auth_internal", {});
+    return { ok: true, mode: "internal" };
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      ok: false,
+      response: unauthorized(
+        corsHeaders,
+        "missing_bearer",
+        "Authorization Bearer requis (session utilisateur) ou en-tête serveur x-internal-push-secret.",
+      ),
+    };
+  }
+
+  const jwt = authHeader.slice("Bearer ".length).trim();
+  if (!jwt) {
+    return {
+      ok: false,
+      response: unauthorized(corsHeaders, "empty_bearer", "Jeton Bearer vide."),
+    };
+  }
+
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(jwt);
+  if (error || !user) {
+    console.warn("[send-push] auth=user rejected: invalid or expired JWT");
+    return {
+      ok: false,
+      response: unauthorized(
+        corsHeaders,
+        "invalid_session",
+        "Session invalide ou expirée. Reconnectez-vous.",
+      ),
+    };
+  }
+
+  logStructured("send-push", "auth_user", { user: logUserRef(user.id) });
+  return { ok: true, mode: "user", callerUserId: user.id };
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
+  const traceId = req.headers.get("x-push-trace-id") ?? crypto.randomUUID();
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    logStructured("send-push", "entry_http", { trace_id: traceId, method: req.method });
+    const missingEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "FIREBASE_SERVICE_ACCOUNT_JSON"].filter(
+      (k) => !Deno.env.get(k),
+    );
+    if (missingEnv.length > 0) {
+      logStructured("send-push", "env_missing", { trace_id: traceId, keys: missingEnv.join(",") });
+      return fail(corsHeaders, 500, "env_var_missing", "Variables d'environnement manquantes", {
+        trace_id: traceId,
+        missing_keys: missingEnv,
+      });
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // ─── Optional JWT validation (allows unauthenticated internal calls) ───
-    const authHeader = req.headers.get('Authorization');
-    let callerUserId: string | null = null;
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
-        if (authUser && !authError) {
-          callerUserId = authUser.id;
-          console.log('🔐 [AUTH] Authenticated caller:', callerUserId.substring(0, 8) + '...');
-        } else {
-          console.warn('⚠️ [AUTH] Invalid token provided, proceeding without auth');
-        }
-      } catch (authErr) {
-        console.warn('⚠️ [AUTH] Token validation error:', authErr);
-      }
-    } else {
-      console.log('ℹ️ [AUTH] No Authorization header — internal/cron call');
+    logStructured("send-push", "auth_start", { trace_id: traceId });
+    const auth = await authenticatePushRequest(req, supabaseClient, corsHeaders);
+    if (!auth.ok) {
+      return auth.response;
     }
+    logStructured("send-push", "auth_ok", {
+      trace_id: traceId,
+      mode: auth.mode,
+      caller_user: auth.mode === "user" ? logUserRef(auth.callerUserId) : "internal",
+    });
 
-    const { user_id, title, body, data, type }: NotificationPayload = await req.json();
+    let payload: NotificationPayload;
+    try {
+      payload = await req.json();
+    } catch (e) {
+      console.error(`[send-push] invalid_payload_json trace_id=${traceId}`, withStack(e));
+      return fail(corsHeaders, 400, "invalid_payload", "Body JSON invalide", { trace_id: traceId });
+    }
+    const { user_id, title, body, data, type } = payload;
+    logStructured("send-push", "payload_received", {
+      trace_id: traceId,
+      target_user: logUserRef(user_id),
+      type: type ?? "default",
+      title_len: typeof title === "string" ? title.length : -1,
+      body_len: typeof body === "string" ? body.length : -1,
+    });
 
     if (!user_id || !title || !body) {
-      return new Response(
-        JSON.stringify({ error: 'user_id, title et body sont requis' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return fail(corsHeaders, 400, "invalid_payload", "user_id, title et body sont requis", {
+        trace_id: traceId,
+      });
     }
-
-    console.log('🔔 [ENTRY] Notification:', { user_id: user_id.substring(0, 8) + '...', title, type });
+    if (typeof user_id !== "string" || !isUuidLike(user_id)) {
+      return fail(corsHeaders, 400, "invalid_payload", "user_id doit être un UUID valide", {
+        trace_id: traceId,
+      });
+    }
 
     // 1. Firebase service account
     const saJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
     if (!saJson) {
-      return new Response(
-        JSON.stringify({ error: 'Firebase service account not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return fail(corsHeaders, 500, "env_var_missing", "Firebase service account non configuré", {
+        trace_id: traceId,
+        missing_keys: ["FIREBASE_SERVICE_ACCOUNT_JSON"],
+      });
     }
 
     let serviceAccount: FirebaseServiceAccount;
     try {
       serviceAccount = JSON.parse(saJson);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid Firebase service account JSON' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } catch (e) {
+      console.error(`[send-push] service_account_json_invalid trace_id=${traceId}`, withStack(e));
+      return fail(corsHeaders, 500, "env_var_missing", "FIREBASE_SERVICE_ACCOUNT_JSON invalide", {
+        trace_id: traceId,
+      });
+    }
+    const missingSaFields = ["project_id", "client_email", "private_key"].filter(
+      (k) => !(serviceAccount as unknown as Record<string, unknown>)[k],
+    );
+    if (missingSaFields.length > 0) {
+      return fail(corsHeaders, 500, "env_var_missing", "Service account Firebase incomplet", {
+        trace_id: traceId,
+        missing_keys: missingSaFields,
+      });
     }
 
-    // 2. Get profile
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('push_token, notifications_enabled, notif_message, notif_session_request, notif_follow_request, notif_friend_session, notif_club_invitation, notif_session_accepted, notif_presence_confirmed')
-      .eq('user_id', user_id)
-      .single();
+    // 2. Get profile (SELECT en cascade si colonnes absentes en prod)
+    logStructured("send-push", "db_fetch_target_user", { trace_id: traceId, target_user: logUserRef(user_id) });
+    const { rows: profileRows, lastError: profileFetchError } = await fetchProfileRowsForPush(
+      supabaseClient,
+      user_id,
+      traceId,
+    );
 
-    if (profileError || !profile) {
-      return new Response(
-        JSON.stringify({ error: 'Utilisateur non trouvé', stage: 'PROFILE_FETCH', push_token: null }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (profileFetchError) {
+      console.error(`[send-push] profile_fetch_error trace_id=${traceId}`, {
+        code: profileFetchError.code,
+        message: profileFetchError.message,
+        details: profileFetchError.details,
+      });
+      return fail(corsHeaders, 500, "database_error", "Erreur lecture profil cible", {
+        trace_id: traceId,
+        stage: "PROFILE_FETCH",
+        db_code: profileFetchError.code ?? null,
+      });
+    }
+    if (profileRows.length === 0) {
+      return fail(corsHeaders, 404, "database_error", "Utilisateur cible non trouvé", {
+        trace_id: traceId,
+        stage: "PROFILE_FETCH",
+      });
+    }
+    const profile = profileRows[0]!;
+
+    // 3. Check global notifications (colonne absente = on n'applique pas la désactivation implicite)
+    if (profile["notifications_enabled"] === false) {
+      return ok(corsHeaders, {
+        skipped: true,
+        stage: "PREFS_DISABLED",
+        code: "notifications_disabled",
+        message: "Notifications globales désactivées pour l'utilisateur cible",
+        trace_id: traceId,
+      });
     }
 
-    // 3. Check global notifications
-    if (!profile.notifications_enabled) {
-      return new Response(
-        JSON.stringify({ message: 'Notifications désactivées', skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 4. Check per-type preferences
-    const prefMap: Record<string, boolean | null> = {
-      message: profile.notif_message,
-      session_request: profile.notif_session_request,
-      follow_request: profile.notif_follow_request,
-      friend_session: profile.notif_friend_session,
-      club_invitation: profile.notif_club_invitation,
-      session_accepted: profile.notif_session_accepted,
-      presence_confirmed: profile.notif_presence_confirmed,
+    // 4. Check per-type preferences (colonnes absentes = pas de blocage)
+    const prefMap: Record<string, unknown> = {
+      message: profile["notif_message"],
+      boost_nearby: profile["notif_boost_nearby"],
+      session_request: profile["notif_session_request"],
+      follow_request: profile["notif_follow_request"],
+      friend_session: profile["notif_friend_session"],
+      club_invitation: profile["notif_club_invitation"],
+      session_accepted: profile["notif_session_accepted"],
+      presence_confirmed: profile["notif_presence_confirmed"],
     };
 
-    if (type && type in prefMap && prefMap[type] === false) {
-      return new Response(
-        JSON.stringify({ message: `Notifications ${type} désactivées`, skipped: true, stage: 'PREFS_DISABLED', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (type && Object.prototype.hasOwnProperty.call(prefMap, type) && prefMap[type] === false) {
+      return ok(corsHeaders, {
+        skipped: true,
+        stage: "PREFS_DISABLED",
+        code: "notifications_disabled",
+        message: `Notifications ${type} désactivées`,
+        trace_id: traceId,
+      });
     }
 
     // 5. Check push token
-    if (!profile.push_token || profile.push_token.length < 50) {
-      return new Response(
-        JSON.stringify({ success: false, message: 'Pas de token FCM', web_only: true, stage: 'TOKEN_CHECK', push_token: null }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const tokenCandidates = profileRows
+      .map((row) => {
+        const rawToken = row["push_token"];
+        const rawPlat = row["push_token_platform"];
+        const rawUpd = row["push_token_updated_at"];
+        return {
+          token: typeof rawToken === "string" ? rawToken.trim() : "",
+          platform: typeof rawPlat === "string" ? rawPlat : null,
+          updatedAt: typeof rawUpd === "string" ? rawUpd : null,
+        };
+      })
+      .filter((row) => row.token.length >= 50);
+    const iosCandidates = tokenCandidates.filter((c) => c.platform === "ios");
+    const selectedToken = (iosCandidates[0] ?? tokenCandidates[0])?.token ?? null;
+    logStructured("send-push", "token_selection", {
+      trace_id: traceId,
+      candidates: tokenCandidates.length,
+      ios_candidates: iosCandidates.length,
+      selected_len: selectedToken?.length ?? 0,
+    });
+    if (!selectedToken) {
+      return fail(corsHeaders, 404, "missing_token", "Aucun token push valide pour l'utilisateur cible", {
+        trace_id: traceId,
+        stage: "TOKEN_CHECK",
+        candidates: tokenCandidates.length,
+      });
     }
 
     // 6. Create notification record
@@ -295,14 +570,15 @@ serve(async (req) => {
         .single();
 
       if (notifError) {
-        return new Response(
-          JSON.stringify({ error: 'Erreur création notification', stage: 'DB_INSERT', push_token: profile.push_token }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return fail(corsHeaders, 500, "database_error", "Erreur création notification", {
+          trace_id: traceId,
+          stage: "DB_INSERT",
+          db_code: notifError.code ?? null,
+        });
       }
       notificationId = notifData?.id ?? null;
     } else {
-      console.log(`ℹ️ [DB] Skipping notification insert for type '${type}' (handled by DB trigger)`);
+      logStructured("send-push", "db_skip_insert_trigger", { type: type ?? "" });
     }
 
     // notificationId already set above
@@ -349,32 +625,40 @@ serve(async (req) => {
     // 8. Send FCM
     try {
       const accessToken = await getFirebaseAccessToken(serviceAccount);
-      console.log('📤 [FCM] Sending | channel: runconnect_channel | title:', finalTitle);
+      logStructured("send-push", "provider_dispatch", {
+        trace_id: traceId,
+        provider: "fcm",
+        project_id: serviceAccount.project_id,
+        title_len: finalTitle.length,
+        body_len: finalBody.length,
+        data_keys: data && typeof data === "object" ? Object.keys(data).length : 0,
+      });
 
       const fcmResult = await sendFCMNotification(
-        accessToken, serviceAccount.project_id, profile.push_token, finalTitle, finalBody, fcmData
+        accessToken, serviceAccount.project_id, selectedToken, finalTitle, finalBody, fcmData
       );
 
       // Handle UNREGISTERED token
       if (typeof fcmResult === 'object' && fcmResult.unregistered) {
-        console.log('🗑️ [CLEANUP] Removing invalid token');
+        logStructured("send-push", "cleanup_invalid_token", { target_user: logUserRef(user_id) });
         await supabaseClient.from('profiles').update({ push_token: null, push_token_updated_at: null }).eq('user_id', user_id);
 
         if (notificationId) {
           try {
             await supabaseClient.from('notification_logs').insert({
-              notification_id: notificationId, user_id, push_token: profile.push_token,
+              notification_id: notificationId, user_id, push_token: selectedToken,
               fcm_success: false, fcm_error: 'UNREGISTERED', fcm_response: { error: 'UNREGISTERED', type }
             });
           } catch (logErr) {
-            console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+            logException("send-push-notification_log", logErr);
           }
         }
 
-        return new Response(
-          JSON.stringify({ success: false, message: 'Token invalide, nettoyé', token_cleaned: true, stage: 'FCM_UNREGISTERED', push_token: profile.push_token }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return fail(corsHeaders, 502, "push_provider_failed", "Token push invalide (UNREGISTERED), nettoyé", {
+          trace_id: traceId,
+          stage: "FCM_UNREGISTERED",
+          token_cleaned: true,
+        });
       }
 
       const fcmSuccess = typeof fcmResult === 'boolean' ? fcmResult : false;
@@ -383,47 +667,55 @@ serve(async (req) => {
       if (notificationId) {
         try {
           await supabaseClient.from('notification_logs').insert({
-            notification_id: notificationId, user_id, push_token: profile.push_token,
+            notification_id: notificationId, user_id, push_token: selectedToken,
             fcm_success: fcmSuccess, fcm_error: fcmSuccess ? null : 'FCM send failed',
             fcm_response: { type, title: finalTitle }
           });
         } catch (logErr) {
-          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+          logException("send-push-notification_log", logErr);
         }
       }
 
-      return new Response(
-        JSON.stringify({
-          success: true, fcm_sent: fcmSuccess, type, stage: fcmSuccess ? 'FCM_SEND' : 'FCM_FAILED',
-          reason: fcmSuccess ? 'OK' : 'FCM send failed', push_token: profile.push_token
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!fcmSuccess) {
+        return fail(corsHeaders, 502, "push_provider_failed", "Le provider push a refusé la notification", {
+          trace_id: traceId,
+          stage: "FCM_FAILED",
+        });
+      }
+      return ok(corsHeaders, {
+        fcm_sent: true,
+        type,
+        stage: "FCM_SEND",
+        reason: "OK",
+        trace_id: traceId,
+      });
     } catch (fcmError) {
-      console.error('❌ [FCM] Exception:', fcmError);
+      console.error(`[send-push] fcm_handler_exception trace_id=${traceId}`, withStack(fcmError));
+      logException("send-push-fcm-handler", fcmError);
 
       if (notificationId) {
         try {
           await supabaseClient.from('notification_logs').insert({
-            notification_id: notificationId, user_id, push_token: profile.push_token,
-            fcm_success: false, fcm_error: String(fcmError), fcm_response: { error: String(fcmError) }
+            notification_id: notificationId, user_id, push_token: selectedToken,
+            fcm_success: false, fcm_error: "exception", fcm_response: { type: type ?? "unknown" }
           });
         } catch (logErr) {
-          console.warn('⚠️ [LOG] Failed to insert notification_log:', logErr);
+          logException("send-push-notification_log", logErr);
         }
       }
 
-      return new Response(
-        JSON.stringify({ success: true, fcm_sent: false, fcm_error: String(fcmError), stage: 'FCM_EXCEPTION', push_token: profile.push_token }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return fail(corsHeaders, 500, "push_provider_failed", "Exception lors de l'appel au provider push", {
+        trace_id: traceId,
+        stage: "FCM_EXCEPTION",
+      });
     }
 
   } catch (error) {
-    console.error('❌ [GENERAL] Error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Erreur serveur interne', details: String(error), stage: 'GENERAL_ERROR', push_token: null }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error(`[send-push] general_exception trace_id=${traceId}`, withStack(error));
+    logException("send-push-general", error);
+    return fail(corsHeaders, 500, "database_error", "Erreur serveur interne", {
+      trace_id: traceId,
+      stage: "GENERAL_ERROR",
+    });
   }
 });

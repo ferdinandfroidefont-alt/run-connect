@@ -3,9 +3,18 @@ import { cn } from "@/lib/utils";
 import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppContext } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSendNotification } from "@/hooks/useSendNotification";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
-import { Bell, Check, X, User, UserPlus, UserCheck, Trash2 } from "lucide-react";
+import { Bell, Check, X, User, UserPlus, UserCheck, Trash2, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,6 +41,7 @@ interface NotificationCenterProps {
 export const NotificationCenter = ({
   onSessionUpdated
 }: NotificationCenterProps) => {
+  const { setHideBottomNav } = useAppContext();
   const {
     user
   } = useAuth();
@@ -117,6 +127,12 @@ export const NotificationCenter = ({
       };
     }
   }, [user, toast]);
+
+  useEffect(() => {
+    if (isOpen) setHideBottomNav(true);
+    else setHideBottomNav(false);
+    return () => setHideBottomNav(false);
+  }, [isOpen, setHideBottomNav]);
 
   // Check actual follow status for all follow_request notifications (source of truth)
   const [followStatuses, setFollowStatuses] = useState<Map<string, string>>(new Map());
@@ -607,7 +623,7 @@ export const NotificationCenter = ({
   })();
 
   const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
-  const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
+  const badgeLabel = String(unreadCount);
   const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -615,19 +631,19 @@ export const NotificationCenter = ({
           type="button"
           className={cn(
             /* Pas h-10 w-10 : sur iOS WebKit, index.css force .h-10.w-10 à 2rem et décale le badge */
-            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white",
+            "touch-manipulation relative flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[13px] border border-[#E5E7EB] bg-white dark:border-[#1f1f1f] dark:bg-[#0a0a0a]",
             "shadow-[0_1px_3px_rgba(0,0,0,0.06)] outline-none transition-[opacity,transform] active:scale-[0.97] active:opacity-90",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           )}
           aria-label="Notifications"
         >
-          <Bell className="h-[22px] w-[22px] text-[#1A1A1A]" strokeWidth={1.85} />
+          <Bell className="h-[22px] w-[22px] text-[#1A1A1A] dark:text-foreground" strokeWidth={1.85} />
           {unreadCount > 0 && (
             <span
               className={cn(
-                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1.5",
+                "absolute right-0 top-0 z-[1] min-h-[18px] -translate-y-1/2 translate-x-1/2 rounded-md bg-[#FF3B30] px-1",
                 "text-center text-[10px] font-semibold leading-[18px] tracking-tight text-white shadow-sm",
-                badgeLabel.length > 1 ? "min-w-[26px]" : "min-w-[18px]"
+                badgeLabel.length <= 1 ? "min-w-[18px]" : badgeLabel.length <= 2 ? "min-w-[22px] px-1.5" : "min-w-[28px] px-1"
               )}
             >
               {badgeLabel}
@@ -637,11 +653,7 @@ export const NotificationCenter = ({
       </SheetTrigger>
       <SheetContent
         side="top"
-        closeButtonClassName={
-          isIosPhone
-            ? "right-5 top-[calc(env(safe-area-inset-top,0px)+0.375rem)]"
-            : undefined
-        }
+        showCloseButton={false}
         className={cn(
           "box-border w-full max-w-full min-w-0 h-full min-h-screen border-0 overflow-x-hidden",
           isIosPhone
@@ -656,14 +668,28 @@ export const NotificationCenter = ({
             : "p-6"
         )}
       >
-        {isIosPhone ? (
-          <div className="relative w-full min-w-0 space-y-1.5 px-0">
-            {/*
-              Centrage visuel type iOS : le titre ne doit pas suivre le flex du SheetHeader (sinon décalé par le X).
-              Le bouton fermer reste géré par SheetContent (absolute right).
-            */}
+        <SheetClose asChild>
+          <button
+            type="button"
+            className={cn(
+              "absolute z-[2] flex touch-manipulation flex-row items-center gap-1 rounded-lg py-1.5 text-[15px] font-medium text-primary outline-none transition-opacity active:opacity-70",
+              isIosPhone
+                ? "left-[max(1.25rem,env(safe-area-inset-left,0px))] top-[calc(env(safe-area-inset-top,0px)+0.375rem)] pl-1 pr-2"
+                : "left-6 top-6 px-2",
+            )}
+          >
+            <ArrowLeft className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+            Retour
+          </button>
+        </SheetClose>
+        <SheetHeader className="space-y-1.5 px-0">
+          {/*
+            Titre centré dans la largeur ; marge latérale pour ne pas chevaucher « Retour » (gauche).
+            Même logique iOS / bureau.
+          */}
+          <div className="relative w-full min-w-0">
             <div className="relative min-h-[1.75rem] w-full">
-              <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center">
+              <SheetTitle className="absolute left-1/2 top-0 z-[1] w-full max-w-[min(100%,calc(100%-5rem))] -translate-x-1/2 truncate text-center text-[17px] font-semibold leading-snug">
                 Notifications
               </SheetTitle>
             </div>
@@ -673,16 +699,7 @@ export const NotificationCenter = ({
                 : 'Aucune nouvelle notification'}
             </SheetDescription>
           </div>
-        ) : (
-          <SheetHeader className="space-y-1.5 px-0 text-left">
-            <SheetTitle>Notifications</SheetTitle>
-            <SheetDescription>
-              {unreadCount > 0
-                ? `${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''} notification${unreadCount > 1 ? 's' : ''}`
-                : 'Aucune nouvelle notification'}
-            </SheetDescription>
-          </SheetHeader>
-        )}
+        </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100vh-7.25rem)] w-full min-w-0 max-w-full overflow-x-hidden">
           <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
             {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">

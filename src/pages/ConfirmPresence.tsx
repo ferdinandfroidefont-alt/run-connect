@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { motion } from 'framer-motion';
 
 import { supabase } from '@/integrations/supabase/client';
 import { SessionSelector } from '@/components/SessionSelector';
@@ -25,9 +26,7 @@ interface Session {
 export type ConfirmPresenceProps = {
   embedded?: boolean;
   onEmbeddedBack?: () => void;
-  /** Quand intégré dans Mes séances : ouvre directement cette séance si fourni. */
   forcedSessionId?: string | null;
-  /** Après chargement d’une séance imposée (Strava → confirmer), pour éviter une boucle de rechargement. */
   onForcedSessionConsumed?: () => void;
 };
 
@@ -42,19 +41,13 @@ export default function ConfirmPresence({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
-  
-  
-  const [loading, setLoading] = useState(false);
 
+  const [loading, setLoading] = useState(false);
   const [roleChoice, setRoleChoice] = useState<'creator' | 'participant' | 'tracking' | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<'creator' | 'participant' | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const carouselRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const [focusedCardIndex, setFocusedCardIndex] = useState<number>(0);
 
-  /* Mêmes teintes que les carrés icônes du hub Paramètres (Notifications / Connexions / Aide & Support) */
   const roleCards = useMemo(
     () => [
       {
@@ -63,7 +56,6 @@ export default function ConfirmPresence({
         description: t('confirmPresence.creatorDescription'),
         icon: UserCheck,
         iconBg: 'bg-[#FF3B30]',
-        iconClass: 'h-[18px] w-[18px] text-white',
       },
       {
         role: 'participant' as const,
@@ -71,7 +63,6 @@ export default function ConfirmPresence({
         description: t('confirmPresence.participantDescription'),
         icon: Users,
         iconBg: 'bg-[#007AFF]',
-        iconClass: 'h-[18px] w-[18px] text-white',
       },
       {
         role: 'tracking' as const,
@@ -79,59 +70,10 @@ export default function ConfirmPresence({
         description: 'Voir en temps réel où se trouvent les autres sur la carte',
         icon: MapPin,
         iconBg: 'bg-[#FF9500]',
-        iconClass: 'h-[18px] w-[18px] text-white',
       },
     ],
     [t]
   );
-
-  const CAROUSEL_COPIES = 7;
-  const repeatedRoleCards = useMemo(
-    () =>
-      Array.from({ length: CAROUSEL_COPIES }, (_, copyIndex) =>
-        roleCards.map((card, cardIndex) => ({
-          ...card,
-          key: `${copyIndex}-${card.role}`,
-          cardIndex,
-        }))
-      ).flat(),
-    [roleCards]
-  );
-
-  const recenterInfiniteCarousel = useCallback(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    const cycleHeight = el.scrollHeight / CAROUSEL_COPIES;
-    const min = cycleHeight * 1.2;
-    const max = cycleHeight * (CAROUSEL_COPIES - 1.2);
-    if (el.scrollTop < min) el.scrollTop += cycleHeight * 2;
-    if (el.scrollTop > max) el.scrollTop -= cycleHeight * 2;
-  }, []);
-
-  const updateFocusedCard = useCallback(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    const containerCenter = el.getBoundingClientRect().top + el.clientHeight / 2;
-    const cards = Array.from(el.querySelectorAll<HTMLButtonElement>('[data-role-card="true"]'));
-    let nearest = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    cards.forEach((card, idx) => {
-      const rect = card.getBoundingClientRect();
-      const center = rect.top + rect.height / 2;
-      const distance = Math.abs(center - containerCenter);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearest = idx;
-      }
-    });
-    setFocusedCardIndex(nearest);
-  }, []);
-
-  const handleCarouselScroll = useCallback(() => {
-    recenterInfiniteCarousel();
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(updateFocusedCard);
-  }, [recenterInfiniteCarousel, updateFocusedCard]);
 
   useEffect(() => {
     if (sessionId && user) {
@@ -139,27 +81,9 @@ export default function ConfirmPresence({
     }
   }, [user, sessionId]);
 
-  useEffect(() => {
-    if (roleChoice || loading) return;
-    const el = carouselRef.current;
-    if (!el) return;
-    const id = window.setTimeout(() => {
-      el.scrollTop = el.scrollHeight / 2 - el.clientHeight / 2;
-      updateFocusedCard();
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [roleChoice, loading, updateFocusedCard]);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
   const loadSpecificSession = async () => {
     if (!user || !sessionId) return;
     const openedViaForced = !!forcedSessionId;
-
     setLoading(true);
     try {
       const { data: session, error } = await supabase
@@ -167,9 +91,7 @@ export default function ConfirmPresence({
         .select('*')
         .eq('id', sessionId)
         .single();
-
       if (error) throw error;
-      
       if (session) {
         setSelectedSession(session);
         const isCreator = session.organizer_id === user.id;
@@ -201,20 +123,15 @@ export default function ConfirmPresence({
     try {
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-      // Load sessions where user is organizer
       const { data: createdSessions } = await supabase
         .from('sessions')
         .select('*')
         .eq('organizer_id', user.id)
         .gte('scheduled_at', twentyFourHoursAgo.toISOString());
-
-      // Load sessions where user is participant
       const { data: participations } = await supabase
         .from('session_participants')
         .select('session_id')
         .eq('user_id', user.id);
-
       const participantSessionIds = participations?.map(p => p.session_id) || [];
       let participantSessions: Session[] = [];
       if (participantSessionIds.length > 0) {
@@ -226,7 +143,6 @@ export default function ConfirmPresence({
           .gte('scheduled_at', twentyFourHoursAgo.toISOString());
         participantSessions = (data || []) as Session[];
       }
-
       const allSessions = [...(createdSessions || []), ...participantSessions] as Session[];
       allSessions.sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
       setSessions(allSessions);
@@ -239,12 +155,10 @@ export default function ConfirmPresence({
 
   const loadSessionsByRole = async (role: 'creator' | 'participant') => {
     if (!user) return;
-    
     setLoading(true);
     try {
       const now = new Date();
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      
       if (role === 'creator') {
         const { data: createdSessions, error } = await supabase
           .from('sessions')
@@ -252,7 +166,6 @@ export default function ConfirmPresence({
           .eq('organizer_id', user.id)
           .gte('scheduled_at', twentyFourHoursAgo.toISOString())
           .order('scheduled_at', { ascending: false });
-
         if (error) throw error;
         setSessions(createdSessions || []);
       } else {
@@ -260,11 +173,8 @@ export default function ConfirmPresence({
           .from('session_participants')
           .select('session_id')
           .eq('user_id', user.id);
-
         if (participantError) throw participantError;
-
         const participantSessionIds = participations?.map(p => p.session_id) || [];
-        
         if (participantSessionIds.length > 0) {
           const { data, error } = await supabase
             .from('sessions')
@@ -273,7 +183,6 @@ export default function ConfirmPresence({
             .neq('organizer_id', user.id)
             .gte('scheduled_at', twentyFourHoursAgo.toISOString())
             .order('scheduled_at', { ascending: false });
-
           if (error) throw error;
           setSessions(data || []);
         } else {
@@ -334,19 +243,12 @@ export default function ConfirmPresence({
         </div>
       )}
 
-      {/* Content : hauteur utile = espace entre header et bas (tab bar déjà hors du fixed-fill) */}
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-ios-4',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-ios-4',
           embedded && 'pt-ios-2',
-          !roleChoice && !loading
-            ? 'overflow-hidden pb-0'
-            : 'overflow-y-auto pb-0',
         )}
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehaviorX: 'none',
-        }}
+        style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'none' }}
       >
         {loading ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 py-ios-4">
@@ -356,51 +258,50 @@ export default function ConfirmPresence({
             </div>
           </div>
         ) : !roleChoice ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-md flex-1 flex-col">
-              <div
-                ref={carouselRef}
-                onScroll={handleCarouselScroll}
-                className={cn(
-                  'min-h-0 w-full min-w-0 flex-1 snap-y snap-mandatory overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain touch-pan-y [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                  embedded ? 'py-3' : 'py-[min(22vh,7.5rem)]',
-                )}
-                style={{ WebkitOverflowScrolling: 'touch' }}
+          /* ─── Role picker — clean stacked cards ─── */
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
+            <div className="w-full max-w-md space-y-2">
+              {/* Header */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="mb-6 text-center"
               >
-                <div className="mx-auto w-full min-w-0 max-w-full space-y-3">
-                  {repeatedRoleCards.map((card, idx) => {
-                    const Icon = card.icon;
-                    const isFocused = focusedCardIndex === idx;
-                    return (
-                      <button
-                        key={card.key}
-                        data-role-card="true"
-                        type="button"
-                        onClick={() => handleRoleChoice(card.role)}
-                        className={cn(
-                          'ios-card mx-auto flex min-h-[148px] w-full min-w-0 max-w-full origin-center snap-center items-center gap-ios-3 border border-border/60 px-ios-4 py-ios-3 text-left transition-all duration-200 ease-out will-change-transform',
-                          isFocused
-                            ? 'scale-[1.01] bg-card shadow-[0_12px_34px_-18px_rgba(0,0,0,0.45)]'
-                            : 'scale-[0.97] bg-card/88 opacity-75'
-                        )}
-                      >
-                        <div className={cn('ios-list-row-icon shrink-0', card.iconBg)}>
-                          <Icon className={card.iconClass} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h2 className="text-[17px] font-semibold leading-tight text-foreground">{card.title}</h2>
-                          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{card.description}</p>
-                        </div>
-                        <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                <h1 className="text-[22px] font-bold text-foreground">Confirmer la présence</h1>
+                <p className="mt-1 text-[15px] text-muted-foreground">Quel est votre rôle pour cette séance ?</p>
+              </motion.div>
+
+              {/* Cards */}
+              {roleCards.map((card, idx) => {
+                const Icon = card.icon;
+                return (
+                  <motion.button
+                    key={card.role}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.08 * (idx + 1) }}
+                    type="button"
+                    onClick={() => handleRoleChoice(card.role)}
+                    className="group flex w-full items-center gap-4 rounded-[14px] bg-card border border-border/60 px-4 py-4 text-left transition-all duration-150 active:scale-[0.98] active:bg-secondary"
+                  >
+                    <div className={cn(
+                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px]',
+                      card.iconBg
+                    )}>
+                      <Icon className="h-[22px] w-[22px] text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-[17px] font-semibold leading-tight text-foreground">{card.title}</h2>
+                      <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">{card.description}</p>
+                    </div>
+                    <ChevronLeft className="h-5 w-5 shrink-0 rotate-180 text-muted-foreground/50 transition-transform group-active:translate-x-0.5" />
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
         ) : !selectedSession ? (
-          // Session selection screen - iOS Style
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
             {embedded && (
               <button
@@ -421,7 +322,7 @@ export default function ConfirmPresence({
                   {t('confirmPresence.noSessions')}
                 </p>
                 <p className="text-[13px] text-muted-foreground">
-                  {roleChoice === 'creator' 
+                  {roleChoice === 'creator'
                     ? t('confirmPresence.noCreatorSessions')
                     : t('confirmPresence.noParticipantSessions')}
                 </p>
@@ -449,7 +350,6 @@ export default function ConfirmPresence({
             )}
           </div>
         ) : (
-          // Validation view
           <div className="min-h-0 min-w-0 flex-1 space-y-4 pb-3 pt-0">
             {embedded && (
               <button
@@ -461,7 +361,6 @@ export default function ConfirmPresence({
                 Retour
               </button>
             )}
-            {/* Track participants button */}
             <button
               onClick={() => navigate(`/session-tracking/${selectedSession.id}`)}
               className="ios-card flex w-full min-w-0 max-w-full items-center gap-3 p-4 transition-colors active:bg-secondary"

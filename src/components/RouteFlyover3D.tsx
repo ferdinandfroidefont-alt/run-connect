@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
+import type { GeoJSONSource, Map as MapboxMap } from 'mapbox-gl';
+import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { RouteFlyoverHud } from '@/components/RouteFlyoverHud';
 import { useRouteFlyoverPlayback } from '@/hooks/useRouteFlyoverPlayback';
 import { getMapboxAccessToken, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
@@ -19,6 +20,8 @@ type RouteFlyover3DProps = {
     elevationGain: number;
     elevationLoss: number;
   } | null;
+  /** Full-resolution coordinates for the base route line (avoids curve clipping). */
+  fullCoordinates?: MapCoord[];
 };
 
 const BASE_SOURCE_ID = 'route-flyover-base';
@@ -37,9 +40,10 @@ export function RouteFlyover3D({
   className,
   routeName,
   routeStats,
+  fullCoordinates,
 }: RouteFlyover3DProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapboxMap | null>(null);
   const mapReadyRef = useRef(false);
   const lastCameraUpdateRef = useRef(0);
   const smoothedCenterRef = useRef<MapCoord | null>(null);
@@ -56,13 +60,18 @@ export function RouteFlyover3D({
     autoPlay,
   });
 
+  const baseLineCoordinates = useMemo(
+    () => (fullCoordinates && fullCoordinates.length >= 2 ? fullCoordinates : playback.flyoverCoordinates),
+    [fullCoordinates, playback.flyoverCoordinates],
+  );
+
   const endpoints = useMemo(() => {
-    if (playback.flyoverCoordinates.length < 2) return [];
+    if (baseLineCoordinates.length < 2) return [];
     return [
-      playback.flyoverCoordinates[0]!,
-      playback.flyoverCoordinates[playback.flyoverCoordinates.length - 1]!,
+      baseLineCoordinates[0]!,
+      baseLineCoordinates[baseLineCoordinates.length - 1]!,
     ];
-  }, [playback.flyoverCoordinates]);
+  }, [baseLineCoordinates]);
 
   const initialFrame = useMemo(
     () => playback.frame,
@@ -89,27 +98,36 @@ export function RouteFlyover3D({
       return;
     }
 
-    mapboxgl.accessToken = token;
-    setSceneReady(false);
-    setMapError(null);
+    let cancelled = false;
 
-    /** Même base que le mode 3D Accueil (`standard3d` — bâtiments / rendu Mapbox Standard). */
-    const map = new mapboxgl.Map({
-      container,
-      style: MAPBOX_STYLE_BY_UI_ID.standard3d,
-      center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
-      zoom: initialFrame.zoom,
-      pitch: initialFrame.pitch,
-      bearing: initialFrame.bearing,
-      interactive: false,
-      attributionControl: false,
-      antialias: true,
-      pitchWithRotate: false,
-      renderWorldCopies: false,
-    });
-    mapRef.current = map;
+    void (async () => {
+      const mapboxgl = await loadMapboxGl();
+      if (cancelled) {
+        resizeObserver.disconnect();
+        return;
+      }
 
-    const scheduleResizePass = () => {
+      mapboxgl.accessToken = token;
+      setSceneReady(false);
+      setMapError(null);
+
+      /** Même base que le mode 3D Accueil (`standard3d` — bâtiments / rendu Mapbox Standard). */
+      const map = new mapboxgl.Map({
+        container,
+        style: MAPBOX_STYLE_BY_UI_ID.standard3d,
+        center: [initialFrame.focusCenter.lng, initialFrame.focusCenter.lat],
+        zoom: initialFrame.zoom,
+        pitch: initialFrame.pitch,
+        bearing: initialFrame.bearing,
+        interactive: false,
+        attributionControl: false,
+        antialias: true,
+        pitchWithRotate: false,
+        renderWorldCopies: false,
+      });
+      mapRef.current = map;
+
+      const scheduleResizePass = () => {
       window.requestAnimationFrame(() => map.resize());
       window.setTimeout(() => map.resize(), 100);
       window.setTimeout(() => map.resize(), 350);
@@ -123,7 +141,7 @@ export function RouteFlyover3D({
       try {
       m.addSource(BASE_SOURCE_ID, {
         type: 'geojson',
-        data: lineStringFeature(playback.flyoverCoordinates),
+        data: lineStringFeature(baseLineCoordinates),
       });
       m.addSource(TRAVELED_SOURCE_ID, {
         type: 'geojson',
@@ -285,13 +303,15 @@ export function RouteFlyover3D({
     });
 
     /** Standard (mapbox://styles/mapbox/standard) : attendre style.load, pas load seul. */
-    if (map.isStyleLoaded()) {
-      bootScene();
-    } else {
-      map.once('style.load', bootScene);
-    }
+      if (map.isStyleLoaded()) {
+        bootScene();
+      } else {
+        map.once('style.load', bootScene);
+      }
+    })();
 
     return () => {
+      cancelled = true;
       mapReadyRef.current = false;
       lastCameraUpdateRef.current = 0;
       smoothedCenterRef.current = null;
@@ -300,10 +320,10 @@ export function RouteFlyover3D({
       smoothedZoomRef.current = null;
       resizeObserver.disconnect();
       setSceneReady(false);
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [endpoints, initialFrame, playback.flyoverCoordinates]);
+  }, [baseLineCoordinates, endpoints, initialFrame, playback.flyoverCoordinates]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -313,10 +333,10 @@ export function RouteFlyover3D({
     traveledPath.push(playback.frame.currentPosition);
 
     if (map.getSource(TRAVELED_SOURCE_ID)) {
-      (map.getSource(TRAVELED_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(lineStringFeature(traveledPath));
+      (map.getSource(TRAVELED_SOURCE_ID) as GeoJSONSource).setData(lineStringFeature(traveledPath));
     }
     if (map.getSource(POINT_SOURCE_ID)) {
-      (map.getSource(POINT_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(pointFeature(playback.frame.currentPosition));
+      (map.getSource(POINT_SOURCE_ID) as GeoJSONSource).setData(pointFeature(playback.frame.currentPosition));
     }
 
     const pulse = (Math.sin(performance.now() / 280) + 1) / 2;

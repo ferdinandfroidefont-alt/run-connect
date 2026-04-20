@@ -56,7 +56,7 @@ const SettingsTutorialCatalog = lazy(() =>
   import("./settings/SettingsTutorialCatalog").then((m) => ({ default: m.SettingsTutorialCatalog }))
 );
 
-type SettingsPage =
+export type SettingsDialogPage =
   | "hub"
   | "general"
   | "notifications"
@@ -69,6 +69,8 @@ interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialSearch?: string;
+  /** Ouvre directement une sous-page (ex. confidentialité depuis le profil). */
+  initialPage?: SettingsDialogPage;
 }
 
 const settingsCategories = [
@@ -78,6 +80,7 @@ const settingsCategories = [
     description: 'Langue, thème, distances, mot de passe',
     icon: Settings,
     color: 'bg-[#8E8E93]',
+    searchItems: ['Langue', 'Thème', 'Mode sombre', 'Mode clair', 'Système', 'Apparence', 'Unités de distance', 'Kilomètres', 'Miles', 'Mot de passe', 'Carte', 'Appui long'],
   },
   {
     id: 'notifications' as const,
@@ -85,6 +88,7 @@ const settingsCategories = [
     description: 'Push, alertes, préférences',
     icon: Bell,
     color: 'bg-[#FF3B30]',
+    searchItems: ['Push', 'Alertes', 'Messages', 'Sessions', 'Amis', 'Invitation club', 'Présence confirmée', 'Demande de suivi', 'Coaching'],
   },
   {
     id: 'connections' as const,
@@ -92,6 +96,7 @@ const settingsCategories = [
     description: 'Strava, Instagram, partage',
     icon: Link2,
     color: 'bg-[#007AFF]',
+    searchItems: ['Strava', 'Instagram', 'Synchronisation', 'Import activités', 'Réseau social', 'Partage'],
   },
   {
     id: 'privacy' as const,
@@ -99,6 +104,7 @@ const settingsCategories = [
     description: 'RGPD, sécurité, données',
     icon: Shield,
     color: 'bg-[#34C759]',
+    searchItems: ['RGPD', 'Sécurité', 'Données', 'Profil privé', 'Visibilité', 'Bloquer', 'Signaler', 'Supprimer compte', 'Export données'],
   },
   {
     id: 'support' as const,
@@ -106,14 +112,22 @@ const settingsCategories = [
     description: 'Contact, tutoriels, documents, compte',
     icon: HelpCircle,
     color: 'bg-[#FF9500]',
+    searchItems: ['Contact', 'Tutoriel', 'Guide', 'FAQ', 'Bug', 'Signaler problème', 'Feedback', 'Version', 'À propos', 'Mentions légales', 'Conditions', 'Déconnexion', 'Supprimer compte'],
   },
 ];
 
-export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDialogProps) => {
+/** Returns matching searchItems for a category given a query */
+function getMatchingItems(items: string[], query: string): string[] {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase().trim();
+  return items.filter(item => item.toLowerCase().includes(q));
+}
+
+export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState<SettingsPage>('hub');
+  const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
   const [searchQuery, setSearchQuery] = useState(initialSearch || "");
   const [loading, setLoading] = useState(false);
 
@@ -145,6 +159,12 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch }: SettingsDi
       setSearchQuery(initialSearch);
     }
   }, [initialSearch]);
+
+  useEffect(() => {
+    if (open && initialPage && initialPage !== "hub") {
+      setCurrentPage(initialPage);
+    }
+  }, [open, initialPage]);
 
   // Reset to hub when dialog closes
   const handleOpenChange = (next: boolean) => {
@@ -418,7 +438,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   };
 
   const filteredCategories = settingsCategories.filter(cat => 
-    matchesSearch(cat.title) || matchesSearch(cat.description)
+    matchesSearch(cat.title) || matchesSearch(cat.description) || cat.searchItems.some(item => item.toLowerCase().includes((searchQuery || '').toLowerCase().trim()))
   );
 
   const handleNavigateToSubscription = () => {
@@ -564,6 +584,15 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                           </div>
                           <div className="min-w-0 flex-1 text-left">
                             <span className="truncate text-[17px]">{category.title}</span>
+                            {searchQuery.trim() && (() => {
+                              const matches = getMatchingItems(category.searchItems, searchQuery);
+                              if (matches.length === 0) return null;
+                              return (
+                                <p className="truncate text-[13px] text-muted-foreground">
+                                  {matches.join(', ')}
+                                </p>
+                              );
+                            })()}
                           </div>
                           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
                         </button>

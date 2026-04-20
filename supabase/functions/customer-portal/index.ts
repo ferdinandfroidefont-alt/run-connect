@@ -2,11 +2,11 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { logException, logStructured, logStripeRef, logUserRef } from "../_shared/secureLog.ts";
 
-// Helper logging function for debugging
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CUSTOMER-PORTAL] ${step}${detailsStr}`);
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  if (details) logStructured("CUSTOMER-PORTAL", step, details);
+  else console.log(`[CUSTOMER-PORTAL] ${step}`);
 };
 
 serve(async (req) => {
@@ -38,7 +38,7 @@ serve(async (req) => {
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { user: logUserRef(user.id) });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -46,23 +46,22 @@ serve(async (req) => {
       throw new Error("No Stripe customer found for this user");
     }
     const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    logStep("Found Stripe customer", { customer: logStripeRef(customerId) });
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/profile`,
     });
-    logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    logStep("Customer portal session created", { session: logStripeRef(portalSession.id) });
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in customer-portal", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    logException("CUSTOMER-PORTAL", error);
+    return new Response(JSON.stringify({ error: "Portal session failed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

@@ -95,7 +95,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                     ? "bg-primary text-primary-foreground"
                     : d.isWeekend
                       ? "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
-                      : "bg-white/5 hover:bg-white/10"
+                      : "bg-white/5 hover:bg-white/10 dark:bg-secondary/60 dark:hover:bg-secondary"
                 )}
                 whileTap={{ scale: 0.95 }}
               >

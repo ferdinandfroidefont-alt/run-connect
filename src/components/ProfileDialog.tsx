@@ -3,23 +3,25 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IOSListItem, IOSListGroup } from "@/components/ui/ios-list-item";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, ChevronRight, Shield, Zap, Instagram, Footprints, Globe } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
-import { ProfileStatsGroup } from "@/components/profile/ProfileStatsGroup";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useShareProfile } from "@/hooks/useShareProfile";
+import { QRShareDialog } from "@/components/QRShareDialog";
+import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
 
-import { ReliabilityBadge } from "@/components/ReliabilityBadge";
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
+import { COUNTRY_LABELS } from "@/lib/countryLabels";
+import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
+import { cn } from "@/lib/utils";
+
 interface Profile {
   username: string;
   display_name: string | null;
@@ -41,9 +43,13 @@ interface Profile {
   instagram_connected?: boolean;
   instagram_verified_at?: string;
   instagram_username?: string;
+  referral_code?: string | null;
 }
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
+);
+const ReferralDialog = lazy(() =>
+  import("@/components/ReferralDialog").then((m) => ({ default: m.ReferralDialog }))
 );
 
 const SPORT_LABELS: Record<string, string> = {
@@ -53,25 +59,6 @@ const SPORT_LABELS: Record<string, string> = {
   triathlon: '🏅 Triathlon',
   walking: '🚶 Marche',
   trail: '⛰️ Trail',
-};
-
-const COUNTRY_LABELS: Record<string, string> = {
-  FR: '🇫🇷 France',
-  BE: '🇧🇪 Belgique',
-  CH: '🇨🇭 Suisse',
-  CA: '🇨🇦 Canada',
-  LU: '🇱🇺 Luxembourg',
-  MA: '🇲🇦 Maroc',
-  TN: '🇹🇳 Tunisie',
-  DZ: '🇩🇿 Algérie',
-  SN: '🇸🇳 Sénégal',
-  CI: "🇨🇮 Côte d'Ivoire",
-  ES: '🇪🇸 Espagne',
-  PT: '🇵🇹 Portugal',
-  DE: '🇩🇪 Allemagne',
-  IT: '🇮🇹 Italie',
-  GB: '🇬🇧 Royaume-Uni',
-  US: '🇺🇸 États-Unis',
 };
 
 interface ProfileDialogProps {
@@ -95,12 +82,20 @@ export const ProfileDialog = ({
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [showCropEditor, setShowCropEditor] = useState(false);
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
+  const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
   const [followDialogType, setFollowDialogType] = useState<'followers' | 'following'>('followers');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
+  const [showReferralDialog, setShowReferralDialog] = useState(false);
+  const [showOwnStory, setShowOwnStory] = useState(false);
+  const [showHighlightsManager, setShowHighlightsManager] = useState(false);
+  const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
+  const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
+  const [highlightStoryId, setHighlightStoryId] = useState<string | null>(null);
+  const [newHighlightTitle, setNewHighlightTitle] = useState("");
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -140,6 +135,7 @@ export const ProfileDialog = ({
   const {
     toast
   } = useToast();
+  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const {
     selectFromGallery,
     loading: cameraLoading
@@ -149,8 +145,49 @@ export const ProfileDialog = ({
       fetchProfile();
       fetchFollowCounts();
       fetchReliabilityStats();
+      void fetchStoriesAndHighlights();
     }
   }, [user, open]);
+  const fetchStoriesAndHighlights = async () => {
+    if (!user) return;
+    const [{ data: stories }, { data: highlights }] = await Promise.all([
+      (supabase as any)
+        .from("session_stories")
+        .select("id, created_at, expires_at")
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(80),
+      (supabase as any)
+        .from("profile_story_highlights")
+        .select("id, story_id, title, position")
+        .eq("owner_id", user.id)
+        .order("position", { ascending: true }),
+    ]);
+    setOwnStories((stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>);
+    setStoryHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
+  };
+  const addStoryToHighlights = async (storyId: string) => {
+    if (!user) return;
+    const title = (newHighlightTitle || "A la une").trim();
+    const position = storyHighlights.length;
+    const { error } = await (supabase as any).from("profile_story_highlights").insert({
+      owner_id: user.id,
+      story_id: storyId,
+      title,
+      position,
+    });
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible d'ajouter cette story a la une", variant: "destructive" });
+      return;
+    }
+    setNewHighlightTitle("");
+    await fetchStoriesAndHighlights();
+  };
+  const removeHighlight = async (highlightId: string) => {
+    const { error } = await (supabase as any).from("profile_story_highlights").delete().eq("id", highlightId);
+    if (error) return;
+    await fetchStoriesAndHighlights();
+  };
   const fetchFollowCounts = async () => {
     if (!user) return;
     try {
@@ -279,33 +316,47 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
+  const openAvatarCropFromFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier image.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "La taille du fichier ne doit pas dépasser 5 Mo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPreparingAvatarCrop(true);
+    try {
+      const imageSrc = await prepareImageForProfileCrop(file);
+      setOriginalImageSrc(imageSrc);
+      setShowCropEditor(true);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de préparer cette image pour le recadrage.",
+        variant: "destructive",
+      });
+    } finally {
+      setPreparingAvatarCrop(false);
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner un fichier image.",
-          variant: "destructive"
-        });
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Erreur",
-          description: "La taille du fichier ne doit pas dépasser 5MB.",
-          variant: "destructive"
-        });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = e => {
-        const imageSrc = e.target?.result as string;
-        setOriginalImageSrc(imageSrc);
-        setShowCropEditor(true);
-      };
-      reader.readAsDataURL(file);
-    }
+    const input = e.target;
+    if (!file) return;
+    void openAvatarCropFromFile(file).finally(() => {
+      input.value = "";
+    });
   };
   const handleCropComplete = (croppedImageBlob: Blob) => {
     const croppedFile = new File([croppedImageBlob], 'avatar.jpg', {
@@ -315,6 +366,7 @@ export const ProfileDialog = ({
     const previewUrl = URL.createObjectURL(croppedImageBlob);
     setAvatarPreview(previewUrl);
     setShowCropEditor(false);
+    setOriginalImageSrc("");
   };
   const uploadAvatar = async (file: File): Promise<string | null> => {
     try {
@@ -399,152 +451,237 @@ export const ProfileDialog = ({
       setLoading(false);
     }
   };
+  /** Plein écran bord à bord (comme les sous-pages Paramètres), sans carte centrée sur desktop. */
+  const profileDialogShellClassName =
+    "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
+
+  const socialSessionsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
+  const isPremiumUser = !!(profile?.is_premium || subscriptionInfo?.subscribed);
+  const socialHighlights = [
+    profile?.favorite_sport ? SPORT_LABELS[profile.favorite_sport] ?? "Sport" : null,
+    profile?.country ? COUNTRY_LABELS[profile.country] ?? profile.country : null,
+    (profile?.strava_connected && profile?.strava_verified_at) ? "Strava" : null,
+    (profile?.instagram_connected && profile?.instagram_verified_at) ? "Instagram" : null,
+    isPremiumUser ? "Premium" : null,
+  ].filter(Boolean) as string[];
+
   if (loading && open) {
-    return <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md max-h-[80vh] p-0">
-          <div className="flex items-center justify-center p-8">
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          data-tutorial="tutorial-profile-page"
+          hideCloseButton
+          fullScreen
+          className={profileDialogShellClassName}
+        >
+          <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
+          <div className="flex flex-1 items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </DialogContent>
-      </Dialog>;
+      </Dialog>
+    );
   }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full max-w-full max-h-full sm:max-w-md sm:max-h-[85vh] rounded-none sm:rounded-lg p-0 flex flex-col bg-secondary border-0 sm:border">
+        <DialogContent
+          data-tutorial="tutorial-profile-page"
+          hideCloseButton
+          fullScreen
+          className={profileDialogShellClassName}
+        >
           {/* iOS Header */}
-          <div className="sticky top-0 z-40 bg-card border-b border-border shrink-0">
-            <div className="flex items-center justify-between px-4 py-3">
+          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
               <button
+                type="button"
                 onClick={() => onOpenChange(false)}
-                className="flex items-center gap-1 text-primary"
+                className="flex min-w-0 max-w-[42%] items-center gap-1 text-primary"
               >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+                <ArrowLeft className="h-5 w-5 shrink-0" />
+                <span className="truncate text-[17px]">Retour</span>
               </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Mon Profil</h1>
-              <div className="w-16" />
+              <h1 className="shrink-0 text-center text-[17px] font-semibold text-foreground">Mon Profil</h1>
+              <button
+                type="button"
+                onClick={() => setShowSettingsDialog(true)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-secondary"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
             </div>
           </div>
           
-           <ScrollArea className="flex-1">
-            <div className="px-4 py-4 space-y-4 pb-0">
-              {/* Profile Header - Centered */}
-              <div className="flex flex-col items-center pt-4 pb-2">
-                <div className="relative mb-3">
-                  <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
-                    <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
-                    <AvatarFallback className="text-2xl bg-secondary">
-                      {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEditing && (
-                    <button 
-                      type="button" 
-                      onClick={async () => {
-                        try {
-                          const file = await selectFromGallery();
-                          if (file) {
-                            handleAvatarChange({ target: { files: [file] } } as any);
-                          }
-                        } catch (error) {
-                          console.error('Error selecting from gallery:', error);
-                          toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
-                        }
-                      }} 
-                      disabled={cameraLoading} 
-                      className="absolute bottom-0 right-0 h-7 w-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
-                    >
-                      <Camera className="h-3.5 w-3.5" />
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+             <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+                {/* Profile Header - Instagram layout: avatar + stats side by side */}
+                <div className="bg-card border-b border-border px-4 pt-5 pb-4">
+                  <div className="flex items-center gap-5">
+                    {/* Avatar */}
+                    <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
+                        <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
+                        <AvatarFallback className="text-2xl bg-secondary">
+                          {profile?.display_name?.[0]?.toUpperCase() || profile?.username?.[0]?.toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const file = await selectFromGallery();
+                              if (file) await openAvatarCropFromFile(file);
+                            } catch (error) {
+                              console.error('Error selecting from gallery:', error);
+                              toast({ title: "Erreur", description: "Impossible d'accéder à la galerie", variant: "destructive" });
+                            }
+                          }}
+                          disabled={cameraLoading}
+                          className="absolute bottom-0 right-0 h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-md"
+                        >
+                          <Camera className="h-3 w-3" />
+                        </button>
+                      )}
                     </button>
-                  )}
-                </div>
-                
-                <h2 className="text-[22px] font-bold text-foreground leading-tight">
-                  {profile?.display_name || profile?.username || "Utilisateur"}
-                </h2>
-                <p className="text-[14px] text-muted-foreground mt-0.5">
-                  @{profile?.username}
-                </p>
-                
-                {/* Status Badges */}
-                <div className="flex items-center gap-1.5 mt-2">
-                  {(profile?.is_premium || subscriptionInfo?.subscribed) && (
-                    <div className="flex items-center gap-1 bg-primary/12 text-primary px-2 py-0.5 rounded-full">
-                      <Crown className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Premium</span>
-                    </div>
-                  )}
-                  {profile?.is_admin && (
-                    <div className="flex items-center gap-1 bg-destructive/12 text-destructive px-2 py-0.5 rounded-full">
-                      <Shield className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Admin</span>
-                    </div>
-                  )}
-                  {profile?.strava_connected && profile?.strava_verified_at && (
-                    <div className="flex items-center gap-1 bg-orange-500/12 text-orange-600 px-2 py-0.5 rounded-full">
-                      <Zap className="h-3 w-3" />
-                      <span className="text-[11px] font-semibold">Strava</span>
-                    </div>
-                  )}
-                  {profile?.instagram_connected && profile?.instagram_verified_at && (
-                    <div className="flex items-center gap-1 bg-pink-500/12 text-pink-600 px-2 py-0.5 rounded-full">
-                      <Instagram className="h-3 w-3" />
-                    </div>
-                  )}
-                </div>
-                
-                {profile?.bio && (
-                  <p className="text-center text-muted-foreground text-[14px] max-w-[280px] mt-3 line-clamp-2">
-                    {profile.bio}
-                  </p>
-                )}
-              </div>
 
-              {/* Social Stats - iOS Segmented */}
-              <IOSListGroup className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]">
-                <div className="flex items-center divide-x divide-border">
-                  <button
-                    onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors relative"
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <p className="text-[20px] font-bold text-foreground">{followerCount}</p>
-                      {pendingRequestsCount > 0 && (
-                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold px-1">
-                          {pendingRequestsCount}
-                        </span>
+                    {/* Stats à droite de l'avatar */}
+                    <div className="flex flex-1 min-w-0 items-center justify-around">
+                      <div className="text-center">
+                        <p className="text-[18px] font-bold text-foreground leading-none">{socialSessionsCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Séances</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogType('followers'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <div className="flex items-center justify-center gap-0.5">
+                          <p className="text-[18px] font-bold text-foreground leading-none">{followerCount}</p>
+                          {pendingRequestsCount > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-0.5 -mt-2">
+                              {pendingRequestsCount}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnés</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
+                        className="text-center touch-manipulation transition-colors active:opacity-70"
+                      >
+                        <p className="text-[18px] font-bold text-foreground leading-none">{followingCount}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">Abonnements</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nom + meta line */}
+                  <div className="mt-3 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
+                        {profile?.display_name || profile?.username || "Utilisateur"}
+                      </h2>
+                      {isPremiumUser && (
+                        <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
                       )}
                     </div>
-                    <p className="text-[12px] text-muted-foreground">Abonnés</p>
-                  </button>
+                    <p className="truncate text-[13px] text-muted-foreground">
+                      @{profile?.username}
+                    </p>
+                    {/* Meta line: country · age · sport */}
+                    {(() => {
+                      const parts: string[] = [];
+                      if (profile?.country) parts.push(COUNTRY_LABELS[profile.country] ?? profile.country);
+                      if (profile?.age) parts.push(`${profile.age} ans`);
+                      if (profile?.favorite_sport) parts.push(SPORT_LABELS[profile.favorite_sport] ?? profile.favorite_sport);
+                      return parts.length > 0 ? (
+                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                          {parts.join(' · ')}
+                        </p>
+                      ) : null;
+                    })()}
+                    {profile?.bio && (
+                      <p className="mt-2 text-[14px] leading-relaxed text-foreground/80 line-clamp-3 break-words">
+                        {profile.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Boutons Modifier / Partager */}
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 rounded-lg text-[13px] font-semibold"
+                      onClick={() => { onOpenChange(false); navigate('/profile/edit'); }}
+                    >
+                      Modifier le profil
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 gap-1.5 rounded-lg text-[13px] font-semibold"
+                      onClick={() => {
+                        const u = profile?.username?.trim();
+                        if (!u) {
+                          toast({
+                            title: "Pseudo manquant",
+                            description: "Définis un nom d'utilisateur dans « Modifier le profil » pour partager ton lien.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        void shareProfile({
+                          username: u,
+                          displayName: profile.display_name,
+                          bio: profile.bio,
+                          avatarUrl: profile.avatar_url,
+                          referralCode: profile.referral_code,
+                        });
+                      }}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Partager
+                    </Button>
+                  </div>
+                </div>
+
+              {/* Stories à la une - cercles style Instagram */}
+              <div className="bg-card border-b border-border px-4 py-3">
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {storyHighlights.map((item) => (
+                    <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
+                        {item.title.slice(0, 2).toUpperCase()}
+                      </div>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                    </button>
+                  ))}
+                  {/* Bouton ajouter */}
                   <button
-                    onClick={() => { setFollowDialogType('following'); setShowFollowDialog(true); }}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
+                    type="button"
+                    className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+                    onClick={() => setShowHighlightsManager(true)}
                   >
-                    <p className="text-[20px] font-bold text-foreground">{followingCount}</p>
-                    <p className="text-[12px] text-muted-foreground">Abonnements</p>
-                  </button>
-                  <button
-                    onClick={() => setShowReliabilityDialog(true)}
-                    className="flex-1 py-3 active:bg-secondary/50 transition-colors"
-                  >
-                    <p className="text-[20px] font-bold text-foreground">{reliabilityRate}%</p>
-                    <p className="text-[12px] text-muted-foreground">Fiabilité</p>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/40 bg-secondary/50 text-muted-foreground">
+                      <span className="text-xl leading-none">+</span>
+                    </div>
+                    <p className="w-full truncate text-center text-[11px] text-muted-foreground">Ajouter</p>
                   </button>
                 </div>
-              </IOSListGroup>
-
-              {/* Gamification Section */}
-              {user?.id && (
-                <ProfileStatsGroup userId={user.id} />
-              )}
+              </div>
 
               {/* Personal Info or Edit Form */}
               {isEditing ? (
-                <IOSListGroup
-                  header="MODIFIER MES INFORMATIONS"
-                  className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                >
+                 <IOSListGroup
+                   header="MODIFIER MES INFORMATIONS"
+                   flush
+                 >
                   <div className="p-4 space-y-4">
                     <div className="space-y-3">
                       <div>
@@ -646,107 +783,93 @@ export const ProfileDialog = ({
                 </IOSListGroup>
               ) : (
                 <>
-                  {/* Personal Info */}
-                  <IOSListGroup
-                    header="INFORMATIONS"
-                    className="ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-blue-500"
-                      iconColor="text-white"
-                      title="Pseudo"
-                      value={profile?.username || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-purple-500"
-                      iconColor="text-white"
-                      title="Nom"
-                      value={profile?.display_name || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Calendar}
-                      iconBgColor="bg-pink-500"
-                      iconColor="text-white"
-                      title="Âge"
-                      value={profile?.age ? `${profile.age} ans` : 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Heart}
-                      iconBgColor="bg-green-500"
-                      iconColor="text-white"
-                      title="Téléphone"
-                      value={profile?.phone || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Footprints}
-                      iconBgColor="bg-orange-500"
-                      iconColor="text-white"
-                      title="Sport favori"
-                      value={(profile?.favorite_sport && SPORT_LABELS[profile.favorite_sport]) || 'Non renseigné'}
-                      showChevron={false}
-                    />
-                    <IOSListItem
-                      icon={Globe}
-                      iconBgColor="bg-indigo-500"
-                      iconColor="text-white"
-                      title="Pays"
-                      value={(profile?.country && COUNTRY_LABELS[profile.country]) || 'Non renseigné'}
-                      showChevron={false}
-                      showSeparator={false}
-                    />
-                  </IOSListGroup>
 
-                  {/* Actions */}
-                  <IOSListGroup
-                    header="RACCOURCIS"
-                    className="mb-0 ios-card border border-border/60 shadow-[var(--shadow-card)]"
-                  >
-                    <IOSListItem
-                      icon={Route}
-                      iconBgColor="bg-teal-500"
-                      iconColor="text-white"
-                      title="Mes séances et itinéraires"
-                      onClick={() => { onOpenChange(false); navigate('/my-sessions'); }}
-                    />
-                    <IOSListItem
-                      icon={MapPin}
-                      iconBgColor="bg-purple-500"
-                      iconColor="text-white"
-                      title="Créer un parcours"
-                      onClick={() => { onOpenChange(false); navigate('/route-creation'); }}
-                    />
-                    <IOSListItem
-                      icon={User}
-                      iconBgColor="bg-gray-500"
-                      iconColor="text-white"
-                      title="Paramètres"
-                      onClick={() => setShowSettingsDialog(true)}
-                    />
-                    <IOSListItem
-                      icon={Shield}
-                      iconBgColor="bg-orange-500"
-                      iconColor="text-white"
-                      title="Modifier mon profil"
-                      onClick={() => setIsEditing(true)}
-                      showSeparator={false}
-                    />
-                   </IOSListGroup>
+                  {/* Raccourcis — grille 2 colonnes ; 5e tuile centrée (premium → abonnement, déjà premium → parrainage) */}
+                  <div className="bg-card border-b border-border px-4 py-3">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {[
+                        { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
+                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
+                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
+                        isPremiumUser
+                          ? {
+                              icon: Gift,
+                              label: 'Parrainer quelqu’un',
+                              color: 'text-primary',
+                              action: () => setShowReferralDialog(true),
+                              centeredHalf: true as const,
+                            }
+                          : {
+                              icon: Crown,
+                              label: 'Devenir premium',
+                              color: 'text-yellow-600',
+                              action: () => {
+                                onOpenChange(false);
+                                navigate('/subscription');
+                              },
+                              accentTile: 'premium' as const,
+                              centeredHalf: true as const,
+                            },
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={item.action}
+                          className={cn(
+                            'flex flex-col items-center justify-center gap-2 rounded-xl p-4 transition-colors',
+                            item.centeredHalf &&
+                              'col-span-2 mx-auto w-full max-w-[calc(50%-0.3125rem)]',
+                            item.accentTile === 'premium'
+                              ? 'border border-yellow-500/40 bg-yellow-500/10 active:bg-yellow-500/15'
+                              : 'bg-secondary/50 active:bg-secondary',
+                          )}
+                        >
+                          <item.icon className={`h-6 w-6 shrink-0 ${item.color}`} />
+                          <span className="text-center text-[13px] font-medium text-foreground leading-snug">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
+
+              <div className="mt-4 space-y-2 px-4">
+                <Button
+                  type="button"
+                  className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate("/stories/create");
+                  }}
+                >
+                  <Video className="h-4 w-4 shrink-0" />
+                  Créer une story
+                </Button>
+              </div>
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
 
-      <ImageCropEditor open={showCropEditor} onClose={() => setShowCropEditor(false)} imageSrc={originalImageSrc} onCropComplete={handleCropComplete} />
+      {preparingAvatarCrop && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
+          <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden />
+          <p className="text-center text-[15px] font-medium text-white">Préparation de la photo…</p>
+        </div>
+      )}
+
+      <ImageCropEditor
+        open={showCropEditor}
+        onClose={() => {
+          setShowCropEditor(false);
+          setOriginalImageSrc("");
+        }}
+        imageSrc={originalImageSrc}
+        onCropComplete={handleCropComplete}
+      />
 
       {/* Settings Dialog */}
       <Suspense fallback={null}>
@@ -754,6 +877,128 @@ export const ProfileDialog = ({
       </Suspense>
 
       {/* Reliability Details Dialog */}
-      <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} userName={profile?.display_name || profile?.username || ''} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+      <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
+
+      <Suspense fallback={null}>
+        <ReferralDialog isOpen={showReferralDialog} onClose={() => setShowReferralDialog(false)} />
+      </Suspense>
+
+      {qrData && (
+        <QRShareDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          profileUrl={qrData.profileUrl}
+          username={qrData.username}
+          displayName={qrData.displayName}
+          avatarUrl={qrData.avatarUrl}
+          referralCode={qrData.referralCode}
+        />
+      )}
+      <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
+        <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Stories à la une</DialogTitle>
+          {/* Header */}
+          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
+            <div className="flex items-center justify-between px-4 py-3">
+              <button type="button" onClick={() => setShowHighlightsManager(false)} className="flex items-center gap-1 text-primary">
+                <ArrowLeft className="h-5 w-5" />
+                <span className="text-[17px]">Retour</span>
+              </button>
+              <h1 className="text-[17px] font-semibold text-foreground">Stories à la une</h1>
+              <div className="w-16" />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Titre du highlight */}
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1 block">Titre du highlight</label>
+              <Input
+                value={newHighlightTitle}
+                onChange={(e) => setNewHighlightTitle(e.target.value)}
+                placeholder="Ex: Courses, PR, Trails..."
+                className="bg-card"
+              />
+            </div>
+
+            {/* Liste des stories */}
+            <div>
+              <p className="text-[13px] font-medium text-muted-foreground mb-2">Sélectionner une story</p>
+              <div className="space-y-2">
+                {ownStories.map((story) => {
+                  const already = storyHighlights.some((h) => h.story_id === story.id);
+                  return (
+                    <div key={story.id} className="flex items-center justify-between rounded-xl bg-card border px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Story du {new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(story.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                      {already ? (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-lg"
+                          onClick={() => {
+                            const h = storyHighlights.find((x) => x.story_id === story.id);
+                            if (h) void removeHighlight(h.id);
+                          }}
+                        >
+                          Retirer
+                        </Button>
+                      ) : (
+                        <Button size="sm" className="rounded-lg" onClick={() => void addStoryToHighlights(story.id)}>
+                          Épingler
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+                {ownStories.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                      <Heart className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                    <p className="text-base font-semibold text-foreground">Aucune story</p>
+                    <p className="mt-1 text-sm text-muted-foreground max-w-[260px]">
+                      Crée ta première story pour pouvoir l'épingler à la une de ton profil.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <SessionStoryDialog
+        open={showOwnStory}
+        onOpenChange={setShowOwnStory}
+        authorId={user?.id ?? null}
+        viewerUserId={user?.id ?? null}
+        stackNested
+        onOpenFeed={() => {
+          setShowOwnStory(false);
+          onOpenChange(false);
+          navigate("/feed");
+        }}
+      />
+      <SessionStoryDialog
+        open={!!highlightStoryId}
+        onOpenChange={(open) => {
+          if (!open) setHighlightStoryId(null);
+        }}
+        authorId={user?.id ?? null}
+        viewerUserId={user?.id ?? null}
+        storyId={highlightStoryId}
+        stackNested
+        onOpenFeed={() => {
+          setHighlightStoryId(null);
+          onOpenChange(false);
+          navigate("/feed");
+        }}
+      />
     </>;
 };

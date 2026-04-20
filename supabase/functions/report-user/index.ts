@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@3.2.0";
+import { requireUserJwtCors } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -62,15 +64,23 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+
+  const authResult = await requireUserJwtCors(req, supabaseAdmin, corsHeaders);
+  if (authResult instanceof Response) return authResult;
+
   try {
     const body = await req.json();
     const { reportedUserId, reportedUsername, reason, description } = body as ReportRequest;
 
-    console.log('Processing user report:', {
-      reportedUserId,
-      reportedUsername,
+    console.log("Processing user report:", {
+      reporterId: authResult.user.id,
       reason,
-      descriptionLength: description?.length || 0
+      descriptionLength: description?.length || 0,
     });
 
     // Security: Validate all required fields
@@ -85,8 +95,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Security: Validate input formats
+    if (reportedUserId === authResult.user.id) {
+      return new Response(JSON.stringify({ error: "Cannot report yourself" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     if (!isValidUUID(reportedUserId)) {
-      console.error('Invalid UUID format:', reportedUserId);
+      console.error("Invalid UUID format for report target");
       return new Response(
         JSON.stringify({ error: "Invalid user ID format" }),
         {
@@ -97,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!isValidUsername(reportedUsername)) {
-      console.error('Invalid username format:', reportedUsername);
+      console.error("Invalid username format for report");
       return new Response(
         JSON.stringify({ error: "Invalid username format" }),
         {
@@ -132,10 +149,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Security: Escape all user inputs before including in HTML email
     const safeUsername = escapeHtml(reportedUsername);
     const safeUserId = escapeHtml(reportedUserId);
+    const safeReporterId = escapeHtml(authResult.user.id);
     const safeReason = escapeHtml(reasonLabels[reason] || reason);
     const safeDescription = escapeHtml(description);
 
-    const emailResponse = await resend.emails.send({
+    await resend.emails.send({
       from: "RunConnect Support <onboarding@resend.dev>",
       to: ["ferdinand.froidefont@gmail.com"],
       subject: `🚨 Signalement utilisateur - @${safeUsername}`,
@@ -144,6 +162,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2>Informations du signalement</h2>
+          <p><strong>Signaleur (ID RunConnect):</strong> ${safeReporterId}</p>
           <p><strong>Utilisateur signalé:</strong> @${safeUsername}</p>
           <p><strong>ID utilisateur:</strong> ${safeUserId}</p>
           <p><strong>Raison:</strong> ${safeReason}</p>
@@ -170,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Report email sent successfully:", emailResponse);
+    console.log("Report email sent successfully");
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
@@ -180,14 +199,11 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: unknown) {
-    console.error("Error in report-user function:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    console.error("Error in report-user function");
+    return new Response(JSON.stringify({ error: "Internal error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 };
 

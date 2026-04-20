@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, Phone, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
+import { Camera, Loader2, User, Lock, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
@@ -22,6 +22,7 @@ import {
   serializeProfileSports,
 } from "@/lib/profileSports";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
+import { prepareImageForProfileCrop } from "@/lib/prepareImageForProfileCrop";
 
 // Key constants for storage
 const FORM_STATE_KEY = 'profileSetupFormState';
@@ -46,7 +47,6 @@ interface FormState {
   username: string;
   displayName: string;
   birthDate: string;
-  phone: string;
   bio: string;
   password: string;
   favoriteSportsCsv: string;
@@ -64,7 +64,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [displayName, setDisplayName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [password, setPassword] = useState("");
   const [selectedSports, setSelectedSports] = useState<ProfileSportKey[]>([]);
@@ -75,6 +74,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [originalImageSrc, setOriginalImageSrc] = useState<string>("");
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
+  const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
   const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -115,7 +115,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             setUsername(formState.username || '');
             setDisplayName(formState.displayName || '');
             setBirthDate(formState.birthDate || '');
-            setPhone(formState.phone || '');
             setBio(formState.bio || '');
             setPassword(formState.password || '');
             setSelectedSports(
@@ -163,9 +162,17 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
           const pendingOriginal = await loadImageFromIndexedDB(PENDING_ORIGINAL_KEY);
           if (pendingOriginal && pendingOriginal.size > 0) {
             console.log('📸 [ProfileSetup] Image ORIGINALE trouvée, size:', pendingOriginal.size);
-            const objectUrl = URL.createObjectURL(pendingOriginal);
-            setOriginalImageSrc(objectUrl);
-            originalImageSrcRef.current = objectUrl;
+            const restoreFile = new File([pendingOriginal], "pending.jpg", {
+              type: pendingOriginal.type || "image/jpeg",
+            });
+            let imageSrc: string;
+            try {
+              imageSrc = await prepareImageForProfileCrop(restoreFile);
+            } catch {
+              imageSrc = URL.createObjectURL(pendingOriginal);
+            }
+            setOriginalImageSrc(imageSrc);
+            originalImageSrcRef.current = imageSrc;
             
             // Délai pour s'assurer que le composant est bien monté
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -281,17 +288,27 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // Continuer quand même - ça fonctionnera si pas de reload
     }
 
-    // Révoquer l'ancienne URL si elle existe
-    if (originalImageSrc) {
+    if (originalImageSrc?.startsWith("blob:")) {
       URL.revokeObjectURL(originalImageSrc);
     }
 
-    // URL.createObjectURL est plus fiable que FileReader.readAsDataURL sur Android WebView
-    const objectUrl = URL.createObjectURL(file);
-    console.log('📸 [ProfileSetup] Object URL créée:', objectUrl);
-    setOriginalImageSrc(objectUrl);
-    originalImageSrcRef.current = objectUrl;
-    setShowCropEditor(true);
+    setPreparingAvatarCrop(true);
+    try {
+      const imageSrc = await prepareImageForProfileCrop(file);
+      console.log('📸 [ProfileSetup] Image préparée pour recadrage (résolution réduite)');
+      setOriginalImageSrc(imageSrc);
+      originalImageSrcRef.current = imageSrc;
+      setShowCropEditor(true);
+    } catch (e) {
+      console.error('📸 [ProfileSetup] Préparation image échouée:', e);
+      toast({
+        title: t('common.error'),
+        description: t('profileSetup.toastPrepareImage'),
+        variant: "destructive",
+      });
+    } finally {
+      setPreparingAvatarCrop(false);
+    }
   };
 
   const handleCropComplete = async (croppedImageBlob: Blob) => {
@@ -332,8 +349,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       URL.revokeObjectURL(avatarPreview);
     }
     
-    // Révoquer l'URL de l'image originale
-    if (originalImageSrc) {
+    if (originalImageSrc?.startsWith("blob:")) {
       URL.revokeObjectURL(originalImageSrc);
     }
     
@@ -394,7 +410,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       toast({ title: t('common.error'), description: t('profileSetup.toastPhotoRequired'), variant: "destructive" });
       return;
     }
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !phone.trim() || !bio.trim() || !password || password.length < 6 || !country) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6 || !country) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
@@ -446,7 +462,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         username: username.trim(),
         display_name: displayName.trim(),
         age: calculatedAge,
-        phone: phone.trim(),
         bio: bio.trim(),
         avatar_url: uploadedUrl,
       };
@@ -478,7 +493,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // ✅ FIX: Verify actual field values, not just row existence
       const { data: verifiedProfile, error: verifyError } = await supabase
         .from('profiles')
-        .select('id, user_id, username, display_name, avatar_url, age, phone, bio')
+        .select('id, user_id, username, display_name, avatar_url, age, bio')
         .eq('user_id', userId)
         .single();
 
@@ -492,7 +507,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         verifiedProfile.display_name?.trim() &&
         verifiedProfile.avatar_url?.trim() &&
         verifiedProfile.age &&
-        verifiedProfile.phone?.trim() &&
         verifiedProfile.bio?.trim();
 
       if (!fieldsOk) {
@@ -603,7 +617,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       username,
       displayName,
       birthDate,
-      phone,
       bio,
       password,
       favoriteSportsCsv: serializeProfileSports(selectedSports) || '',
@@ -812,22 +825,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       )}
                     </div>
                   </div>
-                  <div className="ios-list-row-inset-sep" />
-
-                  {/* Phone */}
-                  <div className="flex items-center gap-2.5 px-4 py-2.5">
-                    <div className="ios-list-row-icon bg-[#FF3B30]">
-                      <Phone className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <Input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder={t('profileSetup.phonePh')}
-                      className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
-                      required
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -959,7 +956,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   !displayName.trim() ||
                   !birthDate ||
                   calculatedAge < 13 ||
-                  !phone.trim() ||
                   !bio.trim() ||
                   !password ||
                   password.length < 6 ||
@@ -976,9 +972,22 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </form>
         </IosFixedPageHeaderShell>
 
+        {preparingAvatarCrop && (
+          <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">
+            <Loader2 className="h-10 w-10 animate-spin text-white" aria-hidden />
+            <p className="text-center text-[15px] font-medium text-white">{t("profileSetup.preparingPhoto")}</p>
+          </div>
+        )}
+
         <ImageCropEditor
           open={showCropEditor}
-          onClose={() => setShowCropEditor(false)}
+          onClose={() => {
+            setShowCropEditor(false);
+            setOriginalImageSrc((prev) => {
+              if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+              return "";
+            });
+          }}
           imageSrc={originalImageSrc}
           onCropComplete={handleCropComplete}
         />
