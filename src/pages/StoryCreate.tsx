@@ -215,6 +215,15 @@ export default function StoryCreate() {
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
   const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [dragTrashVisible, setDragTrashVisible] = useState(false);
+  const [dragTrashHover, setDragTrashHover] = useState(false);
+  const draggedKindRef = useRef<"text" | "music" | "emoji" | "session" | "dynamic" | null>(null);
+  const draggedDynamicIdRef = useRef<string | null>(null);
+  const checkTrashHover = (clientY: number) => {
+    const isOver = clientY > window.innerHeight - 110;
+    setDragTrashHover(isOver);
+    return isOver;
+  };
   const [drawMode, setDrawMode] = useState(false);
   const [drawColor, setDrawColor] = useState("#FFFFFF");
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
