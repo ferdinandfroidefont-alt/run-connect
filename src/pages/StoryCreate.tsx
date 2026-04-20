@@ -2808,38 +2808,97 @@ export default function StoryCreate() {
         </div>
       </div>
 
-      {/* Session picker */}
+      {/* Session picker — fullscreen search to share session card */}
         {showSessionPicker && (
-          <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
-            {sessions.length === 0 ? (
-              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-                Aucune séance disponible
-              </p>
-            ) : (
-              sessions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedSession(selectedSession?.id === s.id ? null : s);
-                    setSelectedLayer(selectedSession?.id === s.id ? null : "session");
-                    setShowSessionPicker(false);
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    selectedSession?.id === s.id ? "bg-primary/10" : "hover:bg-secondary"
-                  }`}
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                    <CalendarPlus className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{s.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
-                  </div>
-                  {selectedSession?.id === s.id && <Check className="h-4 w-4 text-primary" />}
-                </button>
-              ))
-            )}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 z-40 flex flex-col bg-background"
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+          >
+            <div className="flex items-center gap-2 border-b px-3 py-3">
+              <button
+                type="button"
+                onClick={() => { setShowSessionPicker(false); setSessionSearchQuery(""); }}
+                className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-medium text-primary"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                Retour
+              </button>
+              <p className="ml-1 text-sm font-semibold">Partager une séance</p>
+            </div>
+            <div className="px-3 pt-3">
+              <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={sessionSearchQuery}
+                  onChange={(e) => setSessionSearchQuery(e.target.value)}
+                  placeholder="Rechercher une séance par titre ou lieu…"
+                  className="h-7 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto p-3">
+              {(() => {
+                const q = sessionSearchQuery.trim().toLowerCase();
+                const filtered = q
+                  ? sessions.filter((s) =>
+                      `${s.title} ${s.location_name}`.toLowerCase().includes(q),
+                    )
+                  : sessions;
+                if (filtered.length === 0) {
+                  return (
+                    <p className="px-3 py-12 text-center text-sm text-muted-foreground">
+                      {sessions.length === 0 ? "Aucune séance disponible" : "Aucun résultat"}
+                    </p>
+                  );
+                }
+                return filtered.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={sessionShareLoading}
+                    onClick={async () => {
+                      setSessionShareLoading(true);
+                      try {
+                        const generated = await createSessionStoryImage(s);
+                        if (!generated) {
+                          toast({
+                            title: "Erreur",
+                            description: "Impossible de préparer la story de séance",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setSelectedSession(s);
+                        setMediaFile(generated);
+                        setShowSessionPicker(false);
+                        setSessionSearchQuery("");
+                        setActiveTool(null);
+                        setEditorMode("idle");
+                        triggerHaptic("light");
+                      } finally {
+                        setSessionShareLoading(false);
+                      }
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl border bg-card px-3 py-3 text-left transition-colors hover:bg-secondary disabled:opacity-60"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <CalendarPlus className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
+                    </div>
+                    {selectedSession?.id === s.id && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ));
+              })()}
+              {sessionShareLoading && (
+                <p className="py-4 text-center text-xs text-muted-foreground">Préparation de la carte…</p>
+              )}
+            </div>
           </div>
         )}
 
