@@ -211,10 +211,21 @@ export default function StoryCreate() {
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ScheduledSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [sessionSearchQuery, setSessionSearchQuery] = useState("");
+  const [sessionShareLoading, setSessionShareLoading] = useState(false);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
   const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [dragTrashVisible, setDragTrashVisible] = useState(false);
+  const [dragTrashHover, setDragTrashHover] = useState(false);
+  const draggedKindRef = useRef<"text" | "music" | "emoji" | "session" | "dynamic" | null>(null);
+  const draggedDynamicIdRef = useRef<string | null>(null);
+  const checkTrashHover = (clientY: number) => {
+    const isOver = clientY > window.innerHeight - 110;
+    setDragTrashHover(isOver);
+    return isOver;
+  };
   const [drawMode, setDrawMode] = useState(false);
   const [drawColor, setDrawColor] = useState("#FFFFFF");
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -742,10 +753,14 @@ export default function StoryCreate() {
     const layer = dynamicLayers.find((l) => l.id === id);
     if (!layer) return;
     dynamicDragRef.current = { id, startX: e.clientX, startY: e.clientY, baseX: layer.x, baseY: layer.y };
+    draggedKindRef.current = "dynamic";
+    draggedDynamicIdRef.current = id;
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dynamicDragRef.current) return;
+    checkTrashHover(e.clientY);
     setDynamicLayers((prev) =>
       prev.map((l) =>
         l.id === dynamicDragRef.current!.id
@@ -760,7 +775,15 @@ export default function StoryCreate() {
   };
   const endDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dynamicDragRef.current) {
+      const id = dynamicDragRef.current.id;
       dynamicDragRef.current = null;
+      if (dragTrashHover) {
+        setDynamicLayers((prev) => prev.filter((l) => l.id !== id));
+      }
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
+      draggedDynamicIdRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1364,16 +1387,21 @@ export default function StoryCreate() {
   const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!sessionLayer) return;
     stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: sessionLayer.x, baseY: sessionLayer.y };
+    draggedKindRef.current = "session";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
 
   const startMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicLayer) return;
     musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicLayer.x, baseY: musicLayer.y };
+    draggedKindRef.current = "music";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("music", (layer) => ({
       ...layer,
       x: Math.max(0, musicDragRef.current!.baseX + e.clientX - musicDragRef.current!.startX),
@@ -1383,11 +1411,16 @@ export default function StoryCreate() {
   const endMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (musicDragRef.current) {
       musicDragRef.current = null;
+      if (dragTrashHover) setSelectedMusic(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
   const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("session", (layer) => ({
       ...layer,
       x: Math.max(0, stickerDragRef.current!.baseX + e.clientX - stickerDragRef.current!.startX),
@@ -1397,6 +1430,10 @@ export default function StoryCreate() {
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (stickerDragRef.current) {
       stickerDragRef.current = null;
+      if (dragTrashHover) setSelectedSession(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1404,10 +1441,13 @@ export default function StoryCreate() {
   const startEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiLayer) return;
     emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiLayer.x, baseY: emojiLayer.y };
+    draggedKindRef.current = "emoji";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("emoji", (layer) => ({
       ...layer,
       x: Math.max(0, emojiDragRef.current!.baseX + e.clientX - emojiDragRef.current!.startX),
@@ -1417,6 +1457,10 @@ export default function StoryCreate() {
   const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (emojiDragRef.current) {
       emojiDragRef.current = null;
+      if (dragTrashHover) setEmojiSticker(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1425,10 +1469,13 @@ export default function StoryCreate() {
     if (!textOverlay) return;
     setTextDragging(true);
     textDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: textPos.x, baseY: textPos.y };
+    draggedKindRef.current = "text";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!textDragRef.current) return;
+    checkTrashHover(e.clientY);
     const host = drawHostRef.current;
     const baseX = textDragRef.current.baseX + e.clientX - textDragRef.current.startX;
     const baseY = textDragRef.current.baseY + e.clientY - textDragRef.current.startY;
@@ -1469,6 +1516,10 @@ export default function StoryCreate() {
       textDragRef.current = null;
       setTextDragging(false);
       setTextSnapGuides({ centerX: false, topThird: false, midY: false, bottomThird: false });
+      if (dragTrashHover) setTextOverlay("");
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -2561,7 +2612,7 @@ export default function StoryCreate() {
                 placeholder="Ajouter une légende…"
                 autoComplete="off"
                 autoCorrect="off"
-                className="h-auto min-h-[44px] border-0 border-b border-white/12 bg-white/[0.05] px-2.5 py-2.5 text-[16px] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)] placeholder:text-white/55 focus-visible:border-white/25 focus-visible:bg-white/[0.07] focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+                className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
                 style={{
                   textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
                 }}
@@ -2576,11 +2627,43 @@ export default function StoryCreate() {
             <button
               type="button"
               onClick={() => void requestExitWithDraftPrompt("back")}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full border border-white/15 bg-black/22 px-2.5 py-2 text-[15px] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md transition active:scale-[0.97] active:opacity-85"
+              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full bg-transparent px-2.5 py-2 text-[15px] font-medium text-primary transition active:scale-[0.97] active:opacity-85"
             >
               <ArrowLeft className="h-5 w-5 shrink-0" />
               <span className="pr-0.5">Retour</span>
             </button>
+            {selectedMusic && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTool("music");
+                  setEditorMode("music");
+                  setShowMusicPicker(true);
+                  setMusicSheetTab("forYou");
+                  setPendingMusic(selectedMusic);
+                  triggerHaptic("light");
+                }}
+                className="pointer-events-auto inline-flex max-w-[190px] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1.5 text-white shadow-[0_4px_18px_rgba(0,0,0,0.3)] backdrop-blur-xl transition active:scale-[0.97]"
+              >
+                <Music className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate text-xs font-medium">
+                  {selectedMusic.title}
+                  {selectedMusic.artist ? ` · ${selectedMusic.artist}` : ""}
+                </span>
+                <span
+                  role="button"
+                  aria-label="Retirer la musique"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMusic(null);
+                    triggerHaptic("light");
+                  }}
+                  className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white"
+                >
+                  ×
+                </span>
+              </button>
+            )}
             <Button
               type="button"
               disabled={sharing || (editorMode === "idle" && !mediaFile)}
@@ -2607,13 +2690,19 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
-                // dans la même tâche que le geste utilisateur. flushSync force le rendu
-                // synchrone de l'input avant qu'on ne le focus.
+                // Re-clic outil actif → fermer
+                if (editorMode === "text") {
+                  closeEditorMode();
+                  return;
+                }
+                const hasExistingText = textOverlay.trim().length > 0;
                 flushSync(() => {
                   setActiveTool("text");
                   setEditorMode("text");
-                  placeTextEditorAtCenter();
+                  // Garder le texte/position existants si présents, sinon centrer
+                  if (!hasExistingText) {
+                    placeTextEditorAtCenter();
+                  }
                   setSelectedLayer("text");
                   setSelectedDynamicLayerId(null);
                   setShowTextInput(true);
@@ -2632,6 +2721,10 @@ export default function StoryCreate() {
               icon: Music,
               active: editorMode === "music" || !!selectedMusic,
               onClick: () => {
+                if (editorMode === "music") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("music");
                 setEditorMode("music");
                 setShowMusicPicker(true);
@@ -2666,6 +2759,10 @@ export default function StoryCreate() {
               icon: Smile,
               active: editorMode === "sticker" || !!emojiSticker,
               onClick: () => {
+                if (editorMode === "sticker") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("sticker");
                 setEditorMode("sticker");
                 setShowStickerPicker(true);
@@ -2711,38 +2808,97 @@ export default function StoryCreate() {
         </div>
       </div>
 
-      {/* Session picker */}
+      {/* Session picker — fullscreen search to share session card */}
         {showSessionPicker && (
-          <div onClick={(e) => e.stopPropagation()} className="absolute inset-x-3 bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] z-30 max-h-40 space-y-1 overflow-y-auto rounded-2xl border bg-card p-2">
-            {sessions.length === 0 ? (
-              <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-                Aucune séance disponible
-              </p>
-            ) : (
-              sessions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedSession(selectedSession?.id === s.id ? null : s);
-                    setSelectedLayer(selectedSession?.id === s.id ? null : "session");
-                    setShowSessionPicker(false);
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    selectedSession?.id === s.id ? "bg-primary/10" : "hover:bg-secondary"
-                  }`}
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary">
-                    <CalendarPlus className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{s.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
-                  </div>
-                  {selectedSession?.id === s.id && <Check className="h-4 w-4 text-primary" />}
-                </button>
-              ))
-            )}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 z-40 flex flex-col bg-background"
+            style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+          >
+            <div className="flex items-center gap-2 border-b px-3 py-3">
+              <button
+                type="button"
+                onClick={() => { setShowSessionPicker(false); setSessionSearchQuery(""); }}
+                className="inline-flex h-10 items-center gap-1 rounded-full px-2 text-sm font-medium text-primary"
+              >
+                <ArrowLeft className="h-5 w-5" />
+                Retour
+              </button>
+              <p className="ml-1 text-sm font-semibold">Partager une séance</p>
+            </div>
+            <div className="px-3 pt-3">
+              <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={sessionSearchQuery}
+                  onChange={(e) => setSessionSearchQuery(e.target.value)}
+                  placeholder="Rechercher une séance par titre ou lieu…"
+                  className="h-7 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto p-3">
+              {(() => {
+                const q = sessionSearchQuery.trim().toLowerCase();
+                const filtered = q
+                  ? sessions.filter((s) =>
+                      `${s.title} ${s.location_name}`.toLowerCase().includes(q),
+                    )
+                  : sessions;
+                if (filtered.length === 0) {
+                  return (
+                    <p className="px-3 py-12 text-center text-sm text-muted-foreground">
+                      {sessions.length === 0 ? "Aucune séance disponible" : "Aucun résultat"}
+                    </p>
+                  );
+                }
+                return filtered.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={sessionShareLoading}
+                    onClick={async () => {
+                      setSessionShareLoading(true);
+                      try {
+                        const generated = await createSessionStoryImage(s);
+                        if (!generated) {
+                          toast({
+                            title: "Erreur",
+                            description: "Impossible de préparer la story de séance",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setSelectedSession(s);
+                        setMediaFile(generated);
+                        setShowSessionPicker(false);
+                        setSessionSearchQuery("");
+                        setActiveTool(null);
+                        setEditorMode("idle");
+                        triggerHaptic("light");
+                      } finally {
+                        setSessionShareLoading(false);
+                      }
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl border bg-card px-3 py-3 text-left transition-colors hover:bg-secondary disabled:opacity-60"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <CalendarPlus className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{s.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">{s.location_name}</p>
+                    </div>
+                    {selectedSession?.id === s.id && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ));
+              })()}
+              {sessionShareLoading && (
+                <p className="py-4 text-center text-xs text-muted-foreground">Préparation de la carte…</p>
+              )}
+            </div>
           </div>
         )}
 
@@ -2863,10 +3019,27 @@ export default function StoryCreate() {
           </div>
         )}
 
+      {/* Drag-to-delete trash zone (Instagram style) */}
+      {dragTrashVisible && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-50 flex -translate-x-1/2 items-center justify-center rounded-full transition-all duration-200"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+            width: dragTrashHover ? 80 : 64,
+            height: dragTrashHover ? 80 : 64,
+            backgroundColor: dragTrashHover ? "rgba(220,38,38,0.9)" : "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <Trash2 className={cn("text-white transition-all", dragTrashHover ? "h-8 w-8" : "h-6 w-6")} />
+        </div>
+      )}
+
       {showTextInput && (
         <div
-          className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
-          style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
+          className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
+          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 12px) + ${keyboardHeight}px + 8px))` }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -2881,7 +3054,7 @@ export default function StoryCreate() {
           >
             Aa
           </button>
-          {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
+          {["#FFFFFF", "#000000", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
             <button key={c} type="button" onClick={() => { setTextColor(c); triggerHaptic("light"); }} className={cn("h-6 w-6 rounded-full border transition-transform active:scale-90", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
           ))}
           <button

@@ -179,7 +179,7 @@ export const RouteCard = ({ route }: RouteCardProps) => {
             },
           } as any);
         }
-        void fitMapToCoords(m, path, 30);
+        void fitMapToCoords(m, path, 6);
       };
       if (m.isStyleLoaded()) applyRoute();
       else m.once('load', applyRoute);

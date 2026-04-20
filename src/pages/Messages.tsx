@@ -2877,7 +2877,7 @@ const Messages = () => {
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="z-50 border-b border-border bg-card"
+          headerWrapperClassName="z-50 bg-card"
           header={
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
@@ -2923,7 +2923,7 @@ const Messages = () => {
         >
         <div className="space-y-ios-3 pb-ios-2">
           {/* Quick Search Buttons */}
-          <div className="ios-card p-ios-3">
+          <div className="ios-card p-ios-3 !mt-0 !rounded-t-none border-t-0">
             <div className="grid grid-cols-5 gap-ios-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
