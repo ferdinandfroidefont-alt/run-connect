@@ -50,7 +50,7 @@ interface DetailsStepProps {
   onImageRemove: () => void;
   onNext: () => void;
   onBack: () => void;
-  /** Création rapide : pied combiné dans FinalizeStep */
+  /** Masque les boutons Retour / Aperçu (cas avancé) */
   hideNavigation?: boolean;
 }
 

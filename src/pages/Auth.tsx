@@ -793,19 +793,17 @@ const Auth = () => {
           Continuer avec Google
         </button>
 
-        {/* Apple — iOS natif uniquement (spec produit) */}
-        {isNativeIOS() && (
-          <button
-            type="button"
-            onClick={handleAppleAuth}
-            disabled={isLoading}
-            className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-            style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
-          >
-            <AppleIcon />
-            Continuer avec Apple
-          </button>
-        )}
+        {/* Apple */}
+        <button
+          type="button"
+          onClick={handleAppleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+        >
+          <AppleIcon />
+          Continuer avec Apple
+        </button>
 
         {/* Email */}
         <button
@@ -880,18 +878,17 @@ const Auth = () => {
           Se connecter avec Google
         </button>
 
-        {isNativeIOS() && (
-          <button
-            type="button"
-            onClick={handleAppleAuth}
-            disabled={isLoading}
-            className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
-            style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
-          >
-            <AppleIcon />
-            Se connecter avec Apple
-          </button>
-        )}
+        {/* Apple */}
+        <button
+          type="button"
+          onClick={handleAppleAuth}
+          disabled={isLoading}
+          className="w-full h-[54px] flex items-center justify-center gap-3 rounded-[14px] bg-foreground text-background text-[17px] font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ boxShadow: '0 1px 3px hsl(0 0% 0% / 0.12)' }}
+        >
+          <AppleIcon />
+          Se connecter avec Apple
+        </button>
 
         {/* Email */}
         <button

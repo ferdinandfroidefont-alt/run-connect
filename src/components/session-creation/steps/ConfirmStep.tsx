@@ -18,7 +18,7 @@ interface ConfirmStepProps {
   onSubmit: () => void;
   onBack: () => void;
   isCoachingMode?: boolean;
-  /** True : pas d'en-tête ni carte récap (FinalizeStep fournit le pied) */
+  /** True : pas d'en-tête ni carte récap (composition externe) */
   embedInFinalize?: boolean;
   hideFooter?: boolean;
 }

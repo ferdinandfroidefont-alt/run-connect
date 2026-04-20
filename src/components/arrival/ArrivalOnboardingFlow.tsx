@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import useEmblaCarousel from "embla-carousel-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Crown, Link2, MapPin, Sparkles } from "lucide-react";
+import { ChevronRight, Crown, Link2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ import {
 } from "@/components/arrival/ArrivalSlideGraphics";
 import { toast } from "sonner";
 
-type Phase = "slide1" | "loc" | "slides234" | "notif" | "integrations" | "premium";
+type Phase = "slide1" | "slides234" | "integrations" | "premium";
 
 const midSlides = [
   {
@@ -52,8 +52,8 @@ export function ArrivalOnboardingFlow() {
   const [phase, setPhase] = useState<Phase>("slide1");
   const [locWorking, setLocWorking] = useState(false);
   const [notifWorking, setNotifWorking] = useState(false);
-  const [locDone, setLocDone] = useState(false);
-  const [notifDone, setNotifDone] = useState(false);
+  const [locationResolved, setLocationResolved] = useState(false);
+  const [notificationResolved, setNotificationResolved] = useState(false);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: "start" });
   const [midIndex, setMidIndex] = useState(0);
@@ -100,54 +100,57 @@ export function ArrivalOnboardingFlow() {
 
   const skipAhead = useCallback(() => {
     if (!userId) return;
-    if (!locDone) persistPermission("location", "skipped");
-    if (!notifDone) persistPermission("notifications", "skipped");
+    if (!locationResolved) persistPermission("location", "skipped");
+    if (!notificationResolved) persistPermission("notifications", "skipped");
+    setLocationResolved(true);
+    setNotificationResolved(true);
     setPhase("integrations");
-  }, [userId, locDone, notifDone, persistPermission]);
+  }, [userId, locationResolved, notificationResolved, persistPermission]);
 
-  const onLocAuthorize = async () => {
+  /** Déclenche la vraie demande système (iOS / Android / navigateur), sans écran intermédiaire. */
+  const requestLocationFromSlide1 = async () => {
     setLocWorking(true);
     try {
       const outcome = await requestArrivalGeolocationPermission();
       persistPermission("location", outcome);
-      setLocDone(true);
+      setLocationResolved(true);
       setPhase("slides234");
     } finally {
       setLocWorking(false);
     }
   };
 
-  const onLocLater = () => {
+  const skipLocationFromSlide1 = () => {
     persistPermission("location", "skipped");
-    setLocDone(true);
+    setLocationResolved(true);
     setPhase("slides234");
   };
 
-  const onNotifAuthorize = async () => {
+  const requestNotificationsAfterSlides = async () => {
     setNotifWorking(true);
     try {
       const outcome = await requestArrivalNotificationPermission();
       persistPermission("notifications", outcome);
-      setNotifDone(true);
+      setNotificationResolved(true);
       setPhase("integrations");
     } finally {
       setNotifWorking(false);
     }
   };
 
-  const onNotifLater = () => {
+  const skipNotificationsAfterSlides = () => {
     persistPermission("notifications", "skipped");
-    setNotifDone(true);
+    setNotificationResolved(true);
     setPhase("integrations");
   };
 
-  const onMidNext = () => {
+  const onMidPrimaryAction = () => {
     if (!emblaApi) return;
     if (emblaApi.canScrollNext()) {
       emblaApi.scrollNext();
       return;
     }
-    setPhase("notif");
+    void requestNotificationsAfterSlides();
   };
 
   const finishToHome = () => {
@@ -188,8 +191,8 @@ export function ArrivalOnboardingFlow() {
     }
   };
 
-  const showSkip =
-    phase === "slide1" || phase === "loc" || phase === "slides234" || phase === "notif" || phase === "integrations";
+  const showSkip = phase === "slide1" || phase === "slides234" || phase === "integrations";
+  const isLastMidSlide = midIndex === midSlides.length - 1;
 
   return (
     <div
@@ -240,52 +243,25 @@ export function ArrivalOnboardingFlow() {
                   Découvre des entraînements près de toi et rejoins d’autres sportifs en un instant.
                 </p>
               </div>
-              <div className="shrink-0 pb-4">
-                <Button
-                  type="button"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
-                  onClick={() => setPhase("loc")}
-                >
-                  Suivant
-                </Button>
-              </div>
-            </motion.section>
-          )}
-
-          {phase === "loc" && (
-            <motion.section
-              key="loc"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-              className="flex h-full flex-col px-6"
-            >
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-                <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-[22px] border border-border/60 bg-card shadow-lg">
-                  <MapPin className="h-8 w-8 text-primary" strokeWidth={1.5} />
-                </div>
-                <h2 className="text-center text-[26px] font-bold tracking-tight">Active ta position</h2>
-                <p className="mt-4 max-w-[340px] text-center text-[15px] leading-relaxed text-muted-foreground">
-                  Pour afficher les séances proches de toi, te proposer les meilleurs spots et rendre la carte vraiment
-                  utile.
+              <div className="shrink-0 space-y-2 pb-4">
+                <p className="px-1 text-center text-[12px] leading-snug text-muted-foreground">
+                  En continuant, la fenêtre d’autorisation <span className="font-medium text-foreground">localisation</span>{" "}
+                  de ton appareil s’affichera (iOS, Android ou navigateur).
                 </p>
-              </div>
-              <div className="shrink-0 space-y-3 pb-4">
                 <Button
                   type="button"
                   className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
                   disabled={locWorking}
-                  onClick={() => void onLocAuthorize()}
+                  onClick={() => void requestLocationFromSlide1()}
                 >
-                  {locWorking ? "Demande…" : "Autoriser"}
+                  {locWorking ? "Ouverture…" : "Suivant"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
+                  className="h-[48px] w-full rounded-[14px] text-[15px] font-semibold"
                   disabled={locWorking}
-                  onClick={onLocLater}
+                  onClick={skipLocationFromSlide1}
                 >
                   Plus tard
                 </Button>
@@ -330,54 +306,40 @@ export function ArrivalOnboardingFlow() {
                   ))}
                 </div>
               </div>
-              <div className="shrink-0 px-6 pb-4">
-                <Button
-                  type="button"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
-                  onClick={onMidNext}
-                >
-                  {midIndex < midSlides.length - 1 ? "Suivant" : "Suivant"}
-                </Button>
-              </div>
-            </motion.section>
-          )}
-
-          {phase === "notif" && (
-            <motion.section
-              key="notif"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-              className="flex h-full flex-col px-6"
-            >
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-                <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-[22px] border border-border/60 bg-card shadow-lg">
-                  <Sparkles className="h-8 w-8 text-primary" strokeWidth={1.5} />
-                </div>
-                <h2 className="text-center text-[26px] font-bold tracking-tight">Reste informé</h2>
-                <p className="mt-4 max-w-[340px] text-center text-[15px] leading-relaxed text-muted-foreground">
-                  Reçois les nouvelles séances, les réponses à tes participations et les infos importantes au bon moment.
-                </p>
-              </div>
-              <div className="shrink-0 space-y-3 pb-4">
-                <Button
-                  type="button"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
-                  disabled={notifWorking}
-                  onClick={() => void onNotifAuthorize()}
-                >
-                  {notifWorking ? "Demande…" : "Autoriser"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
-                  disabled={notifWorking}
-                  onClick={onNotifLater}
-                >
-                  Plus tard
-                </Button>
+              <div className="shrink-0 space-y-2 px-6 pb-4">
+                {isLastMidSlide ? (
+                  <>
+                    <p className="px-1 text-center text-[12px] leading-snug text-muted-foreground">
+                      En continuant, la fenêtre d’autorisation{" "}
+                      <span className="font-medium text-foreground">notifications</span> de ton appareil s’affichera.
+                    </p>
+                    <Button
+                      type="button"
+                      className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
+                      disabled={notifWorking}
+                      onClick={() => void requestNotificationsAfterSlides()}
+                    >
+                      {notifWorking ? "Ouverture…" : "Continuer"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-[48px] w-full rounded-[14px] text-[15px] font-semibold"
+                      disabled={notifWorking}
+                      onClick={skipNotificationsAfterSlides}
+                    >
+                      Plus tard
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
+                    onClick={onMidPrimaryAction}
+                  >
+                    Suivant
+                  </Button>
+                )}
               </div>
             </motion.section>
           )}
