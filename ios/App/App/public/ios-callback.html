@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redirection RunConnect</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:60px 20px;background:#f5f5f5;">
+  <p id="status" style="font-size:18px;color:#333;">Redirection vers RunConnect...</p>
+  <script>
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var code = params.get('code');
+      var error = params.get('error');
+      var errorDescription = params.get('error_description');
+      var deepLink;
+
+      if (error) {
+        deepLink = 'runconnect://auth/callback?error=' + encodeURIComponent(error) + '&error_description=' + encodeURIComponent(errorDescription || '');
+      } else if (code) {
+        deepLink = 'runconnect://auth/callback?code=' + encodeURIComponent(code);
+      } else {
+        deepLink = 'runconnect://auth/callback?error=no_code&error_description=' + encodeURIComponent('No authorization code received');
+      }
+
+      // Method 1: iframe (works better in SFSafariViewController on some iOS versions)
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLink;
+      document.body.appendChild(iframe);
+
+      // Method 2: location.href fallback after short delay
+      setTimeout(function() { window.location.href = deepLink; }, 100);
+
+      // Method 3: manual link after 2s
+      setTimeout(function() {
+        document.getElementById('status').innerHTML = 'Si l\'application ne s\'ouvre pas automatiquement, <a href="' + deepLink + '" style="color:#007AFF;">appuyez ici</a>.';
+      }, 2000);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["YOUR_TEAM_ID.com.ferdi.runconnect"],
+        "components": [
+          { "/": "/p/*" },
+          { "/": "/confirm-presence/*" },
+          { "/": "/" }
+        ]
+      }
+    ]
+  }
+}

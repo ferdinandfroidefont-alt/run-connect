@@ -1,0 +1,1 @@
+const n="mars 2026";function t(){return"ferdinand.froidefont@gmail.com"}function e(){return`mailto:${t()}`}function r(){return"RunConnect SAS"}function a(){return[]}export{n as L,t as a,r as b,a as c,e as g};
