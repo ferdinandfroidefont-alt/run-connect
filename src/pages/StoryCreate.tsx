@@ -2960,8 +2960,8 @@ export default function StoryCreate() {
 
       {showTextInput && (
         <div
-          className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
-          style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
+          className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
+          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 12px) + ${keyboardHeight}px + 8px))` }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
