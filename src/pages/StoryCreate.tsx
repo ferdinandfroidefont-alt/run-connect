@@ -211,6 +211,8 @@ export default function StoryCreate() {
   const [sessions, setSessions] = useState<ScheduledSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<ScheduledSession | null>(null);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [sessionSearchQuery, setSessionSearchQuery] = useState("");
+  const [sessionShareLoading, setSessionShareLoading] = useState(false);
   const stickerDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
