@@ -2576,7 +2576,7 @@ export default function StoryCreate() {
             <button
               type="button"
               onClick={() => void requestExitWithDraftPrompt("back")}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full border border-white/15 bg-black/22 px-2.5 py-2 text-[15px] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md transition active:scale-[0.97] active:opacity-85"
+              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full bg-transparent px-2.5 py-2 text-[15px] font-medium text-primary transition active:scale-[0.97] active:opacity-85"
             >
               <ArrowLeft className="h-5 w-5 shrink-0" />
               <span className="pr-0.5">Retour</span>
