@@ -2561,7 +2561,7 @@ export default function StoryCreate() {
                 placeholder="Ajouter une légende…"
                 autoComplete="off"
                 autoCorrect="off"
-                className="h-auto min-h-[44px] border-0 border-b border-white/12 bg-white/[0.05] px-2.5 py-2.5 text-[16px] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)] placeholder:text-white/55 focus-visible:border-white/25 focus-visible:bg-white/[0.07] focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
+                className="h-auto min-h-[44px] border-0 bg-transparent px-2.5 py-2.5 text-[16px] text-white shadow-none placeholder:text-white/55 focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
                 style={{
                   textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.45)",
                 }}
@@ -2576,7 +2576,7 @@ export default function StoryCreate() {
             <button
               type="button"
               onClick={() => void requestExitWithDraftPrompt("back")}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full border border-white/15 bg-black/22 px-2.5 py-2 text-[15px] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-md transition active:scale-[0.97] active:opacity-85"
+              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full bg-transparent px-2.5 py-2 text-[15px] font-medium text-primary transition active:scale-[0.97] active:opacity-85"
             >
               <ArrowLeft className="h-5 w-5 shrink-0" />
               <span className="pr-0.5">Retour</span>
