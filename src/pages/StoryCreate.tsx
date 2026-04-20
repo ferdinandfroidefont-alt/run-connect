@@ -215,6 +215,15 @@ export default function StoryCreate() {
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [emojiSticker, setEmojiSticker] = useState<string | null>(null);
   const emojiDragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [dragTrashVisible, setDragTrashVisible] = useState(false);
+  const [dragTrashHover, setDragTrashHover] = useState(false);
+  const draggedKindRef = useRef<"text" | "music" | "emoji" | "session" | "dynamic" | null>(null);
+  const draggedDynamicIdRef = useRef<string | null>(null);
+  const checkTrashHover = (clientY: number) => {
+    const isOver = clientY > window.innerHeight - 110;
+    setDragTrashHover(isOver);
+    return isOver;
+  };
   const [drawMode, setDrawMode] = useState(false);
   const [drawColor, setDrawColor] = useState("#FFFFFF");
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -742,10 +751,14 @@ export default function StoryCreate() {
     const layer = dynamicLayers.find((l) => l.id === id);
     if (!layer) return;
     dynamicDragRef.current = { id, startX: e.clientX, startY: e.clientY, baseX: layer.x, baseY: layer.y };
+    draggedKindRef.current = "dynamic";
+    draggedDynamicIdRef.current = id;
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dynamicDragRef.current) return;
+    checkTrashHover(e.clientY);
     setDynamicLayers((prev) =>
       prev.map((l) =>
         l.id === dynamicDragRef.current!.id
@@ -760,7 +773,15 @@ export default function StoryCreate() {
   };
   const endDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dynamicDragRef.current) {
+      const id = dynamicDragRef.current.id;
       dynamicDragRef.current = null;
+      if (dragTrashHover) {
+        setDynamicLayers((prev) => prev.filter((l) => l.id !== id));
+      }
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
+      draggedDynamicIdRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1364,16 +1385,21 @@ export default function StoryCreate() {
   const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!sessionLayer) return;
     stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: sessionLayer.x, baseY: sessionLayer.y };
+    draggedKindRef.current = "session";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
 
   const startMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicLayer) return;
     musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicLayer.x, baseY: musicLayer.y };
+    draggedKindRef.current = "music";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("music", (layer) => ({
       ...layer,
       x: Math.max(0, musicDragRef.current!.baseX + e.clientX - musicDragRef.current!.startX),
@@ -1383,11 +1409,16 @@ export default function StoryCreate() {
   const endMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (musicDragRef.current) {
       musicDragRef.current = null;
+      if (dragTrashHover) setSelectedMusic(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
   const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("session", (layer) => ({
       ...layer,
       x: Math.max(0, stickerDragRef.current!.baseX + e.clientX - stickerDragRef.current!.startX),
@@ -1397,6 +1428,10 @@ export default function StoryCreate() {
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (stickerDragRef.current) {
       stickerDragRef.current = null;
+      if (dragTrashHover) setSelectedSession(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1404,10 +1439,13 @@ export default function StoryCreate() {
   const startEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiLayer) return;
     emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiLayer.x, baseY: emojiLayer.y };
+    draggedKindRef.current = "emoji";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("emoji", (layer) => ({
       ...layer,
       x: Math.max(0, emojiDragRef.current!.baseX + e.clientX - emojiDragRef.current!.startX),
@@ -1417,6 +1455,10 @@ export default function StoryCreate() {
   const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (emojiDragRef.current) {
       emojiDragRef.current = null;
+      if (dragTrashHover) setEmojiSticker(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1425,10 +1467,13 @@ export default function StoryCreate() {
     if (!textOverlay) return;
     setTextDragging(true);
     textDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: textPos.x, baseY: textPos.y };
+    draggedKindRef.current = "text";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!textDragRef.current) return;
+    checkTrashHover(e.clientY);
     const host = drawHostRef.current;
     const baseX = textDragRef.current.baseX + e.clientX - textDragRef.current.startX;
     const baseY = textDragRef.current.baseY + e.clientY - textDragRef.current.startY;
@@ -1469,6 +1514,10 @@ export default function StoryCreate() {
       textDragRef.current = null;
       setTextDragging(false);
       setTextSnapGuides({ centerX: false, topThird: false, midY: false, bottomThird: false });
+      if (dragTrashHover) setTextOverlay("");
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -2581,6 +2630,38 @@ export default function StoryCreate() {
               <ArrowLeft className="h-5 w-5 shrink-0" />
               <span className="pr-0.5">Retour</span>
             </button>
+            {selectedMusic && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTool("music");
+                  setEditorMode("music");
+                  setShowMusicPicker(true);
+                  setMusicSheetTab("forYou");
+                  setPendingMusic(selectedMusic);
+                  triggerHaptic("light");
+                }}
+                className="pointer-events-auto inline-flex max-w-[190px] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1.5 text-white shadow-[0_4px_18px_rgba(0,0,0,0.3)] backdrop-blur-xl transition active:scale-[0.97]"
+              >
+                <Music className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate text-xs font-medium">
+                  {selectedMusic.title}
+                  {selectedMusic.artist ? ` · ${selectedMusic.artist}` : ""}
+                </span>
+                <span
+                  role="button"
+                  aria-label="Retirer la musique"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMusic(null);
+                    triggerHaptic("light");
+                  }}
+                  className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white"
+                >
+                  ×
+                </span>
+              </button>
+            )}
             <Button
               type="button"
               disabled={sharing || (editorMode === "idle" && !mediaFile)}
@@ -2607,13 +2688,19 @@ export default function StoryCreate() {
               icon: Type,
               active: editorMode === "text",
               onClick: () => {
-                // iOS exige que .focus() (qui ouvre le clavier + curseur) soit appelé
-                // dans la même tâche que le geste utilisateur. flushSync force le rendu
-                // synchrone de l'input avant qu'on ne le focus.
+                // Re-clic outil actif → fermer
+                if (editorMode === "text") {
+                  closeEditorMode();
+                  return;
+                }
+                const hasExistingText = textOverlay.trim().length > 0;
                 flushSync(() => {
                   setActiveTool("text");
                   setEditorMode("text");
-                  placeTextEditorAtCenter();
+                  // Garder le texte/position existants si présents, sinon centrer
+                  if (!hasExistingText) {
+                    placeTextEditorAtCenter();
+                  }
                   setSelectedLayer("text");
                   setSelectedDynamicLayerId(null);
                   setShowTextInput(true);
@@ -2632,6 +2719,10 @@ export default function StoryCreate() {
               icon: Music,
               active: editorMode === "music" || !!selectedMusic,
               onClick: () => {
+                if (editorMode === "music") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("music");
                 setEditorMode("music");
                 setShowMusicPicker(true);
@@ -2666,6 +2757,10 @@ export default function StoryCreate() {
               icon: Smile,
               active: editorMode === "sticker" || !!emojiSticker,
               onClick: () => {
+                if (editorMode === "sticker") {
+                  closeEditorMode();
+                  return;
+                }
                 setActiveTool("sticker");
                 setEditorMode("sticker");
                 setShowStickerPicker(true);
@@ -2863,10 +2958,27 @@ export default function StoryCreate() {
           </div>
         )}
 
+      {/* Drag-to-delete trash zone (Instagram style) */}
+      {dragTrashVisible && (
+        <div
+          className="pointer-events-none absolute left-1/2 z-50 flex -translate-x-1/2 items-center justify-center rounded-full transition-all duration-200"
+          style={{
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+            width: dragTrashHover ? 80 : 64,
+            height: dragTrashHover ? 80 : 64,
+            backgroundColor: dragTrashHover ? "rgba(220,38,38,0.9)" : "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <Trash2 className={cn("text-white transition-all", dragTrashHover ? "h-8 w-8" : "h-6 w-6")} />
+        </div>
+      )}
+
       {showTextInput && (
         <div
-          className="absolute inset-x-3 z-40 flex items-center gap-2 rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
-          style={{ bottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}
+          className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
+          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 12px) + ${keyboardHeight}px + 8px))` }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -2881,7 +2993,7 @@ export default function StoryCreate() {
           >
             Aa
           </button>
-          {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
+          {["#FFFFFF", "#000000", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
             <button key={c} type="button" onClick={() => { setTextColor(c); triggerHaptic("light"); }} className={cn("h-6 w-6 rounded-full border transition-transform active:scale-90", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
           ))}
           <button
