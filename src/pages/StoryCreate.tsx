@@ -1373,16 +1373,21 @@ export default function StoryCreate() {
   const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!sessionLayer) return;
     stickerDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: sessionLayer.x, baseY: sessionLayer.y };
+    draggedKindRef.current = "session";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
 
   const startMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicLayer) return;
     musicDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: musicLayer.x, baseY: musicLayer.y };
+    draggedKindRef.current = "music";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!musicDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("music", (layer) => ({
       ...layer,
       x: Math.max(0, musicDragRef.current!.baseX + e.clientX - musicDragRef.current!.startX),
@@ -1392,11 +1397,16 @@ export default function StoryCreate() {
   const endMusicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (musicDragRef.current) {
       musicDragRef.current = null;
+      if (dragTrashHover) setSelectedMusic(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
   const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!stickerDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("session", (layer) => ({
       ...layer,
       x: Math.max(0, stickerDragRef.current!.baseX + e.clientX - stickerDragRef.current!.startX),
@@ -1406,6 +1416,10 @@ export default function StoryCreate() {
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (stickerDragRef.current) {
       stickerDragRef.current = null;
+      if (dragTrashHover) setSelectedSession(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1413,10 +1427,13 @@ export default function StoryCreate() {
   const startEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiLayer) return;
     emojiDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: emojiLayer.x, baseY: emojiLayer.y };
+    draggedKindRef.current = "emoji";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!emojiDragRef.current) return;
+    checkTrashHover(e.clientY);
     updateKindLayer("emoji", (layer) => ({
       ...layer,
       x: Math.max(0, emojiDragRef.current!.baseX + e.clientX - emojiDragRef.current!.startX),
@@ -1426,6 +1443,10 @@ export default function StoryCreate() {
   const endEmojiDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (emojiDragRef.current) {
       emojiDragRef.current = null;
+      if (dragTrashHover) setEmojiSticker(null);
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
@@ -1434,10 +1455,13 @@ export default function StoryCreate() {
     if (!textOverlay) return;
     setTextDragging(true);
     textDragRef.current = { startX: e.clientX, startY: e.clientY, baseX: textPos.x, baseY: textPos.y };
+    draggedKindRef.current = "text";
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveTextDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!textDragRef.current) return;
+    checkTrashHover(e.clientY);
     const host = drawHostRef.current;
     const baseX = textDragRef.current.baseX + e.clientX - textDragRef.current.startX;
     const baseY = textDragRef.current.baseY + e.clientY - textDragRef.current.startY;
@@ -1478,6 +1502,10 @@ export default function StoryCreate() {
       textDragRef.current = null;
       setTextDragging(false);
       setTextSnapGuides({ centerX: false, topThird: false, midY: false, bottomThird: false });
+      if (dragTrashHover) setTextOverlay("");
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
