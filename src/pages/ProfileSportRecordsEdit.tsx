@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronRight, Clock, Gauge, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Activity, ArrowLeft, Bike, Check, Footprints, Loader2, Plus, Trash2, Waves, Zap, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -9,88 +9,152 @@ import { Input } from "@/components/ui/input";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { WheelValuePickerModal } from "@/components/ui/ios-wheel-picker";
 import {
   PROFILE_SPORT_RECORD_KEYS,
   PROFILE_SPORT_RECORD_LABELS,
-  SPORT_DISTANCES,
   isProfileSportRecordKey,
   type ProfileSportRecordKey,
 } from "@/lib/profileSportRecords";
-import { TimePickerModal, PacePickerModal } from "@/components/ui/ios-wheel-picker";
 import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsDisplay";
-import { cn } from "@/lib/utils";
+import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
+import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
 
-type RecordType = "time" | "pace";
+type WizardStep = 1 | 2 | 3 | 4;
+type RunningMode = "time" | "pace";
+type CyclingMode = "speed" | "watts";
 
-/** Distances courtes pour lesquelles seul "Temps" est pertinent */
-const SHORT_DISTANCES = new Set(["100 m", "200 m", "400 m", "800 m"]);
+const STEP_LABELS = ["Sport", "Distance", "Performance", "Récap"];
 
-function shouldShowPaceOption(sportKey: ProfileSportRecordKey, eventLabel: string): boolean {
-  if (sportKey === "swimming" || sportKey === "triathlon") return false;
-  if (SHORT_DISTANCES.has(eventLabel)) return false;
-  return true;
+const DISTANCE_PRESETS: Array<{ id: string; label: string; km: number | null }> = [
+  { id: "5k", label: "5 km", km: 5 },
+  { id: "10k", label: "10 km", km: 10 },
+  { id: "semi", label: "Semi-marathon", km: 21.097 },
+  { id: "marathon", label: "Marathon", km: 42.195 },
+  { id: "custom", label: "Autre", km: null },
+];
+
+const SPORT_ICONS: Record<ProfileSportRecordKey, LucideIcon> = {
+  running: Activity,
+  walking: Footprints,
+  cycling: Bike,
+  swimming: Waves,
+  triathlon: Zap,
+  other: Plus,
+};
+
+function formatDuration(totalSec: number): string {
+  const safe = Math.max(0, Math.round(totalSec));
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  const s = safe % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function formatDuration(seconds: number): string {
-  const total = Math.max(0, Math.round(seconds));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function parseDurationToSeconds(input: string): number | null {
-  const value = input.trim().replace("/km", "").trim();
-  const parts = value.split(":").map((p) => p.trim());
-  if (parts.some((p) => p === "" || !/^\d+$/.test(p))) return null;
-  if (parts.length === 2) return Number(parts[0]) * 60 + Number(parts[1]);
-  if (parts.length === 3) return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2]);
+function parseDurationToSec(raw: string): number | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const parts = t.split(":").map((p) => Number.parseInt(p, 10));
+  if (parts.some((p) => !Number.isFinite(p) || p < 0)) return null;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   return null;
+}
+
+function formatDistanceByUnit(km: number, unit: "km" | "mi"): string {
+  const v = unit === "mi" ? kmToMiles(km) : km;
+  const suffix = unit === "mi" ? "mi" : "km";
+  return `${v.toFixed(v >= 10 ? 1 : 2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")} ${suffix}`;
+}
+
+function paceSecPerKmFromDuration(distanceKm: number, durationSec: number): number {
+  return durationSec / Math.max(0.001, distanceKm);
+}
+
+function durationSecFromPace(distanceKm: number, paceSecPerKm: number): number {
+  return Math.round(distanceKm * paceSecPerKm);
+}
+
+function speedKmhFromDuration(distanceKm: number, durationSec: number): number {
+  return distanceKm / Math.max(1 / 3600, durationSec / 3600);
+}
+
+function durationSecFromSpeed(distanceKm: number, kmh: number): number {
+  return Math.round((distanceKm / Math.max(0.1, kmh)) * 3600);
+}
+
+function speedFromWatts(watts: number): number {
+  return 10 + watts * 0.065;
 }
 
 export default function ProfileSportRecordsEdit() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { unit } = useDistanceUnits();
+
   const [rows, setRows] = useState<ProfileSportRecordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form state
+  const [step, setStep] = useState<WizardStep>(1);
   const [sportKey, setSportKey] = useState<ProfileSportRecordKey>("running");
-  const [eventLabel, setEventLabel] = useState("");
-  const [customMode, setCustomMode] = useState(false);
-  const [recordType, setRecordType] = useState<RecordType>("time");
-  const [recordValue, setRecordValue] = useState("");
-  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [presetId, setPresetId] = useState<string>("5k");
+  const [distanceKm, setDistanceKm] = useState(5);
+  const [eventLabel, setEventLabel] = useState("5 km");
 
-  // Picker modals
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showPacePicker, setShowPacePicker] = useState(false);
+  const [runningMode, setRunningMode] = useState<RunningMode>("time");
+  const [cyclingMode, setCyclingMode] = useState<CyclingMode>("speed");
+  const [durationSec, setDurationSec] = useState(25 * 60);
+  const [paceSecPerKm, setPaceSecPerKm] = useState(5 * 60);
+  const [speedKmh, setSpeedKmh] = useState(25);
+  const [watts, setWatts] = useState(220);
 
-  // Editing
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingEventLabel, setEditingEventLabel] = useState("");
-  const [editingRecordValue, setEditingRecordValue] = useState("");
+  const [customDistanceOpen, setCustomDistanceOpen] = useState(false);
+  const [durationPickerOpen, setDurationPickerOpen] = useState(false);
+  const [pacePickerOpen, setPacePickerOpen] = useState(false);
+  const [speedPickerOpen, setSpeedPickerOpen] = useState(false);
+  const [wattsPickerOpen, setWattsPickerOpen] = useState(false);
 
-  const showPace = useMemo(() => shouldShowPaceOption(sportKey, eventLabel), [sportKey, eventLabel]);
+  const [customDistanceWhole, setCustomDistanceWhole] = useState("5");
+  const [customDistanceDec, setCustomDistanceDec] = useState("0");
+  const [durH, setDurH] = useState("0");
+  const [durM, setDurM] = useState("25");
+  const [durS, setDurS] = useState("0");
+  const [paceM, setPaceM] = useState("5");
+  const [paceS, setPaceS] = useState("0");
+  const [speedWhole, setSpeedWhole] = useState("25");
+  const [speedDec, setSpeedDec] = useState("0");
+  const [wattsDraft, setWattsDraft] = useState("220");
 
-  // Reset record type if pace not available
-  useEffect(() => {
-    if (!showPace && recordType === "pace") {
-      setRecordType("time");
-      setRecordValue("");
-      setRecordSeconds(0);
-    }
-  }, [showPace, recordType]);
+  const openDurationPicker = () => {
+    const h = Math.floor(durationSec / 3600);
+    const m = Math.floor((durationSec % 3600) / 60);
+    const s = durationSec % 60;
+    setDurH(String(h));
+    setDurM(String(m));
+    setDurS(String(s));
+    setDurationPickerOpen(true);
+  };
+
+  const openPacePicker = () => {
+    setPaceM(String(Math.floor(paceSecPerKm / 60)));
+    setPaceS(String(paceSecPerKm % 60));
+    setPacePickerOpen(true);
+  };
+
+  const openSpeedPicker = () => {
+    const whole = Math.floor(speedKmh);
+    const dec = Math.round((speedKmh - whole) * 10);
+    setSpeedWhole(String(whole));
+    setSpeedDec(String(dec));
+    setSpeedPickerOpen(true);
+  };
+
+  const openWattsPicker = () => {
+    setWattsDraft(String(Math.round(watts)));
+    setWattsPickerOpen(true);
+  };
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -112,14 +176,76 @@ export default function ProfileSportRecordsEdit() {
   }, [user?.id, toast]);
 
   useEffect(() => {
-    if (!user) { navigate("/auth", { replace: true }); return; }
+    if (!user) {
+      navigate("/auth", { replace: true });
+      return;
+    }
     void load();
   }, [user, navigate, load]);
 
-  const canAdd = eventLabel.trim() !== "" && recordValue !== "" && recordSeconds > 0;
+  useEffect(() => {
+    const runningLike = sportKey === "running" || sportKey === "walking" || sportKey === "swimming";
+    if (runningLike && runningMode === "time") {
+      setPaceSecPerKm(paceSecPerKmFromDuration(distanceKm, durationSec));
+    }
+    if (runningLike && runningMode === "pace") {
+      setDurationSec(durationSecFromPace(distanceKm, paceSecPerKm));
+    }
+    if (!runningLike && cyclingMode === "speed") {
+      setDurationSec(durationSecFromSpeed(distanceKm, speedKmh));
+      setWatts(Math.round((speedKmh - 10) / 0.065));
+    }
+    if (!runningLike && cyclingMode === "watts") {
+      const computedSpeed = speedFromWatts(watts);
+      setSpeedKmh(computedSpeed);
+      setDurationSec(durationSecFromSpeed(distanceKm, computedSpeed));
+    }
+  }, [distanceKm, sportKey, runningMode, cyclingMode, paceSecPerKm, speedKmh, watts]);
+
+  const recordValue = useMemo(() => {
+    const distText = formatDistanceByUnit(distanceKm, unit);
+    if (sportKey === "running" || sportKey === "walking") {
+      return `${formatDuration(durationSec)} - ${distText} - ${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")}/km`;
+    }
+    if (sportKey === "swimming") {
+      return `${formatDuration(durationSec)} - ${distText} - ${Math.floor(paceSecPerKm / 60)}:${String(paceSecPerKm % 60).padStart(2, "0")}/100m`;
+    }
+    const perf = cyclingMode === "watts" ? `${Math.round(watts)} W` : `${speedKmh.toFixed(1)} km/h`;
+    return `${formatDuration(durationSec)} - ${distText} - ${perf}`;
+  }, [distanceKm, durationSec, paceSecPerKm, speedKmh, watts, sportKey, unit, cyclingMode]);
+
+  const canContinueStep2 = eventLabel.trim().length > 0 && distanceKm > 0;
+  const canContinueStep3 = durationSec > 0;
+
+  const resetWizard = () => {
+    setStep(1);
+    setSportKey("running");
+    setPresetId("5k");
+    setDistanceKm(5);
+    setEventLabel("5 km");
+    setRunningMode("time");
+    setCyclingMode("speed");
+    setDurationSec(25 * 60);
+    setPaceSecPerKm(5 * 60);
+    setSpeedKmh(25);
+    setWatts(220);
+  };
+
+  const handleSelectPreset = (id: string, label: string, km: number | null) => {
+    setPresetId(id);
+    if (km == null) {
+      setCustomDistanceWhole(String(Math.floor(distanceKm)));
+      setCustomDistanceDec(String(Math.round((distanceKm % 1) * 10)));
+      setCustomDistanceOpen(true);
+      return;
+    }
+    const converted = unit === "mi" ? kmToMiles(km) : km;
+    setDistanceKm(unit === "mi" ? milesToKm(converted) : converted);
+    setEventLabel(label);
+  };
 
   const handleAdd = async () => {
-    if (!user?.id || !canAdd) return;
+    if (!user?.id) return;
     setSaving(true);
     try {
       const nextOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.sort_order)) + 1 : 0;
@@ -136,11 +262,9 @@ export default function ProfileSportRecordsEdit() {
         .single();
       if (error) throw error;
       setRows((prev) => [...prev, data as ProfileSportRecordRow]);
-      setEventLabel("");
-      setRecordValue("");
-      setRecordSeconds(0);
-      setCustomMode(false);
+      window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record ajouté" });
+      resetWizard();
     } catch {
       toast({ title: "Erreur", description: "Impossible d'ajouter le record.", variant: "destructive" });
     } finally {
@@ -155,6 +279,7 @@ export default function ProfileSportRecordsEdit() {
       const { error } = await (supabase as any).from("profile_sport_records").delete().eq("id", id).eq("user_id", user.id);
       if (error) throw error;
       setRows((prev) => prev.filter((r) => r.id !== id));
+      window.dispatchEvent(new Event("profile-records-updated"));
       toast({ title: "Record supprimé" });
     } catch {
       toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
@@ -163,61 +288,12 @@ export default function ProfileSportRecordsEdit() {
     }
   };
 
-  const startEditing = (row: ProfileSportRecordRow) => {
-    setEditingId(row.id);
-    setEditingEventLabel(row.event_label);
-    setEditingRecordValue(row.record_value);
-  };
-
-  const cancelEditing = () => { setEditingId(null); setEditingEventLabel(""); setEditingRecordValue(""); };
-
-  const saveEdit = async () => {
-    if (!user?.id || !editingId) return;
-    const ev = editingEventLabel.trim();
-    const rv = editingRecordValue.trim();
-    if (!ev || !rv) { toast({ title: "Champs requis", variant: "destructive" }); return; }
-    setSaving(true);
-    try {
-      const { error } = await (supabase as any).from("profile_sport_records").update({ event_label: ev, record_value: rv }).eq("id", editingId).eq("user_id", user.id);
-      if (error) throw error;
-      setRows((prev) => prev.map((r) => (r.id === editingId ? { ...r, event_label: ev, record_value: rv } : r)));
-      cancelEditing();
-      toast({ title: "Record modifié" });
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de modifier.", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const moveRecord = async (id: string, direction: "up" | "down") => {
-    if (!user?.id) return;
-    const currentIndex = rows.findIndex((r) => r.id === id);
-    if (currentIndex === -1) return;
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= rows.length) return;
-    const nextRows = [...rows];
-    [nextRows[currentIndex], nextRows[targetIndex]] = [nextRows[targetIndex], nextRows[currentIndex]];
-    setRows(nextRows.map((r, idx) => ({ ...r, sort_order: idx })));
-    setSaving(true);
-    try {
-      const updates = nextRows.map((r, idx) =>
-        (supabase as any).from("profile_sport_records").update({ sort_order: idx }).eq("id", r.id).eq("user_id", user.id)
-      );
-      const results = await Promise.all(updates);
-      if (results.find((res) => res.error)?.error) throw results.find((res) => res.error)!.error;
-    } catch {
-      toast({ title: "Erreur", description: "Impossible de réordonner.", variant: "destructive" });
-      void load();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleOpenPicker = () => {
-    if (recordType === "time") setShowTimePicker(true);
-    else setShowPacePicker(true);
-  };
+  const distanceWholeOpts = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const digitOpts = Array.from({ length: 10 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const hourOpts = Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") }));
+  const minSecOpts = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") }));
+  const speedWholeOpts = Array.from({ length: 101 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const wattsOpts = Array.from({ length: 571 }, (_, i) => ({ value: String(i + 80), label: String(i + 80) }));
 
   return (
     <IosFixedPageHeaderShell
@@ -233,257 +309,250 @@ export default function ProfileSportRecordsEdit() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             }
-            title="Records sport"
+            title="Créer un record"
           />
         </div>
       }
     >
       <ScrollArea className="h-full min-h-0 min-w-0 flex-1 overflow-x-hidden">
-        <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden py-5">
-          <p className="px-4 text-ios-subheadline text-muted-foreground ios-shell:px-2.5">
-            Choisis un sport, sélectionne ton épreuve puis indique ta performance. Visible sur ton profil.
-          </p>
-
-          {/* ─── SPORT ─── */}
-          <div className="bg-card">
-            <div className="space-y-0 divide-y divide-border/50">
-              {/* Sport */}
-              <div className="flex items-center justify-between px-4 py-3 ios-shell:px-2.5">
-                <span className="text-[15px] text-muted-foreground">Sport</span>
-                <Select
-                  value={sportKey}
-                  onValueChange={(v) => {
-                    setSportKey(v as ProfileSportRecordKey);
-                    setEventLabel("");
-                    setCustomMode(false);
-                    setRecordValue("");
-                    setRecordSeconds(0);
-                  }}
-                >
-                  <SelectTrigger className="h-auto w-auto border-0 bg-transparent p-0 text-[17px] font-medium text-foreground shadow-none [&>svg]:ml-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROFILE_SPORT_RECORD_KEYS.map((k) => (
-                      <SelectItem key={k} value={k}>{PROFILE_SPORT_RECORD_LABELS[k]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Distance / Épreuve */}
-              <div className="flex items-center justify-between px-4 py-3 ios-shell:px-2.5">
-                <span className="text-[15px] text-muted-foreground">Épreuve</span>
-                {SPORT_DISTANCES[sportKey].length > 0 && !customMode ? (
-                  <Select
-                    value={SPORT_DISTANCES[sportKey].includes(eventLabel) ? eventLabel : ""}
-                    onValueChange={(v) => {
-                      if (v === "__custom") {
-                        setCustomMode(true);
-                        setEventLabel("");
-                      } else {
-                        setEventLabel(v);
-                        setRecordValue("");
-                        setRecordSeconds(0);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-auto w-auto max-w-[200px] border-0 bg-transparent p-0 text-right text-[17px] font-medium text-foreground shadow-none [&>svg]:ml-1">
-                      <SelectValue placeholder="Choisir" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SPORT_DISTANCES[sportKey].map((d) => (
-                        <SelectItem key={d} value={d}>{d}</SelectItem>
-                      ))}
-                      <SelectItem value="__custom">Autre…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={eventLabel}
-                      onChange={(e) => setEventLabel(e.target.value)}
-                      placeholder="Nom de l'épreuve"
-                      className="h-8 w-40 border-0 bg-transparent p-0 text-right text-[17px] font-medium shadow-none placeholder:text-muted-foreground/40"
-                    />
-                    {customMode && SPORT_DISTANCES[sportKey].length > 0 && (
-                      <button
-                        className="text-xs text-primary"
-                        onClick={() => { setCustomMode(false); setEventLabel(""); }}
-                      >
-                        Liste
-                      </button>
-                    )}
+        <div className="space-y-4 px-4 py-5 ios-shell:px-2.5">
+          <div className="rounded-2xl bg-card p-3">
+            <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>Progression</span>
+              <span>{step}/4</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {STEP_LABELS.map((label, i) => {
+                const idx = (i + 1) as WizardStep;
+                const active = idx === step;
+                const done = idx < step;
+                return (
+                  <div key={label} className={`rounded-lg px-2 py-2 text-center text-[11px] ${active ? "bg-primary text-primary-foreground" : done ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                    {label}
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* ─── TYPE DE RECORD ─── */}
-          {eventLabel.trim() !== "" && (
-            <div>
-              <h3 className="mb-2 px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground ios-shell:px-2.5">
-                Type de record
-              </h3>
-              <div className="bg-card divide-y divide-border/50">
-                {/* Temps */}
-                <button
-                  className="flex w-full items-center justify-between px-4 py-3 active:bg-secondary/60 transition-colors ios-shell:px-2.5"
-                  onClick={() => {
-                    setRecordType("time");
-                    if (recordType !== "time") { setRecordValue(""); setRecordSeconds(0); }
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#007AFF]">
-                      <Clock className="h-[18px] w-[18px] text-white" />
-                    </div>
-                    <span className="text-[17px] text-foreground">Temps</span>
-                  </div>
-                  {recordType === "time" && <Check className="h-5 w-5 text-primary" />}
-                </button>
-
-                {/* Allure */}
-                {showPace && (
+          {step === 1 && (
+            <div className="rounded-2xl bg-card p-4">
+              <h2 className="text-[20px] font-semibold text-foreground">Choisis ton sport</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Une seule sélection, puis suivant.</p>
+              <div className="mt-4 grid grid-cols-2 gap-2.5">
+                {PROFILE_SPORT_RECORD_KEYS.map((k) => {
+                  const SportIcon = SPORT_ICONS[k];
+                  return (
                   <button
-                    className="flex w-full items-center justify-between px-4 py-3 active:bg-secondary/60 transition-colors ios-shell:px-2.5"
-                    onClick={() => {
-                      setRecordType("pace");
-                      if (recordType !== "pace") { setRecordValue(""); setRecordSeconds(0); }
-                    }}
+                    key={k}
+                    type="button"
+                    onClick={() => setSportKey(k)}
+                    className={`rounded-2xl border px-3 py-4 text-left ${sportKey === k ? "border-primary bg-primary/10" : "border-border bg-secondary/40"}`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#FF9500]">
-                        <Gauge className="h-[18px] w-[18px] text-white" />
-                      </div>
-                      <span className="text-[17px] text-foreground">Allure</span>
-                    </div>
-                    {recordType === "pace" && <Check className="h-5 w-5 text-primary" />}
+                    <SportIcon className="h-6 w-6 text-primary" />
+                    <p className="mt-1 text-[14px] font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[k]}</p>
                   </button>
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* ─── VALEUR ─── */}
-          {eventLabel.trim() !== "" && (
-            <div>
-              <h3 className="mb-2 px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground ios-shell:px-2.5">
-                {recordType === "time" ? "Temps" : "Allure"}
-              </h3>
-              <div className="bg-card">
-                <button
-                  className="flex w-full items-center justify-between px-4 py-3.5 active:bg-secondary/60 transition-colors ios-shell:px-2.5"
-                  onClick={handleOpenPicker}
-                >
-                  <span className="text-[17px] text-foreground">
-                    {recordType === "time" ? "Définir le temps" : "Définir l'allure"}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "font-mono text-[17px] tabular-nums",
-                      recordValue ? "font-semibold text-primary" : "text-muted-foreground/40"
-                    )}>
-                      {recordValue || (recordType === "time" ? "00:00" : "0:00/km")}
-                    </span>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+          {step === 2 && (
+            <div className="rounded-2xl bg-card p-4">
+              <h2 className="text-[20px] font-semibold text-foreground">Distance / épreuve</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Format guidé, rapide à une main.</p>
+              <div className="mt-4 space-y-2">
+                {DISTANCE_PRESETS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(d.id, d.label, d.km)}
+                    className={`w-full rounded-xl border px-4 py-3 text-left text-[16px] font-semibold ${presetId === d.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 text-foreground"}`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 rounded-xl border border-border/60 bg-secondary/40 p-3">
+                <p className="text-xs text-muted-foreground">Distance sélectionnée</p>
+                <p className="text-[17px] font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</p>
+                <Input
+                  value={eventLabel}
+                  onChange={(e) => setEventLabel(e.target.value)}
+                  placeholder="Nom de lépreuve"
+                  className="mt-2 h-10"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="rounded-2xl bg-card p-4">
+              <h2 className="text-[20px] font-semibold text-foreground">Performance</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Sélection précise via roulettes verticales.</p>
+
+              {(sportKey === "running" || sportKey === "walking" || sportKey === "swimming") && (
+                <div className="mt-4 space-y-3">
+                  <div className="inline-flex rounded-xl border border-border bg-secondary/30 p-1">
+                    <button type="button" onClick={() => setRunningMode("time")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${runningMode === "time" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Temps</button>
+                    <button type="button" onClick={() => setRunningMode("pace")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${runningMode === "pace" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Allure</button>
                   </div>
-                </button>
-              </div>
+
+                  <button type="button" onClick={openDurationPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
+                    <p className="text-xs text-muted-foreground">Temps</p>
+                    <p className="text-[20px] font-semibold text-foreground">{formatDuration(durationSec)}</p>
+                  </button>
+                  <button type="button" onClick={openPacePicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
+                    <p className="text-xs text-muted-foreground">{sportKey === "swimming" ? "Allure /100m" : "Allure /km"}</p>
+                    <p className="text-[20px] font-semibold text-foreground">{Math.floor(paceSecPerKm / 60)}:{String(paceSecPerKm % 60).padStart(2, "0")}</p>
+                  </button>
+                </div>
+              )}
+
+              {(sportKey === "cycling" || sportKey === "triathlon" || sportKey === "other") && (
+                <div className="mt-4 space-y-3">
+                  <div className="inline-flex rounded-xl border border-border bg-secondary/30 p-1">
+                    <button type="button" onClick={() => setCyclingMode("speed")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${cyclingMode === "speed" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Vitesse</button>
+                    <button type="button" onClick={() => setCyclingMode("watts")} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${cyclingMode === "watts" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Puissance</button>
+                  </div>
+
+                  <button type="button" onClick={openDurationPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
+                    <p className="text-xs text-muted-foreground">Temps</p>
+                    <p className="text-[20px] font-semibold text-foreground">{formatDuration(durationSec)}</p>
+                  </button>
+
+                  {cyclingMode === "speed" ? (
+                    <button type="button" onClick={openSpeedPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
+                      <p className="text-xs text-muted-foreground">Vitesse moyenne</p>
+                      <p className="text-[20px] font-semibold text-foreground">{speedKmh.toFixed(1)} km/h</p>
+                    </button>
+                  ) : (
+                    <button type="button" onClick={openWattsPicker} className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-left">
+                      <p className="text-xs text-muted-foreground">Puissance moyenne</p>
+                      <p className="text-[20px] font-semibold text-foreground">{Math.round(watts)} W</p>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* ─── BOUTON AJOUTER ─── */}
-          <div className="px-4 ios-shell:px-2.5">
-            <Button
-              className="h-12 w-full rounded-xl text-[17px] font-semibold"
-              onClick={() => void handleAdd()}
-              disabled={saving || !canAdd}
-            >
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="mr-2 h-5 w-5" />}
-              Ajouter le record
+          {step === 4 && (
+            <div className="rounded-2xl bg-card p-4">
+              <h2 className="text-[20px] font-semibold text-foreground">Récapitulatif</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">Vérifie puis confirme ton record.</p>
+              <div className="mt-4 space-y-2 rounded-xl border border-border/60 bg-secondary/30 p-3">
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Sport</span><span className="font-semibold text-foreground">{PROFILE_SPORT_RECORD_LABELS[sportKey]}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Épreuve</span><span className="font-semibold text-foreground">{eventLabel}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Distance</span><span className="font-semibold text-foreground">{formatDistanceByUnit(distanceKm, unit)}</span></div>
+                <div className="flex items-center justify-between"><span className="text-sm text-muted-foreground">Performance</span><span className="font-semibold text-primary">{recordValue}</span></div>
+              </div>
+              <Button className="mt-4 h-12 w-full rounded-xl text-[17px] font-semibold" onClick={() => void handleAdd()} disabled={saving}>
+                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Plus className="mr-2 h-5 w-5" />Confirmer le record</>}
+              </Button>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button variant="outline" className="h-11 flex-1" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1) as WizardStep)}>Retour</Button>
+            <Button className="h-11 flex-1" disabled={(step === 2 && !canContinueStep2) || (step === 3 && !canContinueStep3) || step === 4} onClick={() => setStep((s) => Math.min(4, s + 1) as WizardStep)}>
+              Suivant
             </Button>
           </div>
 
-          {/* ─── MES RECORDS ─── */}
-          <div>
-            <h3 className="mb-2 px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground ios-shell:px-2.5">
-              Mes records
-            </h3>
-            <div className="bg-card">
-              {loading ? (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : rows.length === 0 ? (
-                <p className="px-4 py-8 text-center text-ios-subheadline text-muted-foreground ios-shell:px-2.5">
-                  Aucun record pour l'instant.
-                </p>
-              ) : (
-                <ul className="divide-y divide-border/50">
-                  {rows.map((r, index) => (
-                    <li key={r.id} className="flex min-w-0 items-center gap-3 px-4 py-3 ios-shell:px-2.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-ios-caption1 text-muted-foreground">
-                          {isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}
-                        </p>
-                        {editingId === r.id ? (
-                          <div className="space-y-2 mt-1">
-                            <Input value={editingEventLabel} onChange={(e) => setEditingEventLabel(e.target.value)} className="h-9 rounded-ios-sm" />
-                            <Input value={editingRecordValue} onChange={(e) => setEditingRecordValue(e.target.value)} className="h-9 rounded-ios-sm font-mono" />
-                          </div>
-                        ) : (
-                          <>
-                            <p className="truncate text-ios-body font-medium text-foreground">{r.event_label}</p>
-                            <p className="font-mono text-ios-subheadline text-primary tabular-nums">{r.record_value}</p>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        {editingId === r.id ? (
-                          <>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => void saveEdit()} disabled={saving}><Check className="h-5 w-5 text-primary" /></Button>
-                            <Button type="button" variant="ghost" size="icon" onClick={cancelEditing} disabled={saving}><X className="h-5 w-5" /></Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => moveRecord(r.id, "up")} disabled={saving || index === 0}><ArrowUp className="h-4 w-4" /></Button>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => moveRecord(r.id, "down")} disabled={saving || index === rows.length - 1}><ArrowDown className="h-4 w-4" /></Button>
-                            <Button type="button" variant="ghost" size="icon" onClick={() => startEditing(r)} disabled={saving}><Pencil className="h-4 w-4" /></Button>
-                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => void handleDelete(r.id)} disabled={saving}><Trash2 className="h-5 w-5" /></Button>
-                          </>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          <div className="rounded-2xl bg-card p-4">
+            <h3 className="mb-3 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">Mes records</h3>
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+            ) : rows.length === 0 ? (
+              <p className="py-6 text-center text-ios-subheadline text-muted-foreground">Aucun record pour l'instant.</p>
+            ) : (
+              <ul className="divide-y divide-border/50">
+                {rows.map((r) => (
+                  <li key={r.id} className="flex items-center gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-ios-caption1 text-muted-foreground">{isProfileSportRecordKey(r.sport_key) ? PROFILE_SPORT_RECORD_LABELS[r.sport_key] : r.sport_key}</p>
+                      <p className="truncate text-ios-body font-medium text-foreground">{r.event_label}</p>
+                      <p className="font-mono text-ios-subheadline text-primary tabular-nums">{r.record_value}</p>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => void handleDelete(r.id)} disabled={saving}>
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </ScrollArea>
 
-      {/* Picker Modals */}
-      <TimePickerModal
-        open={showTimePicker}
-        onClose={() => setShowTimePicker(false)}
-        onConfirm={(formatted, totalSeconds) => {
-          setRecordValue(formatted);
-          setRecordSeconds(totalSeconds);
-          setShowTimePicker(false);
+      <WheelValuePickerModal
+        open={customDistanceOpen}
+        onClose={() => setCustomDistanceOpen(false)}
+        title={`Distance (${unit})`}
+        columns={[
+          { items: distanceWholeOpts, value: customDistanceWhole, onChange: setCustomDistanceWhole },
+          { items: digitOpts, value: customDistanceDec, onChange: setCustomDistanceDec },
+        ]}
+        onConfirm={() => {
+          const val = Number(`${customDistanceWhole}.${customDistanceDec}`);
+          const km = unit === "mi" ? milesToKm(val) : val;
+          setDistanceKm(Math.max(0.1, km));
+          setEventLabel(`Autre (${val.toFixed(1)} ${unit})`);
+          setCustomDistanceOpen(false);
         }}
-        initialSeconds={recordType === "time" ? recordSeconds : 0}
       />
-      <PacePickerModal
-        open={showPacePicker}
-        onClose={() => setShowPacePicker(false)}
-        onConfirm={(formatted, secondsPerKm) => {
-          setRecordValue(formatted);
-          setRecordSeconds(secondsPerKm);
-          setShowPacePicker(false);
+      <WheelValuePickerModal
+        open={durationPickerOpen}
+        onClose={() => setDurationPickerOpen(false)}
+        title="Temps"
+        columns={[
+          { items: hourOpts, value: durH, onChange: setDurH, suffix: "h" },
+          { items: minSecOpts, value: durM, onChange: setDurM, suffix: "min" },
+          { items: minSecOpts, value: durS, onChange: setDurS, suffix: "s" },
+        ]}
+        onConfirm={() => {
+          const sec = Number(durH) * 3600 + Number(durM) * 60 + Number(durS);
+          setDurationSec(Math.max(1, sec));
+          setDurationPickerOpen(false);
         }}
-        initialSecondsPerKm={recordType === "pace" ? recordSeconds : 300}
+      />
+      <WheelValuePickerModal
+        open={pacePickerOpen}
+        onClose={() => setPacePickerOpen(false)}
+        title={sportKey === "swimming" ? "Allure /100m" : "Allure /km"}
+        columns={[
+          { items: minSecOpts, value: paceM, onChange: setPaceM, suffix: "min" },
+          { items: minSecOpts, value: paceS, onChange: setPaceS, suffix: "s" },
+        ]}
+        onConfirm={() => {
+          setPaceSecPerKm(Number(paceM) * 60 + Number(paceS));
+          setPacePickerOpen(false);
+        }}
+      />
+      <WheelValuePickerModal
+        open={speedPickerOpen}
+        onClose={() => setSpeedPickerOpen(false)}
+        title="Vitesse moyenne"
+        columns={[
+          { items: speedWholeOpts, value: speedWhole, onChange: setSpeedWhole },
+          { items: digitOpts, value: speedDec, onChange: setSpeedDec },
+        ]}
+        onConfirm={() => {
+          setSpeedKmh(Number(`${speedWhole}.${speedDec}`));
+          setSpeedPickerOpen(false);
+        }}
+      />
+      <WheelValuePickerModal
+        open={wattsPickerOpen}
+        onClose={() => setWattsPickerOpen(false)}
+        title="Puissance moyenne"
+        columns={[{ items: wattsOpts, value: wattsDraft, onChange: setWattsDraft, suffix: "W" }]}
+        onConfirm={() => {
+          setWatts(Number(wattsDraft));
+          setWattsPickerOpen(false);
+        }}
       />
     </IosFixedPageHeaderShell>
   );

@@ -28,6 +28,8 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   hideCloseButton?: boolean;
   fullScreen?: boolean;
+  /** Sans zoom d’ouverture (évite flou image sur certains WebKit après animate-in). */
+  noZoom?: boolean;
   /** Classes additionnelles sur le bouton fermer (ex. décalage horizontal iPhone). */
   closeButtonClassName?: string;
   /**
@@ -42,7 +44,7 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps>(
-  ({ className, children, hideCloseButton = false, fullScreen = false, closeButtonClassName, stackNested = false, overlayClassName, ...props }, ref) => (
+  ({ className, children, hideCloseButton = false, fullScreen = false, noZoom = false, closeButtonClassName, stackNested = false, overlayClassName, ...props }, ref) => (
     <DialogPortal>
       <DialogOverlay className={cn(stackNested && "z-[130]", overlayClassName)} />
       <DialogPrimitive.Content
@@ -54,7 +56,10 @@ const DialogContent = React.forwardRef<
                 stackNested ? "z-[130]" : "z-[115]"
               )
             : cn(
-                "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-ios-lg max-h-[90vh] overflow-y-auto ios-surface",
+                "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 rounded-ios-lg max-h-[90vh] overflow-y-auto ios-surface",
+                noZoom
+                  ? ""
+                  : "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
                 stackNested ? "z-[130]" : "z-[115]"
               ),
           className

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,6 +37,8 @@ interface ProfileSetupDialogProps {
   onComplete?: () => void;
   /** Retour connexion : déconnexion + navigation / affichage login (obligatoire si onOpenChange est no-op, ex. Index). */
   onRequestSignIn?: () => void | Promise<void>;
+  /** Parcours arrivée (créateur) : formulaire complet, aucune écriture compte / profil / stockage. */
+  arrivalPreview?: boolean;
 }
 
 const COUNTRY_CODES = [
@@ -56,7 +58,7 @@ interface FormState {
   timestamp: number;
 }
 
-export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete, onRequestSignIn }: ProfileSetupDialogProps) => {
+export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComplete, onRequestSignIn, arrivalPreview }: ProfileSetupDialogProps) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectingPhoto, setIsSelectingPhoto] = useState(false);
@@ -75,7 +77,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
   const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
-  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { t, language, languageManuallySet, suggestLanguageFromCountry } = useLanguage();
@@ -406,35 +407,32 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!avatarFile) {
-      toast({ title: t('common.error'), description: t('profileSetup.toastPhotoRequired'), variant: "destructive" });
-      return;
-    }
-    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password || password.length < 6 || !country) {
+    if (!username.trim() || !displayName.trim() || !birthDate || calculatedAge < 13 || !bio.trim() || !password.trim()) {
       toast({ title: t('common.error'), description: t('profileSetup.toastFillAll'), variant: "destructive" });
       return;
     }
-    if (selectedSports.length === 0) {
-      toast({ title: t('common.error'), description: t('profileSetup.toastSportsRequired'), variant: "destructive" });
-      return;
-    }
-    if (!acceptedPolicies) {
+
+    if (arrivalPreview) {
       toast({
-        title: t('common.error'),
-        description: t('profileSetup.toastLegalRequired'),
-        variant: "destructive",
+        title: "Profil créé (aperçu)",
+        description: "Aucun compte ni donnée enregistrés. Fermez pour revenir aux écrans d’inscription.",
       });
+      onOpenChange(false);
+      onComplete?.();
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const uploadedUrl = await uploadAvatar(avatarFile);
-      if (!uploadedUrl) {
-        toast({ title: t('common.error'), description: t('profileSetup.toastUploadFail'), variant: "destructive" });
-        setIsLoading(false);
-        return;
+      let uploadedUrl: string | null = null;
+      if (avatarFile) {
+        uploadedUrl = await uploadAvatar(avatarFile);
+        if (!uploadedUrl) {
+          toast({ title: t('common.error'), description: t('profileSetup.toastUploadFail'), variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
       }
 
       await supabase.auth.updateUser({ password });
@@ -464,16 +462,16 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
         age: calculatedAge,
         bio: bio.trim(),
         avatar_url: uploadedUrl,
+        // Nouveau compte: privé par défaut. L'utilisateur peut le changer ensuite dans Modifier le profil.
+        is_private: true,
       };
       profileData.favorite_sport = serializeProfileSports(selectedSports);
       if (country) profileData.country = country;
       profileData.preferred_language = language;
       profileData.language_manually_set = languageManuallySet;
-      /* Aligné sur l’écran « Avant de commencer » : évite un second bloc consentement si déjà coché ici */
-      if (acceptedPolicies) {
-        profileData.rgpd_accepted = true;
-        profileData.security_rules_accepted = true;
-      }
+      /* Consentement déjà donné à l’inscription (CGU, confidentialité / RGPD, ECTS) */
+      profileData.rgpd_accepted = true;
+      profileData.security_rules_accepted = true;
 
       // ✅ FIX: Capture and check errors from UPDATE/INSERT
       if (existingProfile) {
@@ -505,7 +503,6 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
       // Check that all required fields are actually populated
       const fieldsOk = verifiedProfile.username?.trim() &&
         verifiedProfile.display_name?.trim() &&
-        verifiedProfile.avatar_url?.trim() &&
         verifiedProfile.age &&
         verifiedProfile.bio?.trim();
 
@@ -727,7 +724,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                     )}
                   </button>
                 </div>
-                <p className="mt-2 text-center text-[13px] text-muted-foreground">{t('profileSetup.photoLabel')}</p>
+                <p className="mt-2 text-center text-[13px] text-muted-foreground">{t('profileSetup.photoLabel')} (facultatif)</p>
                 <p className="mt-1 max-w-xs text-center text-[12px] leading-snug text-muted-foreground/80">
                   {t('profileSetup.heroSubtitle')}
                 </p>
@@ -837,6 +834,9 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   <p className="border-b border-border px-4 py-2.5 text-[12px] leading-snug text-muted-foreground">
                     {t('profileSetup.sportsPickHint')}
                   </p>
+                  <p className="border-b border-border px-4 py-2 text-[12px] leading-snug text-muted-foreground">
+                    Sport favori et pays (facultatif)
+                  </p>
                   <div className="px-2">
                     {PROFILE_SPORT_KEYS.map((key) => (
                       <label
@@ -914,54 +914,18 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                 </div>
               </div>
 
-              {/* Engagements légaux (première inscription) */}
-              <div className="space-y-2">
-                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profileSetup.sectionLegal')}
-                </h3>
-                <div className="ios-card overflow-hidden">
-                  <label
-                    htmlFor="profile-setup-legal"
-                    className="flex cursor-pointer items-start gap-3 px-4 py-3.5 active:bg-secondary/50"
-                  >
-                    <Checkbox
-                      id="profile-setup-legal"
-                      checked={acceptedPolicies}
-                      onCheckedChange={(c) => setAcceptedPolicies(c === true)}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <span className="text-left text-[13px] leading-relaxed text-muted-foreground">
-                      {t('profileSetup.legalIntro')}
-                      <Link to="/terms" className="font-medium text-primary underline-offset-2 hover:underline">
-                        {t('profileSetup.legalTermsLink')}
-                      </Link>
-                      {t('profileSetup.legalMid')}
-                      <Link to="/privacy" className="font-medium text-primary underline-offset-2 hover:underline">
-                        {t('profileSetup.legalPrivacyLink')}
-                      </Link>
-                      {t('profileSetup.legalOutro')}
-                    </span>
-                  </label>
-                </div>
-              </div>
-
               {/* Submit Button */}
               <Button
                 type="submit"
                 className="h-12 w-full rounded-ios-md text-[17px] font-semibold shadow-md shadow-primary/15"
                 disabled={
                   isLoading ||
-                  !avatarFile ||
                   !username.trim() ||
                   !displayName.trim() ||
                   !birthDate ||
                   calculatedAge < 13 ||
                   !bio.trim() ||
-                  !password ||
-                  password.length < 6 ||
-                  selectedSports.length === 0 ||
-                  !country ||
-                  !acceptedPolicies
+                  !password.trim()
                 }
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

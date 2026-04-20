@@ -4,8 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppProvider } from "@/contexts/AppContext";
 import { Layout } from "@/components/Layout";
@@ -17,21 +16,19 @@ import { AnalyticsConsentBanner } from "@/components/AnalyticsConsentBanner";
 import { RouteAnalytics } from "@/components/RouteAnalytics";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveIncomingAppUrl } from "@/lib/appLinks";
+import {
+  finalizeSupabaseOAuthFromDeepLink,
+  isAuthCallbackDeepLink,
+} from "@/lib/oauthMobile";
 import { SessionExperienceFeedbackHost } from "@/components/SessionExperienceFeedbackHost";
 import { AppResumeCoordinator } from "@/components/AppResumeCoordinator";
-import {
-  getAppShellBootCompleted,
-  setAppShellBootCompleted,
-} from "@/lib/appShellPersistence";
+import { MainTabsSwipeHost } from "@/components/MainTabsSwipeHost";
 import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
-const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
+const Welcome = lazy(() => import("./pages/Welcome"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
-const MySessions = lazy(() => import("./pages/MySessions"));
-const Messages = lazy(() => import("./pages/Messages"));
-const Coaching = lazy(() => import("./pages/Coaching"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
 const ProfileByUserIdPage = lazy(() => import("./pages/ProfileByUserIdPage"));
 const ProfileSportRecordsEdit = lazy(() => import("./pages/ProfileSportRecordsEdit"));
@@ -42,7 +39,6 @@ const DonationCanceled = lazy(() => import("./pages/DonationCanceled"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Search = lazy(() => import("./pages/Search"));
 const RouteCreation = lazy(() => import("./pages/RouteCreation"));
-const ItineraryHub = lazy(() => import("./pages/ItineraryHub"));
 const ItineraryMyRoutes = lazy(() => import("./pages/ItineraryMyRoutes"));
 const ItineraryRouteDetail = lazy(() => import("./pages/ItineraryRouteDetail"));
 const Itinerary3D = lazy(() => import("./pages/Itinerary3D"));
@@ -57,7 +53,11 @@ const TrainingMode = lazy(() => import("./pages/TrainingMode"));
 const SessionTracking = lazy(() => import("./pages/SessionTracking"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const StoryCreate = lazy(() => import("./pages/StoryCreate"));
+const Drafts = lazy(() => import("./pages/Drafts"));
+const OpenSessionLink = lazy(() => import("./pages/OpenSessionLink"));
+const ShortSessionLinkRedirect = lazy(() => import("./pages/ShortSessionLinkRedirect"));
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
+const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
@@ -90,11 +90,10 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  /** Une fois le boot effectué sur l’appareil, ne plus montrer le splash global (reprise + rechargements WebView). */
-  const [isAppLoaded, setIsAppLoaded] = useState(() => getAppShellBootCompleted());
+  /** Toujours afficher le splash au lancement de l'app (minimum géré dans LoadingScreen). */
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
 
   const handleShellBootComplete = useCallback(() => {
-    setAppShellBootCompleted();
     setIsAppLoaded(true);
   }, []);
 
@@ -114,13 +113,9 @@ const App = () => {
 
     const preload = () => {
       void Promise.allSettled([
-        import("./pages/Index"),
+        import("./components/MainTabsSwipeHost"),
         import("./pages/Auth"),
         import("./pages/Feed"),
-        import("./pages/MySessions"),
-        import("./pages/Messages"),
-        import("./pages/Coaching"),
-        import("./pages/Leaderboard"),
         import("./pages/ProfileEntry"),
         import("./pages/ProfileByUserIdPage"),
         import("./pages/ProfileSportRecordsEdit"),
@@ -131,7 +126,6 @@ const App = () => {
         import("./pages/NotFound"),
         import("./pages/Search"),
         import("./pages/RouteCreation"),
-        import("./pages/ItineraryHub"),
         import("./pages/ItineraryMyRoutes"),
         import("./pages/ItineraryRouteDetail"),
         import("./pages/Itinerary3D"),
@@ -146,6 +140,8 @@ const App = () => {
         import("./pages/SessionTracking"),
         import("./pages/AuthCallback"),
         import("./pages/StoryCreate"),
+        import("./pages/Drafts"),
+        import("./pages/OpenSessionLink"),
         import("./pages/StoryDeleteConfirm"),
       ]);
     };
@@ -194,55 +190,37 @@ const App = () => {
         const { Browser } = await import('@capacitor/browser');
 
         const listener = await CapApp.addListener('appUrlOpen', async ({ url }) => {
-          if (import.meta.env.DEV) {
-            console.log('🍎 [GLOBAL] appUrlOpen:', url);
-          } else {
-            console.log('🍎 [GLOBAL] appUrlOpen (redacted in prod)');
-          }
+          console.log('[OAuth/App] appUrlOpen', {
+            scheme: url?.split(':')[0],
+            pathPrefix: url?.slice(0, 48),
+          });
 
-          const isAuthCallback =
-            url.startsWith('runconnect://auth/callback') ||
-            url.startsWith('app.runconnect://auth/callback');
-
-          if (!isAuthCallback) {
+          if (!isAuthCallbackDeepLink(url)) {
             const targetRoute = resolveIncomingAppUrl(url);
             if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
-              console.log('🍎 [GLOBAL] Navigating from deep/universal link to:', targetRoute);
+              console.log('[OAuth/App] deep link → in-app route', targetRoute);
               window.location.href = targetRoute;
             }
             return;
           }
 
           try {
-            const params = new URLSearchParams(url.split('?')[1] || '');
-            const code = params.get('code');
-            const error = params.get('error');
-            const errorDesc = params.get('error_description');
+            try {
+              await Browser.close();
+            } catch {
+              /* Safari déjà fermé */
+            }
 
-            // Close Safari immediately
-            try { await Browser.close(); } catch {}
-
-            if (error) {
-              console.error('🍎 [GLOBAL] OAuth error:', error, errorDesc);
+            const result = await finalizeSupabaseOAuthFromDeepLink(supabase, url);
+            if (!result.ok) {
+              console.warn('[OAuth/App] finalize failed', result.reason);
               return;
             }
 
-            if (!code) {
-              console.error('🍎 [GLOBAL] No authorization code received');
-              return;
-            }
-
-            console.log('🍎 [GLOBAL] Exchanging PKCE code for session...');
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-            if (exchangeError) {
-              console.error('🍎 [GLOBAL] Exchange error:', exchangeError);
-              return;
-            }
-
-            console.log('🍎 [GLOBAL] Session established, navigating to /');
-            window.location.href = '/';
+            console.log('[OAuth/App] session OK → reload shell /');
+            window.location.replace(`${window.location.origin}/`);
           } catch (err) {
-            console.error('🍎 [GLOBAL] Deep link handling error:', err);
+            console.error('[OAuth/App] deep link handler error', err);
           }
         });
 
@@ -272,16 +250,32 @@ const App = () => {
     const handleLaunchUrl = async () => {
       try {
         const { App: CapApp } = await import('@capacitor/app');
+        const { Browser } = await import('@capacitor/browser');
         const launchData = await CapApp.getLaunchUrl();
         const incomingUrl = launchData?.url;
         if (!incomingUrl) return;
+
+        if (isAuthCallbackDeepLink(incomingUrl)) {
+          console.log('[OAuth/App] cold start auth callback');
+          try {
+            await Browser.close();
+          } catch {
+            /* no-op */
+          }
+          const result = await finalizeSupabaseOAuthFromDeepLink(supabase, incomingUrl);
+          if (result.ok) {
+            window.location.replace(`${window.location.origin}/`);
+          }
+          return;
+        }
+
         const targetRoute = resolveIncomingAppUrl(incomingUrl);
         if (targetRoute && `${window.location.pathname}${window.location.search}` !== targetRoute) {
-          console.log('🍎 [GLOBAL] Cold start deep/universal link ->', targetRoute);
+          console.log('[OAuth/App] cold start → route', targetRoute);
           window.location.href = targetRoute;
         }
       } catch (e) {
-        console.warn('🍎 [GLOBAL] Could not resolve launch URL:', e);
+        console.warn('[OAuth/App] getLaunchUrl / cold start:', e);
       }
     };
 
@@ -314,23 +308,25 @@ const App = () => {
                 <NetworkStatusBanner />
                 <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
-                <AnimatePresence mode="sync">
                   <Routes>
+                  <Route path="/welcome" element={<PageTransition><PageSuspense><Welcome /></PageSuspense></PageTransition>} />
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
-                  <Route path="/" element={<Layout><PageTransition><PageSuspense><Index /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/onboarding" element={<PageTransition><PageSuspense><Onboarding /></PageSuspense></PageTransition>} />
+                  <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/my-sessions" element={<Layout><PageTransition><PageSuspense><MySessions /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/messages" element={<Layout><PageTransition><PageSuspense><Messages /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/coaching" element={<Layout><PageTransition><PageSuspense><Coaching /></PageSuspense></PageTransition></Layout>} />
-                  <Route path="/leaderboard" element={<Layout><PageTransition><PageSuspense><Leaderboard /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
+                  <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
                   <Route path="/profile/records" element={<Layout><PageTransition><PageSuspense><ProfileSportRecordsEdit /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/edit" element={<PageTransition><PageSuspense><ProfileEdit /></PageSuspense></PageTransition>} />
+                  <Route path="/referral" element={<Layout><PageTransition><PageSuspense><Referral /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile" element={<Layout><PageTransition><PageSuspense><ProfileEntry /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/profile/:userId" element={<Layout><PageTransition><PageSuspense><ProfileByUserIdPage /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/subscription" element={<Layout><PageTransition><PageSuspense><Subscription /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/search" element={<PageTransition><PageSuspense><Search /></PageSuspense></PageTransition>} />
-                  <Route path="/itinerary" element={<Layout><PageTransition><PageSuspense><ItineraryHub /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/itinerary" element={<Navigate to="/route-create" replace />} />
                   <Route path="/itinerary/my-routes" element={<Layout><PageTransition><PageSuspense><ItineraryMyRoutes /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/route/:routeId" element={<Layout><PageTransition><PageSuspense><ItineraryRouteDetail /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/itinerary/3d" element={<Layout><PageTransition><PageSuspense><Itinerary3D /></PageSuspense></PageTransition></Layout>} />
@@ -349,15 +345,20 @@ const App = () => {
                   <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
+                  <Route path="/open/session/:sessionId" element={<PageTransition><PageSuspense><OpenSessionLink /></PageSuspense></PageTransition>} />
+                  <Route path="/s/:sessionId" element={<PageTransition><PageSuspense><ShortSessionLinkRedirect /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts/stories" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
+                  <Route path="/drafts/routes" element={<PageTransition><PageSuspense><Drafts /></PageSuspense></PageTransition>} />
                   <Route path="/stories/:storyId/delete" element={<PageTransition><PageSuspense><StoryDeleteConfirm /></PageSuspense></PageTransition>} />
                   
                   <Route path="/donation-success" element={<PageTransition><PageSuspense><DonationSuccess /></PageSuspense></PageTransition>} />
                   <Route path="/donation-canceled" element={<PageTransition><PageSuspense><DonationCanceled /></PageSuspense></PageTransition>} />
                   {/* Route profil public (AVANT *) */}
                   <Route path="/p/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
+                  <Route path="/u/:username" element={<PageTransition><PageSuspense><PublicProfile /></PageSuspense></PageTransition>} />
                   <Route path="*" element={<PageTransition><PageSuspense><NotFound /></PageSuspense></PageTransition>} />
                   </Routes>
-                </AnimatePresence>
                 </div>
               </BrowserRouter>
             </TooltipProvider>

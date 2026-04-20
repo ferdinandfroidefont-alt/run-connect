@@ -15,11 +15,9 @@ import { MapControls } from './MapControls';
 import { MapStyleSelector } from './MapStyleSelector';
 import { CreateSessionWizard } from './session-creation/CreateSessionWizard';
 import { SessionDetailsDialog } from './SessionDetailsDialog';
-import { SessionPreviewPopup } from './SessionPreviewPopup';
+
 import { StreakBadge } from './StreakBadge';
 import { MapIosColoredFab } from '@/components/map/MapIosColoredFab';
-import { OffscreenSessionIndicators } from '@/components/map/OffscreenSessionIndicators';
-import { useOffscreenSessionIndicators } from '@/hooks/useOffscreenSessionIndicators';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useAppContext } from '@/contexts/AppContext';
@@ -27,20 +25,24 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import type { Position } from '@/types/permissions';
 import { openLocationSettings } from '@/lib/native';
 import { supabase } from '@/integrations/supabase/client';
-import { generateRunConnectMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, PenLine } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useShareProfile } from '@/hooks/useShareProfile';
 import { QRShareDialog } from './QRShareDialog';
+import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
 import { cn } from '@/lib/utils';
+import {
+  createSessionPinButton,
+  resolveSessionPinVariant,
+} from '@/lib/mapSessionPin';
 import {
   getPersistedHomeMapPosition,
   HOME_HOT_PREFETCH_MAX_AGE_MS,
@@ -269,6 +271,11 @@ function coordsToLineString(points: MapCoord[]): GeoJSON.Feature<GeoJSON.LineStr
   };
 }
 
+type SessionMarkerVisual = {
+  marker: Marker;
+  el: HTMLDivElement;
+};
+
 const EMPTY_ROUTE_FEATURE: GeoJSON.Feature<GeoJSON.LineString> = {
   type: 'Feature',
   properties: {},
@@ -317,9 +324,9 @@ export const InteractiveMap = ({
   highlightSessionId,
   isActive = true,
 }: InteractiveMapProps = {}) => {
+  const HOME_PROFILE_CACHE_KEY = "runconnect_home_profile_cache_v1";
   const {
     user,
-    subscriptionInfo
   } = useAuth();
   const {
     setRefreshSessions,
@@ -329,14 +336,12 @@ export const InteractiveMap = ({
     homeFeedSheetSnap,
   } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useLanguage();
 
   // Track newly created sessions for pulse animation
   const [newSessionIds, setNewSessionIds] = useState<Set<string>>(new Set());
-
-  // Cache for generated SVG marker data URLs by user ID
-  const markerCache = useRef(new window.Map<string, string>());
 
   // Vérifier que l'utilisateur est connecté
   React.useEffect(() => {
@@ -349,14 +354,14 @@ export const InteractiveMap = ({
   } = useGeolocation();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
-  const markers = useRef<Marker[]>([]);
+  const markers = useRef<SessionMarkerVisual[]>([]);
   const sessionPolylines = useRef<unknown[]>([]);
   const userLocationMarker = useRef<Marker | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentStyle, setCurrentStyle] = useState(() => getStoredMapStyleId());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
-  const [previewSession, setPreviewSession] = useState<Session | null>(null);
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [sessionPresetRouteId, setSessionPresetRouteId] = useState<string | null>(null);
   const [presetLocation, setPresetLocation] = useState<{
@@ -392,6 +397,14 @@ export const InteractiveMap = ({
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
 
+  /** /profile → / avec state : ouvrir Mon profil depuis la carte (ProfileDialog n’est monté qu’à l’ouverture). */
+  useEffect(() => {
+    const st = location.state as { openProfileDialog?: boolean } | null | undefined;
+    if (!st?.openProfileDialog) return;
+    setShowProfileDialog(true);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+  }, [location.state, location.pathname, location.search, navigate]);
+
   useEffect(() => {
     setHomeMapImmersive(isActive && isImmersiveMode);
     return () => setHomeMapImmersive(false);
@@ -406,6 +419,11 @@ export const InteractiveMap = ({
   const [expandedFilter, setExpandedFilter] = useState<ExpandedFilter>(null);
   const [clubFilters, setClubFilters] = useState<ClubFilterOption[]>([]);
 
+  const applyMarkerScaleFromZoom = useCallback(() => {
+    // No-op: pin scaling disabled to keep marker anchor pixel-stable.
+    return;
+  }, []);
+
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(prev => {
       const next = !prev;
@@ -415,12 +433,7 @@ export const InteractiveMap = ({
   };
 
   // Share profile hook
-  const {
-    shareProfile,
-    showQRDialog,
-    setShowQRDialog,
-    qrData
-  } = useShareProfile();
+  const { showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -509,6 +522,8 @@ export const InteractiveMap = ({
   const filteredSessionsForMap = useMemo(() => {
     const q = (filters.search_query ?? '').trim().toLowerCase();
     return sessions.filter((session) => {
+      // Toujours afficher les séances de l'utilisateur sur la carte.
+      if (session.organizer_id === user?.id) return true;
       const matchesActivity =
         filters.activity_types.length === 0 || filters.activity_types.includes(session.activity_type);
       const matchesType =
@@ -537,39 +552,7 @@ export const InteractiveMap = ({
 
       return matchesActivity && matchesType && matchesSearch && matchesTimeSlot && matchesLevel;
     });
-  }, [sessions, filters]);
-
-  const offscreenSessionIndicators = useOffscreenSessionIndicators({
-    map: mapboxMap,
-    isMapLoaded,
-    isActive,
-    immersive: isImmersiveMode,
-    sessions: filteredSessionsForMap,
-    mapContainerRef: mapContainer,
-    topStackRef: homeMapTopStackRef,
-    feedSnap: homeFeedSheetSnap,
-  });
-
-  const handleOffscreenIndicatorFlyTo = useCallback(
-    (lng: number, lat: number) => {
-      const m = map.current;
-      if (!m) return;
-      requestAnimationFrame(() => {
-        const padding = computeHomeMapViewportPadding({
-          immersive: isImmersiveMode,
-          topStackEl: homeMapTopStackRef.current,
-        });
-        m.easeTo({
-          center: [lng, lat],
-          zoom: Math.max(m.getZoom(), 13.5),
-          padding,
-          duration: 780,
-          essential: true,
-        });
-      });
-    },
-    [isImmersiveMode],
-  );
+  }, [sessions, filters, user?.id]);
 
   const routeCoordinates = useRef<MapCoord[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
@@ -660,15 +643,45 @@ export const InteractiveMap = ({
 
   // Load user profile
   useEffect(() => {
-    if (user) {
-      const loadUserProfile = async () => {
-        const {
-          data: profile
-        } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('user_id', user.id).single();
-        setUserProfile(profile);
-      };
-      loadUserProfile();
+    if (!user?.id) return;
+
+    // Affichage immédiat depuis cache local pour éviter le "trou" avatar au boot.
+    try {
+      const cachedRaw = localStorage.getItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw) as {
+          username?: string;
+          display_name?: string;
+          avatar_url?: string | null;
+        };
+        if (cached?.username || cached?.display_name || cached?.avatar_url) {
+          setUserProfile({
+            username: cached.username || '',
+            display_name: cached.display_name || '',
+            avatar_url: cached.avatar_url ?? null,
+          });
+        }
+      }
+    } catch {
+      /* ignore cache parse */
     }
+
+    const loadUserProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, display_name, avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      if (profile) {
+        setUserProfile(profile);
+        try {
+          localStorage.setItem(`${HOME_PROFILE_CACHE_KEY}_${user.id}`, JSON.stringify(profile));
+        } catch {
+          /* ignore cache write */
+        }
+      }
+    };
+    void loadUserProfile();
   }, [user]);
 
   // Function to mark a session as new with 5 second pulse animation
@@ -849,14 +862,14 @@ export const InteractiveMap = ({
     }
   };
 
-  // Create map markers for sessions
+  // Create map markers for sessions (custom pin + avatar)
   const createMarkers = async () => {
     if (!map.current) return;
     const mapboxgl = await loadMapboxGl();
     const runId = ++markersRunIdRef.current;
 
     // Clear existing markers (Mapbox)
-    markers.current.forEach((marker) => marker.remove());
+    markers.current.forEach((item) => item.marker.remove());
     sessionPolylines.current = [];
     markers.current = [];
 
@@ -870,99 +883,77 @@ export const InteractiveMap = ({
       hasRoute: !!s.routes
     })));
 
-    // Create markers for filtered sessions with error handling
-    const markerPromises = filteredSessions.map(async (session, index) => {
+    const markerPromises = filteredSessions.map(async (session) => {
       try {
         if (runId !== markersRunIdRef.current) return null;
-        // Ensure session has valid data
-        if (!session.location_lat || !session.location_lng || !session.profiles) {
-          console.warn(`Session ${session.id} missing required data:`, {
-            lat: session.location_lat,
-            lng: session.location_lng,
-            profiles: session.profiles
-          });
-          return null;
-        }
-        const markerIcon = await createCustomMarker(session);
-        if (runId !== markersRunIdRef.current) return null;
-        const isNewSession = newSessionIds.has(session.id);
-        
-        // Check if session is imminent (starts in less than 2 hours)
-        const sessionDate = new Date(session.scheduled_at);
-        const now = new Date();
-        const diffMs = sessionDate.getTime() - now.getTime();
-        const diffMinutes = diffMs / 60000;
-        const isImminent = diffMinutes > 0 && diffMinutes <= 120; // 0 to 2 hours
-        
         const lng = Number(session.location_lng);
         const lat = Number(session.location_lat);
-        const wrap = document.createElement('div');
-        wrap.style.cursor = 'pointer';
-        wrap.style.position = 'relative';
-        const img = document.createElement('img');
-        img.src = markerIcon;
-        img.alt = '';
-        const isBoosted = session.visibility_state === 'boosted';
-        const isPremium = session.visibility_state === 'premium';
-        img.style.width = isBoosted ? '62px' : isPremium ? '52px' : '48px';
-        img.style.height = isBoosted ? '78px' : isPremium ? '66px' : '60px';
-        img.style.display = 'block';
-        img.draggable = false;
-        if (isNewSession) img.className = 'pulse-marker-animation';
-        else if (isImminent) img.className = 'imminent-marker-animation';
-        if (isBoosted) {
-          const halo = document.createElement('div');
-          halo.style.position = 'absolute';
-          halo.style.left = '50%';
-          halo.style.top = '50%';
-          halo.style.transform = 'translate(-50%, -58%)';
-          halo.style.width = '54px';
-          halo.style.height = '54px';
-          halo.style.borderRadius = '999px';
-          halo.style.background = 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(59,130,246,0.08) 55%, rgba(59,130,246,0) 75%)';
-          halo.style.pointerEvents = 'none';
-          halo.animate(
-            [
-              { transform: 'translate(-50%, -58%) scale(0.9)', opacity: 0.7 },
-              { transform: 'translate(-50%, -58%) scale(1.15)', opacity: 0.2 },
-            ],
-            { duration: 1600, iterations: Infinity, easing: 'ease-out' },
-          );
-          wrap.appendChild(halo);
+        if (
+          !Number.isFinite(lng) ||
+          !Number.isFinite(lat) ||
+          Math.abs(lat) > 90 ||
+          Math.abs(lng) > 180
+        ) {
+          return null;
         }
-        wrap.appendChild(img);
+        const sessionDate = new Date(session.scheduled_at);
+        const now = new Date();
+        const isPastSession = sessionDate.getTime() < now.getTime();
+        const isSelected = selectedSession?.id === session.id;
+        const wrap = document.createElement('div');
+        wrap.className = cn(
+          'rc-session-pin',
+          'rc-session-pin-pop',
+          isSelected && 'is-selected',
+          isPastSession && 'is-past'
+        );
+        wrap.style.position = 'relative';
+        // Anchor point must remain a true map coordinate (1x1),
+        // pin visual is rendered above it to avoid zoom/dezoom drift.
+        wrap.style.width = '1px';
+        wrap.style.height = '1px';
+        wrap.style.overflow = 'visible';
+
+        const pin = createSessionPinButton({
+          avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
+          ariaLabel: session.title || 'Séance',
+          variant: resolveSessionPinVariant(),
+        });
+
+        wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          setPreviewSession(session);
+          setSelectedSession(session);
         });
         const marker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
           .setLngLat([lng, lat])
           .addTo(map.current!);
-        if (isBoosted) marker.setOffset([0, -4]);
-        return marker;
+        return { marker, el: wrap };
       } catch (error) {
-        console.error(`Error creating marker for session ${session.id}:`, error);
+        console.error('Error creating custom marker cluster:', error);
         if (runId !== markersRunIdRef.current) return null;
-
         try {
-          const wrap = document.createElement('div');
-          wrap.style.cursor = 'pointer';
-          const img = document.createElement('img');
-          img.src = getFallbackIcon(session.activity_type);
-          img.alt = '';
-          img.style.width = session.visibility_state === 'boosted' ? '48px' : '40px';
-          img.style.height = session.visibility_state === 'boosted' ? '48px' : '40px';
-          wrap.appendChild(img);
-          wrap.addEventListener('click', (ev) => {
+          const lng = Number(session.location_lng);
+          const lat = Number(session.location_lat);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+
+          const fallbackWrap = document.createElement('div');
+          fallbackWrap.style.width = '16px';
+          fallbackWrap.style.height = '16px';
+          fallbackWrap.style.borderRadius = '999px';
+          fallbackWrap.style.background = '#2563EB';
+          fallbackWrap.style.border = '2px solid #ffffff';
+          fallbackWrap.style.boxShadow = '0 3px 8px rgba(0,0,0,0.3)';
+          fallbackWrap.style.cursor = 'pointer';
+          fallbackWrap.addEventListener('click', (ev) => {
             ev.stopPropagation();
-            setPreviewSession(session);
+            setSelectedSession(session);
           });
-          const fallbackMarker = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
-            .setLngLat([Number(session.location_lng), Number(session.location_lat)])
+          const fallbackMarker = new mapboxgl.Marker({ element: fallbackWrap, anchor: 'center' })
+            .setLngLat([lng, lat])
             .addTo(map.current!);
-          return fallbackMarker;
-        } catch (fallbackError) {
-          console.error(`Failed to create fallback marker for session ${session.id}:`, fallbackError);
+          return { marker: fallbackMarker, el: fallbackWrap };
+        } catch {
           return null;
         }
       }
@@ -971,61 +962,10 @@ export const InteractiveMap = ({
     // Wait for all markers to be created and add successful ones
     const createdMarkers = await Promise.all(markerPromises);
     if (runId !== markersRunIdRef.current) return;
-    const validMarkers = createdMarkers.filter(marker => marker !== null);
+    const validMarkers = createdMarkers.filter((marker): marker is SessionMarkerVisual => marker !== null);
     markers.current = validMarkers;
+    applyMarkerScaleFromZoom();
     console.log(`Successfully created ${validMarkers.length} markers out of ${filteredSessions.length} sessions`);
-  };
-  const createCustomMarker = async (session: Session): Promise<string> => {
-    console.log('🎨 Creating RunConnect custom marker for session:', session.id, session.title);
-
-    // Validation des données de session
-    if (!session || !session.profiles) {
-      console.warn('Session or profiles missing:', session);
-      return getFallbackIcon(session?.activity_type || 'course');
-    }
-    const organizerId = session.organizer_id;
-
-    // Check cache first
-    if (markerCache.current.has(organizerId)) {
-      console.log('✅ Using cached marker for user:', organizerId);
-      return markerCache.current.get(organizerId)!;
-    }
-
-    // Generate new RunConnect SVG marker with base64 image
-    const profileImageUrl = session.profiles.avatar_url || '/placeholder.svg';
-    console.log('🖼️ Generating SVG marker with profile image:', profileImageUrl);
-    try {
-      // Convert image to base64 first
-      const base64Image = await imageUrlToBase64(profileImageUrl);
-      console.log('📸 Image converted to base64, length:', base64Image.length);
-      const svg = generateRunConnectMarkerSVG(base64Image, 48);
-      const dataUrl = svgToDataUrl(svg);
-
-      // Cache the generated marker
-      markerCache.current.set(organizerId, dataUrl);
-      console.log('✨ RunConnect marker generated and cached for user:', organizerId);
-      return dataUrl;
-    } catch (error) {
-      console.error('❌ Error generating RunConnect marker:', error);
-      return getFallbackIcon(session.activity_type);
-    }
-  };
-  const getActivityColor = (activityType: string) => {
-    const colors: Record<string, string> = {
-      'course': '#ef4444',
-      'trail': '#f97316',
-      // Orange pour le trail
-      'velo': '#3b82f6',
-      'vtt': '#059669',
-      // Vert pour le VTT
-      'marche': '#22c55e',
-      'natation': '#0d9488'
-    };
-    return colors[activityType] || colors['course'];
-  };
-  const getFallbackIcon = (activityType: string) => {
-    // Fallback simple SVG data URL
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIGZpbGw9IiNlZjQ0NDQiIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNlZjQ0NDQiLz48L3N2Zz4=';
   };
 
   // Handle shared session link parameters
@@ -1137,7 +1077,18 @@ export const InteractiveMap = ({
     return () => {
       if (markersDebounceRef.current) clearTimeout(markersDebounceRef.current);
     };
-  }, [sessions, filters, isMapLoaded, newSessionIds]);
+  }, [sessions, filters, isMapLoaded, newSessionIds, selectedSession?.id]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !isMapLoaded) return;
+    const onZoom = () => applyMarkerScaleFromZoom();
+    m.on('zoom', onZoom);
+    onZoom();
+    return () => {
+      m.off('zoom', onZoom);
+    };
+  }, [isMapLoaded, applyMarkerScaleFromZoom]);
 
   /** Suggestions de lieux Mapbox pendant la saisie (monde entier, sans restriction pays). */
   useEffect(() => {
@@ -1600,7 +1551,7 @@ export const InteractiveMap = ({
     };
   };
 
-  const saveRoute = async (routeName: string, routeDescription: string, isPublic?: boolean) => {
+  const saveRoute = async (routeName: string, routeDescription: string) => {
     if (!user) {
       toast.error('Connectez-vous pour enregistrer un itinéraire');
       return false;
@@ -1634,7 +1585,7 @@ export const InteractiveMap = ({
       pathCoords: routeCoordinates.current,
       elevations: routeElevations,
       waypoints: waypointsData,
-      isPublic: isPublic ?? false,
+      isPublic: false,
       statsOverride: routeStats,
     });
 
@@ -1651,10 +1602,9 @@ export const InteractiveMap = ({
     routeName: string,
     routeDescription: string,
     createSession?: boolean,
-    isPublic?: boolean,
   ) => {
     setRouteSaving(true);
-    const success = await saveRoute(routeName, routeDescription, isPublic);
+    const success = await saveRoute(routeName, routeDescription);
     setRouteSaving(false);
     if (success) {
       pendingRouteStatsRef.current = null;
@@ -1803,10 +1753,6 @@ export const InteractiveMap = ({
           )}
           aria-hidden
         />
-        <OffscreenSessionIndicators
-          items={offscreenSessionIndicators}
-          onFlyToSession={handleOffscreenIndicatorFlyTo}
-        />
       </div>
       
       {/* Immersive Mode: Minimal top bar with back button */}
@@ -1842,7 +1788,7 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
-            {/* Même rangée que Feed : RunConnect | avatar centré | cloche + paramètres */}
+            {/* Même rangée que Feed : titre | avatar centré | cloche + paramètres */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
               <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
                 <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
@@ -2309,7 +2255,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--safe-area-bottom)+var(--home-map-controls-stack-bottom))]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+0.75rem+var(--home-bottom-stack-gap))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
@@ -2320,16 +2266,6 @@ export const InteractiveMap = ({
             "dark:border-[#1f1f1f] dark:bg-[#0a0a0a] dark:shadow-[0_12px_40px_-16px_rgba(0,0,0,0.65)]"
           )}
         >
-          <button
-            type="button"
-            title="Créer un itinéraire"
-            aria-label="Créer un itinéraire"
-            onClick={() => navigate("/route-create")}
-            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
-          >
-            <PenLine className="h-[17px] w-[17px]" strokeWidth={2} />
-          </button>
-          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <div className="flex h-11 w-11 items-center justify-center [&_.map-ios-colored-fab]:h-11 [&_.map-ios-colored-fab]:w-11 [&_.map-ios-colored-fab]:rounded-none [&_.map-ios-colored-fab]:bg-transparent [&_.map-ios-colored-fab]:shadow-none [&_.map-ios-colored-fab]:ring-0 [&_.map-ios-colored-fab]:ring-offset-0 [&_span]:!text-foreground/80 [&_span_svg]:!stroke-current [&_span_svg]:!text-foreground/80">
             <MapStyleSelector currentStyle={currentStyle} onStyleChange={handleStyleChange} />
           </div>
@@ -2394,33 +2330,16 @@ export const InteractiveMap = ({
         onCreateRoute={handleCreateRoute}
       />
 
-      {/* Session Preview Popup */}
-      <SessionPreviewPopup
-        session={previewSession}
-        onClose={() => setPreviewSession(null)}
-        onViewDetails={() => {
-          if (previewSession) {
-            setSelectedSession(previewSession);
-            setPreviewSession(null);
-          }
-        }}
-        isImminent={previewSession ? (() => {
-          const sessionDate = new Date(previewSession.scheduled_at);
-          const now = new Date();
-          const diffMs = sessionDate.getTime() - now.getTime();
-          const diffMinutes = diffMs / 60000;
-          return diffMinutes > 0 && diffMinutes <= 120;
-        })() : false}
-      />
+
 
       {/* Session Details Dialog */}
       <SessionDetailsDialog session={selectedSession} onClose={() => setSelectedSession(null)} onSessionUpdated={loadSessions} />
       
-      <Suspense fallback={null}>
-      <Suspense fallback={null}>
-        <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
-      </Suspense>
-      </Suspense>
+      {showProfileDialog && (
+        <Suspense fallback={null}>
+          <ProfileDialog open={showProfileDialog} onOpenChange={setShowProfileDialog} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
       <Suspense fallback={null}>
@@ -2436,6 +2355,15 @@ export const InteractiveMap = ({
       </Suspense>
 
 
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
+
       {/* QR Share Dialog */}
       {qrData && <QRShareDialog open={showQRDialog} onOpenChange={setShowQRDialog} profileUrl={qrData.profileUrl} username={qrData.username} displayName={qrData.displayName} avatarUrl={qrData.avatarUrl} referralCode={qrData.referralCode} />}
 
@@ -2447,7 +2375,6 @@ export const InteractiveMap = ({
         title="Créer un itinéraire"
         loading={routeSaving}
         showCreateSessionOption={true}
-        showPublicToggle={true}
       />
     </div>
   );

@@ -5,19 +5,28 @@ import { useSendNotification } from "@/hooks/useSendNotification";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Search, ChevronRight as ChevronRightIcon, CheckCircle2, MessageSquare, Calendar, ClipboardList, Bell, TrendingUp, TrendingDown, Flame, Loader2, CalendarClock } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday } from "date-fns";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ChevronRight as ChevronRightIcon,
+  ClipboardList,
+  Bell,
+  Loader2,
+  CalendarDays,
+  MessageCircle,
+  Send,
+} from "lucide-react";
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ActivityIcon } from "@/lib/activityIcons";
 import { toast } from "sonner";
 import { coachingRowToWeekSession } from "@/lib/coachingWeekSessionImport";
 import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
-import { parseBlockRpeFromStorage, parseAthleteBlockRpeFelt, rpeChipColor, parseSessionRpePhases } from "@/lib/sessionBlockRpe";
-import { parseRCC } from "@/lib/rccParser";
-
-const DAY_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
-const DAY_FULL = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
+import { parseAthleteBlockRpeFelt } from "@/lib/sessionBlockRpe";
+import { useNavigate } from "react-router-dom";
+import { getOrCreateDirectConversation } from "@/lib/coachingMessaging";
+import { AthleteHeader } from "@/components/coaching/tracking/AthleteHeader";
+import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessionCard";
 
 interface WeeklyTrackingViewProps {
   clubId: string;
@@ -104,8 +113,25 @@ const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number
   );
 };
 
-export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
+type UiDayStatus = "done" | "missed" | "pending" | "none";
+
+const STATUS_CHIP_BY_DAY: Record<UiDayStatus, { short: string; className: string }> = {
+  done: { short: "Fait", className: "bg-emerald-500 text-white" },
+  missed: { short: "Non fait", className: "bg-red-500 text-white" },
+  pending: { short: "En attente", className: "bg-orange-400 text-white" },
+  none: { short: "Aucune", className: "bg-zinc-300 text-white dark:bg-zinc-600" },
+};
+
+const toUiStatus = (status?: string): UiDayStatus => {
+  if (status === "completed") return "done";
+  if (status === "missed") return "missed";
+  if (status === "pending") return "pending";
+  return "none";
+};
+
+export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
@@ -115,7 +141,19 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
   const [fourWeekVolume, setFourWeekVolume] = useState<{ current: number; previous: number } | null>(null);
   const [completionStreak, setCompletionStreak] = useState(0);
 
-  const [activeTab, setActiveTab] = useState("sessions");
+  const openConversationWithAthlete = useCallback(
+    async (athleteId: string) => {
+      if (!user) return;
+      try {
+        const conversationId = await getOrCreateDirectConversation(user.id, athleteId);
+        navigate(`/messages?conversation=${conversationId}`);
+      } catch (error) {
+        console.error("Error opening athlete conversation:", error);
+        toast.error("Impossible d'ouvrir la messagerie");
+      }
+    },
+    [navigate, user]
+  );
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -160,9 +198,7 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     findLatestWeek();
   }, [clubId]);
 
-  useEffect(() => { loadTracking(); }, [clubId, currentWeek]);
-
-  const loadTracking = async () => {
+  const loadTracking = useCallback(async () => {
     setLoading(true);
     try {
       const { data: clubMembers } = await supabase
@@ -178,7 +214,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        (supabase.from("coaching_sessions") as any)
+        (supabase as any)
+          .from("coaching_sessions")
           .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
@@ -212,8 +249,8 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await (supabase
-          .from("coaching_participations") as any)
+        const { data: participations } = await (supabase as any)
+          .from("coaching_participations")
           .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);
 
@@ -246,7 +283,43 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
     } finally {
       setLoading(false);
     }
-  };
+  }, [clubId, currentWeek]);
+
+  useEffect(() => {
+    void loadTracking();
+  }, [loadTracking]);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`weekly-tracking-${clubId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "coaching_participations" },
+        () => {
+          void loadTracking();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "coaching_sessions", filter: `club_id=eq.${clubId}` },
+        () => {
+          void loadTracking();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        () => {
+          void loadTracking();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [clubId, user, loadTracking]);
 
   // Load 4-week volume stats for selected athlete
   useEffect(() => {
@@ -339,28 +412,16 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
 
-  // Volume by objective type
-  const getVolumeByType = useCallback((athlete: AthleteData) => {
-    const volumes: Record<string, number> = {};
-    Object.values(athlete.days).forEach(d => {
-      const key = d.session.objective || d.session.title || "Autre";
-      volumes[key] = (volumes[key] || 0) + (Number(d.session.distance_km) || 0);
-    });
-    return Object.entries(volumes)
-      .filter(([, km]) => km > 0)
-      .sort((a, b) => b[1] - a[1]);
-  }, []);
-
   // ==================== MODE LISTE ====================
   if (!selectedAthlete) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-0">
         {/* Reminder button */}
-        <div className="px-4">
+        <div className="border-b border-border bg-card px-4 py-2.5">
           <Button
             variant="outline"
             size="sm"
-            className="w-full rounded-xl h-10 gap-2 text-[13px] font-semibold"
+            className="h-10 w-full gap-2 rounded-lg text-[13px] font-semibold"
             onClick={handleSendReminder}
             disabled={sendingReminder}
           >
@@ -369,25 +430,27 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
           </Button>
         </div>
         {/* Search */}
-        <div className="relative px-4">
-          <Search className="absolute left-7.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un athlète..."
-            className="pl-10 bg-card border-border/30 rounded-2xl h-11 text-[15px]"
-          />
+        <div className="border-b border-border bg-card px-4 py-2.5">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un athlète..."
+              className="h-10 rounded-lg border-border/60 bg-background pl-9 text-[15px]"
+            />
+          </div>
         </div>
 
         {loading ? (
-          <div className="space-y-2 px-4">
+          <div className="divide-y divide-border border-b border-border bg-card">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="ios-card h-16 animate-pulse border border-border/60" />
+              <div key={i} className="h-14 animate-pulse bg-secondary/40" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="ios-card mx-4 border border-border/60 p-8 text-center shadow-[var(--shadow-card)]">
-            <p className="text-[16px] font-semibold text-foreground mb-1">
+          <div className="border-b border-border bg-secondary/30 px-4 py-10 text-center">
+            <p className="mb-1 text-[16px] font-semibold text-foreground">
               {search ? "Aucun athlète trouvé" : "Aucun athlète"}
             </p>
             <p className="text-[13px] text-muted-foreground">
@@ -395,15 +458,14 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
             </p>
           </div>
         ) : (
-          <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
+          <div className="divide-y divide-border border-b border-border bg-card">
             {filtered.map((athlete, idx) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
                 <div key={athlete.userId}>
-                  {idx > 0 && <div className="h-px bg-border/30 ml-[60px]" />}
                   <button
                     onClick={() => onSelectAthlete(athlete.userId)}
-                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 transition-colors text-left"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-secondary/60"
                   >
                     {/* Avatar */}
                     <div className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -458,343 +520,192 @@ export const WeeklyTrackingView = ({ clubId, onClose, selectedAthleteId, onSelec
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
-  const volumeByType = getVolumeByType(selectedAthlete);
+  const sessionsForWeek = weekDays
+    .map((day) => {
+      const dayKey = format(day, "yyyy-MM-dd");
+      const dayData = selectedAthlete.days[dayKey];
+      if (!dayData) return null;
+      const status = toUiStatus(dayData.status);
+      const felt = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, 12);
+      const avgRpe = felt.length > 0 ? Math.round(felt.reduce((a, b) => a + b, 0) / felt.length) : null;
+      const details = [
+        dayData.session.distance_km ? `${Math.round(Number(dayData.session.distance_km) * 10) / 10} km` : "",
+        dayData.session.pace_target ? `Allure ${dayData.session.pace_target}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • ");
+      return {
+        day,
+        dayData,
+        status,
+        avgRpe,
+        details: details || "Séance planifiée",
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+  const trendPct = fourWeekVolume
+    ? Math.round((((fourWeekVolume.current || 0) - (fourWeekVolume.previous || 0)) / Math.max(1, fourWeekVolume.previous || 0)) * 100)
+    : 0;
+
+  const handleResendSession = async () => {
+    if (!selectedAthleteId) return;
+    try {
+      await sendPushNotification(
+        selectedAthleteId,
+        "📩 Rappel séance",
+        "Ton coach vient de renvoyer la séance. Pense à la valider dès qu'elle est faite.",
+        "coaching_session_resend"
+      );
+      toast.success("Séance renvoyée à l'athlète");
+    } catch {
+      toast.error("Impossible de renvoyer la séance");
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Hero profil : espacement léger sous le header (safe-area gérée par IosFixedPageHeaderShell) */}
-      <div className="flex flex-col items-center bg-card px-4 pb-4 pt-2 text-center">
-        <div className="h-[72px] w-[72px] rounded-full bg-secondary flex items-center justify-center overflow-hidden mb-3">
-          {selectedAthlete.avatarUrl ? (
-            <img src={selectedAthlete.avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-[24px] font-bold text-muted-foreground">
-              {selectedAthlete.displayName.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <p className="text-[18px] font-bold text-foreground">{selectedAthlete.displayName}</p>
-        {selectedAthlete.username && (
-          <p className="text-[14px] text-muted-foreground mt-0.5">@{selectedAthlete.username}</p>
-        )}
-        <div className="flex items-center gap-2 mt-2">
-          {selectedAthlete.groupName && (
-            <Badge
-              className="text-[11px] px-2 py-0.5 rounded-lg border-0"
-              style={{ backgroundColor: `${selectedAthlete.groupColor}20`, color: selectedAthlete.groupColor || undefined }}
-            >
-              {selectedAthlete.groupName}
-            </Badge>
-          )}
-          {selectedAthlete.age && (
-            <Badge variant="outline" className="text-[11px] px-2 py-0.5 rounded-lg">
-              {selectedAthlete.age} ans
-            </Badge>
-          )}
-        </div>
-      </div>
+    <div className="space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
+      <AthleteHeader
+        displayName={selectedAthlete.displayName}
+        avatarUrl={selectedAthlete.avatarUrl}
+        username={selectedAthlete.username}
+        groupName={selectedAthlete.groupName}
+        status={pct >= 70 ? "active" : "late"}
+        onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
+        onViewProfile={() => navigate(`/profile/${selectedAthlete.userId}`)}
+      />
 
-      {/* Week navigation */}
-      <div className="bg-card p-3">
+      <div className="border-b border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
-          <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
+          <button
+            onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Semaine précédente"
+          >
             <ChevronLeft className="h-4 w-4 text-primary" />
           </button>
-          <p className="text-[15px] font-semibold text-foreground">{weekLabel}</p>
-          <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform">
+          <p className="inline-flex items-center gap-1.5 text-[16px] font-semibold text-foreground">
+            {weekLabel}
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </p>
+          <button
+            onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+            className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Semaine suivante"
+          >
             <ChevronRight className="h-4 w-4 text-primary" />
           </button>
         </div>
-
-        {/* Mini calendar */}
-        <div className="grid grid-cols-7 gap-1 mt-3">
-          {weekDays.map((day, i) => {
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {weekDays.map((day) => {
             const dayKey = format(day, "yyyy-MM-dd");
             const dayData = selectedAthlete.days[dayKey];
-            const status = dayData?.status;
-            const today = isToday(day);
-
+            const status = toUiStatus(dayData?.status);
+            const conf = STATUS_CHIP_BY_DAY[status];
             return (
-              <div key={i} className="flex flex-col items-center gap-1">
-                <span className={`text-[10px] font-medium ${today ? "text-primary" : "text-muted-foreground/60"}`}>
-                  {DAY_SHORT[i]}
-                </span>
-                <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[12px] font-semibold ${
-                  status === "completed"
-                    ? "bg-green-500 text-white"
-                    : status === "scheduled" || status === "sent"
-                      ? "bg-primary/15 text-primary"
-                      : today
-                        ? "bg-secondary text-foreground ring-1 ring-primary/30"
-                        : "bg-transparent text-muted-foreground/40"
-                }`}>
-                  {format(day, "d")}
+              <div key={dayKey} className="text-center">
+                <p className="text-[11px] font-semibold text-foreground">{format(day, "EEE", { locale: fr }).slice(0, 3)}</p>
+                <p className="text-[10px] text-muted-foreground">{format(day, "d", { locale: fr })}</p>
+                <div className="mt-1 flex justify-center">
+                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold shadow-sm ${conf.className}`}>
+                    {status === "done" ? "✓" : status === "missed" ? "✕" : status === "pending" ? "⏳" : "–"}
+                  </span>
                 </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">{conf.short}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Stats card */}
-      <div className="bg-card p-4">
-        <div className="flex items-center gap-4">
+      <div className="border-b border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-3">
           <ProgressRing percent={pct} />
-          <div className="flex-1">
-            <p className="text-[15px] font-semibold text-foreground">
-              {selectedAthlete.completedCount}/{selectedAthlete.totalCount} séances faites
+          <div className="min-w-0 flex-1">
+            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
+            <p className="text-[34px] font-black leading-none text-emerald-500">
+              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
+              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
             </p>
-            {selectedAthlete.weeklyVolumeKm > 0 && (
-              <p className="text-[13px] text-muted-foreground mt-0.5">
-                📏 {Math.round(selectedAthlete.weeklyVolumeKm * 10) / 10} km cette semaine
-              </p>
-            )}
+            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
+          </div>
+          <div className="rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
+            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {trendPct >= 0 ? "+" : ""}
+              {trendPct}%
+            </p>
+            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
           </div>
         </div>
-
-        {/* 4-week trends & streak */}
-        {(fourWeekVolume || completionStreak > 0) && (
-          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/20">
-            {fourWeekVolume && (
-              <div className="flex items-center gap-1.5">
-                {fourWeekVolume.current >= fourWeekVolume.previous ? (
-                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-                )}
-                <span className="text-[12px] text-muted-foreground">
-                  {Math.round(fourWeekVolume.current * 10) / 10} km / 4 sem
-                </span>
-              </div>
-            )}
-            {completionStreak > 0 && (
-              <Badge className="bg-orange-500/15 text-orange-600 border-0 rounded-lg text-[11px] px-2 py-0.5 gap-1">
-                <Flame className="h-3 w-3" />
-                {completionStreak} séances d'affilée
-              </Badge>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Tabs: Séances | Commentaires */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full bg-secondary/50 rounded-xl p-1 mx-4 max-w-[calc(100%-2rem)]">
-          <TabsTrigger value="sessions" className="flex-1 rounded-lg text-[14px] gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            <Calendar className="h-3.5 w-3.5" />
-            Séances
-          </TabsTrigger>
-          <TabsTrigger value="comments" className="flex-1 rounded-lg text-[14px] gap-1.5 data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Commentaires
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="sessions" className="mt-3">
-          {selectedAthlete.totalCount === 0 ? (
-            <div className="ios-card mx-4 border border-border/60 p-6 text-center shadow-[var(--shadow-card)]">
-              <p className="text-[14px] text-muted-foreground">Aucune séance cette semaine</p>
+      <div className="border-b border-border bg-card px-4 pb-3 pt-2">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-[17px] font-semibold leading-tight text-foreground">Séances de la semaine</p>
+          <button type="button" className="text-[13px] font-semibold text-primary">
+            Tout voir
+          </button>
+        </div>
+        <div className="flex flex-col divide-y divide-border border-t border-border">
+          {sessionsForWeek.length === 0 ? (
+            <div className="bg-secondary/20 px-3 py-6 text-center">
+              <p className="text-[13px] text-muted-foreground">Aucune séance planifiée cette semaine.</p>
             </div>
           ) : (
-            <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
-              {weekDays.map((day, idx) => {
-                const dayKey = format(day, "yyyy-MM-dd");
-                const dayData = selectedAthlete.days[dayKey];
-                if (!dayData) return null;
-
-                const isDone = dayData.status === "completed";
-
-                return (
-                  <div key={dayKey}>
-                    {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
-                    <div className="flex items-start gap-3 px-4 py-3">
-                      <ActivityIcon activityType={dayData.session.activity_type} size="sm" className="mt-0.5" />
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[15px] font-semibold text-foreground truncate">{dayData.sessionTitle}</p>
-                          {isDone ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <div className="h-4 w-4 rounded-full border-2 border-border/50 flex-shrink-0" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          <Badge className={`text-[10px] px-1.5 py-0 rounded-md border-0 ${getObjectiveColor(dayData.session.objective)}`}>
-                            {DAY_FULL[idx]}
-                          </Badge>
-                          {dayData.session.objective && (
-                            <span className="text-[12px] text-muted-foreground">{dayData.session.objective}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          {dayData.session.distance_km ? (
-                            <span className="text-[12px] font-medium text-primary tabular-nums">
-                              {Math.round(Number(dayData.session.distance_km) * 10) / 10} km
-                            </span>
-                          ) : null}
-                          {dayData.session.pace_target ? (
-                            <span className="text-[12px] text-muted-foreground">Allure {dayData.session.pace_target}</span>
-                          ) : null}
-                        </div>
-                        {dayData.session.rcc_code ? (
-                          <p className="text-[12px] font-mono text-muted-foreground mt-1">{dayData.session.rcc_code}</p>
-                        ) : null}
-                        {(() => {
-                          const nBlocks = dayData.session.rcc_code
-                            ? parseRCC(dayData.session.rcc_code).blocks.length
-                            : 0;
-                          const plannedBlocks =
-                            nBlocks > 0
-                              ? parseBlockRpeFromStorage(dayData.session.rpe_phases, nBlocks)
-                              : [];
-                          const feltBlocks = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, nBlocks);
-                          const legacyPhases = parseSessionRpePhases(dayData.session.rpe_phases);
-                          const legacyPk = legacyPhases
-                            ? (["warmup", "main", "cooldown"] as const).filter(
-                                (k) => legacyPhases && typeof legacyPhases[k] === "number",
-                              )
-                            : [];
-                          const legacyRpe =
-                            typeof dayData.session.rpe === "number" && dayData.session.rpe >= 1 && dayData.session.rpe <= 10
-                              ? dayData.session.rpe
-                              : null;
-                          const showPlanned =
-                            plannedBlocks.length > 0 || legacyPk.length > 0 || legacyRpe != null;
-                          const showFelt = feltBlocks.length > 0;
-                          if (!showPlanned && !showFelt) return null;
-                          return (
-                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                              {showPlanned && (
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <span className="text-[10px] font-medium text-muted-foreground">Prévu</span>
-                                  {plannedBlocks.length > 0
-                                    ? plannedBlocks.map((n, i) => (
-                                        <span
-                                          key={i}
-                                          className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                          style={{
-                                            backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
-                                          }}
-                                        >
-                                          {n}
-                                        </span>
-                                      ))
-                                    : legacyPk.length > 0
-                                      ? legacyPk.map((k) => {
-                                          const n = legacyPhases![k] as number;
-                                          return (
-                                            <span
-                                              key={k}
-                                              className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                              style={{ backgroundColor: rpeChipColor(n) }}
-                                            >
-                                              {n}
-                                            </span>
-                                          );
-                                        })
-                                      : legacyRpe != null && (
-                                          <span
-                                            className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                            style={{ backgroundColor: rpeChipColor(legacyRpe) }}
-                                          >
-                                            {legacyRpe}
-                                          </span>
-                                        )}
-                                </div>
-                              )}
-                              {showFelt && (
-                                <div className="flex flex-wrap items-center gap-1">
-                                  <span className="text-[10px] font-medium text-muted-foreground">Ressenti</span>
-                                  {feltBlocks.map((n, i) => (
-                                    <span
-                                      key={i}
-                                      className="text-[10px] font-bold text-white rounded px-1 py-0.5 tabular-nums"
-                                      style={{
-                                        backgroundColor: rpeChipColor(Math.max(0, Math.min(10, n))),
-                                      }}
-                                    >
-                                      {n}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      {!isDone && onOpenPlanForAthlete ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0 rounded-xl h-9 gap-1 px-2.5 text-[11px] font-semibold"
-                          onClick={() => void handleRescheduleSession(dayData.sessionId)}
-                        >
-                          <CalendarClock className="h-3.5 w-3.5" />
-                          Reprogrammer
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            sessionsForWeek.map(({ day, dayData, status, avgRpe, details }) => (
+              <AthleteSessionCard
+                key={`${dayData.sessionId}-${format(day, "yyyy-MM-dd")}`}
+                dayLabel={format(day, "EEE", { locale: fr }).toUpperCase()}
+                dayNumber={format(day, "d", { locale: fr })}
+                title={dayData.sessionTitle}
+                details={details}
+                status={status === "none" ? "pending" : status}
+                note={dayData.note}
+                rpeLabel={avgRpe != null ? `RPE ${avgRpe}/10` : undefined}
+                objective={dayData.session.objective}
+                onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
+                onOpen={() => void handleRescheduleSession(dayData.sessionId)}
+              />
+            ))
           )}
-        </TabsContent>
-
-        <TabsContent value="comments" className="mt-3">
-          {(() => {
-            const notes = Object.entries(selectedAthlete.days)
-              .filter(([, d]) => d.note)
-              .sort(([a], [b]) => a.localeCompare(b));
-
-            if (notes.length === 0) {
-              return (
-                <div className="ios-card mx-4 border border-border/60 p-6 text-center shadow-[var(--shadow-card)]">
-                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
-                  <p className="text-[14px] text-muted-foreground">Aucun commentaire cette semaine</p>
-                </div>
-              );
-            }
-
-            return (
-              <div className="ios-card mx-4 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
-                {notes.map(([dayKey, dayData], idx) => (
-                  <div key={dayKey}>
-                    {idx > 0 && <div className="h-px bg-border/30 ml-4" />}
-                    <div className="px-4 py-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className={`text-[10px] px-1.5 py-0.5 rounded-md border-0 ${getObjectiveColor(dayData.session.objective)}`}>
-                          {format(new Date(dayKey), "EEE d", { locale: fr })}
-                        </Badge>
-                        <span className="text-[13px] font-medium text-foreground">{dayData.sessionTitle}</span>
-                      </div>
-                      <p className="text-[14px] text-muted-foreground leading-relaxed">{dayData.note}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </TabsContent>
-      </Tabs>
-
-      {/* Continuer le plan button */}
-      {onOpenPlanForAthlete && (
-        <div className="px-4">
-        <Button
-          onClick={() => {
-            onOpenPlanForAthlete(selectedAthlete.userId, selectedAthlete.displayName, selectedAthlete.groupId || undefined, currentWeek);
-          }}
-          className="w-full rounded-2xl h-12 text-[15px] font-semibold gap-2"
-        >
-          <ClipboardList className="h-4.5 w-4.5" />
-          Continuer le plan pour {selectedAthlete.displayName.split(" ")[0]}
-        </Button>
         </div>
-      )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-px border-b border-border bg-border pt-0">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
+          onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
+        >
+          <MessageCircle className="mr-1.5 h-4 w-4" />
+          Envoyer message
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
+          onClick={() =>
+            onOpenPlanForAthlete?.(
+              selectedAthlete.userId,
+              selectedAthlete.displayName,
+              selectedAthlete.groupId || undefined,
+              currentWeek
+            )
+          }
+        >
+          <ClipboardList className="mr-1.5 h-4 w-4" />
+          Modifier semaine
+        </Button>
+        <Button type="button" variant="outline" className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card" onClick={() => void handleResendSession()}>
+          <Send className="mr-1.5 h-4 w-4" />
+          Renvoyer séance
+        </Button>
+      </div>
+      {completionStreak > 0 ? (
+        <p className="border-b border-border bg-secondary/20 px-4 py-2 text-center text-[11px] font-medium text-muted-foreground">
+          Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
+        </p>
+      ) : null}
     </div>
   );
 };

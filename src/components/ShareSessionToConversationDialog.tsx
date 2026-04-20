@@ -10,7 +10,7 @@ import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { buildPreferredSessionShareLink } from "@/lib/appLinks";
+import { getSessionPublicUrl } from "@/lib/appLinks";
 
 
 interface Session {
@@ -131,7 +131,7 @@ export const ShareSessionToConversationDialog = ({
 
   const getShareMessage = () => {
     if (!session) return '';
-    const shareUrl = buildPreferredSessionShareLink(session.id);
+    const shareUrl = getSessionPublicUrl(session.id);
     const date = format(new Date(session.scheduled_at), "EEEE d MMMM 'à' HH:mm", { locale: fr });
     return `🏃 Rejoins-moi pour "${session.title}" !
 
@@ -143,7 +143,7 @@ Ouvre directement dans RunConnect : ${shareUrl}`;
 
   const handleNativeShare = async () => {
     const shareMessage = getShareMessage();
-    const shareUrl = session ? buildPreferredSessionShareLink(session.id) : '';
+    const shareUrl = session ? getSessionPublicUrl(session.id) : '';
     
     try {
       // Priority 1: AndroidBridge for native Android WebView
@@ -290,8 +290,11 @@ Ouvre directement dans RunConnect : ${shareUrl}`;
   if (!session) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        stackNested
+        className="z-[140] p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0"
+      >
         {/* iOS Header */}
         <div className="sticky top-0 z-10 bg-background border-b border-border">
           <div className="flex items-center justify-between h-[56px] px-4">

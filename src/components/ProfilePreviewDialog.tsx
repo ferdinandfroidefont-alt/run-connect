@@ -20,7 +20,8 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "./QRShareDialog";
-import { buildPreferredProfileShareLink } from "@/lib/appLinks";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
+import { AvatarViewer } from "@/components/AvatarViewer";
 
 interface Profile {
   user_id: string;
@@ -77,8 +78,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [showAboutSheet, setShowAboutSheet] = useState(false);
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
+  const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
 
   const isOwnProfile = userId === user?.id;
 
@@ -429,14 +431,21 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                 {/* ── Identity - Instagram layout: avatar + stats side by side ── */}
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
-                    {/* Avatar */}
+                    {/* Avatar — agrandir (même sans stories à la une) */}
                     <div className="relative shrink-0">
-                      <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
-                        <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
-                        <AvatarFallback className="text-2xl bg-secondary">
-                          {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <button
+                        type="button"
+                        onClick={() => setShowAvatarFullscreen(true)}
+                        className="relative rounded-full ring-offset-2 ring-offset-card transition-opacity active:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        aria-label="Agrandir la photo de profil"
+                      >
+                        <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
+                          <AvatarImage src={profile.avatar_url || ""} className="object-cover" />
+                          <AvatarFallback className="text-2xl bg-secondary">
+                            {(profile.display_name || profile.username)?.charAt(0)?.toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
                       {!isOwnProfile && areFriends && (
                         <OnlineStatus userId={profile.user_id} />
                       )}
@@ -817,6 +826,15 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         </SheetContent>
       </Sheet>
 
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
+
       {/* QR Share Dialog */}
       {qrData && (
         <QRShareDialog
@@ -827,6 +845,16 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
           displayName={qrData.displayName}
           avatarUrl={qrData.avatarUrl}
           referralCode={qrData.referralCode}
+        />
+      )}
+
+      {profile && (
+        <AvatarViewer
+          open={showAvatarFullscreen}
+          onClose={() => setShowAvatarFullscreen(false)}
+          avatarUrl={profile.avatar_url}
+          username={profile.username}
+          stackNested
         />
       )}
     </>

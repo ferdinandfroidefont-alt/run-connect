@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,21 +12,13 @@ import {
   Loader2,
   ArrowLeft,
   Search,
-  Copy,
-  Share2,
-  Instagram,
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Share } from '@capacitor/share';
-import { Capacitor } from '@capacitor/core';
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
-import { buildPreferredProfileShareLink } from "@/lib/appLinks";
 import {
   TUTORIAL_REPLAY_DEFINITIONS,
   requestTutorialReplay,
@@ -124,7 +116,6 @@ function getMatchingItems(items: string[], query: string): string[] {
 }
 
 export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage }: SettingsDialogProps) => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState<SettingsDialogPage>("hub");
@@ -144,16 +135,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
     window.setTimeout(() => notifyTutorialReplayQueued(), 60);
   };
   
-  // Profile share state
-  const [profile, setProfile] = useState<{
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    referral_code: string | null;
-  } | null>(null);
-  const [qrImageUrl, setQrImageUrl] = useState<string>("");
-  const [qrLoading, setQrLoading] = useState(false);
-
   useEffect(() => {
     if (initialSearch) {
       setSearchQuery(initialSearch);
@@ -188,247 +169,6 @@ export const SettingsDialog = ({ open, onOpenChange, initialSearch, initialPage 
       }, 300);
     }
   }, [open]);
-
-  // Load profile data for QR code
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!user || !open) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username, display_name, avatar_url, referral_code')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (error) throw error;
-        if (data) {
-          setProfile(data);
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-      }
-    };
-    
-    loadProfile();
-  }, [user, open]);
-
-  // Generate QR code when profile is loaded
-  useEffect(() => {
-    const generateQR = async () => {
-      if (!profile?.username) return;
-      
-      setQrLoading(true);
-      try {
-        const profileUrl = buildPreferredProfileShareLink({
-          username: profile.username,
-          referralCode: profile.referral_code,
-        });
-        
-        const { default: QRCode } = await import("qrcode");
-        const qrDataURL = await QRCode.toDataURL(profileUrl, {
-          width: 240,
-          margin: 2,
-          color: {
-            dark: '#1a1f3a',
-            light: '#6EC6FF'
-          },
-          errorCorrectionLevel: 'M'
-        });
-        
-        setQrImageUrl(qrDataURL);
-      } catch (error) {
-        console.error('Error generating QR code:', error);
-      } finally {
-        setQrLoading(false);
-      }
-    };
-    
-    if (profile) {
-      generateQR();
-    }
-  }, [profile]);
-
-  const getProfileUrl = () => {
-    if (!profile?.username) return '';
-    return buildPreferredProfileShareLink({
-      username: profile.username,
-      referralCode: profile.referral_code,
-    });
-  };
-
-  const getShareMessage = () => {
-    return `Ajoute-moi sur RunConnect (application pour course et vélo) :
-${getProfileUrl()}
-
-Voici mon code de parrainage : ${profile?.referral_code || 'N/A'}
-Entre-le à l'inscription pour gagner un bonus ! 🚀`;
-  };
-
-  const copyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(getShareMessage());
-      toast({
-        title: "✅ Lien copié !",
-        description: "Le message a été copié dans le presse-papiers"
-      });
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de copier le lien",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleShare = async () => {
-    const shareMessage = getShareMessage();
-    const profileUrl = getProfileUrl();
-    
-    try {
-      // Priority 1: AndroidBridge for native Android WebView
-      const win = window as any;
-      if (win.AndroidBridge && typeof win.AndroidBridge.shareText === 'function') {
-        console.log('[Share] Using AndroidBridge.shareText');
-        win.AndroidBridge.shareText(shareMessage, profileUrl);
-        return;
-      }
-      
-      // Priority 2: Capacitor Share for native apps
-      if (Capacitor.isNativePlatform()) {
-        console.log('[Share] Using Capacitor Share');
-        await Share.share({
-          title: 'Rejoins-moi sur RunConnect',
-          text: shareMessage,
-          url: profileUrl,
-          dialogTitle: 'Partager mon profil'
-        });
-        return;
-      }
-      
-      // Priority 3: Web Share API for mobile browsers
-      if (navigator.share) {
-        console.log('[Share] Using Web Share API');
-        await navigator.share({
-          title: 'Rejoins-moi sur RunConnect',
-          text: shareMessage,
-          url: profileUrl
-        });
-        return;
-      }
-      
-      // Fallback for desktop: copy to clipboard
-      await navigator.clipboard.writeText(shareMessage);
-      toast({
-        title: "✅ Lien copié !",
-        description: "Collez-le dans n'importe quelle application"
-      });
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        console.error('Share error:', error);
-        // Fallback on error: try clipboard
-        try {
-          await navigator.clipboard.writeText(shareMessage);
-          toast({
-            title: "✅ Lien copié !",
-            description: "Collez-le dans n'importe quelle application"
-          });
-        } catch {
-          toast({
-            title: "Erreur",
-            description: "Impossible de partager",
-            variant: "destructive"
-          });
-        }
-      }
-    }
-  };
-
-  const generateInstagramStoryImage = async () => {
-    if (!qrImageUrl || !profile) {
-      toast({
-        title: "Erreur",
-        description: "Le QR code n'est pas encore généré",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1080;
-      canvas.height = 1920;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) return;
-
-      const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
-      gradient.addColorStop(0, 'hsl(217, 91%, 65%)');
-      gradient.addColorStop(1, 'hsl(217, 91%, 45%)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 1080, 1920);
-
-      if (profile.avatar_url) {
-        const profileImg = new Image();
-        profileImg.crossOrigin = 'anonymous';
-        profileImg.src = profile.avatar_url;
-        await profileImg.decode();
-        
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(540, 500, 150, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(profileImg, 390, 350, 300, 300);
-        ctx.restore();
-        
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.arc(540, 500, 150, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      const qrImg = new Image();
-      qrImg.src = qrImageUrl;
-      await qrImg.decode();
-      ctx.drawImage(qrImg, 340, 900, 400, 400);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 48px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Ajoutez-moi sur RunConnect', 540, 750);
-
-      ctx.font = 'bold 60px Arial';
-      ctx.fillText(`@${profile.username}`, 540, 1400);
-
-      if (profile.referral_code) {
-        ctx.font = 'bold 40px Arial';
-        ctx.fillText(`Code: ${profile.referral_code}`, 540, 1500);
-      }
-
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `runconnect-story-${profile.username}.png`;
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-      }, 'image/png', 1.0);
-
-      toast({
-        title: "✅ Story générée !",
-        description: "Ouvrez Instagram et ajoutez-la à votre Story"
-      });
-    } catch (error) {
-      console.error('Error generating Instagram story:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de générer l'image",
-        variant: "destructive"
-      });
-    }
-  };
 
   const matchesSearch = (text: string) => {
     if (!searchQuery.trim()) return true;
@@ -515,6 +255,7 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         hideCloseButton
@@ -611,105 +352,12 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
                     </div>
                   )}
 
-                  {/* Partager le profil + QR : colonne centrée comme le profil, tout en % du parent (pas de vw) */}
-                  {profile && (
-                    <div className="box-border flex w-full min-w-0 max-w-full justify-center px-4 ios-shell:px-2">
-                      <div className="w-full min-w-0 max-w-md">
-                        <div className="ios-card box-border w-full min-w-0 max-w-full space-y-ios-3 overflow-hidden rounded-ios-md p-ios-3 ios-shell:p-2.5">
-                          <h3 className="text-center text-[13px] font-medium text-muted-foreground uppercase tracking-wide">
-                            Partager mon profil
-                          </h3>
-
-                          <div className="flex w-full min-w-0 flex-col items-center">
-                            <div className="relative isolate mx-auto max-w-full overflow-hidden rounded-full p-1">
-                              <div className="pointer-events-none absolute inset-0 scale-110 rounded-full bg-gradient-to-br from-primary to-cyan-400 opacity-40 blur-md" />
-                              <div className="relative rounded-full bg-gradient-to-br from-primary via-primary/70 to-cyan-400 p-[3px]">
-                                <Avatar className="h-16 w-16 border-2 border-background shadow-xl">
-                                  <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name || profile.username} />
-                                  <AvatarFallback className="text-lg font-bold bg-primary/20 text-primary">
-                                    {(profile.display_name || profile.username)?.charAt(0).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </div>
-                            </div>
-                            <h4 className="mt-2 w-full min-w-0 max-w-full truncate px-2 text-center text-sm font-semibold">
-                              {profile.display_name || profile.username}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">Scannez pour m&apos;ajouter</p>
-                          </div>
-
-                          <div className="mx-auto w-full min-w-0 max-w-[min(13rem,calc(100%-0.5rem))]">
-                            <div className="relative overflow-hidden rounded-2xl">
-                              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/25 to-cyan-400/25 opacity-60 blur-2xl" />
-                              <div className="relative rounded-2xl border border-primary/20 bg-gradient-to-br from-card to-card/80 p-2 shadow-lg sm:p-3">
-                                {qrLoading ? (
-                                  <div className="flex aspect-square w-full items-center justify-center">
-                                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                                  </div>
-                                ) : qrImageUrl ? (
-                                  <img
-                                    src={qrImageUrl}
-                                    alt="QR Code du profil"
-                                    className="mx-auto block aspect-square w-full rounded-lg object-contain"
-                                  />
-                                ) : (
-                                  <div className="flex aspect-square w-full items-center justify-center text-xs text-muted-foreground">
-                                    Erreur de génération
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {profile.referral_code && (
-                            <div className="ios-card w-full min-w-0 overflow-hidden bg-primary/[0.06] p-ios-3 ring-1 ring-primary/15">
-                              <div className="flex min-w-0 items-center justify-between gap-2">
-                                <span className="shrink-0 text-xs text-muted-foreground">Code parrainage</span>
-                                <span className="min-w-0 truncate font-mono text-sm font-bold tracking-wider text-primary">
-                                  {profile.referral_code}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          <p className="w-full min-w-0 max-w-full break-all px-1 text-center text-[10px] leading-snug text-muted-foreground/80">
-                            {getProfileUrl()}
-                          </p>
-
-                          <div className="flex w-full min-w-0 max-w-full flex-col gap-2">
-                            <Button
-                              variant="default"
-                              size="default"
-                              onClick={copyUrl}
-                              className="h-11 w-full min-w-0 justify-center bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/20 hover:from-primary/90 hover:to-primary"
-                            >
-                              <Copy className="mr-2 h-4 w-4 shrink-0" />
-                              <span className="min-w-0 truncate">Copier le lien</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="default"
-                              onClick={handleShare}
-                              className="h-11 w-full min-w-0 justify-center border-primary/30 hover:border-primary/50 hover:bg-primary/10"
-                            >
-                              <Share2 className="mr-2 h-4 w-4 shrink-0" />
-                              <span className="min-w-0 truncate">Partager</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="default"
-                              onClick={generateInstagramStoryImage}
-                              disabled={!qrImageUrl}
-                              className="h-11 w-full min-w-0 justify-center border-pink-500/30 hover:border-pink-500/50 hover:bg-pink-500/10 disabled:opacity-50"
-                            >
-                              <Instagram className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
-                              <span className="min-w-0 truncate">Story Instagram</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                  <div className="box-border min-w-0 w-full max-w-full px-4 ios-shell:px-2">
+                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+                      <ProfileSharePanel active compact />
                     </div>
-                  )}
+                  </div>
+
                 </div>
               </ScrollArea>
               </IosFixedPageHeaderShell>
@@ -725,5 +373,6 @@ Entre-le à l'inscription pour gagner un bonus ! 🚀`;
         </AnimatePresence>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

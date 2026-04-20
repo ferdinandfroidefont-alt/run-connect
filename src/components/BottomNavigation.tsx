@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, Trophy, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, Route, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -18,15 +18,13 @@ type NavItem = {
 };
 
 const ITEM_GAP_PX = 12;
-/** Nombre de cases visibles ; l’index central = actif (2 à gauche, 2 à droite). */
-const VISIBLE_SLOTS = 5;
-const CENTER_SLOT = 2;
 
-function mod(n: number, m: number) {
-  return ((n % m) + m) % m;
-}
+type BottomNavigationProps = {
+  /** Route profil : tab bar masquée visuellement (overlay plein écran) sans démontage. */
+  isProfileRoute?: boolean;
+};
 
-export const BottomNavigation = () => {
+export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -38,6 +36,7 @@ export const BottomNavigation = () => {
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
+  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages → Itinéraires */
   const navItems = useMemo<NavItem[]>(
     () => [
       { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
@@ -49,6 +48,12 @@ export const BottomNavigation = () => {
         isActive: (p) => p === "/my-sessions" || p.startsWith("/my-sessions/"),
       },
       {
+        path: "/coaching",
+        icon: GraduationCap,
+        label: t("navigation.coaching"),
+        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
+      },
+      {
         path: "/messages",
         icon: MessageCircle,
         label: t("navigation.messages"),
@@ -57,38 +62,15 @@ export const BottomNavigation = () => {
         showUnreadBadge: true,
       },
       {
-        path: "/leaderboard",
-        icon: Trophy,
-        label: t("navigation.leaderboard") || "Classement",
-        tutorialId: "nav-leaderboard",
-        isActive: (p) => p === "/leaderboard" || p.startsWith("/leaderboard/"),
-      },
-      {
-        path: "/coaching",
-        icon: GraduationCap,
-        label: t("navigation.coaching"),
-        isActive: (p) => p === "/coaching" || p.startsWith("/coaching/"),
+        path: "/route-create",
+        icon: Route,
+        label: t("navigation.itinerary") || "Itinéraire",
+        tutorialId: "nav-itinerary",
+        isActive: (p) => p === "/route-create" || p === "/route-creation",
       },
     ],
     [t]
   );
-
-  const N = navItems.length;
-
-  const activeIndex = useMemo(
-    () => navItems.findIndex((item) => item.isActive(pathname)),
-    [navItems, pathname]
-  );
-
-  /** Index utilisé pour la fenêtre circulaire (fallback accueil si route hors menu). */
-  const windowCenterIndex = activeIndex >= 0 ? activeIndex : 0;
-
-  const visibleRow = useMemo(() => {
-    return Array.from({ length: VISIBLE_SLOTS }, (_, slot) => {
-      const itemIdx = mod(windowCenterIndex + slot - CENTER_SLOT, N);
-      return { slot, item: navItems[itemIdx], itemIdx };
-    });
-  }, [N, navItems, windowCenterIndex]);
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
@@ -143,20 +125,32 @@ export const BottomNavigation = () => {
     };
   }, [user, fetchUnreadCount]);
 
-  if (hideBottomNav) return null;
+  /** Toujours montée : masquage visuel uniquement (pas d’animation / pas de translate). */
+  const tabBarHidden = hideBottomNav || isProfileRoute;
+
+  const handleNavClick = (path: string) => {
+    if (path === "/messages") {
+      navigate("/messages", { state: { resetConversation: true, fromBottomTab: true, ts: Date.now() } });
+      return;
+    }
+    navigate(path);
+  };
 
   return (
     <nav
       className={cn(
-        "relative z-[110] w-full shrink-0 border-t border-border bg-background",
+        "fixed inset-x-0 z-[110] w-full border-t border-border bg-background overflow-visible",
         "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none",
-        "pointer-events-auto"
+        tabBarHidden ? "pointer-events-none invisible" : "pointer-events-auto",
+        "[transition:none] motion-reduce:transition-none"
       )}
       role="navigation"
       aria-label="Navigation principale"
+      aria-hidden={tabBarHidden}
       style={{
-        /* Safe area home indicator, légèrement resserrée pour éviter l’air “double” sous les onglets. */
-        paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+        paddingBottom: "var(--tab-bar-ground-strip)",
+        bottom: 0,
+        transition: "none",
       }}
     >
       {/* FAB accueil : fixed (hors flux) — ne pas réserver de place dans la rangée pour garder la même grille que les autres pages. */}
@@ -170,23 +164,21 @@ export const BottomNavigation = () => {
             paddingRight: "0.5rem",
           }}
         >
-          {visibleRow.map(({ slot, item }) => {
+          {navItems.map((item) => {
             const { icon: Icon, label, tutorialId, showUnreadBadge } = item;
-            const isCenter = slot === CENTER_SLOT;
             const isActive = item.isActive(pathname);
             const showBadge = !!showUnreadBadge && totalUnreadCount > 0;
 
             return (
               <button
-                key={`slot-${slot}`}
+                key={item.path}
                 type="button"
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavClick(item.path)}
                 data-tutorial={tutorialId}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex min-h-[48px] min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 rounded-xl",
-                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]",
-                  !isCenter && "opacity-[0.92]"
+                  "touch-manipulation transition-[transform,color,opacity] duration-300 ease-ios active:scale-[0.96]"
                 )}
               >
                 <div className="relative flex h-[26px] w-[26px] shrink-0 items-center justify-center">

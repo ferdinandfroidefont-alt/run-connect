@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, ChevronLeft, MapPin, Calendar, Users, Ruler, EyeOff, Building2, Globe, Repeat, Radio, MapPinned } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SessionFormData, SelectedLocation, ACTIVITY_TYPES, VisibilityType, RecurrenceType } from '../types';
+import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,9 @@ interface ConfirmStepProps {
   onSubmit: () => void;
   onBack: () => void;
   isCoachingMode?: boolean;
+  /** True : pas d'en-tête ni carte récap (composition externe) */
+  embedInFinalize?: boolean;
+  hideFooter?: boolean;
 }
 
 const getVisibilityLabel = (type: VisibilityType, hiddenCount: number) => {
@@ -55,8 +59,15 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
   onSubmit,
   onBack,
   isCoachingMode = false,
+  embedInFinalize = false,
+  hideFooter = false,
 }) => {
   const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
+  const previewTitle = resolveSessionTitle({
+    title: formData.title,
+    activity_type: formData.activity_type,
+    locationName: selectedLocation?.name ?? '',
+  });
 
   const handleVisibilityChange = (type: VisibilityType) => {
     onFormDataChange({ visibility_type: type });
@@ -81,32 +92,37 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex min-h-0 w-full flex-1 flex-col"
+      className={embedInFinalize ? 'flex min-h-0 w-full flex-col' : 'flex min-h-0 w-full flex-1 flex-col'}
     >
-      {/* Header */}
-      <div className="text-center mb-4">
-        <motion.div
-          className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.5 }}
-        >
-          <span className="text-3xl">{activity?.icon || '🏃'}</span>
-        </motion.div>
-        <h2 className="text-xl font-bold text-foreground">{isCoachingMode ? 'Programmer ma séance' : 'Prêt à créer ?'}</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isCoachingMode ? 'Vérifiez les détails pré-remplis par le coach' : 'Vérifiez les détails et la visibilité'}
-        </p>
-      </div>
+      {!embedInFinalize && (
+        <div className="text-center mb-4">
+          <motion.div
+            className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', bounce: 0.5 }}
+          >
+            <span className="text-3xl">{activity?.icon || '🏃'}</span>
+          </motion.div>
+          <h2 className="text-xl font-bold text-foreground">{isCoachingMode ? 'Programmer ma séance' : 'Prêt à créer ?'}</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isCoachingMode ? 'Vérifiez les détails pré-remplis par le coach' : 'Vérifiez les détails et la visibilité'}
+          </p>
+        </div>
+      )}
+
+      {embedInFinalize && (
+        <h3 className="text-[15px] font-semibold text-foreground mb-3">Publication</h3>
+      )}
 
       {/* Content */}
       <motion.div
-        className="flex-1 overflow-y-auto space-y-4"
+        className={embedInFinalize ? 'space-y-4' : 'flex-1 overflow-y-auto space-y-4'}
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: embedInFinalize ? 0 : 0.2 }}
       >
-        {/* Session preview card — iOS premium */}
+        {!embedInFinalize && (
         <div className="rounded-[16px] bg-card border border-border/70 overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
           {/* Image */}
           {imagePreview && (
@@ -126,7 +142,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                   {activity?.label?.replace(/^[^\s]+\s/, '') || ''}
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-foreground">{formData.title}</h3>
+              <h3 className="text-lg font-bold text-foreground">{previewTitle}</h3>
             </div>
 
             {/* Location */}
@@ -181,6 +197,7 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
             </div>
           </div>
         </div>
+        )}
 
         {/* Live tracking — récapitulatif */}
         <div
@@ -258,31 +275,32 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
         )}
       </motion.div>
 
-      {/* Navigation */}
-      <div className="flex gap-3 mt-auto pt-4">
-        <Button variant="outline" onClick={onBack} className="h-14" disabled={loading}>
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <Button
-          onClick={onSubmit}
-          disabled={loading}
-          className="flex-1 h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
-        >
-          {loading ? (
-            <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <>
-              <Check className="w-5 h-5 mr-2" />
-              {isCoachingMode 
-                ? 'Programmer ma séance'
-                : formData.recurrence_type === 'weekly' 
-                  ? `Créer ${formData.recurrence_count} séances`
-                  : 'Créer la séance'
-              }
-            </>
-          )}
-        </Button>
-      </div>
+      {!hideFooter && (
+        <div className="flex gap-3 mt-auto pt-4">
+          <Button variant="outline" onClick={onBack} className="h-14" disabled={loading}>
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={loading}
+            className="flex-1 h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
+          >
+            {loading ? (
+              <div className="w-6 h-6 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Check className="w-5 h-5 mr-2" />
+                {isCoachingMode 
+                  ? 'Programmer ma séance'
+                  : formData.recurrence_type === 'weekly' 
+                    ? `Créer ${formData.recurrence_count} séances`
+                    : 'Créer la séance'
+                }
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

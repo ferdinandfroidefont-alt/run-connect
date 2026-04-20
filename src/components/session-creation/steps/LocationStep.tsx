@@ -13,6 +13,8 @@ interface LocationStepProps {
   selectedLocation: SelectedLocation | null;
   onLocationSelect: (location: SelectedLocation) => void;
   onNext: () => void;
+  /** Masque le pied « Continuer » (création rapide, étape combinée) */
+  hideFooter?: boolean;
 }
 
 export const LocationStep: React.FC<LocationStepProps> = ({
@@ -20,6 +22,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   selectedLocation,
   onLocationSelect,
   onNext,
+  hideFooter = false,
 }) => {
   const [locationSearch, setLocationSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -144,11 +147,23 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex h-full min-h-0 w-full flex-1 flex-col"
+      className={hideFooter ? 'flex w-full flex-col' : 'flex h-full min-h-0 w-full flex-1 flex-col'}
     >
       {/* Zone scroll : contenu centré verticalement entre header wizard et pied fixe */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-        <div className="flex min-h-full flex-col justify-center px-0.5 py-10 sm:py-12">
+      <div
+        className={
+          hideFooter
+            ? 'w-full'
+            : 'min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]'
+        }
+      >
+        <div
+          className={
+            hideFooter
+              ? 'flex min-h-full flex-col justify-start px-0.5 py-4 sm:py-5'
+              : 'flex min-h-full flex-col justify-center px-0.5 py-10 sm:py-12'
+          }
+        >
           <div className="mx-auto flex w-full max-w-sm flex-col items-center text-center">
             {/* Icône — légèrement plus grande, fond discret type iOS */}
             <div
@@ -249,23 +264,24 @@ export const LocationStep: React.FC<LocationStepProps> = ({
         </div>
       </div>
 
-      {/* Continuer : fixe en bas du step, safe area iOS */}
-      <div
-        className={cn(
-          'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4',
-          'backdrop-blur-md supports-[backdrop-filter]:bg-secondary/90',
-          'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
-        )}
-      >
-        <Button
-          onClick={onNext}
-          disabled={!selectedLocation}
-          className="h-14 w-full text-lg font-semibold"
+      {!hideFooter && (
+        <div
+          className={cn(
+            'relative z-10 -mx-4 shrink-0 border-t border-border/60 bg-secondary/95 px-4 pt-4',
+            'backdrop-blur-md supports-[backdrop-filter]:bg-secondary/90',
+            'pb-[max(1rem,env(safe-area-inset-bottom,1rem))]'
+          )}
         >
-          Continuer
-          <ChevronRight className="ml-2 h-5 w-5" />
-        </Button>
-      </div>
+          <Button
+            onClick={onNext}
+            disabled={!selectedLocation}
+            className="h-14 w-full text-lg font-semibold"
+          >
+            Continuer
+            <ChevronRight className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

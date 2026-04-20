@@ -1,24 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Switch } from '@/components/ui/switch';
 import {
-  Route,
-  TrendingUp,
   Mountain,
-  Edit,
-  Trash2,
-  Download,
-  Box,
-  Navigation,
-  Globe,
-  Clock,
-  CalendarPlus,
+  TrendingUp,
+  Route as RouteIcon,
   ChevronRight,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { exportToGPX, shareOrDownloadGPX, GPXTrackPoint } from '@/lib/gpxExport';
-import { ElevationProfile3DDialog } from './ElevationProfile3DDialog';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
@@ -26,10 +13,12 @@ import type { Map, Marker } from 'mapbox-gl';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer } from '@/lib/mapboxEmbed';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
-import { cn } from '@/lib/utils';
 
 const ROUTE_CARD_LINE_SRC = 'route-card-preview-line';
 const ROUTE_CARD_LINE_LAYER = 'route-card-preview-line-layer';
+const ROUTE_CARD_POINTS_SRC = 'route-card-preview-points';
+const ROUTE_CARD_POINTS_START = 'route-card-preview-start';
+const ROUTE_CARD_POINTS_END = 'route-card-preview-end';
 
 interface RouteCardProps {
   route: {
@@ -41,84 +30,77 @@ interface RouteCardProps {
     created_at: string;
     coordinates: any;
   };
-  onEdit: (route: any) => void;
-  onDelete: (routeId: string) => void;
-  onPublishToggle?: (isPublic: boolean) => void;
-  isPublic?: boolean;
 }
 
-export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic = false }: RouteCardProps) => {
+export const RouteCard = ({ route }: RouteCardProps) => {
+  const smoothPathFromPoints = (points: Array<{ x: number; y: number }>) => {
+    if (points.length < 2) return '';
+    let d = `M ${points[0]!.x.toFixed(2)} ${points[0]!.y.toFixed(2)}`;
+    for (let i = 1; i < points.length; i++) {
+      const p0 = points[i - 1]!;
+      const p1 = points[i]!;
+      const cx = (p0.x + p1.x) / 2;
+      const cy = (p0.y + p1.y) / 2;
+      d += ` Q ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} ${cx.toFixed(2)} ${cy.toFixed(2)}`;
+    }
+    const last = points[points.length - 1]!;
+    d += ` T ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
+    return d;
+  };
+
   const navigate = useNavigate();
   const { formatMeters } = useDistanceUnits();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const userLocationMarkerRef = useRef<Marker | null>(null);
   const { position } = useGeolocation();
-  const [show3DDialog, setShow3DDialog] = useState(false);
 
   const formatElevation = (meters: number | null) => {
     if (!meters) return '—';
     return `${Math.round(meters)} m`;
   };
 
-  const formatDuration = (distance: number | null) => {
-    if (!distance) return '—';
-    const hours = (distance / 1000) / 10;
-    const totalMinutes = hours * 60;
-    const h = Math.floor(totalMinutes / 60);
-    const min = Math.round(totalMinutes % 60);
-    if (h > 0) return `${h}h${min.toString().padStart(2, '0')}`;
-    return `${min} min`;
-  };
-
-  const handleExportGPX = async () => {
-    if (!route.coordinates || !Array.isArray(route.coordinates)) return;
-    let trackPoints: GPXTrackPoint[] = route.coordinates
+  const elevations = useMemo(() => {
+    if (!Array.isArray(route.coordinates)) return [] as number[];
+    return route.coordinates
       .map((coord: any) => {
-        if (coord.lat !== undefined && coord.lng !== undefined) {
-          return {
-            lat: Number(coord.lat),
-            lng: Number(coord.lng),
-            elevation: coord.elevation != null ? Number(coord.elevation) : undefined,
-          };
-        } else if (Array.isArray(coord) && coord.length >= 2) {
-          return {
-            lat: Number(coord[0]),
-            lng: Number(coord[1]),
-            elevation: coord.length > 2 ? Number(coord[2]) : undefined,
-          };
-        }
-        return null;
+        if (coord?.elevation != null) return Number(coord.elevation);
+        if (Array.isArray(coord) && coord.length > 2) return Number(coord[2]);
+        return NaN;
       })
-      .filter((point): point is NonNullable<typeof point> => point !== null);
-    if (trackPoints.length === 0) return;
+      .filter((v) => Number.isFinite(v));
+  }, [route.coordinates]);
 
-    const allElevMissing = trackPoints.every((p) => p.elevation == null || p.elevation === 0);
-    if (allElevMissing && trackPoints.length >= 2) {
-      try {
-        const { fetchElevationsForCoords } = await import('@/lib/openElevation');
-        const { densifyMapCoords, resamplePathEvenlyMapCoords, pathLengthMeters } = await import('@/lib/geoUtils');
-        const path = trackPoints.map((p) => ({ lat: p.lat, lng: p.lng }));
-        const dens = densifyMapCoords(path, 14);
-        const lenM = pathLengthMeters(dens);
-        const samples = Math.min(4000, Math.max(80, Math.ceil(lenM / 12)));
-        const sampled = resamplePathEvenlyMapCoords(dens, samples);
-        const elevs = await fetchElevationsForCoords(sampled);
-        if (elevs.length === sampled.length && elevs.some((e) => e !== 0)) {
-          trackPoints = sampled.map((c, i) => ({ lat: c.lat, lng: c.lng, elevation: elevs[i]! }));
-        }
-      } catch (e) {
-        console.warn('[GPX] Elevation re-fetch failed:', e);
-      }
-    }
+  const terrainLabel = useMemo(() => {
+    const distKm = Math.max((route.total_distance ?? 0) / 1000, 0.1);
+    const gainPerKm = (route.total_elevation_gain ?? 0) / distKm;
+    if (gainPerKm >= 80) return 'Montagne';
+    if (gainPerKm >= 35) return 'Vallonné';
+    return 'Plutôt plat';
+  }, [route.total_distance, route.total_elevation_gain]);
 
-    const gpxContent = exportToGPX(route.name, trackPoints, route.description || undefined);
-    await shareOrDownloadGPX(route.name, gpxContent, { title: route.name });
-  };
+  const elevationPath = useMemo(() => {
+    const width = 76;
+    const height = 34;
+    if (elevations.length < 2) return `M0 ${height / 2} L${width} ${height / 2}`;
+    const min = Math.min(...elevations);
+    const max = Math.max(...elevations);
+    const range = Math.max(1, max - min);
+    const pts = elevations
+      .map((e, i) => {
+        const x = (i / (elevations.length - 1)) * width;
+        const y = height - ((e - min) / range) * height;
+        return { x, y };
+      });
+    return smoothPathFromPoints(pts);
+  }, [elevations]);
 
-  const openSessionWithRoute = () => {
-    navigate({ pathname: '/', search: `?presetRoute=${encodeURIComponent(route.id)}` });
-  };
+  const elevationFillPath = useMemo(() => {
+    const width = 76;
+    const height = 34;
+    if (!elevationPath) return '';
+    return `${elevationPath} L ${width} ${height} L 0 ${height} Z`;
+  }, [elevationPath]);
 
   useEffect(() => {
     if (!mapContainer.current || !route.coordinates?.length || !getMapboxAccessToken()) return;
@@ -153,11 +135,51 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
       mapInstanceRef.current = m;
 
       const applyRoute = () => {
+        m.setPaintProperty('background', 'background-color', '#eef2f7');
+        m.setPaintProperty('background', 'background-opacity', 1);
         setOrUpdateLineLayer(m, ROUTE_CARD_LINE_SRC, ROUTE_CARD_LINE_LAYER, path, {
-          color: '#5B7CFF',
-          width: 3,
+          color: '#2d6bff',
+          width: 4.4,
         });
-        void fitMapToCoords(m, path, 30);
+        const start = path[0]!;
+        const end = path[path.length - 1]!;
+        const pointsData = {
+          type: 'FeatureCollection',
+          features: [
+            { type: 'Feature', properties: { kind: 'start' }, geometry: { type: 'Point', coordinates: [start.lng, start.lat] } },
+            { type: 'Feature', properties: { kind: 'end' }, geometry: { type: 'Point', coordinates: [end.lng, end.lat] } },
+          ],
+        } as any;
+        if (m.getSource(ROUTE_CARD_POINTS_SRC)) {
+          (m.getSource(ROUTE_CARD_POINTS_SRC) as any).setData(pointsData);
+        } else {
+          m.addSource(ROUTE_CARD_POINTS_SRC, { type: 'geojson', data: pointsData } as any);
+          m.addLayer({
+            id: ROUTE_CARD_POINTS_START,
+            type: 'circle',
+            source: ROUTE_CARD_POINTS_SRC,
+            filter: ['==', ['get', 'kind'], 'start'],
+            paint: {
+              'circle-radius': 3.6,
+              'circle-color': '#ffffff',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#2d6bff',
+            },
+          } as any);
+          m.addLayer({
+            id: ROUTE_CARD_POINTS_END,
+            type: 'circle',
+            source: ROUTE_CARD_POINTS_SRC,
+            filter: ['==', ['get', 'kind'], 'end'],
+            paint: {
+              'circle-radius': 3.8,
+              'circle-color': '#2d6bff',
+              'circle-stroke-width': 1.6,
+              'circle-stroke-color': '#ffffff',
+            },
+          } as any);
+        }
+        void fitMapToCoords(m, path, 6);
       };
       if (m.isStyleLoaded()) applyRoute();
       else m.once('load', applyRoute);
@@ -191,163 +213,55 @@ export const RouteCard = ({ route, onEdit, onDelete, onPublishToggle, isPublic =
     })();
   }, [position, route.coordinates]);
 
-  const hasCoordinates = route.coordinates?.length > 0;
-
-  const chipPrimary = cn(
-    'inline-flex min-h-[40px] flex-1 shrink-0 items-center justify-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold shadow-sm transition-colors active:scale-[0.98] sm:flex-none sm:px-4',
-    'bg-primary text-primary-foreground active:bg-primary/90'
-  );
-
-  const chipSecondary = cn(
-    'inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1.5 rounded-full border border-border/70 bg-secondary/70 px-3 py-1.5 text-[12px] font-semibold text-foreground shadow-sm active:bg-secondary active:scale-[0.98]'
-  );
+  const hasCoordinates = Array.isArray(route.coordinates) && route.coordinates.length > 0;
 
   return (
-    <>
-      <div className="ios-card overflow-hidden border border-border/60">
-        <button
-          type="button"
-          onClick={() => navigate(`/itinerary/route/${route.id}`)}
-          className="block w-full text-left transition-opacity active:opacity-90"
-          aria-label={`Voir le détail de ${route.name}`}
-        >
+    <button
+      type="button"
+      onClick={() => navigate(`/itinerary/route/${route.id}`)}
+      className="ios-list-row w-full border border-white dark:border-white/10 text-left"
+      aria-label={`Voir le détail de ${route.name}`}
+    >
+      <div className="flex items-center gap-2.5">
+        <div className="h-[72px] w-[96px] shrink-0 overflow-hidden rounded-xl border border-border/50 bg-secondary shadow-sm">
           {hasCoordinates ? (
-            <div className="relative mx-4 mt-4 overflow-hidden rounded-2xl">
-              <div ref={mapContainer} className="pointer-events-none h-44 w-full" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+            <div ref={mapContainer} className="pointer-events-none h-full w-full saturate-75" />
+          ) : null}
+        </div>
 
-              <div className="pointer-events-none absolute left-3 top-3">
-                <span className="rounded-full bg-background/85 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
-                  {format(new Date(route.created_at), 'dd MMM yyyy', { locale: fr })}
-                </span>
-              </div>
-
-              <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Route className="h-3 w-3" /> {formatMeters(route.total_distance)}
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Mountain className="h-3 w-3" /> {formatElevation(route.total_elevation_gain)}
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-background/85 px-2.5 py-1.5 text-[12px] font-semibold text-foreground backdrop-blur-sm">
-                  <Clock className="h-3 w-3" /> {formatDuration(route.total_distance)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-4 mt-4 flex h-32 items-center justify-center rounded-2xl bg-secondary">
-              <Route className="h-8 w-8 text-muted-foreground/40" />
-            </div>
-          )}
-        </button>
-
-        <div className="px-4 pb-4 pt-3">
-          <button
-            type="button"
-            onClick={() => navigate(`/itinerary/route/${route.id}`)}
-            className="flex w-full min-w-0 items-start gap-2 text-left transition-colors active:opacity-80"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-1">
-                <h3 className="truncate text-[17px] font-semibold text-foreground">{route.name}</h3>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              </div>
-              {route.description && (
-                <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">{route.description}</p>
-              )}
-            </div>
-          </button>
-
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
-              <TrendingUp className="h-3.5 w-3.5" />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[15px] font-semibold leading-tight text-foreground">{route.name}</h3>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1 font-semibold text-foreground/95">
+              <RouteIcon className="h-3.5 w-3.5" />
               {formatMeters(route.total_distance)}
             </span>
-            <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
-              <Mountain className="h-3.5 w-3.5" />D+ {formatElevation(route.total_elevation_gain)}
-            </span>
-            <span className="inline-flex items-center gap-1 font-medium text-foreground/90">
-              <Clock className="h-3.5 w-3.5" />
-              {formatDuration(route.total_distance)}
+            <span className="inline-flex items-center gap-1 font-semibold text-foreground/95">
+              <Mountain className="h-3.5 w-3.5" />
+              D+ {formatElevation(route.total_elevation_gain)}
             </span>
           </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className={chipPrimary} onClick={() => setShow3DDialog(true)}>
-              <Box className="h-4 w-4 shrink-0" />
-              Survol 3D
-            </button>
-            <button
-              type="button"
-              className={chipPrimary}
-              onClick={() => navigate(`/training/route/${route.id}`)}
-            >
-              <Navigation className="h-4 w-4 shrink-0" />
-              Entraînement
-            </button>
+          <div className="mt-1 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+            {terrainLabel}
           </div>
+        </div>
 
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <button type="button" className={chipSecondary} onClick={handleExportGPX}>
-              <Download className="h-3.5 w-3.5 shrink-0" />
-              GPX
-            </button>
-            <button type="button" className={chipSecondary} onClick={openSessionWithRoute}>
-              <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
-              Séance
-            </button>
-            <button type="button" className={chipSecondary} onClick={() => onEdit(route)}>
-              <Edit className="h-3.5 w-3.5 shrink-0" />
-              Modifier
-            </button>
-            <button
-              type="button"
-              className={cn(chipSecondary, 'border-destructive/30 text-destructive')}
-              onClick={() => onDelete(route.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
-              Supprimer
-            </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <div className="h-[52px] w-[76px] rounded-xl border border-border/50 bg-secondary/70 px-1.5 py-1">
+            <svg viewBox="0 0 76 34" className="h-full w-full" preserveAspectRatio="none" aria-hidden>
+              <defs>
+                <linearGradient id={`routeCardFill-${route.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
+                </linearGradient>
+              </defs>
+              <path d={elevationFillPath} fill={`url(#routeCardFill-${route.id})`} />
+              <path d={elevationPath} fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-
-          {onPublishToggle && (
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/50 bg-secondary/40 px-3.5 py-2.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="text-[13px] font-medium text-foreground">
-                  {isPublic ? 'Itinéraire public' : 'Rendre public'}
-                </span>
-              </div>
-              <Switch checked={isPublic} onCheckedChange={onPublishToggle} />
-            </div>
-          )}
+          <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
         </div>
       </div>
-
-      <ElevationProfile3DDialog
-        open={show3DDialog}
-        onOpenChange={setShow3DDialog}
-        coordinates={
-          Array.isArray(route.coordinates)
-            ? route.coordinates.map((c: any) => ({ lat: Number(c.lat ?? c[0]), lng: Number(c.lng ?? c[1]) }))
-            : []
-        }
-        elevations={
-          Array.isArray(route.coordinates)
-            ? route.coordinates.map((c: any) => Number(c.elevation ?? c[2] ?? 0))
-            : []
-        }
-        routeName={route.name}
-        routeStats={
-          route.total_distance || route.total_elevation_gain
-            ? {
-                totalDistance: route.total_distance || 0,
-                elevationGain: route.total_elevation_gain || 0,
-                elevationLoss: 0,
-              }
-            : null
-        }
-      />
-    </>
+    </button>
   );
 };

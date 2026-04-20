@@ -347,7 +347,7 @@ export const usePushNotifications = () => {
       case 'challenge_almost_done':
       case 'challenge_completed':
       case 'challenge_reminder':
-        navigate('/leaderboard');
+        navigate('/itinerary');
         break;
       case 'session_request':
         navigate('/');

@@ -1,13 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Bike, Calendar, FileText, Check } from 'lucide-react';
-import { WizardStep, WIZARD_STEPS } from './types';
+import { MapPin, Bike, Calendar, FileText, Check, ClipboardList, FileCheck } from 'lucide-react';
+import { WizardStep } from './types';
 import { cn } from '@/lib/utils';
-
-interface ProgressIndicatorProps {
-  currentStep: WizardStep;
-  progress: number;
-}
 
 const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   location: MapPin,
@@ -15,6 +10,8 @@ const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   datetime: Calendar,
   details: FileText,
   confirm: Check,
+  essentials: ClipboardList,
+  finalize: FileCheck,
 };
 
 const STEP_LABELS: Record<WizardStep, string> = {
@@ -23,26 +20,32 @@ const STEP_LABELS: Record<WizardStep, string> = {
   datetime: 'Date',
   details: 'Détails',
   confirm: 'Confirmer',
+  essentials: 'Plan',
+  finalize: 'Publier',
 };
 
-export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentStep, progress }) => {
-  const currentIndex = WIZARD_STEPS.indexOf(currentStep);
+interface ProgressIndicatorProps {
+  currentStep: WizardStep;
+  progress: number;
+  steps: WizardStep[];
+}
+
+export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentStep, progress, steps }) => {
+  const currentIndex = Math.max(0, steps.indexOf(currentStep));
 
   return (
     <div className="w-full px-4 py-1">
-      {/* Progress bar */}
-      <div className="relative h-1 bg-muted rounded-full overflow-hidden mb-4">
+      <div className="relative mb-4 h-1 overflow-hidden rounded-full bg-muted">
         <motion.div
-          className="absolute left-0 top-0 h-full bg-primary rounded-full"
+          className="absolute left-0 top-0 h-full rounded-full bg-primary"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         />
       </div>
 
-      {/* Step indicators */}
-      <div className="flex justify-between items-center">
-        {WIZARD_STEPS.map((step, index) => {
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => {
           const Icon = STEP_ICONS[step];
           const isCompleted = index < currentIndex;
           const isCurrent = index === currentIndex;
@@ -51,25 +54,21 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ currentSte
             <div key={step} className="flex flex-col items-center gap-1">
               <motion.div
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  isCurrent && "bg-primary/20 border-2 border-primary text-primary",
-                  !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
+                  'flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300',
+                  isCompleted && 'bg-primary text-primary-foreground',
+                  isCurrent && 'border-2 border-primary bg-primary/20 text-primary',
+                  !isCompleted && !isCurrent && 'bg-muted text-muted-foreground'
                 )}
                 initial={{ scale: 0.8 }}
                 animate={{ scale: isCurrent ? 1.1 : 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {isCompleted ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  <Icon className="w-5 h-5" />
-                )}
+                {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
               </motion.div>
               <span
                 className={cn(
-                  "text-xs font-medium transition-colors",
-                  isCurrent ? "text-primary" : "text-muted-foreground"
+                  'text-xs font-medium transition-colors max-w-[4.5rem] text-center leading-tight',
+                  isCurrent ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
                 {STEP_LABELS[step]}

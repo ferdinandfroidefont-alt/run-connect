@@ -1,7 +1,9 @@
 import { lazy, Suspense, useState, useEffect, useRef, useTransition, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppContext } from "@/contexts/AppContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { applyWebChromeForTheme } from "@/lib/iosStatusBarTheme";
 import { useSendNotification } from "@/hooks/useSendNotification";
@@ -16,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { getIosEmptyStateSpacing } from "@/lib/iosEmptyStateLayout";
@@ -159,13 +161,16 @@ interface Message {
 }
 
 const Messages = () => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  const { setHideBottomNav } = useAppContext();
+  const { setBottomNavSuppressed } = useAppContext();
   const { sendPushNotification } = useSendNotification();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   /** Après le 1er chargement de la liste (évite de traiter un deep link avant ; permet les DM sans message). */
@@ -284,6 +289,17 @@ const Messages = () => {
     }
   }, [selectedConversation, broadcastStopTyping]);
 
+  // Explicit reset requested by bottom navigation: always show inbox list.
+  useEffect(() => {
+    const resetConversation = Boolean((location.state as { resetConversation?: boolean } | null)?.resetConversation);
+    if (!resetConversation) return;
+    if (selectedConversation) {
+      setSelectedConversation(null);
+    }
+    setBottomNavSuppressed("messages-thread", false);
+    navigate("/messages", { replace: true, state: {} });
+  }, [location.state, navigate, selectedConversation, setBottomNavSuppressed]);
+
   const isLoading = loading || cameraLoading;
 
   const scrollToBottom = () => {
@@ -305,23 +321,26 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
-  // Show/hide bottom navigation based on conversation state
+  // Single effect for tab bar visibility + chrome color.
+  // Tab bar visible on inbox list, hidden only inside a conversation thread.
+  // Ne pas remettre le suppressor à false dans le cleanup : sinon éclair entre deux conversations (liste swipe host).
   useEffect(() => {
+    const onMessagesPage = location.pathname.startsWith("/messages");
+    const inThread = onMessagesPage && !!selectedConversation;
+    setBottomNavSuppressed("messages-thread", inThread);
+
     const root = document.documentElement;
     const hslVar = (name: string) => {
       const t = getComputedStyle(root).getPropertyValue(name).trim();
       return t ? `hsl(${t})` : '';
     };
-
-    if (selectedConversation) {
-      setHideBottomNav(true);
+    if (inThread) {
       const sec = hslVar('--secondary');
       if (sec) {
         root.style.backgroundColor = sec;
         document.body.style.backgroundColor = sec;
       }
     } else {
-      setHideBottomNav(false);
       const bg = hslVar('--background');
       if (bg) {
         root.style.backgroundColor = bg;
@@ -331,7 +350,13 @@ const Messages = () => {
     return () => {
       applyWebChromeForTheme(root.classList.contains('dark'));
     };
-  }, [selectedConversation, setHideBottomNav]);
+  }, [selectedConversation, setBottomNavSuppressed, location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      setBottomNavSuppressed("messages-thread", false);
+    };
+  }, [setBottomNavSuppressed]);
 
   // Fetch user notification settings
   useEffect(() => {
@@ -855,6 +880,15 @@ const Messages = () => {
   // Send a message
   const sendMessage = async () => {
     if (!user || !selectedConversation || !newMessage.trim()) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "L’envoi de messages est désactivé.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const messageContent = newMessage.trim();
     const currentReplyTo = replyTo;
@@ -1906,6 +1940,18 @@ const Messages = () => {
     }
   }, [tabParam, setSearchParams]);
 
+  // Deep link : /messages?createClub=1 → ouvre directement la création de club
+  useEffect(() => {
+    if (searchParams.get("createClub") === "1") {
+      setShowCreateGroup(true);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("createClub");
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   if (showNewConversation) {
     return (
       <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
@@ -2107,6 +2153,201 @@ const Messages = () => {
             </div>
             }
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            footer={
+              <div
+                className={cn(
+                  "keyboard-input-container z-40 w-full shrink-0 border-t border-border bg-background px-ios-2 py-ios-1",
+                  "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
+                )}
+                style={{
+                  paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
+                }}
+              >
+                {replyTo && (
+                  <ReplyPreview
+                    replyTo={replyTo}
+                    onCancel={() => setReplyTo(null)}
+                  />
+                )}
+                {showEmojiPicker && (
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute bottom-full mb-ios-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
+                  >
+                    <div className="bg-card rounded-ios-lg shadow-xl border border-border">
+                      <EmojiPicker
+                        onEmojiClick={(emojiData: EmojiClickData) => {
+                          setNewMessage((prev) => prev + emojiData.emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {uploadProgress !== null && (
+                  <div className="flex items-center gap-ios-2 px-ios-3 py-ios-2">
+                    <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-ios-2">
+                  {!isRecording && (
+                    <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                            disabled={isLoading}
+                          >
+                            <Plus className="h-6 w-6" strokeWidth={2} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() => fileInputRef.current?.click()}
+                            className="py-ios-3"
+                          >
+                            <Paperclip className="h-4 w-4 mr-ios-3 text-[#007AFF]" />
+                            Document
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const file = await takePicture();
+                                if (file) uploadFile(file);
+                              } catch (error) {
+                                toast({
+                                  title: "Erreur",
+                                  description: "Impossible d'accéder à la caméra",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="py-ios-3"
+                          >
+                            <Camera className="h-4 w-4 mr-ios-3 text-[#FF3B30]" />
+                            Caméra
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const file = await selectFromGallery();
+                                if (file) uploadFile(file);
+                              } catch (error) {
+                                toast({
+                                  title: "Erreur",
+                                  description: "Impossible d'accéder à la galerie",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="py-ios-3"
+                          >
+                            <Image className="h-4 w-4 mr-ios-3 text-[#34C759]" />
+                            Photo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="py-ios-3"
+                          >
+                            <Smile className="h-4 w-4 mr-ios-3 text-[#FF9500]" />
+                            Emoji
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setTimeout(() => setShowCreatePoll(true), 300);
+                            }}
+                            className="py-ios-3"
+                          >
+                            <BarChart3 className="h-4 w-4 mr-ios-3 text-[#5856D6]" />
+                            Sondage
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="*/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 50 * 1024 * 1024) {
+                              toast({
+                                title: "Fichier trop volumineux",
+                                description: "La taille maximale est de 50 MB",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            uploadFile(file);
+                          }
+                        }}
+                        className="hidden"
+                        disabled={isLoading}
+                      />
+                      <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
+                        <input
+                          type="text"
+                          enterKeyHint="send"
+                          autoComplete="off"
+                          placeholder="iMessage"
+                          value={newMessage}
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            handleTyping();
+                          }}
+                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                          className="flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
+                          disabled={isLoading}
+                        />
+                      </div>
+                      {newMessage.trim() ? (
+                        <button
+                          onClick={sendMessage}
+                          disabled={loading || !newMessage.trim()}
+                          className="w-8 h-8 flex items-center justify-center bg-primary rounded-full shrink-0 disabled:opacity-50"
+                        >
+                          <Send className="h-4 w-4 text-white" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleVoiceRecording}
+                          disabled={loading}
+                          className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
+                        >
+                          <Mic className="h-6 w-6" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {isRecording && (
+                    <div className="flex-1 flex items-center gap-ios-3">
+                      <div className="flex-1 flex items-center gap-ios-2 bg-destructive/10 border border-destructive/30 rounded-full px-ios-4 py-ios-2">
+                        <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
+                        <span className="text-[15px] font-medium text-destructive">
+                          {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                        </span>
+                        <span className="text-[13px] text-muted-foreground flex-1">
+                          Enregistrement...
+                        </span>
+                      </div>
+                      <button
+                        onClick={cancelRecording}
+                        className="w-8 h-8 flex items-center justify-center text-muted-foreground"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={handleVoiceRecording}
+                        className="w-8 h-8 flex items-center justify-center bg-destructive rounded-full"
+                      >
+                        <Square className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            }
           >
             {threadSearchOpen && (
               <div className="shrink-0 border-b border-border/50 bg-card px-ios-3 py-ios-2">
@@ -2139,7 +2380,7 @@ const Messages = () => {
                 )}
               </div>
             )}
-            <div className="h-full px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
+            <div className="flex-1 px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? visibleMessages[index - 1] : null;
@@ -2506,196 +2747,7 @@ const Messages = () => {
             </DialogContent>
           </Dialog>
 
-           {/* iMessage Style Input — barre basse alignée sur BottomNavigation (bordure + fond + safe area) */}
-          <div
-            className={cn(
-              "keyboard-input-container z-40 w-full shrink-0 border-t border-border bg-background px-ios-2 py-ios-1",
-              "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
-            )}
-            style={{
-              /* Même logique que BottomNavigation : zone home indicator légèrement resserrée */
-              paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
-            }}
-          >
-            {/* Reply Preview */}
-            {replyTo && (
-              <ReplyPreview
-                replyTo={replyTo}
-                onCancel={() => setReplyTo(null)}
-              />
-            )}
 
-            {/* Emoji Picker */}
-            {showEmojiPicker && (
-              <div 
-                ref={emojiPickerRef}
-                className="absolute bottom-full mb-ios-2 left-1/2 transform -translate-x-1/2 z-[60] animate-scale-in"
-              >
-                <div className="bg-card rounded-ios-lg shadow-xl border border-border">
-                  <EmojiPicker
-                    onEmojiClick={handleEmojiClick}
-                    theme={resolvedTheme === "dark" ? Theme.DARK : Theme.LIGHT}
-                    width={320}
-                    height={400}
-                    searchPlaceHolder="Rechercher..."
-                    previewConfig={{ showPreview: false }}
-                  />
-                </div>
-              </div>
-            )}
-            
-            {uploadProgress && (
-               <div className="flex items-center gap-ios-2 px-ios-4 py-ios-2 bg-border rounded-full mb-ios-2 mx-ios-2">
-                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-[13px] text-muted-foreground">{uploadProgress}</span>
-              </div>
-            )}
-            
-            <div className="flex items-center gap-ios-2">
-              {!isRecording && (
-                <>
-                  {/* Plus button - opens attachment options */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button 
-                         className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
-                        disabled={isLoading}
-                      >
-                        <Plus className="h-6 w-6" strokeWidth={2} />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-48 bg-card border border-border rounded-ios-lg shadow-lg">
-                      <DropdownMenuItem 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="py-ios-3"
-                      >
-                        <Paperclip className="h-4 w-4 mr-ios-3 text-primary" />
-                        Fichier
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={async () => {
-                          try {
-                            const file = await selectFromGallery();
-                            if (file) uploadFile(file);
-                          } catch (error) {
-                            toast({
-                              title: "Erreur",
-                              description: "Impossible d'accéder à la galerie",
-                              variant: "destructive"
-                            });
-                          }
-                        }}
-                        className="py-ios-3"
-                      >
-                        <Image className="h-4 w-4 mr-ios-3 text-[#34C759]" />
-                        Photo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="py-ios-3"
-                      >
-                        <Smile className="h-4 w-4 mr-ios-3 text-[#FF9500]" />
-                        Emoji
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setTimeout(() => setShowCreatePoll(true), 300);
-                        }}
-                        className="py-ios-3"
-                      >
-                        <BarChart3 className="h-4 w-4 mr-ios-3 text-[#5856D6]" />
-                        Sondage
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="*/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        if (file.size > 50 * 1024 * 1024) {
-                          toast({
-                            title: "Fichier trop volumineux",
-                            description: "La taille maximale est de 50 MB",
-                            variant: "destructive"
-                          });
-                          return;
-                        }
-                        uploadFile(file);
-                      }
-                    }}
-                    className="hidden"
-                    disabled={isLoading}
-                  />
-                  
-                  {/* iMessage input field */}
-                  <div className="flex-1 flex items-center bg-secondary border border-border rounded-full px-ios-4 py-ios-2">
-                    <input
-                      type="text"
-                      placeholder="iMessage"
-                      value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value);
-                        handleTyping();
-                      }}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  
-                  {/* Send or Mic button */}
-                  {newMessage.trim() ? (
-                    <button
-                      onClick={sendMessage}
-                      disabled={loading || !newMessage.trim()}
-                      className="w-8 h-8 flex items-center justify-center bg-primary rounded-full shrink-0 disabled:opacity-50"
-                    >
-                      <Send className="h-4 w-4 text-white" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleVoiceRecording}
-                      disabled={loading}
-                      className="w-8 h-8 flex items-center justify-center text-primary shrink-0"
-                    >
-                      <Mic className="h-6 w-6" />
-                    </button>
-                  )}
-                </>
-              )}
-              
-              {isRecording && (
-                 <div className="flex-1 flex items-center gap-ios-3">
-                   <div className="flex-1 flex items-center gap-ios-2 bg-destructive/10 border border-destructive/30 rounded-full px-ios-4 py-ios-2">
-                     <div className="w-2.5 h-2.5 bg-destructive rounded-full animate-pulse" />
-                     <span className="text-[15px] font-medium text-destructive">
-                       {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                     </span>
-                     <span className="text-[13px] text-muted-foreground flex-1">
-                      Enregistrement...
-                    </span>
-                  </div>
-                  <button
-                    onClick={cancelRecording}
-                    className="w-8 h-8 flex items-center justify-center text-muted-foreground"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={handleVoiceRecording}
-                    className="w-8 h-8 flex items-center justify-center bg-destructive rounded-full"
-                  >
-                    <Square className="h-4 w-4 text-white" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
       {/* Delete message confirmation dialog */}
@@ -2825,9 +2877,9 @@ const Messages = () => {
       <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary" data-tutorial="tutorial-messages">
         <IosFixedPageHeaderShell
           className="min-h-0 flex-1"
-          headerWrapperClassName="z-50 border-b border-border bg-card"
+          headerWrapperClassName="z-50 bg-card"
           header={
-          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[52px]">
+          <div className="px-ios-4 py-ios-3 relative flex items-center justify-center min-h-[60px]">
             {isSelectionMode ? (
               <>
                 <Button
@@ -2853,7 +2905,7 @@ const Messages = () => {
               </>
             ) : (
               <>
-                <h1 className="text-[34px] font-bold tracking-tight text-center">Messages</h1>
+                <h1 className="text-ios-title1 font-bold text-center">{t("navigation.messages")}</h1>
                 <div className="absolute right-ios-4 flex items-center gap-ios-2">
                   <Button
                     onClick={() => setShowNewConversation(true)}
@@ -2871,7 +2923,7 @@ const Messages = () => {
         >
         <div className="space-y-ios-3 pb-ios-2">
           {/* Quick Search Buttons */}
-          <div className="ios-card p-ios-3">
+          <div className="ios-card p-ios-3 !mt-0 !rounded-t-none border-t-0">
             <div className="grid grid-cols-5 gap-ios-2">
               <button
                 onClick={() => navigate('/search?tab=profiles')}
@@ -3196,6 +3248,15 @@ const Messages = () => {
             createdBy={groupInfoData?.created_by || ""}
             createdAt={groupInfoData?.created_at || ""}
             isAdmin={groupInfoData?.created_by === user?.id}
+            isClub={!!groupInfoData?.club_code}
+            isMuted={isMuted}
+            onToggleMute={() => {
+              const newMuted = !isMuted;
+              setIsMuted(newMuted);
+              if (user) {
+                supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
+              }
+            }}
             onEditGroup={() => {
               setShowClubProfile(false);
               setTimeout(() => {

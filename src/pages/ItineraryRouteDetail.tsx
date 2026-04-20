@@ -6,15 +6,12 @@ import {
   ArrowLeft,
   Box,
   CalendarPlus,
-  Clock,
+  ChevronRight,
   Download,
-  Edit,
   Loader2,
-  Mountain,
   Navigation,
   Route as RouteIcon,
   Trash2,
-  TrendingUp,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,10 +43,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
-const RouteEditDialog = lazy(() =>
-  import('@/components/RouteEditDialog').then((m) => ({ default: m.RouteEditDialog }))
-);
-
 const DETAIL_LINE_SRC = 'itinerary-detail-line';
 const DETAIL_LINE_LAYER = 'itinerary-detail-line-layer';
 
@@ -65,7 +58,6 @@ export default function ItineraryRouteDetail() {
   const [route, setRoute] = useState<MyRouteRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [show3D, setShow3D] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
@@ -179,16 +171,6 @@ export default function ItineraryRouteDetail() {
   const elevGain = route?.total_elevation_gain ?? 0;
   const elevLoss = route?.total_elevation_loss ?? 0;
 
-  const formatDurationEst = (meters: number) => {
-    if (!meters) return '—';
-    const hours = (meters / 1000) / 10;
-    const totalMinutes = hours * 60;
-    const h = Math.floor(totalMinutes / 60);
-    const min = Math.round(totalMinutes % 60);
-    if (h > 0) return `${h}h${min.toString().padStart(2, '0')}`;
-    return `${min} min`;
-  };
-
   const chartCoords: MapCoord[] = useMemo(() => {
     if (elevations.length >= 2 && points.length === elevations.length) return points;
     return points;
@@ -263,14 +245,6 @@ export default function ItineraryRouteDetail() {
     }
   };
 
-  const chipPrimary = cn(
-    'inline-flex min-h-[44px] flex-1 shrink-0 items-center justify-center gap-2 rounded-full px-4 text-[14px] font-semibold shadow-sm active:scale-[0.98] sm:flex-none',
-    'bg-primary text-primary-foreground'
-  );
-  const chipSecondary = cn(
-    'inline-flex min-h-[40px] shrink-0 items-center justify-center gap-2 rounded-full border border-border/70 bg-secondary/80 px-3.5 text-[13px] font-semibold active:scale-[0.98]'
-  );
-
   return (
     <>
       <IosFixedPageHeaderShell
@@ -289,6 +263,18 @@ export default function ItineraryRouteDetail() {
                 >
                   <ArrowLeft className="h-5 w-5 shrink-0" />
                   <span className="truncate text-[17px] font-medium">Retour</span>
+                </button>
+              }
+              right={
+                <button
+                  type="button"
+                  onClick={() => setDeleteOpen(true)}
+                  className="inline-flex h-9 min-w-[44px] items-center justify-end text-destructive"
+                  aria-label="Supprimer l'itinéraire"
+                >
+                  <span className="text-[20px]" aria-hidden>
+                    🗑️
+                  </span>
                 </button>
               }
               title={route?.name || 'Itinéraire'}
@@ -317,20 +303,6 @@ export default function ItineraryRouteDetail() {
                   className="min-h-[min(42vh,22rem)] w-full overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm"
                 />
 
-                <div className="flex flex-wrap gap-3 text-[13px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    {formatMeters(route.total_distance)}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
-                    <Mountain className="h-4 w-4 text-primary" />D+ {Math.round(elevGain)} m
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
-                    <Clock className="h-4 w-4 text-primary" />
-                    {formatDurationEst(totalDistanceM)}
-                  </span>
-                </div>
-
                 {route.description && (
                   <p className="text-ios-subheadline leading-relaxed text-muted-foreground">{route.description}</p>
                 )}
@@ -349,41 +321,53 @@ export default function ItineraryRouteDetail() {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className={chipPrimary} onClick={() => setShow3D(true)}>
-                    <Box className="h-5 w-5 shrink-0" />
-                    Survol 3D
-                  </button>
+                <div className="bg-card">
                   <button
                     type="button"
-                    className={chipPrimary}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 active:bg-secondary/50 ios-shell:px-2.5"
+                    onClick={handleGpx}
+                  >
+                    <div className="ios-list-row-icon bg-[#34C759]">
+                      <Download className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <span className="min-w-0 flex-1 text-left text-[15px] font-medium">Télécharger en GPX</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/45" />
+                  </button>
+                  <div className="ios-list-row-inset-sep" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-4 py-3 active:bg-secondary/50 ios-shell:px-2.5"
+                    onClick={openSession}
+                  >
+                    <div className="ios-list-row-icon bg-[#0A84FF]">
+                      <CalendarPlus className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <span className="min-w-0 flex-1 text-left text-[15px] font-medium">Planifier une séance avec cet itinéraire</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/45" />
+                  </button>
+                  <div className="ios-list-row-inset-sep" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-4 py-3 active:bg-secondary/50 ios-shell:px-2.5"
+                    onClick={() => setShow3D(true)}
+                  >
+                    <div className="ios-list-row-icon bg-[#5E5CE6]">
+                      <Box className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <span className="min-w-0 flex-1 text-left text-[15px] font-medium">Survoler l’itinéraire</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/45" />
+                  </button>
+                  <div className="ios-list-row-inset-sep" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-4 py-3 active:bg-secondary/50 ios-shell:px-2.5"
                     onClick={() => navigate(`/training/route/${route.id}`)}
                   >
-                    <Navigation className="h-5 w-5 shrink-0" />
-                    Entraînement
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className={chipSecondary} onClick={handleGpx}>
-                    <Download className="h-4 w-4 shrink-0" />
-                    Export GPX
-                  </button>
-                  <button type="button" className={chipSecondary} onClick={openSession}>
-                    <CalendarPlus className="h-4 w-4 shrink-0" />
-                    Créer une séance
-                  </button>
-                  <button type="button" className={chipSecondary} onClick={() => setEditOpen(true)}>
-                    <Edit className="h-4 w-4 shrink-0" />
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(chipSecondary, 'border-destructive/35 text-destructive')}
-                    onClick={() => setDeleteOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4 shrink-0" />
-                    Supprimer
+                    <div className="ios-list-row-icon bg-[#FF9500]">
+                      <Navigation className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <span className="min-w-0 flex-1 text-left text-[15px] font-medium">Mode entraînement</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/45" />
                   </button>
                 </div>
               </div>
@@ -418,24 +402,6 @@ export default function ItineraryRouteDetail() {
           }
         />
       )}
-
-      <Suspense fallback={null}>
-        <RouteEditDialog
-          isOpen={editOpen}
-          onClose={() => setEditOpen(false)}
-          route={route}
-          onRouteUpdated={async () => {
-            if (!user || !routeId) return;
-            const { data } = await supabase
-              .from('routes')
-              .select('*')
-              .eq('id', routeId)
-              .eq('created_by', user.id)
-              .maybeSingle();
-            setRoute((data as MyRouteRow) || null);
-          }}
-        />
-      </Suspense>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="rounded-ios-lg max-w-[320px]">

@@ -18,6 +18,7 @@ import { motion } from "framer-motion";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { SupportInbox } from "@/components/settings/SupportInbox";
 
+
 interface SettingsSupportProps {
   onBack: () => void;
   onClose: () => void;
@@ -284,6 +285,7 @@ export const SettingsSupport = ({ onBack, onClose, onOpenTutorialCatalog }: Sett
               )}
             </div>
           </div>
+
 
           {/* Danger Zone */}
           <div className="space-y-2">

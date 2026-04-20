@@ -1,6 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapPin, PenLine, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, PenLine, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderShell';
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
@@ -8,21 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { RouteCard } from '@/components/RouteCard';
 import { useMyRoutesList } from '@/hooks/useMyRoutesList';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-const RouteEditDialog = lazy(() =>
-  import('@/components/RouteEditDialog').then((m) => ({ default: m.RouteEditDialog }))
-);
 
 type ItineraryMyRoutesLocationState = {
   /** Cible du bouton Retour (ex. `/route-creation` depuis l’éditeur de carte). */
@@ -35,35 +19,7 @@ export default function ItineraryMyRoutes() {
   const itineraryBackTo =
     (location.state as ItineraryMyRoutesLocationState | null)?.itineraryBackTo ?? '/itinerary';
   const { user } = useAuth();
-  const { routes, loading, refresh } = useMyRoutesList();
-  const [editingRoute, setEditingRoute] = useState<any>(null);
-  const [isRouteEditDialogOpen, setIsRouteEditDialogOpen] = useState(false);
-  const [showRouteDeleteConfirm, setShowRouteDeleteConfirm] = useState(false);
-  const [routeToDelete, setRouteToDelete] = useState<string | null>(null);
-
-  const editRoute = (route: any) => {
-    setEditingRoute(route);
-    setIsRouteEditDialogOpen(true);
-  };
-
-  const confirmDeleteRoute = (routeId: string) => {
-    setRouteToDelete(routeId);
-    setShowRouteDeleteConfirm(true);
-  };
-
-  const deleteRoute = async () => {
-    if (!routeToDelete) return;
-    try {
-      const { error } = await supabase.from('routes').delete().eq('id', routeToDelete);
-      if (error) throw error;
-      await refresh();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setShowRouteDeleteConfirm(false);
-      setRouteToDelete(null);
-    }
-  };
+  const { routes, loading } = useMyRoutesList();
 
   return (
     <>
@@ -79,8 +35,9 @@ export default function ItineraryMyRoutes() {
                 <button
                   type="button"
                   onClick={() => navigate(itineraryBackTo)}
-                  className="text-[17px] font-medium text-primary"
+                  className="inline-flex items-center gap-1 text-[17px] font-medium text-primary"
                 >
+                  <ArrowLeft className="h-5 w-5 shrink-0" />
                   Retour
                 </button>
               }
@@ -130,17 +87,7 @@ export default function ItineraryMyRoutes() {
                   </Button>
                 </div>
                 {routes.map((route) => (
-                  <RouteCard
-                    key={route.id}
-                    route={route}
-                    onEdit={() => editRoute(route)}
-                    onDelete={() => confirmDeleteRoute(route.id)}
-                    onPublishToggle={async (isPublic) => {
-                      await supabase.from('routes').update({ is_public: isPublic }).eq('id', route.id);
-                      await refresh();
-                    }}
-                    isPublic={route.is_public || false}
-                  />
+                  <RouteCard key={route.id} route={route} />
                 ))}
               </div>
             )}
@@ -148,41 +95,6 @@ export default function ItineraryMyRoutes() {
           </div>
         </ScrollArea>
       </IosFixedPageHeaderShell>
-
-      <Suspense fallback={null}>
-        <RouteEditDialog
-          isOpen={isRouteEditDialogOpen}
-          onClose={() => setIsRouteEditDialogOpen(false)}
-          route={editingRoute}
-          onRouteUpdated={refresh}
-        />
-      </Suspense>
-
-      <AlertDialog open={showRouteDeleteConfirm} onOpenChange={setShowRouteDeleteConfirm}>
-        <AlertDialogContent className="rounded-ios-lg max-w-[280px] p-0 gap-0">
-          <AlertDialogHeader className="p-ios-6 pb-ios-4">
-            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
-              Supprimer l&apos;itinéraire
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-ios-footnote text-muted-foreground">
-              Êtes-vous sûr de vouloir supprimer cet itinéraire ? Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="border-t border-border">
-            <AlertDialogCancel className="w-full h-[44px] border-0 rounded-none text-primary text-ios-headline font-normal hover:bg-secondary/50">
-              Annuler
-            </AlertDialogCancel>
-          </div>
-          <div className="border-t border-border">
-            <AlertDialogAction
-              onClick={deleteRoute}
-              className="w-full h-[44px] border-0 rounded-none bg-transparent hover:bg-secondary/50 text-destructive text-ios-headline font-semibold"
-            >
-              Supprimer
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

@@ -1,5 +1,8 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +11,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map, Video, Gift } from "lucide-react";
+import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useShareProfile } from "@/hooks/useShareProfile";
 import { QRShareDialog } from "@/components/QRShareDialog";
+import { ProfileShareScreen } from "@/components/profile-share/ProfileShareScreen";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
+import { AvatarViewer } from "@/components/AvatarViewer";
 
 import { ReliabilityDetailsDialog } from "@/components/ReliabilityDetailsDialog";
 import { COUNTRY_LABELS } from "@/lib/countryLabels";
@@ -44,12 +49,10 @@ interface Profile {
   instagram_verified_at?: string;
   instagram_username?: string;
   referral_code?: string | null;
+  onboarding_completed?: boolean;
 }
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog }))
-);
-const ReferralDialog = lazy(() =>
-  import("@/components/ReferralDialog").then((m) => ({ default: m.ReferralDialog }))
 );
 
 const SPORT_LABELS: Record<string, string> = {
@@ -61,6 +64,9 @@ const SPORT_LABELS: Record<string, string> = {
   trail: '⛰️ Trail',
 };
 
+const HIGHLIGHT_GRID_LONG_PRESS_MS = 480;
+const HIGHLIGHT_GRID_MOVE_CANCEL_PX = 16;
+
 interface ProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,8 +77,10 @@ export const ProfileDialog = ({
 }: ProfileDialogProps) => {
   const {
     user,
-    subscriptionInfo
   } = useAuth();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
+  const { isPreviewMode, previewIdentity } = useAppPreview();
+  const { userProfile } = useUserProfile();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,13 +97,49 @@ export const ProfileDialog = ({
   const [followingCount, setFollowingCount] = useState(0);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showReliabilityDialog, setShowReliabilityDialog] = useState(false);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
   const [showOwnStory, setShowOwnStory] = useState(false);
+  const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
   const [showHighlightsManager, setShowHighlightsManager] = useState(false);
-  const [ownStories, setOwnStories] = useState<Array<{ id: string; created_at: string; expires_at: string }>>([]);
+  const [ownStories, setOwnStories] = useState<Array<{
+    id: string;
+    created_at: string;
+    expires_at: string;
+    media_url: string | null;
+    media_type: 'image' | 'video' | 'boomerang' | null;
+    duration_label: string | null;
+    is_highlighted: boolean;
+  }>>([]);
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
   const [highlightStoryId, setHighlightStoryId] = useState<string | null>(null);
   const [newHighlightTitle, setNewHighlightTitle] = useState("");
+  /** Ordre de sélection = ordre d’insertion dans « à la une » (premier tap = position 0). */
+  const [highlightPickOrder, setHighlightPickOrder] = useState<string[]>([]);
+  const [highlightSubmitting, setHighlightSubmitting] = useState(false);
+  const highlightPressRef = useRef<{
+    storyId: string | null;
+    timer: ReturnType<typeof setTimeout> | null;
+    longTriggered: boolean;
+    startX: number;
+    startY: number;
+    startT: number;
+  }>({
+    storyId: null,
+    timer: null,
+    longTriggered: false,
+    startX: 0,
+    startY: 0,
+    startT: 0,
+  });
+  const clearHighlightGridPressTimer = () => {
+    const t = highlightPressRef.current.timer;
+    if (t) clearTimeout(t);
+    highlightPressRef.current.timer = null;
+  };
+  const resetHighlightGridPress = () => {
+    clearHighlightGridPressTimer();
+    highlightPressRef.current.storyId = null;
+    highlightPressRef.current.longTriggered = false;
+  };
   const [reliabilityRate, setReliabilityRate] = useState(100);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [totalSessionsCreated, setTotalSessionsCreated] = useState(0);
@@ -135,19 +179,60 @@ export const ProfileDialog = ({
   const {
     toast
   } = useToast();
-  const { shareProfile, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
+  const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const {
     selectFromGallery,
     loading: cameraLoading
   } = useCamera();
   useEffect(() => {
-    if (user && open) {
-      fetchProfile();
-      fetchFollowCounts();
-      fetchReliabilityStats();
-      void fetchStoriesAndHighlights();
+    if (!user || !open) return;
+    setLoading(true);
+    if (isPreviewMode && userProfile && previewIdentity) {
+      const data = userProfile as unknown as Profile;
+      setProfile(data);
+      setFormData(data);
+      const defaultRecords = {
+        walking: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        running: { '5k': '', '10k': '', '21k': '', '42k': '' },
+        cycling: { '25k': '', '50k': '', '100k': '', '200k': '' },
+        swimming: { '100m': '', '500m': '', '1000m': '', '1500m': '' },
+      };
+      setRecordsData({
+        walking: data.walking_records && typeof data.walking_records === "object"
+          ? { ...defaultRecords.walking, ...data.walking_records } : defaultRecords.walking,
+        running: data.running_records && typeof data.running_records === "object"
+          ? { ...defaultRecords.running, ...data.running_records } : defaultRecords.running,
+        cycling: data.cycling_records && typeof data.cycling_records === "object"
+          ? { ...defaultRecords.cycling, ...data.cycling_records } : defaultRecords.cycling,
+        swimming: data.swimming_records && typeof data.swimming_records === "object"
+          ? { ...defaultRecords.swimming, ...data.swimming_records } : defaultRecords.swimming,
+      });
+      setFollowerCount(previewIdentity.followerCount ?? 0);
+      setFollowingCount(previewIdentity.followingCount ?? 0);
+      setPendingRequestsCount(0);
+      const ms = previewIdentity.mockStats;
+      if (ms) {
+        setReliabilityRate(ms.reliability_rate ?? 100);
+        setTotalSessionsJoined(ms.total_sessions_joined ?? 0);
+        setTotalSessionsCompleted(ms.total_sessions_completed ?? 0);
+        setTotalSessionsCreated(ms.sessions_created ?? 0);
+      } else {
+        setReliabilityRate(100);
+        setTotalSessionsJoined(0);
+        setTotalSessionsCompleted(0);
+        setTotalSessionsCreated(0);
+      }
+      setOwnStories([]);
+      setStoryHighlights([]);
+      setHighlightPickOrder([]);
+      setLoading(false);
+      return;
     }
-  }, [user, open]);
+    void fetchProfile();
+    void fetchFollowCounts();
+    void fetchReliabilityStats();
+    void fetchStoriesAndHighlights();
+  }, [user, open, isPreviewMode, userProfile, previewIdentity]);
   const fetchStoriesAndHighlights = async () => {
     if (!user) return;
     const [{ data: stories }, { data: highlights }] = await Promise.all([
@@ -163,8 +248,66 @@ export const ProfileDialog = ({
         .eq("owner_id", user.id)
         .order("position", { ascending: true }),
     ]);
-    setOwnStories((stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>);
-    setStoryHighlights((highlights ?? []) as Array<{ id: string; story_id: string; title: string }>);
+    const baseStories = (stories ?? []) as Array<{ id: string; created_at: string; expires_at: string }>;
+    const highlightRows = (highlights ?? []) as Array<{ id: string; story_id: string; title: string }>;
+    const storyIds = baseStories.map((s) => s.id);
+    const highlighted = new Set(highlightRows.map((h) => h.story_id));
+    const { data: mediaRows } = storyIds.length
+      ? await (supabase as any)
+          .from("story_media")
+          .select("story_id, media_url, media_type, metadata, created_at")
+          .in("story_id", storyIds)
+          .order("created_at", { ascending: true })
+      : { data: [] };
+    const mediaByStory: Map<string, { media_url: string | null; media_type: 'image' | 'video' | 'boomerang' | null; duration_label: string | null }> = new Map();
+    for (const row of (mediaRows ?? []) as Array<any>) {
+      if (mediaByStory.has(row.story_id)) continue;
+      const sec = Number(row?.metadata?.duration_sec ?? row?.metadata?.duration ?? 0);
+      const duration_label = Number.isFinite(sec) && sec > 0 ? `0:${String(Math.round(sec)).padStart(2, "0")}` : null;
+      mediaByStory.set(row.story_id, {
+        media_url: row.media_url ?? null,
+        media_type: row.media_type ?? null,
+        duration_label,
+      });
+    }
+    setOwnStories(
+      baseStories.map((s) => {
+        const media = mediaByStory.get(s.id);
+        return {
+          ...s,
+          media_url: media?.media_url ?? null,
+          media_type: media?.media_type ?? null,
+          duration_label: media?.duration_label ?? null,
+          is_highlighted: highlighted.has(s.id),
+        };
+      })
+    );
+    setStoryHighlights(highlightRows);
+    setHighlightPickOrder([]);
+  };
+
+  const addStoriesToHighlights = async (storyIds: string[]) => {
+    if (!user || storyIds.length === 0) return;
+    setHighlightSubmitting(true);
+    try {
+      const title = (newHighlightTitle || "À la une").trim();
+      const startPos = storyHighlights.length;
+      const payload = storyIds.map((story_id, idx) => ({
+        owner_id: user.id,
+        story_id,
+        title,
+        position: startPos + idx,
+      }));
+      const { error } = await (supabase as any).from("profile_story_highlights").insert(payload);
+      if (error) throw error;
+      toast({ title: "Ajouté", description: `${storyIds.length} story${storyIds.length > 1 ? "s" : ""} ajoutée${storyIds.length > 1 ? "s" : ""} à la une.` });
+      await fetchStoriesAndHighlights();
+      setShowHighlightsManager(false);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'ajouter ces stories à la une", variant: "destructive" });
+    } finally {
+      setHighlightSubmitting(false);
+    }
   };
   const addStoryToHighlights = async (storyId: string) => {
     if (!user) return;
@@ -387,6 +530,13 @@ export const ProfileDialog = ({
     }
   };
   const updateProfile = async () => {
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Les modifications ne sont pas enregistrées. Quittez l’aperçu pour retrouver votre compte réel.",
+      });
+      return;
+    }
     try {
       setLoading(true);
       let avatarUrl = formData.avatar_url;
@@ -455,6 +605,19 @@ export const ProfileDialog = ({
   const profileDialogShellClassName =
     "z-[116] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]";
 
+  const hasActiveOwnStory = ownStories.some((story) => {
+    const expiresAtMs = Date.parse(story.expires_at);
+    return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
+  });
+
+  const handleAvatarPress = () => {
+    if (hasActiveOwnStory) {
+      setShowOwnStory(true);
+      return;
+    }
+    setShowAvatarFullscreen(true);
+  };
+
   const socialSessionsCount = Math.max(totalSessionsCompleted, totalSessionsCreated);
   const isPremiumUser = !!(profile?.is_premium || subscriptionInfo?.subscribed);
   const socialHighlights = [
@@ -465,31 +628,24 @@ export const ProfileDialog = ({
     isPremiumUser ? "Premium" : null,
   ].filter(Boolean) as string[];
 
-  if (loading && open) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          data-tutorial="tutorial-profile-page"
-          hideCloseButton
-          fullScreen
-          className={profileDialogShellClassName}
-        >
-          <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
-          <div className="flex flex-1 items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
   return <>
       <Dialog open={open} onOpenChange={onOpenChange}>
+        {open ? (
         <DialogContent
           data-tutorial="tutorial-profile-page"
           hideCloseButton
           fullScreen
           className={profileDialogShellClassName}
         >
+          {loading ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
+            <DialogTitle className="sr-only">Chargement du profil</DialogTitle>
+            <div className="flex flex-1 items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          </div>
+          ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-secondary">
           {/* iOS Header */}
           <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
             <div className="flex min-w-0 max-w-full items-center justify-between gap-2 px-4 py-3">
@@ -512,13 +668,13 @@ export const ProfileDialog = ({
             </div>
           </div>
           
-           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-             <div className="box-border min-w-0 max-w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+           <div className="ios-scroll-region min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] bg-secondary">
+             <div className="box-border min-w-0 max-w-full">
                 {/* Profile Header - Instagram layout: avatar + stats side by side */}
                 <div className="bg-card border-b border-border px-4 pt-5 pb-4">
                   <div className="flex items-center gap-5">
                     {/* Avatar */}
-                    <button type="button" className="relative shrink-0" onClick={() => setShowOwnStory(true)}>
+                    <button type="button" className="relative shrink-0" onClick={handleAvatarPress}>
                       <Avatar className="h-20 w-20 ring-[3px] ring-primary/20">
                         <AvatarImage src={avatarPreview || profile?.avatar_url || ""} className="object-cover" />
                         <AvatarFallback className="text-2xl bg-secondary">
@@ -654,14 +810,18 @@ export const ProfileDialog = ({
               {/* Stories à la une - cercles style Instagram */}
               <div className="bg-card border-b border-border px-4 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
-                  {storyHighlights.map((item) => (
+                  {storyHighlights.map((item) => {
+                    const titleSafe = String(item.title ?? "").trim() || "À la une";
+                    const initials = titleSafe.slice(0, 2).toUpperCase();
+                    return (
                     <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
                       <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                        {item.title.slice(0, 2).toUpperCase()}
+                        {initials}
                       </div>
-                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                      <p className="w-full truncate text-center text-[11px] text-muted-foreground">{titleSafe}</p>
                     </button>
-                  ))}
+                    );
+                  })}
                   {/* Bouton ajouter */}
                   <button
                     type="button"
@@ -784,21 +944,24 @@ export const ProfileDialog = ({
               ) : (
                 <>
 
-                  {/* Raccourcis — grille 2 colonnes ; 5e tuile centrée (premium → abonnement, déjà premium → parrainage) */}
+                  {/* Raccourcis — grille 2 colonnes ; premium: rangée basse Parrainage + Plan d'entraînement */}
                   <div className="bg-card border-b border-border px-4 py-3">
                     <div className="grid grid-cols-2 gap-2.5">
                       {[
                         { icon: Trophy, label: 'Records', color: 'text-yellow-500', action: () => { onOpenChange(false); navigate('/profile/records'); } },
-                        { icon: Shield, label: `Fiabilité ${reliabilityRate}%`, color: 'text-blue-500', action: () => setShowReliabilityDialog(true) },
-                        { icon: Map, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
                         { icon: History, label: 'Séances', color: 'text-primary', action: () => { onOpenChange(false); navigate('/my-sessions'); } },
+                        { icon: MapIcon, label: 'Parcours', color: 'text-green-500', action: () => { onOpenChange(false); navigate('/route-creation'); } },
+                        { icon: MapPin, label: 'Mes itinéraires', color: 'text-blue-500', action: () => { onOpenChange(false); navigate('/itinerary/my-routes'); } },
                         isPremiumUser
                           ? {
                               icon: Gift,
                               label: 'Parrainer quelqu’un',
                               color: 'text-primary',
-                              action: () => setShowReferralDialog(true),
-                              centeredHalf: true as const,
+                              action: () => {
+                                onOpenChange(false);
+                                navigate("/referral");
+                              },
+                              halfTile: true as const,
                             }
                           : {
                               icon: Crown,
@@ -811,13 +974,34 @@ export const ProfileDialog = ({
                               accentTile: 'premium' as const,
                               centeredHalf: true as const,
                             },
-                      ].map((item) => (
+                        isPremiumUser
+                          ? {
+                              icon: Calendar,
+                              label: "Plan d'entraînement",
+                              color: 'text-primary',
+                              action: () => {
+                                onOpenChange(false);
+                                navigate('/coaching');
+                              },
+                              halfTile: true as const,
+                            }
+                          : {
+                              icon: Crown,
+                              label: '',
+                              color: 'hidden',
+                              action: () => {},
+                              hiddenTile: true as const,
+                            },
+                      ].map((item, idx) => (
                         <button
-                          key={item.label}
+                          key={item.label || `shortcut-empty-${idx}`}
                           type="button"
                           onClick={item.action}
+                          disabled={item.hiddenTile}
                           className={cn(
                             'flex flex-col items-center justify-center gap-2 rounded-xl p-4 transition-colors',
+                            item.hiddenTile && 'pointer-events-none opacity-0',
+                            item.halfTile && 'w-full',
                             item.centeredHalf &&
                               'col-span-2 mx-auto w-full max-w-[calc(50%-0.3125rem)]',
                             item.accentTile === 'premium'
@@ -833,23 +1017,28 @@ export const ProfileDialog = ({
                   </div>
                 </>
               )}
-
-              <div className="mt-4 space-y-2 px-4">
-                <Button
-                  type="button"
-                  className="h-11 w-full gap-2 rounded-xl text-[15px] font-semibold"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/stories/create");
-                  }}
-                >
-                  <Video className="h-4 w-4 shrink-0" />
-                  Créer une story
-                </Button>
-              </div>
             </div>
           </div>
+
+          <div className="shrink-0 border-t border-border bg-card px-4 pt-2 pb-[max(14px,env(safe-area-inset-bottom,0px))]">
+            <div className="mx-auto w-full max-w-md">
+              <Button
+                type="button"
+                className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold shadow-md shadow-black/[0.07] ring-1 ring-black/[0.05] dark:shadow-black/30 dark:ring-white/[0.08]"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate("/stories/create");
+                }}
+              >
+                <Video className="h-4 w-4 shrink-0" />
+                Créer une story
+              </Button>
+            </div>
+          </div>
+          </div>
+          )}
         </DialogContent>
+        ) : null}
       </Dialog>
 
       <FollowDialog open={showFollowDialog} onOpenChange={setShowFollowDialog} type={followDialogType} followerCount={followerCount} followingCount={followingCount} />
@@ -879,9 +1068,14 @@ export const ProfileDialog = ({
       {/* Reliability Details Dialog */}
       <ReliabilityDetailsDialog open={showReliabilityDialog} onOpenChange={setShowReliabilityDialog} reliabilityRate={reliabilityRate} totalSessionsCreated={totalSessionsCreated} totalSessionsJoined={totalSessionsJoined} totalSessionsCompleted={totalSessionsCompleted} />
 
-      <Suspense fallback={null}>
-        <ReferralDialog isOpen={showReferralDialog} onClose={() => setShowReferralDialog(false)} />
-      </Suspense>
+      <ProfileShareScreen
+        open={showProfileShare}
+        onClose={() => setShowProfileShare(false)}
+        onOpenQr={() => {
+          setShowProfileShare(false);
+          setShowQRDialog(true);
+        }}
+      />
 
       {qrData && (
         <QRShareDialog
@@ -894,85 +1088,192 @@ export const ProfileDialog = ({
           referralCode={qrData.referralCode}
         />
       )}
-      <Dialog open={showHighlightsManager} onOpenChange={setShowHighlightsManager}>
+      <Dialog
+        open={showHighlightsManager}
+        onOpenChange={(next) => {
+          setShowHighlightsManager(next);
+          if (next) setHighlightPickOrder([]);
+        }}
+      >
+        {showHighlightsManager ? (
         <DialogContent stackNested fullScreen hideCloseButton className="z-[200] flex min-h-0 min-w-0 max-w-full flex-col overflow-hidden rounded-none border-0 bg-secondary p-0 !bg-secondary h-[100dvh] max-h-[100dvh]" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Stories à la une</DialogTitle>
-          {/* Header */}
-          <div className="shrink-0 border-b border-border bg-card pt-[env(safe-area-inset-top,0px)]">
-            <div className="flex items-center justify-between px-4 py-3">
-              <button type="button" onClick={() => setShowHighlightsManager(false)} className="flex items-center gap-1 text-primary">
-                <ArrowLeft className="h-5 w-5" />
-                <span className="text-[17px]">Retour</span>
+          <div className="shrink-0 border-b border-border/70 bg-card/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+            <div className="grid grid-cols-[72px_1fr_72px] items-center px-3 py-3">
+              <button
+                type="button"
+                onClick={() => setShowHighlightsManager(false)}
+                className="justify-self-start rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+              >
+                Annuler
               </button>
-              <h1 className="text-[17px] font-semibold text-foreground">Stories à la une</h1>
-              <div className="w-16" />
+              <h1 className="truncate px-2 text-center text-[16px] font-semibold text-foreground">Ajouter au contenu à la une</h1>
+              <button
+                type="button"
+                disabled={highlightPickOrder.length === 0 || highlightSubmitting}
+                onClick={() => void addStoriesToHighlights(highlightPickOrder)}
+                className={cn(
+                  "justify-self-end rounded-full px-2 py-1 text-[15px] font-semibold transition-opacity",
+                  highlightPickOrder.length === 0 || highlightSubmitting
+                    ? "text-muted-foreground/60"
+                    : "text-primary active:opacity-70"
+                )}
+              >
+                {highlightSubmitting ? "..." : "Suivant"}
+              </button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Titre du highlight */}
-            <div>
-              <label className="text-[13px] font-medium text-muted-foreground mb-1 block">Titre du highlight</label>
-              <Input
-                value={newHighlightTitle}
-                onChange={(e) => setNewHighlightTitle(e.target.value)}
-                placeholder="Ex: Courses, PR, Trails..."
-                className="bg-card"
-              />
-            </div>
-
-            {/* Liste des stories */}
-            <div>
-              <p className="text-[13px] font-medium text-muted-foreground mb-2">Sélectionner une story</p>
-              <div className="space-y-2">
+          <div className="flex-1 overflow-y-auto px-3 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3">
+            {ownStories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <Heart className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="text-base font-semibold text-foreground">Aucune story</p>
+                <p className="mt-1 max-w-[260px] text-sm text-muted-foreground">
+                  Crée ta première story pour pouvoir l&apos;épingler à la une de ton profil.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
                 {ownStories.map((story) => {
-                  const already = storyHighlights.some((h) => h.story_id === story.id);
+                  const pickIndex = highlightPickOrder.indexOf(story.id);
+                  const selected = pickIndex >= 0;
+                  const dateLabel = new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
                   return (
-                    <div key={story.id} className="flex items-center justify-between rounded-xl bg-card border px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Story du {new Date(story.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(story.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      {already ? (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="rounded-lg"
-                          onClick={() => {
-                            const h = storyHighlights.find((x) => x.story_id === story.id);
-                            if (h) void removeHighlight(h.id);
-                          }}
-                        >
-                          Retirer
-                        </Button>
-                      ) : (
-                        <Button size="sm" className="rounded-lg" onClick={() => void addStoryToHighlights(story.id)}>
-                          Épingler
-                        </Button>
+                    <button
+                      key={story.id}
+                      type="button"
+                      onPointerDown={(e) => {
+                        if (e.button !== 0 && e.button !== -1) return;
+                        resetHighlightGridPress();
+                        const r = highlightPressRef.current;
+                        r.storyId = story.id;
+                        r.longTriggered = false;
+                        r.startX = e.clientX;
+                        r.startY = e.clientY;
+                        r.startT = Date.now();
+                        try {
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        } catch {
+                          /* ignore */
+                        }
+                        r.timer = setTimeout(() => {
+                          r.longTriggered = true;
+                          r.timer = null;
+                          setHighlightStoryId(story.id);
+                          if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                            navigator.vibrate(12);
+                          }
+                        }, HIGHLIGHT_GRID_LONG_PRESS_MS);
+                      }}
+                      onPointerMove={(e) => {
+                        const r = highlightPressRef.current;
+                        if (r.storyId !== story.id || r.longTriggered) return;
+                        const dx = e.clientX - r.startX;
+                        const dy = e.clientY - r.startY;
+                        if (Math.hypot(dx, dy) > HIGHLIGHT_GRID_MOVE_CANCEL_PX) clearHighlightGridPressTimer();
+                      }}
+                      onPointerUp={(e) => {
+                        const r = highlightPressRef.current;
+                        if (r.storyId !== story.id) return;
+                        const longTriggered = r.longTriggered;
+                        clearHighlightGridPressTimer();
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch {
+                          /* ignore */
+                        }
+                        const dur = Date.now() - r.startT;
+                        const dist = Math.hypot(e.clientX - r.startX, e.clientY - r.startY);
+                        resetHighlightGridPress();
+                        if (longTriggered) return;
+                        if (dur < HIGHLIGHT_GRID_LONG_PRESS_MS && dist <= HIGHLIGHT_GRID_MOVE_CANCEL_PX) {
+                          setHighlightPickOrder((prev) =>
+                            prev.includes(story.id) ? prev.filter((id) => id !== story.id) : [...prev, story.id]
+                          );
+                          if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                            navigator.vibrate(8);
+                          }
+                        }
+                      }}
+                      onPointerCancel={resetHighlightGridPress}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter" && e.key !== " ") return;
+                        e.preventDefault();
+                        setHighlightPickOrder((prev) =>
+                          prev.includes(story.id) ? prev.filter((id) => id !== story.id) : [...prev, story.id]
+                        );
+                        if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                          navigator.vibrate(8);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        clearHighlightGridPressTimer();
+                        resetHighlightGridPress();
+                        setHighlightStoryId(story.id);
+                      }}
+                      className={cn(
+                        "group relative aspect-[9/16] touch-manipulation overflow-hidden rounded-xl bg-black transition-all select-none",
+                        selected && "ring-2 ring-primary"
                       )}
-                    </div>
+                    >
+                      {story.media_type === "video" || story.media_type === "boomerang" ? (
+                        <video
+                          src={story.media_url ?? undefined}
+                          className={cn("h-full w-full object-cover transition-opacity", selected ? "opacity-75" : "opacity-100")}
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img
+                          src={story.media_url ?? ""}
+                          alt=""
+                          loading="lazy"
+                          className={cn("h-full w-full object-cover transition-opacity", selected ? "opacity-75" : "opacity-100")}
+                        />
+                      )}
+
+                      <div className="absolute left-1.5 top-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        {dateLabel}
+                      </div>
+
+                      {(story.media_type === "video" || story.media_type === "boomerang") && (
+                        <div className="absolute bottom-1.5 right-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          {story.duration_label || "Vidéo"}
+                        </div>
+                      )}
+
+                      {story.is_highlighted && !selected && (
+                        <div className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                          Déjà à la une
+                        </div>
+                      )}
+
+                      <div
+                        className={cn(
+                          "absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums",
+                          selected
+                            ? "border-primary bg-primary text-white"
+                            : "border-white/75 bg-black/25 text-transparent"
+                        )}
+                        aria-hidden
+                      >
+                        {selected ? pickIndex + 1 : "\u00a0"}
+                      </div>
+                    </button>
                   );
                 })}
-                {ownStories.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-                      <Heart className="h-7 w-7 text-muted-foreground" />
-                    </div>
-                    <p className="text-base font-semibold text-foreground">Aucune story</p>
-                    <p className="mt-1 text-sm text-muted-foreground max-w-[260px]">
-                      Crée ta première story pour pouvoir l'épingler à la une de ton profil.
-                    </p>
-                  </div>
-                )}
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
+        ) : null}
       </Dialog>
+      {showOwnStory && (
       <SessionStoryDialog
         open={showOwnStory}
         onOpenChange={setShowOwnStory}
@@ -985,10 +1286,12 @@ export const ProfileDialog = ({
           navigate("/feed");
         }}
       />
+      )}
+      {highlightStoryId && (
       <SessionStoryDialog
-        open={!!highlightStoryId}
-        onOpenChange={(open) => {
-          if (!open) setHighlightStoryId(null);
+        open
+        onOpenChange={(next) => {
+          if (!next) setHighlightStoryId(null);
         }}
         authorId={user?.id ?? null}
         viewerUserId={user?.id ?? null}
@@ -999,6 +1302,14 @@ export const ProfileDialog = ({
           onOpenChange(false);
           navigate("/feed");
         }}
+      />
+      )}
+      <AvatarViewer
+        open={showAvatarFullscreen}
+        onClose={() => setShowAvatarFullscreen(false)}
+        avatarUrl={avatarPreview || profile?.avatar_url || null}
+        username={profile?.username?.trim() || "Profil"}
+        stackNested
       />
     </>;
 };

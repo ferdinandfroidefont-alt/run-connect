@@ -1,14 +1,21 @@
 import { useAuth } from '@/hooks/useAuth';
+import { hasCompletedOnboarding } from '@/lib/arrivalFlowStorage';
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BottomNavigation } from './BottomNavigation';
 import { useAppContext } from '@/contexts/AppContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
+import { useAppPreview } from '@/contexts/AppPreviewContext';
+import { PreviewModeBanner } from '@/components/preview/PreviewModeBanner';
 import { ConsentDialog } from './ConsentDialog';
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, type CSSProperties } from 'react';
 import { resetBodyInteractionLocks } from '@/lib/bodyInteractionLocks';
 import { cn } from '@/lib/utils';
 import { TutorialReplayHost } from '@/components/TutorialReplayHost';
-import { RUCONNECT_LOADING_SCREEN_URL, RUCONNECT_SPLASH_BLUE } from '@/lib/ruconnectSplashChrome';
+import {
+  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_SPLASH_ICON_URL,
+  RUCONNECT_SPLASH_PRIMARY,
+} from '@/lib/ruconnectSplashChrome';
 import { HomeFeedBottomSheet } from '@/components/home/HomeFeedBottomSheet';
 const PersistentHomeMap = lazy(() => import('@/components/PersistentHomeMap'));
 
@@ -19,7 +26,8 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
   const { userProfile, loading: profileLoading, refreshProfile } = useUserProfile();
-  const { hideBottomNav, homeMapImmersive } = useAppContext();
+  const { isPreviewMode } = useAppPreview();
+  const { removeMainBottomInset, homeMapImmersive } = useAppContext();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -28,8 +36,11 @@ export const Layout = ({ children }: LayoutProps) => {
     (location.pathname || '/').replace(/\/+$/, '') || '/';
   const isProfileRoute =
     normalizedPath === '/profile' || normalizedPath.startsWith('/profile/');
-  const showBottomNav = !hideBottomNav && !isProfileRoute;
   const [homeMapPrimed, setHomeMapPrimed] = useState(isHome);
+
+  /** Padding bas du <main> : stable dès le 1er rendu (pas de useEffect) — évite reflow / « remontée » de la zone utile. */
+  const layoutBottomInset =
+    isProfileRoute || removeMainBottomInset ? "0px" : "var(--bottom-nav-offset)";
 
   useEffect(() => {
     if (isHome) setHomeMapPrimed(true);
@@ -57,17 +68,6 @@ export const Layout = ({ children }: LayoutProps) => {
   const mapInitialLng = lngStr ? parseFloat(lngStr) : undefined;
   const mapInitialZoom = zoomStr ? parseInt(zoomStr, 10) : undefined;
 
-  // Réserve l’espace sous le contenu quand la tab bar est visible (profil = plein écran sans barre).
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--layout-bottom-inset',
-      hideBottomNav || isProfileRoute ? '0px' : 'var(--bottom-nav-offset)'
-    );
-    return () => {
-      document.documentElement.style.removeProperty('--layout-bottom-inset');
-    };
-  }, [hideBottomNav, isProfileRoute]);
-  
   // État local pour éviter la boucle infinie RGPD
   const [consentCompleted, setConsentCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -115,25 +115,31 @@ export const Layout = ({ children }: LayoutProps) => {
 
   // Hook "ready" — MUST be before any conditional return
 
-  /* Un seul splash bleu (LoadingScreen) : ne pas bloquer sur profileLoading sinon 2e plein écran après restore StatusBar → barre iOS blanche sur fond bleu. */
+  /* Un seul splash premium (LoadingScreen) : ne pas bloquer sur profileLoading sinon double plein écran. */
   if (loading) {
     return (
       <div
         className="fixed inset-0 z-[99] flex items-center justify-center px-5"
         style={{
-          backgroundColor: RUCONNECT_SPLASH_BLUE,
+          backgroundColor: RUCONNECT_SPLASH_BACKGROUND,
           paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingBottom: '0px',
         }}
       >
-        <img
-          src={RUCONNECT_LOADING_SCREEN_URL}
-          alt=""
-          draggable={false}
-          className="block max-h-[min(78dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-2rem))] w-auto max-w-[min(92vw,28rem)] select-none object-contain"
-          width={473}
-          height={1024}
-        />
+        <div className="flex flex-col items-center">
+          <img
+            src={RUCONNECT_SPLASH_ICON_URL}
+            alt="RunConnect"
+            draggable={false}
+            className="mb-5 block h-[128px] w-[128px] select-none object-contain"
+          />
+          <p className="text-[26px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+            RUNCONNECT
+          </p>
+          <p className="mt-2 text-[12px] font-medium tracking-[0.22em] text-foreground/45">
+            TROUVE. CONNECTE. PARTAGE.
+          </p>
+        </div>
       </div>
     );
   }
@@ -142,12 +148,23 @@ export const Layout = ({ children }: LayoutProps) => {
     return <Navigate to="/auth" replace />;
   }
 
+  if (user.id && !hasCompletedOnboarding(user.id)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (needsConsent) {
     return <ConsentDialog userId={user.id} onComplete={handleConsentComplete} />;
   }
 
   return (
-    <div className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden">
+    <div
+      className="h-screen-safe ios-app-canvas flex flex-col overflow-hidden"
+      style={
+        {
+          ["--layout-bottom-inset" as string]: layoutBottomInset,
+        } as CSSProperties
+      }
+    >
       {/*
         La tab bar est dans le flux (plus en fixed) : le <main> a une hauteur réelle = viewport − barre.
         Le scroll ne s’étend plus derrière les onglets (plus besoin de ios-nav-padding sur le scroll).
@@ -156,7 +173,16 @@ export const Layout = ({ children }: LayoutProps) => {
         Le scroll est dans chaque page (ios-scroll-region), pas ici : sinon les barres du haut
         partent avec le scroll / le clavier sur iOS. Le main ne fait que cadrer la hauteur utile.
       */}
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden">
+      <PreviewModeBanner />
+      <main
+        className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden"
+        style={{
+          paddingBottom: "var(--layout-bottom-inset)",
+          paddingTop: isPreviewMode
+            ? "calc(44px + env(safe-area-inset-top, 0px))"
+            : undefined,
+        }}
+      >
         {homeMapPrimed && (
           <div
             className={
@@ -204,9 +230,10 @@ export const Layout = ({ children }: LayoutProps) => {
       {isHome && !homeMapImmersive && <HomeFeedBottomSheet />}
       <TutorialReplayHost />
       {/*
-        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock (hors flux des onglets).
+        Tab bar toujours montée (pas de mount/unmount par route) : visibilité gérée dans BottomNavigation.
+        FAB création : rendu par BottomNavigation sur l’accueil, position fixed au-dessus du dock.
       */}
-      {showBottomNav && <BottomNavigation />}
+      <BottomNavigation isProfileRoute={isProfileRoute} />
     </div>
   );
 };

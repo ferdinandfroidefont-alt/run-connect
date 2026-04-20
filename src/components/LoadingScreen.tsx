@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  RUCONNECT_SPLASH_BLUE,
-  RUCONNECT_LOADING_SCREEN_URL,
+  RUCONNECT_SPLASH_BACKGROUND,
+  RUCONNECT_SPLASH_ICON_URL,
+  RUCONNECT_SPLASH_PRIMARY,
   applyRuconnectSplashNativeChrome,
   applyRuconnectSplashWebChrome,
   restoreChromeAfterRuconnectSplash,
@@ -76,16 +77,8 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- boot unique ; voir commentaire ci-dessus
   }, []);
 
-  const splashLayerStyle: CSSProperties = {
-    backgroundColor: RUCONNECT_SPLASH_BLUE,
-  };
-
-  const splashArtStyle: CSSProperties = {
-    width: "auto",
-    height: "auto",
-    maxWidth: "min(92vw, 28rem)",
-    maxHeight: "min(78dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem))",
-  };
+  const splashLayerStyle: CSSProperties = { backgroundColor: RUCONNECT_SPLASH_BACKGROUND };
+  const iconStyle: CSSProperties = { width: "clamp(120px, 30vw, 140px)", height: "clamp(120px, 30vw, 140px)" };
 
   return (
     <AnimatePresence>
@@ -101,41 +94,64 @@ export const LoadingScreen = ({ onLoadingComplete }: LoadingScreenProps) => {
           transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
         >
           <span className="sr-only">{t("loading.splashAria")}</span>
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center px-5"
-            style={{
-              paddingTop: "env(safe-area-inset-top, 0px)",
-              paddingBottom: "env(safe-area-inset-bottom, 0px)",
-            }}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                type: "spring",
-                stiffness: 320,
-                damping: 32,
-                mass: 0.9,
-              }}
-              className="flex flex-col items-center"
-            >
-              <img
-                src={RUCONNECT_LOADING_SCREEN_URL}
-                alt=""
-                draggable={false}
-                className="block shrink-0 select-none object-contain"
-                style={splashArtStyle}
-                width={473}
-                height={1024}
-              />
-            </motion.div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col px-6" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div className="flex min-h-0 flex-1 items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+                className="flex flex-col items-center"
+              >
+                <div className="relative mb-8 flex items-center justify-center" style={iconStyle}>
+                  {[0, 1, 2].map((wave) => (
+                    <motion.span
+                      key={wave}
+                      className="absolute rounded-full border"
+                      style={{ borderColor: RUCONNECT_SPLASH_PRIMARY, inset: 0 }}
+                      animate={{ scale: [1, 1.8], opacity: [0.28, 0] }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: wave * 0.32,
+                      }}
+                    />
+                  ))}
+                  <img
+                    src={RUCONNECT_SPLASH_ICON_URL}
+                    alt="RunConnect"
+                    draggable={false}
+                    className="relative z-10 block h-full w-full select-none object-contain"
+                  />
+                </div>
+
+                <h1 className="text-[28px] font-bold tracking-[0.08em]" style={{ color: RUCONNECT_SPLASH_PRIMARY }}>
+                  RUNCONNECT
+                </h1>
+                <p className="mt-2 text-[12px] font-medium tracking-[0.24em] text-foreground/45">
+                  TROUVE. CONNECTE. PARTAGE.
+                </p>
+                <p className="mt-5 text-[12px] text-foreground/40">Connexion en cours...</p>
+              </motion.div>
+            </div>
+
+            <div className="pb-[max(8px,env(safe-area-inset-bottom,0px))]">
+              <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-[#2563EB]/10">
+                <motion.div
+                  className="absolute inset-y-0 w-[40%] rounded-full"
+                  style={{ backgroundColor: RUCONNECT_SPLASH_PRIMARY }}
+                  animate={{ x: ["-45%", "250%"] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </div>
+            </div>
           </div>
         </motion.div>
       ) : (
         <motion.div
           key="splash-exit"
           className="pointer-events-none fixed inset-0 z-[100]"
-          style={{ backgroundColor: RUCONNECT_SPLASH_BLUE }}
+          style={{ backgroundColor: RUCONNECT_SPLASH_BACKGROUND }}
           initial={{ opacity: 1 }}
           animate={{ opacity: 0 }}
           transition={{ duration: 0.14, ease: [0.32, 0.72, 0, 1] }}

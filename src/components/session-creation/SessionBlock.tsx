@@ -4,41 +4,9 @@ import { X, Flame, Snowflake, Zap, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SessionBlock as SessionBlockType, BlockType, INTENSITY_LEVELS, RECOVERY_TYPES, getPacePlaceholder, isRunningActivity } from './types';
+import { SessionBlock as SessionBlockType, BlockType, RECOVERY_TYPES, getPacePlaceholder, isRunningActivity } from './types';
 import { cn } from '@/lib/utils';
-import { rpeChipColor } from '@/lib/sessionBlockRpe';
-
-function RpeTenPicker({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value?: number;
-  onChange: (v: number | undefined) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5 pt-2 border-t border-border/50">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <div className="flex flex-wrap gap-0.5">
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(value === n ? undefined : n)}
-            className={cn(
-              'h-8 min-w-[28px] px-1 rounded-lg text-[11px] font-semibold transition-colors touch-manipulation',
-              value === n ? 'text-white shadow-sm' : 'bg-card text-muted-foreground hover:bg-card/80 active:scale-95'
-            )}
-            style={value === n ? { backgroundColor: rpeChipColor(n) } : undefined}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 
 interface SessionBlockProps {
   block: SessionBlockType;
@@ -55,6 +23,16 @@ const BLOCK_CONFIG: Record<BlockType, { icon: React.ElementType; label: string; 
   cooldown: { icon: Snowflake, label: 'Retour au calme', bgColor: 'bg-purple-500/10', iconColor: 'text-purple-500' },
 };
 
+type PickerKind =
+  | 'repetitions'
+  | 'blockRepetitions'
+  | 'distance'
+  | 'effortPace'
+  | 'recovery'
+  | 'blockRecovery'
+  | 'duration'
+  | 'pace';
+
 export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
   block,
   activityType,
@@ -65,6 +43,26 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
   const config = BLOCK_CONFIG[block.type];
   const IconComponent = config.icon;
   const pacePlaceholder = getPacePlaceholder(activityType);
+  const [openPicker, setOpenPicker] = React.useState<null | PickerKind>(null);
+  const [draftA, setDraftA] = React.useState("0");
+  const [draftB, setDraftB] = React.useState("0");
+
+  const intOptions = (max: number, start = 0) => Array.from({ length: max - start + 1 }, (_, i) => ({ value: String(i + start), label: String(i + start) }));
+  const secOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+
+  const openIntPicker = (kind: Exclude<PickerKind, 'effortPace' | 'pace'>, current: string | number | undefined, fallback = 0) => {
+    setDraftA(String(Number.parseInt(String(current ?? fallback), 10) || fallback));
+    setOpenPicker(kind);
+  };
+
+  const openPacePicker = (kind: 'effortPace' | 'pace', current: string | undefined) => {
+    const mmss = (current || "").match(/(\d{1,2}):(\d{2})/);
+    setDraftA(String(mmss ? Number.parseInt(mmss[1], 10) : 5));
+    setDraftB(String(mmss ? Number.parseInt(mmss[2], 10) : 0));
+    setOpenPicker(kind);
+  };
+
+  const blockReps = block.blockRepetitions ?? 1;
 
   return (
     <motion.div
@@ -99,72 +97,70 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
         {block.type === 'interval' ? (
           /* Interval Block */
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div>
-                <Label className="text-xs text-muted-foreground">Répétitions</Label>
+                <Label className="text-xs text-muted-foreground">Blocs</Label>
                 <Input
-                  type="number"
+                  value={block.blockRepetitions || ''}
+                  readOnly
+                  onClick={() => openIntPicker('blockRepetitions', block.blockRepetitions, 1)}
+                  placeholder="1"
+                  className="h-10 cursor-pointer text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Séries</Label>
+                <Input
                   value={block.repetitions || ''}
-                  onChange={(e) => onUpdate({ repetitions: parseInt(e.target.value) || undefined })}
+                  readOnly
+                  onClick={() => openIntPicker('repetitions', block.repetitions, 10)}
                   placeholder="10"
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Distance (m)</Label>
                 <Input
-                  type="number"
                   value={block.effortDuration || ''}
-                  onChange={(e) => onUpdate({ effortDuration: e.target.value, effortType: 'distance' })}
+                  readOnly
+                  onClick={() => openIntPicker('distance', block.effortDuration, 400)}
                   placeholder="400"
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Allure</Label>
                 <Input
                   value={block.effortPace || ''}
-                  onChange={(e) => onUpdate({ effortPace: e.target.value })}
+                  readOnly
+                  onClick={() => openPacePicker('effortPace', block.effortPace)}
                   placeholder={isRunningActivity(activityType) ? "3:30" : "35"}
-                  className="h-10 text-sm"
+                  className="h-10 cursor-pointer text-sm"
                 />
               </div>
             </div>
 
-            {/* Intensity */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Intensité</Label>
-              <div className="grid grid-cols-5 gap-1">
-                {INTENSITY_LEVELS.map((level) => (
-                  <button
-                    key={level.value}
-                    type="button"
-                    onClick={() => onUpdate({ effortIntensity: level.value })}
-                    className={cn(
-                      "py-1.5 px-1 rounded-lg text-[10px] font-medium transition-all text-center",
-                      block.effortIntensity === level.value
-                        ? `${level.color} text-white`
-                        : "bg-card text-muted-foreground hover:bg-card/80"
-                    )}
-                  >
-                    {level.label.split(' - ')[0]}
-                  </button>
-                ))}
+            {/* Aperçu format ex: 2×3×400 */}
+            {(block.repetitions || block.effortDuration) && (
+              <div className="text-xs text-muted-foreground tabular-nums">
+                {blockReps > 1 ? `${blockReps}×` : ''}
+                {block.repetitions || '?'}×{block.effortDuration || '?'}m
+                {block.effortPace ? ` @ ${block.effortPace}` : ''}
               </div>
-            </div>
+            )}
 
-            {/* Recovery */}
+            {/* Recovery between series */}
             <div className="pt-2 border-t border-border/50">
-              <Label className="text-xs text-muted-foreground mb-2 block">Récupération</Label>
+              <Label className="text-xs text-muted-foreground mb-2 block">Récup entre séries</Label>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs text-muted-foreground">Durée (sec)</Label>
                   <Input
-                    type="number"
                     value={block.recoveryDuration || ''}
-                    onChange={(e) => onUpdate({ recoveryDuration: e.target.value })}
+                    readOnly
+                    onClick={() => openIntPicker('recovery', block.recoveryDuration, 90)}
                     placeholder="90"
-                    className="h-10 text-sm"
+                    className="h-10 cursor-pointer text-sm"
                   />
                 </div>
                 <div>
@@ -183,68 +179,150 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({
               </div>
             </div>
 
-            <RpeTenPicker
-              label="RPE effort (série)"
-              value={block.rpe}
-              onChange={(rpe) => onUpdate({ rpe })}
-            />
-            <RpeTenPicker
-              label="RPE récup (entre répétitions)"
-              value={block.recoveryRpe}
-              onChange={(recoveryRpe) => onUpdate({ recoveryRpe })}
-            />
+            {/* Recovery between blocks (only if blocks > 1) */}
+            {blockReps > 1 && (
+              <div className="pt-2 border-t border-border/50">
+                <Label className="text-xs text-muted-foreground mb-2 block">Récup entre blocs</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Durée (sec)</Label>
+                    <Input
+                      value={block.blockRecoveryDuration || ''}
+                      readOnly
+                      onClick={() => openIntPicker('blockRecovery', block.blockRecoveryDuration, 180)}
+                      placeholder="180"
+                      className="h-10 cursor-pointer text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Type</Label>
+                    <Select value={block.blockRecoveryType || 'marche'} onValueChange={(v) => onUpdate({ blockRecoveryType: v as 'trot' | 'marche' | 'statique' })}>
+                      <SelectTrigger className="h-10 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {RECOVERY_TYPES.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           /* Warmup / Cooldown / Steady Block */
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs text-muted-foreground">Durée (min)</Label>
-                <Input
-                  type="number"
-                  value={block.duration || ''}
-                  onChange={(e) => onUpdate({ duration: e.target.value, durationType: 'time' })}
-                  placeholder={block.type === 'warmup' ? "15" : "10"}
-                  className="h-10 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Allure</Label>
-                <Input
-                  value={block.pace || ''}
-                  onChange={(e) => onUpdate({ pace: e.target.value })}
-                  placeholder={pacePlaceholder}
-                  className="h-10 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Intensity */}
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Intensité</Label>
-              <div className="grid grid-cols-5 gap-1">
-                {INTENSITY_LEVELS.map((level) => (
-                  <button
-                    key={level.value}
-                    type="button"
-                    onClick={() => onUpdate({ intensity: level.value })}
-                    className={cn(
-                      "py-1.5 px-1 rounded-lg text-[10px] font-medium transition-all text-center",
-                      block.intensity === level.value
-                        ? `${level.color} text-white`
-                        : "bg-card text-muted-foreground hover:bg-card/80"
-                    )}
-                  >
-                    {level.label.split(' - ')[0]}
-                  </button>
-                ))}
-              </div>
+              <Label className="text-xs text-muted-foreground">Durée (min)</Label>
+              <Input
+                value={block.duration || ''}
+                readOnly
+                onClick={() => openIntPicker('duration', block.duration, 15)}
+                placeholder={block.type === 'warmup' ? "15" : "10"}
+                className="h-10 cursor-pointer text-sm"
+              />
             </div>
-
-            <RpeTenPicker label="RPE du bloc" value={block.rpe} onChange={(rpe) => onUpdate({ rpe })} />
-          </>
+            <div>
+              <Label className="text-xs text-muted-foreground">Allure</Label>
+              <Input
+                value={block.pace || ''}
+                readOnly
+                onClick={() => openPacePicker('pace', block.pace)}
+                placeholder={pacePlaceholder}
+                className="h-10 cursor-pointer text-sm"
+              />
+            </div>
+          </div>
         )}
       </div>
+      <WheelValuePickerModal
+        open={openPicker === 'repetitions'}
+        onClose={() => setOpenPicker(null)}
+        title="Séries"
+        columns={[{ items: intOptions(100, 1), value: draftA, onChange: setDraftA, suffix: 'x' }]}
+        onConfirm={() => {
+          onUpdate({ repetitions: Number.parseInt(draftA, 10) || undefined });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'blockRepetitions'}
+        onClose={() => setOpenPicker(null)}
+        title="Blocs"
+        columns={[{ items: intOptions(10, 1), value: draftA, onChange: setDraftA, suffix: 'x' }]}
+        onConfirm={() => {
+          onUpdate({ blockRepetitions: Number.parseInt(draftA, 10) || 1 });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'distance'}
+        onClose={() => setOpenPicker(null)}
+        title="Distance effort"
+        columns={[{ items: intOptions(5000, 50), value: draftA, onChange: setDraftA, suffix: 'm' }]}
+        onConfirm={() => {
+          onUpdate({ effortDuration: draftA, effortType: 'distance' });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'recovery'}
+        onClose={() => setOpenPicker(null)}
+        title="Récup entre séries"
+        columns={[{ items: intOptions(1200, 0), value: draftA, onChange: setDraftA, suffix: 's' }]}
+        onConfirm={() => {
+          onUpdate({ recoveryDuration: draftA });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'blockRecovery'}
+        onClose={() => setOpenPicker(null)}
+        title="Récup entre blocs"
+        columns={[{ items: intOptions(1800, 0), value: draftA, onChange: setDraftA, suffix: 's' }]}
+        onConfirm={() => {
+          onUpdate({ blockRecoveryDuration: draftA });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'duration'}
+        onClose={() => setOpenPicker(null)}
+        title="Durée du bloc"
+        columns={[{ items: intOptions(240, 1), value: draftA, onChange: setDraftA, suffix: 'min' }]}
+        onConfirm={() => {
+          onUpdate({ duration: draftA, durationType: 'time' });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'effortPace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure effort"
+        columns={[
+          { items: intOptions(59, 0).map((it) => ({ ...it, label: it.label.padStart(2, '0') })), value: draftA, onChange: setDraftA, suffix: 'min' },
+          { items: secOptions, value: draftB, onChange: setDraftB, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onUpdate({ effortPace: `${draftA}:${draftB.padStart(2, '0')}` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'pace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure du bloc"
+        columns={[
+          { items: intOptions(59, 0).map((it) => ({ ...it, label: it.label.padStart(2, '0') })), value: draftA, onChange: setDraftA, suffix: 'min' },
+          { items: secOptions, value: draftB, onChange: setDraftB, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onUpdate({ pace: `${draftA}:${draftB.padStart(2, '0')}` });
+          setOpenPicker(null);
+        }}
+      />
     </motion.div>
   );
 };

@@ -3,6 +3,8 @@ import type { Map as MapboxMap } from 'mapbox-gl';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveSubscriptionInfo } from '@/hooks/useEffectiveSubscription';
+import { useAppPreview } from '@/contexts/AppPreviewContext';
 import { useAdMob } from '@/hooks/useAdMob';
 import { supabase } from '@/integrations/supabase/client';
 import { useSendNotification } from '@/hooks/useSendNotification';
@@ -14,6 +16,7 @@ import { IosFixedPageHeaderShell } from '@/components/layout/IosFixedPageHeaderS
 import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
+import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -23,7 +26,12 @@ import { DateTimeStep } from './steps/DateTimeStep';
 import { DetailsStep } from './steps/DetailsStep';
 import { ConfirmStep } from './steps/ConfirmStep';
 import { BoostSessionDialog } from '@/components/sessions/BoostSessionDialog';
-import { FREE_VISIBILITY_RADIUS_KM, PREMIUM_VISIBILITY_RADIUS_KM } from '@/lib/sessionVisibility';
+import {
+  FREE_VISIBILITY_RADIUS_KM,
+  PREMIUM_VISIBILITY_RADIUS_KM,
+  isPostgrestMissingSessionsVisibilitySnapshot,
+  stripSessionsVisibilitySnapshot,
+} from '@/lib/sessionVisibility';
 
 declare global {
   interface Window {
@@ -62,7 +70,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   coachingSession,
   onCoachingScheduled,
 }) => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterSessionCreation, showRewardedBoostAd } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -72,7 +82,12 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const [boostDialogOpen, setBoostDialogOpen] = useState(false);
   const [boostingSessionId, setBoostingSessionId] = useState<string | null>(null);
 
-  const wizard = useSessionWizard({ presetLocation, initialSession: editSession, isEditMode, coachingSession });
+  const wizard = useSessionWizard({
+    presetLocation,
+    initialSession: editSession,
+    isEditMode,
+    coachingSession,
+  });
   const lastAppliedPresetRouteRef = useRef<string | null>(null);
 
   // Handle preset location
@@ -162,6 +177,15 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   const handleSubmit = async () => {
     if (!user || !wizard.selectedLocation) return;
 
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La création ou modification de séance est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { formData, selectedLocation, selectedImage, selectedRoute, routeMode } = wizard;
     const isPremiumUser = !!subscriptionInfo?.subscribed;
     const isPublicSession = formData.visibility_type === 'public';
@@ -179,11 +203,17 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         imageUrl = await uploadImage(selectedImage);
       }
 
-      // Calculate session level automatically (only for endurance sports)
-      const calculatedLevel = calculateSessionLevel(formData);
-
-      const sessionPayload = {
+      const resolvedTitle = resolveSessionTitle({
         title: formData.title,
+        activity_type: formData.activity_type,
+        locationName: formData.location_name || selectedLocation.name,
+      });
+
+      // Calculate session level automatically (only for endurance sports)
+      const calculatedLevel = calculateSessionLevel({ ...formData, title: resolvedTitle });
+
+      const sessionPayloadCore = {
+        title: resolvedTitle,
         description: formData.description,
         activity_type: formData.activity_type,
         session_type: formData.session_type,
@@ -212,24 +242,44 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         hidden_from_users: formData.hidden_from_users || [],
         intensity: formData.intensity || null,
         coaching_session_id: coachingSession?.id || null,
+      };
+
+      const visibilitySnapshot = {
         visibility_tier: visibilityTier,
         visibility_radius_km: Number.isFinite(visibilityRadiusKm) ? visibilityRadiusKm : 999999,
-        boost_expires_at: null,
-        boost_consumed_at: null,
-        boost_notification_sent_at: null,
         discovery_score: discoveryScore,
       };
+
+      const sessionPayload = { ...sessionPayloadCore, ...visibilitySnapshot };
 
       let sessionData;
 
       if (isEditMode && editSession) {
         // UPDATE existing session
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('sessions')
           .update(sessionPayload)
           .eq('id', editSession.id)
           .select()
           .single();
+
+        if (error && isPostgrestMissingSessionsVisibilitySnapshot(error)) {
+          if (isPublicSession && isPremiumUser) {
+            toast({
+              title: "Base de données à jour requise",
+              description:
+                "Appliquez la migration Supabase « sessions_visibility_tiers » (fichier 20260405132000_sessions_visibility_tiers.sql) pour les séances publiques premium.",
+              variant: "destructive",
+            });
+            throw error;
+          }
+          ({ data, error } = await supabase
+            .from('sessions')
+            .update(sessionPayloadCore)
+            .eq('id', editSession.id)
+            .select()
+            .single());
+        }
 
         if (error) throw error;
         sessionData = data;
@@ -252,7 +302,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
             sessionsToCreate.push({
               ...sessionPayload,
               scheduled_at: sessionDate.toISOString(),
-              title: i === 0 ? formData.title : `${formData.title} (${i + 1}/${formData.recurrence_count})`,
+              title: i === 0 ? resolvedTitle : `${resolvedTitle} (${i + 1}/${formData.recurrence_count})`,
               organizer_id: user.id,
               current_participants: 0,
             });
@@ -266,10 +316,24 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           });
         }
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('sessions')
           .insert(sessionsToCreate)
           .select();
+
+        if (error && isPostgrestMissingSessionsVisibilitySnapshot(error)) {
+          if (isPublicSession && isPremiumUser) {
+            toast({
+              title: "Base de données à jour requise",
+              description:
+                "Appliquez la migration Supabase « sessions_visibility_tiers » (fichier 20260405132000_sessions_visibility_tiers.sql) pour les séances publiques premium.",
+              variant: "destructive",
+            });
+            throw error;
+          }
+          const legacyRows = sessionsToCreate.map((row) => stripSessionsVisibilitySnapshot(row));
+          ({ data, error } = await supabase.from('sessions').insert(legacyRows).select());
+        }
 
         if (error) throw error;
         sessionData = data?.[0]; // Use first session for callbacks
@@ -357,11 +421,11 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
               await sendPushNotification(
                 follower.follower_id,
                 'Nouvelle séance d\'ami',
-                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${formData.title}`,
+                `${user.email?.split('@')[0] || 'Un ami'} a créé une séance: ${resolvedTitle}`,
                 'friend_session',
                 {
                   organizer_name: user.email?.split('@')[0] || 'Un ami',
-                  session_title: formData.title,
+                  session_title: resolvedTitle,
                   session_id: sessionData.id,
                   activity_type: formData.activity_type,
                   scheduled_at: formData.scheduled_at
@@ -525,14 +589,22 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
                     isEditMode ? 'Modifier la séance' : coachingSession ? 'Programmer ma séance' : 'Créer une séance'
                   }
                 />
-                <ProgressIndicator currentStep={wizard.currentStep} progress={wizard.progress} />
+                <ProgressIndicator
+                  currentStep={wizard.currentStep}
+                  progress={wizard.progress}
+                  steps={wizard.wizardSteps}
+                />
               </>
             }
             scrollClassName="bg-secondary"
           >
             {/* h-full : permet au step « Lieu » de remplir la zone scroll et de centrer le bloc entre header et pied */}
             <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-4">
-              <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
+              <AnimatePresence mode="wait">
+                <div key={wizard.currentStep} className="flex min-h-0 flex-1 flex-col">
+                  {renderStep()}
+                </div>
+              </AnimatePresence>
             </div>
           </IosFixedPageHeaderShell>
         </DialogContent>

@@ -36,6 +36,9 @@ import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
+import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
+import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
+import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -47,6 +50,8 @@ interface DetailsStepProps {
   onImageRemove: () => void;
   onNext: () => void;
   onBack: () => void;
+  /** Masque les boutons Retour / Aperçu (cas avancé) */
+  hideNavigation?: boolean;
 }
 
 export const DetailsStep: React.FC<DetailsStepProps> = ({
@@ -59,18 +64,43 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   onImageRemove,
   onNext,
   onBack,
+  hideNavigation = false,
 }) => {
   const [liveTrackingWarningOpen, setLiveTrackingWarningOpen] = useState(false);
+  const [openPicker, setOpenPicker] = useState<null | 'pace' | 'distance' | 'elevation' | 'participants'>(null);
+  const [draftPaceMin, setDraftPaceMin] = useState("5");
+  const [draftPaceSec, setDraftPaceSec] = useState("30");
+  const [draftDistanceWhole, setDraftDistanceWhole] = useState("10");
+  const [draftDistanceDec, setDraftDistanceDec] = useState("0");
+  const [draftElevation, setDraftElevation] = useState("150");
+  const [draftParticipants, setDraftParticipants] = useState("20");
   // Auto-generate title suggestion
   useEffect(() => {
     if (!formData.title && formData.activity_type && selectedLocation) {
-      const activity = ACTIVITY_TYPES.find(a => a.value === formData.activity_type);
-      const locationShort = selectedLocation.name.split(',')[0];
-      const activityLabel = activity?.label?.replace(/^[^\s]+\s/, '');
-      const suggestion = `${activityLabel || 'Séance'} à ${locationShort}`;
-      onFormDataChange({ title: suggestion });
+      onFormDataChange({
+        title: resolveSessionTitle({
+          title: '',
+          activity_type: formData.activity_type,
+          locationName: selectedLocation.name,
+        }),
+      });
     }
   }, [formData.activity_type, selectedLocation]);
+
+  // Auto-compute distance from structured blocks
+  const isStructured = formData.session_mode === 'structured';
+  const computedDistanceKm = React.useMemo(
+    () => (isStructured ? computeBlocksDistanceKm(formData.blocks) : null),
+    [isStructured, formData.blocks]
+  );
+  useEffect(() => {
+    if (!isStructured || computedDistanceKm == null) return;
+    const formatted = formatDistanceForInput(computedDistanceKm);
+    if (formatted !== formData.distance_km) {
+      onFormDataChange({ distance_km: formatted });
+    }
+  }, [isStructured, computedDistanceKm, formData.distance_km, onFormDataChange]);
+
 
   const showEnduranceFields = isEnduranceActivity(formData.activity_type);
   const showTerrainField = isRunningActivity(formData.activity_type) || isCyclingActivity(formData.activity_type);
@@ -94,23 +124,57 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     onFormDataChange(data);
   };
 
+  const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const distanceDecOptions = Array.from({ length: 10 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const participantsOptions = Array.from({ length: 200 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+  const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+  const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
+
+  const openDistancePicker = () => {
+    const [w = "0", d = "0"] = (formData.distance_km || "0").replace(",", ".").split(".");
+    setDraftDistanceWhole(String(Math.max(0, Number.parseInt(w, 10) || 0)));
+    setDraftDistanceDec(String(Math.max(0, Math.min(9, Number.parseInt(d?.[0] ?? "0", 10) || 0))));
+    setOpenPicker("distance");
+  };
+
+  const openPacePicker = () => {
+    const raw = (formData.pace_general || "").trim();
+    const mmss = raw.match(/(\d{1,2}):(\d{2})/);
+    const min = mmss ? Number.parseInt(mmss[1], 10) : 5;
+    const sec = mmss ? Number.parseInt(mmss[2], 10) : 30;
+    setDraftPaceMin(String(Math.max(0, Math.min(59, min))));
+    setDraftPaceSec(String(Math.max(0, Math.min(59, sec))));
+    setOpenPicker("pace");
+  };
+
+  const openElevationPicker = () => {
+    setDraftElevation(String(Math.max(0, Number.parseInt(formData.elevation_gain || "0", 10) || 0)));
+    setOpenPicker("elevation");
+  };
+
+  const openParticipantsPicker = () => {
+    setDraftParticipants(String(Math.max(1, Number.parseInt(formData.max_participants || "20", 10) || 20)));
+    setOpenPicker("participants");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex min-h-0 w-full flex-1 flex-col"
+      className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
     >
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+      <div className={cn('space-y-4', hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4')}>
         {/* Title - Always first */}
         <div className="bg-card rounded-2xl p-4 space-y-3">
           <div>
-            <Label htmlFor="title" className="text-sm font-medium">Titre de la séance *</Label>
+            <Label htmlFor="title" className="text-sm font-medium">Titre (optionnel)</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => onFormDataChange({ title: e.target.value })}
-              placeholder="ex: Footing matinal au parc"
+              placeholder="Généré automatiquement si vide"
               className="h-12 mt-1.5"
               required
             />
@@ -163,10 +227,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 Allure générale
               </Label>
               <Input
-                value={formData.pace_general}
-                onChange={(e) => onFormDataChange({ pace_general: e.target.value })}
+                value={formData.pace_general || ''}
+                readOnly
+                onClick={openPacePicker}
                 placeholder={pacePlaceholder}
-                className="h-11"
+                className="h-11 cursor-pointer"
               />
             </div>
           </div>
@@ -203,16 +268,29 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                 <Label htmlFor="distance_km" className="text-sm font-medium flex items-center gap-1.5">
                   <Ruler className="w-4 h-4 text-primary" />
                   Distance ({distanceUnit})
+                  {isStructured && (
+                    <span className="ml-auto text-[10px] font-normal text-muted-foreground uppercase tracking-wide">
+                      auto
+                    </span>
+                  )}
                 </Label>
                 <Input
                   id="distance_km"
-                  type="number"
-                  step="0.1"
                   value={formData.distance_km}
-                  onChange={(e) => onFormDataChange({ distance_km: e.target.value })}
-                  placeholder={isSwimmingActivity(formData.activity_type) ? "1500" : "10"}
-                  className="h-11 mt-1.5"
+                  readOnly
+                  onClick={isStructured ? undefined : openDistancePicker}
+                  placeholder={isStructured ? '—' : (isSwimmingActivity(formData.activity_type) ? "1500" : "10")}
+                  className={cn(
+                    "h-11 mt-1.5",
+                    isStructured ? "cursor-not-allowed bg-muted/50" : "cursor-pointer"
+                  )}
+                  title={isStructured ? "Calculée automatiquement à partir de la structure de la séance" : undefined}
                 />
+                {isStructured && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Calculée à partir de la structure
+                  </p>
+                )}
               </div>
               {showElevationField && (
                 <div>
@@ -222,11 +300,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
                   </Label>
                   <Input
                     id="elevation_gain"
-                    type="number"
                     value={formData.elevation_gain}
-                    onChange={(e) => onFormDataChange({ elevation_gain: e.target.value })}
+                    readOnly
+                    onClick={openElevationPicker}
                     placeholder="150"
-                    className="h-11 mt-1.5"
+                    className="h-11 mt-1.5 cursor-pointer"
                   />
                 </div>
               )}
@@ -264,12 +342,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
             </Label>
             <Input
               id="max_participants"
-              type="number"
               value={formData.max_participants}
-              onChange={(e) => onFormDataChange({ max_participants: e.target.value })}
+              readOnly
+              onClick={openParticipantsPicker}
               placeholder="Illimité"
-              min="1"
-              className="h-11 mt-1.5"
+              className="h-11 mt-1.5 cursor-pointer"
             />
           </div>
 
@@ -391,20 +468,72 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex gap-3 mt-auto pt-4">
-        <Button variant="outline" onClick={onBack} className="h-14 px-5">
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <Button
-          onClick={onNext}
-          disabled={!formData.title}
-          className="flex-1 h-14 text-lg font-semibold"
-        >
-          Aperçu
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </Button>
-      </div>
+      <WheelValuePickerModal
+        open={openPicker === 'pace'}
+        onClose={() => setOpenPicker(null)}
+        title="Allure générale"
+        columns={[
+          { items: paceMinOptions, value: draftPaceMin, onChange: setDraftPaceMin, suffix: 'min' },
+          { items: paceSecOptions, value: draftPaceSec, onChange: setDraftPaceSec, suffix: 's' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ pace_general: `${draftPaceMin}:${draftPaceSec.padStart(2, '0')}/km` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'distance'}
+        onClose={() => setOpenPicker(null)}
+        title={`Distance (${distanceUnit})`}
+        columns={[
+          { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole },
+          { items: distanceDecOptions, value: draftDistanceDec, onChange: setDraftDistanceDec },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ distance_km: `${draftDistanceWhole}.${draftDistanceDec}` });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'elevation'}
+        onClose={() => setOpenPicker(null)}
+        title="Dénivelé positif"
+        columns={[
+          { items: elevationOptions, value: draftElevation, onChange: setDraftElevation, suffix: 'm' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ elevation_gain: draftElevation });
+          setOpenPicker(null);
+        }}
+      />
+      <WheelValuePickerModal
+        open={openPicker === 'participants'}
+        onClose={() => setOpenPicker(null)}
+        title="Participants max"
+        columns={[
+          { items: participantsOptions, value: draftParticipants, onChange: setDraftParticipants, suffix: 'pers.' },
+        ]}
+        onConfirm={() => {
+          onFormDataChange({ max_participants: draftParticipants });
+          setOpenPicker(null);
+        }}
+      />
+
+      {!hideNavigation && (
+        <div className="flex gap-3 mt-auto pt-4">
+          <Button variant="outline" onClick={onBack} className="h-14 px-5">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={!formData.activity_type || !selectedLocation}
+            className="flex-1 h-14 text-lg font-semibold"
+          >
+            Aperçu
+            <ChevronRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

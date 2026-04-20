@@ -1,3 +1,8 @@
+# Use the git Specs repo instead of the default CDN (cdn.jsdelivr.net). Some CI
+# networks or DNS setups cannot resolve the CDN mirror and pod install fails with
+# "Couldn't resolve host name" for Firebase and other pods.
+source 'https://github.com/CocoaPods/Specs.git'
+
 require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
 
 platform :ios, '15.0'
@@ -21,6 +26,7 @@ def capacitor_pods
   pod 'CapacitorGeolocation', :path => '../../node_modules/@capacitor/geolocation'
   pod 'CapacitorHaptics', :path => '../../node_modules/@capacitor/haptics'
   pod 'CapacitorInappbrowser', :path => '../../node_modules/@capacitor/inappbrowser'
+  pod 'CapacitorKeyboard', :path => '../../node_modules/@capacitor/keyboard'
   pod 'CapacitorPushNotifications', :path => '../../node_modules/@capacitor/push-notifications'
   pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
   pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'

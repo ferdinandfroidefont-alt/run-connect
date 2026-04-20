@@ -13,8 +13,7 @@ import { MonthlyCalendarView, type MonthSessionDot } from "./MonthlyCalendarView
 import { AthleteOverrideEditor } from "./AthleteOverrideEditor";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
-import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, TrendingUp, FileText } from "lucide-react";
-import { MesocycleView } from "./MesocycleView";
+import { ChevronLeft, ChevronRight, Plus, Send, Loader2, Copy, Save, FolderOpen, Trash2, X, Users, ChevronDown, BarChart3, History, FileText } from "lucide-react";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { format, startOfWeek, addWeeks, subWeeks, addDays, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -874,7 +873,6 @@ export const WeeklyPlanDialog = ({
   const [showDupDropdown, setShowDupDropdown] = useState(false);
   const [showTemplateList, setShowTemplateList] = useState(false);
   const [showAthleteOverrides, setShowAthleteOverrides] = useState(false);
-  const [showMesocycle, setShowMesocycle] = useState(false);
 
   // Get base values from the selected session for override defaults
   const selectedSessionIntervalBlock = selectedSession?.parsedBlocks?.find(b => b.type === "interval");
@@ -1097,77 +1095,44 @@ export const WeeklyPlanDialog = ({
             )}
           </div>
 
-          {/* ── CHARGE DE LA SEMAINE (moved BEFORE calendar) ── */}
-          {weekLoadSummary && (
-            <div className="mb-3 px-4">
-              <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Charge de la semaine</p>
-              <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-3">
-                {/* Compact stats row */}
-                <div className="flex items-center justify-between mb-2">
+          {/* ── CALENDAR GRID + résumé charge fusionné ── */}
+          <div className="mb-3 px-4">
+            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Calendrier</p>
+            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
+              {weekLoadSummary && (
+                <div className="mb-3 flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                       <BarChart3 className="h-4 w-4 text-primary" />
                     </div>
-                    <p className="text-[18px] font-bold text-foreground leading-none">{weekLoadSummary.totalKm} <span className="text-[13px] font-medium text-muted-foreground">km</span></p>
+                    <p className="text-[16px] font-bold text-foreground leading-none">
+                      {weekLoadSummary.totalKm} <span className="text-[12px] font-medium text-muted-foreground">km</span>
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3 text-[13px]">
+                  <div className="flex items-center gap-3 text-[12px]">
                     <div className="text-center">
-                      <p className="text-[16px] font-bold text-foreground">{sessions.length}</p>
+                      <p className="text-[14px] font-bold text-foreground">{sessions.length}</p>
                       <p className="text-[10px] text-muted-foreground">séances</p>
                     </div>
                     {weekLoadSummary.qualitySessions > 0 && (
                       <div className="text-center">
-                        <p className="text-[16px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
+                        <p className="text-[14px] font-bold text-orange-500">{weekLoadSummary.qualitySessions}</p>
                         <p className="text-[10px] text-muted-foreground">qualité</p>
                       </div>
                     )}
-                    <Badge variant={
-                      weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
-                      weekLoadSummary.intensity === 'Intense' ? 'default' :
-                      'secondary'
-                    } className="text-[11px] px-2 py-0.5">
+                    <Badge
+                      variant={
+                        weekLoadSummary.intensity === 'Très intense' ? 'destructive' :
+                        weekLoadSummary.intensity === 'Intense' ? 'default' :
+                        'secondary'
+                      }
+                      className="text-[10px] px-2 py-0.5"
+                    >
                       {weekLoadSummary.intensity}
                     </Badge>
                   </div>
                 </div>
-
-                {/* Compact bar chart — height reduced to 48px */}
-                {(() => {
-                  const maxCharge = Math.max(...dailyCharge, 1);
-                  return (
-                    <div className="flex items-end gap-2" style={{ height: 48 }}>
-                      {DAY_LABELS.map((label, i) => {
-                        const val = dailyCharge[i];
-                        const pct = (val / maxCharge) * 100;
-                        const daySessions = (sessionsByDay[i] || []).map(idx => sessions[idx]);
-                        const hasIntense = daySessions.some(s => {
-                          const obj = (s.objective || s.activityType || "").toLowerCase();
-                          return obj.includes("vma") || obj.includes("seuil") || obj.includes("interval") || obj.includes("fractionné") || obj.includes("pma");
-                        });
-                        const barColor = val === 0 ? "bg-muted" : hasIntense ? "bg-primary/75" : "bg-primary/35";
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                            <div className="w-full flex items-end justify-center" style={{ height: 36 }}>
-                              <div
-                                className={`w-full max-w-[20px] rounded-t-md transition-all ${barColor}`}
-                                style={{ height: val > 0 ? `${Math.max(pct, 12)}%` : 3 }}
-                              />
-                            </div>
-                            <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-
-          {/* ── CALENDAR GRID (moved AFTER charge) ── */}
-          <div className="mb-3 px-4">
-            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Calendrier</p>
-            <div className="ios-card border border-border/60 shadow-[var(--shadow-card)] p-4">
+              )}
               <div className="grid grid-cols-7 gap-2">
                 {DAY_LABELS.map((label, dayIndex) => {
                   const daySessions = sessionsByDay[dayIndex] || [];
@@ -1340,25 +1305,8 @@ export const WeeklyPlanDialog = ({
                   showSeparator
                 />
               )}
-              <IOSListItem
-                icon={TrendingUp}
-                iconBgColor="bg-indigo-500"
-                title="Vue mesocycle (8 sem.)"
-                subtitle="Progression volume et intensité"
-                onClick={() => setShowMesocycle(!showMesocycle)}
-                showSeparator={false}
-              />
             </div>
           </div>
-
-          {/* Mesocycle panel */}
-          {showMesocycle && (
-            <div className="mb-3 px-4">
-              <div className="ios-card border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <MesocycleView clubId={clubId} currentWeek={currentWeek} />
-              </div>
-            </div>
-          )}
 
           {/* Save template input */}
           {showSaveTemplate && (
@@ -1432,20 +1380,6 @@ export const WeeklyPlanDialog = ({
             </>
           )}
 
-          {/* FAB */}
-          {plannerView === "week" && (
-          <button
-            onClick={() => {
-              const todayDow = new Date().getDay();
-              const dayIndex = todayDow === 0 ? 6 : todayDow - 1;
-              addSession(dayIndex);
-            }}
-            className="fixed right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95 bottom-[max(7rem,calc(6.5rem+var(--safe-area-bottom)))]"
-            style={{ boxShadow: "0 6px 20px hsl(var(--primary) / 0.35)" }}
-          >
-            <Plus className="h-7 w-7" />
-          </button>
-          )}
         </IosFixedPageHeaderShell>
       </DialogContent>
     </Dialog>

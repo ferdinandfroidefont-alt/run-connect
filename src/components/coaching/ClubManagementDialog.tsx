@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import {
   AlertDialog,
@@ -28,7 +29,6 @@ import {
   UserMinus,
   GraduationCap,
   Trash2,
-  Search,
   Pencil,
   FileText,
   X,
@@ -87,8 +87,6 @@ export const ClubManagementDialog = ({
 
   // Invite
   const [showInvite, setShowInvite] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Profile[]>([]);
 
   // Confirm dialogs
   const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
@@ -148,10 +146,10 @@ export const ClubManagementDialog = ({
 
   useEffect(() => {
     if (isOpen) {
-      loadClubInfo();
-      loadMembers();
+      void loadClubInfo();
+      void loadMembers();
     }
-  }, [isOpen, clubId]);
+  }, [isOpen, clubId, loadClubInfo, loadMembers]);
 
   // Save name
   const saveName = async () => {
@@ -223,34 +221,6 @@ export const ClubManagementDialog = ({
     loadMembers();
   };
 
-  // Search users for invite
-  useEffect(() => {
-    if (!searchQuery.trim()) { setSearchResults([]); return; }
-    const t = setTimeout(async () => {
-      const memberIds = members.map((m) => m.user_id);
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, username, display_name, avatar_url")
-        .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
-        .not("user_id", "in", `(${memberIds.join(",")})`)
-        .limit(10);
-      setSearchResults(data || []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [searchQuery, members]);
-
-  const inviteUser = async (profile: Profile) => {
-    const { error } = await supabase.from("club_invitations").insert([{ club_id: clubId, inviter_id: user?.id, invited_user_id: profile.user_id }]);
-    if (error?.code === "23505") {
-      toast({ title: "Déjà invité" });
-    } else if (!error) {
-      toast({ title: "Invitation envoyée", description: `à ${profile.username || profile.display_name}` });
-      setSearchQuery("");
-      setSearchResults([]);
-      setShowInvite(false);
-    }
-  };
-
   // Delete club
   const deleteClub = async () => {
     await supabase.from("group_members").delete().eq("conversation_id", clubId);
@@ -269,6 +239,8 @@ export const ClubManagementDialog = ({
           <DialogTitle className="sr-only">Gérer le club</DialogTitle>
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
+            contentTopOffsetPx={12}
+            headerWrapperClassName="shrink-0"
             header={<CoachingFullscreenHeader title="Gérer le club" onBack={onClose} />}
             scrollClassName="bg-secondary py-4"
           >
@@ -430,40 +402,13 @@ export const ClubManagementDialog = ({
         </DialogContent>
       </Dialog>
 
-      {/* Invite overlay */}
-      {showInvite && (
-        <div className="fixed inset-0 z-[120] flex items-start justify-center bg-black/50 pt-20">
-          <div className="mx-4 w-full max-w-md rounded-ios-lg bg-background p-ios-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[17px] font-semibold">Inviter des membres</h3>
-              <button type="button" onClick={() => { setShowInvite(false); setSearchQuery(""); setSearchResults([]); }}>
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Rechercher un utilisateur..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" autoFocus />
-            </div>
-            <div className="max-h-64 space-y-1 overflow-y-auto">
-              {searchResults.map((p) => (
-                <div key={p.user_id} onClick={() => inviteUser(p)} className="flex cursor-pointer items-center gap-3 rounded-ios-md p-2.5 active:bg-secondary/80">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={p.avatar_url || ""} />
-                    <AvatarFallback>{(p.username || "?")[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-[15px] font-medium">{p.username || p.display_name}</p>
-                    <p className="text-[13px] text-muted-foreground">@{p.username}</p>
-                  </div>
-                </div>
-              ))}
-              {searchQuery && searchResults.length === 0 && (
-                <p className="py-4 text-center text-[15px] text-muted-foreground">Aucun résultat</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <InviteMembersDialog
+        open={showInvite}
+        onOpenChange={setShowInvite}
+        clubId={clubId}
+        stackNested
+        onMemberInvited={() => void loadMembers()}
+      />
 
       {/* Remove member confirm */}
       <AlertDialog open={!!memberToRemove} onOpenChange={() => setMemberToRemove(null)}>

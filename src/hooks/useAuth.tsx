@@ -101,6 +101,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (error) console.error('[Auth] getSession error:', error);
         if (!mounted) return;
         if (session) {
+          const native =
+            typeof window !== "undefined" &&
+            !!((window as unknown as { CapacitorForceNative?: boolean }).CapacitorForceNative ||
+              (window as unknown as { Capacitor?: unknown }).Capacitor);
+          if (import.meta.env.DEV || native) {
+            console.log("[Auth] Session restaurée au lancement", {
+              hasUser: !!session.user,
+              userPrefix: session.user?.id?.slice(0, 8),
+            });
+          }
           setSession(session);
           setUser(session.user);
           setLoading(false);

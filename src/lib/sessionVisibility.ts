@@ -105,3 +105,27 @@ export function getVisibilityBadgeLabel(session: SessionVisibilityFields, now = 
   if (state === "premium") return "Premium";
   return null;
 }
+
+/** Colonnes ajoutées par `20260405132000_sessions_visibility_tiers.sql` — absentes si migration non appliquée. */
+export const SESSION_VISIBILITY_SNAPSHOT_KEYS = ["visibility_tier", "visibility_radius_km", "discovery_score"] as const;
+
+/**
+ * PostgREST signale une colonne absente du cache schéma (migration `sessions_visibility_tiers` non déployée).
+ */
+export function isPostgrestMissingSessionsVisibilitySnapshot(
+  error: { message?: string } | null | undefined,
+): boolean {
+  const m = (error?.message ?? "").toLowerCase();
+  if (!m) return false;
+  const mentions =
+    m.includes("discovery_score") ||
+    m.includes("visibility_tier") ||
+    m.includes("visibility_radius_km");
+  return mentions && (m.includes("schema cache") || m.includes("column") || m.includes("could not find"));
+}
+
+export function stripSessionsVisibilitySnapshot<T extends Record<string, unknown>>(row: T): T {
+  const out = { ...row } as Record<string, unknown>;
+  for (const k of SESSION_VISIBILITY_SNAPSHOT_KEYS) delete out[k];
+  return out as T;
+}

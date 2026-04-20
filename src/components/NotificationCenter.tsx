@@ -41,7 +41,7 @@ interface NotificationCenterProps {
 export const NotificationCenter = ({
   onSessionUpdated
 }: NotificationCenterProps) => {
-  const { setHideBottomNav } = useAppContext();
+  const { setBottomNavSuppressed } = useAppContext();
   const {
     user
   } = useAuth();
@@ -129,10 +129,9 @@ export const NotificationCenter = ({
   }, [user, toast]);
 
   useEffect(() => {
-    if (isOpen) setHideBottomNav(true);
-    else setHideBottomNav(false);
-    return () => setHideBottomNav(false);
-  }, [isOpen, setHideBottomNav]);
+    setBottomNavSuppressed("notifications", isOpen);
+    return () => setBottomNavSuppressed("notifications", false);
+  }, [isOpen, setBottomNavSuppressed]);
 
   // Check actual follow status for all follow_request notifications (source of truth)
   const [followStatuses, setFollowStatuses] = useState<Map<string, string>>(new Map());

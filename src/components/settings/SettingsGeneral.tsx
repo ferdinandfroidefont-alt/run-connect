@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, RotateCcw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -17,6 +18,7 @@ import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import type { DistanceUnit } from "@/lib/distanceUnits";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
+import { resetArrivalFlowForDev } from "@/lib/arrivalFlowDev";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -74,6 +76,20 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
     } finally {
       setIsChangingPassword(false);
     }
+  };
+
+  const handleResetOnboardingForDev = () => {
+    if (!import.meta.env.DEV) return;
+    const confirmed = window.confirm(
+      "Réinitialiser le tunnel d’arrivée pour ce compte ? Vous reverrez consentement, onboarding et permissions au prochain passage."
+    );
+    if (!confirmed) return;
+
+    resetArrivalFlowForDev(user?.id);
+    toast({
+      title: "Onboarding réinitialisé",
+      description: "Le tunnel d’arrivée est prêt à être rejoué.",
+    });
   };
 
   return (
@@ -333,6 +349,32 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
               </div>
             </div>
           </div>
+
+          {import.meta.env.DEV && (
+            <div className="space-y-2">
+              <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground ios-shell:px-2.5">
+                Développement
+              </h3>
+              <div className="overflow-hidden bg-card">
+                <button
+                  type="button"
+                  onClick={handleResetOnboardingForDev}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors active:bg-secondary/50 ios-shell:px-2.5"
+                >
+                  <div className="ios-list-row-icon bg-[#FF3B30]">
+                    <RotateCcw className="h-[18px] w-[18px] text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium">Réinitialiser onboarding</p>
+                    <p className="text-[13px] text-muted-foreground">
+                      Rejouer le tunnel d’arrivée (consentement + onboarding)
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
       </IosFixedPageHeaderShell>

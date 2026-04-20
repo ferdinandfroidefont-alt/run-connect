@@ -108,7 +108,8 @@ export const SessionPreviewPopup = ({
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed left-4 z-[115]"
             style={{
-              bottom: "max(5rem, calc(var(--layout-bottom-inset) + 0.75rem))",
+              bottom:
+                "max(7rem, calc(var(--layout-bottom-inset) + var(--safe-area-bottom) + var(--home-feed-sheet-peek) + 0.65rem))",
               right: "max(1rem, calc(env(safe-area-inset-right, 0px) + 4.25rem))",
             }}
           >

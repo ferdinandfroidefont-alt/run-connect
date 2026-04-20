@@ -16,6 +16,7 @@ import {
   setAnalyticsConsent,
 } from "@/lib/analyticsConsent";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import { ProfileSharePanel } from "@/components/profile-share/ProfileSharePanel";
 
 interface Profile {
   rgpd_accepted?: boolean;
@@ -552,6 +553,14 @@ export const SettingsPrivacy = ({ onBack, onClose }: SettingsPrivacyProps) => {
               </button>
             </div>
           </div>
+
+          {user && (
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+                <ProfileSharePanel active compact />
+              </div>
+            </div>
+          )}
 
           {/* Revoke All */}
           {profile?.rgpd_accepted && profile?.security_rules_accepted && (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X } from "lucide-react";
+import { Plus, Trash2, Users, ChevronDown, ChevronUp, Camera, X, MessageCircle, Pencil, GraduationCap, ArchiveRestore, Archive } from "lucide-react";
 
 interface ClubGroup {
   id: string;
@@ -20,17 +20,19 @@ interface Member {
   user_id: string;
   display_name: string;
   avatar_url: string | null;
+  is_coach: boolean;
 }
 
 interface ClubGroupsManagerProps {
   clubId: string;
+  onMessageGroup?: (group: { id: string; name: string; avatarUrl: string | null; memberIds: string[] }) => void;
 }
 
 const GROUP_COLORS = [
   "#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316",
 ];
 
-export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
+export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [groups, setGroups] = useState<ClubGroup[]>([]);
@@ -39,8 +41,9 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [groupMembers, setGroupMembers] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
+  const [archivedGroups, setArchivedGroups] = useState<Set<string>>(new Set());
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const { data: groupsData } = await supabase
@@ -51,11 +54,12 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
 
       const { data: memberIds } = await supabase
         .from("group_members")
-        .select("user_id")
+        .select("user_id, is_coach")
         .eq("conversation_id", clubId);
 
       if (memberIds && memberIds.length > 0) {
         const uids = memberIds.map(m => m.user_id).filter(id => id !== user?.id);
+        const roleById = new Map(memberIds.map((m) => [m.user_id, !!m.is_coach]));
         const { data: profiles } = await supabase
           .from("profiles")
           .select("user_id, display_name, avatar_url")
@@ -64,6 +68,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
           user_id: p.user_id!,
           display_name: p.display_name || "Athlète",
           avatar_url: p.avatar_url || null,
+          is_coach: roleById.get(p.user_id!) ?? false,
         })));
       }
 
@@ -82,22 +87,28 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
         });
 
         setGroupMembers(memberMap);
-        setGroups(groupsData.map(g => ({
+        const archived = new Set<string>();
+        setGroups(groupsData.map(g => {
+          if (g.name.startsWith("[ARCHIVE] ")) archived.add(g.id);
+          return ({
           ...g,
           member_count: countMap[g.id] || 0,
-          avatar_url: (g as any).avatar_url || null,
-        })));
+          avatar_url: g.avatar_url || null,
+          });
+        }));
+        setArchivedGroups(archived);
       } else {
         setGroups([]);
+        setArchivedGroups(new Set());
       }
     } catch (e) {
       console.error("Error loading groups:", e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clubId, user?.id]);
 
-  useEffect(() => { loadData(); }, [clubId]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -118,6 +129,57 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
   const deleteGroup = async (groupId: string) => {
     await supabase.from("club_groups").delete().eq("id", groupId);
     loadData();
+  };
+
+  const renameGroup = async (groupId: string, currentName: string) => {
+    const cleanCurrent = currentName.replace(/^\[ARCHIVE\]\s*/, "");
+    const next = window.prompt("Renommer le groupe", cleanCurrent);
+    if (!next?.trim()) return;
+    const isArchived = currentName.startsWith("[ARCHIVE] ");
+    const updatedName = `${isArchived ? "[ARCHIVE] " : ""}${next.trim()}`;
+    const { error } = await supabase.from("club_groups").update({ name: updatedName }).eq("id", groupId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: "Groupe renommé" });
+  };
+
+  const assignCoach = async (groupId: string) => {
+    const coaches = members.filter((m) => m.is_coach);
+    if (coaches.length === 0) {
+      toast({ title: "Aucun coach disponible", description: "Ajoutez un coach au club d'abord." });
+      return;
+    }
+    const list = coaches.map((coach, index) => `${index + 1}. ${coach.display_name}`).join("\n");
+    const picked = window.prompt(`Assigner coach (numéro):\n${list}`, "1");
+    if (!picked) return;
+    const idx = Number(picked) - 1;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= coaches.length) {
+      toast({ title: "Choix invalide", variant: "destructive" });
+      return;
+    }
+    const coach = coaches[idx];
+    const { error } = await supabase.from("club_group_members").upsert({ group_id: groupId, user_id: coach.user_id });
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: `${coach.display_name} assigné au groupe` });
+  };
+
+  const toggleArchiveGroup = async (groupId: string, currentName: string) => {
+    const isArchived = currentName.startsWith("[ARCHIVE] ");
+    const nextName = isArchived ? currentName.replace(/^\[ARCHIVE\]\s*/, "") : `[ARCHIVE] ${currentName}`;
+    const { error } = await supabase.from("club_groups").update({ name: nextName }).eq("id", groupId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    loadData();
+    toast({ title: isArchived ? "Groupe désarchivé" : "Groupe archivé" });
   };
 
   const toggleMember = async (groupId: string, userId: string) => {
@@ -146,7 +208,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
         return;
       }
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      await supabase.from("club_groups").update({ avatar_url: urlData.publicUrl } as any).eq("id", groupId);
+      await supabase.from("club_groups").update({ avatar_url: urlData.publicUrl }).eq("id", groupId);
       loadData();
       toast({ title: "Photo mise à jour !" });
     };
@@ -164,6 +226,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
       {groups.map(group => {
         const isExpanded = expandedGroup === group.id;
         const groupMembersList = groupMembers[group.id] || [];
+        const isArchived = archivedGroups.has(group.id);
         return (
           <div
             key={group.id}
@@ -191,7 +254,7 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
                 </div>
               )}
               <div className="flex-1 text-left">
-                <p className="text-[15px] font-semibold text-foreground">{group.name}</p>
+                <p className="text-[15px] font-semibold text-foreground">{group.name.replace(/^\[ARCHIVE\]\s*/, "")}</p>
                 <p className="text-[12px] text-muted-foreground">
                   {group.member_count} athlète{group.member_count > 1 ? "s" : ""}
                 </p>
@@ -211,6 +274,34 @@ export const ClubGroupsManager = ({ clubId }: ClubGroupsManagerProps) => {
                   <Camera className="h-4 w-4" />
                   {group.avatar_url ? "Changer la photo" : "Ajouter une photo"}
                 </button>
+                {onMessageGroup ? (
+                  <button
+                    onClick={() =>
+                      onMessageGroup({
+                        id: group.id,
+                        name: group.name,
+                        avatarUrl: group.avatar_url,
+                        memberIds: groupMembersList,
+                      })
+                    }
+                    className="flex items-center gap-2 py-2 px-1 text-primary text-[13px] font-medium w-full active:opacity-70"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Envoyer un message au groupe
+                  </button>
+                ) : null}
+                <div className="grid grid-cols-3 gap-1 px-1 pb-1">
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => renameGroup(group.id, group.name)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Renommer
+                  </Button>
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => assignCoach(group.id)}>
+                    <GraduationCap className="h-3.5 w-3.5 mr-1" /> Assigner coach
+                  </Button>
+                  <Button variant="secondary" size="sm" className="h-8 text-[11px]" onClick={() => toggleArchiveGroup(group.id, group.name)}>
+                    {isArchived ? <ArchiveRestore className="h-3.5 w-3.5 mr-1" /> : <Archive className="h-3.5 w-3.5 mr-1" />}
+                    {isArchived ? "Désarchiver" : "Archiver"}
+                  </Button>
+                </div>
 
                 <div className="border-t border-border pt-1">
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium py-1.5">Membres</p>

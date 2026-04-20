@@ -27,7 +27,8 @@ import { ProfileSportChips } from "@/components/profile/ProfileSportsCard";
 import { parseProfileSports } from "@/lib/profileSports";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
+import { APP_WEB_ORIGIN, buildProfileDeepLink, getStoreFallbackUrl } from "@/lib/appLinks";
+import { PROFILE_SPORT_LABELS, type ProfileSportKey } from "@/lib/profileSports";
 import { getCountryLabel } from "@/lib/countryLabels";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SessionStoryDialog } from "@/components/stories/SessionStoryDialog";
@@ -60,6 +61,7 @@ interface PublicProfileData {
   swimming_records?: unknown;
   triathlon_records?: unknown;
   walking_records?: unknown;
+  is_private?: boolean | null;
 }
 
 function MetaRow({
@@ -112,6 +114,50 @@ const PublicProfile = () => {
   const [showAllHighlights, setShowAllHighlights] = useState(false);
 
   useEffect(() => {
+    if (!profile) return;
+    const name = profile.display_name || profile.username;
+    const pageTitle = `${name} sur RunConnect`;
+    const sportKey = profile.favorite_sport as ProfileSportKey | undefined;
+    const sportFr =
+      sportKey && sportKey in PROFILE_SPORT_LABELS ? PROFILE_SPORT_LABELS[sportKey].label : profile.favorite_sport;
+    const description =
+      [sportFr, profile.bio?.trim().slice(0, 100)].filter(Boolean).join(" · ") ||
+      `Découvre le profil de ${name} sur RunConnect — séances et communauté sportive.`;
+
+    const prevTitle = document.title;
+    document.title = pageTitle;
+
+    const upsertMeta = (attr: "property" | "name", key: string, content: string) => {
+      const sel = `meta[${attr}="${key}"]`;
+      let el = document.head.querySelector(sel) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    const ogImage =
+      profile.avatar_url && /^https?:\/\//i.test(profile.avatar_url)
+        ? profile.avatar_url
+        : `${APP_WEB_ORIGIN}/favicon.png`;
+
+    upsertMeta("property", "og:title", pageTitle);
+    upsertMeta("property", "og:description", description);
+    upsertMeta("property", "og:image", ogImage);
+    upsertMeta("property", "og:type", "website");
+    upsertMeta("name", "twitter:card", "summary_large_image");
+    upsertMeta("name", "twitter:title", pageTitle);
+    upsertMeta("name", "twitter:description", description);
+    upsertMeta("name", "twitter:image", ogImage);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [profile]);
+
+  useEffect(() => {
     setIsNative(Capacitor.isNativePlatform());
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get("r");
@@ -146,10 +192,9 @@ const PublicProfile = () => {
         const { data: profileData, error } = await supabase
           .from("profiles")
           .select(
-            "user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, created_at, favorite_sport, age, country, organizer_avg_rating, running_records, cycling_records, swimming_records, triathlon_records, walking_records"
+            "user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, created_at, favorite_sport, age, country, organizer_avg_rating, running_records, cycling_records, swimming_records, triathlon_records, walking_records, is_private"
           )
           .eq("username", username)
-          .eq("is_private", false)
           .single();
 
         if (error || !profileData) {
@@ -282,9 +327,10 @@ const PublicProfile = () => {
         setIsFollowing(false);
         setFollowRequestSent(false);
       } else {
+        const targetStatus = profile.is_private ? "pending" : "accepted";
         const { error } = await supabase
           .from("user_follows")
-          .insert({ follower_id: user.id, following_id: profile.user_id, status: "pending" });
+          .insert({ follower_id: user.id, following_id: profile.user_id, status: targetStatus });
         if (error) {
           if (error.code === "23505") {
             toast({ title: "Demande déjà envoyée" });
@@ -292,8 +338,15 @@ const PublicProfile = () => {
           }
           throw error;
         }
-        setFollowRequestSent(true);
-        toast({ title: "Demande de suivi envoyée" });
+        if (profile.is_private) {
+          setFollowRequestSent(true);
+          toast({ title: "Demande de suivi envoyée" });
+        } else {
+          setIsFollowing(true);
+          setFollowRequestSent(false);
+          setFollowerCount((c) => c + 1);
+          toast({ title: "Vous suivez maintenant cette personne" });
+        }
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "Erreur";
@@ -361,6 +414,7 @@ const PublicProfile = () => {
   if (!profile) return null;
 
   const profileSports = parseProfileSports(profile.favorite_sport);
+  const canViewPrivateContent = !profile.is_private || isFollowing;
   const countryLine = getCountryLabel(profile.country ?? undefined) ?? "—";
   const ageLine =
     profile.age != null && profile.age > 0 ? `${profile.age} ans` : "—";
@@ -425,6 +479,9 @@ const PublicProfile = () => {
                       .join(" · ")}
                   </p>
                 )}
+                {profile.is_private ? (
+                  <p className="mt-1 text-[12px] font-medium text-muted-foreground">Compte privé</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -454,7 +511,7 @@ const PublicProfile = () => {
                 className="h-11 min-w-0 flex-1 rounded-[10px] text-ios-body font-semibold"
               >
                 <UserPlus className="mr-2 h-5 w-5 shrink-0" />
-                S&apos;abonner
+                {profile.is_private ? "Se connecter pour suivre" : "Suivre"}
               </Button>
             ) : (
               <>
@@ -479,7 +536,7 @@ const PublicProfile = () => {
                     </>
                   )}
                 </Button>
-                {isFollowing && (
+                {canViewPrivateContent && (
                   <Button
                     type="button"
                     variant="outline"
@@ -514,13 +571,13 @@ const PublicProfile = () => {
             </button>
           )}
 
-          {profile.bio ? (
+          {canViewPrivateContent && profile.bio ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <p className="whitespace-pre-wrap text-ios-body text-muted-foreground">{profile.bio}</p>
             </div>
           ) : null}
 
-          {profileHighlights.length > 0 ? (
+          {canViewPrivateContent && profileHighlights.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
@@ -554,7 +611,7 @@ const PublicProfile = () => {
             </div>
           ) : null}
 
-          {profileSports.length > 0 ? (
+          {canViewPrivateContent && profileSports.length > 0 ? (
             <div className="ios-card min-w-0 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
               <p className="mb-2 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
                 Sports
@@ -563,6 +620,17 @@ const PublicProfile = () => {
             </div>
           ) : null}
 
+          {!canViewPrivateContent ? (
+            <div className="ios-card min-w-0 border border-border/60 px-4 py-5 text-center shadow-[var(--shadow-card)]">
+              <p className="text-ios-body font-medium text-foreground">Ce compte est privé</p>
+              <p className="mt-1 text-ios-subheadline text-muted-foreground">
+                Suivez cette personne pour voir ses stories et ses informations de profil.
+              </p>
+            </div>
+          ) : null}
+
+          {canViewPrivateContent ? (
+          <>
           <div className="ios-card min-w-0 overflow-hidden border border-border/60 shadow-[var(--shadow-card)]">
             <p className="border-b border-border/50 px-4 py-2.5 text-ios-caption1 font-medium uppercase tracking-wide text-muted-foreground">
               Informations
@@ -653,6 +721,8 @@ const PublicProfile = () => {
           <p className="pb-2 pt-1 text-center text-ios-caption1 text-muted-foreground">
             Rejoignez {profile.username} sur RunConnect
           </p>
+          </>
+          ) : null}
         </div>
       </div>
 
@@ -663,7 +733,7 @@ const PublicProfile = () => {
         />
       ) : null}
       <SessionStoryDialog
-        open={showStoryDialog}
+        open={showStoryDialog && canViewPrivateContent}
         onOpenChange={setShowStoryDialog}
         authorId={profile.user_id}
         viewerUserId={user?.id ?? null}
@@ -673,7 +743,7 @@ const PublicProfile = () => {
         }}
       />
       <SessionStoryDialog
-        open={!!selectedHighlightStoryId}
+        open={!!selectedHighlightStoryId && canViewPrivateContent}
         onOpenChange={(open) => {
           if (!open) setSelectedHighlightStoryId(null);
         }}

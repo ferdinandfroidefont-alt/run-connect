@@ -13,6 +13,7 @@ interface ActivityStepProps {
   onSessionTypeChange: (type: string) => void;
   onNext: () => void;
   onBack: () => void;
+  hideNavigation?: boolean;
 }
 
 export const ActivityStep: React.FC<ActivityStepProps> = ({
@@ -22,6 +23,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
   onSessionTypeChange,
   onNext,
   onBack,
+  hideNavigation = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -38,16 +40,24 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex min-h-0 w-full flex-1 flex-col"
+      className={cn(
+        'flex w-full flex-col',
+        hideNavigation ? '' : 'min-h-0 flex-1'
+      )}
     >
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center text-3xl">
-          {activityType ? ACTIVITY_TYPES.find(a => a.value === activityType)?.icon : '🏃'}
+      {!hideNavigation && (
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center text-3xl">
+            {activityType ? ACTIVITY_TYPES.find(a => a.value === activityType)?.icon : '🏃'}
+          </div>
+          <h2 className="text-2xl font-bold text-foreground">Quel sport ?</h2>
+          <p className="text-muted-foreground mt-2">Choisissez l'activité de votre séance</p>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Quel sport ?</h2>
-        <p className="text-muted-foreground mt-2">Choisissez l'activité de votre séance</p>
-      </div>
+      )}
+
+      {hideNavigation && (
+        <h3 className="text-[15px] font-semibold text-foreground mb-3">Activité</h3>
+      )}
 
       {/* Search */}
       <div className="relative mb-4">
@@ -61,7 +71,7 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
       </div>
 
       {/* Activity grid */}
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+      <div className={cn('space-y-4 mb-4', hideNavigation ? '' : 'flex-1 overflow-y-auto')}>
         {/* Popular activities */}
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">Populaires</h3>
@@ -139,20 +149,21 @@ export const ActivityStep: React.FC<ActivityStepProps> = ({
         )}
       </div>
 
-      {/* Navigation */}
-      <div className="flex gap-3 mt-auto">
-        <Button variant="outline" onClick={onBack} className="h-14">
-          <ChevronLeft className="w-5 h-5" />
-        </Button>
-        <Button
-          onClick={onNext}
-          disabled={!activityType}
-          className="flex-1 h-14 text-lg font-semibold"
-        >
-          Continuer
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </Button>
-      </div>
+      {!hideNavigation && (
+        <div className="flex gap-3 mt-auto">
+          <Button variant="outline" onClick={onBack} className="h-14">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={!activityType}
+            className="flex-1 h-14 text-lg font-semibold"
+          >
+            Continuer
+            <ChevronRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };

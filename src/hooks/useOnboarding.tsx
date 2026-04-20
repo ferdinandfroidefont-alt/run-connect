@@ -64,7 +64,6 @@ export const useOnboarding = () => {
           profile.display_name?.trim() && 
           profile.avatar_url?.trim() &&
           profile.age && 
-          profile.phone?.trim() && 
           profile.bio?.trim();
 
         console.log('Profile fields check:', {
@@ -72,7 +71,6 @@ export const useOnboarding = () => {
           display_name: !!profile.display_name?.trim(),
           avatar_url: !!profile.avatar_url?.trim(),
           age: !!profile.age,
-          phone: !!profile.phone?.trim(),
           bio: !!profile.bio?.trim(),
           hasRequiredFields: !!hasRequiredFields
         });

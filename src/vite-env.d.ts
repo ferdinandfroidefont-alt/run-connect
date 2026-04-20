@@ -18,4 +18,6 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_LEGAL_DIRECTOR?: string;
   /** Hébergeur (texte libre, peut contenir des retours ligne). */
   readonly VITE_PUBLIC_LEGAL_HOSTING?: string;
+  /** Pin carte Accueil : `minimal` | `depth` | `premium` (défaut : depth). */
+  readonly VITE_MAP_PIN_VARIANT?: string;
 }

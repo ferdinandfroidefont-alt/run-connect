@@ -1667,6 +1667,77 @@ public class MainActivity extends AppCompatActivity {
         }
         
         @android.webkit.JavascriptInterface
+        public boolean isInstagramInstalled() {
+            try {
+                getPackageManager().getPackageInfo("com.instagram.android", 0);
+                return true;
+            } catch (PackageManager.NameNotFoundException e) {
+                return false;
+            }
+        }
+
+        @android.webkit.JavascriptInterface
+        public void shareToInstagramStory(String imageBase64, String contentUrl, String facebookAppId) {
+            Log.d(TAG, "📸 AndroidBridge: partage Instagram Story");
+
+            runOnUiThread(() -> {
+                try {
+                    // Decode base64 → write temp file
+                    byte[] decoded = Base64.decode(imageBase64, Base64.DEFAULT);
+                    java.io.File cacheDir = getCacheDir();
+                    java.io.File imgFile = new java.io.File(cacheDir, "runconnect_story_" + System.currentTimeMillis() + ".png");
+                    java.io.FileOutputStream fos = new java.io.FileOutputStream(imgFile);
+                    fos.write(decoded);
+                    fos.close();
+
+                    Uri imgUri = androidx.core.content.FileProvider.getUriForFile(
+                        MainActivity.this,
+                        getPackageName() + ".fileprovider",
+                        imgFile
+                    );
+
+                    Intent intent = new Intent("com.instagram.share.ADD_TO_STORY");
+                    intent.setDataAndType(imgUri, "image/png");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                    if (facebookAppId != null && !facebookAppId.isEmpty()) {
+                        intent.putExtra("source_application", facebookAppId);
+                    }
+                    if (contentUrl != null && !contentUrl.isEmpty()) {
+                        intent.putExtra("content_url", contentUrl);
+                    }
+                    intent.putExtra("top_background_color", "#FFFFFF");
+                    intent.putExtra("bottom_background_color", "#FFFFFF");
+
+                    // Grant URI permission to Instagram
+                    grantUriPermission("com.instagram.android", imgUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                    if (intent.resolveActivity(getPackageManager()) != null) {
+                        startActivity(intent);
+                        Log.d(TAG, "✅ Instagram Story intent lancé avec content_url=" + contentUrl);
+
+                        webView.evaluateJavascript(
+                            "window.dispatchEvent(new CustomEvent('instagramStoryShared', {detail: {success: true}}));",
+                            null
+                        );
+                    } else {
+                        Log.w(TAG, "⚠️ Instagram non installé ou intent non résolu");
+                        webView.evaluateJavascript(
+                            "window.dispatchEvent(new CustomEvent('instagramStoryShared', {detail: {success: false, reason: 'no_instagram'}}));",
+                            null
+                        );
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Erreur partage Instagram Story: " + e.getMessage(), e);
+                    webView.evaluateJavascript(
+                        "window.dispatchEvent(new CustomEvent('instagramStoryShared', {detail: {success: false, reason: 'error'}}));",
+                        null
+                    );
+                }
+            });
+        }
+
+        @android.webkit.JavascriptInterface
         public boolean hasGooglePlayServices() {
             try {
                 com.google.android.gms.common.GoogleApiAvailability availability = 

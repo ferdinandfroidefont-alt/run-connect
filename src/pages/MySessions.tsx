@@ -3,13 +3,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, Edit, Trash2, ChevronRight, ChevronDown, ChevronUp, ArrowLeft, Plus, CalendarDays, List, MessageCircle, LogOut, Navigation, Share2 } from "lucide-react";
 import { Switch } from '@/components/ui/switch';
 import { Geolocation } from '@capacitor/geolocation';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { setLiveShareOptIn } from '@/lib/liveTrackingStorage';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SessionCalendarView } from '@/components/SessionCalendarView';
 import ConfirmPresence from '@/pages/ConfirmPresence';
 import { StravaActivitiesPanel } from '@/components/sessions/StravaActivitiesPanel';
+import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
+import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
+import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
 
 const CreateSessionWizard = lazy(() =>
   import('@/components/session-creation/CreateSessionWizard').then((m) => ({ default: m.CreateSessionWizard }))
@@ -48,6 +52,16 @@ interface UserSession {
   image_url?: string;
   organizer_id?: string;
   live_tracking_max_duration?: number;
+  route_id?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
+  session_blocks?: unknown;
+  interval_count?: number | null;
+  interval_distance?: number | null;
+  interval_pace?: string | null;
+  interval_pace_unit?: string | null;
+  pace_general?: string | null;
+  pace_unit?: string | null;
 }
 
 interface Participant {
@@ -70,6 +84,7 @@ interface OrganizerProfile {
 
 export default function MySessions() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,6 +101,9 @@ export default function MySessions() {
   const [isEditSessionDialogOpen, setIsEditSessionDialogOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showSessionShare, setShowSessionShare] = useState(false);
+  const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
+  const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
   const [focusColumn, setFocusColumn] = useState<'programmed' | 'finished'>('programmed');
   const [finishedSub, setFinishedSub] = useState<'activities' | 'confirm'>('activities');
@@ -206,6 +224,36 @@ export default function MySessions() {
       await supabase.from('sessions').update({ live_tracking_active: false }).eq('id', selectedSession.id);
     }
   }, [sessionSource, selectedSession]);
+
+  const openSessionShare = useCallback(async () => {
+    if (!selectedSession) return;
+    try {
+      const s = selectedSession as UserSession & Record<string, unknown>;
+      const base: Record<string, unknown> = { ...s };
+      const routeId = s.route_id;
+      if (routeId) {
+        const { data: route, error } = await supabase.from('routes').select('coordinates').eq('id', routeId).maybeSingle();
+        if (error) console.error(error);
+        base.routes = route?.coordinates != null ? { coordinates: route.coordinates } : null;
+      } else {
+        base.routes = (s as { routes?: { coordinates?: unknown } | null }).routes ?? null;
+      }
+      const lat = Number(s.location_lat);
+      const lng = Number(s.location_lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        base.location_lat = 48.8566;
+        base.location_lng = 2.3522;
+      } else {
+        base.location_lat = lat;
+        base.location_lng = lng;
+      }
+      setSessionForShare(base as unknown as Parameters<typeof buildSessionSharePayload>[0]);
+      setShowSessionShare(true);
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erreur", description: "Impossible de charger la séance pour le partage.", variant: "destructive" });
+    }
+  }, [selectedSession, toast]);
 
   const handleTrackingToggle = (checked: boolean) => {
     if (checked) {
@@ -536,6 +584,14 @@ export default function MySessions() {
               </Button>
               {!isViewingJoinedSession && (
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void openSessionShare()}
+                    className="h-9 w-9"
+                  >
+                    <Share2 className="h-5 w-5 text-primary" />
+                  </Button>
                   {isUpcoming && (
                     <Button
                       variant="ghost"
@@ -553,6 +609,18 @@ export default function MySessions() {
                     className="h-9 w-9"
                   >
                     <Trash2 className="h-5 w-5 text-destructive" />
+                  </Button>
+                </div>
+              )}
+              {isViewingJoinedSession && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void openSessionShare()}
+                    className="h-9 w-9"
+                  >
+                    <Share2 className="h-5 w-5 text-primary" />
                   </Button>
                 </div>
               )}
@@ -816,6 +884,48 @@ export default function MySessions() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+
+        <SessionShareScreen
+          open={showSessionShare}
+          onClose={() => {
+            setShowSessionShare(false);
+            setSessionForShare(null);
+          }}
+          session={sessionForShare}
+          onOpenConversationShare={() => {
+            setShowSessionShare(false);
+            setShowShareConversationDialog(true);
+          }}
+        />
+
+        {selectedSession && (
+          <ShareSessionToConversationDialog
+            isOpen={showShareConversationDialog}
+            onClose={() => setShowShareConversationDialog(false)}
+            session={{
+              id: selectedSession.id,
+              title: selectedSession.title,
+              description: selectedSession.description,
+              activity_type: selectedSession.activity_type,
+              scheduled_at: selectedSession.scheduled_at,
+              location_name: selectedSession.location_name,
+              organizer_id: selectedSession.organizer_id ?? '',
+              profiles: selectedSession.organizer_id
+                ? (() => {
+                    const p = organizerProfiles.get(selectedSession.organizer_id!);
+                    return p
+                      ? {
+                          username: p.username,
+                          display_name: p.display_name,
+                          avatar_url: p.avatar_url ?? undefined,
+                        }
+                      : undefined;
+                  })()
+                : undefined,
+            }}
+            onSessionShared={() => setShowShareConversationDialog(false)}
+          />
+        )}
       </>
     );
   }
@@ -827,7 +937,7 @@ export default function MySessions() {
         {/* iOS Header */}
         <div className="z-50 shrink-0 border-b border-border bg-card pt-[var(--safe-area-top)]">
           <div className="px-ios-4 py-ios-3 relative flex items-center justify-center">
-            <h1 className="text-ios-largetitle font-bold tracking-tight text-center">Mes Séances</h1>
+            <h1 className="text-ios-title1 font-bold text-center">{t("navigation.mySessions")}</h1>
           </div>
           
           {/* iOS Segmented Control - Two columns layout */}
@@ -1142,7 +1252,7 @@ export default function MySessions() {
               {sessionSource === "created" && (
                 <div className="mt-ios-3 pb-ios-6">
                   <Suspense fallback={null}>
-                    <OrganizerStatsCard />
+                    <OrganizerStatsCard weeklyOnly />
                   </Suspense>
                 </div>
               )}
@@ -1184,6 +1294,48 @@ export default function MySessions() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SessionShareScreen
+        open={showSessionShare}
+        onClose={() => {
+          setShowSessionShare(false);
+          setSessionForShare(null);
+        }}
+        session={sessionForShare}
+        onOpenConversationShare={() => {
+          setShowSessionShare(false);
+          setShowShareConversationDialog(true);
+        }}
+      />
+
+      {selectedSession && (
+        <ShareSessionToConversationDialog
+          isOpen={showShareConversationDialog}
+          onClose={() => setShowShareConversationDialog(false)}
+          session={{
+            id: selectedSession.id,
+            title: selectedSession.title,
+            description: selectedSession.description,
+            activity_type: selectedSession.activity_type,
+            scheduled_at: selectedSession.scheduled_at,
+            location_name: selectedSession.location_name,
+            organizer_id: selectedSession.organizer_id ?? '',
+            profiles: selectedSession.organizer_id
+              ? (() => {
+                  const p = organizerProfiles.get(selectedSession.organizer_id!);
+                  return p
+                    ? {
+                        username: p.username,
+                        display_name: p.display_name,
+                        avatar_url: p.avatar_url ?? undefined,
+                      }
+                    : undefined;
+                })()
+              : undefined,
+          }}
+          onSessionShared={() => setShowShareConversationDialog(false)}
+        />
+      )}
 
     </>
   );

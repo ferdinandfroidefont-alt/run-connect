@@ -6,12 +6,13 @@ import {
 } from '@/lib/iosStatusBarTheme';
 
 /**
- * Écran splash Ruconnect : une seule teinte de bleu partout (fond icône = fond écran = WKWebView).
+ * Splash RunConnect (style iOS premium) :
+ * - fond blanc
+ * - accent bleu marque
  * À garder aligné avec capacitor.config.ts (ios.backgroundColor) et index.html (body initial).
  */
-// Couleur bleue splash alignée sur le fond du PNG `public/brand/runconnect-splash-icon.png`
-// pour éviter toute « zone carré » visible autour du logo.
-export const RUCONNECT_SPLASH_BLUE = '#2E68FF';
+export const RUCONNECT_SPLASH_BACKGROUND = '#FFFFFF';
+export const RUCONNECT_SPLASH_PRIMARY = '#2563EB';
 
 /** Icône seule (cartes de chargement, fallback boot, etc.). */
 export const RUCONNECT_SPLASH_ICON_URL = '/brand/runconnect-splash-icon.png';
@@ -24,12 +25,12 @@ export function applyRuconnectSplashWebChrome(): void {
   const root = document.documentElement;
   const body = document.body;
   const appRoot = document.getElementById('root');
-  root.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
-  body.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
-  if (appRoot) appRoot.style.backgroundColor = RUCONNECT_SPLASH_BLUE;
+  root.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
+  body.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
+  if (appRoot) appRoot.style.backgroundColor = RUCONNECT_SPLASH_BACKGROUND;
 
   const metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
-  if (metaTheme) metaTheme.setAttribute('content', RUCONNECT_SPLASH_BLUE);
+  if (metaTheme) metaTheme.setAttribute('content', RUCONNECT_SPLASH_BACKGROUND);
 
   const metaApple = document.querySelector(
     'meta[name="apple-mobile-web-app-status-bar-style"]'
@@ -39,8 +40,8 @@ export function applyRuconnectSplashWebChrome(): void {
 
 /**
  * Barre d’état **système** uniquement (pas de doublon HTML) :
- * - overlay true → le fond bleu du Web remonte sous la barre ; une seule bande visible.
- * - Style.Light → pictogrammes / heure en clair sur le bleu.
+ * - overlay true → le fond du Web remonte sous la barre ; une seule bande visible.
+ * - Style.Dark → pictogrammes/heure sombres sur fond blanc.
  * - padding env(safe-area-inset-*) sur l’écran de chargement = marge contenu, pas une 2e barre.
  */
 export async function applyRuconnectSplashNativeChrome(): Promise<void> {
@@ -48,9 +49,9 @@ export async function applyRuconnectSplashNativeChrome(): Promise<void> {
   try {
     const { StatusBar, Style } = await import('@capacitor/status-bar');
     await StatusBar.setOverlaysWebView({ overlay: true });
-    await StatusBar.setStyle({ style: Style.Light });
+    await StatusBar.setStyle({ style: Style.Dark });
     try {
-      await StatusBar.setBackgroundColor({ color: RUCONNECT_SPLASH_BLUE });
+      await StatusBar.setBackgroundColor({ color: RUCONNECT_SPLASH_BACKGROUND });
     } catch {
       /* iOS peut ignorer setBackgroundColor ; overlay + fond HTML suffit */
     }

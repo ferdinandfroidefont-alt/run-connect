@@ -1,83 +1,52 @@
 
 
-## Remplacer "Gérer le club" par une page de gestion complète style iOS Settings
+## Problèmes identifiés (StoryCreate.tsx)
 
-### Constat actuel
-Le bouton "Gérer le club" ouvre `ClubInfoDialog` — un dialog plein écran avec des onglets (Membres/Entraînements/Groupes) et un design ancien, incohérent avec le style iOS premium du reste de la page Coaching. Il y a aussi `EditClubDialog` qui s'ouvre en cascade depuis `ClubInfoDialog`. Les deux sont redondants et mal intégrés.
+1. **Réactivation d'un mode = écrasement** : cliquer sur Texte/Musique/Sticker quand un objet existe déjà sélectionne/recrée au lieu d'éditer l'existant ou de revenir en mode idle.
+   - `placeTextEditorAtCenter()` réinitialise `textPos` (ligne 2616) → le texte existant est déplacé/sélectionné automatiquement.
+   - `setShowMusicPicker(true)` rouvre le sélecteur musique (ligne 2637) même si une musique est déjà choisie.
+   - `setShowStickerPicker(true)` rouvre la grille emoji.
 
-### Ce qui va changer
+2. **Pas de zone poubelle façon Instagram** pour drag-to-delete (texte, emoji, musique, séance, layers dynamiques).
 
-**Supprimer** : `ClubInfoDialog` et `EditClubDialog` ne seront plus utilisés depuis la page Coaching. On retire les imports lazy, les states (`showClubInfo`, `showEditClub`, `clubInfoData`), et le rendu `<Suspense>` correspondant dans `Coaching.tsx`.
+3. **Musique active non visible dans le header** : aucun mini-badge entre Retour et Terminé avec une croix pour retirer rapidement la musique.
 
-**Créer** : Un nouveau composant `ClubManagementDialog` en plein écran, style iOS Settings (fond `bg-secondary`, sections `IOSListGroup` avec titres en majuscules), qui regroupe tout en un seul écran scrollable :
+4. **Palette couleurs texte** : manque le noir (`#000000`) et la palette est tout en bas → masquée par le clavier (`bottom: env(safe-area-inset-bottom)` ne tient pas compte de `keyboardHeight`).
 
-### Structure de la nouvelle page
+## Plan de correction
 
-```text
-┌─────────────────────────────┐
-│  ← Retour     Gérer le club │
-├─────────────────────────────┤
-│                             │
-│  [Avatar du club]           │
-│  Nom du club                │
-│  Description                │
-│                             │
-│  INFORMATIONS               │
-│  ┌─────────────────────────┐│
-│  │ Nom du club      [Edit] ││
-│  │ Description      [Edit] ││
-│  │ Photo de profil  [Chg]  ││
-│  └─────────────────────────┘│
-│                             │
-│  CODE D'INVITATION          │
-│  ┌─────────────────────────┐│
-│  │ ABC123         [Copier] ││
-│  └─────────────────────────┘│
-│                             │
-│  MEMBRES (12)               │
-│  ┌─────────────────────────┐│
-│  │ Inviter des membres   > ││
-│  │ @alice  Admin  Coach    ││
-│  │ @bob    Membre    [⚙]  ││
-│  │ @charlie Membre   [⚙]  ││
-│  └─────────────────────────┘│
-│                             │
-│  ZONE DANGER                │
-│  ┌─────────────────────────┐│
-│  │ Supprimer le club       ││
-│  └─────────────────────────┘│
-│                             │
-└─────────────────────────────┘
+### A. Logique d'activation des modes (ne pas écraser l'existant)
+Pour chaque outil (Texte, Musique, Sticker, Séance) : si un objet du type est déjà présent ET que le mode n'est pas actif → ouvrir l'édition de l'existant SANS recréer ; si déjà actif → revenir à `idle` ; sinon → créer.
+
+- **Texte** : si `textOverlay` non vide et `editorMode !== "text"` → garder `textPos`/`textColor`/etc., juste `setShowTextInput(true)` + focus, ne PAS appeler `placeTextEditorAtCenter()`.
+- **Musique** : si `selectedMusic` existe et picker fermé → garder, ouvrir picker en lecture (pré-sélection). Re-clic → toggle picker fermé.
+- **Sticker emoji** : si `emojiSticker` existe → ouvrir le picker pour changer (pas écraser auto).
+- **Séance** : déjà togglable, OK mais aligner pattern.
+- Re-clic sur un outil déjà actif → `closeEditorMode()`.
+
+### B. Zone poubelle façon Instagram (drag-to-delete)
+- Ajouter un état `dragTrashVisible` + `dragTrashHover`.
+- Dans tous les `start*Drag` (text, music, emoji, session, dynamic) → `setDragTrashVisible(true)`.
+- Dans `move*Drag` → si `clientY > window.innerHeight - 110` → `setDragTrashHover(true)` + scale up icône.
+- Dans `end*Drag` → si `dragTrashHover` → supprimer le layer (`setTextOverlay("")`/`setSelectedMusic(null)`/`setEmojiSticker(null)`/`setSelectedSession(null)` ou `removeKindLayer`/filter dynamiques) ; sinon comportement normal. Reset `dragTrashVisible`.
+- UI : pastille ronde 64px centrée en bas (`bottom: 24px`) avec `Trash2`, fond `bg-black/50`, agrandie + rouge quand `dragTrashHover`. Z-index 50, `pointer-events-none`.
+
+### C. Mini-badge musique dans le header
+Dans la barre du haut (ligne 2575), entre Retour et Terminé, si `selectedMusic` :
 ```
+[♪ titre · artiste] [×]
+```
+- Pill `bg-black/55 backdrop-blur` avec icône Music, titre tronqué (max-w-[120px]), bouton croix → `setSelectedMusic(null)`.
+- Cliquable au centre → ouvre picker pour changer.
 
-### Fonctionnalités intégrées
+### D. Palette couleurs texte + remontée au-dessus du clavier
+- Ajouter `#000000` dans le tableau ligne 2884 : `["#FFFFFF", "#000000", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"]`.
+- Modifier le `style` ligne 2869 pour utiliser `keyboardHeight` :
+  ```tsx
+  style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 12px) + ${keyboardHeight}px + 8px))` }}
+  ```
+- S'assurer que la barre reste scrollable horizontalement si dépassement (`overflow-x-auto`) car ajouter le noir + scroll horizontal sur petits écrans.
 
-1. **Modifier nom/description/avatar** — inline, avec sauvegarde directe (reprend la logique d'`EditClubDialog`)
-2. **Code d'invitation** — affiché avec bouton copier (visible uniquement pour le créateur/admin)
-3. **Liste des membres** — avec badges Admin/Coach, actions par membre :
-   - Promouvoir/rétrograder coach (toggle)
-   - Retirer du club (avec confirmation AlertDialog)
-4. **Inviter des membres** — recherche utilisateurs intégrée (dialog léger ou section inline)
-5. **Supprimer le club** — section danger en bas, avec AlertDialog de confirmation
-
-### Détails techniques
-
-**Fichiers créés :**
-- `src/components/coaching/ClubManagementDialog.tsx` — nouveau composant unique (~400 lignes), utilisant `IOSListGroup`, `IOSListItem`, `IosFixedPageHeaderShell`, `CoachingFullscreenHeader`
-
-**Fichiers modifiés :**
-- `src/pages/Coaching.tsx` :
-  - Supprimer les imports lazy de `ClubInfoDialog` et `EditClubDialog`
-  - Supprimer les states `clubInfoData`, `showClubInfo`, `showEditClub`
-  - Supprimer la fonction `openClubManagement` (fetch conversation)
-  - Supprimer le bloc `<Suspense>` avec les deux dialogs
-  - Ajouter un state `showClubManagement` et le nouveau `<ClubManagementDialog>`
-  - Le bouton "Gérer le club" appellera simplement `setShowClubManagement(true)`
-
-**Fichiers NON supprimés** (utilisés ailleurs, depuis Messages/ClubProfileDialog) :
-- `ClubInfoDialog.tsx` — reste en place
-- `EditClubDialog.tsx` — reste en place
-
-### Logique métier reprise
-Toute la logique Supabase (load members, toggle coach, remove member, invite, delete club, upload avatar, update name/description) est copiée depuis `ClubInfoDialog` + `EditClubDialog` et consolidée dans le nouveau composant.
+## Fichier modifié
+- `src/pages/StoryCreate.tsx` (un seul fichier, ~6 zones modifiées)
 

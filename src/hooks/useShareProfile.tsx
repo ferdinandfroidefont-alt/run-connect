@@ -1,8 +1,5 @@
-import { Share } from '@capacitor/share';
-import { Capacitor } from '@capacitor/core';
-import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { buildPreferredProfileShareLink } from '@/lib/appLinks';
+import { getProfilePublicUrl } from '@/lib/appLinks';
 
 interface ShareProfileOptions {
   username: string;
@@ -13,7 +10,7 @@ interface ShareProfileOptions {
 }
 
 export const useShareProfile = () => {
-  const { toast } = useToast();
+  const [showProfileShare, setShowProfileShare] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [qrData, setQrData] = useState<{
     profileUrl: string;
@@ -23,27 +20,24 @@ export const useShareProfile = () => {
     referralCode?: string | null;
   } | null>(null);
 
-  const shareProfile = async (options: ShareProfileOptions) => {
-    const profileUrl = buildPreferredProfileShareLink({
-      username: options.username,
-      referralCode: options.referralCode,
-    });
-    
-    // Set QR data and show dialog as primary sharing method
+  const shareProfile = (options: ShareProfileOptions) => {
+    const profileUrl = getProfilePublicUrl(options.username, options.referralCode);
     setQrData({
       profileUrl,
       username: options.username,
       displayName: options.displayName,
       avatarUrl: options.avatarUrl,
-      referralCode: options.referralCode
+      referralCode: options.referralCode,
     });
-    setShowQRDialog(true);
+    setShowProfileShare(true);
   };
 
-  return { 
-    shareProfile, 
-    showQRDialog, 
-    setShowQRDialog, 
-    qrData 
+  return {
+    shareProfile,
+    showProfileShare,
+    setShowProfileShare,
+    showQRDialog,
+    setShowQRDialog,
+    qrData,
   };
 };

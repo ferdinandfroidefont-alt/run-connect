@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,9 @@ interface EditSessionDialogProps {
 }
 
 export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }: EditSessionDialogProps) => {
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -158,6 +162,15 @@ export const EditSessionDialog = ({ isOpen, onClose, onSessionUpdated, session }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !session) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La modification de séance est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!formData.title || !formData.activity_type || !formData.session_type || !formData.scheduled_at || !formData.location_name) {
       toast({

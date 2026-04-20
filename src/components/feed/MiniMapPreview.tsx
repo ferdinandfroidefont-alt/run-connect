@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
-import { generateRoundProfileMarkerSVG, svgToDataUrl, imageUrlToBase64 } from '@/lib/map-marker-generator';
 import { createEmbeddedMapboxMap } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
+import { createSessionPinButton, resolveSessionPinVariant } from '@/lib/mapSessionPin';
 
 interface MiniMapPreviewProps {
   lat: number;
   lng: number;
-  profileImageUrl: string;
   sessionId?: string;
+  onOpenSession?: () => void;
+  avatarUrl?: string | null;
 }
 
-export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMapPreviewProps) => {
+export const MiniMapPreview = ({ lat, lng, sessionId, onOpenSession, avatarUrl }: MiniMapPreviewProps) => {
   const navigate = useNavigate();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -22,6 +23,10 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
   const [error, setError] = useState(false);
 
   const handleMapClick = useCallback(() => {
+    if (onOpenSession) {
+      onOpenSession();
+      return;
+    }
     const params = new URLSearchParams({
       lat: lat.toString(),
       lng: lng.toString(),
@@ -29,7 +34,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
       ...(sessionId && { sessionId }),
     });
     navigate(`/?${params.toString()}`);
-  }, [lat, lng, sessionId, navigate]);
+  }, [lat, lng, onOpenSession, sessionId, navigate]);
 
   useEffect(() => {
     if (!mapRef.current || lat === undefined || lat === null || lng === undefined || lng === null) {
@@ -52,39 +57,29 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
 
         const map = await createEmbeddedMapboxMap(mapRef.current, {
           center: { lat, lng },
-          zoom: 14,
+          zoom: 12,
           interactive: true,
         });
         mapInstanceRef.current = map;
 
-        const el = document.createElement('div');
-        el.className = 'cursor-pointer';
-        el.style.width = '44px';
-        el.style.height = '44px';
+        const wrap = document.createElement('div');
+        wrap.className = 'rc-session-pin';
+        wrap.style.position = 'relative';
+        wrap.style.width = '1px';
+        wrap.style.height = '1px';
+        wrap.style.overflow = 'visible';
 
-        if (profileImageUrl) {
-          try {
-            const base64Image = await imageUrlToBase64(profileImageUrl);
-            const svg = generateRoundProfileMarkerSVG(base64Image, 44);
-            const dataUrl = svgToDataUrl(svg);
-            el.style.backgroundImage = `url(${dataUrl})`;
-            el.style.backgroundSize = 'cover';
-            el.style.borderRadius = '50%';
-            el.style.border = '3px solid white';
-            el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
-          } catch {
-            el.style.borderRadius = '50%';
-            el.style.background = '#385bdc';
-            el.style.border = '3px solid white';
-          }
-        } else {
-          el.style.borderRadius = '50%';
-          el.style.background = '#385bdc';
-          el.style.border = '3px solid white';
-        }
+        const pin = createSessionPinButton({
+          avatarUrl: avatarUrl || '/placeholder.svg',
+          ariaLabel: 'Séance sur la carte',
+          variant: resolveSessionPinVariant(),
+        });
+        wrap.appendChild(pin);
 
         const mapboxgl = await loadMapboxGl();
-        markerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
+        markerRef.current = new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+          .setLngLat([lng, lat])
+          .addTo(map);
 
         map.on('click', handleMapClick);
 
@@ -107,7 +102,7 @@ export const MiniMapPreview = ({ lat, lng, profileImageUrl, sessionId }: MiniMap
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
     };
-  }, [lat, lng, profileImageUrl, handleMapClick]);
+  }, [lat, lng, handleMapClick, avatarUrl]);
 
   if (error) {
     return (

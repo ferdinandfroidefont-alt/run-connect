@@ -2,10 +2,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { Map, Marker } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
-import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Undo, Redo, Trash2, Navigation, Route, MapPin, ArrowLeft, Check, Layers, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppContext } from '@/contexts/AppContext';
 
 import { RouteDialog } from '@/components/RouteDialog';
 import { MapStyleSelector } from '@/components/MapStyleSelector';
@@ -41,7 +52,9 @@ import { insertRouteRecord } from '@/lib/insertRouteRecord';
 import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
+import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 
 interface RouteSegment {
   startPoint: MapCoord;
@@ -60,14 +73,23 @@ interface EditRouteData {
   waypoints?: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
 }
 
+type RouteDraftPayload = {
+  savedAt: number;
+  waypoints: Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }>;
+  isManualMode: boolean;
+};
+
+const ROUTE_DRAFT_STORAGE_KEY = 'runconnect_route_creation_draft_v1';
+
 /** Réduit le bruit des petites oscillations du MNE (m). */
 const ELEV_NOISE_THRESHOLD_M = 2;
 
 export const RouteCreation = () => {
   const navigate = useNavigate();
-  const { pathname: routeCreationPathname, search: routeCreationSearch } = useLocation();
-  const [searchParams] = useSearchParams();
+  const { pathname: routeCreationPathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { setBottomNavSuppressed } = useAppContext();
   const { formatKm, unit } = useDistanceUnits();
 
   const { getCurrentPosition } = useGeolocation();
@@ -80,6 +102,7 @@ export const RouteCreation = () => {
   const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
   const waypointMarkers = useRef<Marker[]>([]);
+  const userLocationMarkerRef = useRef<Marker | null>(null);
   const segmentIdCounterRef = useRef(0);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -96,7 +119,11 @@ export const RouteCreation = () => {
   const [isManualMode, setIsManualMode] = useState(false);
   const [waypointCount, setWaypointCount] = useState(0);
   const [elevationLoading, setElevationLoading] = useState(false);
+  const [elevationAutoExpandToken, setElevationAutoExpandToken] = useState(0);
   const elevationRequestId = useRef(0);
+  const [exitDraftDialogOpen, setExitDraftDialogOpen] = useState(false);
+  const [pendingExitPath, setPendingExitPath] = useState<string | null>(null);
+  const autoRestoreDoneRef = useRef(false);
 
   const undoHistory = useRef<
     Array<{
@@ -115,11 +142,35 @@ export const RouteCreation = () => {
   }, [isManualMode]);
 
   const addWaypointRef = useRef<(latLng: MapCoord) => Promise<void>>(async () => {});
+  const previousWaypointCountRef = useRef(0);
+
+  // MainTabsSwipeHost : la page reste montée en arrière-plan — se fier à la route active.
+  const isActiveRouteCreation =
+    routeCreationPathname === "/route-create" || routeCreationPathname === "/route-creation";
+  useEffect(() => {
+    setBottomNavSuppressed("route-creation", isActiveRouteCreation);
+    return () => setBottomNavSuppressed("route-creation", false);
+  }, [isActiveRouteCreation, setBottomNavSuppressed]);
 
   function allocSegmentLayer(): { layerSourceId: string; layerId: string } {
     const n = segmentIdCounterRef.current++;
     return { layerSourceId: `rc-${n}-src`, layerId: `rc-${n}-ly` };
   }
+
+  const ensureUserLocationMarker = useCallback(async (position: { lat: number; lng: number }) => {
+    if (!map.current) return;
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.setLngLat([position.lng, position.lat]);
+      return;
+    }
+    const marker = await createUserLocationMapboxMarker(position.lng, position.lat);
+    if (!map.current) {
+      marker.remove();
+      return;
+    }
+    marker.addTo(map.current);
+    userLocationMarkerRef.current = marker;
+  }, []);
 
   useEffect(() => {
     if (isEditMode) {
@@ -195,7 +246,7 @@ export const RouteCreation = () => {
       await fitMapToCoords(map.current, waypoints.current, 50);
     }
 
-    await updateElevationAndStats();
+    await updateElevationAndStats('fast');
     setWaypointCount(waypoints.current.length);
 
     toast.success("Itinéraire chargé - modifiez les points");
@@ -245,6 +296,7 @@ export const RouteCreation = () => {
               .then((position) => {
                 if (position && map.current) {
                   map.current.jumpTo({ center: [position.lng, position.lat], zoom: 14 });
+                  void ensureUserLocationMarker(position);
                 }
               })
               .catch(() => {
@@ -270,6 +322,8 @@ export const RouteCreation = () => {
       roCleanup?.();
       scrubMarkerRef.current?.remove();
       scrubMarkerRef.current = null;
+      userLocationMarkerRef.current?.remove();
+      userLocationMarkerRef.current = null;
       map.current?.remove();
       map.current = null;
     };
@@ -354,6 +408,21 @@ export const RouteCreation = () => {
     window.addEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
     return () => window.removeEventListener(MAP_STYLE_THEME_SYNC_EVENT, onThemeMapSync);
   }, []);
+
+  // Sécurise l'affichage des traits à chaque rechargement de style Mapbox.
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const ensureSegmentsVisible = () => {
+      replayAllSegments();
+      window.setTimeout(() => replayAllSegments(), 120);
+      window.setTimeout(() => replayAllSegments(), 320);
+    };
+    m.on('style.load', ensureSegmentsVisible);
+    return () => {
+      m.off('style.load', ensureSegmentsVisible);
+    };
+  }, [isMapLoaded, replayAllSegments]);
 
   const clearScrubMarker = () => {
     scrubMarkerRef.current?.remove();
@@ -461,7 +530,7 @@ export const RouteCreation = () => {
       if (newSegment) {
         segments.current.push(newSegment);
         setWaypointCount(waypoints.current.length);
-        await updateElevationAndStats();
+        void updateElevationAndStats('fast');
       }
     }
   };
@@ -480,7 +549,9 @@ export const RouteCreation = () => {
     return allCoords;
   };
 
-  const updateElevationAndStats = async (): Promise<{
+  const updateElevationAndStats = async (
+    quality: 'fast' | 'full' = 'fast'
+  ): Promise<{
     distanceKm: number;
     elevations: number[];
     elevationGain: number;
@@ -499,13 +570,41 @@ export const RouteCreation = () => {
     const reqId = ++elevationRequestId.current;
     setElevationLoading(true);
 
-    const pathForElevation = densifyMapCoords(allCoordinates, 7);
+    const pathForElevation = densifyMapCoords(allCoordinates, quality === 'full' ? 7 : 18);
     const totalPathM = pathLengthMeters(pathForElevation);
-    /** Pas grossier sur lointain : ~7–11 m entre requêtes MNE selon longueur. */
     const stepM =
-      totalPathM > 90_000 ? 11 : totalPathM > 55_000 ? 10 : totalPathM > 28_000 ? 9 : 7;
+      quality === 'full'
+        ? totalPathM > 90_000
+          ? 11
+          : totalPathM > 55_000
+            ? 10
+            : totalPathM > 28_000
+              ? 9
+              : 7
+        : totalPathM > 90_000
+          ? 80
+          : totalPathM > 55_000
+            ? 60
+            : totalPathM > 28_000
+              ? 42
+              : totalPathM > 10_000
+                ? 28
+                : totalPathM > 3_000
+                  ? 20
+                  : 12;
     let sampled = resamplePathEveryMeters(pathForElevation, stepM);
-    const MAX_POINTS = 4000;
+    const MAX_POINTS =
+      quality === 'full'
+        ? 4000
+        : totalPathM > 90_000
+          ? 520
+          : totalPathM > 28_000
+            ? 420
+            : totalPathM > 10_000
+              ? 320
+              : totalPathM > 3_000
+                ? 240
+                : 180;
     if (sampled.length > MAX_POINTS) {
       sampled = resamplePathEvenlyMapCoords(sampled, MAX_POINTS);
     }
@@ -602,7 +701,7 @@ export const RouteCreation = () => {
       setTotalElevationGain(0);
       setTotalElevationLoss(0);
     } else {
-      await updateElevationAndStats();
+      void updateElevationAndStats('fast');
     }
     setWaypointCount(waypoints.current.length);
   };
@@ -635,7 +734,7 @@ export const RouteCreation = () => {
 
     setCanRedo(undoHistory.current.length > 0);
     setWaypointCount(waypoints.current.length);
-    await updateElevationAndStats();
+    void updateElevationAndStats('fast');
   };
 
   const handleClear = () => {
@@ -653,19 +752,163 @@ export const RouteCreation = () => {
     setWaypointCount(0);
   };
 
-  const handleRecenter = async () => {
+  useEffect(() => {
+    if (waypointCount >= 2 && waypointCount > previousWaypointCountRef.current) {
+      setElevationAutoExpandToken((t) => t + 1);
+    }
+    previousWaypointCountRef.current = waypointCount;
+  }, [waypointCount]);
+
+  const getWaypointModes = useCallback((): Array<{ lat: number; lng: number; mode: 'manual' | 'guided' }> => {
+    return waypoints.current.map((wp, index) => {
+      const mode = index > 0 && index - 1 < segments.current.length ? segments.current[index - 1]!.mode : 'manual';
+      return { lat: wp.lat, lng: wp.lng, mode };
+    });
+  }, []);
+
+  const clearRouteDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(ROUTE_DRAFT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveRouteDraft = useCallback(() => {
+    const payload: RouteDraftPayload = {
+      savedAt: Date.now(),
+      waypoints: getWaypointModes(),
+      isManualMode,
+    };
+    try {
+      localStorage.setItem(ROUTE_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+  }, [getWaypointModes, isManualMode]);
+
+  const restoreRouteDraft = useCallback(async () => {
+    if (isEditMode) return;
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(ROUTE_DRAFT_STORAGE_KEY);
+    } catch {
+      raw = null;
+    }
+    if (!raw) {
+      toast.error('Aucun brouillon trouvé');
+      return;
+    }
+    try {
+      const draft = JSON.parse(raw) as RouteDraftPayload;
+      if (!Array.isArray(draft.waypoints) || draft.waypoints.length < 2) {
+        toast.error('Brouillon invalide');
+        return;
+      }
+      if (!map.current) {
+        toast.error('Carte non prête');
+        return;
+      }
+      handleClear();
+      for (let i = 0; i < draft.waypoints.length; i += 1) {
+        const wp = draft.waypoints[i]!;
+        const latLng: MapCoord = { lat: Number(wp.lat), lng: Number(wp.lng) };
+        waypoints.current.push(latLng);
+        await addWaypointMarker(latLng, i, wp.mode || 'manual');
+        if (i > 0) {
+          const prev = draft.waypoints[i - 1]!;
+          const prevLatLng: MapCoord = { lat: Number(prev.lat), lng: Number(prev.lng) };
+          const segment = wp.mode === 'guided'
+            ? await createGuidedSegment(prevLatLng, latLng)
+            : createManualSegment(prevLatLng, latLng);
+          if (segment) segments.current.push(segment);
+        }
+      }
+      // Fallback robuste : si aucun segment n'a pu être reconstruit (style/reseau),
+      // on trace des segments manuels pour garantir l'affichage des traits.
+      if (segments.current.length === 0 && waypoints.current.length >= 2) {
+        for (let i = 1; i < waypoints.current.length; i += 1) {
+          const prevPoint = waypoints.current[i - 1]!;
+          const currPoint = waypoints.current[i]!;
+          const seg = createManualSegment(prevPoint, currPoint);
+          if (seg) segments.current.push(seg);
+        }
+      }
+      setIsManualMode(!!draft.isManualMode);
+      isManualModeRef.current = !!draft.isManualMode;
+      setWaypointCount(waypoints.current.length);
+      await fitMapToCoords(map.current, waypoints.current, 50);
+      // Rejouer les lignes après restauration + après éventuel refresh style.
+      replayAllSegments();
+      window.setTimeout(() => replayAllSegments(), 120);
+      window.setTimeout(() => replayAllSegments(), 320);
+      void updateElevationAndStats('fast');
+      toast.success('Brouillon d’itinéraire restauré');
+    } catch {
+      toast.error('Impossible de restaurer le brouillon');
+    }
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (autoRestoreDoneRef.current) return;
+    if (!isMapLoaded || isEditMode) return;
+    if (searchParams.get('restoreDraft') !== '1') return;
+    autoRestoreDoneRef.current = true;
+    void restoreRouteDraft().finally(() => {
+      const next = new URLSearchParams(searchParams);
+      next.delete('restoreDraft');
+      setSearchParams(next, { replace: true });
+    });
+  }, [isMapLoaded, isEditMode, restoreRouteDraft, searchParams, setSearchParams]);
+
+  const requestExitWithRouteDraft = useCallback((to: string) => {
+    if (isEditMode || waypoints.current.length < 2) {
+      navigate(to);
+      return;
+    }
+    setPendingExitPath(to);
+    setExitDraftDialogOpen(true);
+  }, [isEditMode, navigate]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let removed = false;
+    const setup = async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        const listener = await CapApp.addListener('backButton', () => {
+          requestExitWithRouteDraft('/');
+        });
+        return () => {
+          if (!removed) {
+            removed = true;
+            listener.remove();
+          }
+        };
+      } catch {
+        return undefined;
+      }
+    };
+    const cleanupPromise = setup();
+    return () => {
+      cleanupPromise.then((cleanup) => cleanup?.());
+    };
+  }, [requestExitWithRouteDraft]);
+
+  const handleRecenter = useCallback(async () => {
     try {
       const position = await getCurrentPosition();
       if (position) {
         map.current?.flyTo({ center: [position.lng, position.lat], zoom: 14, duration: 600 });
+        await ensureUserLocationMarker(position);
       }
     } catch {
       toast.error('Position non disponible');
     }
-  };
+  }, [ensureUserLocationMarker, getCurrentPosition]);
 
   const handleCancel = () => {
-    navigate('/');
+    requestExitWithRouteDraft('/');
   };
 
   const handleFinish = async () => {
@@ -691,7 +934,7 @@ export const RouteCreation = () => {
     });
 
     if (isEditMode && editRouteDataRef.current && user) {
-      const elevStats = await updateElevationAndStats();
+      const elevStats = await updateElevationAndStats('full');
       try {
         const elevationsForEdit = routeElevations.length >= 2 ? routeElevations : (elevStats?.elevations ?? []);
         const coordsWithElev = elevationsForEdit.length >= 2
@@ -733,7 +976,7 @@ export const RouteCreation = () => {
       return;
     }
 
-    void updateElevationAndStats();
+    void updateElevationAndStats('fast');
     setSaveDialogOpen(true);
   };
 
@@ -741,7 +984,6 @@ export const RouteCreation = () => {
     name: string,
     description: string,
     _createSession?: boolean,
-    isPublic?: boolean,
   ) => {
     if (!user) {
       toast.error('Connectez-vous pour enregistrer un itinéraire');
@@ -755,7 +997,7 @@ export const RouteCreation = () => {
 
     let elevationsForSave = routeElevations;
     if (elevationsForSave.length < 2) {
-      const refreshed = await updateElevationAndStats();
+      const refreshed = await updateElevationAndStats('full');
       if (!refreshed || refreshed.elevations.length < 2) {
         toast.error('Impossible de calculer le dénivelé — réessayez dans un instant');
         return;
@@ -779,7 +1021,7 @@ export const RouteCreation = () => {
       pathCoords,
       elevations: elevationsForSave,
       waypoints: waypointsData,
-      isPublic: isPublic ?? false,
+      isPublic: false,
     });
     setRouteSaving(false);
 
@@ -790,6 +1032,7 @@ export const RouteCreation = () => {
 
     toast.success('Itinéraire enregistré');
     setSaveDialogOpen(false);
+    clearRouteDraft();
     navigate('/itinerary/my-routes', {
       state: { itineraryBackTo: routeCreationPathname },
     });
@@ -863,7 +1106,7 @@ export const RouteCreation = () => {
       )}
 
       <div className="absolute left-ios-4 top-ios-4 z-10 max-w-[calc(100vw-2rem)] min-w-0">
-        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-wrap items-center gap-ios-1">
+        <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-ios-lg p-ios-1 shadow-lg flex flex-nowrap items-center gap-ios-1">
           <Button
             size="sm"
             variant={!isManualMode ? 'default' : 'ghost'}
@@ -882,20 +1125,11 @@ export const RouteCreation = () => {
             <MapPin className="w-4 h-4" />
             Manuel
           </Button>
-          <div
-            className="mx-2 h-5 w-px shrink-0 bg-border/70"
-            aria-hidden
-            role="presentation"
-          />
           <Button
             size="sm"
             variant="ghost"
-            onClick={() =>
-              navigate('/itinerary/my-routes', {
-                state: { itineraryBackTo: `${routeCreationPathname}${routeCreationSearch}` },
-              })
-            }
-            className="gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
+            onClick={() => requestExitWithRouteDraft('/itinerary/my-routes')}
+            className="ml-auto shrink-0 gap-2 text-muted-foreground hover:bg-[#34C759]/12 hover:text-[#2fb350] dark:hover:text-[#5de07a]"
           >
             <Layers className="h-4 w-4" />
             Mes itinéraires
@@ -906,7 +1140,11 @@ export const RouteCreation = () => {
         </p>
       </div>
 
-      <div className="absolute right-ios-4 top-ios-4 flex flex-col gap-ios-2 z-10">
+      <div
+        className={cn(
+          'absolute right-ios-4 top-[calc(env(safe-area-inset-top)+7.75rem)] z-10 flex flex-col gap-ios-2'
+        )}
+      >
         <Button
           size="icon"
           variant="outline"
@@ -950,6 +1188,18 @@ export const RouteCreation = () => {
           <Trash2 className="w-4 h-4" />
         </Button>
 
+        {!isEditMode && (
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => navigate('/drafts/routes')}
+            className="bg-background/80 hover:bg-background/90 backdrop-blur-md border-border/50 shadow-lg"
+            title="Brouillons itinéraire"
+          >
+            <FileText className="w-4 h-4" />
+          </Button>
+        )}
+
         {/* Même bottom sheet « Style de carte » que l’accueil ; gabarit h-11 comme les boutons outline */}
         <div
           className={cn(
@@ -974,6 +1224,7 @@ export const RouteCreation = () => {
               formatDistanceAlongPath={(m) => formatDistanceAlongPathMeters(m, unit)}
               isLoadingElevation={elevationLoading}
               defaultExpanded={false}
+              autoExpandToken={elevationAutoExpandToken}
               onScrub={handleElevationScrub}
             />
           )}
@@ -994,8 +1245,39 @@ export const RouteCreation = () => {
         title="Enregistrer l'itinéraire"
         loading={routeSaving}
         showCreateSessionOption={false}
-        showPublicToggle={true}
       />
+      <AlertDialog open={exitDraftDialogOpen} onOpenChange={setExitDraftDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ton itinéraire en cours n’est pas encore enregistré. Tu peux le reprendre plus tard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                const to = pendingExitPath;
+                setPendingExitPath(null);
+                if (to) navigate(to);
+              }}
+            >
+              Quitter sans enregistrer
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                saveRouteDraft();
+                toast.success('Brouillon d’itinéraire enregistré');
+                const to = pendingExitPath;
+                setPendingExitPath(null);
+                if (to) navigate(to);
+              }}
+            >
+              Enregistrer et quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

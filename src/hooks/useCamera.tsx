@@ -70,15 +70,15 @@ export const useCamera = () => {
         
         if (permissions.camera === 'granted') {
           const result = await Camera.getPhoto({
-            quality: 85, // Qualité réduite pour éviter les timeouts
+            quality: 98,
             allowEditing: false,
-            resultType: CameraResultType.DataUrl,
+            resultType: CameraResultType.Uri,
             source: CameraSource.Camera,
             direction: capacitorDirection,
           });
           
-          if (result.dataUrl) {
-            const response = await fetch(result.dataUrl);
+          if (result.webPath) {
+            const response = await fetch(result.webPath);
             const blob = await response.blob();
             const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
             console.log('✅ Photo via Capacitor:', file.size, 'bytes');

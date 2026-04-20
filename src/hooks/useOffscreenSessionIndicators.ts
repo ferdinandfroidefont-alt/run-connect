@@ -85,10 +85,21 @@ function pickIndicators(
   map: mapboxgl.Map,
   inner: MapInnerRect,
 ): OffscreenIndicatorItem[] {
+  const mapEl = map.getContainer();
+  const viewportW = mapEl.clientWidth;
+  const viewportH = mapEl.clientHeight;
   const centerLngLat = map.getCenter();
   const centerScreen = map.project([centerLngLat.lng, centerLngLat.lat]);
 
-  type Row = { s: SessionLike; px: number; py: number; dist: number; bearing: number; inInner: boolean };
+  type Row = {
+    s: SessionLike;
+    px: number;
+    py: number;
+    dist: number;
+    bearing: number;
+    inInner: boolean;
+    inViewport: boolean;
+  };
   const rows: Row[] = [];
 
   for (const s of sessions) {
@@ -103,11 +114,17 @@ function pickIndicators(
         : haversineKm(centerLngLat.lat, centerLngLat.lng, lat, lng);
 
     const inInner = isProjectedPointInInnerRect(p.x, p.y, inner);
+    const inViewport = p.x >= 0 && p.y >= 0 && p.x <= viewportW && p.y <= viewportH;
     const bearing = screenBearingDeg(centerScreen.x, centerScreen.y, p.x, p.y);
-    rows.push({ s, px: p.x, py: p.y, dist, bearing, inInner });
+    rows.push({ s, px: p.x, py: p.y, dist, bearing, inInner, inViewport });
   }
 
-  if (rows.some((r) => r.inInner)) {
+  /**
+   * Si une séance est déjà visible dans la carte (viewport réel),
+   * on masque les badges hors-cadre (ex: "À 13 km") pour éviter l'effet
+   * de badge mobile inutile quand le marqueur RDV est déjà présent.
+   */
+  if (rows.some((r) => r.inViewport)) {
     return [];
   }
 

@@ -1,5 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { Map as MapboxMap } from "mapbox-gl";
+import { createEmbeddedMapboxMap, setOrUpdateLineLayer } from "@/lib/mapboxEmbed";
+import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
+import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
+import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
+import mapboxgl from "mapbox-gl";
+import { exportToGPX, shareOrDownloadGPX } from "@/lib/gpxExport";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
+import { useAppPreview } from "@/contexts/AppPreviewContext";
 import { useSendNotification } from "@/hooks/useSendNotification";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -8,13 +17,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Star, Trash2, Route, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Flame, Snowflake, Timer, Repeat, Copy, ExternalLink, Files, CalendarPlus, Navigation } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, Maximize2, ChevronDown } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RoutePreview } from "./RoutePreview";
 import { ProfilePreviewDialog } from "./ProfilePreviewDialog";
 import { ShareSessionToConversationDialog } from "./ShareSessionToConversationDialog";
+import { SessionShareScreen } from "./session-share/SessionShareScreen";
 import { SessionQuestions } from "./SessionQuestions";
 import { SessionLevelBadge } from "./SessionLevelBadge";
 import { CreateSessionWizard } from "./session-creation/CreateSessionWizard";
@@ -23,9 +33,15 @@ import { useGPSValidation } from '@/hooks/useGPSValidation';
 import { useNavigate } from 'react-router-dom';
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LEVEL_CONFIG, type SessionLevel } from '@/lib/sessionLevelCalculator';
+import type { SessionLevel } from '@/lib/sessionLevelCalculator';
+import { estimateSessionDurationMinutes, DEFAULT_SESSION_CALENDAR_DURATION_MIN } from '@/lib/estimateSessionDurationMinutes';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { RateSessionDialog } from './RateSessionDialog';
-import { OrganizerRatingBadge } from './OrganizerRatingBadge';
 import { useDistanceUnits } from '@/contexts/DistanceUnitsContext';
 interface SessionBlock {
   id: string;
@@ -129,7 +145,9 @@ const SettingsSeparator = () => (
 
 export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: SessionDetailsDialogProps) => {
   const { unit, formatKm, formatMeters, formatSpeed } = useDistanceUnits();
-  const { user, subscriptionInfo } = useAuth();
+  const { user } = useAuth();
+  const { isPreviewMode } = useAppPreview();
+  const subscriptionInfo = useEffectiveSubscriptionInfo();
   const { showAdAfterJoiningSession } = useAdMob(subscriptionInfo?.subscribed || false);
   const { toast } = useToast();
   const { validatePresence, validating: validatingGPS } = useGPSValidation();
@@ -141,6 +159,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [isParticipant, setIsParticipant] = useState(false);
   const [showOrganizerProfile, setShowOrganizerProfile] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showSessionShare, setShowSessionShare] = useState(false);
   const [gpsValidated, setGpsValidated] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -150,6 +169,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(false);
+  const [showBlocksDialog, setShowBlocksDialog] = useState(false);
+  const [showParticipantsDialog, setShowParticipantsDialog] = useState(false);
+  const [participantsList, setParticipantsList] = useState<Array<{ user_id: string; profile: { username: string; display_name: string; avatar_url: string | null } }>>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
 
 
   useEffect(() => {
@@ -199,6 +223,148 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     checkUserStatus();
   }, [user, session]);
 
+  // Map refs (declared before early return to satisfy hooks rules)
+  const headerMapRef = useRef<HTMLDivElement | null>(null);
+  const headerMapInstance = useRef<MapboxMap | null>(null);
+  const routeMapRef = useRef<HTMLDivElement | null>(null);
+  const routeMapInstance = useRef<MapboxMap | null>(null);
+  const [headerMapReady, setHeaderMapReady] = useState(false);
+  const [headerMapFailed, setHeaderMapFailed] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    let ro: ResizeObserver | null = null;
+    let rafId: number | null = null;
+    let attempts = 0;
+
+    setHeaderMapReady(false);
+    setHeaderMapFailed(false);
+
+    const init = async (container: HTMLDivElement) => {
+      try {
+        const map = await createEmbeddedMapboxMap(container, {
+          interactive: false,
+          center: { lat: session.location_lat, lng: session.location_lng },
+          zoom: 14,
+          style: MAPBOX_STREETS_STYLE,
+        });
+        if (cancelled) { map.remove(); return; }
+        headerMapInstance.current = map;
+        const doResize = () => { try { map.resize(); } catch {} };
+        map.once('load', () => {
+          doResize();
+          if (cancelled) return;
+          // Add the same DOM pin used on Home (avatar + tip)
+          try {
+            const wrap = document.createElement('div');
+            wrap.className = 'rc-session-pin rc-session-pin-pop';
+            wrap.style.position = 'relative';
+            wrap.style.width = '1px';
+            wrap.style.height = '1px';
+            wrap.style.overflow = 'visible';
+            const pin = createSessionPinButton({
+              avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
+              ariaLabel: session.title || 'Séance',
+              variant: resolveSessionPinVariant(),
+            });
+            wrap.appendChild(pin);
+            new mapboxgl.Marker({ element: wrap, anchor: 'bottom' })
+              .setLngLat([session.location_lng, session.location_lat])
+              .addTo(map);
+          } catch (err) {
+            console.warn('[SessionDetails] pin creation failed', err);
+          }
+          setHeaderMapReady(true);
+        });
+        map.once('error', () => {
+          if (!cancelled) setHeaderMapFailed(true);
+        });
+        requestAnimationFrame(doResize);
+        setTimeout(doResize, 120);
+        setTimeout(doResize, 400);
+        setTimeout(doResize, 800);
+        if (typeof ResizeObserver !== 'undefined') {
+          ro = new ResizeObserver(doResize);
+          ro.observe(container);
+        }
+      } catch (e) {
+        console.warn('[SessionDetails] header map error', e);
+        if (!cancelled) setHeaderMapFailed(true);
+      }
+    };
+
+    const tryInit = () => {
+      if (cancelled || headerMapInstance.current) return;
+      const el = headerMapRef.current;
+      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        init(el);
+      } else if (attempts++ < 60) {
+        rafId = requestAnimationFrame(tryInit);
+      } else {
+        setHeaderMapFailed(true);
+      }
+    };
+    tryInit();
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      ro?.disconnect();
+      headerMapInstance.current?.remove();
+      headerMapInstance.current = null;
+      setHeaderMapReady(false);
+    };
+  }, [session?.id, session?.location_lat, session?.location_lng]);
+
+  useEffect(() => {
+    if (!session?.routes) return;
+    let cancelled = false;
+    let rafId: number | null = null;
+    let attempts = 0;
+
+    const init = async (container: HTMLDivElement) => {
+      try {
+        const coords = (session.routes!.coordinates as Array<{ lat: number; lng: number }>).map(c => ({ lat: c.lat, lng: c.lng }));
+        if (!coords.length) return;
+        const center = coords[Math.floor(coords.length / 2)];
+        const map = await createEmbeddedMapboxMap(container, {
+          interactive: false,
+          center,
+          zoom: 13,
+        });
+        if (cancelled) { map.remove(); return; }
+        routeMapInstance.current = map;
+        const doResize = () => { try { map.resize(); } catch {} };
+        map.once('load', () => {
+          doResize();
+          setOrUpdateLineLayer(map, 'route-src', 'route-line', coords, { color: 'hsl(var(--primary))', width: 4 });
+        });
+        setTimeout(doResize, 200);
+      } catch (e) {
+        console.warn('[SessionDetails] route map error', e);
+      }
+    };
+
+    const tryInit = () => {
+      if (cancelled || routeMapInstance.current) return;
+      const el = routeMapRef.current;
+      if (el && el.offsetWidth > 0 && el.offsetHeight > 0) {
+        init(el);
+      } else if (attempts++ < 60) {
+        rafId = requestAnimationFrame(tryInit);
+      }
+    };
+    tryInit();
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      routeMapInstance.current?.remove();
+      routeMapInstance.current = null;
+    };
+  }, [session?.routes?.id]);
+
   if (!session) return null;
 
   const isOrganizer = user?.id === session.organizer_id;
@@ -228,6 +394,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleRequestJoin = async () => {
     if (!user || !isScheduled) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Les demandes et notifications sont désactivées.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -305,6 +480,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const handleCancelRequest = async () => {
     if (!user) return;
 
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Action désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -328,6 +512,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleGPSValidation = async () => {
     if (!user || !session) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La validation GPS est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const result = await validatePresence(
       session.id,
@@ -355,6 +548,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   const handleLeaveSession = async () => {
     if (!user) return;
+
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "Action désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -390,6 +592,15 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const handleDeleteSession = async () => {
     if (!user || !isOrganizer) return;
 
+    if (isPreviewMode) {
+      toast({
+        title: "Mode aperçu",
+        description: "La suppression est désactivée.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error: participantsError } = await supabase
@@ -417,606 +628,472 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
     }
   };
 
+  // Build dynamic title from blocks (e.g. "6 × 1000m allure 3'00/km")
+  const buildSessionTitle = (): string => {
+    const blocks = session.session_blocks as SessionBlock[] | undefined;
+    if (blocks?.length) {
+      const interval = blocks.find(b => b.type === 'interval');
+      if (interval) {
+        const reps = interval.repetitions || 1;
+        const eff = interval.effortDuration || '0';
+        const unit = interval.effortType === 'time' ? 's' : 'm';
+        const pace = interval.effortPace ? ` allure ${interval.effortPace}/km` : '';
+        return `${reps} × ${eff}${unit}${pace}`;
+      }
+    }
+    if (session.session_type === 'fractionne' && session.interval_count && session.interval_distance) {
+      const dist = session.interval_distance < 1
+        ? `${Math.round(session.interval_distance * 1000)}m`
+        : formatKm(session.interval_distance);
+      const pace = session.interval_pace ? ` allure ${session.interval_pace}/km` : '';
+      return `${session.interval_count} × ${dist}${pace}`;
+    }
+    return session.title;
+  };
+
+  const sessionTypeLabel = getSessionTypeLabel(session.session_type);
+  const dynamicTitle = buildSessionTitle();
+  const dateFmt = format(new Date(session.scheduled_at), "EEEE d MMMM yyyy", { locale: fr });
+  const timeFmt = format(new Date(session.scheduled_at), "HH:mm", { locale: fr });
+
+  // Compute timeline blocks
+  const timelineBlocks = (session.session_blocks as SessionBlock[] | undefined) || [];
+
+  // Stats card values — fall back across structured blocks / interval mode / route
+  const blocksAll = (session.session_blocks as SessionBlock[] | undefined) || [];
+  const intervalBlock = blocksAll.find(b => b.type === 'interval');
+
+  // Derive distance: structured > session.distance_km > route
+  let derivedDistanceKm: number | null = session.distance_km ?? null;
+  if (!derivedDistanceKm && intervalBlock?.effortType === 'distance' && intervalBlock.effortDuration) {
+    const m = parseFloat(String(intervalBlock.effortDuration).replace(',', '.'));
+    if (!isNaN(m) && intervalBlock.repetitions) derivedDistanceKm = (m * intervalBlock.repetitions) / 1000;
+  }
+  if (!derivedDistanceKm && session.interval_distance && session.interval_count) {
+    derivedDistanceKm = session.interval_distance * session.interval_count;
+  }
+  const totalDistance = derivedDistanceKm
+    ? formatKm(derivedDistanceKm)
+    : (session.routes?.total_distance ? formatMeters(session.routes.total_distance) : '—');
+
+  const showElevationTile = session.routes?.total_elevation_gain != null;
+  const elevGain = showElevationTile ? `${Math.round(session.routes!.total_elevation_gain)} m` : '—';
+
+  // Pace: prefer interval pace if structured/fractionné, else general
+  const rawPace = intervalBlock?.effortPace || session.interval_pace || session.pace_general || null;
+  const avgPace = rawPace
+    ? (session.activity_type === 'course' ? `${rawPace}/km`
+      : session.activity_type === 'natation' ? `${rawPace}/100m`
+      : rawPace)
+    : '—';
+
+  const estimatedDurationMin = estimateSessionDurationMinutes(session);
+  const estimatedDuration = estimatedDurationMin != null ? `${estimatedDurationMin} min` : '—';
+  const endTimeLabel = estimatedDurationMin != null
+    ? format(new Date(new Date(session.scheduled_at).getTime() + estimatedDurationMin * 60_000), 'HH:mm', { locale: fr })
+    : '—';
+
+  const calendarDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
+  const calendarEvent = {
+    title: dynamicTitle,
+    description: session.description || '',
+    location: session.location_name,
+    startDate: new Date(session.scheduled_at),
+    durationMinutes: calendarDurationMin,
+    organizer: session.profiles.username || session.profiles.display_name,
+  };
+
+  const levelBadge =
+    typeof session.calculated_level === 'number' &&
+    session.calculated_level >= 1 &&
+    session.calculated_level <= 6 ? (
+      <SessionLevelBadge level={session.calculated_level as SessionLevel} variant="full" size="sm" />
+    ) : null;
+
+  // (header & route map refs/effects are declared at the top of the component)
+
+  const handleExportGPX = async () => {
+    if (!session.routes) return;
+    const coords = (session.routes.coordinates as Array<{ lat: number; lng: number; elevation?: number }>);
+    const gpx = exportToGPX(session.routes.name, coords, session.description);
+    await shareOrDownloadGPX(session.routes.name, gpx, { title: session.routes.name });
+  };
+
+  const openParticipants = async () => {
+    setShowParticipantsDialog(true);
+    if (participantsList.length > 0) return;
+    setParticipantsLoading(true);
+    try {
+      const { data: parts } = await supabase
+        .from('session_participants')
+        .select('user_id')
+        .eq('session_id', session.id);
+      const ids = (parts || []).map(p => p.user_id);
+      const allIds = Array.from(new Set([session.organizer_id, ...ids]));
+      if (allIds.length === 0) { setParticipantsList([]); return; }
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', allIds);
+      setParticipantsList((profiles || []).map(p => ({
+        user_id: p.user_id!,
+        profile: { username: p.username || '', display_name: p.display_name || '', avatar_url: p.avatar_url || null },
+      })));
+    } catch (e) {
+      console.warn('[SessionDetails] participants load failed', e);
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  const participantsCount = session.current_participants || 0;
+  const headerStaticMapUrl = buildSessionStaticMapUrl({
+    routePath: [],
+    pin: { lat: session.location_lat, lng: session.location_lng },
+    width: 1200,
+    height: 560,
+  });
+
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[90vh] sm:rounded-xl bg-secondary border-0">
-        {/* iOS Header */}
-        <div className="sticky top-0 z-10 bg-background border-b border-border">
-          <div className="flex items-center justify-between h-[56px] px-4">
-            <button 
-              onClick={onClose}
-              className="flex items-center gap-1 text-primary"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span className="text-[17px]">Retour</span>
-            </button>
-            <h1 className="absolute left-1/2 transform -translate-x-1/2 text-[17px] font-semibold text-foreground">
-              Détails
-            </h1>
-            <div className="w-16" />
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1 h-[calc(100vh-56px)] sm:h-auto sm:max-h-[calc(90vh-56px)] bg-pattern">
-          <div className="pb-8">
-            {/* Session Header Card */}
-            <div className="bg-background mt-6 mx-4 rounded-xl overflow-hidden">
-              {session.image_url && (
-                <img 
-                  src={session.image_url} 
-                  alt={session.title}
-                  className="w-full h-40 object-cover"
+      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col">
+        <ScrollArea className="flex-1 bg-white">
+          <div className="pb-[140px]">
+            {/* ==== HEADER MAP ==== */}
+            <div className="relative w-full h-[280px] bg-secondary overflow-hidden">
+              {headerStaticMapUrl ? (
+                <img
+                  src={headerStaticMapUrl}
+                  alt="Carte du lieu de la séance"
+                  className="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
                 />
-              )}
-              <div className="p-4">
-                <h2 className="text-[20px] font-semibold text-foreground mb-2">{session.title}</h2>
-                <div 
-                  className="flex items-center gap-2 cursor-pointer"
-                  onClick={() => setShowOrganizerProfile(true)}
+              ) : null}
+              <div
+                ref={headerMapRef}
+                className="absolute inset-0"
+                style={{ opacity: headerMapReady && !headerMapFailed ? 1 : 0, transition: 'opacity 220ms ease' }}
+              />
+              {/* Bottom gradient */}
+              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+              {/* Top: back button only (style standard app) */}
+              <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-[max(env(safe-area-inset-top),12px)]">
+                <button
+                  onClick={onClose}
+                  className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+                  aria-label="Retour"
                 >
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={session.profiles.avatar_url} />
-                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                      {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-[15px] text-muted-foreground">
-                    Organisé par {session.profiles.username || session.profiles.display_name}
-                  </span>
-                </div>
+                  <ChevronLeft className="h-5 w-5 text-foreground" />
+                </button>
               </div>
             </div>
 
-            {/* Activity Type Section */}
-            <div className="mt-6 mx-4">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Informations</p>
-              <div className="bg-background rounded-xl overflow-hidden">
-                {/* Level Row */}
-                <SettingsRow
-                  icon={Zap}
-                  iconBg={LEVEL_CONFIG[(session.calculated_level || 3) as SessionLevel]?.bgClass || "bg-yellow-500"}
-                  label="Niveau"
-                  value={
-                    <div className="flex items-center gap-2">
-                      <SessionLevelBadge 
-                        level={(session.calculated_level || 3) as SessionLevel} 
-                        variant="full"
-                        size="sm"
-                        showTooltip={false}
-                      />
-                    </div>
-                  }
-                />
-                <SettingsSeparator />
-                <SettingsRow
-                  icon={Star}
-                  iconBg="bg-[#FF9500]"
-                  label="Activité"
-                  value={getActivityLabel(session.activity_type)}
-                />
-                <SettingsSeparator />
-                <SettingsRow
-                  icon={Route}
-                  iconBg="bg-[#5856D6]"
-                  label="Type de séance"
-                  value={getSessionTypeLabel(session.session_type)}
-                />
-                <SettingsSeparator />
-                <SettingsRow
-                  icon={Calendar}
-                  iconBg="bg-[#FF3B30]"
-                  label="Date"
-                  value={format(new Date(session.scheduled_at), "d MMM yyyy, HH:mm", { locale: fr })}
-                />
-                {session.distance_km && (
-                  <>
-                    <SettingsSeparator />
-                    <SettingsRow
-                      icon={Route}
-                      iconBg="bg-[#34C759]"
-                      label="Distance"
-                      value={formatKm(session.distance_km)}
-                    />
-                  </>
-                )}
-                {session.pace_general && (session.session_type === 'footing' || session.session_type === 'sortie_longue') && (
-                  <>
-                    <SettingsSeparator />
-                    <SettingsRow
-                      icon={Clock}
-                      iconBg="bg-[#007AFF]"
-                      label="Allure"
-                      value={
-                        session.activity_type === 'course' 
-                          ? `${session.pace_general}/${unit === 'mi' ? 'mi' : 'km'}`
-                          : session.activity_type === 'natation'
-                            ? `${session.pace_general}/100m`
-                            : session.activity_type === 'velo' && session.pace_unit === 'power'
-                              ? `${session.pace_general} W`
-                              : formatSpeed(parseFloat(String(session.pace_general).replace(',', '.')) || 0)
-                      }
-                    />
-                  </>
-                )}
+            {/* ==== TITLE BLOCK ==== */}
+            <div className="px-5 pt-4 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-muted-foreground capitalize tracking-wide">
+                  {sessionTypeLabel}
+                </p>
+                <h1 className="mt-1 text-[28px] leading-tight font-bold text-foreground tracking-tight">
+                  {dynamicTitle}
+                </h1>
               </div>
+              {levelBadge}
             </div>
 
-            {/* Fractionné Info (mode simple) */}
-            {session.session_type === 'fractionne' && !session.session_blocks?.length && (session.interval_distance || session.interval_pace || session.interval_count) && (
-              <div className="mt-6 mx-4">
-                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Fractionné</p>
-                <div className="bg-background rounded-xl overflow-hidden">
-                  {session.interval_count && session.interval_distance && (
-                    <SettingsRow
-                      icon={Repeat}
-                      iconBg="bg-[#FF9500]"
-                      label="Séries"
-                      value={`${session.interval_count} × ${session.interval_distance < 1 ? `${Math.round(session.interval_distance * 1000)}m` : formatKm(session.interval_distance)}`}
-                    />
-                  )}
-                  {session.interval_pace && (
-                    <>
-                      <SettingsSeparator />
-                      <SettingsRow
-                        icon={Timer}
-                        iconBg="bg-[#FF3B30]"
-                        label="Allure"
-                        value={
-                          session.activity_type === 'course'
-                            ? `${session.interval_pace}/${unit === 'mi' ? 'mi' : 'km'}`
-                            : session.activity_type === 'natation'
-                              ? `${session.interval_pace}/100m`
-                              : session.activity_type === 'velo' && session.interval_pace_unit === 'power'
-                                ? `${session.interval_pace} W`
-                                : formatSpeed(parseFloat(String(session.interval_pace).replace(',', '.')) || 0)
-                        }
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Structured Blocks (mode structuré) */}
-            {session.session_blocks && session.session_blocks.length > 0 && (
-              <div className="mt-6 mx-4">
-                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Programmation</p>
-                <div className="bg-background rounded-xl overflow-hidden divide-y divide-border">
-                  {(session.session_blocks as SessionBlock[]).map((block, index) => {
-                    const getBlockIcon = () => {
-                      switch (block.type) {
-                        case 'warmup': return Flame;
-                        case 'cooldown': return Snowflake;
-                        case 'interval': return Repeat;
-                        default: return Timer;
-                      }
-                    };
-                    const getBlockColor = () => {
-                      switch (block.type) {
-                        case 'warmup': return 'bg-[#34C759]';
-                        case 'cooldown': return 'bg-[#5856D6]';
-                        case 'interval': return 'bg-[#FF9500]';
-                        default: return 'bg-[#007AFF]';
-                      }
-                    };
-                    const getBlockLabel = () => {
-                      switch (block.type) {
-                        case 'warmup': return 'Échauffement';
-                        case 'cooldown': return 'Retour au calme';
-                        case 'interval': return 'Séries';
-                        default: return 'Bloc constant';
-                      }
-                    };
-                    const getBlockValue = () => {
-                      const rpeParts: string[] = [];
-                      if (typeof block.rpe === 'number' && block.rpe >= 1 && block.rpe <= 10) {
-                        rpeParts.push(`RPE ${block.rpe}`);
-                      }
-                      if (block.type === 'interval' && typeof block.recoveryRpe === 'number' && block.recoveryRpe >= 1 && block.recoveryRpe <= 10) {
-                        rpeParts.push(`récup RPE ${block.recoveryRpe}`);
-                      }
-                      const rpeSuffix = rpeParts.length ? ` · ${rpeParts.join(' · ')}` : '';
-
-                      if (block.type === 'interval') {
-                        const reps = block.repetitions || 1;
-                        const effort = block.effortDuration || '0';
-                        const effortUnit = block.effortType === 'time' ? 's' : 'm';
-                        const pace = block.effortPace ? ` à ${block.effortPace}/km` : '';
-                        const recovery = block.recoveryDuration ? ` r${block.recoveryDuration}s ${block.recoveryType || ''}` : '';
-                        return `${reps}×${effort}${effortUnit}${pace}${recovery}${rpeSuffix}`;
-                      } else {
-                        const duration = block.duration || '0';
-                        const unit = block.durationType === 'time' ? 'min' : 'm';
-                        const pace = block.pace ? ` à ${block.pace}/km` : '';
-                        return `${duration}${unit}${pace}${rpeSuffix}`;
-                      }
-                    };
-
-                    const Icon = getBlockIcon();
-                    return (
-                      <SettingsRow
-                        key={block.id || index}
-                        icon={Icon}
-                        iconBg={getBlockColor()}
-                        label={getBlockLabel()}
-                        value={getBlockValue()}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Location Section */}
-            <div className="mt-6 mx-4">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Lieu</p>
-              <div className="bg-background rounded-xl overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#FF3B30] flex items-center justify-center flex-shrink-0">
-                      <MapPin className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[15px] text-foreground">{session.location_name}</p>
-                      <div className="flex gap-3 mt-2">
-                        <button
-                          onClick={async () => {
-                            await navigator.clipboard.writeText(session.location_name);
-                            toast({ title: 'Adresse copiée !' });
-                          }}
-                          className="text-[13px] text-primary hover:underline flex items-center gap-1"
-                        >
-                          <Copy className="h-3 w-3" />
-                          Copier
-                        </button>
-                        <button
-                          onClick={() => {
-                            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.location_name)}`;
-                            window.open(mapsUrl, '_blank');
-                          }}
-                          className="text-[13px] text-primary hover:underline flex items-center gap-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Google Maps
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Participants Section */}
-            <div className="mt-6 mx-4">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Participants</p>
-              <div className="bg-background rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
-                      <Users className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-[15px] text-foreground">
-                      {session.current_participants} participant{session.current_participants > 1 ? 's' : ''}
-                      {session.max_participants && ` / ${session.max_participants}`}
-                    </span>
-                  </div>
-                  {isFull && (
-                    <Badge variant="destructive" className="text-xs">Complet</Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            {session.description && (
-              <div className="mt-6 mx-4">
-                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Description</p>
-                <div className="bg-background rounded-xl overflow-hidden p-4">
-                  <p className="text-[15px] text-foreground">{session.description}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Route Preview */}
-            {session.routes && (
-              <div className="mt-6 mx-4">
-                <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Itinéraire</p>
-                <div className="bg-background rounded-xl overflow-hidden">
-                  <div className="p-4">
-                    <p className="text-[15px] font-medium text-foreground mb-3">{session.routes.name}</p>
-                    <div className="rounded-lg overflow-hidden bg-secondary">
-                      <RoutePreview 
-                        coordinates={session.routes.coordinates}
-                        activityType={session.activity_type}
-                      />
-                    </div>
-                    <div className="flex gap-4 mt-3 text-[13px] text-muted-foreground">
-                      <span>{formatMeters(session.routes.total_distance)}</span>
-                      <span>D+ {Math.round(session.routes.total_elevation_gain)}m</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Training Mode Button */}
-                {(isOrganizer || isParticipant) && isScheduled && (
-                  <div className="mt-3">
-                    <button
-                      onClick={() => navigate(`/training/${session.id}`)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-primary/10 rounded-xl active:bg-primary/20 transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                        <Navigation className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                      <span className="text-[15px] font-medium text-primary">Mode Entraînement</span>
-                      <ChevronRight className="h-5 w-5 text-primary/50 ml-auto" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Organizer */}
-            <div className="mt-6 mx-4">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Organisateur</p>
-              <div className="bg-background rounded-xl overflow-hidden">
-                <div 
-                  className="flex items-center gap-3 p-4 cursor-pointer active:bg-secondary/50"
-                  onClick={() => setShowOrganizerProfile(true)}
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={session.profiles.avatar_url} />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-[15px] font-medium text-foreground">
+            {/* ==== ORGANIZER + PARTICIPANTS ==== */}
+            <div className="px-5 py-3 flex items-center justify-between gap-3">
+              <button
+                onClick={() => setShowOrganizerProfile(true)}
+                className="flex items-center gap-3 min-w-0 flex-1 active:opacity-70"
+              >
+                <Avatar className="h-11 w-11">
+                  <AvatarImage src={session.profiles.avatar_url} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {(session.profiles.username || session.profiles.display_name)?.charAt(0)?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="flex items-center gap-1">
+                    <p className="text-[15px] font-semibold text-foreground truncate">
                       {session.profiles.username || session.profiles.display_name}
                     </p>
+                    <BadgeCheck className="h-4 w-4 text-primary flex-shrink-0" />
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50" />
+                  <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={openParticipants}
+                className="flex items-center gap-2 flex-shrink-0 active:opacity-70"
+                aria-label="Voir les participants"
+              >
+                <div className="flex -space-x-2">
+                  {Array.from({ length: Math.min(4, Math.max(1, participantsCount)) }).map((_, i) => (
+                    <Avatar key={i} className="h-7 w-7 ring-2 ring-white">
+                      <AvatarFallback className="bg-secondary text-[10px] text-muted-foreground">
+                        {i === 0 ? (session.profiles.username || '?').charAt(0).toUpperCase() : '·'}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
+                <span className="text-[12px] text-muted-foreground">{participantsCount} part. ›</span>
+              </button>
+            </div>
+
+            {/* ==== DATE + LIEU CARD ==== */}
+            <div className="mx-4 mt-2 rounded-2xl border border-border bg-white p-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Date */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-[11px] uppercase tracking-wide">Date</span>
+                  </div>
+                  <p className="text-[14px] font-semibold text-foreground capitalize leading-tight">{dateFmt}</p>
+                  <p className="text-[13px] text-muted-foreground">{timeFmt}</p>
+                </div>
+                {/* Lieu */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-[11px] uppercase tracking-wide">Lieu</span>
+                  </div>
+                  <p className="text-[14px] font-semibold text-foreground leading-tight line-clamp-2">{session.location_name}</p>
+                  <button
+                    onClick={() => {
+                      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.location_name)}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-foreground active:bg-secondary"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-[#34A853]" />
+                    Google Maps
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Actions Section */}
-            <div className="mt-6 mx-4">
-              <p className="text-[13px] text-muted-foreground uppercase tracking-wide px-4 mb-2">Actions</p>
-              <div className="bg-background rounded-xl overflow-hidden">
-                {/* Export Calendar */}
+            {/* ==== DÉTAILS DE LA SÉANCE ==== */}
+            <div className="px-5 mt-6">
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Détails de la séance
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Timeline */}
                 <button
-                  onClick={() => {
-                    const event = {
-                      title: session.title,
-                      description: session.description || '',
-                      location: session.location_name,
-                      startDate: new Date(session.scheduled_at),
-                      durationMinutes: 60,
-                      organizer: session.profiles.username || session.profiles.display_name,
-                    };
-                    downloadICSFile(event);
-                    toast({ title: 'Fichier .ics téléchargé !' });
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
+                  type="button"
+                  onClick={() => timelineBlocks.length > 0 && setShowBlocksDialog(true)}
+                  className={`relative text-left ${timelineBlocks.length > 0 ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center">
-                    <CalendarPlus className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-[15px] text-foreground">Exporter vers le calendrier</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                </button>
-
-                <SettingsSeparator />
-
-                {/* Google Calendar */}
-                <button
-                  onClick={() => {
-                    const event = {
-                      title: session.title,
-                      description: session.description || '',
-                      location: session.location_name,
-                      startDate: new Date(session.scheduled_at),
-                      durationMinutes: 60,
-                      organizer: session.profiles.username || session.profiles.display_name,
-                    };
-                    openGoogleCalendarLink(event);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#4285F4] flex items-center justify-center">
-                    <Calendar className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-[15px] text-foreground">Google Calendar</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                </button>
-
-                <SettingsSeparator />
-
-                {/* Share */}
-                <button
-                  onClick={() => setShowShareDialog(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
-                    <Share2 className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-[15px] text-foreground">Partager la séance</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                </button>
-
-                {isOrganizer ? (
-                  <>
-                    <SettingsSeparator />
-                    <button
-                      onClick={() => setShowEditDialog(true)}
-                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-[#007AFF] flex items-center justify-center">
-                        <Pencil className="h-4 w-4 text-white" />
+                  {timelineBlocks.length > 0 ? (
+                    <div className="relative pl-1">
+                      <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-border" />
+                      <div className="space-y-3">
+                        {timelineBlocks.map((b, idx) => {
+                          const color =
+                            b.type === 'warmup' ? 'bg-[#34C759]' :
+                            b.type === 'cooldown' ? 'bg-[#FF9500]' :
+                            b.type === 'interval' ? 'bg-primary' : 'bg-[#007AFF]';
+                          const label =
+                            b.type === 'warmup' ? 'Échauffement' :
+                            b.type === 'cooldown' ? 'Retour au calme' :
+                            b.type === 'interval' ? 'Bloc principal' : 'Bloc constant';
+                          const detail =
+                            b.type === 'interval'
+                              ? `${b.repetitions || 1}×${b.effortDuration || 0}${b.effortType === 'time' ? 's' : 'm'}`
+                              : `${b.duration || 0}${b.durationType === 'time' ? ' min' : ' m'}`;
+                          return (
+                            <div key={b.id || idx} className="relative flex items-start gap-3">
+                              <div className={`mt-1 h-3.5 w-3.5 rounded-full ${color} ring-2 ring-white flex-shrink-0`} />
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-foreground leading-tight">{label}</p>
+                                <p className="text-[12px] text-muted-foreground">{detail}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <span className="text-[15px] text-foreground">Modifier la séance</span>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                    </button>
-                    <SettingsSeparator />
+                      <p className="mt-2 text-[11px] text-primary font-medium">Voir détail ›</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border p-3 text-[12px] text-muted-foreground">
+                      Séance simple, pas de découpage.
+                    </div>
+                  )}
+                </button>
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { icon: Footprints, label: 'Distance', value: totalDistance, onClick: undefined as undefined | (() => void) },
+                    {
+                      icon: Clock,
+                      label: showDurationAsEndTime ? 'Fin estimée' : 'Durée',
+                      value: showDurationAsEndTime ? endTimeLabel : estimatedDuration,
+                      onClick: () => setShowDurationAsEndTime(v => !v),
+                    },
+                    { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
+                    ...(showElevationTile
+                      ? [{ icon: Mountain, label: 'D+', value: elevGain, onClick: undefined }]
+                      : []),
+                  ].map((s, i) => (
                     <button
+                      key={i}
+                      type="button"
+                      onClick={s.onClick}
+                      disabled={!s.onClick}
+                      className={`text-left rounded-xl border border-border bg-white p-2.5 shadow-sm ${s.onClick ? 'active:opacity-70 cursor-pointer' : 'cursor-default'}`}
+                    >
+                      <s.icon className="h-3.5 w-3.5 text-muted-foreground mb-1" />
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
+                      <p className="text-[13px] font-bold text-foreground truncate">{s.value}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ==== PARCOURS ==== */}
+            {session.routes && (
+              <div className="px-5 mt-6">
+                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  Parcours
+                </p>
+                <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
+                  <div className="grid grid-cols-5">
+                    <div ref={routeMapRef} className="col-span-3 h-32 bg-secondary" />
+                    <div className="col-span-2 p-3 flex flex-col justify-center">
+                      <p className="text-[18px] font-bold text-foreground leading-tight">
+                        {formatMeters(session.routes.total_distance)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        D+ {Math.round(session.routes.total_elevation_gain)} m
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(isOrganizer || isParticipant) && isScheduled && (
+                    <button
+                      onClick={() => navigate(`/training/${session.id}`)}
+                      className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground h-11 text-[14px] font-semibold active:opacity-90"
+                    >
+                      <Navigation className="h-4 w-4" />
+                      Mode entraînement
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate(`/training/${session.id}`)}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                    Plein écran
+                  </button>
+                  <button
+                    onClick={handleExportGPX}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Exporter GPX
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ==== DESCRIPTION ==== */}
+            {session.description && (
+              <div className="px-5 mt-6">
+                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Description
+                </p>
+                <p className="text-[14px] text-foreground leading-relaxed">{session.description}</p>
+              </div>
+            )}
+
+            {/* ==== ACTIONS RAPIDES ==== */}
+            <div className="px-5 mt-6">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOrganizerProfile(true)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
+                >
+                  <User className="h-4 w-4 text-foreground" />
+                  <span className="text-[11px] text-muted-foreground">Profil</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSessionShare(true)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
+                >
+                  <Share2 className="h-4 w-4 text-foreground" />
+                  <span className="text-[11px] text-muted-foreground">Partager</span>
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary w-full"
+                    >
+                      <CalendarPlus className="h-4 w-4 text-foreground" />
+                      <span className="text-[11px] text-muted-foreground inline-flex items-center gap-0.5">
+                        Agenda
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[200px]">
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => openGoogleCalendarLink(calendarEvent)}
+                    >
+                      Ouvrir dans Google&nbsp;Calendar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
                       onClick={() => {
-                        // Prepare duplicate data: copy all fields except id, reset date to tomorrow same time
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        const originalDate = new Date(session.scheduled_at);
-                        tomorrow.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
-                        
-                        const duplicateData = {
-                          ...session,
-                          title: `${session.title} (copie)`,
-                          scheduled_at: tomorrow.toISOString(),
-                          // Reset participant counts for new session
-                          current_participants: 0,
-                        };
-                        // Remove id so wizard creates a new session
-                        delete duplicateData.id;
-                        delete duplicateData.profiles;
-                        delete duplicateData.routes;
-                        
-                        setDuplicateSessionData(duplicateData);
-                        setShowDuplicateDialog(true);
+                        downloadICSFile(calendarEvent);
+                        toast({ title: 'Calendrier', description: 'Fichier .ics téléchargé' });
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#5856D6] flex items-center justify-center">
-                        <Files className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-[15px] text-foreground">Dupliquer la séance</span>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                    </button>
-                    {!isScheduled && (
-                      <>
-                        <SettingsSeparator />
-                        <button
-                          onClick={() => navigate(`/confirm-presence/${session.id}`)}
-                          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
-                            <CheckCircle2 className="h-4 w-4 text-white" />
-                          </div>
-                          <span className="text-[15px] text-foreground">Valider les participants</span>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/50 ml-auto" />
-                        </button>
-                      </>
-                    )}
-                  </>
-                ) : isParticipant ? (
-                  <>
-                    {isScheduled && !gpsValidated && (
-                      <>
-                        <SettingsSeparator />
-                        <button
-                          onClick={handleGPSValidation}
-                          disabled={validatingGPS}
-                          className="w-full flex items-center gap-3 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
-                            {validatingGPS ? (
-                              <Loader2 className="h-4 w-4 text-white animate-spin" />
-                            ) : (
-                              <MapPin className="h-4 w-4 text-white" />
-                            )}
-                          </div>
-                          <span className="text-[15px] text-foreground">
-                            {validatingGPS ? 'Validation GPS...' : 'Je suis arrivé (GPS)'}
-                          </span>
-                        </button>
-                      </>
-                    )}
-                    {gpsValidated && (
-                      <>
-                        <SettingsSeparator />
-                        <div className="px-4 py-3 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#34C759] flex items-center justify-center">
-                            <CheckCircle2 className="h-4 w-4 text-white" />
-                          </div>
-                          <span className="text-[15px] text-[#34C759] font-medium">GPS validé - Présence confirmée</span>
-                        </div>
-                      </>
-                    )}
-                  </>
-                ) : hasRequested ? (
-                  <>
-                    <SettingsSeparator />
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#FF9500] flex items-center justify-center">
-                        <Clock className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-[15px] text-[#FF9500] font-medium">Demande en attente</span>
-                    </div>
-                  </>
-                ) : !isScheduled ? (
-                  <>
-                    <SettingsSeparator />
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#8E8E93] flex items-center justify-center">
-                        <Clock className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-[15px] text-muted-foreground">Séance terminée</span>
-                    </div>
-                  </>
-                ) : null}
+                      Télécharger le fichier .ics
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
-            {/* Danger Zone */}
-            <div className="mt-6 mx-4">
-              {isOrganizer ? (
-                <div className="bg-background rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                    <span className="text-[15px] text-destructive">
-                      Supprimer la séance
-                    </span>
-                  </button>
-                </div>
-              ) : isParticipant ? (
-                <div className="bg-background rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setShowLeaveConfirm(true)}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
-                  >
-                    <span className="text-[15px] text-destructive">
-                      Quitter la séance
-                    </span>
-                  </button>
-                </div>
-              ) : hasRequested ? (
-                <div className="bg-background rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setShowCancelRequestConfirm(true)}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 active:bg-secondary/50 disabled:opacity-50"
-                  >
-                    <span className="text-[15px] text-destructive">
-                      Annuler ma demande
-                    </span>
-                  </button>
-                </div>
-              ) : isScheduled && !isFull ? (
-                <Button
-                  onClick={handleRequestJoin}
-                  disabled={loading}
-                  className="w-full h-12 rounded-xl text-[17px] font-medium"
+            {/* ==== ORGANIZER MGMT (kept for organizers / past sessions) ==== */}
+            {isOrganizer && (
+              <div className="px-5 mt-6 space-y-2">
+                <button
+                  onClick={() => setShowEditDialog(true)}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-white h-11 text-[14px] font-medium text-foreground active:bg-secondary"
                 >
-                  {loading ? "Envoi..." : "Demander à rejoindre"}
-                </Button>
-              ) : null}
-            </div>
+                  <Pencil className="h-4 w-4" /> Modifier la séance
+                </button>
+                {!isScheduled && (
+                  <button
+                    onClick={() => navigate(`/confirm-presence/${session.id}`)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#34C759] text-white h-11 text-[14px] font-semibold active:opacity-90"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Valider les participants
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-white h-11 text-[14px] font-medium text-destructive active:bg-destructive/5"
+                >
+                  <Trash2 className="h-4 w-4" /> Supprimer la séance
+                </button>
+              </div>
+            )}
 
-            {/* Questions Section */}
-            <div className="mt-6 mx-4 pb-4">
-              <SessionQuestions 
+            {/* ==== Questions ==== */}
+            <div className="mt-6 px-4">
+              <SessionQuestions
                 sessionId={session.id}
                 sessionTitle={session.title}
                 organizerId={session.organizer_id}
@@ -1027,6 +1104,77 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
             </div>
           </div>
         </ScrollArea>
+
+        {/* ==== STICKY CTA ==== */}
+        <div
+          className="absolute left-0 right-0 bottom-0 bg-white/95 backdrop-blur-md border-t border-border px-4 pt-3"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+        >
+          {isOrganizer ? (
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowSessionShare(true)}
+                className="flex-1 h-14 rounded-2xl text-[15px] font-bold"
+              >
+                PARTAGER LA SÉANCE
+              </Button>
+            </div>
+          ) : isParticipant ? (
+            <div className="flex gap-2">
+              {isScheduled && !gpsValidated ? (
+                <Button
+                  onClick={handleGPSValidation}
+                  disabled={validatingGPS}
+                  className="flex-1 h-14 rounded-2xl text-[15px] font-bold bg-[#34C759] hover:bg-[#34C759]/90"
+                >
+                  {validatingGPS ? <Loader2 className="h-5 w-5 animate-spin" /> : <><MapPin className="h-5 w-5 mr-1" /> JE SUIS ARRIVÉ</>}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setShowLeaveConfirm(true)}
+                  variant="outline"
+                  className="flex-1 h-14 rounded-2xl text-[15px] font-semibold border-destructive/40 text-destructive"
+                >
+                  Quitter la séance
+                </Button>
+              )}
+            </div>
+          ) : hasRequested ? (
+            <Button
+              onClick={() => setShowCancelRequestConfirm(true)}
+              variant="outline"
+              className="w-full h-14 rounded-2xl text-[15px] font-semibold"
+            >
+              Annuler ma demande
+            </Button>
+          ) : isScheduled && !isFull ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleRequestJoin}
+                disabled={loading}
+                className="flex-1 h-14 rounded-2xl bg-primary text-primary-foreground active:opacity-90 disabled:opacity-50 flex flex-col items-center justify-center"
+              >
+                <span className="text-[15px] font-bold tracking-wide">
+                  {loading ? 'ENVOI…' : 'REJOINDRE LA SÉANCE'}
+                </span>
+                <span className="text-[10px] text-primary-foreground/80">
+                  Visible par les autres participants
+                </span>
+              </button>
+              <button
+                onClick={() => navigate(`/messages?user=${session.organizer_id}`)}
+                className="h-14 w-14 rounded-2xl border border-border bg-white flex items-center justify-center active:bg-secondary"
+                aria-label="Message"
+              >
+                <MessageCircle className="h-5 w-5 text-foreground" />
+              </button>
+            </div>
+          ) : (
+            <div className="w-full h-14 rounded-2xl bg-secondary flex items-center justify-center text-[14px] text-muted-foreground font-medium">
+              {isFull ? 'Séance complète' : 'Séance terminée'}
+            </div>
+          )}
+        </div>
       </DialogContent>
 
       <ProfilePreviewDialog
@@ -1043,6 +1191,16 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         organizerName={session.profiles.username || session.profiles.display_name}
         userId={user?.id || ''}
         onRated={() => setHasRated(true)}
+      />
+
+      <SessionShareScreen
+        open={showSessionShare}
+        onClose={() => setShowSessionShare(false)}
+        session={session}
+        onOpenConversationShare={() => {
+          setShowSessionShare(false);
+          setShowShareDialog(true);
+        }}
       />
 
       <ShareSessionToConversationDialog
@@ -1168,6 +1326,110 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
         editSession={duplicateSessionData}
         isEditMode={false}
       />
+
+      {/* ==== Blocks Detail Dialog ==== */}
+      <Dialog open={showBlocksDialog} onOpenChange={setShowBlocksDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowBlocksDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Découpage de la séance</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {timelineBlocks.map((b, idx) => {
+                const color =
+                  b.type === 'warmup' ? 'bg-[#34C759]' :
+                  b.type === 'cooldown' ? 'bg-[#FF9500]' :
+                  b.type === 'interval' ? 'bg-primary' : 'bg-[#007AFF]';
+                const label =
+                  b.type === 'warmup' ? 'Échauffement' :
+                  b.type === 'cooldown' ? 'Retour au calme' :
+                  b.type === 'interval' ? 'Bloc principal (intervalles)' : 'Bloc constant';
+                return (
+                  <div key={b.id || idx} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`h-3 w-3 rounded-full ${color}`} />
+                      <p className="text-[14px] font-semibold text-foreground">{label}</p>
+                    </div>
+                    {b.type === 'interval' ? (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Répétitions :</span> <strong>{b.repetitions || 1}</strong></p>
+                        <p><span className="text-muted-foreground">Effort :</span> <strong>{b.effortDuration || 0}{b.effortType === 'time' ? ' s' : ' m'}</strong>{b.effortPace ? ` @ ${b.effortPace}/km` : ''}</p>
+                        {b.recoveryDuration && (
+                          <p><span className="text-muted-foreground">Récup :</span> <strong>{b.recoveryDuration} s</strong>{b.recoveryType ? ` (${b.recoveryType})` : ''}</p>
+                        )}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE effort :</span> <strong>{b.rpe}/10</strong></p> : null}
+                        {b.recoveryRpe ? <p><span className="text-muted-foreground">RPE récup :</span> <strong>{b.recoveryRpe}/10</strong></p> : null}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 text-[13px] text-foreground">
+                        <p><span className="text-muted-foreground">Durée :</span> <strong>{b.duration || 0}{b.durationType === 'time' ? ' min' : ' m'}</strong></p>
+                        {b.pace && <p><span className="text-muted-foreground">Allure :</span> <strong>{b.pace}</strong></p>}
+                        {b.intensity && <p><span className="text-muted-foreground">Intensité :</span> <strong>{b.intensity}</strong></p>}
+                        {b.rpe ? <p><span className="text-muted-foreground">RPE :</span> <strong>{b.rpe}/10</strong></p> : null}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==== Participants List Dialog ==== */}
+      <Dialog open={showParticipantsDialog} onOpenChange={setShowParticipantsDialog}>
+        <DialogContent className="p-0 gap-0 max-w-md sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <button onClick={() => setShowParticipantsDialog(false)} className="h-9 w-9 rounded-full flex items-center justify-center active:bg-secondary" aria-label="Retour">
+              <ChevronLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <h2 className="text-[15px] font-semibold">Participants ({participantsList.length})</h2>
+            <div className="w-9" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2">
+              {participantsLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : participantsList.length === 0 ? (
+                <p className="text-center text-[13px] text-muted-foreground py-8">Aucun participant pour le moment.</p>
+              ) : (
+                participantsList.map((p) => {
+                  const isOrg = p.user_id === session.organizer_id;
+                  return (
+                    <button
+                      key={p.user_id}
+                      onClick={() => { setShowParticipantsDialog(false); setShowOrganizerProfile(false); navigate(`/profile/${p.user_id}`); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-secondary"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={p.profile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-[13px]">
+                          {(p.profile.username || p.profile.display_name || '?').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-[14px] font-semibold text-foreground truncate">
+                          {p.profile.display_name || p.profile.username || 'Utilisateur'}
+                        </p>
+                        {p.profile.username && (
+                          <p className="text-[12px] text-muted-foreground truncate">@{p.profile.username}</p>
+                        )}
+                      </div>
+                      {isOrg && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Orga</span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

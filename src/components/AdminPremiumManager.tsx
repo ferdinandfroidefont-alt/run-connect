@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Crown, User, Wrench, BarChart3, Flag, ChevronLeft, Shield } from "lucide-react";
+import { Crown, User, Wrench, BarChart3, Flag, ChevronLeft, Shield, Eye } from "lucide-react";
 import { AdminSearchBar } from "./admin/AdminSearchBar";
 import { AdminUserList } from "./admin/AdminUserList";
 import { AdminPremiumTab } from "./admin/AdminPremiumTab";
@@ -11,6 +11,7 @@ import { AdminUserDetailsTab } from "./admin/AdminUserDetailsTab";
 import { AdminSupportTab } from "./admin/AdminSupportTab";
 import { AdminStatsTab } from "./admin/AdminStatsTab";
 import { AdminReportsTab } from "./admin/AdminReportsTab";
+import { AdminAppPreviewTab } from "./admin/AdminAppPreviewTab";
 
 export interface UserResult {
   user_id: string;
@@ -180,6 +181,13 @@ export const AdminPremiumManager = ({
                 <Flag className="h-3.5 w-3.5" />
                 Signalements
               </TabsTrigger>
+              <TabsTrigger
+                value="preview"
+                className="min-h-[44px] shrink-0 gap-1.5 rounded-[10px] px-3.5 text-[12px] font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Aperçu
+              </TabsTrigger>
             </TabsList>
 
             {needsUser && (
@@ -223,6 +231,9 @@ export const AdminPremiumManager = ({
               </TabsContent>
               <TabsContent value="reports" className="m-0 min-h-[120px]">
                 <AdminReportsTab invokeAdmin={invokeAdmin} />
+              </TabsContent>
+              <TabsContent value="preview" className="m-0 min-h-[120px]">
+                <AdminAppPreviewTab onClose={handleClose} />
               </TabsContent>
             </div>
           </Tabs>
