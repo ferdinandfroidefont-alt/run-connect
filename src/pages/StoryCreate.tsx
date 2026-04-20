@@ -751,10 +751,14 @@ export default function StoryCreate() {
     const layer = dynamicLayers.find((l) => l.id === id);
     if (!layer) return;
     dynamicDragRef.current = { id, startX: e.clientX, startY: e.clientY, baseX: layer.x, baseY: layer.y };
+    draggedKindRef.current = "dynamic";
+    draggedDynamicIdRef.current = id;
+    setDragTrashVisible(true);
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const moveDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dynamicDragRef.current) return;
+    checkTrashHover(e.clientY);
     setDynamicLayers((prev) =>
       prev.map((l) =>
         l.id === dynamicDragRef.current!.id
@@ -769,7 +773,15 @@ export default function StoryCreate() {
   };
   const endDynamicDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dynamicDragRef.current) {
+      const id = dynamicDragRef.current.id;
       dynamicDragRef.current = null;
+      if (dragTrashHover) {
+        setDynamicLayers((prev) => prev.filter((l) => l.id !== id));
+      }
+      setDragTrashVisible(false);
+      setDragTrashHover(false);
+      draggedKindRef.current = null;
+      draggedDynamicIdRef.current = null;
       try { (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId); } catch {}
     }
   };
