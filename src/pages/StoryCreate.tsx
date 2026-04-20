@@ -2976,7 +2976,7 @@ export default function StoryCreate() {
           >
             Aa
           </button>
-          {["#FFFFFF", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
+          {["#FFFFFF", "#000000", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
             <button key={c} type="button" onClick={() => { setTextColor(c); triggerHaptic("light"); }} className={cn("h-6 w-6 rounded-full border transition-transform active:scale-90", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
           ))}
           <button
