@@ -2630,6 +2630,38 @@ export default function StoryCreate() {
               <ArrowLeft className="h-5 w-5 shrink-0" />
               <span className="pr-0.5">Retour</span>
             </button>
+            {selectedMusic && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTool("music");
+                  setEditorMode("music");
+                  setShowMusicPicker(true);
+                  setMusicSheetTab("forYou");
+                  setPendingMusic(selectedMusic);
+                  triggerHaptic("light");
+                }}
+                className="pointer-events-auto inline-flex max-w-[190px] items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1.5 text-white shadow-[0_4px_18px_rgba(0,0,0,0.3)] backdrop-blur-xl transition active:scale-[0.97]"
+              >
+                <Music className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate text-xs font-medium">
+                  {selectedMusic.title}
+                  {selectedMusic.artist ? ` · ${selectedMusic.artist}` : ""}
+                </span>
+                <span
+                  role="button"
+                  aria-label="Retirer la musique"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMusic(null);
+                    triggerHaptic("light");
+                  }}
+                  className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white"
+                >
+                  ×
+                </span>
+              </button>
+            )}
             <Button
               type="button"
               disabled={sharing || (editorMode === "idle" && !mediaFile)}
