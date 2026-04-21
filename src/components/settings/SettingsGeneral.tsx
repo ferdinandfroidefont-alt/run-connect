@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +32,6 @@ const THEME_MODES = [
 ];
 
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
@@ -106,7 +104,7 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       title: "Onboarding relancé",
       description: "Vous allez revoir le tunnel d’arrivée.",
     });
-    navigate("/onboarding");
+    window.location.assign("/onboarding");
   };
 
   return (
