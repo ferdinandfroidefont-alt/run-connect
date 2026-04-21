@@ -440,8 +440,8 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
   }, [open, initialSecondsPerKm]);
 
   const columns = [
-    { items: PACE_MIN.map((x) => ({ value: x, label: x })), value: PACE_MIN[m] ?? "00", onChange: (next: string) => setM(Number(next)), suffix: "min" },
-    { items: PACE_SEC.map((x) => ({ value: x, label: x })), value: PACE_SEC[s] ?? "00", onChange: (next: string) => setS(Number(next)), suffix: "s" },
+    { items: PACE_MIN.map((x) => ({ value: x, label: x })), value: PACE_MIN[m] ?? "00", onChange: (next: string) => setM(Number(next)), suffix: "'" },
+    { items: PACE_SEC.map((x) => ({ value: x, label: x })), value: PACE_SEC[s] ?? "00", onChange: (next: string) => setS(Number(next)), suffix: "''" },
     { items: [{ value: "/km", label: "/km" }], value: "/km", onChange: () => undefined },
   ];
 
@@ -453,7 +453,7 @@ export function PacePickerModal({ open, onClose, onConfirm, initialSecondsPerKm 
       columns={columns}
       onConfirm={() => {
         const totalSec = m * 60 + s;
-        onConfirm(`${m}:${String(s).padStart(2, "0")}/km`, totalSec);
+        onConfirm(`${m}'${String(s).padStart(2, "0")}''/km`, totalSec);
       }}
     />
   );

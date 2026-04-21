@@ -59,6 +59,7 @@ const ShortSessionLinkRedirect = lazy(() => import("./pages/ShortSessionLinkRedi
 const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
+const Participants = lazy(() => import("./pages/Participants"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -143,6 +144,7 @@ const App = () => {
         import("./pages/Drafts"),
         import("./pages/OpenSessionLink"),
         import("./pages/StoryDeleteConfirm"),
+        import("./pages/Participants"),
       ]);
     };
 
@@ -344,6 +346,7 @@ const App = () => {
                   <Route path="/training/route/:routeId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/training/:sessionId" element={<PageTransition><PageSuspense><TrainingMode /></PageSuspense></PageTransition>} />
                   <Route path="/session-tracking/:sessionId" element={<PageTransition><PageSuspense><SessionTracking /></PageSuspense></PageTransition>} />
+                  <Route path="/participants" element={<PageTransition><PageSuspense><Participants /></PageSuspense></PageTransition>} />
                   <Route path="/stories/create" element={<PageTransition><PageSuspense><StoryCreate /></PageSuspense></PageTransition>} />
                   <Route path="/open/session/:sessionId" element={<PageTransition><PageSuspense><OpenSessionLink /></PageSuspense></PageTransition>} />
                   <Route path="/s/:sessionId" element={<PageTransition><PageSuspense><ShortSessionLinkRedirect /></PageSuspense></PageTransition>} />
