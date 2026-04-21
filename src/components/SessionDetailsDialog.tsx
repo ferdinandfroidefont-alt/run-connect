@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, Maximize2, ChevronDown } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, ChevronDown } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -169,7 +169,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const [duplicateSessionData, setDuplicateSessionData] = useState<any>(null);
   const [showRateDialog, setShowRateDialog] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  const [showDurationAsEndTime, setShowDurationAsEndTime] = useState(false);
   const [showBlocksDialog, setShowBlocksDialog] = useState(false);
   const [showParticipantsDialog, setShowParticipantsDialog] = useState(false);
   const [participantsList, setParticipantsList] = useState<Array<{ user_id: string; profile: { username: string; display_name: string; avatar_url: string | null } }>>([]);
@@ -227,6 +226,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
   const headerMapRef = useRef<HTMLDivElement | null>(null);
   const headerMapInstance = useRef<MapboxMap | null>(null);
   const routeMapRef = useRef<HTMLDivElement | null>(null);
+  const routeSectionRef = useRef<HTMLDivElement | null>(null);
   const routeMapInstance = useRef<MapboxMap | null>(null);
   const [headerMapReady, setHeaderMapReady] = useState(false);
   const [headerMapFailed, setHeaderMapFailed] = useState(false);
@@ -756,11 +756,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
-      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col">
+      <DialogContent className="p-0 gap-0 w-full h-full max-w-full max-h-full sm:max-w-md sm:h-auto sm:max-h-[95vh] sm:rounded-2xl bg-white border-0 overflow-hidden flex flex-col [&>button]:hidden">
         <ScrollArea className="flex-1 bg-white">
           <div className="pb-[140px]">
             {/* ==== HEADER MAP ==== */}
-            <div className="relative w-full h-[280px] bg-secondary overflow-hidden">
+            <div className="relative w-full h-[140px] bg-secondary overflow-hidden">
               {headerStaticMapUrl ? (
                 <img
                   src={headerStaticMapUrl}
@@ -776,14 +776,21 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               />
               {/* Bottom gradient */}
               <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-              {/* Top: back button only (style standard app) */}
-              <div className="absolute top-0 left-0 right-0 flex items-center px-4 pt-[max(env(safe-area-inset-top),12px)]">
+              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
                 <button
                   onClick={onClose}
                   className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
                   aria-label="Retour"
                 >
                   <ChevronLeft className="h-5 w-5 text-foreground" />
+                </button>
+                <button
+                  onClick={() => setShowSessionShare(true)}
+                  className="h-10 rounded-full bg-white/95 shadow-md px-3 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                  aria-label="Partager"
+                >
+                  <Share2 className="h-4 w-4 text-foreground" />
+                  <span className="text-[12px] font-semibold text-foreground">Partager</span>
                 </button>
               </div>
             </div>
@@ -801,7 +808,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               {levelBadge}
             </div>
 
-            {/* ==== ORGANIZER + PARTICIPANTS ==== */}
+            {/* ==== ORGANIZER ==== */}
             <div className="px-5 py-3 flex items-center justify-between gap-3">
               <button
                 onClick={() => setShowOrganizerProfile(true)}
@@ -823,23 +830,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={openParticipants}
-                className="flex items-center gap-2 flex-shrink-0 active:opacity-70"
-                aria-label="Voir les participants"
-              >
-                <div className="flex -space-x-2">
-                  {Array.from({ length: Math.min(4, Math.max(1, participantsCount)) }).map((_, i) => (
-                    <Avatar key={i} className="h-7 w-7 ring-2 ring-white">
-                      <AvatarFallback className="bg-secondary text-[10px] text-muted-foreground">
-                        {i === 0 ? (session.profiles.username || '?').charAt(0).toUpperCase() : '·'}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                </div>
-                <span className="text-[12px] text-muted-foreground">{participantsCount} part. ›</span>
-              </button>
             </div>
 
             {/* ==== DATE + LIEU CARD ==== */}
@@ -853,6 +843,35 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   </div>
                   <p className="text-[14px] font-semibold text-foreground capitalize leading-tight">{dateFmt}</p>
                   <p className="text-[13px] text-muted-foreground">{timeFmt}</p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-[12px] font-medium text-foreground active:bg-secondary"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5 text-primary" />
+                        Agenda
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[220px]">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => openGoogleCalendarLink(calendarEvent)}
+                      >
+                        Ouvrir dans Google Calendar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          downloadICSFile(calendarEvent);
+                          toast({ title: 'Calendrier', description: 'Fichier .ics téléchargé' });
+                        }}
+                      >
+                        Télécharger .ics
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 {/* Lieu */}
                 <div className="min-w-0">
@@ -926,14 +945,26 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { icon: Footprints, label: 'Distance', value: totalDistance, onClick: undefined as undefined | (() => void) },
+                    {
+                      icon: Footprints,
+                      label: 'Distance',
+                      value: totalDistance,
+                      onClick: () => {
+                        if (session.routes) {
+                          routeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          return;
+                        }
+                        toast({ title: 'Parcours indisponible', description: 'Aucun parcours associé à cette séance.' });
+                      },
+                    },
                     {
                       icon: Clock,
-                      label: showDurationAsEndTime ? 'Fin estimée' : 'Durée',
-                      value: showDurationAsEndTime ? endTimeLabel : estimatedDuration,
-                      onClick: () => setShowDurationAsEndTime(v => !v),
+                      label: 'Fin estimée',
+                      value: endTimeLabel,
+                      onClick: undefined,
                     },
                     { icon: Zap, label: 'Allure', value: avgPace, onClick: undefined },
+                    { icon: Users, label: 'Participants', value: `${participantsCount}`, onClick: openParticipants },
                     ...(showElevationTile
                       ? [{ icon: Mountain, label: 'D+', value: elevGain, onClick: undefined }]
                       : []),
@@ -956,7 +987,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
 
             {/* ==== PARCOURS ==== */}
             {session.routes && (
-              <div className="px-5 mt-6">
+              <div ref={routeSectionRef} className="px-5 mt-6">
                 <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                   Parcours
                 </p>
@@ -973,26 +1004,10 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {(isOrganizer || isParticipant) && isScheduled && (
-                    <button
-                      onClick={() => navigate(`/training/${session.id}`)}
-                      className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground h-11 text-[14px] font-semibold active:opacity-90"
-                    >
-                      <Navigation className="h-4 w-4" />
-                      Mode entraînement
-                    </button>
-                  )}
-                  <button
-                    onClick={() => navigate(`/training/${session.id}`)}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5" />
-                    Plein écran
-                  </button>
+              <div className="mt-2">
                   <button
                     onClick={handleExportGPX}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-border bg-white h-10 text-[13px] font-medium text-foreground active:bg-secondary"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Exporter GPX
@@ -1000,6 +1015,22 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </div>
               </div>
             )}
+
+            {session.image_url ? (
+              <div className="px-5 mt-6">
+                <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  Photo du lieu
+                </p>
+                <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden">
+                  <img
+                    src={session.image_url}
+                    alt="Photo du lieu"
+                    className="w-full h-48 object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            ) : null}
 
             {/* ==== DESCRIPTION ==== */}
             {session.description && (
@@ -1010,59 +1041,6 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 <p className="text-[14px] text-foreground leading-relaxed">{session.description}</p>
               </div>
             )}
-
-            {/* ==== ACTIONS RAPIDES ==== */}
-            <div className="px-5 mt-6">
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowOrganizerProfile(true)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
-                >
-                  <User className="h-4 w-4 text-foreground" />
-                  <span className="text-[11px] text-muted-foreground">Profil</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSessionShare(true)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary"
-                >
-                  <Share2 className="h-4 w-4 text-foreground" />
-                  <span className="text-[11px] text-muted-foreground">Partager</span>
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-white py-3 active:bg-secondary w-full"
-                    >
-                      <CalendarPlus className="h-4 w-4 text-foreground" />
-                      <span className="text-[11px] text-muted-foreground inline-flex items-center gap-0.5">
-                        Agenda
-                        <ChevronDown className="h-3 w-3 opacity-60" />
-                      </span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[200px]">
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => openGoogleCalendarLink(calendarEvent)}
-                    >
-                      Ouvrir dans Google&nbsp;Calendar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => {
-                        downloadICSFile(calendarEvent);
-                        toast({ title: 'Calendrier', description: 'Fichier .ics téléchargé' });
-                      }}
-                    >
-                      Télécharger le fichier .ics
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
 
             {/* ==== ORGANIZER MGMT (kept for organizers / past sessions) ==== */}
             {isOrganizer && (

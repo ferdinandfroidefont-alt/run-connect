@@ -17,6 +17,7 @@ import { IosPageHeaderBar } from '@/components/layout/IosPageHeaderBar';
 import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
+import { DEFAULT_SESSION_CALENDAR_DURATION_MIN, estimateSessionDurationMinutes } from '@/lib/estimateSessionDurationMinutes';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -501,6 +502,23 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   };
 
   const renderStep = () => {
+    const estimatedDurationMin = estimateSessionDurationMinutes({
+      session_blocks: wizard.formData.blocks,
+      distance_km: wizard.formData.distance_km ? Number.parseFloat(wizard.formData.distance_km) : null,
+      interval_distance: wizard.formData.interval_distance ? Number.parseFloat(wizard.formData.interval_distance) : null,
+      interval_count: wizard.formData.interval_count ? Number.parseInt(wizard.formData.interval_count, 10) : null,
+      interval_pace: wizard.formData.interval_pace || null,
+      pace_general: wizard.formData.pace_general || null,
+    });
+    const usedFallbackDuration = estimatedDurationMin == null;
+    const safeDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
+    const estimatedEndTimeLabel = wizard.formData.scheduled_at
+      ? new Date(new Date(wizard.formData.scheduled_at).getTime() + safeDurationMin * 60_000).toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
+
     switch (wizard.currentStep) {
       case 'location':
         return (
@@ -526,6 +544,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         return (
           <DateTimeStep
             scheduledAt={wizard.formData.scheduled_at}
+            estimatedEndTimeLabel={estimatedEndTimeLabel}
+            isEstimatedEndTimeProvisional={usedFallbackDuration}
             onScheduledAtChange={(value) => wizard.updateFormData({ scheduled_at: value })}
             onNext={wizard.goToNextStep}
             onBack={wizard.goToPreviousStep}

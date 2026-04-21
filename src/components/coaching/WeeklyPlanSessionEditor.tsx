@@ -154,9 +154,12 @@ export const WeeklyPlanSessionEditor = ({
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number>(0);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
-  const [wheelItems, setWheelItems] = useState<Array<{ value: string; label: string }>>([]);
-  const [wheelValue, setWheelValue] = useState("0");
-  const [wheelApply, setWheelApply] = useState<((next: string) => void) | null>(null);
+  const [wheelColumns, setWheelColumns] = useState<Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>>([]);
+  const [wheelApply, setWheelApply] = useState<(() => void) | null>(null);
+  const [wheelA, setWheelA] = useState("0");
+  const [wheelB, setWheelB] = useState("0");
+  const [wheelC, setWheelC] = useState("0");
+  const [wheelUnit, setWheelUnit] = useState("km");
 
   const update = <K extends keyof WeekSession>(key: K, value: WeekSession[K]) => {
     onChange({ ...session, [key]: value });
@@ -183,15 +186,9 @@ export const WeeklyPlanSessionEditor = ({
     });
   };
 
-  const openWheel = (
-    title: string,
-    items: Array<{ value: string; label: string }>,
-    current: string,
-    onConfirm: (next: string) => void
-  ) => {
+  const openWheel = (title: string, columns: Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>, onConfirm: () => void) => {
     setWheelTitle(title);
-    setWheelItems(items);
-    setWheelValue(current);
+    setWheelColumns(columns);
     setWheelApply(() => onConfirm);
     setWheelOpen(true);
   };
@@ -324,23 +321,44 @@ export const WeeklyPlanSessionEditor = ({
                       variant="secondary"
                       className="justify-start rounded-xl text-[13px]"
                       onClick={() =>
-                        openWheel(
-                          "Distance",
-                          DISTANCE_OPTIONS,
-                          String(selectedBlock.distance || 1000),
-                          (next) => {
+                        (() => {
+                          const currentMeters = selectedBlock.distance || 1000;
+                          const useMeters = currentMeters < 1000;
+                          setWheelUnit(useMeters ? "m" : "km");
+                          setWheelA(String(useMeters ? currentMeters : Math.floor(currentMeters / 1000)));
+                          setWheelB(String(useMeters ? 0 : currentMeters % 1000));
+                          openWheel(
+                            "Distance",
+                            useMeters
+                              ? [
+                                  { items: Array.from({ length: 3000 }, (_, i) => ({ value: String(i * 5), label: String(i * 5) })), value: wheelA, onChange: setWheelA, suffix: "m" },
+                                  { items: [{ value: "m", label: "m" }, { value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                                ]
+                              : [
+                                  { items: Array.from({ length: 80 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: wheelUnit },
+                                  { items: Array.from({ length: 100 }, (_, i) => ({ value: String(i * 10), label: String(i * 10).padStart(3, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
+                                  { items: [{ value: "m", label: "m" }, { value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                                ],
+                            () => {
+                              const next =
+                                wheelUnit === "m"
+                                  ? Number.parseInt(wheelA, 10)
+                                  : wheelUnit === "km"
+                                  ? Number.parseInt(wheelA, 10) * 1000 + Number.parseInt(wheelB, 10)
+                                  : Math.round((Number.parseInt(wheelA, 10) + Number.parseInt(wheelB, 10) / 1000) * 1609.344);
                             const nextBlocks = [...session.parsedBlocks];
                             nextBlocks[selectedBlockIndex] = {
                               ...selectedBlock,
                               type: "interval",
-                              distance: Number.parseInt(next, 10),
+                              distance: next,
                               duration: undefined,
                               repetitions: Math.max(1, selectedBlock.repetitions || 1),
                               pace: selectedBlock.pace || "5:30",
                             };
                             applyBlocks(nextBlocks);
-                          }
-                        )
+                            }
+                          );
+                        })()
                       }
                     >
                       Distance
@@ -352,9 +370,9 @@ export const WeeklyPlanSessionEditor = ({
                       onClick={() =>
                         openWheel(
                           "Répétitions",
-                          REP_OPTIONS,
-                          String(selectedBlock.repetitions || 1),
-                          (next) => {
+                          [{ items: REP_OPTIONS, value: String(selectedBlock.repetitions || 1), onChange: setWheelA }],
+                          () => {
+                            const next = wheelA;
                             const reps = Number.parseInt(next, 10);
                             const nextBlocks = [...session.parsedBlocks];
                             nextBlocks[selectedBlockIndex] = {
@@ -378,19 +396,29 @@ export const WeeklyPlanSessionEditor = ({
                         variant="secondary"
                         className="justify-start rounded-xl text-[13px]"
                         onClick={() =>
-                          openWheel(
-                            "Récup répétitions",
-                            RECOVERY_OPTIONS,
-                            String(selectedBlock.recoveryDuration || 0),
-                            (next) => {
+                          (() => {
+                            const total = selectedBlock.recoveryDuration || 0;
+                            setWheelA(String(Math.floor(total / 3600)));
+                            setWheelB(String(Math.floor((total % 3600) / 60)));
+                            setWheelC(String(total % 60));
+                            openWheel(
+                              "Récup répétitions",
+                              [
+                                { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
+                                { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
+                                { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
+                              ],
+                              () => {
+                                const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
                               const nextBlocks = [...session.parsedBlocks];
                               nextBlocks[selectedBlockIndex] = {
                                 ...selectedBlock,
-                                recoveryDuration: Number.parseInt(next, 10),
+                                recoveryDuration: next,
                               };
                               applyBlocks(nextBlocks);
-                            }
-                          )
+                              }
+                            );
+                          })()
                         }
                       >
                         Récup répétitions
@@ -403,9 +431,9 @@ export const WeeklyPlanSessionEditor = ({
                       onClick={() =>
                         openWheel(
                           "RPE",
-                          RPE_OPTIONS,
-                          String(session.blockRpe[selectedBlockIndex] ?? 0),
-                          (next) => {
+                          [{ items: RPE_OPTIONS, value: String(session.blockRpe[selectedBlockIndex] ?? 0), onChange: setWheelA }],
+                          () => {
+                            const next = wheelA;
                             const nextRpe = [...session.blockRpe];
                             nextRpe[selectedBlockIndex] = Number.parseInt(next, 10);
                             applyBlocks([...session.parsedBlocks], nextRpe);
@@ -538,9 +566,9 @@ export const WeeklyPlanSessionEditor = ({
         open={wheelOpen}
         onClose={() => setWheelOpen(false)}
         title={wheelTitle}
-        columns={[{ items: wheelItems, value: wheelValue, onChange: setWheelValue }]}
+        columns={wheelColumns}
         onConfirm={() => {
-          wheelApply?.(wheelValue);
+          wheelApply?.();
           setWheelOpen(false);
         }}
       />

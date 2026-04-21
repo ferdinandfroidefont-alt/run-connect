@@ -7,6 +7,10 @@ import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { VisibilitySelector } from '../VisibilitySelector';
 import { RecurrenceSelector } from '../RecurrenceSelector';
 import { cn } from '@/lib/utils';
+import {
+  DEFAULT_SESSION_CALENDAR_DURATION_MIN,
+  estimateSessionDurationMinutes,
+} from '@/lib/estimateSessionDurationMinutes';
 
 interface ConfirmStepProps {
   formData: SessionFormData;
@@ -68,6 +72,19 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
     activity_type: formData.activity_type,
     locationName: selectedLocation?.name ?? '',
   });
+  const estimatedDurationMin = estimateSessionDurationMinutes({
+    session_blocks: formData.blocks,
+    distance_km: formData.distance_km ? Number.parseFloat(formData.distance_km) : null,
+    interval_distance: formData.interval_distance ? Number.parseFloat(formData.interval_distance) : null,
+    interval_count: formData.interval_count ? Number.parseInt(formData.interval_count, 10) : null,
+    interval_pace: formData.interval_pace || null,
+    pace_general: formData.pace_general || null,
+  });
+  const calendarDurationMin = estimatedDurationMin ?? DEFAULT_SESSION_CALENDAR_DURATION_MIN;
+  const estimatedEndTime =
+    formData.scheduled_at
+      ? new Date(new Date(formData.scheduled_at).getTime() + calendarDurationMin * 60_000)
+      : null;
 
   const handleVisibilityChange = (type: VisibilityType) => {
     onFormDataChange({ visibility_type: type });
@@ -174,6 +191,22 @@ export const ConfirmStep: React.FC<ConfirmStepProps> = ({
                     })} à {new Date(formData.scheduled_at).toLocaleTimeString('fr-FR', {
                       hour: '2-digit',
                       minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
+            {estimatedEndTime && (
+              <div className="flex items-start gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Fin estimée</p>
+                  <p className="text-sm text-foreground">
+                    {estimatedEndTime.toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
                   </p>
                 </div>

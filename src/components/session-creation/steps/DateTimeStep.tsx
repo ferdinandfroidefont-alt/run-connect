@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 
 interface DateTimeStepProps {
   scheduledAt: string;
+  estimatedEndTimeLabel?: string | null;
+  isEstimatedEndTimeProvisional?: boolean;
   onScheduledAtChange: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
@@ -27,6 +29,8 @@ const TIME_SUGGESTIONS = [
 
 export const DateTimeStep: React.FC<DateTimeStepProps> = ({
   scheduledAt,
+  estimatedEndTimeLabel = null,
+  isEstimatedEndTimeProvisional = false,
   onScheduledAtChange,
   onNext,
   onBack,
@@ -185,6 +189,16 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                 <p className="text-sm text-muted-foreground">
                   à {new Date(scheduledAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
+                {estimatedEndTimeLabel ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Fin estimée : {estimatedEndTimeLabel}
+                    </p>
+                    {isEstimatedEndTimeProvisional ? (
+                      <p className="text-[11px] text-muted-foreground/80">Estimation provisoire</p>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             </div>
           </motion.div>

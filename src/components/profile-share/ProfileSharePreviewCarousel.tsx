@@ -11,7 +11,7 @@ const META: { id: ProfileShareTemplateId; label: string }[] = [
   { id: 'light_card', label: 'Carte claire' },
   { id: 'organizer_focus', label: 'Organisateur' },
   { id: 'minimal_story', label: 'Story minimal' },
-  { id: 'generated_card', label: 'Carte générée' },
+  { id: 'generated_card', label: 'Carte 4' },
 ];
 
 type Props = {

@@ -12,8 +12,7 @@ import { templateDimensions } from '@/lib/sessionSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 
 const RC_BLUE = '#2563eb';
-/** Bleu bandeau / CTA — aligné partage profil */
-const RC_LIGHT = '#0066ff';
+const RC_LIGHT = '#0b6cff';
 
 const FONT_SANS =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Inter, sans-serif';
@@ -58,14 +57,16 @@ function ActivityGlyph({ type, size = 28 }: { type: string; size?: number }) {
 function BluePinMarker({
   avatarUrl,
   initials,
+  scale = 1,
 }: {
   avatarUrl?: string | null;
   initials?: string;
+  scale?: number;
 }) {
   // Réplique exacte du pin séance utilisé sur la carte d'accueil (variant "depth").
   // Dimensions, dégradés, anneau, ombre et pointe : alignés sur `rc-session-pin__*` (src/index.css).
-  const PIN_W = 58;
-  const PIN_H = 72;
+  const PIN_W = 58 * scale;
+  const PIN_H = 72 * scale;
 
   return (
     <div style={{ position: 'relative', width: PIN_W, height: PIN_H }}>
@@ -75,12 +76,12 @@ function BluePinMarker({
           position: 'absolute',
           left: '50%',
           bottom: 2,
-          width: 32,
-          height: 10,
+          width: 34 * scale,
+          height: 12 * scale,
           transform: 'translateX(-50%)',
           borderRadius: 999,
-          background: 'rgba(15, 23, 42, 0.14)',
-          filter: 'blur(5px)',
+          background: 'rgba(15, 23, 42, 0.18)',
+          filter: `blur(${5 * scale}px)`,
           zIndex: 0,
         }}
       />
@@ -89,9 +90,9 @@ function BluePinMarker({
         style={{
           position: 'absolute',
           left: '50%',
-          top: 3,
-          width: 56,
-          height: 56,
+          top: 3 * scale,
+          width: 56 * scale,
+          height: 56 * scale,
           transform: 'translateX(-50%)',
           borderRadius: 999,
           background:
@@ -106,9 +107,9 @@ function BluePinMarker({
         style={{
           position: 'absolute',
           left: '50%',
-          top: 55,
-          width: 13,
-          height: 10,
+          top: 55 * scale,
+          width: 13 * scale,
+          height: 10 * scale,
           transform: 'translateX(-50%)',
           clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
           background: 'linear-gradient(180deg, hsl(217 91% 49%) 0%, hsl(221 83% 41%) 100%)',
@@ -121,12 +122,12 @@ function BluePinMarker({
         style={{
           position: 'absolute',
           left: '50%',
-          top: 8,
-          width: 46,
-          height: 46,
+          top: 8 * scale,
+          width: 46 * scale,
+          height: 46 * scale,
           transform: 'translateX(-50%)',
           borderRadius: 999,
-          border: '3px solid rgba(255,255,255,0.98)',
+          border: `${3 * scale}px solid rgba(255,255,255,0.98)`,
           overflow: 'hidden',
           background: '#e2e8f0',
           boxShadow: '0 0 0 1px rgba(15,23,42,0.06)',
@@ -145,7 +146,7 @@ function BluePinMarker({
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#334155' }}>
+          <span style={{ fontSize: 16 * scale, fontWeight: 700, color: '#334155' }}>
             {(initials || 'RC').slice(0, 2)}
           </span>
         )}
@@ -154,8 +155,6 @@ function BluePinMarker({
   );
 }
 
-
-/** Icône RunConnect : pin de localisation avec ondes radio (identique au partage profil) */
 function RunConnectPinIcon({ size = 44, color = '#ffffff' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -171,159 +170,100 @@ function RunConnectPinIcon({ size = 44, color = '#ffffff' }: { size?: number; co
   );
 }
 
-/** Motif topographique discret (côté droit du bandeau) — repris du partage profil */
-const FOOTER_TOPO_SVG = encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" preserveAspectRatio="none"><path fill="none" stroke="white" stroke-opacity="0.12" stroke-width="1" d="M0 120 Q100 100 200 130 T400 110"/><path fill="none" stroke="white" stroke-opacity="0.1" stroke-width="1" d="M0 140 Q120 125 240 150 T400 130"/><path fill="none" stroke="white" stroke-opacity="0.08" stroke-width="1" d="M0 80 Q80 60 160 90 T320 70 T400 85"/><path fill="none" stroke="white" stroke-opacity="0.09" stroke-width="1" d="M200 0 Q220 80 180 160"/></svg>'
-);
-
-/** Bandeau QR + marque — mêmes proportions que le partage profil (évite pin/typos surdimensionnés). */
-function CtaBar({ publicUrl, qrDataUrl }: { publicUrl: string; qrDataUrl: string | null }) {
-  const publicUrlDisplay = publicUrl.replace(/^https?:\/\//, '');
+function SessionJoinBar() {
   return (
     <div
       style={{
         position: 'relative',
-        display: 'flex',
         width: '100%',
-        flexShrink: 0,
-        alignItems: 'stretch',
-        overflow: 'hidden',
         borderRadius: 28,
-        background: `linear-gradient(125deg, ${RC_LIGHT} 0%, #0052d4 45%, #0039a3 100%)`,
-        boxShadow: '0 16px 48px rgba(0, 82, 212, 0.22)',
+        overflow: 'hidden',
+        background: `linear-gradient(110deg, ${RC_LIGHT} 0%, #0759dc 50%, #0352d6 100%)`,
+        boxShadow: '0 16px 44px rgba(9, 86, 220, 0.25)',
       }}
     >
       <div
         style={{
           position: 'absolute',
-          top: 0,
-          bottom: 0,
-          right: 0,
-          width: '55%',
+          right: -20,
+          bottom: -52,
+          width: 380,
+          height: 220,
+          borderRadius: '50%',
+          border: '1px solid rgba(255,255,255,0.16)',
           pointerEvents: 'none',
-          opacity: 0.88,
-          backgroundImage: `url("data:image/svg+xml,${FOOTER_TOPO_SVG}")`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right bottom',
-          backgroundSize: 'cover',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          right: 30,
+          bottom: -58,
+          width: 300,
+          height: 190,
+          borderRadius: '50%',
+          border: '1px solid rgba(255,255,255,0.12)',
+          pointerEvents: 'none',
         }}
       />
       <div
         style={{
           position: 'relative',
           zIndex: 1,
+          minHeight: 174,
           display: 'flex',
-          width: '100%',
-          minHeight: 216,
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: 20,
-          padding: '28px 28px',
+          padding: '24px 28px',
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <RunConnectPinIcon size={72} color="#ffffff" />
-            <div style={{ minWidth: 0, paddingTop: 2 }}>
-              <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: 'rgba(255,255,255,0.95)', margin: 0 }}>Rejoins-moi sur</p>
-              <p style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.02em', color: '#ffffff', margin: '4px 0 0 0' }}>
-                RunConnect
-              </p>
-            </div>
-          </div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 10,
-              background: '#ffffff',
-              borderRadius: 50,
-              padding: '10px 20px',
-              width: 'fit-content',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: RC_LIGHT,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14M13 5l7 7-7 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: RC_LIGHT, whiteSpace: 'nowrap' }}>Ouvrir avec RunConnect</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+          <RunConnectPinIcon size={64} color="#ffffff" />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 500, color: 'rgba(255,255,255,0.92)' }}>Retrouve cette séance sur</p>
+            <p style={{ margin: '2px 0 0 0', fontSize: 28, fontWeight: 800, lineHeight: 1.02, letterSpacing: '-0.02em', color: '#ffffff' }}>
+              RunConnect
+            </p>
           </div>
         </div>
-
-        <div style={{ height: 148, width: 1, flexShrink: 0, background: 'rgba(255,255,255,0.35)' }} aria-hidden="true" />
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0, alignSelf: 'center' }}>
-          {qrDataUrl ? (
-            <img
-              src={qrDataUrl}
-              alt=""
-              crossOrigin="anonymous"
-              style={{
-                width: 128,
-                height: 128,
-                borderRadius: 12,
-                border: '3px solid #ffffff',
-                background: '#ffffff',
-                padding: 6,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-              }}
-            />
-          ) : (
-            <div style={{ width: 128, height: 128, borderRadius: 12, border: '3px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)' }} />
-          )}
-          <p
+        <div style={{ width: 1, height: 118, flexShrink: 0, background: 'rgba(255,255,255,0.34)' }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            borderRadius: 26,
+            padding: '18px 24px',
+            background: '#ffffff',
+            color: '#0f172a',
+            boxShadow: '0 10px 24px rgba(2, 16, 45, 0.2)',
+            flexShrink: 0,
+          }}
+        >
+          <div
             style={{
-              maxWidth: 200,
-              textAlign: 'right',
-              fontSize: 11,
-              fontWeight: 500,
-              lineHeight: 1.35,
-              color: 'rgba(255,255,255,0.88)',
-              wordBreak: 'break-all',
-              margin: 0,
+              width: 46,
+              height: 46,
+              borderRadius: 999,
+              background: RC_LIGHT,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            {publicUrlDisplay}
-          </p>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.08 }}>Ouvrir avec RunConnect</span>
+            <span style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.15, color: '#475569' }}>Rejoins la séance dans l&apos;app</span>
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-/** Bloc infos séance — carte opaque façon fiche iOS (export PNG compatible, pas de blur). */
-function SessionInfoPanel({
-  children,
-  isDark,
-  isStory,
-}: {
-  children: ReactNode;
-  isDark: boolean;
-  isStory: boolean;
-}) {
-  const bg = isDark ? 'rgba(30, 41, 59, 0.94)' : '#ffffff';
-  const border = isDark ? '1px solid rgba(148, 163, 184, 0.22)' : '1px solid rgba(15, 23, 42, 0.07)';
-  const shadow = isDark
-    ? '0 12px 44px rgba(0, 0, 0, 0.38)'
-    : '0 1px 0 rgba(15, 23, 42, 0.04), 0 14px 42px rgba(15, 23, 42, 0.09)';
-
-  const margin = isStory ? '12px 24px 6px 24px' : '26px 18px 26px 28px';
-  const padding = isStory ? '26px 22px 28px' : '30px 26px 32px';
-
-  return (
-    <div style={{ margin, padding, borderRadius: 22, background: bg, border, boxShadow: shadow, minWidth: 0 }}>{children}</div>
   );
 }
 
@@ -335,13 +275,13 @@ export type SessionShareArtboardProps = {
 };
 
 export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtboardProps>(
-  function SessionShareArtboard({ payload, templateId, mapImageUrl, qrDataUrl = null }, ref) {
+  function SessionShareArtboard({ payload, templateId, mapImageUrl }, ref) {
     const { w, h } = templateDimensions(templateId);
     const isDark = templateId === 'dark_premium';
     const isMinimal = templateId === 'minimal';
     const isStory = templateId === 'instagram_story';
 
-    const cardBg = isDark ? '#0f172a' : '#eef2f7';
+    const cardBg = isDark ? '#0f172a' : '#f8fafc';
     const fg = isDark ? '#f8fafc' : '#0f172a';
     const muted = isDark ? '#94a3b8' : '#64748b';
     const dividerColor = isDark ? 'rgba(51, 65, 85, 0.85)' : 'rgba(226, 232, 240, 0.95)';
@@ -350,7 +290,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
       <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         <ShareMapBackdropImg
           mapUrl={mapImageUrl}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            filter: isDark ? 'saturate(0.9) contrast(0.95)' : 'saturate(0.72) contrast(0.94) brightness(1.03)',
+          }}
         />
         {!isDark && (
           <div
@@ -358,8 +305,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background:
-                'linear-gradient(90deg, rgba(238,242,247,0.99) 0%, rgba(238,242,247,0.93) 36%, rgba(238,242,247,0.5) 58%, rgba(238,242,247,0.08) 82%, rgba(238,242,247,0) 100%)',
+              background: 'linear-gradient(90deg, rgba(248,250,252,0.95) 0%, rgba(248,250,252,0.78) 28%, rgba(248,250,252,0.38) 48%, rgba(248,250,252,0) 72%)',
             }}
           />
         )}
@@ -373,47 +319,43 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             }}
           />
         )}
-        {/* Pin centré sur la zone visible droite (≈ 75% horizontal) */}
+        {/* Pin plus dominant sur la zone map */}
         <div
           style={{
             position: 'absolute',
             top: '50%',
-            left: '75%',
+            left: '64%',
             transform: 'translate(-50%, -100%)',
             pointerEvents: 'none',
           }}
         >
-          <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} />
+          <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} scale={1.35} />
         </div>
       </div>
     );
 
-    const titleSize = isStory ? 54 : 56;
-    const metaSize = isStory ? 22 : 23;
+    const titleSize = isStory ? 68 : 72;
+    const metaSize = isStory ? 22 : 24;
     const locTitleSize = isStory ? 24 : 25;
-    const locSubSize = isStory ? 18 : 19;
+    const locSubSize = isStory ? 17 : 18;
 
     const leftColumn = (
-      <SessionInfoPanel isDark={isDark} isStory={isStory}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0, padding: isStory ? '36px 34px 28px' : '40px 36px 28px' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
               alignSelf: 'flex-start',
-              padding: '7px 14px 7px 10px',
-              borderRadius: 999,
-              background: isDark ? 'rgba(37, 99, 235, 0.22)' : 'rgba(37, 99, 235, 0.09)',
-              border: isDark ? '1px solid rgba(96, 165, 250, 0.28)' : '1px solid rgba(37, 99, 235, 0.14)',
+              opacity: isDark ? 0.9 : 0.72,
             }}
           >
-            <ActivityGlyph type={payload.activityType} size={22} />
+            <ActivityGlyph type={payload.activityType} size={18} />
             <span
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                letterSpacing: '0.07em',
+                letterSpacing: '0.11em',
                 color: isDark ? '#93c5fd' : RC_BLUE,
                 textTransform: 'uppercase' as const,
               }}
@@ -436,14 +378,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           </h1>
 
           {payload.structureBadge && !isMinimal && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
               <div
                 style={{
                   display: 'inline-flex',
                   width: 'fit-content',
-                  borderRadius: 14,
-                  padding: '12px 22px',
-                  fontSize: isStory ? 30 : 32,
+                  borderRadius: 999,
+                  padding: '14px 24px',
+                  fontSize: isStory ? 32 : 34,
                   fontWeight: 800,
                   color: '#ffffff',
                   background: `linear-gradient(135deg, ${RC_BLUE} 0%, #1d4ed8 100%)`,
@@ -455,12 +397,12 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                 {payload.structureBadge}
               </div>
               {payload.pacePrimary && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
                   <MetaRowIcon>
                     <Clock style={{ width: 22, height: 22, color: RC_BLUE }} />
                   </MetaRowIcon>
                   <span style={{ fontSize: metaSize, fontWeight: 600, color: fg }}>
-                    {payload.pacePrimary} <span style={{ color: muted, fontWeight: 500 }}>· allure cible</span>
+                    {payload.pacePrimary} <span style={{ color: muted, fontWeight: 500, opacity: 0.6 }}>· allure cible</span>
                   </span>
                 </div>
               )}
@@ -468,23 +410,23 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           )}
 
           {payload.pacePrimary && !isMinimal && !payload.structureBadge && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <MetaRowIcon>
                   <Clock style={{ width: 22, height: 22, color: RC_BLUE }} />
                 </MetaRowIcon>
                 <span style={{ fontSize: metaSize + 2, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
               </div>
               {payload.paceSecondary && (
-                <span style={{ paddingLeft: 52, fontSize: 15, color: muted }}>{payload.paceSecondary}</span>
+                <span style={{ paddingLeft: 54, fontSize: 15, color: muted, opacity: 0.62 }}>{payload.paceSecondary}</span>
               )}
             </div>
           )}
 
-          <div style={{ height: 1, width: '100%', maxWidth: 300, background: dividerColor, margin: '6px 0 2px' }} />
+          <div style={{ height: 1, width: '100%', maxWidth: 380, background: dividerColor, margin: '8px 0 6px' }} />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <MetaRowIcon>
                 <Calendar style={{ width: 22, height: 22, color: RC_BLUE }} />
               </MetaRowIcon>
@@ -492,7 +434,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                 {payload.dateLabel}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <MetaRowIcon>
                 <Clock style={{ width: 22, height: 22, color: RC_BLUE }} />
               </MetaRowIcon>
@@ -501,8 +443,8 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           </div>
 
           {!isMinimal && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 460, marginTop: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', maxWidth: 560, marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                 <MetaRowIcon>
                   <MapPin style={{ width: 22, height: 22, color: RC_BLUE }} />
                 </MetaRowIcon>
@@ -511,14 +453,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                     {payload.locationTitle}
                   </p>
                   {payload.locationSubtitle && (
-                    <p style={{ fontSize: locSubSize, color: muted, lineHeight: 1.35, margin: '4px 0 0 0' }}>
+                    <p style={{ fontSize: locSubSize, color: muted, lineHeight: 1.35, opacity: 0.62, margin: '4px 0 0 0' }}>
                       {payload.locationSubtitle}
                     </p>
                   )}
                 </div>
               </div>
               {payload.audienceLine && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <MetaRowIcon>
                     <Users style={{ width: 22, height: 22, color: RC_BLUE }} />
                   </MetaRowIcon>
@@ -527,11 +469,9 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               )}
             </div>
           )}
-        </div>
-      </SessionInfoPanel>
+      </div>
     );
-
-    const bottomCta = <CtaBar publicUrl={payload.publicUrl} qrDataUrl={qrDataUrl} />;
+    const bottomCta = <SessionJoinBar />;
 
     if (isStory) {
       return (
@@ -547,7 +487,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             fontFamily: FONT_SANS,
           }}
         >
-          <div style={{ position: 'relative', flex: '1.15 1 0%', minHeight: 0 }}>{mapSection}</div>
+          <div style={{ position: 'relative', flex: '1.1 1 0%', minHeight: 0 }}>{mapSection}</div>
           <div
             style={{
               position: 'relative',
@@ -559,7 +499,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             }}
           >
             {leftColumn}
-            <div style={{ marginTop: 'auto', padding: '12px 28px 36px' }}>{bottomCta}</div>
+            <div style={{ marginTop: 'auto', padding: '10px 28px 32px' }}>{bottomCta}</div>
           </div>
         </div>
       );
@@ -584,14 +524,21 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           fontFamily: FONT_SANS,
         }}
       >
-        {/* Carte en fond, occupe toute la largeur jusqu'au bord gauche */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          {mapSection}
-        </div>
-        {/* Contenu textuel par-dessus à gauche */}
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0 }}>
-          <div style={{ width: '58%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0, padding: '34px 36px 10px' }}>
+          <div style={{ width: '45%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {leftColumn}
+          </div>
+          <div
+            style={{
+              width: '55%',
+              minWidth: 0,
+              overflow: 'hidden',
+              borderRadius: 28,
+              border: isDark ? '1px solid rgba(148,163,184,0.24)' : '1px solid rgba(148,163,184,0.22)',
+              background: isDark ? '#0b1220' : '#f1f5f9',
+            }}
+          >
+            {mapSection}
           </div>
         </div>
         <div style={{ position: 'relative', zIndex: 3, padding: '0 48px 36px', flexShrink: 0 }}>

@@ -2,7 +2,6 @@ import { forwardRef } from 'react';
 import {
   Activity,
   Calendar,
-  ChevronRight,
   Footprints,
   MapPin,
   Timer,
@@ -14,10 +13,23 @@ import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileS
 import { templateDimensions } from '@/lib/profileSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
+import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 
 const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
+
+function sportIconFromLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+  const match = Object.values(PROFILE_SPORT_LABELS).find((entry) => entry.label.toLowerCase() === normalized);
+  const key = match?.label.toLowerCase();
+  if (key?.includes('cycl')) return Activity;
+  if (key?.includes('nat')) return Activity;
+  if (key?.includes('triathlon')) return Timer;
+  if (key?.includes('marche')) return Footprints;
+  if (key?.includes('trail')) return Footprints;
+  return Footprints;
+}
 
 /** Badge vérifié style dentelé (comme Twitter/X) — bleu avec coche blanche */
 function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: number }) {
@@ -333,6 +345,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
     const { w, h } = templateDimensions(templateId);
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
     const ctaText = 'Ajoute-moi sur RunConnect';
+    const SportIcon = sportIconFromLabel(payload.sportLabel);
 
     if (templateId === 'generated_card') {
       const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
@@ -355,72 +368,68 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
           />
 
-          {/* Avatar */}
-          <div style={{ position: 'absolute', top: 140, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-            <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={200} />
+          <div style={{ position: 'absolute', top: 146, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={120} />
           </div>
 
-          {/* Name + premium badge */}
-          <div style={{ position: 'absolute', top: 360, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 60px' }}>
-            <h1 style={{ fontSize: 56, fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em', textAlign: 'center' }}>
+          <div style={{ position: 'absolute', top: 325, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 90px' }}>
+            <h1 style={{ fontSize: 54, fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.02, textAlign: 'center' }}>
               {payload.displayName}
             </h1>
-            {payload.isPremium ? <VerifiedPremiumBadge size={42} /> : null}
+            {payload.isPremium ? <VerifiedPremiumBadge size={38} /> : null}
           </div>
 
-          {/* Username */}
-          <p style={{ position: 'absolute', top: 440, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 26, color: '#64748b', margin: 0 }}>
+          <p style={{ position: 'absolute', top: 390, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 24, color: '#6B7280', margin: 0 }}>
             @{payload.username}
           </p>
 
-          {/* Role + location */}
-          <div style={{ position: 'absolute', top: 500, left: 0, right: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: RC_LIGHT }}>{payload.roleLinePrimary}</span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 20, color: '#1e293b', fontWeight: 600 }}>
-              <MapPin style={{ width: 22, height: 22, color: '#0f172a' }} strokeWidth={2.3} />
+          <div style={{ position: 'absolute', top: 442, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '0 70px' }}>
+            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', borderRadius: 999, background: '#DBEAFE', padding: '10px 22px', boxShadow: '0 4px 14px rgba(37,99,235,0.08)' }}>
+              <span style={{ fontSize: 19, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.2 }}>{payload.roleLinePrimary}</span>
+              {payload.roleLineSecondary ? (
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1D4ED8', opacity: 0.9, lineHeight: 1.25, marginTop: 2 }}>{payload.roleLineSecondary}</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={{ position: 'absolute', top: 530, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 19, color: '#1f2937', fontWeight: 600 }}>
+              <MapPin style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
               {payload.locationLine}
-              <span style={{ display: 'inline-block', width: 1, height: 18, background: '#cbd5e1', margin: '0 6px' }} />
-              <Footprints style={{ width: 22, height: 22, color: '#0f172a' }} strokeWidth={2.3} />
+              <span style={{ display: 'inline-block', width: 1, height: 20, background: '#cbd5e1', margin: '0 8px' }} />
+              <SportIcon style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
               {payload.sportLabel}
             </span>
           </div>
 
-          {/* Stats grid 4 */}
-          <div style={{ position: 'absolute', top: 640, left: 60, right: 60, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <div style={{ position: 'absolute', top: 586, left: 54, right: 54, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { value: payload.sessionsCreated, label: 'Créées' },
-              { value: payload.sessionsJoined, label: 'Rejointes' },
-              { value: payload.followersCount, label: 'Abonnés' },
-              { value: payload.followingCount, label: 'Suivis' },
+              { icon: Calendar, value: payload.sessionsCreated, label: 'Séances créées' },
+              { icon: Users, value: payload.sessionsJoined, label: 'Séances rejointes' },
+              { icon: Users, value: payload.followersCount, label: 'Abonnés' },
+              { icon: UserPlus, value: payload.followingCount, label: 'Abonnements' },
             ].map((s) => (
-              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.8)', boxShadow: '0 4px 16px rgba(15,23,42,0.06)' }}>
-                <span style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
-                <span style={{ marginTop: 8, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b' }}>{s.label}</span>
+              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '14px 8px', borderRadius: 18, background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.8)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
+                <s.icon style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.25} />
+                <span style={{ fontSize: 34, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
+                <span style={{ marginTop: 2, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b', textAlign: 'center' }}>{s.label}</span>
               </div>
             ))}
           </div>
 
-          {/* Presence */}
           {presence ? (
-            <div style={{ position: 'absolute', top: 850, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 50, background: '#ffffff', border: `2px solid ${RC_LIGHT}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ position: 'absolute', top: 762, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '9px 22px', borderRadius: 999, background: 'rgba(248,250,252,0.92)', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15,23,42,0.05)' }}>
                 <Users style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.3} />
-                <span style={{ fontSize: 18, fontWeight: 700, color: RC_LIGHT }}>{presence} présence</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: '#1D4ED8' }}>{presence} présence</span>
               </div>
             </div>
           ) : null}
 
-          {/* QR + URL */}
-          <div style={{ position: 'absolute', bottom: 50, left: 0, right: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-            {payload.qrDataUrl ? (
-              <img
-                src={payload.qrDataUrl}
-                alt=""
-                style={{ width: 150, height: 150, borderRadius: 14, padding: 8, background: '#ffffff', boxShadow: '0 6px 20px rgba(0,0,0,0.12)' }}
-              />
-            ) : null}
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#475569', margin: 0 }}>{payload.publicUrlDisplay}</p>
-          </div>
+          <div style={{ position: 'absolute', right: 58, bottom: 60, width: 150, height: 72, borderRadius: 18, zIndex: 2, background: 'linear-gradient(130deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 100%)', border: '1px solid rgba(255,255,255,0.24)' }} />
+          <div style={{ position: 'absolute', right: 198, bottom: 90, width: 9, height: 9, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
+          <div style={{ position: 'absolute', right: 180, bottom: 74, width: 6, height: 6, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
+          <div style={{ position: 'absolute', right: 228, bottom: 62, width: 4, height: 4, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.28)' }} />
         </div>
       );
     }
