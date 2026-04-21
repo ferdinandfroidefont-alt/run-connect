@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings } from 'lucide-react';
+import { Search, MapPin, PersonStanding, Sunrise, Sun, Moon, Expand, Minimize2, ArrowLeft, Clock3, Users, CalendarDays, SlidersHorizontal, Activity, Route, Newspaper, Settings, Brush, Radio } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -184,6 +184,19 @@ const formatPinDistanceLabel = (distanceMeters: number): string => {
   const km = distanceMeters / 1000;
   const rounded = km >= 10 ? Math.round(km) : Math.round(km * 10) / 10;
   return Number.isInteger(rounded) ? `${rounded}km` : `${rounded.toFixed(1)}km`;
+};
+
+const updatePinDistanceBadge = (pin: HTMLButtonElement, distanceLabel: string) => {
+  if (!distanceLabel) return;
+  const existingBadge = pin.querySelector<HTMLElement>('.rc-session-pin__distance-badge');
+  if (existingBadge) {
+    existingBadge.textContent = distanceLabel;
+    return;
+  }
+  const distanceBadge = document.createElement('span');
+  distanceBadge.className = 'rc-session-pin__distance-badge';
+  distanceBadge.textContent = distanceLabel;
+  pin.appendChild(distanceBadge);
 };
 interface Filter {
   activity_types: string[];
@@ -916,12 +929,8 @@ export const InteractiveMap = ({
           if (cached !== undefined) {
             distanceLabel = cached;
           } else {
-            const routedDistance = await fetchMapboxFastestDrivingDistanceMeters(
-              { lat: userLocation.lat, lng: userLocation.lng },
-              { lat, lng },
-            );
             const fallbackMeters = calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) * 1000;
-            distanceLabel = formatPinDistanceLabel(routedDistance ?? fallbackMeters);
+            distanceLabel = formatPinDistanceLabel(fallbackMeters);
             routeDistanceLabelCacheRef.current.set(cacheKey, distanceLabel);
           }
         }
@@ -945,6 +954,23 @@ export const InteractiveMap = ({
           variant: resolveSessionPinVariant(),
           distanceLabel,
         });
+
+        if (userLocation) {
+          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
+          void fetchMapboxFastestDrivingDistanceMeters(
+            { lat: userLocation.lat, lng: userLocation.lng },
+            { lat, lng },
+          ).then((routedDistance) => {
+            if (runId !== markersRunIdRef.current) return;
+            if (!routedDistance) return;
+            const nextLabel = formatPinDistanceLabel(routedDistance);
+            if (!nextLabel) return;
+            routeDistanceLabelCacheRef.current.set(cacheKey, nextLabel);
+            updatePinDistanceBadge(pin, nextLabel);
+          }).catch(() => {
+            // Keep fallback distance label when routed distance lookup fails.
+          });
+        }
 
         wrap.appendChild(pin);
         wrap.addEventListener('click', (ev) => {
@@ -1514,6 +1540,9 @@ export const InteractiveMap = ({
   const handleCreateRoute = () => {
     console.log('🗺️ InteractiveMap handleCreateRoute called - navigating to route creation');
     navigate('/route-create');
+  };
+  const handleOpenLiveTracking = () => {
+    navigate('/my-sessions');
   };
   const createDirectionsRoute = async () => {
     if (waypoints.current.length < 2) return;
@@ -2281,7 +2310,7 @@ export const InteractiveMap = ({
       <div
         className={cn(
           "pointer-events-none fixed z-[104] flex flex-col items-end",
-          "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+0.75rem+var(--home-bottom-stack-gap))]",
+          "bottom-[calc(var(--layout-bottom-inset)+var(--home-feed-sheet-peek)+1.35rem+var(--home-bottom-stack-gap))]",
           "right-[max(1rem,env(safe-area-inset-right,0px))]"
         )}
       >
@@ -2303,6 +2332,26 @@ export const InteractiveMap = ({
             className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
           >
             <MapPin className="h-[17px] w-[17px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <button
+            type="button"
+            title="Créer un itinéraire"
+            aria-label="Créer un itinéraire"
+            onClick={handleCreateRoute}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <Brush className="h-[17px] w-[17px]" strokeWidth={2} />
+          </button>
+          <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
+          <button
+            type="button"
+            title="Suivre les participants"
+            aria-label="Suivre les participants"
+            onClick={handleOpenLiveTracking}
+            className="flex h-11 w-11 items-center justify-center text-foreground/85 transition-all duration-150 active:scale-[0.92] active:bg-muted/50 dark:active:bg-white/[0.06]"
+          >
+            <Radio className="h-[17px] w-[17px]" strokeWidth={2} />
           </button>
           <div className="mx-2 h-px w-7 bg-border/90 dark:bg-[#1f1f1f]" />
           <button

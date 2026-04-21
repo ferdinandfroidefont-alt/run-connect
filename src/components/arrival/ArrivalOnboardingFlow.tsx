@@ -395,14 +395,24 @@ export function ArrivalOnboardingFlow() {
                 </div>
               </div>
               <div className="shrink-0 pb-4">
-                <Button
-                  type="button"
-                  className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
-                  onClick={() => setPhase("premium")}
-                >
-                  Continuer
-                  <ChevronRight className="ml-1 h-4 w-4 opacity-80" />
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    className="h-[52px] w-full rounded-[14px] text-[16px] font-semibold"
+                    onClick={() => setPhase("premium")}
+                  >
+                    Continuer
+                    <ChevronRight className="ml-1 h-4 w-4 opacity-80" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-[48px] w-full rounded-[14px] text-[15px] font-semibold"
+                    onClick={() => setPhase("premium")}
+                  >
+                    Passer
+                  </Button>
+                </div>
               </div>
             </motion.section>
           )}

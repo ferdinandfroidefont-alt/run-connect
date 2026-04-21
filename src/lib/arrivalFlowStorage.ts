@@ -60,7 +60,7 @@ export function markOnboardingCompleted(userId: string): void {
   }
 }
 
-export function hasSawPremiumScreen(userId: string | undefined): boolean {
+export function hasSeenPremiumScreen(userId: string | undefined): boolean {
   if (!userId) return false;
   try {
     return localStorage.getItem(onboardingSawPremiumKey(userId)) === "1";
@@ -68,6 +68,9 @@ export function hasSawPremiumScreen(userId: string | undefined): boolean {
     return false;
   }
 }
+
+/** @deprecated use hasSeenPremiumScreen */
+export const hasSawPremiumScreen = hasSeenPremiumScreen;
 
 export function markPremiumScreenSeen(userId: string): void {
   try {
