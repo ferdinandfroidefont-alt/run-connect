@@ -21,15 +21,15 @@ type Props = {
 };
 
 /**
- * Aperçu « Carte 3 » : composition React/CSS uniquement (pas de calque sur PNG carte 1).
- * Mêmes champs que les autres cartes de partage.
+ * Aperçu « Carte 3 » : composition React/CSS uniquement (mode clair, format publication Insta 1:1).
+ * Stats alignées verticalement, header simplifié (logo + RunConnect en noir).
  */
 export function ProfileShareGeneratedPreviewCard({ payload, locationParts, className }: Props) {
   if (!payload) {
     return (
       <div
         className={cn(
-          'w-full overflow-hidden rounded-[20px] bg-muted/50 shadow-[0_8px_32px_rgba(15,23,42,0.13)] aspect-[4/5] animate-pulse',
+          'w-full overflow-hidden rounded-[20px] bg-muted/50 shadow-[0_8px_32px_rgba(15,23,42,0.13)] aspect-square animate-pulse',
           className
         )}
       />
@@ -41,79 +41,78 @@ export function ProfileShareGeneratedPreviewCard({ payload, locationParts, class
   return (
     <div
       className={cn(
-        'relative w-full overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)] aspect-[4/5]',
+        'relative w-full overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)] aspect-square bg-white',
         className
       )}
     >
-      {/* Fond : dégradé + halos (indépendant des assets carte 1 / 2) */}
+      {/* Fond clair : dégradé doux + halo bleu très léger */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(145deg, #0c1222 0%, #111827 28%, #0f172a 55%, #172554 85%, #1e3a8a 100%)',
+            'linear-gradient(160deg, #ffffff 0%, #f8fafc 45%, #eff6ff 100%)',
         }}
       />
       <div
-        className="pointer-events-none absolute -left-1/4 -top-1/4 h-[70%] w-[70%] rounded-full opacity-[0.35] blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(10,132,255,0.55) 0%, transparent 65%)' }}
+        className="pointer-events-none absolute -left-1/4 -top-1/4 h-[60%] w-[60%] rounded-full opacity-40 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(10,132,255,0.18) 0%, transparent 65%)' }}
       />
       <div
-        className="pointer-events-none absolute -bottom-1/4 -right-1/4 h-[60%] w-[60%] rounded-full opacity-25 blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.5) 0%, transparent 65%)' }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")`,
-        }}
+        className="pointer-events-none absolute -bottom-1/4 -right-1/4 h-[55%] w-[55%] rounded-full opacity-30 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.18) 0%, transparent 65%)' }}
       />
 
-      <div className="relative flex h-full min-h-0 flex-col px-[5%] pb-5 pt-6 text-white">
-        <div className="flex items-center justify-between gap-2">
-          <img src="/brand/runconnect-splash-icon.png" alt="" className="h-9 w-9 shrink-0 opacity-95 drop-shadow-md" />
-          <span className="text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
-            Profil
+      <div className="relative flex h-full min-h-0 flex-col px-[5%] pb-4 pt-4 text-slate-900">
+        {/* Header : logo + RunConnect en noir, plus rien à droite */}
+        <div className="flex items-center gap-2">
+          <img src="/brand/runconnect-splash-icon.png" alt="" className="h-8 w-8 shrink-0 drop-shadow-sm" />
+          <span className="text-[clamp(0.85rem,3.4cqw,1.05rem)] font-extrabold tracking-tight text-slate-900">
+            RunConnect
           </span>
         </div>
 
-        <div className="mt-4 flex flex-col items-center">
+        <div className="mt-3 flex flex-col items-center">
           <div
-            className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-white/25 to-white/5 p-[3px] shadow-[0_12px_40px_rgba(10,132,255,0.35)]"
-            style={{ width: 'clamp(72px, 22cqw, 104px)', height: 'clamp(72px, 22cqw, 104px)' }}
+            className="relative flex items-center justify-center rounded-full p-[3px] shadow-[0_10px_30px_rgba(10,132,255,0.18)]"
+            style={{
+              width: 'clamp(64px, 19cqw, 92px)',
+              height: 'clamp(64px, 19cqw, 92px)',
+              background: 'linear-gradient(135deg, #0A84FF 0%, #38BDF8 100%)',
+            }}
           >
-            <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-slate-800 ring-2 ring-white/90">
+            <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-white ring-2 ring-white">
               {payload.avatarUrl ? (
                 <img src={payload.avatarUrl} alt="" className="h-full w-full object-cover" crossOrigin="anonymous" />
               ) : (
-                <span className="text-[clamp(1.25rem,6cqw,2rem)] font-bold text-white/90">{payload.initials}</span>
+                <span className="text-[clamp(1.1rem,5.5cqw,1.8rem)] font-bold text-slate-700">{payload.initials}</span>
               )}
             </div>
           </div>
 
-          <div className="mt-3 flex max-w-full items-center justify-center gap-1.5 px-1">
-            <h2 className="max-w-[92%] truncate text-center text-[clamp(1.15rem,5.2cqw,1.65rem)] font-extrabold leading-tight tracking-tight">
+          <div className="mt-2.5 flex max-w-full items-center justify-center gap-1.5 px-1">
+            <h2 className="max-w-[92%] truncate text-center text-[clamp(1.05rem,4.8cqw,1.5rem)] font-extrabold leading-tight tracking-tight text-slate-900">
               {payload.displayName}
             </h2>
             {payload.isPremium && (
-              <BadgeCheck className="shrink-0 fill-[#0A84FF] text-white" style={{ width: '1.35rem', height: '1.35rem' }} strokeWidth={2.4} />
+              <BadgeCheck className="shrink-0 fill-[#0A84FF] text-white" style={{ width: '1.25rem', height: '1.25rem' }} strokeWidth={2.4} />
             )}
           </div>
-          <p className="mt-1 text-[clamp(0.7rem,2.8cqw,0.9rem)] font-medium text-white/50">@{payload.username}</p>
+          <p className="mt-0.5 text-[clamp(0.65rem,2.6cqw,0.85rem)] font-medium text-slate-500">@{payload.username}</p>
 
-          <div className="mt-3 w-full max-w-[94%] rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2.5 text-center backdrop-blur-md">
-            <p className="text-[clamp(0.7rem,2.6cqw,0.82rem)] font-bold" style={{ color: ACCENT }}>
+          <div className="mt-2 w-full max-w-[94%] rounded-2xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-center backdrop-blur-md">
+            <p className="text-[clamp(0.68rem,2.5cqw,0.8rem)] font-bold" style={{ color: ACCENT }}>
               {payload.roleLinePrimary}
             </p>
             {payload.roleLineSecondary ? (
-              <p className="mt-0.5 text-[clamp(0.62rem,2.3cqw,0.75rem)] leading-snug text-white/75">
+              <p className="mt-0.5 text-[clamp(0.6rem,2.2cqw,0.72rem)] leading-snug text-slate-600">
                 {payload.roleLineSecondary}
               </p>
             ) : null}
           </div>
 
-          <div className="mt-3 flex w-full max-w-[96%] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[clamp(0.65rem,2.5cqw,0.78rem)] font-semibold text-white/90">
+          <div className="mt-2 flex w-full max-w-[96%] flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[clamp(0.62rem,2.4cqw,0.76rem)] font-semibold text-slate-700">
             <span className="inline-flex min-w-0 max-w-[48%] items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-sky-300" strokeWidth={2.4} />
+              <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: ACCENT }} strokeWidth={2.4} />
               <span className="truncate">{locationParts.text || '—'}</span>
               {locationParts.isoCode ? (
                 <img
@@ -125,7 +124,7 @@ export function ProfileShareGeneratedPreviewCard({ payload, locationParts, class
               ) : null}
             </span>
             <span className="inline-flex min-w-0 max-w-[48%] items-center gap-1">
-              <Footprints className="h-3.5 w-3.5 shrink-0 text-sky-300" strokeWidth={2.4} />
+              <Footprints className="h-3.5 w-3.5 shrink-0" style={{ color: ACCENT }} strokeWidth={2.4} />
               <span className="truncate">
                 {sportEmoji} {payload.sportLabel}
               </span>
@@ -133,27 +132,29 @@ export function ProfileShareGeneratedPreviewCard({ payload, locationParts, class
           </div>
         </div>
 
-        <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
-          <StatCell icon={Calendar} value={payload.sessionsCreated} label="Créées" />
-          <StatCell icon={Users} value={payload.sessionsJoined} label="Rejointes" />
-          <StatCell icon={Users} value={payload.followersCount} label="Abonnés" />
-          <StatCell icon={UserPlus} value={payload.followingCount} label="Abonnements" />
+        {/* Stats : empilées verticalement, plus petites */}
+        <div className="mt-3 flex flex-col gap-1.5">
+          <StatRow icon={Calendar} value={payload.sessionsCreated} label="Séances créées" />
+          <StatRow icon={Users} value={payload.sessionsJoined} label="Séances rejointes" />
+          <StatRow icon={Users} value={payload.followersCount} label="Abonnés" />
+          <StatRow icon={UserPlus} value={payload.followingCount} label="Abonnements" />
         </div>
 
         {payload.presenceRate != null ? (
-          <p className="mt-2 text-center text-[clamp(0.68rem,2.6cqw,0.8rem)] font-bold" style={{ color: ACCENT }}>
+          <p className="mt-1.5 text-center text-[clamp(0.62rem,2.4cqw,0.74rem)] font-bold" style={{ color: ACCENT }}>
             {payload.presenceRate}% présence
           </p>
         ) : null}
 
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
+        {/* CTA (bas de carte) */}
+        <div className="mt-auto flex items-end justify-between gap-2 border-t border-slate-200/80 pt-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-white/40">Rejoins-moi</p>
-            <p className="truncate text-[11px] font-semibold text-white/80">{payload.publicUrlDisplay}</p>
+            <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">Rejoins-moi</p>
+            <p className="truncate text-[10px] font-semibold text-slate-700">{payload.publicUrlDisplay}</p>
           </div>
           {payload.qrDataUrl ? (
-            <div className="shrink-0 rounded-lg bg-white p-1 shadow-lg">
-              <img src={payload.qrDataUrl} alt="" className="h-[clamp(52px,16cqw,72px)] w-[clamp(52px,16cqw,72px)] object-contain" />
+            <div className="shrink-0 rounded-lg bg-white p-1 shadow-md ring-1 ring-slate-200">
+              <img src={payload.qrDataUrl} alt="" className="h-[clamp(44px,13cqw,60px)] w-[clamp(44px,13cqw,60px)] object-contain" />
             </div>
           ) : null}
         </div>
@@ -162,7 +163,7 @@ export function ProfileShareGeneratedPreviewCard({ payload, locationParts, class
   );
 }
 
-function StatCell({
+function StatRow({
   icon: Icon,
   value,
   label,
@@ -172,10 +173,16 @@ function StatCell({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] px-1 py-2.5 backdrop-blur-sm">
-      <Icon className="mb-1 h-4 w-4 text-sky-300/90" strokeWidth={2.2} />
-      <span className="text-[clamp(1rem,4.2cqw,1.35rem)] font-extrabold tabular-nums leading-none text-white">{value}</span>
-      <span className="mt-1 max-w-full px-0.5 text-center text-[9px] font-semibold uppercase tracking-wide text-white/45">{label}</span>
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: ACCENT }} strokeWidth={2.3} />
+        <span className="truncate text-[clamp(0.6rem,2.3cqw,0.74rem)] font-semibold uppercase tracking-wide text-slate-600">
+          {label}
+        </span>
+      </div>
+      <span className="shrink-0 text-[clamp(0.85rem,3.4cqw,1.05rem)] font-extrabold tabular-nums leading-none text-slate-900">
+        {value}
+      </span>
     </div>
   );
 }
