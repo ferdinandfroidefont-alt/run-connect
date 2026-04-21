@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Share } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
   const { user } = useAuth();
   const [payload, setPayload] = useState<ProfileSharePayload | null>(null);
   const [variant, setVariant] = useState<CardVariant>('v1');
+  const previewFrameRef = useRef<HTMLDivElement | null>(null);
+  const [previewFrameSize, setPreviewFrameSize] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +47,27 @@ export function ProfileSharePanel({ compact = false }: Props) {
     return 'map_overlay_card' as const;
   };
 
+  useEffect(() => {
+    const el = previewFrameRef.current;
+    if (!el) return;
+    const sync = () => {
+      const size = Math.floor(el.getBoundingClientRect().width);
+      setPreviewFrameSize(size > 0 ? size : 0);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
+
+  const previewScale = useMemo(() => {
+    if (!previewFrameSize) return 1;
+    const baseHeight = variant === 'v3' ? 1920 : 1080;
+    return previewFrameSize / baseHeight;
+  }, [previewFrameSize, variant]);
+
   return (
     <div className="min-w-0 max-w-full">
       <div className="flex min-h-0 flex-col">
@@ -52,7 +75,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
           'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
           compact ? 'pt-2' : 'pt-4'
         )}>
-          <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
+          <div ref={previewFrameRef} className="relative w-full max-w-sm mx-auto">
             <div className="relative aspect-square w-full overflow-hidden rounded-none bg-muted/25 shadow-[0_8px_32px_rgba(15,23,42,0.13)]">
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                 {payload ? (
@@ -60,10 +83,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                     style={{
                       width: 1080,
                       height: variant === 'v3' ? 1920 : 1080,
-                      transform:
-                        variant === 'v3'
-                          ? 'scale(calc(100cqw / 1920))'
-                          : 'scale(calc(100cqw / 1080))',
+                      transform: `scale(${previewScale})`,
                       transformOrigin: 'center center',
                     }}
                   >
