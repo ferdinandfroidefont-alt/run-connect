@@ -432,6 +432,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           <div style={{ position: 'absolute', right: 198, bottom: 90, width: 9, height: 9, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 180, bottom: 74, width: 6, height: 6, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 228, bottom: 62, width: 4, height: 4, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.28)' }} />
+          </div>
         </div>
       );
     }
