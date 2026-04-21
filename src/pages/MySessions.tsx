@@ -141,11 +141,6 @@ export default function MySessions() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!user) return;
-    void loadSessions();
-  }, [user, loadSessions]);
-
   const loadSessions = useCallback(async () => {
     if (!user) return;
     try {
@@ -218,6 +213,11 @@ export default function MySessions() {
       setLoading(false);
     }
   }, [toast, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void loadSessions();
+  }, [user, loadSessions]);
 
   const needsConfirmation = useCallback((session: UserSession, source: SessionSource) => {
     const isPast = new Date(session.scheduled_at).getTime() < Date.now();
