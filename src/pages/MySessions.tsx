@@ -75,17 +75,17 @@ export default function MySessions() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
-
-  const [tab, setTab] = useState<SessionTab>("created");
-  const [createdSessions, setCreatedSessions] = useState<UserSession[]>([]);
-  const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (searchParams.get("tab") === "confirm") {
       setTab("to-confirm");
     }
   }, [searchParams]);
+
+
+  const [tab, setTab] = useState<SessionTab>("created");
+  const [createdSessions, setCreatedSessions] = useState<UserSession[]>([]);
+  const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const loadSessions = useCallback(async () => {
     if (!user) return;

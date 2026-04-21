@@ -199,6 +199,8 @@ const Messages = () => {
   const [isPending, startTransition] = useTransition();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const threadScrollRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   /** Canal `typing-*` déjà souscrit (obligatoire pour que `broadcast` parte) */
@@ -236,6 +238,8 @@ const Messages = () => {
   /** Recherche locale dans le fil de messages ouvert */
   const [threadSearchOpen, setThreadSearchOpen] = useState(false);
   const [threadSearch, setThreadSearch] = useState("");
+  const [keyboardInsetBottom, setKeyboardInsetBottom] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(0);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
@@ -320,6 +324,59 @@ const Messages = () => {
       return () => clearTimeout(timer);
     }
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      setKeyboardInsetBottom(0);
+      return;
+    }
+
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const syncKeyboardInset = () => {
+      // Keyboard overlap over layout viewport (iOS Safari/App WebView).
+      const nextInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardInsetBottom((prev) => (Math.abs(prev - nextInset) > 1 ? nextInset : prev));
+    };
+
+    syncKeyboardInset();
+    vv.addEventListener("resize", syncKeyboardInset);
+    vv.addEventListener("scroll", syncKeyboardInset);
+    window.addEventListener("orientationchange", syncKeyboardInset);
+
+    return () => {
+      vv.removeEventListener("resize", syncKeyboardInset);
+      vv.removeEventListener("scroll", syncKeyboardInset);
+      window.removeEventListener("orientationchange", syncKeyboardInset);
+    };
+  }, [selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+    const el = composerRef.current;
+    if (!el) return;
+
+    const syncComposerHeight = () => {
+      const next = Math.ceil(el.getBoundingClientRect().height);
+      setComposerHeight((prev) => (Math.abs(prev - next) > 1 ? next : prev));
+    };
+
+    syncComposerHeight();
+    const ro = new ResizeObserver(syncComposerHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [selectedConversation, replyTo, showEmojiPicker, uploadProgress, isRecording, newMessage]);
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+    const activeEl = document.activeElement;
+    const isComposerFocused = !!(activeEl && composerRef.current?.contains(activeEl));
+    if (!isComposerFocused && keyboardInsetBottom <= 0) return;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }, [keyboardInsetBottom, selectedConversation]);
 
   // Single effect for tab bar visibility + chrome color.
   // Tab bar visible on inbox list, hidden only inside a conversation thread.
@@ -1977,6 +2034,7 @@ const Messages = () => {
         <div className="max-w-md mx-auto flex min-h-0 w-full flex-1 flex-col">
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
+            scrollRef={threadScrollRef}
             headerWrapperClassName="z-50 bg-card border-b border-border/50"
             header={
             <div className="flex items-center px-ios-2 py-ios-2">
@@ -2155,11 +2213,14 @@ const Messages = () => {
             scrollClassName="overscroll-y-contain [-webkit-overflow-scrolling:touch]"
             footer={
               <div
+                ref={composerRef}
                 className={cn(
-                  "keyboard-input-container z-40 w-full shrink-0 border-t border-border bg-background px-ios-2 py-ios-1",
+                  "keyboard-input-container fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md border-t border-border bg-background px-ios-2 py-ios-1",
                   "dark:border-[#1f1f1f] dark:bg-black dark:backdrop-blur-none"
                 )}
                 style={{
+                  transform: `translateY(-${keyboardInsetBottom}px)`,
+                  transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
                   paddingBottom: "max(0px, calc(env(safe-area-inset-bottom, 0px) - 4px))",
                 }}
               >
@@ -2380,7 +2441,10 @@ const Messages = () => {
                 )}
               </div>
             )}
-            <div className="flex-1 px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary">
+            <div
+              className="flex-1 px-ios-3 pt-ios-2 pb-ios-2 space-y-ios-1 bg-secondary"
+              style={{ paddingBottom: composerHeight + keyboardInsetBottom + 8 }}
+            >
               {visibleMessages.map((message, index) => {
                 const isOwnMessage = message.sender_id === user?.id;
                 const previousMessage = index > 0 ? visibleMessages[index - 1] : null;
@@ -3041,38 +3105,50 @@ const Messages = () => {
                         confirmDeleteConversation(conversation);
                       }}
                     >
-                      {isSelectionMode && (
-                        <div className="flex items-center mr-ios-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedConversations.has(conversation.id)}
-                            onChange={() => toggleConversationSelection(conversation.id)}
-                            className="w-5 h-5 rounded-full border-2 border-primary"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="relative">
-                        <Avatar className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] aspect-square shrink-0 avatar-fixed">
-                          {conversation.is_group ? (
-                            <>
-                              <AvatarImage src={conversation.group_avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary">
-                                <Users className="h-6 w-6 text-muted-foreground" />
-                              </AvatarFallback>
-                            </>
-                          ) : (
-                            <>
-                              <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
-                              <AvatarFallback className="bg-secondary text-[17px] font-semibold">
-                                {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </>
-                          )}
-                        </Avatar>
-                        {!conversation.is_group && <OnlineStatus userId={conversation.other_participant?.user_id || ""} />}
-                      </div>
+                      <button
+                        type="button"
+                        className="relative shrink-0 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelectionMode) {
+                            toggleConversationSelection(conversation.id);
+                          }
+                        }}
+                        aria-label={
+                          isSelectionMode
+                            ? selectedConversations.has(conversation.id)
+                              ? "Désélectionner la conversation"
+                              : "Sélectionner la conversation"
+                            : "Avatar"
+                        }
+                      >
+                        {isSelectionMode && selectedConversations.has(conversation.id) ? (
+                          <div className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] rounded-full border-2 border-primary bg-primary flex items-center justify-center">
+                            <Check className="h-5 w-5 text-primary-foreground" />
+                          </div>
+                        ) : (
+                          <Avatar className="h-[52px] w-[52px] min-w-[52px] min-h-[52px] aspect-square avatar-fixed">
+                            {conversation.is_group ? (
+                              <>
+                                <AvatarImage src={conversation.group_avatar_url || ""} />
+                                <AvatarFallback className="bg-secondary">
+                                  <Users className="h-6 w-6 text-muted-foreground" />
+                                </AvatarFallback>
+                              </>
+                            ) : (
+                              <>
+                                <AvatarImage src={conversation.other_participant?.avatar_url || ""} />
+                                <AvatarFallback className="bg-secondary text-[17px] font-semibold">
+                                  {(conversation.other_participant?.username || "U").charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </>
+                            )}
+                          </Avatar>
+                        )}
+                        {!conversation.is_group && (!isSelectionMode || !selectedConversations.has(conversation.id)) && (
+                          <OnlineStatus userId={conversation.other_participant?.user_id || ""} />
+                        )}
+                      </button>
                       
                       <div 
                         className="flex-1 min-w-0"

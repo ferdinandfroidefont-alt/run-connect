@@ -7,9 +7,9 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 5;
 const PAD_ROWS = Math.floor(VISIBLE_ITEMS / 2);
 const MODAL_ROOT_CLASS =
-  "fixed inset-0 z-[1200] flex items-end justify-center overscroll-none pb-[max(4.75rem,calc(var(--safe-area-bottom)+3.5rem))] pointer-events-auto";
+  "fixed inset-0 z-[1200] flex items-center justify-center overscroll-none px-4 pt-4 pb-[max(1rem,var(--safe-area-bottom))] pointer-events-auto";
 const MODAL_PANEL_CLASS =
-  "relative z-10 w-full max-w-md animate-in slide-in-from-bottom-4 duration-300 rounded-t-3xl bg-card pb-[max(0.5rem,var(--safe-area-bottom))] shadow-2xl";
+  "relative z-10 w-full max-w-sm -translate-y-6 animate-in slide-in-from-bottom-4 duration-300 rounded-3xl bg-card shadow-2xl";
 
 type WheelOption = { value: string; label: string };
 
@@ -21,7 +21,7 @@ interface PickerColumnProps {
   disabled?: boolean;
 }
 
-interface PickerHeaderProps {
+interface PickerFooterProps {
   title: string;
   onCancel: () => void;
   onConfirm: () => void;
@@ -275,13 +275,13 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
   );
 }
 
-export function PickerHeader({ title, onCancel, onConfirm, accentColor }: PickerHeaderProps) {
+export function PickerFooter({ title, onCancel, onConfirm, accentColor }: PickerFooterProps) {
   return (
-    <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+    <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
       <button onClick={onCancel} className="text-[17px] text-muted-foreground active:opacity-70">
         Annuler
       </button>
-      <span className="text-[17px] font-semibold text-foreground" style={{ textShadow: `0 0 18px ${accentColor}22` }}>
+      <span className="text-[15px] font-semibold text-foreground/85" style={{ textShadow: `0 0 18px ${accentColor}22` }}>
         {title}
       </span>
       <button onClick={onConfirm} className="text-[17px] font-semibold active:opacity-70" style={{ color: accentColor }}>
@@ -349,8 +349,10 @@ export function SmartPerformancePicker({
         onPointerDownCapture={(e) => e.stopPropagation()}
         onTouchStartCapture={(e) => e.stopPropagation()}
       >
-        <PickerHeader title={title} onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
-        <div className="relative px-4 py-3">
+        <div className="px-4 pb-2 pt-4 text-center">
+          <span className="text-[17px] font-semibold text-foreground">{title}</span>
+        </div>
+        <div className="relative px-4 py-2">
           <PickerOverlay accentColor={accentColor} />
           <div className="relative z-0 flex items-center gap-1">
             {columns.map((column, idx) => (
@@ -365,6 +367,7 @@ export function SmartPerformancePicker({
             ))}
           </div>
         </div>
+        <PickerFooter title={title} onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
       </div>
     </div>
   );
