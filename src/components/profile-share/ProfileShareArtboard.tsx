@@ -13,6 +13,7 @@ import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileS
 import { templateDimensions } from '@/lib/profileSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
+import profileShareCardV3 from '@/assets/profile-share-card-v3.png';
 import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 
 const RC = '#2563eb';
@@ -361,11 +362,13 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             background: '#ffffff',
           }}
         >
+          {/* Wrapper interne 1024x1024 (taille native du PNG) centré dans l'artboard 1080x1080 */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 1024, height: 1024, transform: 'translate(-50%, -50%)', zIndex: 0 }}>
           <img
             src={profileShareCardV2}
             alt=""
             crossOrigin="anonymous"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0 }}
           />
 
           <div style={{ position: 'absolute', top: 146, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
@@ -430,6 +433,100 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           <div style={{ position: 'absolute', right: 198, bottom: 90, width: 9, height: 9, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 180, bottom: 74, width: 6, height: 6, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 228, bottom: 62, width: 4, height: 4, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.28)' }} />
+          </div>
+        </div>
+      );
+    }
+
+    if (templateId === 'map_overlay_card') {
+      const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+      return (
+        <div
+          ref={ref}
+          style={{
+            position: 'relative',
+            width: w,
+            height: h,
+            overflow: 'hidden',
+            fontFamily: fontStack,
+            background: '#ffffff',
+          }}
+        >
+          {/* Wrapper interne 1024x1024 (taille native du PNG) centré dans 1080x1080 */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 1024, height: 1024, transform: 'translate(-50%, -50%)', zIndex: 0 }}>
+            <img
+              src={profileShareCardV3}
+              alt=""
+              crossOrigin="anonymous"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0 }}
+            />
+
+            {/* Avatar */}
+            <div style={{ position: 'absolute', top: 150, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+              <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={120} />
+            </div>
+
+            {/* Nom + badge */}
+            <div style={{ position: 'absolute', top: 295, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 90px' }}>
+              <h1 style={{ fontSize: 48, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.02, textAlign: 'center' }}>
+                {payload.displayName}
+              </h1>
+              {payload.isPremium ? <VerifiedPremiumBadge size={34} /> : null}
+            </div>
+
+            {/* Username */}
+            <p style={{ position: 'absolute', top: 360, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 22, color: '#6B7280', margin: 0 }}>
+              @{payload.username}
+            </p>
+
+            {/* Pill rôle */}
+            <div style={{ position: 'absolute', top: 410, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '0 70px' }}>
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', borderRadius: 999, background: '#DBEAFE', padding: '10px 22px', boxShadow: '0 4px 14px rgba(37,99,235,0.08)' }}>
+                <span style={{ fontSize: 19, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.2 }}>{payload.roleLinePrimary}</span>
+                {payload.roleLineSecondary ? (
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1D4ED8', opacity: 0.9, lineHeight: 1.25, marginTop: 2 }}>{payload.roleLineSecondary}</span>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Ligne infos : ville | sport */}
+            <div style={{ position: 'absolute', top: 490, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 19, color: '#1f2937', fontWeight: 600 }}>
+                <MapPin style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
+                {payload.locationLine}
+                <span style={{ display: 'inline-block', width: 1, height: 20, background: '#cbd5e1', margin: '0 8px' }} />
+                <SportIcon style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
+                {payload.sportLabel}
+              </span>
+            </div>
+
+            {/* Stats (4 cartes) */}
+            <div style={{ position: 'absolute', top: 545, left: 54, right: 54, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {[
+                { icon: Calendar, value: payload.sessionsCreated, label: 'Séances créées' },
+                { icon: Users, value: payload.sessionsJoined, label: 'Séances rejointes' },
+                { icon: Users, value: payload.followersCount, label: 'Abonnés' },
+                { icon: UserPlus, value: payload.followingCount, label: 'Abonnements' },
+              ].map((s) => (
+                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '14px 8px', borderRadius: 18, background: '#ffffff', border: '1px solid rgba(226,232,240,0.9)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
+                  <s.icon style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.25} />
+                  <span style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
+                  <span style={{ marginTop: 2, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b', textAlign: 'center' }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Pill présence */}
+            {presence ? (
+              <div style={{ position: 'absolute', top: 720, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '9px 22px', borderRadius: 999, background: 'rgba(248,250,252,0.95)', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15,23,42,0.05)' }}>
+                  <Users style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.3} />
+                  <span style={{ fontSize: 18, fontWeight: 700, color: '#1D4ED8' }}>{presence} présence</span>
+                </div>
+              </div>
+            ) : null}
+            {/* Bandeau bleu inférieur déjà présent dans le PNG — pas d'overlay (zone 820 → 1024) */}
+          </div>
         </div>
       );
     }

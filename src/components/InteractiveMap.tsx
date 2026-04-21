@@ -459,7 +459,7 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
-  const routeDistanceLabelCacheRef = useRef<Map<string, string>>(new Map());
+  const routeDistanceLabelCacheRef = useRef<globalThis.Map<string, string>>(new globalThis.Map());
 
   /**
    * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
