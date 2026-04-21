@@ -10,7 +10,7 @@ import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 import { ProfileShareGeneratedPreviewCard } from './ProfileShareGeneratedPreviewCard';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
 
-type CardVariant = 'v1' | 'v2' | 'v3' | 'v4';
+type CardVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5';
 const CARD_IMAGES: Record<'v1' | 'v2', string> = {
   v1: profileShareCardImg,
   v2: profileShareCardV2,
@@ -91,7 +91,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
         )}>
           {/* Carte 1 : PNG + calque. Carte 2 : PNG seul. Carte 3 : composition HTML/CSS (pas de calque carte 1). */}
           <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
-            {variant === 'v4' ? (
+            {variant === 'v4' || variant === 'v5' ? (
               payload ? (
                 <div className="relative w-full aspect-square overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]">
                   <div
@@ -102,7 +102,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                       transformOrigin: 'top left',
                     }}
                   >
-                    <ProfileShareArtboard payload={payload} templateId="generated_card" />
+                    <ProfileShareArtboard payload={payload} templateId={variant === 'v5' ? 'map_overlay_card' : 'generated_card'} />
                   </div>
                 </div>
               ) : (
@@ -307,6 +307,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               { id: 'v2' as const, label: 'Carte 2' },
               { id: 'v3' as const, label: 'Carte 3' },
               { id: 'v4' as const, label: 'Carte 4' },
+              { id: 'v5' as const, label: 'Carte 5' },
             ]).map((opt) => (
               <button
                 key={opt.id}
