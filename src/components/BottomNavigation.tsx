@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Calendar, MessageCircle, Route, GraduationCap } from "lucide-react";
+import { Home, Calendar, MessageCircle, GraduationCap } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -36,7 +36,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const pathname = location.pathname;
   const isHome = pathname === "/";
 
-  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages → Itinéraires */
+  /** Ordre fixe : Accueil → Mes séances → Coaching → Messages */
   const navItems = useMemo<NavItem[]>(
     () => [
       { path: "/", icon: Home, label: t("navigation.home"), isActive: (p) => p === "/" },
@@ -60,13 +60,6 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
         tutorialId: "nav-messages",
         isActive: (p) => p === "/messages" || p.startsWith("/messages/"),
         showUnreadBadge: true,
-      },
-      {
-        path: "/route-create",
-        icon: Route,
-        label: t("navigation.itinerary") || "Itinéraire",
-        tutorialId: "nav-itinerary",
-        isActive: (p) => p === "/route-create" || p === "/route-creation",
       },
     ],
     [t]

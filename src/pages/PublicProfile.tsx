@@ -8,7 +8,7 @@ import {
   Loader2,
   UserPlus,
   Download,
-  Crown,
+  BadgeCheck,
   Calendar,
   ArrowLeft,
   MapPin,
@@ -51,6 +51,7 @@ interface PublicProfileData {
   cover_image_url: string | null;
   bio: string | null;
   is_premium: boolean | null;
+  is_admin?: boolean | null;
   created_at: string;
   favorite_sport?: string | null;
   age?: number | null;
@@ -193,7 +194,7 @@ const PublicProfile = () => {
         const { data: profileData, error } = await supabase
           .from("profiles")
           .select(
-            "user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, created_at, favorite_sport, age, country, organizer_avg_rating, running_records, cycling_records, swimming_records, triathlon_records, walking_records, is_private"
+            "user_id, username, display_name, avatar_url, cover_image_url, bio, is_premium, is_admin, created_at, favorite_sport, age, country, organizer_avg_rating, running_records, cycling_records, swimming_records, triathlon_records, walking_records, is_private"
           )
           .eq("username", username)
           .single();
@@ -483,8 +484,10 @@ const PublicProfile = () => {
                   <h1 className="min-w-0 truncate text-ios-title2 font-bold text-foreground">
                     {profile.display_name || profile.username}
                   </h1>
-                  {profile.is_premium ? (
-                    <Crown className="h-4 w-4 shrink-0 text-yellow-500" aria-hidden />
+                  {profile.is_admin ? (
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+                  ) : profile.is_premium ? (
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" aria-hidden />
                   ) : null}
                 </div>
                 <p className="truncate text-ios-subheadline text-muted-foreground">

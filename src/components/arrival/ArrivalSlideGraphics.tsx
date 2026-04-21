@@ -1,163 +1,138 @@
 import { cn } from "@/lib/utils";
 
-/** Carte + pins — slide « séances autour de toi » */
+function PhoneFrame({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative mx-auto w-full max-w-[290px] rounded-[28px] border border-border/70 bg-card p-2 shadow-[0_30px_70px_-24px_hsl(0_0%_0%_/0.35)]",
+        className
+      )}
+    >
+      <div className="absolute left-1/2 top-1.5 h-1.5 w-16 -translate-x-1/2 rounded-full bg-muted-foreground/25" />
+      <div className="overflow-hidden rounded-[22px] border border-border/60 bg-background">{children}</div>
+    </div>
+  );
+}
+
+/** Écran type "map home" — proche d’une capture app. */
 export function SlideGraphicNearby({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        "relative mx-auto aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[20px] border border-border/60 bg-gradient-to-b from-sky-100/90 to-background shadow-[0_20px_50px_-12px_hsl(0_0%_0%_/0.18)] dark:from-sky-950/40 dark:to-background",
-        className
-      )}
-    >
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 320 240" aria-hidden>
-        <defs>
-          <linearGradient id="gMap" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--muted))" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="hsl(var(--card))" stopOpacity="0.9" />
-          </linearGradient>
-        </defs>
-        <rect width="320" height="240" fill="url(#gMap)" rx="12" />
-        <path
-          d="M40 180 Q80 120 120 140 T200 100 T280 60"
-          fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.35"
-        />
-        <circle cx="200" cy="88" r="36" fill="hsl(var(--primary) / 0.12)" />
-        <circle cx="200" cy="88" r="6" fill="hsl(var(--primary))" />
-      </svg>
-      <div className="absolute left-[12%] top-[18%] flex flex-col items-center gap-1">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-[11px] font-semibold shadow-sm">
-          JD
+    <PhoneFrame className={className}>
+      <div className="relative h-[208px] bg-gradient-to-b from-sky-100/80 to-background dark:from-sky-950/35">
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-3 py-2">
+          <div className="rounded-full bg-card/95 px-3 py-1 text-[10px] font-semibold shadow-sm">Autour de toi</div>
+          <div className="h-7 w-7 rounded-full bg-card/95 shadow-sm" />
         </div>
-        <span className="rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-          2 km
-        </span>
-      </div>
-      <div className="absolute right-[14%] top-[38%] flex flex-col items-center gap-1">
-        <div className="h-8 w-8 rounded-full border-2 border-primary bg-primary/15 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]" />
-        <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
-          Séance
-        </span>
-      </div>
-      <div className="absolute bottom-[14%] left-[22%] flex flex-col items-center gap-1">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-[11px] font-semibold shadow-sm">
-          AL
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 290 208" aria-hidden>
+          <path d="M12 165 Q48 122 78 132 T142 100 T278 54" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" opacity="0.4" />
+          <circle cx="215" cy="78" r="34" fill="hsl(var(--primary)/0.12)" />
+          <circle cx="215" cy="78" r="6" fill="hsl(var(--primary))" />
+          <circle cx="92" cy="138" r="5" fill="hsl(142 70% 42%)" />
+        </svg>
+        <div className="absolute left-4 top-[30%] rounded-full bg-card/95 px-2 py-0.5 text-[10px] shadow-sm">2 km</div>
+        <div className="absolute right-4 top-[56%] rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
+          Séance live
         </div>
-        <span className="rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-          4 km
-        </span>
       </div>
-      <div className="absolute bottom-[10%] right-[10%] rounded-[10px] bg-card/95 px-2.5 py-1.5 text-[10px] font-medium shadow-md backdrop-blur-sm">
-        Carte live
+      <div className="space-y-2 bg-background p-2.5">
+        <div className="rounded-[12px] border border-border/60 bg-card px-2.5 py-2">
+          <p className="text-[11px] font-semibold">Footing groupe · 18:30</p>
+          <p className="text-[10px] text-muted-foreground">Parc central · 6 participants</p>
+        </div>
+        <div className="h-2 w-20 rounded-full bg-muted-foreground/20 mx-auto" />
       </div>
-    </div>
+    </PhoneFrame>
   );
 }
 
-/** Fiche séance + Rejoindre */
+/** Écran type "détail séance" */
 export function SlideGraphicSessionJoin({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        "relative mx-auto aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[20px] border border-border/60 bg-gradient-to-br from-background to-muted/40 shadow-[0_20px_50px_-12px_hsl(0_0%_0%_/0.15)]",
-        className
-      )}
-    >
-      <div className="absolute left-3 top-3 right-3 rounded-[14px] border border-border/70 bg-card/95 p-3 shadow-lg backdrop-blur-md">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-[13px] font-bold leading-tight">Sortie footing</p>
-          <span className="rounded-md bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-            18:30
-          </span>
+    <PhoneFrame className={className}>
+      <div className="space-y-2.5 bg-background p-2.5">
+        <div className="rounded-[14px] border border-border/60 bg-card p-3 shadow-sm">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <p className="text-[12px] font-bold">Sortie footing</p>
+            <span className="rounded-md bg-primary/12 px-1.5 py-0.5 text-[10px] font-semibold text-primary">18:30</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">Parc • 8 km • Débutants OK</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-[9px] bg-primary py-2 text-center text-[11px] font-semibold text-primary-foreground">Rejoindre</div>
+            <div className="rounded-[9px] border border-border bg-secondary py-2 text-center text-[11px] text-muted-foreground">Créer</div>
+          </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">Parc · 8 km · Débutants OK</p>
-        <div className="mt-3 flex gap-2">
-          <div className="h-7 flex-1 rounded-[8px] bg-primary text-center text-[12px] font-semibold leading-7 text-primary-foreground shadow-sm">
-            Rejoindre
+        <div className="rounded-[14px] border border-border/60 bg-card p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="h-7 w-7 rounded-full bg-primary/15" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold">Alex organise</p>
+              <p className="text-[10px] text-muted-foreground">5 min ago</p>
+            </div>
           </div>
-          <div className="h-7 w-14 rounded-[8px] border border-border bg-secondary text-center text-[11px] leading-7 text-muted-foreground">
-            Infos
-          </div>
+          <p className="text-[10px] text-muted-foreground">“Départ devant l’entrée nord, rythme progressif.”</p>
         </div>
       </div>
-      <svg className="absolute inset-0 -z-10 h-full w-full" viewBox="0 0 320 240" aria-hidden>
-        <rect width="320" height="240" fill="hsl(var(--muted) / 0.25)" rx="16" />
-        <circle cx="160" cy="170" r="10" fill="hsl(var(--primary))" opacity="0.85" />
-        <circle cx="160" cy="170" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="2" opacity="0.35" />
-      </svg>
-    </div>
+    </PhoneFrame>
   );
 }
 
-/** Itinéraire tracé + RDV */
+/** Écran type "création itinéraire / map editor" */
 export function SlideGraphicRoutePlan({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        "relative mx-auto aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[20px] border border-border/60 bg-gradient-to-b from-emerald-50/80 to-background shadow-[0_20px_50px_-12px_hsl(0_0%_0%_/0.16)] dark:from-emerald-950/25",
-        className
-      )}
-    >
-      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 320 240" aria-hidden>
-        <rect width="320" height="240" fill="hsl(var(--muted) / 0.2)" rx="14" />
-        <path
-          d="M50 180 C90 40 230 40 270 160"
-          fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray="8 6"
-        />
-        <circle cx="50" cy="180" r="7" fill="hsl(var(--primary))" />
-        <circle cx="270" cy="160" r="7" fill="hsl(142 70% 42%)" />
-        <rect x="118" y="96" width="84" height="36" rx="10" fill="hsl(var(--card))" stroke="hsl(var(--border))" />
-        <text x="160" y="118" textAnchor="middle" fill="hsl(var(--foreground))" fontSize="11" fontWeight="600">
-          RDV
-        </text>
-      </svg>
-      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-[12px] bg-card/95 px-3 py-2 text-[11px] font-medium shadow-md backdrop-blur-sm">
-        <span className="text-muted-foreground">Parcours</span>
-        <span className="font-semibold text-foreground">12,4 km</span>
+    <PhoneFrame className={className}>
+      <div className="relative h-[150px] bg-gradient-to-b from-emerald-100/70 to-background dark:from-emerald-950/30">
+        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 290 150" aria-hidden>
+          <path d="M30 116 C68 24 206 24 252 98" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeDasharray="7 5" />
+          <circle cx="30" cy="116" r="6" fill="hsl(var(--primary))" />
+          <circle cx="252" cy="98" r="6" fill="hsl(142 70% 42%)" />
+        </svg>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-[9px] border border-border bg-card/95 px-2 py-1 text-[10px] font-semibold shadow-sm">
+          Point de RDV
+        </div>
       </div>
-    </div>
+      <div className="space-y-2 bg-background p-2.5">
+        <div className="flex items-center justify-between rounded-[11px] border border-border/60 bg-card px-2.5 py-2 text-[11px]">
+          <span className="text-muted-foreground">Distance</span>
+          <span className="font-semibold">12,4 km</span>
+        </div>
+        <div className="flex items-center justify-between rounded-[11px] border border-border/60 bg-card px-2.5 py-2 text-[11px]">
+          <span className="text-muted-foreground">Dénivelé</span>
+          <span className="font-semibold">+220 m</span>
+        </div>
+      </div>
+    </PhoneFrame>
   );
 }
 
-/** Communauté — avatars + dynamique */
+/** Écran type "feed communauté / progression". */
 export function SlideGraphicCommunity({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        "relative mx-auto aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[20px] border border-border/60 bg-gradient-to-br from-violet-50/90 to-background shadow-[0_20px_50px_-12px_hsl(0_0%_0%_/0.14)] dark:from-violet-950/30",
-        className
-      )}
-    >
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-        <div className="flex -space-x-3">
-          {["SK", "MR", "AL", "JD"].map((t) => (
-            <div
-              key={t}
-              className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-primary/25 to-primary/5 text-[12px] font-bold shadow-md"
-            >
-              {t}
-            </div>
-          ))}
+    <PhoneFrame className={className}>
+      <div className="space-y-2.5 bg-background p-2.5">
+        <div className="rounded-[14px] border border-border/60 bg-card p-3">
+          <p className="text-[11px] font-semibold">Progression hebdo</p>
+          <div className="mt-2 flex items-end gap-1.5">
+            {[28, 42, 36, 52, 48, 62, 54].map((h, i) => (
+              <div key={i} className="flex-1 rounded-t-[5px] bg-primary/70" style={{ height: `${h / 2}px` }} />
+            ))}
+          </div>
         </div>
-        <div className="w-full max-w-[260px] space-y-2 rounded-[14px] border border-border/60 bg-card/95 p-3 shadow-md backdrop-blur-sm">
+        <div className="rounded-[14px] border border-border/60 bg-card p-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/15 text-center text-[10px] font-bold leading-8 text-primary">
-              RC
+            <div className="h-8 w-8 rounded-full bg-primary/15" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold">Séance terminée · bravo !</p>
+              <p className="text-[10px] text-muted-foreground">+42 points communauté</p>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] font-semibold">Séance terminée · bravo !</p>
-              <p className="text-[11px] text-muted-foreground">+42 points communauté</p>
-            </div>
+          </div>
+          <div className="mt-2.5 flex -space-x-2">
+            <div className="h-6 w-6 rounded-full border-2 border-card bg-violet-400/70" />
+            <div className="h-6 w-6 rounded-full border-2 border-card bg-sky-400/70" />
+            <div className="h-6 w-6 rounded-full border-2 border-card bg-emerald-400/70" />
+            <div className="h-6 w-6 rounded-full border-2 border-card bg-primary/70" />
           </div>
         </div>
       </div>
-    </div>
+    </PhoneFrame>
   );
 }

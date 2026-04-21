@@ -92,10 +92,15 @@ function SwipeConfirmCard({
   children: React.ReactNode;
 }) {
   const [opened, setOpened] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   return (
     <div className="relative overflow-hidden rounded-ios-lg">
-      <div className="absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3">
+      <div
+        className={`absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3 transition-opacity ${
+          opened || isDragging ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
         <button
           type="button"
           onClick={(event) => {
@@ -115,7 +120,9 @@ function SwipeConfirmCard({
         dragElastic={0.08}
         animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
         transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        onDragStart={() => setIsDragging(true)}
         onDragEnd={(_, info) => {
+          setIsDragging(false);
           if (info.offset.x < CARD_SWIPE_THRESHOLD) {
             setOpened(true);
             return;

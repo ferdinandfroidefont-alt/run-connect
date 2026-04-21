@@ -8,7 +8,7 @@ import { OnlineStatus } from "./OnlineStatus";
 import { ReportUserDialog } from "./ReportUserDialog";
 import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
+import { UserPlus, UserMinus, BadgeCheck, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
 import { PersonalRecords } from "@/components/PersonalRecords";
 import { RecentActivities } from "@/components/profile/RecentActivities";
@@ -501,7 +501,11 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                       <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
                         {profile.display_name || profile.username}
                       </h2>
-                      {profile.is_premium && <Crown className="h-4 w-4 shrink-0 text-yellow-500" />}
+                      {profile.is_admin ? (
+                        <BadgeCheck className="h-4 w-4 shrink-0 text-amber-500" />
+                      ) : profile.is_premium ? (
+                        <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
+                      ) : null}
                     </div>
                     <p className="truncate text-[13px] text-muted-foreground">
                       @{profile.username}

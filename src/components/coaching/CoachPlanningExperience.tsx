@@ -90,11 +90,11 @@ type TrainingSession = {
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
 
-const SPORTS: Array<{ id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: "running", label: "Course à pied", icon: Flame },
-  { id: "cycling", label: "Vélo", icon: Bike },
-  { id: "swimming", label: "Natation", icon: Waves },
-  { id: "strength", label: "Renforcement", icon: Dumbbell },
+const SPORTS: Array<{ id: SportType; label: string; emoji: string }> = [
+  { id: "running", label: "Course à pied", emoji: "🏃" },
+  { id: "cycling", label: "Vélo", emoji: "🚴" },
+  { id: "swimming", label: "Natation", emoji: "🏊" },
+  { id: "strength", label: "Renforcement", emoji: "💪" },
 ];
 
 const BLOCK_TYPES: Array<{
@@ -1361,6 +1361,8 @@ export function CoachPlanningExperience() {
   }, [filteredSessions]);
 
   const activeClubName = clubs.find((club) => club.id === activeClubId)?.name;
+  const activeAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
+  const activeGroup = activeGroupId ? groups.find((group) => group.id === activeGroupId) : undefined;
   const coachName =
     (user?.user_metadata?.display_name as string | undefined) ||
     (user?.user_metadata?.full_name as string | undefined) ||
@@ -1712,6 +1714,36 @@ export function CoachPlanningExperience() {
 
             {activeMenuKey === "planning" && !effectiveAthleteMode && <PlanningSearchBar value={search} onChange={setSearch} />}
 
+            {activeMenuKey === "planning" && !effectiveAthleteMode && (activeAthlete || activeGroup) && (
+              <div className="border-b border-border bg-card px-4 py-2">
+                {activeAthlete ? (
+                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
+                    <span className="text-[14px] font-medium text-foreground">Athlète sélectionné : {activeAthlete.name}</span>
+                    <button
+                      type="button"
+                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                      onClick={() => setActiveAthleteId(undefined)}
+                      aria-label="Désélectionner l'athlète"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : activeGroup ? (
+                  <div className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2">
+                    <span className="text-[14px] font-medium text-foreground">Groupe sélectionné : {activeGroup.name}</span>
+                    <button
+                      type="button"
+                      className="text-[13px] font-medium text-muted-foreground hover:text-foreground"
+                      onClick={() => setActiveGroupId(undefined)}
+                      aria-label="Désélectionner le groupe"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {activeMenuKey === "planning" && !effectiveAthleteMode && (searchResults.athletes.length > 0 || searchResults.groups.length > 0) && (
               <div className="divide-y divide-border border-b border-border bg-card">
                 {searchResults.groups.map((group) => (
@@ -1722,7 +1754,6 @@ export function CoachPlanningExperience() {
                     onClick={() => {
                       setActiveGroupId(group.id);
                       setActiveAthleteId(undefined);
-                      setSearch("");
                     }}
                   >
                     <span className="text-[15px] font-medium text-foreground">{group.name}</span>
@@ -1737,7 +1768,6 @@ export function CoachPlanningExperience() {
                     onClick={() => {
                       setActiveAthleteId(athlete.id);
                       setActiveGroupId(undefined);
-                      setSearch("");
                     }}
                   >
                     <span className="text-[15px] font-medium text-foreground">{athlete.name}</span>
@@ -2095,28 +2125,24 @@ export function CoachPlanningExperience() {
           >
             {editorTab === "build" ? (
               <div className="space-y-4 px-4 pb-6">
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {SPORTS.map((sport) => (
                     <button
                       key={sport.id}
                       type="button"
                       onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
                       className={cn(
-                        "flex h-14 items-center gap-2 rounded-2xl border px-3 text-left transition-all",
+                        "flex h-14 items-center justify-center rounded-2xl border transition-all",
                         draft.sport === sport.id
                           ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
                           : "border-border/80 bg-card text-foreground"
                       )}
+                      title={sport.label}
+                      aria-label={sport.label}
                     >
-                      <div
-                        className={cn(
-                          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
-                          draft.sport === sport.id ? "bg-primary/15" : "bg-secondary"
-                        )}
-                      >
-                        <sport.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-[13px] font-semibold leading-tight">{sport.label}</span>
+                      <span className="text-[24px] leading-none" aria-hidden="true">
+                        {sport.emoji}
+                      </span>
                     </button>
                   ))}
                 </div>

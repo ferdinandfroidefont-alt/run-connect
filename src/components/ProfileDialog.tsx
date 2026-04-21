@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
+import { User, Crown, BadgeCheck, Camera, ArrowLeft, Calendar, Heart, Route, MapPin, Shield, Zap, Instagram, Footprints, Globe, Trophy, Share2, Settings, History, Map as MapIcon, Video, Gift } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -755,9 +755,11 @@ export const ProfileDialog = ({
                       <h2 className="truncate text-[16px] font-bold text-foreground leading-tight">
                         {profile?.display_name || profile?.username || "Utilisateur"}
                       </h2>
-                      {isPremiumUser && (
-                        <Crown className="h-4 w-4 shrink-0 text-yellow-500" />
-                      )}
+                      {profile?.is_admin ? (
+                        <BadgeCheck className="h-4 w-4 shrink-0 text-amber-500" />
+                      ) : isPremiumUser ? (
+                        <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
+                      ) : null}
                     </div>
                     <p className="truncate text-[13px] text-muted-foreground">
                       @{profile?.username}

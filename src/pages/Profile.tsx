@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
-import { Settings, LogOut, Crown, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
+import { Settings, LogOut, Crown, BadgeCheck, Camera, Users, Sun, Moon, Key, Bell, Shield, FileText, Mail, Route, MapPin, Calendar, Trash2, Share2, Volume2, Flag, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useCamera } from "@/hooks/useCamera";
 import { FollowDialog } from "@/components/FollowDialog";
@@ -718,9 +718,11 @@ const Profile = () => {
               <h2 className="max-w-full truncate text-center text-ios-title2 font-bold text-foreground">
                 {profile?.display_name || profile?.username}
               </h2>
-              {profile?.is_premium && (
-                <Crown className="h-4 w-4 text-yellow-500" />
-              )}
+              {profile?.is_admin || isAdmin ? (
+                <BadgeCheck className="h-4 w-4 text-amber-500" />
+              ) : profile?.is_premium ? (
+                <BadgeCheck className="h-4 w-4 text-blue-500" />
+              ) : null}
             </div>
 
             <p className="mb-ios-1 text-ios-subheadline text-muted-foreground">

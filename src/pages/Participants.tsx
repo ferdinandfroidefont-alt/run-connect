@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Expand, Minimize2, Navigation, Pencil, Radio, Users } from "lucide-react";
+import { Expand, Minimize2, Navigation, Search, Users, X } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
@@ -12,8 +12,8 @@ import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
-
-type LiveState = "none" | "upcoming" | "live";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 type Participant = {
   id: string;
@@ -25,48 +25,11 @@ type Participant = {
 };
 
 const FALLBACK_POINT = { lat: 48.8668, lng: 2.3339 };
-const BASE_PARTICIPANTS: Participant[] = [
-  {
-    id: "p1",
-    name: "Alex",
-    avatar: "https://i.pravatar.cc/120?img=32",
-    lat: 48.8678,
-    lng: 2.3362,
-    active: true,
-  },
-  {
-    id: "p2",
-    name: "Lina",
-    avatar: "https://i.pravatar.cc/120?img=47",
-    lat: 48.8662,
-    lng: 2.3313,
-    active: true,
-  },
-  {
-    id: "p3",
-    name: "Tom",
-    avatar: "https://i.pravatar.cc/120?img=14",
-    lat: 48.8655,
-    lng: 2.3369,
-    active: false,
-  },
-  {
-    id: "p4",
-    name: "Ines",
-    avatar: "https://i.pravatar.cc/120?img=25",
-    lat: 48.8687,
-    lng: 2.3308,
-    active: true,
-  },
-  {
-    id: "p5",
-    name: "Noah",
-    avatar: "https://i.pravatar.cc/120?img=61",
-    lat: 48.8693,
-    lng: 2.3354,
-    active: true,
-  },
-];
+type LiveSessionRow = {
+  id: string;
+  title: string;
+  scheduled_at: string;
+};
 
 function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElement {
   const el = document.createElement("div");
@@ -85,18 +48,16 @@ function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElem
 
 export default function Participants() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, session: authSession } = useAuth();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("sessionId") ?? undefined;
-  const initialMode = searchParams.get("mode");
-  const [forcedMode, setForcedMode] = useState<LiveState | null>(
-    initialMode === "none" || initialMode === "upcoming" || initialMode === "live"
-      ? initialMode
-      : null
-  );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-  const [demoParticipants, setDemoParticipants] = useState<Participant[]>(BASE_PARTICIPANTS);
+  const [peopleSearch, setPeopleSearch] = useState("");
+  const [sessionsSearch, setSessionsSearch] = useState("");
+  const [showLiveSessionsPanel, setShowLiveSessionsPanel] = useState(false);
+  const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
+  const [liveSessionsFilter, setLiveSessionsFilter] = useState<"live" | "upcoming" | "recent">("live");
   const {
     session,
     participantPositions,
@@ -112,37 +73,42 @@ export default function Participants() {
   const userMarkerRef = useRef<Marker | null>(null);
   const rdvMarkerRef = useRef<Marker | null>(null);
   const participantMarkersRef = useRef<Map<string, Marker>>(new Map());
+  const userPositionRef = useRef(userPosition);
 
-  const participants = useMemo<Participant[]>(() => {
-    if (participantPositions.size === 0) return demoParticipants;
-    return Array.from(participantPositions.entries()).map(([id, pos]) => ({
+  useEffect(() => {
+    userPositionRef.current = userPosition;
+  }, [userPosition]);
+
+  const participants = useMemo<Participant[]>(
+    () =>
+      Array.from(participantPositions.entries()).map(([id, pos]) => ({
       id,
       name: pos.display_name || pos.username || "Participant",
       avatar: pos.avatar_url,
       lat: pos.lat,
       lng: pos.lng,
       active: true,
-    }));
-  }, [participantPositions, demoParticipants]);
+      })),
+    [participantPositions]
+  );
 
-  const computedLiveState = useMemo<LiveState>(() => {
-    if (forcedMode) return forcedMode;
+  const computedLiveState = useMemo<"none" | "upcoming" | "live">(() => {
     if (!session || !sessionAllowsLive) return "none";
     if (!inLiveWindow) return "upcoming";
     return "live";
-  }, [forcedMode, session, sessionAllowsLive, inLiveWindow]);
+  }, [session, sessionAllowsLive, inLiveWindow]);
 
   const fitDefaultView = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    const center = userPosition ?? FALLBACK_POINT;
+    const center = userPositionRef.current ?? FALLBACK_POINT;
     map.easeTo({
       center: [center.lng, center.lat],
       zoom: 14.3,
       duration: 450,
       essential: true,
     });
-  }, [userPosition]);
+  }, []);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -152,7 +118,7 @@ export default function Participants() {
     const bootMap = async () => {
       try {
         const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
-          center: userPosition ?? FALLBACK_POINT,
+          center: userPositionRef.current ?? FALLBACK_POINT,
           zoom: 14.3,
           interactive: true,
         });
@@ -197,7 +163,16 @@ export default function Participants() {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [fitDefaultView, userPosition]);
+  }, [fitDefaultView]);
+
+  useEffect(() => {
+    if (!mapRef.current || !userPosition) return;
+    mapRef.current.easeTo({
+      center: [userPosition.lng, userPosition.lat],
+      duration: 320,
+      essential: true,
+    });
+  }, [userPosition]);
 
   useEffect(() => {
     const onVis = () => {
@@ -237,12 +212,26 @@ export default function Participants() {
         wrap.style.height = "1px";
         wrap.style.overflow = "visible";
 
-        const myPin = createSessionPinButton({
-          avatarUrl: myAvatarUrl || "/placeholder.svg",
-          ariaLabel: "Ma position",
-          variant: resolveSessionPinVariant(),
-        });
-        wrap.appendChild(myPin);
+        try {
+          const myPin = createSessionPinButton({
+            avatarUrl: myAvatarUrl || "/placeholder.svg",
+            ariaLabel: "Ma position",
+            variant: resolveSessionPinVariant(),
+          });
+          wrap.appendChild(myPin);
+        } catch {
+          // Fallback dur: si le pin perso échoue, on garde un marker simple pour ne jamais bloquer la carte.
+          const fallback = document.createElement("div");
+          fallback.style.width = "18px";
+          fallback.style.height = "18px";
+          fallback.style.borderRadius = "999px";
+          fallback.style.background = "#0A84FF";
+          fallback.style.border = "2px solid #fff";
+          fallback.style.boxShadow = "0 4px 10px rgba(0,0,0,0.25)";
+          wrap.style.width = "18px";
+          wrap.style.height = "18px";
+          wrap.appendChild(fallback);
+        }
 
         const marker = new mapboxgl.Marker({ element: wrap, anchor: "bottom" })
           .setLngLat([userPosition.lng, userPosition.lat])
@@ -325,18 +314,58 @@ export default function Participants() {
   }, [participants, computedLiveState, user?.id]);
 
   useEffect(() => {
-    if (computedLiveState !== "live" || participantPositions.size > 0) return;
-    const t = window.setInterval(() => {
-      setDemoParticipants((prev) =>
-        prev.map((p) => ({
-          ...p,
-          lat: p.lat + (Math.random() - 0.5) * 0.00035,
-          lng: p.lng + (Math.random() - 0.5) * 0.00035,
-        }))
-      );
-    }, 3500);
-    return () => window.clearInterval(t);
-  }, [computedLiveState, participantPositions.size]);
+    if (!showLiveSessionsPanel || !authSession?.user?.id) return;
+    let cancelled = false;
+    void (async () => {
+      const nowIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("sessions")
+        .select("id, title, scheduled_at")
+        .eq("live_tracking_enabled", true)
+        .gte("scheduled_at", nowIso)
+        .order("scheduled_at", { ascending: true })
+        .limit(60);
+      if (cancelled) return;
+      setLiveSessions((data ?? []) as LiveSessionRow[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showLiveSessionsPanel, authSession?.user?.id]);
+
+  const filteredParticipants = useMemo(() => {
+    const q = peopleSearch.trim().toLowerCase();
+    if (!q) return participants;
+    return participants.filter((p) => p.name.toLowerCase().includes(q));
+  }, [participants, peopleSearch]);
+
+  const filteredLiveSessions = useMemo(() => {
+    const now = Date.now();
+    const liveWindowMs = 2 * 60 * 60 * 1000;
+    const byFilter = liveSessions.filter((s) => {
+      const t = new Date(s.scheduled_at).getTime();
+      if (liveSessionsFilter === "live") return t <= now && now <= t + liveWindowMs;
+      if (liveSessionsFilter === "upcoming") return t > now;
+      return t + liveWindowMs < now;
+    });
+
+    const q = sessionsSearch.trim().toLowerCase();
+    if (!q) return byFilter;
+    return byFilter.filter((s) => (s.title || "Séance").toLowerCase().includes(q));
+  }, [liveSessions, sessionsSearch, liveSessionsFilter]);
+
+  const centerOnParticipant = useCallback((participantId: string) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const row = participants.find((p) => p.id === participantId);
+    if (!row) return;
+    map.easeTo({
+      center: [row.lng, row.lat],
+      zoom: Math.max(15.2, map.getZoom()),
+      duration: 420,
+      essential: true,
+    });
+  }, [participants]);
 
   const banner = useMemo(() => {
     const participantsCount = participants.length;
@@ -344,7 +373,7 @@ export default function Participants() {
       return {
         tone: "bg-[#F2F2F7] border-[#E5E5EA] text-[#3A3A3C]",
         title: "Aucune séance en cours",
-        subtitle: "Active le live pendant une séance pour suivre les participants",
+        subtitle: "",
       };
     }
     if (computedLiveState === "upcoming") {
@@ -403,7 +432,18 @@ export default function Participants() {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[15px] font-semibold">{banner.title}</p>
-              <p className="mt-0.5 truncate text-[13px] opacity-80">{banner.subtitle}</p>
+              {computedLiveState !== "none" && (
+                <p className="mt-0.5 truncate text-[13px] opacity-80">{banner.subtitle}</p>
+              )}
+              {computedLiveState === "none" && (
+                <button
+                  type="button"
+                  onClick={() => setShowLiveSessionsPanel(true)}
+                  className="mt-1 text-[13px] font-semibold text-[#0A84FF]"
+                >
+                  Voir mes séances live
+                </button>
+              )}
             </div>
             {computedLiveState === "live" && (
               <Button
@@ -431,29 +471,6 @@ export default function Participants() {
           </MapIosColoredFab>
           <div className="mx-2 h-px bg-border/80" />
           <MapIosColoredFab
-            tone={computedLiveState === "live" ? "blue" : "gray"}
-            title="Activer le live"
-            onClick={() =>
-              setForcedMode((s) => {
-                if (s === "live") return "none";
-                return "live";
-              })
-            }
-            className="h-11 w-11 rounded-none bg-transparent shadow-none"
-          >
-            <Radio className="h-[17px] w-[17px]" />
-          </MapIosColoredFab>
-          <div className="mx-2 h-px bg-border/80" />
-          <MapIosColoredFab
-            tone="gray"
-            title="Edition"
-            onClick={() => setForcedMode("upcoming")}
-            className="h-11 w-11 rounded-none bg-transparent shadow-none"
-          >
-            <Pencil className="h-[17px] w-[17px] text-foreground" />
-          </MapIosColoredFab>
-          <div className="mx-2 h-px bg-border/80" />
-          <MapIosColoredFab
             tone="gray"
             title={isFullscreen ? "Quitter plein écran" : "Plein écran"}
             onClick={() => setIsFullscreen((v) => !v)}
@@ -468,60 +485,124 @@ export default function Participants() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 z-30 px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-        <div className="rounded-[22px] border border-border/60 bg-card/92 shadow-[0_-16px_46px_rgba(0,0,0,0.12)] backdrop-blur-2xl">
-          <div className="flex justify-center pt-2">
-            <span className="h-1.5 w-10 rounded-full bg-muted-foreground/35" />
-          </div>
-          <div className="px-4 pb-4 pt-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[17px] font-semibold text-foreground">
-                  {participants.length} participant{participants.length > 1 ? "s" : ""}
-                </p>
-                <p className="text-[13px] text-muted-foreground">
-                  {computedLiveState === "none"
-                    ? "Partage de position en attente"
-                    : isBroadcasting
-                    ? "Partage de position activé"
-                    : "Live visible pour les participants"}
-                </p>
+      {computedLiveState === "live" && (
+        <div className="absolute bottom-0 left-0 right-0 z-30 px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <div className="rounded-[18px] border border-border/60 bg-card/94 px-3 py-3 shadow-[0_-10px_28px_rgba(0,0,0,0.1)] backdrop-blur-2xl">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[14px] font-semibold text-foreground">
+                {participants.length} personne{participants.length > 1 ? "s" : ""} en live tracking
+              </p>
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={peopleSearch}
+                onChange={(e) => setPeopleSearch(e.target.value)}
+                placeholder="Rechercher une personne en live"
+                className="h-10 rounded-xl border-border/70 bg-background pl-9"
+              />
+            </div>
+            {peopleSearch.trim().length > 0 && (
+              <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">
+                {filteredParticipants.length === 0 ? (
+                  <p className="px-1 py-1 text-[12px] text-muted-foreground">Aucun participant trouvé.</p>
+                ) : (
+                  filteredParticipants.slice(0, 8).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => centerOnParticipant(p.id)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left active:bg-secondary"
+                    >
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={p.avatar ?? undefined} />
+                        <AvatarFallback>{p.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate text-[13px] text-foreground">{p.name}</span>
+                    </button>
+                  ))
+                )}
               </div>
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
-              {(computedLiveState === "none" ? [] : participants.slice(0, computedLiveState === "upcoming" ? 3 : 8)).map((p) => (
-                <div key={p.id} className="relative shrink-0">
-                  <Avatar className="h-11 w-11 ring-2 ring-background">
-                    <AvatarImage src={p.avatar ?? undefined} className="object-cover" />
-                    <AvatarFallback>{p.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span
-                    className={cn(
-                      "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background",
-                      p.active ? "bg-[#34C759]" : "bg-[#FF9500]"
-                    )}
-                  />
-                </div>
-              ))}
-              {computedLiveState === "none" && (
-                <p className="py-2 text-[13px] text-muted-foreground">
-                  Aucun partage live pour l’instant.
-                </p>
-              )}
-            </div>
-
-            <Button
-              type="button"
-              className="mt-3 h-11 w-full rounded-[14px] bg-[#0A84FF] text-[16px] font-semibold"
-              onClick={() => navigate("/route-create")}
-            >
-              Voir l’itinéraire
-            </Button>
+            )}
           </div>
         </div>
-      </div>
+      )}
+
+      {showLiveSessionsPanel && (
+        <div className="absolute inset-0 z-50 bg-background">
+          <div className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 pb-3 pt-[var(--safe-area-top)]">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[17px] font-semibold">Mes séances live</p>
+              <button
+                type="button"
+                onClick={() => setShowLiveSessionsPanel(false)}
+                className="rounded-full p-2 text-foreground/80 active:bg-secondary"
+                aria-label="Fermer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={sessionsSearch}
+                onChange={(e) => setSessionsSearch(e.target.value)}
+                placeholder="Rechercher une séance live"
+                className="h-10 rounded-xl border-border/70 bg-background pl-9"
+              />
+            </div>
+            <div className="mt-3 flex gap-ios-2 overflow-x-auto pb-ios-1">
+              {[
+                { key: "live" as const, label: "En cours" },
+                { key: "upcoming" as const, label: "À venir" },
+                { key: "recent" as const, label: "Récentes" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setLiveSessionsFilter(f.key)}
+                  className={cn(
+                    "px-ios-3 py-1.5 min-h-[32px] rounded-full text-[12px] leading-tight font-medium whitespace-nowrap transition-colors",
+                    liveSessionsFilter === f.key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2 px-4 py-3">
+            {filteredLiveSessions.length === 0 ? (
+              <p className="pt-6 text-center text-[14px] text-muted-foreground">Aucune séance live trouvée.</p>
+            ) : (
+              filteredLiveSessions.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  onClick={() => {
+                    setShowLiveSessionsPanel(false);
+                    navigate(`/participants?sessionId=${row.id}`);
+                  }}
+                  className="w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left active:bg-secondary"
+                >
+                  <p className="truncate text-[15px] font-semibold text-foreground">{row.title || "Séance live"}</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    {new Date(row.scheduled_at).toLocaleString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
