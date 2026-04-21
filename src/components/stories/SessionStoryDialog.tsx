@@ -115,7 +115,7 @@ export function SessionStoryDialog({
   const [likedByMe, setLikedByMe] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [actionMode, setActionMode] = useState<StoryActionMode>(null);
-  const [highlightTitle, setHighlightTitle] = useState("À la une");
+  const [highlightTitle, setHighlightTitle] = useState("");
   const [followers, setFollowers] = useState<FollowerRow[]>([]);
   const [hideSelection, setHideSelection] = useState<Set<string>>(new Set());
   const [followersLoading, setFollowersLoading] = useState(false);
@@ -551,7 +551,11 @@ export function SessionStoryDialog({
 
   const addToHighlights = async () => {
     if (!current?.id || !viewerUserId || !isOwnStory) return;
-    const title = highlightTitle.trim() || "À la une";
+    const title = highlightTitle.trim();
+    if (!title) {
+      toast({ title: "Titre requis", description: "Donne un titre à ton groupe de stories à la une." });
+      return;
+    }
     setHighlightSaving(true);
     try {
       const { data: lastRow } = await (supabase as any)

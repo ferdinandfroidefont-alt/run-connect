@@ -336,9 +336,12 @@ export function CoachPlanningExperience() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
-  const [wheelItems, setWheelItems] = useState<Array<{ value: string; label: string }>>([]);
-  const [wheelValue, setWheelValue] = useState("0");
-  const [applyWheel, setApplyWheel] = useState<((next: string) => void) | null>(null);
+  const [wheelColumns, setWheelColumns] = useState<Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>>([]);
+  const [applyWheel, setApplyWheel] = useState<(() => void) | null>(null);
+  const [wheelA, setWheelA] = useState("0");
+  const [wheelB, setWheelB] = useState("0");
+  const [wheelC, setWheelC] = useState("0");
+  const [wheelUnit, setWheelUnit] = useState("min/km");
   const [savePulse, setSavePulse] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [myModels, setMyModels] = useState<SessionModelItem[]>([]);
@@ -1216,17 +1219,21 @@ export function CoachPlanningExperience() {
     setMyModels((prev) => prev.filter((entry) => entry.id !== model.id));
   };
 
+  const openWheelColumns = (title: string, columns: Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>, onConfirm: () => void) => {
+    setWheelTitle(title);
+    setWheelColumns(columns);
+    setApplyWheel(() => onConfirm);
+    setWheelOpen(true);
+  };
+
   const openWheel = (
     title: string,
     items: Array<{ value: string; label: string }>,
     currentValue: string,
     onConfirm: (next: string) => void
   ) => {
-    setWheelTitle(title);
-    setWheelItems(items);
-    setWheelValue(currentValue);
-    setApplyWheel(() => onConfirm);
-    setWheelOpen(true);
+    setWheelA(currentValue);
+    openWheelColumns(title, [{ items, value: currentValue, onChange: setWheelA }], () => onConfirm(wheelA));
   };
 
   const startBlockCreation = (type?: BlockType, existing?: SessionBlock) => {
@@ -2226,28 +2233,59 @@ export function CoachPlanningExperience() {
                   <Button
                     variant="secondary"
                     className="h-10 justify-start rounded-xl text-[13px]"
-                    onClick={() =>
-                      openWheel(
+                    onClick={() => {
+                      const total = blockForm.durationSec || 0;
+                      setWheelA(String(Math.floor(total / 3600)));
+                      setWheelB(String(Math.floor((total % 3600) / 60)));
+                      setWheelC(String(total % 60));
+                      openWheelColumns(
                         "Durée",
-                        Array.from({ length: 121 }, (_, i) => ({ value: String(i * 60), label: i === 0 ? "0 min" : `${i} min` })),
-                        String(blockForm.durationSec || 0),
-                        (next) => setBlockForm((prev) => (prev ? { ...prev, durationSec: Number(next), distanceM: undefined } : prev))
-                      )
-                    }
+                        [
+                          { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
+                        ],
+                        () => {
+                          const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
+                          setBlockForm((prev) => (prev ? { ...prev, durationSec: next, distanceM: undefined } : prev));
+                        }
+                      );
+                    }}
                   >
                     Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
                   </Button>
                   <Button
                     variant="secondary"
                     className="h-10 justify-start rounded-xl text-[13px]"
-                    onClick={() =>
-                      openWheel(
+                    onClick={() => {
+                      const meters = blockForm.distanceM || 0;
+                      const unit = meters > 0 && meters < 1000 ? "m" : "km";
+                      setWheelUnit(unit);
+                      setWheelA(String(unit === "m" ? meters : Math.floor(meters / 1000)));
+                      setWheelB(String(unit === "m" ? 0 : meters % 1000));
+                      openWheelColumns(
                         "Distance",
-                        Array.from({ length: 101 }, (_, i) => ({ value: String(i * 100), label: i === 0 ? "0 m" : `${i * 100} m` })),
-                        String(blockForm.distanceM || 0),
-                        (next) => setBlockForm((prev) => (prev ? { ...prev, distanceM: Number(next), durationSec: undefined } : prev))
-                      )
-                    }
+                        unit === "m"
+                          ? [
+                              { items: Array.from({ length: 3000 }, (_, i) => ({ value: String(i * 5), label: String(i * 5) })), value: wheelA, onChange: setWheelA, suffix: "m" },
+                              { items: [{ value: "km", label: "km" }, { value: "m", label: "m" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                            ]
+                          : [
+                              { items: Array.from({ length: 80 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: wheelUnit },
+                              { items: Array.from({ length: 100 }, (_, i) => ({ value: String(i * 10), label: String(i * 10).padStart(3, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
+                              { items: [{ value: "km", label: "km" }, { value: "m", label: "m" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                            ],
+                        () => {
+                          const next =
+                            wheelUnit === "m"
+                              ? Number.parseInt(wheelA, 10)
+                              : wheelUnit === "km"
+                              ? Number.parseInt(wheelA, 10) * 1000 + Number.parseInt(wheelB, 10)
+                              : Math.round((Number.parseInt(wheelA, 10) + Number.parseInt(wheelB, 10) / 1000) * 1609.344);
+                          setBlockForm((prev) => (prev ? { ...prev, distanceM: next, durationSec: undefined } : prev));
+                        }
+                      );
+                    }}
                   >
                     Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
                   </Button>
@@ -2277,14 +2315,24 @@ export function CoachPlanningExperience() {
                     <Button
                       variant="secondary"
                       className="h-10 justify-start rounded-xl text-[13px]"
-                      onClick={() =>
-                        openWheel(
-                          "Récupération (sec)",
-                          Array.from({ length: 61 }, (_, i) => ({ value: String(i * 15), label: i === 0 ? "Aucune" : `${i * 15} s` })),
-                          String(blockForm.recoveryDurationSec || 0),
-                          (next) => setBlockForm((prev) => (prev ? { ...prev, recoveryDurationSec: Number(next) } : prev))
-                        )
-                      }
+                      onClick={() => {
+                        const total = blockForm.recoveryDurationSec || 0;
+                        setWheelA(String(Math.floor(total / 3600)));
+                        setWheelB(String(Math.floor((total % 3600) / 60)));
+                        setWheelC(String(total % 60));
+                        openWheelColumns(
+                          "Récupération",
+                          [
+                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
+                          ],
+                          () => {
+                            const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
+                            setBlockForm((prev) => (prev ? { ...prev, recoveryDurationSec: next } : prev));
+                          }
+                        );
+                      }}
                     >
                       Récup: {secondsToLabel(blockForm.recoveryDurationSec) || "Aucune"}
                     </Button>
@@ -2301,22 +2349,38 @@ export function CoachPlanningExperience() {
                     <Button
                       variant="secondary"
                       className="h-10 justify-start rounded-xl text-[12px]"
-                      onClick={() =>
-                        openWheel(
+                      onClick={() => {
+                        setWheelUnit("min/km");
+                        const pace = blockForm.paceSecPerKm || 330;
+                        setWheelA(String(Math.floor(pace / 60)));
+                        setWheelB(String(pace % 60));
+                        openWheelColumns(
                           "Allure",
-                          Array.from({ length: 541 }, (_, idx) => {
-                            const total = 180 + idx;
-                            const min = Math.floor(total / 60);
-                            const sec = total % 60;
-                            return { value: String(total), label: `${min}:${sec.toString().padStart(2, "0")}/km` };
-                          }),
-                          String(blockForm.paceSecPerKm || 330),
-                          (next) =>
-                            setBlockForm((prev) =>
-                              prev ? { ...prev, paceSecPerKm: Number(next), speedKmh: undefined, powerWatts: undefined } : prev
-                            )
-                        )
-                      }
+                          [
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelA, onChange: setWheelA, suffix: "min" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "s" },
+                            { items: [{ value: "min/km", label: "min/km" }, { value: "min/mi", label: "min/mi" }, { value: "s/100", label: "s/100" }, { value: "km/h", label: "km/h" }, { value: "mi/h", label: "mi/h" }], value: wheelUnit, onChange: setWheelUnit },
+                          ],
+                          () => {
+                            const unit = wheelUnit;
+                            if (unit === "km/h" || unit === "mi/h") {
+                              const speed = Number.parseInt(wheelA, 10) + Number.parseInt(wheelB, 10) / 10;
+                              const kmh = unit === "km/h" ? speed : speed * 1.609344;
+                              setBlockForm((prev) => (prev ? { ...prev, speedKmh: Number(kmh.toFixed(1)), paceSecPerKm: undefined, powerWatts: undefined } : prev));
+                              return;
+                            }
+                            if (unit === "s/100") {
+                              const sec100 = Number.parseInt(wheelA, 10);
+                              const pacePerKm = sec100 * 10;
+                              setBlockForm((prev) => (prev ? { ...prev, paceSecPerKm: pacePerKm, speedKmh: undefined, powerWatts: undefined } : prev));
+                              return;
+                            }
+                            const secBase = Number.parseInt(wheelA, 10) * 60 + Number.parseInt(wheelB, 10);
+                            const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
+                            setBlockForm((prev) => (prev ? { ...prev, paceSecPerKm: pacePerKm, speedKmh: undefined, powerWatts: undefined } : prev));
+                          }
+                        );
+                      }}
                     >
                       {paceToLabel(blockForm.paceSecPerKm) || "Allure"}
                     </Button>
@@ -2435,9 +2499,9 @@ export function CoachPlanningExperience() {
         open={wheelOpen}
         onClose={() => setWheelOpen(false)}
         title={wheelTitle}
-        columns={[{ items: wheelItems, value: wheelValue, onChange: setWheelValue }]}
+        columns={wheelColumns}
         onConfirm={() => {
-          applyWheel?.(wheelValue);
+          applyWheel?.();
           setWheelOpen(false);
         }}
       />

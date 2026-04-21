@@ -21,6 +21,7 @@ export function createSessionPinButton(opts: {
   avatarUrl: string;
   ariaLabel: string;
   variant?: SessionPinVariant;
+  distanceLabel?: string;
 }): HTMLButtonElement {
   const variant = opts.variant ?? resolveSessionPinVariant();
 
@@ -65,6 +66,13 @@ export function createSessionPinButton(opts: {
 
   const tip = document.createElement("span");
   tip.className = "rc-session-pin__tip";
+
+  if (opts.distanceLabel) {
+    const distanceBadge = document.createElement("span");
+    distanceBadge.className = "rc-session-pin__distance-badge";
+    distanceBadge.textContent = opts.distanceLabel;
+    pin.appendChild(distanceBadge);
+  }
 
   pin.appendChild(ground);
   pin.appendChild(circle);

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffectiveSubscriptionInfo } from "@/hooks/useEffectiveSubscription";
 import { useAppPreview } from "@/contexts/AppPreviewContext";
@@ -290,7 +290,11 @@ export const ProfileDialog = ({
     if (!user || storyIds.length === 0) return;
     setHighlightSubmitting(true);
     try {
-      const title = (newHighlightTitle || "À la une").trim();
+      const title = newHighlightTitle.trim();
+      if (!title) {
+        toast({ title: "Titre requis", description: "Donne un titre à ton groupe de stories à la une." });
+        return;
+      }
       const startPos = storyHighlights.length;
       const payload = storyIds.map((story_id, idx) => ({
         owner_id: user.id,
@@ -311,7 +315,11 @@ export const ProfileDialog = ({
   };
   const addStoryToHighlights = async (storyId: string) => {
     if (!user) return;
-    const title = (newHighlightTitle || "A la une").trim();
+    const title = newHighlightTitle.trim();
+    if (!title) {
+      toast({ title: "Titre requis", description: "Donne un titre à ton groupe de stories à la une." });
+      return;
+    }
     const position = storyHighlights.length;
     const { error } = await (supabase as any).from("profile_story_highlights").insert({
       owner_id: user.id,
@@ -326,6 +334,13 @@ export const ProfileDialog = ({
     setNewHighlightTitle("");
     await fetchStoriesAndHighlights();
   };
+  const highlightPreviewByStoryId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const story of ownStories) {
+      if (story.media_url) map.set(story.id, story.media_url);
+    }
+    return map;
+  }, [ownStories]);
   const removeHighlight = async (highlightId: string) => {
     const { error } = await (supabase as any).from("profile_story_highlights").delete().eq("id", highlightId);
     if (error) return;
@@ -811,12 +826,16 @@ export const ProfileDialog = ({
               <div className="bg-card border-b border-border px-4 py-3">
                 <div className="flex gap-3 overflow-x-auto pb-1">
                   {storyHighlights.map((item) => {
-                    const titleSafe = String(item.title ?? "").trim() || "À la une";
-                    const initials = titleSafe.slice(0, 2).toUpperCase();
+                    const titleSafe = String(item.title ?? "").trim() || "Sans titre";
+                    const previewUrl = highlightPreviewByStoryId.get(item.story_id) ?? null;
                     return (
                     <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5" onClick={() => setHighlightStoryId(item.story_id)}>
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                        {initials}
+                      <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-primary/30 bg-muted">
+                        {previewUrl ? (
+                          <img src={previewUrl} alt={titleSafe} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+                        )}
                       </div>
                       <p className="w-full truncate text-center text-[11px] text-muted-foreground">{titleSafe}</p>
                     </button>
@@ -1110,11 +1129,11 @@ export const ProfileDialog = ({
               <h1 className="truncate px-2 text-center text-[16px] font-semibold text-foreground">Ajouter au contenu à la une</h1>
               <button
                 type="button"
-                disabled={highlightPickOrder.length === 0 || highlightSubmitting}
+                disabled={highlightPickOrder.length === 0 || highlightSubmitting || !newHighlightTitle.trim()}
                 onClick={() => void addStoriesToHighlights(highlightPickOrder)}
                 className={cn(
                   "justify-self-end rounded-full px-2 py-1 text-[15px] font-semibold transition-opacity",
-                  highlightPickOrder.length === 0 || highlightSubmitting
+                  highlightPickOrder.length === 0 || highlightSubmitting || !newHighlightTitle.trim()
                     ? "text-muted-foreground/60"
                     : "text-primary active:opacity-70"
                 )}
@@ -1125,6 +1144,14 @@ export const ProfileDialog = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-3 pb-[max(16px,env(safe-area-inset-bottom,16px))] pt-3">
+            <div className="mb-3">
+              <Input
+                value={newHighlightTitle}
+                onChange={(e) => setNewHighlightTitle(e.target.value)}
+                placeholder="Titre du groupe à la une"
+                className="h-11 bg-card"
+              />
+            </div>
             {ownStories.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">

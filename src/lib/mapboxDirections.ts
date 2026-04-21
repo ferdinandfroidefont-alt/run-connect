@@ -59,6 +59,48 @@ export async function fetchMapboxDirectionsPath(
 }
 
 /**
+ * Distance la plus rapide en voiture entre 2 points (en mètres).
+ */
+export async function fetchMapboxFastestDrivingDistanceMeters(
+  start: MapCoord,
+  end: MapCoord,
+): Promise<number | null> {
+  const token = getMapboxAccessToken();
+  if (!token) return null;
+
+  const params = new URLSearchParams({
+    alternatives: "false",
+    geometries: "geojson",
+    overview: "simplified",
+    steps: "false",
+    continue_straight: "false",
+    access_token: token,
+  });
+
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?${params.toString()}`;
+  const controller = new AbortController();
+  const to = window.setTimeout(() => controller.abort(), DIRECTIONS_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      console.warn("[Mapbox Directions distance] driving", res.status);
+      return null;
+    }
+    const data = (await res.json()) as {
+      routes?: { distance?: number }[];
+    };
+    const distance = data.routes?.[0]?.distance;
+    if (typeof distance !== "number" || !Number.isFinite(distance) || distance <= 0) return null;
+    return distance;
+  } catch (e) {
+    console.warn("[Mapbox Directions distance] erreur", e);
+    return null;
+  } finally {
+    window.clearTimeout(to);
+  }
+}
+
+/**
  * Un segment A→B : essaie marche (sentiers), puis vélo et route (même logique pour longues distances).
  * Garde la meilleure géométrie « suivie » vs ligne droite ; sinon retourne la dernière réponse valide.
  */

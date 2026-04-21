@@ -80,6 +80,7 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
   const [showAboutSheet, setShowAboutSheet] = useState(false);
   const { shareProfile, showProfileShare, setShowProfileShare, showQRDialog, setShowQRDialog, qrData } = useShareProfile();
   const [storyHighlights, setStoryHighlights] = useState<Array<{ id: string; story_id: string; title: string }>>([]);
+  const [highlightPreviewByStoryId, setHighlightPreviewByStoryId] = useState<Record<string, string>>({});
   const [showAvatarFullscreen, setShowAvatarFullscreen] = useState(false);
 
   const isOwnProfile = userId === user?.id;
@@ -106,7 +107,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
       .select("id, story_id, title, position")
       .eq("owner_id", userId)
       .order("position", { ascending: true });
-    setStoryHighlights((data ?? []) as Array<{ id: string; story_id: string; title: string }>);
+    const rows = (data ?? []) as Array<{ id: string; story_id: string; title: string }>;
+    setStoryHighlights(rows);
+    const storyIds = rows.map((row) => row.story_id);
+    if (storyIds.length === 0) {
+      setHighlightPreviewByStoryId({});
+      return;
+    }
+    const { data: mediaRows } = await (supabase as any)
+      .from("story_media")
+      .select("story_id, media_url, created_at")
+      .in("story_id", storyIds)
+      .order("created_at", { ascending: true });
+    const nextPreviewByStoryId: Record<string, string> = {};
+    for (const row of (mediaRows ?? []) as Array<{ story_id: string; media_url: string | null }>) {
+      if (!row.media_url || nextPreviewByStoryId[row.story_id]) continue;
+      nextPreviewByStoryId[row.story_id] = row.media_url;
+    }
+    setHighlightPreviewByStoryId(nextPreviewByStoryId);
   };
 
   useEffect(() => {
@@ -538,10 +556,14 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                     {storyHighlights.length > 0 ? (
                       storyHighlights.map((item) => (
                         <button key={item.id} type="button" className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary">
-                            {item.title.slice(0, 2).toUpperCase()}
+                          <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-primary/30 bg-muted">
+                            {highlightPreviewByStoryId[item.story_id] ? (
+                              <img src={highlightPreviewByStoryId[item.story_id]} alt={item.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5" />
+                            )}
                           </div>
-                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title}</p>
+                          <p className="w-full truncate text-center text-[11px] text-muted-foreground">{item.title?.trim() || "Sans titre"}</p>
                         </button>
                       ))
                     ) : (

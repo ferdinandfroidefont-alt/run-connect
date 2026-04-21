@@ -217,8 +217,8 @@ const App = () => {
               return;
             }
 
-            console.log('[OAuth/App] session OK → reload shell /');
-            window.location.replace(`${window.location.origin}/`);
+            console.log('[OAuth/App] session OK → /auth/callback (stabilise la session)');
+            window.location.replace(`${window.location.origin}/auth/callback`);
           } catch (err) {
             console.error('[OAuth/App] deep link handler error', err);
           }
@@ -264,7 +264,7 @@ const App = () => {
           }
           const result = await finalizeSupabaseOAuthFromDeepLink(supabase, incomingUrl);
           if (result.ok) {
-            window.location.replace(`${window.location.origin}/`);
+            window.location.replace(`${window.location.origin}/auth/callback`);
           }
           return;
         }

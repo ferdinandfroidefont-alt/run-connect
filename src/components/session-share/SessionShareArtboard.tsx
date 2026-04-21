@@ -22,13 +22,13 @@ function MetaRowIcon({ children }: { children: ReactNode }) {
     <span
       style={{
         display: 'inline-flex',
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         flexShrink: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 12,
-        background: 'rgba(37, 99, 235, 0.1)',
+        borderRadius: 14,
+        background: 'rgba(37, 99, 235, 0.11)',
       }}
     >
       {children}
@@ -86,6 +86,20 @@ function BluePinMarker({
         }}
       />
       {/* Cercle (gradient depth) */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 1 * scale,
+          width: 64 * scale,
+          height: 64 * scale,
+          transform: 'translateX(-50%)',
+          borderRadius: 999,
+          background: 'rgba(59, 130, 246, 0.22)',
+          filter: `blur(${8 * scale}px)`,
+          zIndex: 0,
+        }}
+      />
       <div
         style={{
           position: 'absolute',
@@ -282,7 +296,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const isStory = templateId === 'instagram_story';
 
     const cardBg = isDark ? '#0f172a' : '#f8fafc';
-    const fg = isDark ? '#f8fafc' : '#0f172a';
+    const fg = isDark ? '#f8fafc' : '#0b0f1a';
     const muted = isDark ? '#94a3b8' : '#64748b';
     const dividerColor = isDark ? 'rgba(51, 65, 85, 0.85)' : 'rgba(226, 232, 240, 0.95)';
 
@@ -296,7 +310,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            filter: isDark ? 'saturate(0.9) contrast(0.95)' : 'saturate(0.72) contrast(0.94) brightness(1.03)',
+            filter: isDark ? 'saturate(1.06) contrast(1.04) brightness(0.96)' : 'saturate(1.08) contrast(1.08) brightness(1.01)',
           }}
         />
         {!isDark && (
@@ -305,7 +319,8 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(248,250,252,0.95) 0%, rgba(248,250,252,0.78) 28%, rgba(248,250,252,0.38) 48%, rgba(248,250,252,0) 72%)',
+              background:
+                'linear-gradient(270deg, rgba(15,23,42,0.22) 0%, rgba(15,23,42,0.14) 20%, rgba(248,250,252,0.18) 52%, rgba(248,250,252,0.68) 75%, rgba(248,250,252,0.96) 100%)',
             }}
           />
         )}
@@ -315,7 +330,7 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
-              background: 'linear-gradient(90deg, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.85) 38%, rgba(15,23,42,0.4) 60%, rgba(15,23,42,0) 80%)',
+              background: 'linear-gradient(270deg, rgba(2,6,23,0.48) 0%, rgba(2,6,23,0.34) 28%, rgba(15,23,42,0.22) 52%, rgba(15,23,42,0.1) 78%, rgba(15,23,42,0) 100%)',
             }}
           />
         )}
@@ -324,38 +339,38 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           style={{
             position: 'absolute',
             top: '50%',
-            left: '64%',
+            left: '66%',
             transform: 'translate(-50%, -100%)',
             pointerEvents: 'none',
           }}
         >
-          <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} scale={1.35} />
+          <BluePinMarker avatarUrl={payload.sharerAvatarUrl} initials={payload.sharerInitials} scale={1.5} />
         </div>
       </div>
     );
 
-    const titleSize = isStory ? 68 : 72;
+    const titleSize = isStory ? 74 : 82;
     const metaSize = isStory ? 22 : 24;
     const locTitleSize = isStory ? 24 : 25;
     const locSubSize = isStory ? 17 : 18;
 
     const leftColumn = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0, padding: isStory ? '36px 34px 28px' : '40px 36px 28px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 25, minWidth: 0, padding: isStory ? '38px 34px 30px' : '42px 38px 30px' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
               alignSelf: 'flex-start',
-              opacity: isDark ? 0.9 : 0.72,
+              opacity: isDark ? 0.9 : 0.62,
             }}
           >
-            <ActivityGlyph type={payload.activityType} size={18} />
+            <ActivityGlyph type={payload.activityType} size={19} />
             <span
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: '0.11em',
+                letterSpacing: '0.13em',
                 color: isDark ? '#93c5fd' : RC_BLUE,
                 textTransform: 'uppercase' as const,
               }}
@@ -367,10 +382,10 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           <h1
             style={{
               fontSize: titleSize,
-              fontWeight: 800,
+              fontWeight: 850,
               color: fg,
-              lineHeight: 1.08,
-              letterSpacing: '-0.025em',
+              lineHeight: 1.01,
+              letterSpacing: '-0.03em',
               margin: 0,
             }}
           >
@@ -384,14 +399,14 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                   display: 'inline-flex',
                   width: 'fit-content',
                   borderRadius: 999,
-                  padding: '14px 24px',
-                  fontSize: isStory ? 32 : 34,
+                  padding: '15px 26px',
+                  fontSize: isStory ? 34 : 36,
                   fontWeight: 800,
                   color: '#ffffff',
-                  background: `linear-gradient(135deg, ${RC_BLUE} 0%, #1d4ed8 100%)`,
+                  background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #1e40af 100%)',
                   letterSpacing: '0.01em',
                   lineHeight: 1,
-                  boxShadow: '0 10px 28px rgba(37, 99, 235, 0.32)',
+                  boxShadow: '0 14px 34px rgba(37, 99, 235, 0.34)',
                 }}
               >
                 {payload.structureBadge}
@@ -410,10 +425,10 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           )}
 
           {payload.pacePrimary && !isMinimal && !payload.structureBadge && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <MetaRowIcon>
-                  <Clock style={{ width: 22, height: 22, color: RC_BLUE }} />
+                  <Clock style={{ width: 24, height: 24, color: RC_BLUE }} />
                 </MetaRowIcon>
                 <span style={{ fontSize: metaSize + 2, fontWeight: 700, color: fg }}>{payload.pacePrimary}</span>
               </div>
@@ -425,28 +440,28 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
 
           <div style={{ height: 1, width: '100%', maxWidth: 380, background: dividerColor, margin: '8px 0 6px' }} />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <MetaRowIcon>
-                <Calendar style={{ width: 22, height: 22, color: RC_BLUE }} />
+                <Calendar style={{ width: 24, height: 24, color: RC_BLUE }} />
               </MetaRowIcon>
               <span style={{ fontSize: metaSize, fontWeight: 600, color: fg, textTransform: 'capitalize' as const }}>
                 {payload.dateLabel}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <MetaRowIcon>
-                <Clock style={{ width: 22, height: 22, color: RC_BLUE }} />
+                <Clock style={{ width: 24, height: 24, color: RC_BLUE }} />
               </MetaRowIcon>
               <span style={{ fontSize: metaSize, fontWeight: 600, color: fg }}>{payload.timeLabel}</span>
             </div>
           </div>
 
           {!isMinimal && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', maxWidth: 560, marginTop: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 560, marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
                 <MetaRowIcon>
-                  <MapPin style={{ width: 22, height: 22, color: RC_BLUE }} />
+                  <MapPin style={{ width: 24, height: 24, color: RC_BLUE }} />
                 </MetaRowIcon>
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: locTitleSize, fontWeight: 600, color: fg, lineHeight: 1.3, margin: 0 }}>
@@ -460,9 +475,9 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
                 </div>
               </div>
               {payload.audienceLine && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <MetaRowIcon>
-                    <Users style={{ width: 22, height: 22, color: RC_BLUE }} />
+                    <Users style={{ width: 24, height: 24, color: RC_BLUE }} />
                   </MetaRowIcon>
                   <span style={{ fontSize: metaSize, fontWeight: 600, color: fg }}>{payload.audienceLine}</span>
                 </div>
@@ -515,27 +530,28 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: cardBg,
-          borderRadius: 32,
+          background: isDark ? cardBg : 'linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%)',
+          borderRadius: 36,
           border: isDark ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(15,23,42,0.06)',
           boxShadow: isDark
             ? '0 24px 64px rgba(0,0,0,0.45)'
-            : '0 1px 0 rgba(15,23,42,0.04), 0 28px 64px rgba(15,23,42,0.1)',
+            : '0 1px 0 rgba(15,23,42,0.04), 0 24px 54px rgba(15,23,42,0.13), inset 0 1px 0 rgba(255,255,255,0.85)',
           fontFamily: FONT_SANS,
         }}
       >
-        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0, padding: '34px 36px 10px' }}>
-          <div style={{ width: '45%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0, padding: '32px 34px 10px' }}>
+          <div style={{ width: '43%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {leftColumn}
           </div>
           <div
             style={{
-              width: '55%',
+              width: '57%',
               minWidth: 0,
               overflow: 'hidden',
-              borderRadius: 28,
+              borderRadius: 30,
               border: isDark ? '1px solid rgba(148,163,184,0.24)' : '1px solid rgba(148,163,184,0.22)',
               background: isDark ? '#0b1220' : '#f1f5f9',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.36)',
             }}
           >
             {mapSection}

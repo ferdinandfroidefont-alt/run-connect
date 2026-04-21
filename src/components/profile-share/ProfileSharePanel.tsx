@@ -8,8 +8,9 @@ import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 import { ProfileShareGeneratedPreviewCard } from './ProfileShareGeneratedPreviewCard';
+import { ProfileShareArtboard } from './ProfileShareArtboard';
 
-type CardVariant = 'v1' | 'v2' | 'v3';
+type CardVariant = 'v1' | 'v2' | 'v3' | 'v4';
 const CARD_IMAGES: Record<'v1' | 'v2', string> = {
   v1: profileShareCardImg,
   v2: profileShareCardV2,
@@ -90,7 +91,24 @@ export function ProfileSharePanel({ compact = false }: Props) {
         )}>
           {/* Carte 1 : PNG + calque. Carte 2 : PNG seul. Carte 3 : composition HTML/CSS (pas de calque carte 1). */}
           <div className="relative w-full max-w-sm mx-auto" style={{ containerType: 'inline-size' }}>
-            {variant === 'v3' ? (
+            {variant === 'v4' ? (
+              payload ? (
+                <div className="relative w-full aspect-square overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(15,23,42,0.13)]">
+                  <div
+                    style={{
+                      width: 1080,
+                      height: 1080,
+                      transform: 'scale(calc(100cqw / 1080))',
+                      transformOrigin: 'top left',
+                    }}
+                  >
+                    <ProfileShareArtboard payload={payload} templateId="generated_card" />
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full overflow-hidden rounded-[20px] bg-muted/50 shadow-[0_8px_32px_rgba(15,23,42,0.13)] aspect-square animate-pulse" />
+              )
+            ) : variant === 'v3' ? (
               <ProfileShareGeneratedPreviewCard payload={payload} locationParts={locationParts} />
             ) : (
               <>
@@ -288,6 +306,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
               { id: 'v1' as const, label: 'Carte 1' },
               { id: 'v2' as const, label: 'Carte 2' },
               { id: 'v3' as const, label: 'Carte 3' },
+              { id: 'v4' as const, label: 'Carte 4' },
             ]).map((opt) => (
               <button
                 key={opt.id}

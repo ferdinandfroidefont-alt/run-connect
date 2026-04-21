@@ -200,7 +200,9 @@ export default function StoryCreate() {
   const [caption, setCaption] = useState("");
   const [activeTool, setActiveTool] = useState<"text" | "music" | "session" | "sticker" | "draw" | null>(null);
   const [editorMode, setEditorMode] = useState<StoryEditorMode>("idle");
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [keyboardTransitionMs, setKeyboardTransitionMs] = useState(240);
+  const keyboardInsetRef = useRef(0);
   const [selectedLayer, setSelectedLayer] = useState<LayerKind | null>(null);
   const [layerOrder, setLayerOrder] = useState<LayerKind[]>(["session", "music", "emoji", "text"]);
   const [dynamicLayers, setDynamicLayers] = useState<DynamicLayer[]>([]);
@@ -349,7 +351,7 @@ export default function StoryCreate() {
   };
 
   const selectedObjectType = selectedDynamicLayerId ? "dynamic" : selectedLayer;
-  const editToolbarHeight = editorMode === "text" ? 60 : 0;
+  const editToolbarHeight = editorMode === "text" ? 72 : 0;
   const visibleMusicTracks = useMemo(() => {
     if (musicSheetTab === "forYou") return filteredMusic;
     if (musicSheetTab === "popular") {
@@ -1647,22 +1649,49 @@ export default function StoryCreate() {
   };
 
   useEffect(() => {
+    keyboardInsetRef.current = keyboardInset;
+  }, [keyboardInset]);
+
+  useEffect(() => {
     if (step !== "edit") return;
+    const vv = window.visualViewport;
+    if (!vv) {
+      setKeyboardInset(0);
+      return;
+    }
+
+    let raf = 0;
     const updateKeyboardInset = () => {
-      const vv = window.visualViewport;
-      if (!vv) {
-        setKeyboardHeight(0);
-        return;
-      }
-      const inset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-      setKeyboardHeight(inset);
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        const active = document.activeElement as HTMLElement | null;
+        const isInputFocused =
+          !!active &&
+          (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+        const rawInset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+        const nextInset = rawInset < 20 || !isInputFocused ? 0 : rawInset;
+        setKeyboardTransitionMs((prev) => {
+          const delta = Math.abs(nextInset - keyboardInsetRef.current);
+          if (delta < 6) return prev;
+          return delta > 60 ? 320 : 220;
+        });
+        setKeyboardInset(nextInset);
+      });
     };
+
     updateKeyboardInset();
-    window.visualViewport?.addEventListener("resize", updateKeyboardInset);
-    window.visualViewport?.addEventListener("scroll", updateKeyboardInset);
+    vv.addEventListener("resize", updateKeyboardInset);
+    vv.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("orientationchange", updateKeyboardInset);
+    window.addEventListener("focusin", updateKeyboardInset);
+    window.addEventListener("focusout", updateKeyboardInset);
     return () => {
-      window.visualViewport?.removeEventListener("resize", updateKeyboardInset);
-      window.visualViewport?.removeEventListener("scroll", updateKeyboardInset);
+      if (raf) window.cancelAnimationFrame(raf);
+      vv.removeEventListener("resize", updateKeyboardInset);
+      vv.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("orientationchange", updateKeyboardInset);
+      window.removeEventListener("focusin", updateKeyboardInset);
+      window.removeEventListener("focusout", updateKeyboardInset);
     };
   }, [step]);
 
@@ -1680,15 +1709,14 @@ export default function StoryCreate() {
     if (!host) return null;
     const rect = host.getBoundingClientRect();
     const topBoundary = 92;
-    // Stable bottom boundary: reserve space for the text styling toolbar only.
-    // We intentionally DO NOT include keyboardHeight here — the scene must stay fixed.
-    const bottomBoundary = rect.height - Math.max(80, editToolbarHeight + 24);
+    const keyboardReserve = showTextInput ? keyboardInset : 0;
+    const bottomBoundary = rect.height - Math.max(84, editToolbarHeight + keyboardReserve + 28);
     return {
       width: rect.width,
       top: Math.max(32, topBoundary),
       bottom: Math.max(topBoundary + 72, bottomBoundary),
     };
-  }, [editToolbarHeight]);
+  }, [editToolbarHeight, keyboardInset, showTextInput]);
 
   const placeTextEditorAtCenter = useCallback(() => {
     const viewport = getTextEditingViewport();
@@ -1710,9 +1738,9 @@ export default function StoryCreate() {
       if (prev.y >= minSafeY && prev.y <= maxSafeY) return prev;
       return { ...prev, y: Math.max(minSafeY, Math.min(maxSafeY, prev.y)) };
     });
-    // Intentionally NOT depending on keyboardHeight or textPos.y to avoid loops/jumps.
+    // Intentionally NOT depending on textPos.y to avoid loops/jumps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showTextInput]);
+  }, [showTextInput, keyboardInset]);
 
   // Reliable focus with iOS fallback (some iOS Safari builds miss the first focus()).
   useEffect(() => {
@@ -3038,14 +3066,20 @@ export default function StoryCreate() {
 
       {showTextInput && (
         <div
-          className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-xl border border-white/20 bg-black/55 px-2 py-2 text-white backdrop-blur-xl transition-all duration-250 ease-out animate-in slide-in-from-bottom-2"
-          style={{ bottom: `max(12px, calc(env(safe-area-inset-bottom, 12px) + ${keyboardHeight}px + 8px))` }}
+          className="absolute inset-x-3 z-40 flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/15 bg-black/72 px-2.5 py-2 text-white shadow-[0_14px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-[bottom,opacity,transform] ease-out"
+          style={{
+            bottom: `calc(${keyboardInset}px + env(safe-area-inset-bottom, 0px) + 6px)`,
+            transitionDuration: `${keyboardTransitionMs}ms`,
+          }}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <button
             type="button"
-            className={cn("rounded-lg border border-white/20 p-1.5", textStyle === "bubble" && "bg-primary text-primary-foreground")}
+            className={cn(
+              "inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-white/15 px-2 text-[13px] font-semibold text-white/90",
+              textStyle === "bubble" && "border-primary/40 bg-primary text-primary-foreground"
+            )}
             onClick={() => {
               setTextStyle((prev) => (prev === "bubble" ? "plain" : "bubble"));
               triggerHaptic("light");
@@ -3055,11 +3089,23 @@ export default function StoryCreate() {
             Aa
           </button>
           {["#FFFFFF", "#000000", "#2563EB", "#EF4444", "#22C55E", "#F59E0B", "#F472B6"].map((c) => (
-            <button key={c} type="button" onClick={() => { setTextColor(c); triggerHaptic("light"); }} className={cn("h-6 w-6 rounded-full border transition-transform active:scale-90", textColor === c && "ring-2 ring-white/80")} style={{ backgroundColor: c }} />
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                setTextColor(c);
+                triggerHaptic("light");
+              }}
+              className={cn(
+                "h-7 w-7 rounded-full border border-white/25 transition-transform active:scale-90",
+                textColor === c && "ring-2 ring-white/85 ring-offset-1 ring-offset-black/30"
+              )}
+              style={{ backgroundColor: c }}
+            />
           ))}
           <button
             type="button"
-            className="rounded-lg border border-white/20 p-1.5"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5"
             onClick={() => {
               setTextAlign((prev) => (prev === "left" ? "center" : prev === "center" ? "right" : "left"));
               triggerHaptic("light");
@@ -3070,7 +3116,10 @@ export default function StoryCreate() {
           </button>
           <button
             type="button"
-            className={cn("rounded-lg border border-white/20 px-2 text-sm", textBold && "bg-primary text-primary-foreground")}
+            className={cn(
+              "inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-white/15 px-2 text-sm font-semibold",
+              textBold && "border-primary/45 bg-primary text-primary-foreground"
+            )}
             onClick={() => {
               setTextBold((v) => !v);
               triggerHaptic("light");
@@ -3081,21 +3130,21 @@ export default function StoryCreate() {
           </button>
           <button
             type="button"
-            className="rounded-lg border border-white/20 p-1"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5"
             onClick={() => setTextSize((s) => Math.max(20, s - 2))}
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
-            className="rounded-lg border border-white/20 p-1"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5"
             onClick={() => setTextSize((s) => Math.min(72, s + 2))}
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
-            className="rounded-lg border border-white/20 px-2 py-1 text-xs"
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-white/15 px-2.5 text-[11px] font-semibold uppercase tracking-wide text-white/90"
             onClick={() => {
               setTextFont((prev) => (prev === "modern" ? "clean" : prev === "clean" ? "signature" : "modern"));
               triggerHaptic("light");

@@ -10,13 +10,12 @@ import { getSessionPublicUrl } from '@/lib/appLinks';
 import { buildSessionStaticMapUrl } from '@/lib/mapboxStaticImage';
 import {
   generateSessionShareImage,
+  shareSessionImageToSystem,
   shareSessionToChannel,
-  type SessionShareChannel,
 } from '@/services/sessionShareService';
 import { SessionShareArtboard } from './SessionShareArtboard';
 import { SessionSharePreviewCarousel } from './SessionSharePreviewCarousel';
-import { SessionShareActionsGrid } from './SessionShareActionsGrid';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SessionLike = Parameters<typeof buildSessionSharePayload>[0];
@@ -118,24 +117,16 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
     }
   }, [payload, templateId]);
 
-  const handleChannel = async (channel: SessionShareChannel) => {
+  const handleSystemShare = async () => {
     if (!session || !payload) return;
-
-    const needsImage =
-      channel === 'instagram_story' ||
-      channel === 'instagram_messages' ||
-      channel === 'save_image' ||
-      channel === 'copy_image';
-
-    let imageDataUrl = lastImage;
-    if (needsImage) {
-      imageDataUrl = (await runExport()) ?? lastImage;
+    const imageDataUrl = (await runExport()) ?? lastImage;
+    if (imageDataUrl) {
+      await shareSessionImageToSystem(imageDataUrl, session.title);
+      return;
     }
-
-    await shareSessionToChannel(channel, {
+    await shareSessionToChannel('more', {
       sessionTitle: session.title,
       publicUrl,
-      imageDataUrl: imageDataUrl ?? undefined,
     });
   };
 
@@ -172,9 +163,15 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
               />
             )}
 
-            <div className="mt-8">
-              <SessionShareActionsGrid busy={exporting} onChannel={(c) => void handleChannel(c)} />
-            </div>
+            <Button
+              type="button"
+              className="mt-8 h-12 w-full rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_12px_28px_rgba(37,99,235,0.35)] hover:bg-primary/90"
+              onClick={() => void handleSystemShare()}
+              disabled={!payload || exporting}
+            >
+              <Share2 className="mr-2 h-5 w-5" />
+              Partager ma séance
+            </Button>
 
             {onOpenConversationShare && (
               <Button

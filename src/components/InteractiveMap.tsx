@@ -60,7 +60,7 @@ import {
 import { getMapboxAccessToken, MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STYLE_BY_UI_ID } from '@/lib/mapboxConfig';
 import type { MapCoord } from '@/lib/geoUtils';
 import { pathLengthMeters, resamplePathEvenlyMapCoords } from '@/lib/geoUtils';
-import { fetchMapboxDirectionsPath } from '@/lib/mapboxDirections';
+import { fetchMapboxDirectionsPath, fetchMapboxFastestDrivingDistanceMeters } from '@/lib/mapboxDirections';
 import { geocodeForwardDetail, geocodeSearchMapbox, type GeocodeSearchRow } from '@/lib/mapboxGeocode';
 import { fetchElevationsForCoords } from '@/lib/openElevation';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
@@ -176,6 +176,14 @@ const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: num
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+const formatPinDistanceLabel = (distanceMeters: number): string => {
+  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return "";
+  if (distanceMeters < 1000) return `${Math.round(distanceMeters)}m`;
+  const km = distanceMeters / 1000;
+  const rounded = km >= 10 ? Math.round(km) : Math.round(km * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}km` : `${rounded.toFixed(1)}km`;
 };
 interface Filter {
   activity_types: string[];
@@ -438,6 +446,7 @@ export const InteractiveMap = ({
     lat: number;
     lng: number;
   } | null>(null);
+  const routeDistanceLabelCacheRef = useRef<Map<string, string>>(new Map());
 
   /**
    * Géoloc « fast » lancée au montage : tourne en parallèle du chargement Mapbox (une seule requête,
@@ -900,6 +909,22 @@ export const InteractiveMap = ({
         const now = new Date();
         const isPastSession = sessionDate.getTime() < now.getTime();
         const isSelected = selectedSession?.id === session.id;
+        let distanceLabel = "";
+        if (userLocation) {
+          const cacheKey = `${userLocation.lat.toFixed(4)}:${userLocation.lng.toFixed(4)}:${lat.toFixed(4)}:${lng.toFixed(4)}`;
+          const cached = routeDistanceLabelCacheRef.current.get(cacheKey);
+          if (cached !== undefined) {
+            distanceLabel = cached;
+          } else {
+            const routedDistance = await fetchMapboxFastestDrivingDistanceMeters(
+              { lat: userLocation.lat, lng: userLocation.lng },
+              { lat, lng },
+            );
+            const fallbackMeters = calculateDistanceKm(userLocation.lat, userLocation.lng, lat, lng) * 1000;
+            distanceLabel = formatPinDistanceLabel(routedDistance ?? fallbackMeters);
+            routeDistanceLabelCacheRef.current.set(cacheKey, distanceLabel);
+          }
+        }
         const wrap = document.createElement('div');
         wrap.className = cn(
           'rc-session-pin',
@@ -918,6 +943,7 @@ export const InteractiveMap = ({
           avatarUrl: session.profiles?.avatar_url || '/placeholder.svg',
           ariaLabel: session.title || 'Séance',
           variant: resolveSessionPinVariant(),
+          distanceLabel,
         });
 
         wrap.appendChild(pin);

@@ -70,6 +70,69 @@ const Auth = () => {
   const captchaRef = useRef<CaptchaWidgetRef>(null);
   const { toast } = useToast();
 
+  const waitForSessionAndNavigateHome = async (opts?: { timeoutMs?: number; source?: string }) => {
+    const timeoutMs = opts?.timeoutMs ?? 6000;
+    const source = opts?.source ?? "unknown";
+    const deadline = Date.now() + timeoutMs;
+
+    const readSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session;
+    };
+
+    try {
+      const current = await readSession();
+      if (current?.user) {
+        console.log(`[Auth] Session ready (${source}) -> /`);
+        navigate("/", { replace: true });
+        return;
+      }
+    } catch (e) {
+      console.warn("[Auth] Session check failed:", e);
+    }
+
+    await new Promise<void>((resolve) => {
+      let done = false;
+      let intervalId: number | null = null;
+      let timeoutId: number | null = null;
+
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (intervalId !== null) window.clearInterval(intervalId);
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        subscription.unsubscribe();
+        resolve();
+      };
+
+      const navigateHome = () => {
+        if (done) return;
+        console.log(`[Auth] Session confirmed (${source}) -> /`);
+        navigate("/", { replace: true });
+        finish();
+      };
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+        if (event === "SIGNED_IN" && nextSession?.user) {
+          navigateHome();
+        }
+      });
+
+      intervalId = window.setInterval(async () => {
+        try {
+          const session = await readSession();
+          if (session?.user) {
+            navigateHome();
+          }
+        } catch {
+          // Ignore transient polling failures.
+        }
+      }, 250);
+
+      timeoutId = window.setTimeout(() => finish(), Math.max(250, deadline - Date.now()));
+    });
+  };
+
   useLayoutEffect(() => {
     resetBodyInteractionLocks();
   }, []);
@@ -286,7 +349,7 @@ const Auth = () => {
               }
               setShowProfileSetup(true);
             } else {
-              navigate('/', { replace: true });
+              await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'google-native-existing-profile' });
             }
           }
           return;
@@ -336,7 +399,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: { access_type: 'offline', prompt: 'consent' }
         }
       });
@@ -572,7 +635,7 @@ const Auth = () => {
             }
             setShowProfileSetup(true);
           } else {
-            navigate('/', { replace: true });
+            await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'otp-existing-profile' });
           }
         }, 1000);
       }
@@ -619,7 +682,7 @@ const Auth = () => {
       captchaRef.current?.resetCaptcha();
       
       if (error) throw error;
-      navigate('/', { replace: true });
+      await waitForSessionAndNavigateHome({ timeoutMs: 7000, source: 'password-signin' });
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {

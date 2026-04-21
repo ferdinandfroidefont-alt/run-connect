@@ -67,7 +67,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   const removeMainBottomInset = useMemo(() => {
     if (bottomNavSuppressors["_legacy"]) return true;
-    return Boolean(bottomNavSuppressors["coaching-create"] || bottomNavSuppressors["route-creation"]);
+    return Boolean(
+      bottomNavSuppressors["coaching-create"] ||
+        bottomNavSuppressors["route-creation"] ||
+        bottomNavSuppressors["messages-thread"]
+    );
   }, [bottomNavSuppressors]);
 
   /** Compat : une seule bascule sans id (écrans legacy). */

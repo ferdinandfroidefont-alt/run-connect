@@ -970,7 +970,7 @@ html, body {
   position: relative;
   display: block;
   width: 58px;
-  height: 72px;
+  height: 78px;
   border: 0;
   padding: 0;
   cursor: pointer;
@@ -1060,10 +1060,10 @@ html, body {
 .rc-session-pin__tip {
   position: absolute;
   left: 50%;
-  top: 55px;
+  top: 54px;
   z-index: 1;
-  width: 13px;
-  height: 10px;
+  width: 18px;
+  height: 14px;
   transform: translateX(-50%);
   clip-path: polygon(50% 100%, 0 0, 100% 0);
   pointer-events: none;
@@ -1080,16 +1080,35 @@ html, body {
   height: 46px;
   transform: translateX(-50%);
   border-radius: 999px;
-  border: 3px solid rgba(255, 255, 255, 0.98);
+  border: 0;
   overflow: hidden;
   background: hsl(var(--muted));
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
 }
 
 .rc-session-pin__avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.rc-session-pin__distance-badge {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  z-index: 3;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #fff;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
+  pointer-events: none;
 }
 
 .rc-session-pin__cluster-badge {
