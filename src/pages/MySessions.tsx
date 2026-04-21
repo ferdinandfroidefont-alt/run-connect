@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ActivityIcon } from "@/lib/activityIcons";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, ChevronRight, Clock, MapPin, Users } from "lucide-react";
@@ -8,7 +8,6 @@ import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
 
 type SessionSource = "created" | "joined";
 type SessionTab = "created" | "joined" | "to-confirm";
@@ -23,68 +22,18 @@ interface UserSession {
   organizer_id: string;
 }
 
-interface ParticipantStatus {
-  confirmed_by_creator: boolean | null;
-  confirmed_by_gps: boolean | null;
-  validation_status: string | null;
-}
-
-const CARD_SWIPE_THRESHOLD = -80;
-const SWIPE_ACTION_WIDTH = 124;
-
 function SessionCard({
   session,
-  source,
   badgeLabel,
   badgeClassName,
-  showConfirmAction,
-  onConfirm,
 }: {
   session: UserSession;
-  source: SessionSource;
   badgeLabel: string;
   badgeClassName: string;
-  showConfirmAction: boolean;
-  onConfirm: (sessionId: string, source: SessionSource) => void;
 }) {
-  const [opened, setOpened] = useState(false);
-
   return (
     <div className="relative overflow-hidden rounded-ios-lg bg-card">
-      {showConfirmAction && (
-        <div className="absolute inset-y-0 right-0 flex w-[124px] items-center justify-center bg-primary px-3">
-          <button
-            type="button"
-            onClick={() => onConfirm(session.id, source)}
-            className="h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
-          >
-            Confirmer
-          </button>
-        </div>
-      )}
-
-      <motion.div
-        drag={showConfirmAction ? "x" : false}
-        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: 0 }}
-        dragElastic={0.08}
-        animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
-        transition={{ type: "spring", stiffness: 420, damping: 32 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.x < CARD_SWIPE_THRESHOLD) {
-            setOpened(true);
-            return;
-          }
-          if (info.offset.x > -24) {
-            setOpened(false);
-          }
-        }}
-        onTap={() => {
-          if (opened) {
-            setOpened(false);
-          }
-        }}
-        className="ios-list-row border border-white/70 dark:border-white/10"
-      >
+      <div className="ios-list-row border border-white/70 dark:border-white/10">
         <div className="flex items-start gap-ios-2">
           <ActivityIcon activityType={session.activity_type} size="md" />
           <div className="min-w-0 flex-1">
@@ -117,13 +66,12 @@ function SessionCard({
           </div>
           <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground/50" />
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
 
 export default function MySessions() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -131,8 +79,6 @@ export default function MySessions() {
   const [tab, setTab] = useState<SessionTab>("created");
   const [createdSessions, setCreatedSessions] = useState<UserSession[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<UserSession[]>([]);
-  const [joinedStatusBySession, setJoinedStatusBySession] = useState<Record<string, ParticipantStatus>>({});
-  const [createdPendingSet, setCreatedPendingSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -155,7 +101,7 @@ export default function MySessions() {
 
       const { data: joinedRows, error: joinedRowsError } = await supabase
         .from("session_participants")
-        .select("session_id,confirmed_by_creator,confirmed_by_gps,validation_status")
+        .select("session_id")
         .eq("user_id", user.id);
       if (joinedRowsError) throw joinedRowsError;
 
@@ -173,35 +119,8 @@ export default function MySessions() {
         joinedData = (joined || []) as UserSession[];
       }
 
-      const participantStatusMap: Record<string, ParticipantStatus> = {};
-      (joinedRows || []).forEach((row) => {
-        participantStatusMap[row.session_id] = {
-          confirmed_by_creator: row.confirmed_by_creator,
-          confirmed_by_gps: row.confirmed_by_gps,
-          validation_status: row.validation_status,
-        };
-      });
-
-      const pastCreatedIds = (created || [])
-        .filter((session) => new Date(session.scheduled_at).getTime() < Date.now())
-        .map((session) => session.id);
-
-      let pendingSet = new Set<string>();
-      if (pastCreatedIds.length) {
-        const { data: creatorPendingRows, error: pendingError } = await supabase
-          .from("session_participants")
-          .select("session_id,confirmed_by_creator,user_id")
-          .in("session_id", pastCreatedIds)
-          .neq("user_id", user.id)
-          .is("confirmed_by_creator", null);
-        if (pendingError) throw pendingError;
-        pendingSet = new Set((creatorPendingRows || []).map((row) => row.session_id));
-      }
-
       setCreatedSessions((created || []) as UserSession[]);
       setJoinedSessions(joinedData);
-      setJoinedStatusBySession(participantStatusMap);
-      setCreatedPendingSet(pendingSet);
     } catch (error) {
       console.error(error);
       toast({
@@ -219,33 +138,8 @@ export default function MySessions() {
     void loadSessions();
   }, [user, loadSessions]);
 
-  const needsConfirmation = useCallback((session: UserSession, source: SessionSource) => {
+  const getBadge = (session: UserSession, _source: SessionSource) => {
     const isPast = new Date(session.scheduled_at).getTime() < Date.now();
-    if (!isPast) return false;
-
-    if (source === "created") {
-      return createdPendingSet.has(session.id);
-    }
-
-    const status = joinedStatusBySession[session.id];
-    if (!status) return true;
-    return !(
-      status.confirmed_by_creator === true ||
-      status.confirmed_by_gps === true ||
-      status.validation_status === "validated"
-    );
-  }, [createdPendingSet, joinedStatusBySession]);
-
-  const getBadge = (session: UserSession, source: SessionSource) => {
-    const isPast = new Date(session.scheduled_at).getTime() < Date.now();
-    const shouldConfirm = needsConfirmation(session, source);
-
-    if (shouldConfirm) {
-      return {
-        label: "À confirmer",
-        className: "bg-orange-500 text-white border-0 text-xs",
-      };
-    }
     if (isPast) {
       return {
         label: "Terminée",
@@ -258,30 +152,12 @@ export default function MySessions() {
     };
   };
 
-  const toConfirmSessions = useMemo(() => {
-    const fromCreated = createdSessions
-      .filter((session) => needsConfirmation(session, "created"))
-      .map((session) => ({ ...session, source: "created" as const }));
-
-    const fromJoined = joinedSessions
-      .filter((session) => needsConfirmation(session, "joined"))
-      .map((session) => ({ ...session, source: "joined" as const }));
-
-    return [...fromCreated, ...fromJoined].sort(
-      (a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),
-    );
-  }, [createdSessions, joinedSessions, needsConfirmation]);
-
   const activeSessions =
     tab === "created"
       ? createdSessions.map((session) => ({ ...session, source: "created" as const }))
       : tab === "joined"
         ? joinedSessions.map((session) => ({ ...session, source: "joined" as const }))
-        : toConfirmSessions;
-
-  const handleConfirm = (sessionId: string, source: SessionSource) => {
-    navigate(`/my-sessions/confirm/${sessionId}?source=${source}`);
-  };
+        : [];
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-secondary">
@@ -328,7 +204,7 @@ export default function MySessions() {
           <div className="ios-card mt-ios-4 p-6 text-center">
             <p className="text-ios-subheadline text-muted-foreground">
               {tab === "to-confirm"
-                ? "Aucune séance à confirmer."
+                ? "Section À confirmer à venir."
                 : tab === "created"
                   ? "Aucune séance créée."
                   : "Aucune séance rejointe."}
@@ -342,11 +218,8 @@ export default function MySessions() {
                 <SessionCard
                   key={`${session.source}-${session.id}`}
                   session={session}
-                  source={session.source}
                   badgeLabel={badge.label}
                   badgeClassName={badge.className}
-                  showConfirmAction={needsConfirmation(session, session.source)}
-                  onConfirm={handleConfirm}
                 />
               );
             })}

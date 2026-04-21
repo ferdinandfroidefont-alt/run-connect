@@ -1542,7 +1542,7 @@ export const InteractiveMap = ({
     navigate('/route-create');
   };
   const handleOpenLiveTracking = () => {
-    navigate('/my-sessions');
+    navigate('/participants');
   };
   const createDirectionsRoute = async () => {
     if (waypoints.current.length < 2) return;
