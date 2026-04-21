@@ -361,11 +361,13 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             background: '#ffffff',
           }}
         >
+          {/* Wrapper interne 1024x1024 (taille native du PNG) centré dans l'artboard 1080x1080 */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 1024, height: 1024, transform: 'translate(-50%, -50%)', zIndex: 0 }}>
           <img
             src={profileShareCardV2}
             alt=""
             crossOrigin="anonymous"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0 }}
           />
 
           <div style={{ position: 'absolute', top: 146, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
@@ -430,6 +432,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
           <div style={{ position: 'absolute', right: 198, bottom: 90, width: 9, height: 9, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 180, bottom: 74, width: 6, height: 6, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
           <div style={{ position: 'absolute', right: 228, bottom: 62, width: 4, height: 4, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.28)' }} />
+          </div>
         </div>
       );
     }
