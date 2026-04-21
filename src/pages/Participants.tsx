@@ -141,6 +141,7 @@ export default function Participants() {
           center: userPositionRef.current ?? FALLBACK_POINT,
           zoom: 14.3,
           interactive: true,
+          style: MAPBOX_NAVIGATION_DAY_STYLE,
         });
         if (cancelled) {
           map.remove();
@@ -157,7 +158,7 @@ export default function Participants() {
           }
           mapRef.current.resize();
           setMapReady(true);
-        }, 2200);
+        }, 1200);
 
         const clearFallback = () => {
           armedFallback = false;
