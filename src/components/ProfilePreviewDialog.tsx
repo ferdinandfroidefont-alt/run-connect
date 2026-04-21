@@ -10,6 +10,7 @@ import { ReliabilityDetailsDialog } from "./ReliabilityDetailsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, UserMinus, Crown, Loader2, Flag, MoreVertical, ChevronLeft, MessageCircle, Trophy, CalendarDays, MapPin, Route, Lock, Share2, ShieldBan, Info, X } from "lucide-react";
 import { ProfileRecordsDisplay } from "@/components/profile/ProfileRecordsDisplay";
+import { PersonalRecords } from "@/components/PersonalRecords";
 import { RecentActivities } from "@/components/profile/RecentActivities";
 import { getCountryLabel } from "@/lib/countryLabels";
 

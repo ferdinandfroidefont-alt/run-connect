@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { EmblaCarouselType } from 'embla-carousel';
+import type { UseEmblaCarouselType } from 'embla-carousel-react';
+type EmblaCarouselType = NonNullable<UseEmblaCarouselType[1]>;
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { templateDimensions } from '@/lib/profileSharePayload';
