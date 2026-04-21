@@ -27,6 +27,8 @@ import { useNavigate } from "react-router-dom";
 import { getOrCreateDirectConversation } from "@/lib/coachingMessaging";
 import { AthleteHeader } from "@/components/coaching/tracking/AthleteHeader";
 import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessionCard";
+import { useProfileNavigation } from "@/hooks/useProfileNavigation";
+import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 
 interface WeeklyTrackingViewProps {
   clubId: string;
@@ -132,6 +134,7 @@ const toUiStatus = (status?: string): UiDayStatus => {
 export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { selectedUserId, navigateToProfile, closeProfilePreview } = useProfileNavigation();
   const { sendPushNotification } = useSendNotification();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
@@ -411,6 +414,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
+  const totalAthletes = athletes.length;
+  const displayedAthletes = filtered.length;
 
   // ==================== MODE LISTE ====================
   if (!selectedAthlete) {
@@ -431,6 +436,11 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         </div>
         {/* Search */}
         <div className="border-b border-border bg-card px-4 py-2.5">
+          <p className="mb-2 text-[13px] font-medium text-muted-foreground">
+            {search
+              ? `${displayedAthletes} athlète${displayedAthletes > 1 ? "s" : ""} trouvé${displayedAthletes > 1 ? "s" : ""}`
+              : `${totalAthletes} athlète${totalAthletes > 1 ? "s" : ""}`}
+          </p>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -571,7 +581,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         groupName={selectedAthlete.groupName}
         status={pct >= 70 ? "active" : "late"}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
-        onViewProfile={() => navigate(`/profile/${selectedAthlete.userId}`)}
+        onViewProfile={() => navigateToProfile(selectedAthlete.userId)}
       />
 
       <div className="border-b border-border bg-card px-4 py-3">
@@ -706,6 +716,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
         </p>
       ) : null}
+      <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
     </div>
   );
 };

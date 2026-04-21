@@ -193,13 +193,18 @@ export const ClubGroupsManager = ({ clubId, onMessageGroup }: ClubGroupsManagerP
   };
 
   const handleGroupPhoto = async (groupId: string) => {
+    if (!user) {
+      toast({ title: "Erreur", description: "Utilisateur non connecté", variant: "destructive" });
+      return;
+    }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const filePath = `club-groups/${groupId}/${Date.now()}.${file.name.split('.').pop()}`;
+      const extension = file.name.split(".").pop() || "jpg";
+      const filePath = `${user.id}/club-groups/${groupId}-${Date.now()}.${extension}`;
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, { upsert: true });

@@ -1685,7 +1685,11 @@ export function CoachPlanningExperience() {
             <PlanningHeader
               onOpenMenu={() => setDrawerOpen(true)}
               title={sectionTitle}
-              subtitle={activeMenuKey === "my-plan" ? "Semaine d'entraînement et séances programmées" : undefined}
+              subtitle={
+                activeMenuKey === "my-plan"
+                  ? `Semaine du ${format(weekAnchor, "d", { locale: fr })} au ${format(addDays(weekAnchor, 6), "d MMMM", { locale: fr })}`
+                  : undefined
+              }
             />
           }
           scrollClassName="bg-secondary pb-24"
