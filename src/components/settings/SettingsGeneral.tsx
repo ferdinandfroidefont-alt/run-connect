@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, RotateCcw } from "lucide-react";
+import { Languages, Key, Loader2, ArrowLeft, ChevronRight, MapPin, Sun, Moon, Monitor, Check, ChevronsUpDown, Ruler, RotateCcw, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LANGUAGES_SORTED, LANGUAGE_INFO } from "@/lib/i18n/languageCatalog";
@@ -19,6 +20,7 @@ import type { DistanceUnit } from "@/lib/distanceUnits";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { resetArrivalFlowForDev } from "@/lib/arrivalFlowDev";
+import { clearOnboardingCompleted } from "@/lib/arrivalFlowStorage";
 
 interface SettingsGeneralProps {
   onBack: () => void;
@@ -31,6 +33,7 @@ const THEME_MODES = [
 ];
 
 export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { toast } = useToast();
@@ -90,6 +93,20 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
       title: "Onboarding réinitialisé",
       description: "Le tunnel d’arrivée est prêt à être rejoué.",
     });
+  };
+
+  const handleReplayOnboarding = () => {
+    if (!user?.id) return;
+    const confirmed = window.confirm(
+      "Voulez-vous revoir l’onboarding maintenant ?"
+    );
+    if (!confirmed) return;
+    clearOnboardingCompleted(user.id);
+    toast({
+      title: "Onboarding relancé",
+      description: "Vous allez revoir le tunnel d’arrivée.",
+    });
+    navigate("/onboarding");
   };
 
   return (
@@ -315,6 +332,23 @@ export const SettingsGeneral = ({ onBack }: SettingsGeneralProps) => {
                 <div className="flex-1 text-left">
                   <p className="text-[15px] font-medium">{t('settings.password')}</p>
                   <p className="text-[13px] text-muted-foreground">{t('settings.passwordDescription')}</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
+              </button>
+              <div className="ios-list-row-inset-sep" />
+              <button
+                type="button"
+                onClick={handleReplayOnboarding}
+                className="w-full flex items-center gap-2.5 px-4 ios-shell:px-2.5 py-2.5 text-left active:bg-secondary/50 transition-colors"
+              >
+                <div className="ios-list-row-icon bg-[#007AFF]">
+                  <Sparkles className="h-[18px] w-[18px] text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-medium">Revoir l’onboarding</p>
+                  <p className="text-[13px] text-muted-foreground">
+                    Relancer le tunnel d’arrivée
+                  </p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground/40" />
               </button>

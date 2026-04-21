@@ -60,6 +60,14 @@ export function markOnboardingCompleted(userId: string): void {
   }
 }
 
+export function clearOnboardingCompleted(userId: string): void {
+  try {
+    localStorage.removeItem(onboardingCompletedKey(userId));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function hasSeenPremiumScreen(userId: string | undefined): boolean {
   if (!userId) return false;
   try {
