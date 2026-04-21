@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
+import { cn } from "@/lib/utils";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession } from "./planUtils";
@@ -77,13 +77,26 @@ export function AthleteMyPlanView(props: Props) {
 
   return (
     <div className="bg-[#F7F8FA] pb-28 pt-2">
-      <WeekSelectorPremium
-        weekStart={props.weekStart}
-        selectedDate={selectedDate}
-        onSelectDate={onSelectDate}
-        onPreviousWeek={props.onPreviousWeek}
-        onNextWeek={props.onNextWeek}
-      />
+      <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+        {weekDays.map((day) => {
+          const active = isSameDay(day, selectedDate);
+          return (
+            <button
+              key={day.toISOString()}
+              type="button"
+              onClick={() => onSelectDate(day)}
+              className={cn(
+                "shrink-0 snap-start border-b-2 px-2 py-2 text-xs font-semibold transition active:scale-[0.98]",
+                active
+                  ? "border-[#2563EB] text-[#2563EB]"
+                  : "border-transparent text-[#334155]"
+              )}
+            >
+              {format(day, "EEEEE", { locale: fr }).toUpperCase()} {format(day, "d")}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex flex-col border-t border-border">
         {loading ? (
