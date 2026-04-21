@@ -13,6 +13,7 @@ import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 
 const RC_BLUE = '#2563eb';
 const RC_LIGHT = '#0b6cff';
+const RC_DEEP = '#0a3ea8';
 
 const FONT_SANS =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Inter, sans-serif';
@@ -193,9 +194,17 @@ function SessionJoinBar() {
         borderRadius: 28,
         overflow: 'hidden',
         background: `linear-gradient(110deg, ${RC_LIGHT} 0%, #0759dc 50%, #0352d6 100%)`,
-        boxShadow: '0 16px 44px rgba(9, 86, 220, 0.25)',
+        boxShadow: '0 16px 44px rgba(9, 86, 220, 0.25), inset 0 1px 0 rgba(255,255,255,0.28)',
       }}
     >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 38%)',
+          pointerEvents: 'none',
+        }}
+      />
       <div
         style={{
           position: 'absolute',
@@ -334,6 +343,19 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
             }}
           />
         )}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '34%',
+            pointerEvents: 'none',
+            background: isDark
+              ? 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.26) 50%, rgba(2,6,23,0.64) 100%)'
+              : 'linear-gradient(180deg, rgba(248,250,252,0) 0%, rgba(248,250,252,0.38) 58%, rgba(241,245,249,0.88) 100%)',
+          }}
+        />
         {/* Pin plus dominant sur la zone map */}
         <div
           style={{
@@ -539,6 +561,18 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
           fontFamily: FONT_SANS,
         }}
       >
+        {!isDark && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: 'none',
+              background:
+                'radial-gradient(1200px 480px at 78% -2%, rgba(37,99,235,0.2) 0%, rgba(37,99,235,0.08) 28%, rgba(37,99,235,0) 72%)',
+            }}
+          />
+        )}
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', flex: 1, minHeight: 0, padding: '32px 34px 10px' }}>
           <div style={{ width: '43%', minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {leftColumn}
@@ -560,6 +594,33 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
         <div style={{ position: 'relative', zIndex: 3, padding: '0 48px 36px', flexShrink: 0 }}>
           {bottomCta}
         </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 132,
+            pointerEvents: 'none',
+            zIndex: 4,
+            background: isDark
+              ? 'linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.28) 52%, rgba(2,6,23,0.58) 100%)'
+              : 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(241,245,249,0.76) 72%, rgba(233,240,252,0.95) 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '8%',
+            bottom: -120,
+            width: 520,
+            height: 260,
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            zIndex: 1,
+            background: `radial-gradient(ellipse at center, ${RC_DEEP}26 0%, transparent 72%)`,
+          }}
+        />
       </div>
     );
   }

@@ -87,7 +87,7 @@ export function SessionSharePreviewCarousel({
                 <div className="flex flex-col items-center">
                   <p className="mb-2.5 text-center text-[12px] font-semibold tracking-tight text-muted-foreground">{meta.label}</p>
                   <div
-                    className="ios-card overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.1)]"
+                    className="ios-card relative overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.1)]"
                     style={{ width: boxW, height: boxH }}
                   >
                     <div
@@ -105,6 +105,10 @@ export function SessionSharePreviewCarousel({
                         qrDataUrl={qrDataUrl ?? null}
                       />
                     </div>
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-[16%] bg-gradient-to-b from-transparent via-white/25 to-[#edf3ff]/92"
+                    />
                   </div>
                 </div>
               </CarouselItem>

@@ -135,11 +135,11 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
       <DialogContent
         fullScreen
         hideCloseButton
-        className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-background p-0 sm:max-w-none"
-        overlayClassName="bg-background"
+        className="flex max-h-[100dvh] flex-col gap-0 overflow-hidden border-0 bg-[linear-gradient(180deg,#f8fbff_0%,#f1f6ff_48%,#eef3fc_100%)] p-0 sm:max-w-none"
+        overlayClassName="bg-slate-950/35 backdrop-blur-[2px]"
         stackNested
       >
-        <header className="relative flex shrink-0 items-center justify-center border-b border-border/60 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <header className="relative flex shrink-0 items-center justify-center border-b border-slate-200/85 bg-white/84 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm">
           <button
             type="button"
             onClick={onClose}
@@ -165,7 +165,7 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
 
             <Button
               type="button"
-              className="mt-8 h-12 w-full rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_12px_28px_rgba(37,99,235,0.35)] hover:bg-primary/90"
+              className="mt-8 h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#1d4ed8_0%,#2563eb_48%,#0b63ff_100%)] text-[16px] font-semibold text-primary-foreground shadow-[0_14px_34px_rgba(37,99,235,0.38)] transition-transform active:scale-[0.996] hover:brightness-[1.03]"
               onClick={() => void handleSystemShare()}
               disabled={!payload || exporting}
             >

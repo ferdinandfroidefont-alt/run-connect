@@ -15,6 +15,7 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { MAPBOX_NAVIGATION_DAY_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -86,7 +87,8 @@ export default function Participants() {
 
   useEffect(() => {
     let cancelled = false;
-    if (userPosition) return;
+    const hasTrackingUserPosition = !!userPosition;
+    if (hasTrackingUserPosition) return;
     void (async () => {
       const pos = await getCurrentPosition(0, { mode: "fast" });
       if (cancelled || !pos) return;
@@ -95,7 +97,7 @@ export default function Participants() {
     return () => {
       cancelled = true;
     };
-  }, [getCurrentPosition, userPosition]);
+  }, [getCurrentPosition, userPosition?.lat, userPosition?.lng]);
 
   const participants = useMemo<Participant[]>(
     () =>
@@ -145,8 +147,26 @@ export default function Participants() {
           return;
         }
         mapRef.current = map;
+        let armedFallback = true;
+        const styleFallbackTimer = window.setTimeout(() => {
+          if (!armedFallback || cancelled || !mapRef.current) return;
+          try {
+            mapRef.current.setStyle(MAPBOX_NAVIGATION_DAY_STYLE);
+          } catch {
+            // Ignore, on garde la carte même si le style custom échoue.
+          }
+          mapRef.current.resize();
+          setMapReady(true);
+        }, 2200);
+
+        const clearFallback = () => {
+          armedFallback = false;
+          window.clearTimeout(styleFallbackTimer);
+        };
+
         const onReady = () => {
           if (cancelled) return;
+          clearFallback();
           setMapReady(true);
           fitDefaultView();
           // iOS/WebView: force plusieurs resize au boot pour éviter la carte blanche.
@@ -159,8 +179,21 @@ export default function Participants() {
             window.clearTimeout(t3);
           }, 420);
         };
-        if (map.isStyleLoaded()) onReady();
-        else map.once("load", onReady);
+        map.once("load", onReady);
+        map.once("style.load", onReady);
+        map.once("idle", onReady);
+
+        map.on("error", () => {
+          if (cancelled || !mapRef.current) return;
+          // Si le style préféré échoue, fallback immédiat vers style stable.
+          try {
+            mapRef.current.setStyle(MAPBOX_NAVIGATION_DAY_STYLE);
+          } catch {
+            // no-op
+          }
+          mapRef.current.resize();
+          setMapReady(true);
+        });
       } catch {
         // Retry léger pour éviter un échec transitoire d'init mapbox.
         window.setTimeout(() => {
