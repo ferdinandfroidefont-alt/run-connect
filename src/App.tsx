@@ -60,7 +60,6 @@ const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const Referral = lazy(() => import("./pages/Referral"));
 const StoryDeleteConfirm = lazy(() => import("./pages/StoryDeleteConfirm"));
 const Participants = lazy(() => import("./pages/Participants"));
-const SessionConfirmPage = lazy(() => import("./pages/SessionConfirmPage"));
 
 /** Un Suspense par route : évite de remplacer tout l’écran au chargement d’un chunk. */
 function PageSuspense({ children }: { children: ReactNode }) {
@@ -319,7 +318,7 @@ const App = () => {
                   <Route path="/" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/feed" element={<Layout><PageTransition><PageSuspense><Feed /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/my-sessions" element={<Layout><MainTabsSwipeHost /></Layout>} />
-                  <Route path="/my-sessions/confirm/:sessionId" element={<Layout><PageTransition><PageSuspense><SessionConfirmPage /></PageSuspense></PageTransition></Layout>} />
+                  <Route path="/my-sessions/confirm/:sessionId" element={<Layout><PageTransition><PageSuspense><ConfirmPresence /></PageSuspense></PageTransition></Layout>} />
                   <Route path="/messages" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/coaching" element={<Layout><MainTabsSwipeHost /></Layout>} />
                   <Route path="/leaderboard" element={<Navigate to="/route-create" replace />} />
