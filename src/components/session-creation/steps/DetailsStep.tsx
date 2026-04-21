@@ -71,7 +71,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const [draftPaceMin, setDraftPaceMin] = useState("5");
   const [draftPaceSec, setDraftPaceSec] = useState("30");
   const [draftDistanceWhole, setDraftDistanceWhole] = useState("10");
-  const [draftDistanceDec, setDraftDistanceDec] = useState("0");
+  const [draftDistanceMeters, setDraftDistanceMeters] = useState("0");
   const [draftElevation, setDraftElevation] = useState("150");
   const [draftParticipants, setDraftParticipants] = useState("20");
   // Auto-generate title suggestion
@@ -125,16 +125,50 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   };
 
   const distanceWholeOptions = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
-  const distanceDecOptions = Array.from({ length: 10 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const distanceMetersOptions = Array.from({ length: 40 }, (_, i) => {
+    const meters = i * 25;
+    return {
+      value: String(meters),
+      label: String(meters).padStart(3, '0'),
+    };
+  });
+  const distanceMetersOnlyOptions = Array.from({ length: 401 }, (_, i) => {
+    const meters = i * 25;
+    return {
+      value: String(meters),
+      label: String(meters),
+    };
+  });
+  const distanceMilesDecOptions = Array.from({ length: 100 }, (_, i) => ({
+    value: String(i),
+    label: String(i).padStart(2, '0'),
+  }));
   const elevationOptions = Array.from({ length: 5001 }, (_, i) => ({ value: String(i), label: String(i) }));
   const participantsOptions = Array.from({ length: 200 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
   const paceMinOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
   const paceSecOptions = Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
 
   const openDistancePicker = () => {
-    const [w = "0", d = "0"] = (formData.distance_km || "0").replace(",", ".").split(".");
-    setDraftDistanceWhole(String(Math.max(0, Number.parseInt(w, 10) || 0)));
-    setDraftDistanceDec(String(Math.max(0, Math.min(9, Number.parseInt(d?.[0] ?? "0", 10) || 0))));
+    const parsedKm = Math.max(0, Number.parseFloat((formData.distance_km || "0").replace(",", ".")) || 0);
+
+    if (distanceUnit === 'mi') {
+      const parsedMi = parsedKm / 1.60934;
+      const wholeMi = Math.floor(parsedMi);
+      const decMi = Math.max(0, Math.min(99, Math.round((parsedMi - wholeMi) * 100)));
+      setDraftDistanceWhole(String(wholeMi));
+      setDraftDistanceMeters(String(decMi));
+    } else if (distanceUnit === 'm') {
+      const metersRaw = Math.round(parsedKm * 1000);
+      const snappedMeters = Math.max(0, Math.round(metersRaw / 25) * 25);
+      setDraftDistanceWhole(String(snappedMeters));
+      setDraftDistanceMeters("0");
+    } else {
+      const wholeKm = Math.floor(parsedKm);
+      const remainingMetersRaw = Math.round((parsedKm - wholeKm) * 1000);
+      const snappedMeters = Math.min(975, Math.max(0, Math.round(remainingMetersRaw / 25) * 25));
+      setDraftDistanceWhole(String(wholeKm));
+      setDraftDistanceMeters(String(snappedMeters));
+    }
     setOpenPicker("distance");
   };
 
@@ -485,12 +519,33 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
         open={openPicker === 'distance'}
         onClose={() => setOpenPicker(null)}
         title={`Distance (${distanceUnit})`}
-        columns={[
-          { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole },
-          { items: distanceDecOptions, value: draftDistanceDec, onChange: setDraftDistanceDec },
-        ]}
+        columns={distanceUnit === 'm'
+          ? [{ items: distanceMetersOnlyOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole, suffix: 'm' }]
+          : distanceUnit === 'mi'
+            ? [
+                { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole, suffix: 'mi' },
+                { items: distanceMilesDecOptions, value: draftDistanceMeters, onChange: setDraftDistanceMeters },
+              ]
+            : [
+                { items: distanceWholeOptions, value: draftDistanceWhole, onChange: setDraftDistanceWhole },
+                { items: distanceMetersOptions, value: draftDistanceMeters, onChange: setDraftDistanceMeters, suffix: 'm' },
+              ]}
         onConfirm={() => {
-          onFormDataChange({ distance_km: `${draftDistanceWhole}.${draftDistanceDec}` });
+          let totalKm = 0;
+          if (distanceUnit === 'mi') {
+            const wholeMi = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
+            const decMi = Math.max(0, Math.min(99, Number.parseInt(draftDistanceMeters, 10) || 0));
+            totalKm = (wholeMi + decMi / 100) * 1.60934;
+          } else if (distanceUnit === 'm') {
+            const meters = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
+            totalKm = meters / 1000;
+          } else {
+            const wholeKm = Math.max(0, Number.parseInt(draftDistanceWhole, 10) || 0);
+            const meters = Math.min(975, Math.max(0, Number.parseInt(draftDistanceMeters, 10) || 0));
+            totalKm = wholeKm + meters / 1000;
+          }
+          const formattedDistance = Number(totalKm.toFixed(3)).toString();
+          onFormDataChange({ distance_km: formattedDistance });
           setOpenPicker(null);
         }}
       />

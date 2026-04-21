@@ -36,7 +36,15 @@ import {
 type CaptureMode = "photo" | "video" | "boomerang";
 type StoryStep = "entry" | "capture" | "edit";
 type LayerKind = "text" | "music" | "session" | "emoji";
-type DynamicLayerKind = "mention" | "place" | "time" | "music" | "session" | "emoji";
+type DynamicLayerKind = "mention" | "place" | "time" | "music" | "session" | "emoji" | "text";
+type TextLayerStyle = {
+  color: string;
+  font: TextFontMode;
+  align: TextAlign;
+  style: TextStyleMode;
+  size: number;
+  bold: boolean;
+};
 type DynamicLayer = {
   id: string;
   kind: DynamicLayerKind;
@@ -45,6 +53,7 @@ type DynamicLayer = {
   y: number;
   scale: number;
   rotation: number;
+  textStyle?: TextLayerStyle;
 };
 type TextAlign = "left" | "center" | "right";
 type TextStyleMode = "plain" | "bubble" | "outline" | "band";
@@ -138,6 +147,14 @@ const FONT_MAP: Record<TextFontMode, string> = {
   modern: '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif',
   clean: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif',
   signature: '"Snell Roundhand", "Segoe Script", cursive',
+};
+const DEFAULT_TEXT_LAYER_STYLE: TextLayerStyle = {
+  color: "#FFFFFF",
+  font: "modern",
+  align: "center",
+  style: "plain",
+  size: 30,
+  bold: true,
 };
 
 export default function StoryCreate() {
@@ -264,7 +281,9 @@ export default function StoryCreate() {
 
   const musicLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "music") ?? null, [dynamicLayers]);
   const sessionLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "session") ?? null, [dynamicLayers]);
-  const emojiLayer = useMemo(() => dynamicLayers.find((l) => l.kind === "emoji") ?? null, [dynamicLayers]);
+  const emojiLayers = useMemo(() => dynamicLayers.filter((l) => l.kind === "emoji"), [dynamicLayers]);
+  const emojiLayer = useMemo(() => emojiLayers[0] ?? null, [emojiLayers]);
+  const textLayers = useMemo(() => dynamicLayers.filter((l) => l.kind === "text"), [dynamicLayers]);
 
   const previewUrl = useMemo(() => (mediaFile ? URL.createObjectURL(mediaFile) : null), [mediaFile]);
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
@@ -299,19 +318,7 @@ export default function StoryCreate() {
   }, [selectedSession]);
 
   useEffect(() => {
-    if (emojiSticker) {
-      upsertKindLayer("emoji", { x: 120, y: 220, scale: 1, rotation: 0, label: emojiSticker });
-      requestAnimationFrame(() => {
-        setDynamicLayers((prev) => {
-          const layer = prev.find((l) => l.kind === "emoji");
-          if (layer) setSelectedDynamicLayerId(layer.id);
-          return prev;
-        });
-      });
-    } else {
-      removeKindLayer("emoji");
-      setSelectedDynamicLayerId(null);
-    }
+    if (emojiSticker) setEmojiSticker(null);
   }, [emojiSticker]);
 
   useEffect(() => {
@@ -722,15 +729,16 @@ export default function StoryCreate() {
     };
   }, [requestExitWithDraftPrompt]);
 
-  const addDynamicLayer = (kind: DynamicLayerKind) => {
+  const addDynamicLayer = (kind: DynamicLayerKind, options?: { label?: string; textStyle?: TextLayerStyle }) => {
     const id = `${kind}-${Date.now()}`;
     const label =
+      options?.label ??
       kind === "mention"
         ? "@mention"
         : kind === "place"
           ? "📍 Mon lieu"
           : new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    const layer: DynamicLayer = { id, kind, label, x: 120, y: 300, scale: 1, rotation: 0 };
+    const layer: DynamicLayer = { id, kind, label, x: 120, y: 300, scale: 1, rotation: 0, textStyle: options?.textStyle };
     setDynamicLayers((prev) => [...prev, layer]);
     setSelectedDynamicLayerId(id);
   };
@@ -1696,13 +1704,73 @@ export default function StoryCreate() {
   }, [step]);
 
   const closeEditorMode = useCallback(() => {
+    if (editorMode === "text") {
+      const selectedTextLayer =
+        selectedDynamicLayerId
+          ? dynamicLayers.find((layer) => layer.id === selectedDynamicLayerId && layer.kind === "text")
+          : null;
+      const normalizedText = textOverlay.trim();
+      if (selectedTextLayer) {
+        if (!normalizedText) {
+          setDynamicLayers((prev) => prev.filter((layer) => layer.id !== selectedTextLayer.id));
+          setSelectedDynamicLayerId(null);
+        } else {
+          setDynamicLayers((prev) =>
+            prev.map((layer) =>
+              layer.id === selectedTextLayer.id
+                ? {
+                    ...layer,
+                    label: normalizedText,
+                    x: textPos.x,
+                    y: textPos.y,
+                    scale: textScale,
+                    rotation: textRotation,
+                    textStyle: {
+                      color: textColor,
+                      font: textFont,
+                      align: textAlign,
+                      style: textStyle,
+                      size: textSize,
+                      bold: textBold,
+                    },
+                  }
+                : layer
+            )
+          );
+        }
+      } else if (normalizedText) {
+        const newId = `text-${Date.now()}`;
+        setDynamicLayers((prev) => [
+          ...prev,
+          {
+            id: newId,
+            kind: "text",
+            label: normalizedText,
+            x: textPos.x,
+            y: textPos.y,
+            scale: textScale,
+            rotation: textRotation,
+            textStyle: {
+              color: textColor,
+              font: textFont,
+              align: textAlign,
+              style: textStyle,
+              size: textSize,
+              bold: textBold,
+            },
+          },
+        ]);
+        setSelectedDynamicLayerId(newId);
+      }
+      setTextOverlay("");
+    }
     setEditorMode("idle");
     setShowTextInput(false);
     setShowMusicPicker(false);
     setShowSessionPicker(false);
     setShowStickerPicker(false);
     setDrawMode(false);
-  }, []);
+  }, [dynamicLayers, editorMode, selectedDynamicLayerId, textAlign, textBold, textColor, textFont, textOverlay, textPos.x, textPos.y, textRotation, textScale, textSize, textStyle]);
 
   const getTextEditingViewport = useCallback(() => {
     const host = drawHostRef.current;
@@ -1928,34 +1996,36 @@ export default function StoryCreate() {
         ctx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, outW, outH);
       }
 
-      if (textOverlay.trim()) {
+      const exportTextLayers = dynamicLayers.filter((layer) => layer.kind === "text" && layer.label.trim().length > 0);
+      for (const layer of exportTextLayers) {
+        const style = layer.textStyle ?? DEFAULT_TEXT_LAYER_STYLE;
         ctx.save();
-        const fontPx = Math.max(18, Math.round(textSize * sx));
-        ctx.font = `${textBold ? 700 : 500} ${fontPx}px ${FONT_MAP[textFont]}`;
-        ctx.textAlign = textAlign;
+        const fontPx = Math.max(18, Math.round(style.size * sx));
+        ctx.font = `${style.bold ? 700 : 500} ${fontPx}px ${FONT_MAP[style.font]}`;
+        ctx.textAlign = style.align;
         ctx.textBaseline = "top";
-        const tx = Math.max(18, textPos.x * sx);
-        const ty = Math.max(18, textPos.y * sy);
-        const metrics = ctx.measureText(textOverlay);
+        const tx = Math.max(18, layer.x * sx);
+        const ty = Math.max(18, layer.y * sy);
+        const metrics = ctx.measureText(layer.label);
         const boxW = metrics.width + 30;
         const boxH = Math.max(40, Math.round(outW * 0.08));
         ctx.translate(tx, ty);
-        ctx.scale(textScale, textScale);
-        ctx.rotate((textRotation * Math.PI) / 180);
-        const anchorX = textAlign === "center" ? 0 : textAlign === "right" ? -metrics.width : 0;
-        if (textStyle === "bubble" || textStyle === "band") {
-          ctx.fillStyle = textStyle === "bubble" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.38)";
+        ctx.scale(layer.scale, layer.scale);
+        ctx.rotate((layer.rotation * Math.PI) / 180);
+        const anchorX = style.align === "center" ? 0 : style.align === "right" ? -metrics.width : 0;
+        if (style.style === "bubble" || style.style === "band") {
+          ctx.fillStyle = style.style === "bubble" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.38)";
           ctx.beginPath();
-          ctx.roundRect(anchorX - 14, -10, boxW, boxH, textStyle === "bubble" ? 14 : 4);
+          ctx.roundRect(anchorX - 14, -10, boxW, boxH, style.style === "bubble" ? 14 : 4);
           ctx.fill();
         }
-        if (textStyle === "outline") {
+        if (style.style === "outline") {
           ctx.strokeStyle = "rgba(0,0,0,0.6)";
           ctx.lineWidth = Math.max(1, Math.round(fontPx / 12));
-          ctx.strokeText(textOverlay, anchorX, 0);
+          ctx.strokeText(layer.label, anchorX, 0);
         }
-        ctx.fillStyle = textColor;
-        ctx.fillText(textOverlay, anchorX, 0);
+        ctx.fillStyle = style.color;
+        ctx.fillText(layer.label, anchorX, 0);
         ctx.restore();
       }
 
@@ -2001,13 +2071,14 @@ export default function StoryCreate() {
         ctx.restore();
       }
 
-      if (emojiSticker) {
+      const exportEmojiLayers = dynamicLayers.filter((layer) => layer.kind === "emoji");
+      for (const layer of exportEmojiLayers) {
         ctx.save();
-        ctx.translate((emojiLayer?.x ?? 120) * sx, (emojiLayer?.y ?? 220) * sy);
-        ctx.scale(emojiLayer?.scale ?? 1, emojiLayer?.scale ?? 1);
-        ctx.rotate(((emojiLayer?.rotation ?? 0) * Math.PI) / 180);
+        ctx.translate(layer.x * sx, layer.y * sy);
+        ctx.scale(layer.scale, layer.scale);
+        ctx.rotate((layer.rotation * Math.PI) / 180);
         ctx.font = `700 ${Math.max(26, Math.round(outW * 0.08))}px -apple-system, BlinkMacSystemFont, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-        ctx.fillText(emojiSticker, 0, 0);
+        ctx.fillText(layer.label, 0, 0);
         ctx.restore();
       }
 
@@ -2039,23 +2110,10 @@ export default function StoryCreate() {
     }
   }, [
     dynamicLayers,
-    emojiLayer,
-    emojiSticker,
     musicLayer,
     selectedMusic,
     selectedSession,
     sessionLayer,
-    textAlign,
-    textBold,
-    textColor,
-    textFont,
-    textOverlay,
-    textPos.x,
-    textPos.y,
-    textRotation,
-    textScale,
-    textSize,
-    textStyle,
     storyPan.x,
     storyPan.y,
     storyRotation,
@@ -2395,81 +2453,89 @@ export default function StoryCreate() {
           </>
         )}
 
-        {/* Text overlay on preview (positioned at cursor) */}
-        {(textOverlay || showTextInput) && (
+        {textLayers.map((layer) => {
+          const style = layer.textStyle ?? DEFAULT_TEXT_LAYER_STYLE;
+          return (
+            <div
+              key={layer.id}
+              className={cn("absolute cursor-move", selectedDynamicLayerId === layer.id && "ring-2 ring-white/60 rounded-xl")}
+              style={{
+                zIndex: layerZ("text"),
+                left: 0,
+                top: 0,
+                transform: `translate(${layer.x}px, ${layer.y}px) scale(${layer.scale}) rotate(${layer.rotation}deg)`,
+                transformOrigin: "top left",
+              }}
+              onPointerDown={(e) => startDynamicDrag(layer.id, e)}
+              onPointerMove={moveDynamicDrag}
+              onPointerUp={endDynamicDrag}
+              onPointerCancel={endDynamicDrag}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedLayer(null);
+                setSelectedDynamicLayerId(layer.id);
+                setActiveTool("text");
+                setEditorMode("text");
+                setShowTextInput(true);
+                setTextOverlay(layer.label);
+                setTextPos({ x: layer.x, y: layer.y });
+                setTextScale(layer.scale);
+                setTextRotation(layer.rotation);
+                setTextColor(style.color);
+                setTextFont(style.font);
+                setTextAlign(style.align);
+                setTextStyle(style.style);
+                setTextSize(style.size);
+                setTextBold(style.bold);
+                window.setTimeout(() => textInputRef.current?.focus({ preventScroll: true }), 0);
+                triggerHaptic("light");
+              }}
+            >
+              <div
+                className="px-1"
+                style={{
+                  fontFamily: FONT_MAP[style.font],
+                  fontWeight: style.bold ? 700 : 500,
+                  textAlign: style.align,
+                  fontSize: `${style.size}px`,
+                  color: style.color,
+                  WebkitTextStroke: style.style === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
+                  textShadow: "0 1px 2px rgba(0,0,0,0.35)",
+                }}
+              >
+                {layer.label}
+              </div>
+            </div>
+          );
+        })}
+        {showTextInput && (
           <div
             className="absolute"
             style={{
-              zIndex: layerZ("text"),
+              zIndex: layerZ("text") + 2,
               left: 0,
               top: 0,
               transform: `translate(${textPos.x}px, ${textPos.y}px)`,
               transition: textDragging || textPinching ? "none" : "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
             }}
-            onPointerDown={startTextDrag}
-            onPointerMove={moveTextDrag}
-            onPointerUp={endTextDrag}
-            onPointerCancel={endTextDrag}
-            onTouchStart={onTextTouchStart}
-            onTouchMove={onTextTouchMove}
-            onTouchEnd={onTextTouchEnd}
-            onTouchCancel={onTextTouchEnd}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedLayer("text");
-              setSelectedDynamicLayerId(null);
-              bringLayerToFront("text");
-              setActiveTool("text");
-              setEditorMode("text");
-              setShowTextInput(true);
-              window.setTimeout(() => textInputRef.current?.focus({ preventScroll: true }), 0);
-              triggerHaptic("light");
-            }}
           >
-            {showTextInput ? (
-              // While editing: NO scale/rotate on the input's parent so the caret is rendered correctly.
-              <div>
-                <input
-                  ref={textInputRef}
-                  value={textOverlay}
-                  onChange={(e) => setTextOverlay(e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  placeholder=""
-                  className="min-w-[2px] border-none bg-transparent p-0 text-white outline-none"
-                  style={{
-                    fontFamily: FONT_MAP[textFont],
-                    fontWeight: textBold ? 800 : 600,
-                    textAlign,
-                    fontSize: `${Math.max(30, textSize)}px`,
-                    color: textColor,
-                    caretColor: textColor,
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                style={{
-                  transform: `scale(${textScale}) rotate(${textRotation}deg)`,
-                  transformOrigin: "top left",
-                }}
-              >
-                <div
-                  className="px-1"
-                  style={{
-                    fontFamily: FONT_MAP[textFont],
-                    fontWeight: textBold ? 700 : 500,
-                    textAlign,
-                    fontSize: `${textSize}px`,
-                    color: textColor,
-                    WebkitTextStroke: textStyle === "outline" ? "1px rgba(0,0,0,0.45)" : undefined,
-                    textShadow: "0 1px 2px rgba(0,0,0,0.35)",
-                  }}
-                >
-                  {textOverlay}
-                </div>
-              </div>
-            )}
+            <input
+              ref={textInputRef}
+              value={textOverlay}
+              onChange={(e) => setTextOverlay(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              placeholder=""
+              className="min-w-[2px] border-none bg-transparent p-0 text-white outline-none"
+              style={{
+                fontFamily: FONT_MAP[textFont],
+                fontWeight: textBold ? 800 : 600,
+                textAlign,
+                fontSize: `${Math.max(30, textSize)}px`,
+                color: textColor,
+                caretColor: textColor,
+              }}
+            />
           </div>
         )}
 
@@ -2541,30 +2607,29 @@ export default function StoryCreate() {
           </div>
         )}
 
-        {emojiSticker && (
+        {emojiLayers.map((layer) => (
           <div
-            className={cn("absolute cursor-move select-none", selectedDynamicLayerId === emojiLayer?.id && "ring-2 ring-white/65 rounded-2xl")}
+            key={layer.id}
+            className={cn("absolute cursor-move select-none", selectedDynamicLayerId === layer.id && "ring-2 ring-white/65 rounded-2xl")}
             style={{
               zIndex: layerZ("emoji"),
-              transform: `translate(${emojiLayer?.x ?? 120}px, ${emojiLayer?.y ?? 220}px) scale(${emojiLayer?.scale ?? 1}) rotate(${emojiLayer?.rotation ?? 0}deg)`,
+              transform: `translate(${layer.x}px, ${layer.y}px) scale(${layer.scale}) rotate(${layer.rotation}deg)`,
               transformOrigin: "top left",
             }}
-            onPointerDown={startEmojiDrag}
-            onPointerMove={moveEmojiDrag}
-            onPointerUp={endEmojiDrag}
-            onPointerCancel={endEmojiDrag}
+            onPointerDown={(e) => startDynamicDrag(layer.id, e)}
+            onPointerMove={moveDynamicDrag}
+            onPointerUp={endDynamicDrag}
+            onPointerCancel={endDynamicDrag}
             onClick={(e) => {
               e.stopPropagation();
-              if (emojiLayer) {
-                setSelectedDynamicLayerId(emojiLayer.id);
-                setDynamicLayers((prev) => [...prev.filter((l) => l.id !== emojiLayer.id), emojiLayer]);
-              }
+              setSelectedDynamicLayerId(layer.id);
+              setSelectedLayer(null);
               setActiveTool("sticker");
             }}
           >
-            <div className="rounded-2xl bg-black/35 px-3 py-2 text-3xl backdrop-blur-sm">{emojiSticker}</div>
+            <div className="rounded-2xl bg-black/35 px-3 py-2 text-3xl backdrop-blur-sm">{layer.label}</div>
           </div>
-        )}
+        ))}
 
         {dynamicLayers
           .filter((layer) => layer.kind === "mention" || layer.kind === "place" || layer.kind === "time")
@@ -2704,7 +2769,7 @@ export default function StoryCreate() {
               }}
               className="h-10 shrink-0 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition active:scale-[0.98]"
             >
-              {sharing ? "Envoi…" : editorMode === "idle" ? "Partager" : "Terminé"}
+              {sharing ? "Envoi…" : "Publier"}
             </Button>
           </div>
         </div>
@@ -2723,16 +2788,21 @@ export default function StoryCreate() {
                   closeEditorMode();
                   return;
                 }
-                const hasExistingText = textOverlay.trim().length > 0;
                 flushSync(() => {
                   setActiveTool("text");
                   setEditorMode("text");
-                  // Garder le texte/position existants si présents, sinon centrer
-                  if (!hasExistingText) {
-                    placeTextEditorAtCenter();
-                  }
-                  setSelectedLayer("text");
+                  placeTextEditorAtCenter();
+                  setSelectedLayer(null);
                   setSelectedDynamicLayerId(null);
+                  setTextOverlay("");
+                  setTextScale(1);
+                  setTextRotation(0);
+                  setTextColor(DEFAULT_TEXT_LAYER_STYLE.color);
+                  setTextFont(DEFAULT_TEXT_LAYER_STYLE.font);
+                  setTextAlign(DEFAULT_TEXT_LAYER_STYLE.align);
+                  setTextStyle(DEFAULT_TEXT_LAYER_STYLE.style);
+                  setTextSize(DEFAULT_TEXT_LAYER_STYLE.size);
+                  setTextBold(DEFAULT_TEXT_LAYER_STYLE.bold);
                   setShowTextInput(true);
                   setShowMusicPicker(false);
                   setShowSessionPicker(false);
@@ -2785,7 +2855,7 @@ export default function StoryCreate() {
               id: "sticker",
               label: "Sticker",
               icon: Smile,
-              active: editorMode === "sticker" || !!emojiSticker,
+              active: editorMode === "sticker" || emojiLayers.length > 0,
               onClick: () => {
                 if (editorMode === "sticker") {
                   closeEditorMode();
@@ -2972,42 +3042,19 @@ export default function StoryCreate() {
                   key={emoji}
                   type="button"
                   onClick={() => {
-                    const toggling = emojiSticker === emoji;
-                    setEmojiSticker(toggling ? null : emoji);
-                    if (toggling) {
-                      setSelectedLayer(null);
-                      setSelectedDynamicLayerId(null);
-                    } else {
-                      setSelectedLayer(null);
-                      const existing = dynamicLayers.find((l) => l.kind === "emoji");
-                      if (existing) {
-                        setSelectedDynamicLayerId(existing.id);
-                      }
-                    }
+                    addDynamicLayer("emoji", { label: emoji });
+                    setSelectedLayer(null);
                     setShowStickerPicker(false);
                   }}
                   className={cn(
                     "rounded-lg border px-2 py-1.5 text-lg transition-colors",
-                    emojiSticker === emoji ? "border-primary bg-primary/10" : "hover:bg-secondary",
+                    "hover:bg-secondary",
                   )}
                 >
                   {emoji}
                 </button>
               ))}
             </div>
-            {emojiSticker && (
-              <div className="mt-2 flex items-center justify-end gap-2">
-                <button type="button" className="rounded-full border p-1" onClick={() => nudgeSelectedObjectScale(-0.1)}>
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" className="rounded-full border p-1" onClick={() => nudgeSelectedObjectScale(0.1)}>
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" className="rounded-full border px-2 py-1 text-xs" onClick={() => setEmojiSticker(null)}>
-                  Supprimer
-                </button>
-              </div>
-            )}
           </div>
         )}
 

@@ -190,6 +190,36 @@ function paceToLabel(paceSecPerKm?: number) {
   return `${min}'${sec.toString().padStart(2, "0")}''/km`;
 }
 
+function isPositive(value?: number) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function deriveRunningVolume(
+  block: SessionBlock,
+  changedField: "duration" | "distance" | "pace"
+): SessionBlock {
+  const next = { ...block };
+  const hasDuration = isPositive(next.durationSec);
+  const hasDistance = isPositive(next.distanceM);
+  const hasPace = isPositive(next.paceSecPerKm);
+
+  if (changedField === "duration") {
+    if (hasDistance) next.paceSecPerKm = Math.round((next.durationSec! / next.distanceM!) * 1000);
+    else if (hasPace) next.distanceM = Math.max(1, Math.round((next.durationSec! * 1000) / next.paceSecPerKm!));
+    return next;
+  }
+
+  if (changedField === "distance") {
+    if (hasDuration) next.paceSecPerKm = Math.round((next.durationSec! / next.distanceM!) * 1000);
+    else if (hasPace) next.durationSec = Math.max(1, Math.round((next.distanceM! * next.paceSecPerKm!) / 1000));
+    return next;
+  }
+
+  if (hasDuration) next.distanceM = Math.max(1, Math.round((next.durationSec! * next.paceSecPerKm!) / 1000));
+  else if (hasDistance) next.durationSec = Math.max(1, Math.round((next.distanceM! * next.paceSecPerKm!) / 1000));
+  return next;
+}
+
 function blockTitle(type: BlockType) {
   return BLOCK_TYPES.find((b) => b.id === type)?.label ?? "Bloc";
 }
@@ -1672,6 +1702,7 @@ export function CoachPlanningExperience() {
                 {searchResults.groups.map((group) => (
                   <button
                     key={group.id}
+                    type="button"
                     className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
                     onClick={() => {
                       setActiveGroupId(group.id);
@@ -1686,6 +1717,7 @@ export function CoachPlanningExperience() {
                 {searchResults.athletes.map((athlete) => (
                   <button
                     key={athlete.id}
+                    type="button"
                     className="flex w-full items-center justify-between px-4 py-3 text-left active:bg-secondary/80"
                     onClick={() => {
                       setActiveAthleteId(athlete.id);
@@ -2055,14 +2087,21 @@ export function CoachPlanningExperience() {
                       type="button"
                       onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
                       className={cn(
-                        "flex items-center gap-2 rounded-2xl border px-3 py-3 text-left transition-all",
+                        "flex h-14 items-center gap-2 rounded-2xl border px-3 text-left transition-all",
                         draft.sport === sport.id
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-card text-foreground"
+                          ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
+                          : "border-border/80 bg-card text-foreground"
                       )}
                     >
-                      <sport.icon className="h-4 w-4" />
-                      <span className="text-[13px] font-semibold">{sport.label}</span>
+                      <div
+                        className={cn(
+                          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+                          draft.sport === sport.id ? "bg-primary/15" : "bg-secondary"
+                        )}
+                      >
+                        <sport.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-[13px] font-semibold leading-tight">{sport.label}</span>
                     </button>
                   ))}
                 </div>
@@ -2209,6 +2248,19 @@ export function CoachPlanningExperience() {
           ) : blockForm ? (
             <div className="space-y-3 px-4 py-4">
               {(() => {
+                const hasDuration = isPositive(blockForm.durationSec);
+                const hasDistance = isPositive(blockForm.distanceM);
+                const hasPace = isPositive(blockForm.paceSecPerKm);
+                const computedPace =
+                  hasDuration && hasDistance
+                    ? Math.round((blockForm.durationSec! / blockForm.distanceM!) * 1000)
+                    : undefined;
+                const paceDelta =
+                  hasPace && computedPace ? Math.abs((blockForm.paceSecPerKm as number) - computedPace) : 0;
+                const hasVolumeConflict = hasDuration && hasDistance && hasPace && paceDelta > 8;
+                return (
+                  <>
+              {(() => {
                 const meta = blockTypeMeta(blockForm.type);
                 return (
                   <div className={cn("rounded-2xl border p-3", meta.tone)}>
@@ -2236,9 +2288,9 @@ export function CoachPlanningExperience() {
 
               <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
                 <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Volume
+                  {blockForm.type === "steady" ? "Volume estimé" : "Volume"}
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <Button
                     variant="secondary"
                     className="h-10 justify-start rounded-xl text-[13px]"
@@ -2258,9 +2310,8 @@ export function CoachPlanningExperience() {
                           const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
                           setBlockForm((prev) => {
                             if (!prev) return prev;
-                            const computedPace =
-                              prev.distanceM && prev.distanceM > 0 ? Math.round((next / prev.distanceM) * 1000) : prev.paceSecPerKm;
-                            return { ...prev, durationSec: next, paceSecPerKm: computedPace };
+                            const draftNext = { ...prev, durationSec: next };
+                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "duration") : draftNext;
                           });
                         }
                       );
@@ -2292,9 +2343,8 @@ export function CoachPlanningExperience() {
                           setBlockForm((prev) => {
                             if (!prev) return prev;
                             const nextDistance = Number.isFinite(next) ? next : 0;
-                            const computedPace =
-                              prev.durationSec && nextDistance > 0 ? Math.round((prev.durationSec / nextDistance) * 1000) : prev.paceSecPerKm;
-                            return { ...prev, distanceM: nextDistance, paceSecPerKm: computedPace };
+                            const draftNext = { ...prev, distanceM: nextDistance };
+                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "distance") : draftNext;
                           });
                         }
                       );
@@ -2302,7 +2352,72 @@ export function CoachPlanningExperience() {
                   >
                     Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
                   </Button>
+                  {draft.sport !== "strength" && (
+                    <Button
+                      variant={draft.sport === "running" ? "default" : "secondary"}
+                      className={cn(
+                        "h-10 justify-start rounded-xl text-[12px]",
+                        draft.sport === "running" && "bg-primary/90 text-primary-foreground hover:bg-primary"
+                      )}
+                      onClick={() => {
+                        const derivedPace =
+                          blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
+                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
+                            : undefined;
+                        setWheelUnit("min/km");
+                        const pace = blockForm.paceSecPerKm || derivedPace || 330;
+                        setWheelA(String(Math.floor(pace / 60)));
+                        setWheelB(String(pace % 60));
+                        openWheelColumns(
+                          "Allure moyenne estimée",
+                          [
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelA, onChange: setWheelA, suffix: "'" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "''" },
+                            { items: [{ value: "min/km", label: "/km" }, { value: "min/mi", label: "/mi" }, { value: "s/100", label: "/100m" }], value: wheelUnit, onChange: setWheelUnit },
+                          ],
+                          () => {
+                            const unit = wheelUnit;
+                            if (unit === "s/100") {
+                              const sec100 = Number.parseInt(wheelA, 10);
+                              const pacePerKm = sec100 * 10;
+                              setBlockForm((prev) => {
+                                if (!prev) return prev;
+                                const draftNext = { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined };
+                                return draft.sport === "running" ? deriveRunningVolume(draftNext, "pace") : draftNext;
+                              });
+                              return;
+                            }
+                            const secBase = Number.parseInt(wheelA, 10) * 60 + Number.parseInt(wheelB, 10);
+                            const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
+                            setBlockForm((prev) => {
+                              if (!prev) return prev;
+                              const draftNext = { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined };
+                              return draft.sport === "running" ? deriveRunningVolume(draftNext, "pace") : draftNext;
+                            });
+                          }
+                        );
+                      }}
+                    >
+                      Allure moyenne estimée:{" "}
+                      {paceToLabel(
+                        blockForm.paceSecPerKm ||
+                          (blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
+                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
+                            : undefined)
+                      ) || "Non définie"}
+                    </Button>
+                  )}
                 </div>
+                {hasVolumeConflict && draft.sport === "running" ? (
+                  <p className="mt-2 px-1 text-[11px] text-amber-600 dark:text-amber-400">
+                    Valeurs incohérentes: l’allure est automatiquement ajustée selon durée + distance.
+                  </p>
+                ) : null}
+                {draft.sport === "running" ? (
+                  <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+                    L’allure est dérivée automatiquement dès que 2 valeurs de volume sont renseignées.
+                  </p>
+                ) : null}
               </div>
 
               {blockForm.type === "interval" && (
@@ -2359,47 +2474,6 @@ export function CoachPlanningExperience() {
                     Cible
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="secondary"
-                      className="h-10 justify-start rounded-xl text-[12px]"
-                      onClick={() => {
-                        const derivedPace =
-                          blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
-                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
-                            : undefined;
-                        setWheelUnit("min/km");
-                        const pace = blockForm.paceSecPerKm || derivedPace || 330;
-                        setWheelA(String(Math.floor(pace / 60)));
-                        setWheelB(String(pace % 60));
-                        openWheelColumns(
-                          "Allure",
-                          [
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelA, onChange: setWheelA, suffix: "'" },
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "''" },
-                            { items: [{ value: "min/km", label: "/km" }, { value: "min/mi", label: "/mi" }, { value: "s/100", label: "/100m" }], value: wheelUnit, onChange: setWheelUnit },
-                          ],
-                          () => {
-                            const unit = wheelUnit;
-                            if (unit === "s/100") {
-                              const sec100 = Number.parseInt(wheelA, 10);
-                              const pacePerKm = sec100 * 10;
-                              setBlockForm((prev) => (prev ? { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined } : prev));
-                              return;
-                            }
-                            const secBase = Number.parseInt(wheelA, 10) * 60 + Number.parseInt(wheelB, 10);
-                            const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
-                            setBlockForm((prev) => (prev ? { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined } : prev));
-                          }
-                        );
-                      }}
-                    >
-                      {paceToLabel(
-                        blockForm.paceSecPerKm ||
-                          (blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
-                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
-                            : undefined)
-                      ) || "Allure"}
-                    </Button>
                     {draft.sport === "cycling" ? (
                       <Button
                         variant="secondary"
@@ -2422,6 +2496,9 @@ export function CoachPlanningExperience() {
                   </div>
                 </div>
               )}
+                  </>
+                );
+              })()}
 
               <div className="rounded-2xl border border-border bg-secondary/40 p-2">
                 <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

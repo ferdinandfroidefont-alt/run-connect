@@ -22,7 +22,6 @@ interface PickerColumnProps {
 }
 
 interface PickerFooterProps {
-  title: string;
   onCancel: () => void;
   onConfirm: () => void;
   accentColor: string;
@@ -275,15 +274,13 @@ export function PickerColumn({ items, value, onChange, suffix, disabled = false 
   );
 }
 
-export function PickerFooter({ title, onCancel, onConfirm, accentColor }: PickerFooterProps) {
+export function PickerFooter({ onCancel, onConfirm, accentColor }: PickerFooterProps) {
   return (
     <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
       <button onClick={onCancel} className="text-[17px] text-muted-foreground active:opacity-70">
         Annuler
       </button>
-      <span className="text-[15px] font-semibold text-foreground/85" style={{ textShadow: `0 0 18px ${accentColor}22` }}>
-        {title}
-      </span>
+      <span aria-hidden="true" className="w-16" />
       <button onClick={onConfirm} className="text-[17px] font-semibold active:opacity-70" style={{ color: accentColor }}>
         OK
       </button>
@@ -367,7 +364,7 @@ export function SmartPerformancePicker({
             ))}
           </div>
         </div>
-        <PickerFooter title={title} onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
+        <PickerFooter onCancel={onClose} onConfirm={onConfirm} accentColor={accentColor} />
       </div>
     </div>
   );

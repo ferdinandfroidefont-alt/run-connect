@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { createEmbeddedMapboxMap } from "@/lib/mapboxEmbed";
-import { createUserLocationMapboxMarker } from "@/lib/mapUserLocationIcon";
 import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAuth } from "@/hooks/useAuth";
+import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
 
 type LiveState = "none" | "upcoming" | "live";
 
@@ -177,17 +177,41 @@ export default function Participants() {
     const map = mapRef.current;
     if (!map) return;
     let cancelled = false;
+    const myProfile = user?.id ? participantProfiles.get(user.id) : null;
+    const myAvatarUrl =
+      myProfile?.avatar_url ??
+      (typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null) ??
+      null;
 
     if (userPosition) {
       void (async () => {
-        const userMarker = await createUserLocationMapboxMarker(userPosition.lng, userPosition.lat);
+        const mapboxgl = await loadMapboxGl();
         if (cancelled || !mapRef.current) {
-          userMarker.remove();
           return;
         }
-        userMarkerRef.current?.remove();
-        userMarker.addTo(mapRef.current);
-        userMarkerRef.current = userMarker;
+        const existing = userMarkerRef.current;
+        if (existing) {
+          existing.setLngLat([userPosition.lng, userPosition.lat]);
+          return;
+        }
+
+        const wrap = document.createElement("div");
+        wrap.style.position = "relative";
+        wrap.style.width = "1px";
+        wrap.style.height = "1px";
+        wrap.style.overflow = "visible";
+
+        const myPin = createSessionPinButton({
+          avatarUrl: myAvatarUrl || "/placeholder.svg",
+          ariaLabel: "Ma position",
+          variant: resolveSessionPinVariant(),
+        });
+        wrap.appendChild(myPin);
+
+        const marker = new mapboxgl.Marker({ element: wrap, anchor: "bottom" })
+          .setLngLat([userPosition.lng, userPosition.lat])
+          .addTo(mapRef.current);
+        userMarkerRef.current = marker;
       })();
     } else {
       userMarkerRef.current?.remove();
@@ -214,7 +238,7 @@ export default function Participants() {
     return () => {
       cancelled = true;
     };
-  }, [session, userPosition]);
+  }, [session, userPosition, participantProfiles, user]);
 
   useEffect(() => {
     const map = mapRef.current;

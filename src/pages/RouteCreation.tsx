@@ -49,7 +49,12 @@ import {
   persistMapStyleId,
 } from '@/lib/mapboxMapStylePreference';
 import { insertRouteRecord } from '@/lib/insertRouteRecord';
-import { buildCoordinatesWithElevation, computeRouteStats } from '@/lib/routePersistence';
+import {
+  buildCoordinatesWithElevation,
+  computeRouteStats,
+  cumulativeDistanceAlongPath,
+  sampleAlongPathAtDistance,
+} from '@/lib/routePersistence';
 import { createEmbeddedMapboxMap, fitMapToCoords, setOrUpdateLineLayer, removeLineLayer } from '@/lib/mapboxEmbed';
 import { loadMapboxGl } from '@/lib/mapboxLazy';
 import { createUserLocationMapboxMarker } from '@/lib/mapUserLocationIcon';
@@ -101,7 +106,9 @@ export const RouteCreation = () => {
   const map = useRef<Map | null>(null);
   const segments = useRef<RouteSegment[]>([]);
   const waypoints = useRef<MapCoord[]>([]);
-  const waypointMarkers = useRef<Marker[]>([]);
+  const startMarkerRef = useRef<Marker | null>(null);
+  const endMarkerRef = useRef<Marker | null>(null);
+  const distanceMarkersRef = useRef<Marker[]>([]);
   const userLocationMarkerRef = useRef<Marker | null>(null);
   const segmentIdCounterRef = useRef(0);
 
@@ -129,7 +136,6 @@ export const RouteCreation = () => {
     Array<{
       waypoint: MapCoord;
       segment: RouteSegment | null;
-      marker: Marker | null;
       mode: 'manual' | 'guided';
     }>
   >([]);
@@ -200,7 +206,6 @@ export const RouteCreation = () => {
         const wp = savedWaypoints[i]!;
         const latLng: MapCoord = { lat: wp.lat, lng: wp.lng };
         waypoints.current.push(latLng);
-        await addWaypointMarker(latLng, i, wp.mode || 'manual');
 
         if (i > 0) {
           const prevWp = savedWaypoints[i - 1]!;
@@ -223,8 +228,6 @@ export const RouteCreation = () => {
 
       waypoints.current.push(latLngs[0]!, latLngs[latLngs.length - 1]!);
 
-      await addWaypointMarker(latLngs[0]!, 0, 'manual');
-      await addWaypointMarker(latLngs[latLngs.length - 1]!, 1, 'manual');
 
       const { layerSourceId, layerId } = allocSegmentLayer();
       setOrUpdateLineLayer(map.current, layerSourceId, layerId, latLngs, {
@@ -245,6 +248,7 @@ export const RouteCreation = () => {
     if (waypoints.current.length > 0) {
       await fitMapToCoords(map.current, waypoints.current, 50);
     }
+    await refreshEndpointAndDistanceMarkers();
 
     await updateElevationAndStats('fast');
     setWaypointCount(waypoints.current.length);
@@ -331,34 +335,74 @@ export const RouteCreation = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode]);
 
-  const addWaypointMarker = async (latLng: MapCoord, index: number, mode: 'manual' | 'guided') => {
-    if (!map.current) return;
+  const clearMarkers = () => {
+    startMarkerRef.current?.remove();
+    startMarkerRef.current = null;
+    endMarkerRef.current?.remove();
+    endMarkerRef.current = null;
+    distanceMarkersRef.current.forEach((m) => m.remove());
+    distanceMarkersRef.current = [];
+  };
+
+  const refreshEndpointAndDistanceMarkers = useCallback(async () => {
+    const m = map.current;
+    if (!m) return;
+    clearMarkers();
+    if (waypoints.current.length === 0) return;
 
     const mapboxgl = await loadMapboxGl();
+    const start = waypoints.current[0]!;
+    const startEl = document.createElement('div');
+    startEl.style.width = '18px';
+    startEl.style.height = '18px';
+    startEl.style.borderRadius = '9999px';
+    startEl.style.background = '#34C759';
+    startEl.style.border = '3px solid white';
+    startEl.style.boxShadow = '0 4px 10px rgba(0,0,0,0.25)';
+    startMarkerRef.current = new mapboxgl.Marker({ element: startEl })
+      .setLngLat([start.lng, start.lat])
+      .addTo(m);
 
-    const wrap = document.createElement('div');
-    wrap.style.display = 'flex';
-    wrap.style.alignItems = 'center';
-    wrap.style.justifyContent = 'center';
-    wrap.style.width = '28px';
-    wrap.style.height = '28px';
-    wrap.style.borderRadius = '50%';
-    wrap.style.background = mode === 'manual' ? '#f97316' : '#3b82f6';
-    wrap.style.color = 'white';
-    wrap.style.fontWeight = '800';
-    wrap.style.fontSize = '12px';
-    wrap.style.border = '2px solid white';
-    wrap.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)';
-    wrap.textContent = String(index + 1);
+    if (waypoints.current.length >= 2) {
+      const end = waypoints.current[waypoints.current.length - 1]!;
+      const finishEl = document.createElement('div');
+      finishEl.style.width = '20px';
+      finishEl.style.height = '20px';
+      finishEl.style.display = 'flex';
+      finishEl.style.alignItems = 'center';
+      finishEl.style.justifyContent = 'center';
+      finishEl.style.fontSize = '18px';
+      finishEl.style.filter = 'drop-shadow(0 3px 6px rgba(0,0,0,0.25))';
+      finishEl.textContent = '🏁';
+      endMarkerRef.current = new mapboxgl.Marker({ element: finishEl, anchor: 'bottom' })
+        .setLngLat([end.lng, end.lat])
+        .addTo(m);
+    }
 
-    const marker = new mapboxgl.Marker({ element: wrap }).setLngLat([latLng.lng, latLng.lat]).addTo(map.current);
-    waypointMarkers.current.push(marker);
-  };
-
-  const clearMarkers = () => {
-    waypointMarkers.current.forEach((m) => m.remove());
-    waypointMarkers.current = [];
-  };
+    const allCoordinates = getAllCoordinates();
+    if (allCoordinates.length < 2) return;
+    const distCum = cumulativeDistanceAlongPath(allCoordinates);
+    const totalMeters = distCum[distCum.length - 1] ?? 0;
+    const spacingM = totalMeters >= 20_000 ? 5_000 : 2_000;
+    for (let d = spacingM; d < totalMeters; d += spacingM) {
+      const sample = sampleAlongPathAtDistance(allCoordinates, new Array(allCoordinates.length).fill(0), distCum, d);
+      if (!sample) continue;
+      const bubble = document.createElement('div');
+      bubble.style.padding = '2px 7px';
+      bubble.style.borderRadius = '9999px';
+      bubble.style.background = 'rgba(17,24,39,0.84)';
+      bubble.style.color = '#fff';
+      bubble.style.fontSize = '11px';
+      bubble.style.fontWeight = '600';
+      bubble.style.letterSpacing = '0.01em';
+      bubble.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+      bubble.textContent = `${Math.round(d / 1000)} km`;
+      const distanceMarker = new mapboxgl.Marker({ element: bubble })
+        .setLngLat([sample.lng, sample.lat])
+        .addTo(m);
+      distanceMarkersRef.current.push(distanceMarker);
+    }
+  }, []);
 
   const clearSegments = () => {
     const m = map.current;
@@ -512,12 +556,11 @@ export const RouteCreation = () => {
 
     if (waypoints.current.length === 0) {
       waypoints.current.push(latLng);
-      await addWaypointMarker(latLng, 0, currentMode);
       setWaypointCount(1);
+      await refreshEndpointAndDistanceMarkers();
     } else {
       const lastPoint = waypoints.current[waypoints.current.length - 1]!;
       waypoints.current.push(latLng);
-      await addWaypointMarker(latLng, waypoints.current.length - 1, currentMode);
 
       let newSegment: RouteSegment | null;
 
@@ -530,6 +573,7 @@ export const RouteCreation = () => {
       if (newSegment) {
         segments.current.push(newSegment);
         setWaypointCount(waypoints.current.length);
+        await refreshEndpointAndDistanceMarkers();
         void updateElevationAndStats('fast');
       }
     }
@@ -672,10 +716,7 @@ export const RouteCreation = () => {
     if (waypoints.current.length === 0) return;
 
     const removedWaypoint = waypoints.current.pop();
-    const removedMarker = waypointMarkers.current.pop();
     let removedSegment: RouteSegment | null = null;
-
-    if (removedMarker) removedMarker.remove();
 
     if (segments.current.length > 0) {
       removedSegment = segments.current.pop() || null;
@@ -688,7 +729,6 @@ export const RouteCreation = () => {
       undoHistory.current.push({
         waypoint: removedWaypoint,
         segment: removedSegment,
-        marker: removedMarker || null,
         mode: removedSegment?.mode || (isManualModeRef.current ? 'manual' : 'guided'),
       });
       setCanRedo(true);
@@ -703,6 +743,7 @@ export const RouteCreation = () => {
     } else {
       void updateElevationAndStats('fast');
     }
+    await refreshEndpointAndDistanceMarkers();
     setWaypointCount(waypoints.current.length);
   };
 
@@ -713,9 +754,6 @@ export const RouteCreation = () => {
     if (!lastUndo) return;
 
     waypoints.current.push(lastUndo.waypoint);
-
-    const markerIndex = waypoints.current.length - 1;
-    await addWaypointMarker(lastUndo.waypoint, markerIndex, lastUndo.mode);
 
     if (waypoints.current.length > 1) {
       const prevPoint = waypoints.current[waypoints.current.length - 2]!;
@@ -734,6 +772,7 @@ export const RouteCreation = () => {
 
     setCanRedo(undoHistory.current.length > 0);
     setWaypointCount(waypoints.current.length);
+    await refreshEndpointAndDistanceMarkers();
     void updateElevationAndStats('fast');
   };
 
@@ -814,7 +853,6 @@ export const RouteCreation = () => {
         const wp = draft.waypoints[i]!;
         const latLng: MapCoord = { lat: Number(wp.lat), lng: Number(wp.lng) };
         waypoints.current.push(latLng);
-        await addWaypointMarker(latLng, i, wp.mode || 'manual');
         if (i > 0) {
           const prev = draft.waypoints[i - 1]!;
           const prevLatLng: MapCoord = { lat: Number(prev.lat), lng: Number(prev.lng) };
@@ -837,6 +875,7 @@ export const RouteCreation = () => {
       setIsManualMode(!!draft.isManualMode);
       isManualModeRef.current = !!draft.isManualMode;
       setWaypointCount(waypoints.current.length);
+      await refreshEndpointAndDistanceMarkers();
       await fitMapToCoords(map.current, waypoints.current, 50);
       // Rejouer les lignes après restauration + après éventuel refresh style.
       replayAllSegments();
