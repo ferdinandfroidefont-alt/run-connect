@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { EmblaCarouselType } from 'embla-carousel-react';
+import type { UseEmblaCarouselType } from 'embla-carousel-react';
+type EmblaCarouselType = NonNullable<UseEmblaCarouselType[1]>;
 import {
   Carousel,
   CarouselContent,
