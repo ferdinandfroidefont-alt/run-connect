@@ -22,6 +22,7 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
+import { StravaActivitiesPanel } from '@/components/sessions/StravaActivitiesPanel';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
@@ -80,6 +81,12 @@ interface OrganizerProfile {
   display_name: string;
   avatar_url: string | null;
 }
+
+type ConfirmTarget = {
+  sessionId: string;
+  scheduledAt: string;
+  isCreator: boolean;
+};
 
 const CARD_SWIPE_THRESHOLD = -80;
 const SWIPE_ACTION_WIDTH = 148;
@@ -164,6 +171,8 @@ export default function MySessions() {
   const [showShareConversationDialog, setShowShareConversationDialog] = useState(false);
   const [sessionForShare, setSessionForShare] = useState<Parameters<typeof buildSessionSharePayload>[0] | null>(null);
   const [sessionPage, setSessionPage] = useState(0);
+  const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const SESSIONS_PER_PAGE = 4;
 
@@ -605,6 +614,7 @@ export default function MySessions() {
   };
 
   const now = new Date().toISOString();
+  const nowMs = Date.now();
   const activeSessions =
     sessionSource === 'created'
       ? sessions
@@ -617,6 +627,24 @@ export default function MySessions() {
     if (filter === 'completed') return session.scheduled_at < now;
     return true;
   });
+
+  const openConfirmDialog = (session: UserSession) => {
+    setConfirmTarget({
+      sessionId: session.id,
+      scheduledAt: session.scheduled_at,
+      isCreator: session.organizer_id === user?.id,
+    });
+    setConfirmDialogOpen(true);
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialogOpen(false);
+    setConfirmTarget(null);
+  };
+
+  const isConfirmExpired = confirmTarget
+    ? nowMs - new Date(confirmTarget.scheduledAt).getTime() > 3 * 24 * 60 * 60 * 1000
+    : false;
 
   // Session detail view
   if (selectedSession) {
@@ -1058,6 +1086,14 @@ export default function MySessions() {
 
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
+              {sessionSource === "to-confirm" ? (
+                <StravaActivitiesPanel
+                  userId={user?.id}
+                  enabled={!!user}
+                  onConfirmSession={(sessionId) => navigate(`/my-sessions/confirm/${sessionId}`)}
+                />
+              ) : (
+                <>
               {/* List/Calendar toggle */}
               <div className="flex px-ios-4 mb-ios-1">
                 <div className="flex ios-card rounded-ios-lg p-ios-1 shrink-0">
@@ -1176,9 +1212,7 @@ export default function MySessions() {
                       return (
                         <SwipeConfirmCard
                           key={session.id}
-                          onConfirm={() => {
-                            toast({ title: "Confirmation", description: "Séance marquée à confirmer." });
-                          }}
+                          onConfirm={() => openConfirmDialog(session)}
                         >
                           <div
                             onClick={() => handleSessionClick(session)}
@@ -1263,6 +1297,8 @@ export default function MySessions() {
                   </Suspense>
                 </div>
               )}
+                </>
+              )}
           </>
         </div>
       </div>
@@ -1298,6 +1334,68 @@ export default function MySessions() {
               Supprimer
             </AlertDialogAction>
           </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent className="rounded-ios-lg max-w-[320px] p-0 gap-0">
+          <AlertDialogHeader className="p-ios-6 pb-ios-4">
+            <AlertDialogTitle className="text-center text-ios-headline font-semibold">
+              {isConfirmExpired ? "Séance expirée" : "Confirmer cette séance"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-ios-subheadline text-muted-foreground mt-ios-2">
+              {isConfirmExpired
+                ? "Cette séance est passée depuis plus de 3 jours."
+                : "Choisissez votre mode de confirmation."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {isConfirmExpired ? (
+            <AlertDialogFooter className="p-ios-4 pt-0">
+              <AlertDialogAction className="w-full" onClick={closeConfirmDialog}>
+                Fermer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          ) : (
+            <div className="px-ios-4 pb-ios-4 space-y-ios-2">
+              <button
+                type="button"
+                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
+                onClick={() => {
+                  if (!confirmTarget) return;
+                  closeConfirmDialog();
+                  navigate(`/my-sessions/confirm/${confirmTarget.sessionId}`);
+                }}
+              >
+                <p className="text-[15px] font-semibold text-foreground">
+                  {confirmTarget?.isCreator
+                    ? "Créateur : valider la présence des participants"
+                    : "Participant : confirmer ma présence (position actuelle)"}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                className="w-full rounded-ios-md border border-border px-ios-3 py-ios-3 text-left active:opacity-80"
+                onClick={() => {
+                  closeConfirmDialog();
+                  setSessionSource('to-confirm');
+                  setSessionPage(0);
+                }}
+              >
+                <p className="text-[15px] font-semibold text-foreground">
+                  Confirmer ma séance avec mes activités Strava
+                </p>
+              </button>
+
+              <AlertDialogCancel
+                className="w-full mt-ios-1"
+                onClick={closeConfirmDialog}
+              >
+                Annuler
+              </AlertDialogCancel>
+            </div>
+          )}
         </AlertDialogContent>
       </AlertDialog>
 

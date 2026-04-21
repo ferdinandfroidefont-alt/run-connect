@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useGeolocation } from "@/hooks/useGeolocation";
 
 type Participant = {
   id: string;
@@ -58,6 +59,9 @@ export default function Participants() {
   const [showLiveSessionsPanel, setShowLiveSessionsPanel] = useState(false);
   const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
   const [liveSessionsFilter, setLiveSessionsFilter] = useState<"live" | "upcoming" | "recent">("live");
+  const [fallbackUserPosition, setFallbackUserPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [hasAutoCentered, setHasAutoCentered] = useState(false);
+  const { getCurrentPosition } = useGeolocation();
   const {
     session,
     participantPositions,
@@ -73,11 +77,25 @@ export default function Participants() {
   const userMarkerRef = useRef<Marker | null>(null);
   const rdvMarkerRef = useRef<Marker | null>(null);
   const participantMarkersRef = useRef<Map<string, Marker>>(new Map());
-  const userPositionRef = useRef(userPosition);
+  const effectiveUserPosition = userPosition ?? fallbackUserPosition;
+  const userPositionRef = useRef(effectiveUserPosition);
 
   useEffect(() => {
-    userPositionRef.current = userPosition;
-  }, [userPosition]);
+    userPositionRef.current = effectiveUserPosition;
+  }, [effectiveUserPosition]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (userPosition) return;
+    void (async () => {
+      const pos = await getCurrentPosition(0, { mode: "fast" });
+      if (cancelled || !pos) return;
+      setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getCurrentPosition, userPosition]);
 
   const participants = useMemo<Participant[]>(
     () =>
@@ -166,13 +184,16 @@ export default function Participants() {
   }, [fitDefaultView]);
 
   useEffect(() => {
-    if (!mapRef.current || !userPosition) return;
+    if (!mapRef.current || !effectiveUserPosition) return;
+    const nextZoom = hasAutoCentered ? undefined : 15.2;
     mapRef.current.easeTo({
-      center: [userPosition.lng, userPosition.lat],
-      duration: 320,
+      center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
+      zoom: nextZoom,
+      duration: 420,
       essential: true,
     });
-  }, [userPosition]);
+    if (!hasAutoCentered) setHasAutoCentered(true);
+  }, [effectiveUserPosition, hasAutoCentered]);
 
   useEffect(() => {
     const onVis = () => {
@@ -194,7 +215,7 @@ export default function Participants() {
       (typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null) ??
       null;
 
-    if (userPosition) {
+    if (effectiveUserPosition) {
       void (async () => {
         const mapboxgl = await loadMapboxGl();
         if (cancelled || !mapRef.current) {
@@ -234,7 +255,7 @@ export default function Participants() {
         }
 
         const marker = new mapboxgl.Marker({ element: wrap, anchor: "bottom" })
-          .setLngLat([userPosition.lng, userPosition.lat])
+          .setLngLat([effectiveUserPosition.lng, effectiveUserPosition.lat])
           .addTo(mapRef.current);
         userMarkerRef.current = marker;
       })();
@@ -263,7 +284,7 @@ export default function Participants() {
     return () => {
       cancelled = true;
     };
-  }, [session, userPosition, participantProfiles, user]);
+  }, [session, effectiveUserPosition, participantProfiles, user]);
 
   useEffect(() => {
     const map = mapRef.current;

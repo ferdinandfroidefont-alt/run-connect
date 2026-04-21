@@ -12,7 +12,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Activity, Bike, Dumbbell, Footprints, Moon, Sparkles, TrendingUp, Waves } from "lucide-react";
+import { Activity, Bike, ChevronDown, Dumbbell, Footprints, Moon, Sparkles, TrendingUp, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession, mapParticipationToUiStatus, sessionVolumeLabel } from "./planUtils";
@@ -61,6 +61,7 @@ export function AthleteMyPlanView(props: Props) {
   } = props;
   const [calendarMode, setCalendarMode] = useState<"week" | "month">("week");
   const [progressionRange, setProgressionRange] = useState<"1m" | "3m" | "6m" | "1y">("1y");
+  const [progressionDropdownOpen, setProgressionDropdownOpen] = useState(false);
   const [detail, setDetail] = useState<AthletePlanSessionModel | null>(null);
   const [savingFeedback, setSavingFeedback] = useState(false);
 
@@ -80,13 +81,6 @@ export function AthleteMyPlanView(props: Props) {
       (a, b) => new Date(a.assignedDate).getTime() - new Date(b.assignedDate).getTime()
       ),
     [sessions, weekDays]
-  );
-  const todaySession = useMemo(
-    () =>
-      sessions
-        .filter((s) => isSameDay(parseISO(s.assignedDate), new Date()))
-        .sort((a, b) => new Date(a.assignedDate).getTime() - new Date(b.assignedDate).getTime())[0] ?? null,
-    [sessions]
   );
   const progressionMonthsCount = progressionRange === "1m" ? 1 : progressionRange === "3m" ? 3 : progressionRange === "6m" ? 6 : 12;
   const progressionMonths = useMemo(() => {
@@ -123,21 +117,28 @@ export function AthleteMyPlanView(props: Props) {
   const currentMonthIndex = progressionColumns.findIndex((column) => isCurrentMonth(column.monthDate));
   const activeProgressionIndex = safeProgressionIndex >= 0 ? safeProgressionIndex : Math.max(currentMonthIndex, 0);
   const selectedPoints = selectedProgression ? Math.round(selectedProgression.total * 3.8 + 55) : 0;
-  const previousYearTotal = useMemo(() => {
-    const previousYear = new Date().getFullYear() - 1;
-    return sessions
-      .filter((session) => parseISO(session.assignedDate).getFullYear() === previousYear)
+  const { evolutionPct, evolutionPts } = useMemo(() => {
+    const currentRangeStart = startOfMonth(new Date(new Date().getFullYear(), new Date().getMonth() - (progressionMonthsCount - 1), 1));
+    const previousRangeStart = startOfMonth(
+      new Date(currentRangeStart.getFullYear(), currentRangeStart.getMonth() - progressionMonthsCount, 1)
+    );
+    const currentRangeTotal = sessions
+      .filter((session) => {
+        const date = parseISO(session.assignedDate);
+        return date >= currentRangeStart;
+      })
       .reduce((acc, session) => acc + computeSessionLoad(session), 0);
-  }, [sessions]);
-  const currentYearTotal = useMemo(
-    () =>
-      sessions
-        .filter((session) => parseISO(session.assignedDate).getFullYear() === new Date().getFullYear())
-        .reduce((acc, session) => acc + computeSessionLoad(session), 0),
-    [sessions]
-  );
-  const yearDeltaPct = previousYearTotal > 0 ? Math.round(((currentYearTotal - previousYearTotal) / previousYearTotal) * 100) : 3;
-  const yearDeltaPts = Math.max(1, Math.round(Math.abs((currentYearTotal - previousYearTotal) * 0.35))) || 3;
+    const previousRangeTotal = sessions
+      .filter((session) => {
+        const date = parseISO(session.assignedDate);
+        return date >= previousRangeStart && date < currentRangeStart;
+      })
+      .reduce((acc, session) => acc + computeSessionLoad(session), 0);
+    const pct =
+      previousRangeTotal > 0 ? Math.round(((currentRangeTotal - previousRangeTotal) / previousRangeTotal) * 100) : 0;
+    const pts = Math.round((currentRangeTotal - previousRangeTotal) * 0.4);
+    return { evolutionPct: pct, evolutionPts: pts };
+  }, [progressionMonthsCount, sessions]);
   const cardMetrics = useMemo(() => {
     const last7 = sessions
       .filter((session) => differenceInMonths(new Date(), parseISO(session.assignedDate)) <= 1)
@@ -248,101 +249,47 @@ export function AthleteMyPlanView(props: Props) {
           </button>
         </div>
 
-        {calendarMode === "week" ? (
-          <div className="-mx-1 overflow-x-auto pb-1">
-            <div className="flex min-w-max gap-2.5 px-1">
-              {visibleDayCards.map((card) => {
-                const isCurrent = isSameDay(card.day, selectedDate);
-                const inMonth = isSameMonth(card.day, selectedDate);
-                return (
-                  <button
-                    key={card.day.toISOString()}
-                    type="button"
-                    onClick={() => onSelectDate(card.day)}
-                    className={cn(
-                      "w-[94px] shrink-0 rounded-[18px] border bg-white px-2.5 py-3 text-left transition duration-200 active:scale-[0.98]",
-                      isCurrent
-                        ? "border-blue-500 shadow-[0_4px_10px_rgba(37,99,235,0.14)]"
-                        : "border-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.06)]",
-                      !inMonth && "opacity-45"
-                    )}
-                  >
-                    <p className="text-[11px] font-semibold uppercase text-slate-500">
-                      {format(card.day, "EEE", { locale: fr })}
-                    </p>
-                    <p className="text-[33px] font-semibold leading-none text-slate-900">{format(card.day, "d")}</p>
-                    <div className={cn("mt-2.5 flex h-12 w-12 items-center justify-center rounded-full", sportSurfaceClass(card.mainSport))}>
-                      {sportIcon(card.mainSport)}
-                    </div>
-                    <div className="mt-2 h-1 w-full rounded-full bg-slate-200/80">
-                      <div
-                        className={cn("h-1 rounded-full transition-all", sportBarClass(card.mainSport))}
-                        style={{ width: `${card.barPercent}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 truncate text-sm font-semibold leading-tight text-slate-900">{card.summary}</p>
-                    {card.secondarySummary ? (
-                      <p className="truncate text-[11px] text-slate-500">{card.secondarySummary}</p>
-                    ) : (
-                      <p className="h-[16px] text-[11px] text-transparent">.</p>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-2">
-            {visibleDayCards.map((card) => {
-              const isCurrent = isSameDay(card.day, selectedDate);
-              const inMonth = isSameMonth(card.day, selectedDate);
-              return (
-                <button
-                  key={card.day.toISOString()}
-                  type="button"
-                  onClick={() => onSelectDate(card.day)}
-                  className={cn(
-                    "rounded-2xl border bg-white px-1.5 py-2 text-center transition active:scale-[0.98]",
-                    isCurrent ? "border-blue-500 shadow-[0_3px_8px_rgba(37,99,235,0.13)]" : "border-slate-200",
-                    !inMonth && "opacity-40"
-                  )}
-                >
-                  <p className="text-[9px] font-semibold uppercase text-slate-400">{format(card.day, "EEE", { locale: fr })}</p>
-                  <p className="text-sm font-semibold text-slate-900">{format(card.day, "d")}</p>
-                  <div className={cn("mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full", sportSurfaceClass(card.mainSport))}>
-                    <span className="scale-[0.85]">{sportIcon(card.mainSport)}</span>
-                  </div>
-                  <div className="mx-auto mt-1 h-1 w-8 rounded-full bg-slate-200/80">
-                    <div className={cn("h-1 rounded-full", sportBarClass(card.mainSport))} style={{ width: `${card.barPercent}%` }} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-        <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Aujourd'hui</p>
-        {todaySession ? (
-          <button
-            type="button"
-            onClick={() => setDetail(todaySession)}
-            className="w-full rounded-2xl border border-border/80 bg-secondary/30 p-3 text-left transition hover:bg-secondary/50"
-          >
-            <p className="text-sm font-semibold text-foreground">{todaySession.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {todaySession.coachName} · {Math.round(kmForSession(todaySession) * 10) / 10} km
-            </p>
-            <p className="mt-2 inline-flex rounded-full bg-secondary px-2 py-1 text-xs font-semibold text-foreground">
-              {todaySession.participationStatus === "completed" ? "Faite" : "Pas encore faite"}
-            </p>
-          </button>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border p-3 text-sm text-muted-foreground">
-            Pas de séance prévue aujourd'hui.
-          </div>
-        )}
+        <div className="grid grid-cols-7 gap-2">
+          {visibleDayCards.map((card) => {
+            const isCurrent = isSameDay(card.day, selectedDate);
+            const inMonth = isSameMonth(card.day, selectedDate);
+            return (
+              <button
+                key={card.day.toISOString()}
+                type="button"
+                onClick={() => onSelectDate(card.day)}
+                className={cn(
+                  "rounded-2xl border bg-white px-1.5 py-2 text-center transition active:scale-[0.98]",
+                  isCurrent ? "border-blue-500 shadow-[0_3px_8px_rgba(37,99,235,0.13)]" : "border-slate-200",
+                  !inMonth && "opacity-40"
+                )}
+              >
+                <p className="text-[9px] font-semibold uppercase text-slate-400">{format(card.day, "EEE", { locale: fr })}</p>
+                <p className="text-sm font-semibold text-slate-900">{format(card.day, "d")}</p>
+                <div className={cn("mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full", sportSurfaceClass(card.mainSport))}>
+                  <span className="scale-[0.85]">{sportIcon(card.mainSport)}</span>
+                </div>
+                <div className="mx-auto mt-1 h-1 w-8 rounded-full bg-slate-200/80">
+                  <div className={cn("h-1 rounded-full", sportBarClass(card.mainSport))} style={{ width: `${card.barPercent}%` }} />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-slate-600">
+          {[
+            { sport: "running", label: "Course à pied" },
+            { sport: "cycling", label: "Vélo" },
+            { sport: "swimming", label: "Natation" },
+            { sport: "strength", label: "Renforcement" },
+            { sport: "other", label: "Repos" },
+          ].map((item) => (
+            <span key={item.sport} className="inline-flex items-center gap-1.5">
+              <span className={cn("h-2.5 w-2.5 rounded-full", sportDotClass(item.sport as SportType))} />
+              {item.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
@@ -383,43 +330,56 @@ export function AthleteMyPlanView(props: Props) {
       <div className="mt-7 space-y-3 rounded-[24px] border border-slate-200/80 bg-[#F7F8FA] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[22px] font-semibold leading-tight text-slate-900">Ma progression</p>
-            <p className="mt-0.5 text-xs text-slate-500">Analyse de ta charge d'entraînement</p>
+            <p className="text-lg font-semibold leading-tight text-slate-900">Ma progression</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">Analyse de ta charge d'entraînement</p>
           </div>
-          <div className="rounded-full border border-slate-200 bg-white p-1 shadow-[0_1px_2px_rgba(15,23,42,0.05)]">
-            {[
-              { key: "1m", label: "1 mois" },
-              { key: "3m", label: "3 mois" },
-              { key: "6m", label: "6 mois" },
-              { key: "1y", label: "1 an" },
-            ].map((range) => (
-              <button
-                key={range.key}
-                type="button"
-                onClick={() => {
-                  setProgressionRange(range.key as "1m" | "3m" | "6m" | "1y");
-                }}
-                className={cn(
-                  "rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all duration-200",
-                  progressionRange === range.key ? "bg-blue-500 text-white shadow-[0_2px_5px_rgba(59,130,246,0.34)]" : "text-slate-500"
-                )}
-              >
-                {range.label}
-              </button>
-            ))}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setProgressionDropdownOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
+            >
+              {progressionRangeLabel(progressionRange)}
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            {progressionDropdownOpen ? (
+              <div className="absolute right-0 z-20 mt-1 w-28 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                {[
+                  { key: "1m", label: "1 mois" },
+                  { key: "3m", label: "3 mois" },
+                  { key: "6m", label: "6 mois" },
+                  { key: "1y", label: "1 an" },
+                ].map((range) => (
+                  <button
+                    key={range.key}
+                    type="button"
+                    onClick={() => {
+                      setProgressionRange(range.key as "1m" | "3m" | "6m" | "1y");
+                      setProgressionDropdownOpen(false);
+                    }}
+                    className={cn(
+                      "w-full rounded-lg px-2 py-1.5 text-left text-[11px] font-semibold",
+                      progressionRange === range.key ? "bg-blue-50 text-blue-700" : "text-slate-600"
+                    )}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 rounded-[18px] border border-slate-200 bg-white p-3">
           <div className="border-r border-slate-100 pr-2">
-            <p className="text-[32px] font-semibold leading-none text-blue-600">{yearDeltaPct >= 0 ? `+${yearDeltaPct}%` : `${yearDeltaPct}%`}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-800">{yearDeltaPts >= 0 ? `+${yearDeltaPts}` : yearDeltaPts} pts</p>
-            <p className="text-xs text-slate-500">vs année passée</p>
+            <p className="text-[24px] font-semibold leading-none text-blue-600">{evolutionPct >= 0 ? `+${evolutionPct}%` : `${evolutionPct}%`}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-800">{evolutionPts >= 0 ? `+${evolutionPts}` : evolutionPts} pts</p>
+            <p className="text-[11px] text-slate-500">vs période précédente</p>
           </div>
           <div className="pl-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Charge actuelle</p>
-            <p className="mt-0.5 text-[31px] font-semibold leading-none text-slate-900">{selectedPoints} pts</p>
-            <span className="mt-2 inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Charge actuelle</p>
+            <p className="mt-0.5 text-2xl font-semibold leading-none text-slate-900">{selectedPoints} pts</p>
+            <span className="mt-2 inline-flex items-center rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">
               Modérée
             </span>
           </div>
@@ -431,7 +391,7 @@ export function AthleteMyPlanView(props: Props) {
               <div className="flex h-full items-end justify-between gap-1.5 pb-5">
                 {progressionColumns.map((column, index) => {
                   const active = index === activeProgressionIndex || (activeProgressionIndex < 0 && index === currentMonthIndex);
-                  const totalBlocks = Math.max(2, Math.round((column.total / maxProgressionLoad) * 13));
+                  const totalBlocks = column.total > 0 ? Math.max(2, Math.round((column.total / maxProgressionLoad) * 13)) : 0;
                   const sequence = buildSportBlockSequence(column.bySport, totalBlocks);
                   return (
                     <button
@@ -447,7 +407,7 @@ export function AthleteMyPlanView(props: Props) {
                       ) : (
                         <span className="h-5" />
                       )}
-                      <div className={cn("flex flex-col-reverse gap-1 transition duration-300", active ? "scale-[1.04]" : "scale-100")}>
+                      <div className={cn("flex min-h-7 flex-col-reverse gap-1 transition duration-300", active ? "scale-[1.04]" : "scale-100")}>
                         {sequence.map((sport, blockIndex) => (
                           <span
                             key={`${column.monthDate.toISOString()}-${blockIndex}`}
@@ -488,22 +448,22 @@ export function AthleteMyPlanView(props: Props) {
           {cardMetrics.map((metric) => (
             <div
               key={metric.id}
-              className="w-[168px] shrink-0 snap-start rounded-[16px] border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              className="h-[118px] w-[144px] shrink-0 snap-start rounded-[14px] border border-slate-200 bg-white p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
             >
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full bg-slate-100 p-1.5 text-slate-600">
-                  <metric.icon className="h-3.5 w-3.5" />
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <span className="rounded-full bg-slate-100 p-1 text-slate-600">
+                  <metric.icon className="h-3 w-3" />
                 </span>
-                <p className="text-[11px] font-semibold text-slate-500">{metric.label}</p>
+                <p className="truncate text-[10px] font-semibold text-slate-500">{metric.label}</p>
               </div>
-              <p className="text-xl font-semibold leading-none text-slate-900">{metric.value}</p>
-              <p className="mt-1 text-xs text-slate-500">{metric.status}</p>
-              <div className="mt-3 flex h-7 items-end gap-1">
+              <p className="text-base font-semibold leading-none text-slate-900">{metric.value}</p>
+              <p className="mt-0.5 text-[10px] text-slate-500">{metric.status}</p>
+              <div className="mt-2 flex h-6 items-end gap-1">
                 {metric.spark.map((point, idx) => (
                   <span
                     key={`${metric.id}-${idx}`}
-                    className="w-1.5 rounded-full bg-blue-300/90"
-                    style={{ height: `${point * 4}px` }}
+                    className="w-1 rounded-full bg-blue-300/90"
+                    style={{ height: `${point * 3}px` }}
                   />
                 ))}
               </div>
@@ -683,7 +643,21 @@ function sportDotClass(sport: SportType): string {
   }
 }
 
+function progressionRangeLabel(range: "1m" | "3m" | "6m" | "1y"): string {
+  switch (range) {
+    case "1m":
+      return "1 mois";
+    case "3m":
+      return "3 mois";
+    case "6m":
+      return "6 mois";
+    default:
+      return "1 an";
+  }
+}
+
 function buildSportBlockSequence(bySport: Record<SportType, number>, totalBlocks: number): SportType[] {
+  if (totalBlocks <= 0) return [];
   const sports: SportType[] = ["running", "cycling", "swimming", "strength", "other"];
   const total = Math.max(Object.values(bySport).reduce((acc, value) => acc + value, 0), 1);
   const allocated = sports.map((sport) => ({
