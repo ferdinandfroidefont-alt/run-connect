@@ -13,6 +13,7 @@ import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileS
 import { templateDimensions } from '@/lib/profileSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
 import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
+import profileShareCardV3 from '@/assets/profile-share-card-v3.png';
 import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 
 const RC = '#2563eb';
