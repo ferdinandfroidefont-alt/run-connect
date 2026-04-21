@@ -514,6 +514,7 @@ export default function ProfileSportRecordsEdit() {
         ]}
         onConfirm={() => {
           const sec = Number(durH) * 3600 + Number(durM) * 60 + Number(durS);
+          setRunningMode("time");
           setDurationSec(Math.max(1, sec));
           setDurationPickerOpen(false);
         }}
@@ -527,6 +528,7 @@ export default function ProfileSportRecordsEdit() {
           { items: minSecOpts, value: paceS, onChange: setPaceS, suffix: "s" },
         ]}
         onConfirm={() => {
+          setRunningMode("pace");
           setPaceSecPerKm(Number(paceM) * 60 + Number(paceS));
           setPacePickerOpen(false);
         }}
