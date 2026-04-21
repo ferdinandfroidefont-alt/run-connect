@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useProfileNavigation } from '@/hooks/useProfileNavigation';
 import { ActivityIcon, getActivityLabel } from '@/lib/activityIcons';
 import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
@@ -80,6 +81,59 @@ interface OrganizerProfile {
   avatar_url: string | null;
 }
 
+const CARD_SWIPE_THRESHOLD = -80;
+const SWIPE_ACTION_WIDTH = 148;
+
+function SwipeConfirmCard({
+  onConfirm,
+  children,
+}: {
+  onConfirm: () => void;
+  children: React.ReactNode;
+}) {
+  const [opened, setOpened] = useState(false);
+
+  return (
+    <div className="relative overflow-hidden rounded-ios-lg">
+      <div className="absolute inset-y-0 right-0 flex w-[148px] items-center justify-center bg-primary px-3">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onConfirm();
+            setOpened(false);
+          }}
+          className="h-10 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+        >
+          Confirmer cette séance
+        </button>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: -SWIPE_ACTION_WIDTH, right: 0 }}
+        dragElastic={0.08}
+        animate={{ x: opened ? -SWIPE_ACTION_WIDTH : 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 32 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < CARD_SWIPE_THRESHOLD) {
+            setOpened(true);
+            return;
+          }
+          if (info.offset.x > -24) {
+            setOpened(false);
+          }
+        }}
+        onTap={() => {
+          if (opened) setOpened(false);
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+}
+
 export default function MySessions() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -87,7 +141,7 @@ export default function MySessions() {
   const navigate = useNavigate();
   const location = useLocation();
   const { navigateToProfile, selectedUserId, showProfilePreview, closeProfilePreview } = useProfileNavigation();
-  const [sessionSource, setSessionSource] = useState<'created' | 'joined'>('created');
+  const [sessionSource, setSessionSource] = useState<'created' | 'joined' | 'to-confirm'>('created');
   const [sessionsDisplayMode, setSessionsDisplayMode] = useState<'list' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed'>('all');
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -544,7 +598,12 @@ export default function MySessions() {
   };
 
   const now = new Date().toISOString();
-  const activeSessions = sessionSource === 'created' ? sessions : joinedSessions;
+  const activeSessions =
+    sessionSource === 'created'
+      ? sessions
+      : sessionSource === 'joined'
+        ? joinedSessions
+        : [];
   const filteredSessions = activeSessions.filter(session => {
     if (filter === 'all') return true;
     if (filter === 'upcoming') return session.scheduled_at >= now;
@@ -970,6 +1029,20 @@ export default function MySessions() {
                 >
                   Rejointes
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSessionSource('to-confirm');
+                    setSessionPage(0);
+                  }}
+                  className={`flex-1 min-w-0 py-ios-1 text-[11px] font-semibold rounded-ios-sm transition-colors ${
+                    sessionSource === 'to-confirm'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  À confirmer
+                </button>
               </div>
             </div>
           </div>
@@ -1050,10 +1123,16 @@ export default function MySessions() {
                   </div>
                   <div className={emptyStateSx.textBlock}>
                     <h3 className="text-ios-title3 font-semibold text-foreground">
-                      {sessionSource === 'created' ? 'Aucune séance créée' : 'Aucune séance rejointe'}
+                      {sessionSource === 'to-confirm'
+                        ? 'Aucune séance à confirmer'
+                        : sessionSource === 'created'
+                          ? 'Aucune séance créée'
+                          : 'Aucune séance rejointe'}
                     </h3>
                     <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                      {sessionSource === 'created'
+                      {sessionSource === 'to-confirm'
+                        ? 'Les séances à confirmer s’afficheront ici.'
+                        : sessionSource === 'created'
                         ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
                         : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
                     </p>
@@ -1088,59 +1167,65 @@ export default function MySessions() {
                         ? organizerProfiles.get(session.organizer_id)
                         : null;
                       return (
-                        <div
+                        <SwipeConfirmCard
                           key={session.id}
-                          onClick={() => handleSessionClick(session)}
-                          className="ios-list-row border border-white dark:border-white/10"
+                          onConfirm={() => {
+                            toast({ title: "Confirmation", description: "Séance marquée à confirmer." });
+                          }}
                         >
-                          <div className="flex items-start gap-ios-2">
-                            <ActivityIcon activityType={session.activity_type} size="md" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                {sessionSource === 'joined' ? (
-                                  <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
-                                ) : (
-                                  <Badge 
-                                    variant={isUpcoming ? "default" : "secondary"}
-                                    className="text-xs"
-                                  >
-                                    {isUpcoming ? "À venir" : "Terminée"}
-                                  </Badge>
+                          <div
+                            onClick={() => handleSessionClick(session)}
+                            className="ios-list-row border border-white dark:border-white/10"
+                          >
+                            <div className="flex items-start gap-ios-2">
+                              <ActivityIcon activityType={session.activity_type} size="md" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  {sessionSource === 'joined' ? (
+                                    <Badge className="text-xs bg-blue-500 text-white">Rejoint</Badge>
+                                  ) : (
+                                    <Badge 
+                                      variant={isUpcoming ? "default" : "secondary"}
+                                      className="text-xs"
+                                    >
+                                      {isUpcoming ? "À venir" : "Terminée"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
+                                {/* Organizer info for joined sessions */}
+                                {orgProfile && (
+                                  <div className="flex items-center gap-ios-1 mt-ios-1">
+                                    <Avatar className="h-4 w-4">
+                                      <AvatarImage src={orgProfile.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[8px]">
+                                        {orgProfile.username?.[0]?.toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-ios-footnote text-muted-foreground truncate">
+                                      {orgProfile.display_name || orgProfile.username}
+                                    </span>
+                                  </div>
                                 )}
-                              </div>
-                              <h3 className="text-ios-headline font-semibold truncate">{session.title}</h3>
-                              {/* Organizer info for joined sessions */}
-                              {orgProfile && (
-                                <div className="flex items-center gap-ios-1 mt-ios-1">
-                                  <Avatar className="h-4 w-4">
-                                    <AvatarImage src={orgProfile.avatar_url || undefined} />
-                                    <AvatarFallback className="text-[8px]">
-                                      {orgProfile.username?.[0]?.toUpperCase() || '?'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-ios-footnote text-muted-foreground truncate">
-                                    {orgProfile.display_name || orgProfile.username}
+                                <div className="flex items-center gap-ios-3 mt-0.5 text-[12px] text-muted-foreground leading-tight">
+                                  <span className="flex items-center gap-0.5">
+                                    <Calendar className="h-3 w-3 shrink-0" />
+                                    {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Clock className="h-3 w-3 shrink-0" />
+                                    {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Users className="h-3 w-3 shrink-0" />
+                                    {session.current_participants || 0}
                                   </span>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-ios-3 mt-0.5 text-[12px] text-muted-foreground leading-tight">
-                                <span className="flex items-center gap-0.5">
-                                  <Calendar className="h-3 w-3 shrink-0" />
-                                  {format(new Date(session.scheduled_at), 'dd/MM', { locale: fr })}
-                                </span>
-                                <span className="flex items-center gap-0.5">
-                                  <Clock className="h-3 w-3 shrink-0" />
-                                  {format(new Date(session.scheduled_at), 'HH:mm', { locale: fr })}
-                                </span>
-                                <span className="flex items-center gap-0.5">
-                                  <Users className="h-3 w-3 shrink-0" />
-                                  {session.current_participants || 0}
-                                </span>
                               </div>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
                             </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground/50 mt-1 shrink-0" />
                           </div>
-                        </div>
+                        </SwipeConfirmCard>
                       );
                     })}
 

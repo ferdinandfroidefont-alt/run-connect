@@ -95,6 +95,7 @@ export default function Participants() {
       : null
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
   const [demoParticipants, setDemoParticipants] = useState<Participant[]>(BASE_PARTICIPANTS);
   const {
     session,
@@ -148,22 +149,47 @@ export default function Participants() {
     let cancelled = false;
     const participantMarkers = participantMarkersRef.current;
 
-    void (async () => {
-      const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
-        center: userPosition ?? FALLBACK_POINT,
-        zoom: 14.3,
-        interactive: true,
-      });
-      if (cancelled) {
-        map.remove();
-        return;
+    const bootMap = async () => {
+      try {
+        const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
+          center: userPosition ?? FALLBACK_POINT,
+          zoom: 14.3,
+          interactive: true,
+        });
+        if (cancelled) {
+          map.remove();
+          return;
+        }
+        mapRef.current = map;
+        const onReady = () => {
+          if (cancelled) return;
+          setMapReady(true);
+          fitDefaultView();
+          // iOS/WebView: force plusieurs resize au boot pour éviter la carte blanche.
+          const t1 = window.setTimeout(() => mapRef.current?.resize(), 0);
+          const t2 = window.setTimeout(() => mapRef.current?.resize(), 120);
+          const t3 = window.setTimeout(() => mapRef.current?.resize(), 360);
+          window.setTimeout(() => {
+            window.clearTimeout(t1);
+            window.clearTimeout(t2);
+            window.clearTimeout(t3);
+          }, 420);
+        };
+        if (map.isStyleLoaded()) onReady();
+        else map.once("load", onReady);
+      } catch {
+        // Retry léger pour éviter un échec transitoire d'init mapbox.
+        window.setTimeout(() => {
+          if (!cancelled && !mapRef.current) void bootMap();
+        }, 240);
       }
-      mapRef.current = map;
-      map.once("load", () => fitDefaultView());
-    })();
+    };
+
+    void bootMap();
 
     return () => {
       cancelled = true;
+      setMapReady(false);
       userMarkerRef.current?.remove();
       rdvMarkerRef.current?.remove();
       participantMarkers.forEach((m) => m.remove());
@@ -172,6 +198,16 @@ export default function Participants() {
       mapRef.current = null;
     };
   }, [fitDefaultView, userPosition]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        mapRef.current?.resize();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -333,6 +369,13 @@ export default function Participants() {
   return (
     <div className="fixed inset-0 bg-background">
       <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-secondary" />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 z-[1] bg-secondary/80 transition-opacity duration-200",
+          mapReady ? "opacity-0" : "opacity-100"
+        )}
+        aria-hidden
+      />
 
       <div className="absolute left-0 right-0 top-0 z-20 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
         <IosPageHeaderBar

@@ -162,6 +162,20 @@ const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone
   { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-violet-500/12 text-violet-700 dark:text-violet-300" },
 ];
 
+const DISTANCE_KM_WHOLE_OPTIONS = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
+const DISTANCE_METERS_25_OPTIONS = Array.from({ length: 40 }, (_, i) => {
+  const meters = i * 25;
+  return { value: String(meters), label: String(meters).padStart(3, "0") };
+});
+const DISTANCE_MI_DEC_OPTIONS = Array.from({ length: 100 }, (_, i) => ({
+  value: String(i),
+  label: String(i).padStart(2, "0"),
+}));
+const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
+  const meters = i * 25;
+  return { value: String(meters), label: String(meters) };
+});
+
 type CoachClub = { id: string; name: string };
 type AthleteEntry = { id: string; name: string };
 type GroupEntry = { id: string; name: string };
@@ -664,7 +678,6 @@ export function CoachPlanningExperience() {
         .lt("scheduled_at", weekEnd.toISOString());
       query = query.eq("coach_id", user.id);
       if (activeGroupId) query = query.eq("target_group_id", activeGroupId);
-      if (activeAthleteId) query = query.contains("target_athletes", [activeAthleteId]);
       const { data, error } = await query.order("scheduled_at", { ascending: true });
       if (!ignore) {
         if (error) {
@@ -888,16 +901,18 @@ export function CoachPlanningExperience() {
       if (!effectiveAthleteMode && !activeAthleteId && !activeGroupId) return [];
       return sessions.filter((s) => {
         if (activeAthleteId) {
+          const matchesAthleteGroup = !!(s.groupId && groupMembers[s.groupId]?.includes(activeAthleteId));
           const athleteMatches =
             s.athleteId === activeAthleteId ||
-            (Array.isArray(s.athleteIds) && s.athleteIds.includes(activeAthleteId));
+            (Array.isArray(s.athleteIds) && s.athleteIds.includes(activeAthleteId)) ||
+            matchesAthleteGroup;
           if (!athleteMatches) return false;
         }
         if (activeGroupId && s.groupId !== activeGroupId) return false;
         return true;
       });
     },
-    [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode]
+    [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
   const totalDurationSec = useMemo(
@@ -2324,22 +2339,55 @@ export function CoachPlanningExperience() {
                     className="h-10 justify-start rounded-xl text-[13px]"
                     onClick={() => {
                       const meters = blockForm.distanceM || 0;
-                      setWheelA(String(Math.max(0, Math.round(meters))));
+                      let selectedUnit: "km" | "mi" = wheelUnit === "mi" ? "mi" : "km";
+                      if (draft.sport === "swimming") {
+                        const snapped = Math.max(0, Math.round(meters / 25) * 25);
+                        setWheelA(String(snapped));
+                        setWheelB("0");
+                        setWheelUnit("m");
+                      } else if (selectedUnit === "mi") {
+                        const miles = meters / 1609.344;
+                        const wholeMi = Math.floor(miles);
+                        const decMi = Math.max(0, Math.min(99, Math.round((miles - wholeMi) * 100)));
+                        setWheelA(String(wholeMi));
+                        setWheelB(String(decMi));
+                      } else {
+                        selectedUnit = "km";
+                        const wholeKm = Math.floor(meters / 1000);
+                        const remMeters = Math.max(0, meters - wholeKm * 1000);
+                        const snapped = Math.min(975, Math.max(0, Math.round(remMeters / 25) * 25));
+                        setWheelA(String(wholeKm));
+                        setWheelB(String(snapped));
+                        setWheelUnit("km");
+                      }
                       openWheelColumns(
                         "Distance",
-                        [
-                          {
-                            items: Array.from({ length: 1001 }, (_, i) => {
-                              const value = i * 10;
-                              return { value: String(value), label: value.toLocaleString("fr-FR") };
-                            }),
-                            value: wheelA,
-                            onChange: setWheelA,
-                            suffix: "m",
-                          },
-                        ],
+                        draft.sport === "swimming"
+                          ? [{ items: DISTANCE_METERS_ONLY_25_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "m" }]
+                          : selectedUnit === "mi"
+                            ? [
+                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "mi" },
+                                { items: DISTANCE_MI_DEC_OPTIONS, value: wheelB, onChange: setWheelB },
+                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                              ]
+                            : [
+                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "km" },
+                                { items: DISTANCE_METERS_25_OPTIONS, value: wheelB, onChange: setWheelB, suffix: "m" },
+                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                              ],
                         () => {
-                          const next = Number.parseInt(wheelA, 10);
+                          let next = 0;
+                          if (draft.sport === "swimming") {
+                            next = Math.max(0, Number.parseInt(wheelA, 10) || 0);
+                          } else if (wheelUnit === "mi") {
+                            const wholeMi = Math.max(0, Number.parseInt(wheelA, 10) || 0);
+                            const decMi = Math.max(0, Math.min(99, Number.parseInt(wheelB, 10) || 0));
+                            next = Math.round((wholeMi + decMi / 100) * 1609.344);
+                          } else {
+                            const wholeKm = Math.max(0, Number.parseInt(wheelA, 10) || 0);
+                            const remMeters = Math.min(975, Math.max(0, Number.parseInt(wheelB, 10) || 0));
+                            next = wholeKm * 1000 + remMeters;
+                          }
                           setBlockForm((prev) => {
                             if (!prev) return prev;
                             const nextDistance = Number.isFinite(next) ? next : 0;

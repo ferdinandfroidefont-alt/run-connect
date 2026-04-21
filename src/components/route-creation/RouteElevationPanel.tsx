@@ -68,6 +68,14 @@ function catmullRomPath(points: Array<{ x: number; y: number }>): string {
   return d;
 }
 
+function polylinePath(points: Array<{ x: number; y: number }>): string {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0]!.x} ${points[0]!.y}`;
+  return points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
+    .join(' ');
+}
+
 function areaPath(curvePath: string, firstX: number, lastX: number, baseY: number): string {
   if (!curvePath) return '';
   return `${curvePath} L ${lastX.toFixed(2)} ${baseY.toFixed(2)} L ${firstX.toFixed(2)} ${baseY.toFixed(2)} Z`;
@@ -150,11 +158,12 @@ export function RouteElevationPanel({
     }));
   }, [seriesOk, smoothElevations, xAtDist, yAtElev, distCum]);
 
+  const precisePath = useMemo(() => polylinePath(curvePoints.map((p) => ({ x: p.x, y: p.y }))), [curvePoints]);
   const curvePath = useMemo(() => catmullRomPath(curvePoints.map((p) => ({ x: p.x, y: p.y }))), [curvePoints]);
   const fillPath = useMemo(() => {
     if (curvePoints.length < 2) return '';
-    return areaPath(curvePath, curvePoints[0]!.x, curvePoints[curvePoints.length - 1]!.x, PAD.t + innerH);
-  }, [curvePath, curvePoints, innerH]);
+    return areaPath(precisePath, curvePoints[0]!.x, curvePoints[curvePoints.length - 1]!.x, PAD.t + innerH);
+  }, [precisePath, curvePoints, innerH]);
 
   const xTicksTop = useMemo(() => {
     if (!seriesOk) return [] as Array<{ x: number; label: string; anchor: 'start' | 'end' }>;
@@ -206,7 +215,7 @@ export function RouteElevationPanel({
   const cursorY = scrubSample != null ? yAtElev(scrubSample.elevM) : null;
 
   useEffect(() => {
-    if (!expanded || !curvePath) {
+    if (!expanded || !precisePath) {
       setDrawReady(false);
       return;
     }
@@ -216,7 +225,7 @@ export function RouteElevationPanel({
       setDrawReady(true);
     });
     return () => cancelAnimationFrame(raf);
-  }, [expanded, curvePath, elevations.length, totalDistanceM]);
+  }, [expanded, precisePath, elevations.length, totalDistanceM]);
 
   return (
     <div className={cn('overflow-hidden rounded-ios-lg border border-slate-200 bg-white shadow-sm', className)}>
@@ -324,7 +333,7 @@ export function RouteElevationPanel({
 
                 <path
                   ref={mainPathRef}
-                  d={curvePath}
+                  d={precisePath}
                   fill="none"
                   stroke="url(#elevLine)"
                   strokeWidth={2.8}
@@ -341,6 +350,16 @@ export function RouteElevationPanel({
                         ? { strokeDasharray: drawLength, strokeDashoffset: drawLength }
                         : undefined
                   }
+                />
+
+                <path
+                  d={curvePath}
+                  fill="none"
+                  stroke="#2563eb"
+                  strokeOpacity={0.22}
+                  strokeWidth={1.2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
                 />
 
                 {cursorX != null && cursorY != null && (
