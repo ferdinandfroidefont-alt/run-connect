@@ -1509,8 +1509,8 @@ export function CoachPlanningExperience() {
     groupedByDate.forEach((list, key) => {
       if (!list.length) return;
       const sorted = [...list].sort((a, b) => {
-        const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport }) });
-        const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport }) });
+        const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport, athleteIntensity: a.athleteIntensity ?? undefined }) });
+        const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport, athleteIntensity: b.athleteIntensity ?? undefined }) });
         const loadA = (metricsA.distanceKm || 0) * 10 + (metricsA.durationMin || 0);
         const loadB = (metricsB.distanceKm || 0) * 10 + (metricsB.durationMin || 0);
         return loadB - loadA;
@@ -1520,9 +1520,9 @@ export function CoachPlanningExperience() {
         output[key] = { sport: "rest", value: "Repos" };
         return;
       }
-      const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport }) });
+      const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport, athleteIntensity: primary.athleteIntensity ?? undefined }) });
       const totalDistance = sorted.reduce((acc, session) => {
-        const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport }) });
+        const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport, athleteIntensity: session.athleteIntensity ?? undefined }) });
         return acc + (metrics.distanceKm || 0);
       }, 0);
       const value =
