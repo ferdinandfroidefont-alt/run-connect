@@ -70,6 +70,13 @@ const BLOCK_LIBRARY: Array<{ kind: BuilderKind; label: string; color: string }> 
   { kind: "rest", label: "Repos", color: "#94A3B8" },
 ];
 
+const QUICK_SPORTS = [
+  { value: "course", label: "Course", emoji: "🏃" },
+  { value: "trail", label: "Trail", emoji: "⛰️" },
+  { value: "velo", label: "Vélo", emoji: "🚴" },
+  { value: "natation", label: "Natation", emoji: "🏊" },
+] as const;
+
 function paceToRcc(pace?: string): string {
   if (!pace) return "5'30";
   const [m, s] = pace.split(":");
@@ -456,15 +463,15 @@ export const CreateCoachingSessionDialog = ({
             scrollClassName="bg-secondary px-4 py-4"
           >
             <div className="space-y-4">
-              <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="flex rounded-xl border border-border/70 bg-card p-1">
+              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <div className="flex rounded-2xl border border-border/70 bg-card p-1">
                   <button
                     type="button"
                     onClick={() => {
                       setBuilderTab("build");
                       setSelectedBlockIndex(null);
                     }}
-                    className={`h-9 flex-1 rounded-lg text-sm font-semibold ${builderTab === "build" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "build" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                   >
                     Construire
                   </button>
@@ -474,29 +481,45 @@ export const CreateCoachingSessionDialog = ({
                       setBuilderTab("models");
                       setSelectedBlockIndex(null);
                     }}
-                    className={`h-9 flex-1 rounded-lg text-sm font-semibold ${builderTab === "models" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "models" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                   >
                     Modèles
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
                     <Label className="text-xs">Sport</Label>
-                    <Select value={activityType} onValueChange={setActivityType}>
-                      <SelectTrigger className="h-10 rounded-xl border-border bg-card">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVITY_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
+                      <p className="text-sm font-semibold capitalize text-foreground">{dateLabel}</p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
-                    <p className="text-sm font-semibold capitalize text-foreground">{dateLabel}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {QUICK_SPORTS.map((sport) => {
+                      const isActive = activityType === sport.value;
+                      return (
+                        <button
+                          key={sport.value}
+                          type="button"
+                          onClick={() => setActivityType(sport.value)}
+                          className={`flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition-colors ${isActive ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-card text-foreground"}`}
+                        >
+                          <span className="text-2xl" aria-hidden>{sport.emoji}</span>
+                          <span className="text-[11px] font-semibold leading-tight">{sport.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-10 rounded-xl border-border bg-card text-xs text-muted-foreground">
+                      <SelectValue placeholder="Autres sports" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -522,8 +545,8 @@ export const CreateCoachingSessionDialog = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant="secondary" className="h-8 rounded-lg text-xs" onClick={() => applyBlocks([...parsedBlocks, defaultBlock("steady")])}>
-                        <Plus className="mr-1 h-3.5 w-3.5" /> Bloc
+                      <Button type="button" size="sm" variant="secondary" className="h-9 rounded-xl text-xs font-semibold" onClick={() => applyBlocks([...parsedBlocks, defaultBlock("steady")])}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un bloc
                       </Button>
                       <Button
                         type="button"
@@ -888,19 +911,30 @@ export const CreateCoachingSessionDialog = ({
                   </div>
                 </>
               ) : (
-                <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Modèles</p>
-                    <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg text-xs" onClick={() => setShowTemplates(true)}>
-                      <BookOpen className="mr-1 h-3.5 w-3.5" /> Ouvrir bibliothèque
-                    </Button>
+                <div className="space-y-3">
+                  <div className="ios-card flex items-center justify-between border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
+                    <p className="text-[17px] font-semibold text-foreground">Modèles</p>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="secondary" size="sm" className="h-9 rounded-xl text-[12px] font-semibold" onClick={() => setBuilderTab("build")}>
+                        Construire modèle
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl text-[12px] font-semibold" onClick={() => setShowTemplates(true)}>
+                        <BookOpen className="mr-1.5 h-4 w-4" /> Bibliothèque
+                      </Button>
+                    </div>
                   </div>
-                  {loadingTemplateRows ? (
-                    <p className="text-sm text-muted-foreground">Chargement des modèles…</p>
-                  ) : templateRows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucun modèle sauvegardé.</p>
-                  ) : (
-                    <div className="space-y-2">
+
+                  <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                    {loadingTemplateRows ? (
+                      <p className="text-sm text-muted-foreground">Chargement des modèles…</p>
+                    ) : templateRows.length === 0 ? (
+                      <div className="rounded-xl border border-border/70 bg-card px-4 py-10 text-center">
+                        <BookOpen className="mx-auto mb-2 h-9 w-9 text-muted-foreground/60" />
+                        <p className="text-[15px] font-medium text-foreground">Aucun modèle enregistré</p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">Crée une séance puis sauvegarde-la comme modèle.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
                       {templateRows.map((tpl) => {
                         const parsed = parseRCC(tpl.rcc_code);
                         const segs = buildWorkoutSegments(parsed.blocks);
@@ -910,7 +944,7 @@ export const CreateCoachingSessionDialog = ({
                           <button
                             type="button"
                             key={tpl.id}
-                            className="w-full rounded-xl border border-border/70 bg-card p-3 text-left"
+                            className="w-full rounded-2xl border border-border/70 bg-card p-4 text-left"
                             onClick={() => {
                               setRccCode(tpl.rcc_code);
                               setObjective(tpl.objective || tpl.name);
@@ -919,19 +953,21 @@ export const CreateCoachingSessionDialog = ({
                               setBuilderTab("build");
                             }}
                           >
-                            <p className="text-sm font-semibold text-foreground">{tpl.name}</p>
-                            <div className="mt-2 flex gap-1">
-                              {parsed.blocks.slice(0, 8).map((b, i) => (
-                                <span key={`${tpl.id}-${i}`} className="rounded-md" style={{ width: `${Math.max(12, (b.duration || 6) * 2)}px`, height: `${b.type === "interval" ? 24 : 14}px`, backgroundColor: colorForBlock(b) }} />
-                              ))}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground">{tpl.name}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">{tpl.objective || "Séance modèle"}</p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">Utiliser</span>
                             </div>
+                            <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{tpl.rcc_code}</p>
                             <p className="mt-2 text-xs text-muted-foreground">{dur} min • {dist.toFixed(1).replace(".", ",")} km</p>
-                            <p className="mt-1 text-xs font-medium text-primary">Ajouter au planning</p>
                           </button>
                         );
                       })}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
