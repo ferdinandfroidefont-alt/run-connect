@@ -56,6 +56,7 @@ import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/co
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
+import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -197,11 +198,18 @@ const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
 });
 
 type CoachClub = { id: string; name: string };
-type AthleteEntry = { id: string; name: string; runningRecords?: Record<string, unknown> | null };
+type AthleteEntry = {
+  id: string;
+  name: string;
+  runningRecords?: Record<string, unknown> | null;
+  coachRunningRecords?: Record<string, unknown> | null;
+};
 type GroupEntry = { id: string; name: string };
 
-const athleteIntensityFromRunningRecords = (runningRecords?: Record<string, unknown> | null) =>
-  buildAthleteIntensityContext({ runningRecords: runningRecords ?? null });
+const athleteIntensityFromRunningRecords = (
+  runningRecords?: Record<string, unknown> | null,
+  coachRunningRecords?: Record<string, unknown> | null,
+) => buildAthleteIntensityContext({ runningRecords: runningRecords ?? null, coachRunningRecords: coachRunningRecords ?? null });
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
