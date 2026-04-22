@@ -19,6 +19,7 @@ export interface MiniProfileBlock {
   width: number;
   height: number;
   color: string;
+  opacity?: number;
 }
 
 type ParsedLikeBlock = {
@@ -42,6 +43,8 @@ type SessionLikeBlock = {
 };
 
 const DEFAULT_RECOVERY_SPEED_KM_PER_MIN = 1 / 7.2; // ~7:12/km
+const DEFAULT_STEADY_PACE_SEC_PER_KM = 330;
+const DEFAULT_RECOVERY_DISTANCE_KM = 0.15;
 
 function toPaceSecPerKmFromString(pace?: string): number | null {
   if (!pace) return null;
@@ -59,6 +62,13 @@ function estimateDistanceKm(durationMin: number, paceSecPerKm: number | null): n
 
 function clampPositive(n: number): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function estimateDistanceFromFallback(durationMin: number, kind: WorkoutSegmentKind): number {
+  if (durationMin <= 0) return 0;
+  if (kind === "recovery" || kind === "cooldown") return durationMin * DEFAULT_RECOVERY_SPEED_KM_PER_MIN;
+  if (kind === "warmup" || kind === "steady" || kind === "rep") return durationMin * (60 / DEFAULT_STEADY_PACE_SEC_PER_KM);
+  return 0;
 }
 
 export interface BuildWorkoutSegmentsOptions {
@@ -102,7 +112,7 @@ export function buildWorkoutSegments(
       const effortDistance =
         distanceKm > 0
           ? distanceKm * repetitions
-          : estimateDistanceKm(durationMin * repetitions, paceSecPerKm);
+          : estimateDistanceKm(perRepDuration * repetitions, paceSecPerKm) || estimateDistanceFromFallback(perRepDuration * repetitions, "rep");
 
       const repIntensity =
         sport === "running"
@@ -129,7 +139,9 @@ export function buildWorkoutSegments(
         segments.push({
           kind: "recovery",
           durationMin: totalRecoveryDuration,
-          distanceKm: totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN,
+          distanceKm:
+            totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN ||
+            Math.max(0, repetitions - 1) * DEFAULT_RECOVERY_DISTANCE_KM,
           intensityBand: "recovery",
           intensitySource: refResolution.source,
         });
@@ -143,7 +155,9 @@ export function buildWorkoutSegments(
         : "steady";
     const segDuration = durationMin * repetitions;
     const segDistance =
-      distanceKm > 0 ? distanceKm * repetitions : estimateDistanceKm(segDuration, paceSecPerKm);
+      distanceKm > 0
+        ? distanceKm * repetitions
+        : estimateDistanceKm(segDuration, paceSecPerKm) || estimateDistanceFromFallback(segDuration, kind);
 
     const steadyIntensity =
       sport === "running"
@@ -180,12 +194,12 @@ export function computeWorkoutDuration(segments: WorkoutSegment[]): number {
 
 export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfileBlock[] {
   const meaningful = segments.filter((s) => s.kind !== "rest");
-  if (!meaningful.length) return [{ width: 100, height: 8, color: "#9CA3AF" }];
+  if (!meaningful.length) return [{ width: 100, height: 8, color: "hsl(var(--muted))", opacity: 0.8 }];
 
   // Keep simple sessions simple: one steady-like segment => one block.
   if (meaningful.length === 1 && (meaningful[0].kind === "steady" || meaningful[0].kind === "warmup" || meaningful[0].kind === "cooldown")) {
     const only = meaningful[0];
-    return [{ width: 100, height: heightForBand(only.intensityBand), color: colorForBand(only.intensityBand) }];
+    return [{ width: 100, height: heightForBand(only.intensityBand), color: colorForBand(only.intensityBand), opacity: 1 }];
   }
 
   const total = Math.max(
@@ -196,8 +210,8 @@ export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfil
   // Compact repeated work: large rep + recovery pairs become alternating chunks.
   const compact: WorkoutSegment[] = [];
   for (const seg of meaningful) {
-    if (seg.kind === "rep" && seg.durationMin >= 15) {
-      const chunks = 4;
+    if (seg.kind === "rep" && seg.durationMin >= 12) {
+      const chunks = seg.durationMin >= 24 ? 5 : 3;
       for (let i = 0; i < chunks; i += 1) {
         compact.push({ ...seg, durationMin: seg.durationMin / chunks, distanceKm: seg.distanceKm / chunks });
         if (i < chunks - 1) {
@@ -215,16 +229,17 @@ export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfil
       width: Math.max(8, Math.round((weight / total) * 100)),
       height: heightForBand(seg.intensityBand),
       color: colorForBand(seg.intensityBand),
+      opacity: 1,
     };
   });
 }
 
 function colorForBand(band: WorkoutSegment["intensityBand"]): string {
-  if (band === "interval") return "#F97316";
-  if (band === "tempo") return "#8B5CF6";
-  if (band === "recovery") return "#22C55E";
-  if (band === "transition") return "#9CA3AF";
-  return "#60A5FA";
+  if (band === "interval") return "hsl(var(--destructive))";
+  if (band === "tempo") return "hsl(var(--chart-4))";
+  if (band === "recovery") return "hsl(var(--chart-2))";
+  if (band === "transition") return "hsl(var(--muted-foreground))";
+  return "hsl(var(--primary))";
 }
 
 function heightForBand(band: WorkoutSegment["intensityBand"]): number {
