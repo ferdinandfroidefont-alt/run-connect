@@ -1932,7 +1932,7 @@ export function CoachPlanningExperience() {
             ) : null
           }
         >
-          <div className="space-y-0 pb-6">
+          <div className={cn("space-y-0", activeMenuKey === "planning" ? "pb-0" : "pb-6")}>
             {activeMenuKey === "planning" && clubs.length > 1 && (
               <div className="border-b border-border bg-card">
                 <p className="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">Club</p>
