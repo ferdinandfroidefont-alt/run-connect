@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronRight, MoreHorizontal, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MoreHorizontal } from "lucide-react";
+import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
+import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
+import { sportDotClass } from "./sportTokens";
 
 type Props = {
   loading: boolean;
@@ -76,97 +78,74 @@ export function AthleteMyPlanView(props: Props) {
   );
 
   return (
-    <div className="space-y-3 bg-[#F7F8FA] px-4 pb-28 pt-2">
-      <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
-        {weekDays.map((day) => {
-          const active = isSameDay(day, selectedDate);
-          return (
-            <button
-              key={day.toISOString()}
-              type="button"
-              onClick={() => onSelectDate(day)}
-              className={cn(
-                "shrink-0 snap-start rounded-full px-3 py-2 text-xs font-semibold transition active:scale-[0.98]",
-                active ? "bg-[#2563EB] text-white" : "bg-[#EEF1F5] text-[#334155]"
-              )}
-            >
-              {format(day, "EEEEE", { locale: fr }).toUpperCase()} {format(day, "d")}
-            </button>
-          );
-        })}
-      </div>
+    <div className="bg-secondary pb-28 pt-2">
+      <WeekSelectorPremium
+        weekStart={props.weekStart}
+        selectedDate={selectedDate}
+        onSelectDate={onSelectDate}
+        onPreviousWeek={props.onPreviousWeek}
+        onNextWeek={props.onNextWeek}
+      />
 
-      <div className="space-y-3 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_1px_4px_rgba(15,23,42,0.06)]">
+      <div className="flex flex-col border-t border-border bg-card">
         {loading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
+          <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />
         ) : (
           dayRows.map((row) => {
             const selected = isSameDay(row.day, selectedDate);
-            const dayLabel = format(row.day, "EEE", { locale: fr }).slice(0, 3).toUpperCase();
+            const dayLabel = format(row.day, "EEEE", { locale: fr });
             const hasSession = row.sessions.length > 0;
             const summary = row.primarySession ? sessionSummaryLine(row.primarySession) : null;
+            const accentColorClass = row.primarySession ? sportDotClass(row.primarySession.sport) : "bg-muted-foreground/50";
             return (
               <div
                 key={row.day.toISOString()}
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  onSelectDate(row.day);
-                  if (row.primarySession) setDetail(row.primarySession);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onSelectDate(row.day);
-                    if (row.primarySession) setDetail(row.primarySession);
-                  }
-                }}
-                className={cn(
-                  "flex min-h-[92px] w-full cursor-pointer items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition active:scale-[0.98]",
-                  selected ? "bg-blue-50/80" : "bg-[#F8FAFC]"
-                )}
+                className={accentColorClass}
               >
-                <div className="w-[68px] shrink-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dayLabel}.</p>
-                  <p className="text-xs text-slate-400">{format(row.day, "d MMM", { locale: fr })}</p>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  {!hasSession ? (
-                    <p className="text-sm font-medium text-slate-500">Ajouter une séance</p>
-                  ) : row.isRest ? (
-                    <div className="space-y-2 opacity-60">
-                      <p className="text-sm font-semibold text-slate-600">Repos</p>
-                      <div className="h-1.5 w-full rounded-full bg-slate-200" />
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
+                <DayPlanningRow
+                  dayLabel={dayLabel}
+                  dateLabel={format(row.day, "d MMM", { locale: fr })}
+                  isSelected={selected}
+                  session={
+                    hasSession
+                      ? {
+                          title: row.isRest ? "Repos" : row.primarySession?.title ?? "Séance",
+                          duration: row.isRest ? undefined : summary ?? undefined,
+                          distance: undefined,
+                          intensityLabel: row.sessions.length > 1 ? `${row.sessions.length} séances` : undefined,
+                        }
+                      : undefined
+                  }
+                  accentColor="hsl(var(--primary))"
+                  emptyLabel="Aucune séance"
+                  onAdd={() => {
+                    onSelectDate(row.day);
+                    onOpenCalendar?.();
+                  }}
+                  onOpen={
+                    row.primarySession
+                      ? () => {
+                          onSelectDate(row.day);
+                          setDetail(row.primarySession);
+                        }
+                      : undefined
+                  }
+                  onEdit={row.primarySession ? () => setDetail(row.primarySession) : undefined}
+                  onSend={undefined}
+                  onDuplicate={undefined}
+                  onDelete={undefined}
+                  onUnsend={undefined}
+                  allowSessionActions={false}
+                  hideActionSlot={!hasSession}
+                />
+                {hasSession && !row.isRest ? (
+                  <div className="pointer-events-none -mt-12 ml-[5.5rem] mr-14 mb-3 min-w-0">
+                    <div className="flex items-center gap-2">
                       <MiniSessionProfile session={row.primarySession!} />
-                      <p className="truncate text-[12px] text-slate-500">{summary}</p>
+                      <MoreHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
                     </div>
-                  )}
-                </div>
-
-                <div className="shrink-0">
-                  {!hasSession ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onSelectDate(row.day);
-                        onOpenCalendar?.();
-                      }}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#2563EB] text-white active:scale-[0.98]"
-                      aria-label="Ajouter une séance"
-                    >
-                      <Plus className="h-5 w-5" />
-                    </button>
-                  ) : row.isRest ? (
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  ) : (
-                    <MoreHorizontal className="h-5 w-5 text-slate-500" />
-                  )}
-                </div>
+                  </div>
+                ) : null}
               </div>
             );
           })
