@@ -981,6 +981,7 @@ export function CoachPlanningExperience() {
           locationName: row.default_location_name,
           description: row.description,
           hasConflict: false,
+            athleteIntensity: athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null),
         };
       });
       setAthletePlanSessions(mapped);
