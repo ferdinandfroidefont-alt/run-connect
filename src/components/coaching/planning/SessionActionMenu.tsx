@@ -2,13 +2,12 @@ import { Copy, EllipsisVertical, Send, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface SessionActionMenuProps {
-  onEdit: () => void;
   onSend: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }
 
-export function SessionActionMenu({ onEdit, onSend, onDuplicate, onDelete }: SessionActionMenuProps) {
+export function SessionActionMenu({ onSend, onDuplicate, onDelete }: SessionActionMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -17,7 +16,6 @@ export function SessionActionMenu({ onEdit, onSend, onDuplicate, onDelete }: Ses
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={onEdit}>Modifier</DropdownMenuItem>
         <DropdownMenuItem onClick={onSend}>
           <Send className="mr-2 h-4 w-4" />
           Envoyer à l'athlète
