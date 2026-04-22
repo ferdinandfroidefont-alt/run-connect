@@ -2323,7 +2323,12 @@ export function CoachPlanningExperience() {
                     <button
                       type="button"
                       className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[12px] font-medium text-primary"
-                      onClick={() => startBlockCreation()}
+                      onClick={() => {
+                        setBlockStep("type");
+                        setBlockForm(createDefaultBlock("steady", draft.blocks.length + 1));
+                        setEditingBlockId(null);
+                        setBlockSheetOpen(true);
+                      }}
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Ajouter un bloc
@@ -2362,10 +2367,10 @@ export function CoachPlanningExperience() {
                           <button
                             key={block.id}
                             type="button"
-                            onClick={() => startBlockCreation(undefined, block)}
+                            onClick={() => setSelectedEditorBlockId(block.id)}
                             className={cn(
                               "shrink-0 rounded-full border px-3 py-2 text-left text-[12px] font-medium transition-colors",
-                              isEditing ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary text-foreground"
+                              selectedDraftBlock?.id === block.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary text-foreground"
                             )}
                           >
                             {index + 1}. {label}
@@ -2376,6 +2381,134 @@ export function CoachPlanningExperience() {
 
                     {draft.blocks.length > 0 ? (
                       <div className="mt-3 space-y-2">
+                        {selectedDraftBlock ? (
+                          <div className="rounded-2xl border border-border bg-secondary/40 p-3">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div>
+                                <p className="text-[14px] font-semibold text-foreground">
+                                  Éditer : {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
+                                </p>
+                                <p className="text-[12px] text-muted-foreground">Modification en direct sur le graph et les totaux.</p>
+                              </div>
+                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => startBlockCreation(undefined, selectedDraftBlock)}>
+                                Plus d’options
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-2">
+                              <Button
+                                variant="secondary"
+                                className="h-10 justify-start rounded-xl text-[13px]"
+                                onClick={() => {
+                                  const total = selectedDraftBlock.durationSec || 0;
+                                  const nextA = String(Math.floor(total / 3600));
+                                  const nextB = String(Math.floor((total % 3600) / 60));
+                                  const nextC = String(total % 60);
+                                  setWheelAValue(nextA);
+                                  setWheelBValue(nextB);
+                                  setWheelCValue(nextC);
+                                  openWheelColumns(
+                                    "Durée du bloc",
+                                    [
+                                      { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
+                                    ],
+                                    () => {
+                                      const next =
+                                        Number.parseInt(wheelARef.current, 10) * 3600 +
+                                        Number.parseInt(wheelBRef.current, 10) * 60 +
+                                        Number.parseInt(wheelCRef.current, 10);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, durationSec: next }, "duration")
+                                          : { ...block, durationSec: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                Durée: {secondsToLabel(selectedDraftBlock.durationSec) || "Non définie"}
+                              </Button>
+
+                              <Button
+                                variant="secondary"
+                                className="h-10 justify-start rounded-xl text-[13px]"
+                                onClick={() => {
+                                  const meters = selectedDraftBlock.distanceM || 0;
+                                  const wholeKm = Math.floor(meters / 1000);
+                                  const remMeters = Math.max(0, meters - wholeKm * 1000);
+                                  setWheelAValue(String(wholeKm));
+                                  setWheelBValue(String(Math.round(remMeters / 25) * 25));
+                                  setWheelUnit("km");
+                                  openWheelColumns(
+                                    "Distance du bloc",
+                                    [
+                                      { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
+                                      { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
+                                    ],
+                                    () => {
+                                      const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, distanceM: next }, "distance")
+                                          : { ...block, distanceM: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                Distance: {metersToLabel(selectedDraftBlock.distanceM) || "Non définie"}
+                              </Button>
+
+                              <Button
+                                variant="secondary"
+                                className="h-10 justify-start rounded-xl text-[13px]"
+                                onClick={() => {
+                                  const pace = selectedDraftBlock.paceSecPerKm || 330;
+                                  setWheelAValue(String(Math.floor(pace / 60)));
+                                  setWheelBValue(String(pace % 60));
+                                  setWheelUnit("min/km");
+                                  openWheelColumns(
+                                    "Allure du bloc",
+                                    [
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
+                                    ],
+                                    () => {
+                                      const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, paceSecPerKm: next }, "pace")
+                                          : { ...block, paceSecPerKm: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                Allure: {paceToLabel(selectedDraftBlock.paceSecPerKm) || "Non définie"}
+                              </Button>
+
+                              {selectedDraftBlock.type === "interval" || selectedDraftBlock.notes?.includes("[Pyramid]") ? (
+                                <Button
+                                  variant="secondary"
+                                  className="h-10 justify-start rounded-xl text-[13px]"
+                                  onClick={() =>
+                                    openWheel(
+                                      selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions",
+                                      Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+                                      String(selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)),
+                                      (next) => updateDraftBlock(selectedDraftBlock.id, (block) => ({ ...block, repetitions: Number(next) }))
+                                    )
+                                  }
+                                >
+                                  {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : null}
+
                         {draft.blocks.map((block, index) => (
                           <div key={block.id} className="rounded-2xl border border-border/70 bg-card p-3">
                             <button
