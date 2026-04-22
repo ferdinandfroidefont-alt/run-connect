@@ -42,6 +42,7 @@ import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDr
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 import { parseRCC } from "@/lib/rccParser";
+import { buildWorkoutSegments, computeWorkoutDistance, computeWorkoutDuration, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
@@ -1836,19 +1837,25 @@ export function CoachPlanningExperience() {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
-                const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
+                const normalizedSegments = session ? buildWorkoutSegments(session.blocks) : [];
+                const durationMin = session ? computeWorkoutDuration(normalizedSegments) : 0;
+                const distanceKm = session ? computeWorkoutDistance(normalizedSegments) : 0;
                 const summary = session
                   ? {
                       title: session.title,
-                      duration: durationSec > 0 ? secondsToLabel(durationSec) : undefined,
-                      distance: distanceM > 0 ? metersToLabel(distanceM) : undefined,
+                      duration: durationMin > 0 ? `${durationMin} min` : undefined,
+                      distance: distanceKm > 0 ? `${distanceKm.toFixed(1).replace(".", ",")} km` : undefined,
                       intensityLabel:
                         session.blocks[0]?.intensityMode === "rpe"
                           ? session.blocks[0]?.rpe != null
                             ? `RPE ${session.blocks[0].rpe}`
                             : undefined
                           : session.blocks[0]?.zone,
+                      miniProfile: renderWorkoutMiniProfile(normalizedSegments),
+                      isRestDay:
+                        session.blocks.length > 0 &&
+                        session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown"),
+                      sportHint: session.sport === "cycling" ? "cycling" : session.sport === "swimming" ? "swimming" : session.sport === "strength" ? "strength" : session.sport === "running" ? "running" : "other",
                     }
                   : undefined;
                 const accentColor =

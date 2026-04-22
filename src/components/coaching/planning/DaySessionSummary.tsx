@@ -1,11 +1,15 @@
 import { cn } from "@/lib/utils";
 import { Bike, Dumbbell, Footprints, Moon, Waves, Zap } from "lucide-react";
+import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 
 export interface SessionSummaryView {
   title: string;
   duration?: string;
   distance?: string;
   intensityLabel?: string;
+  miniProfile?: MiniProfileBlock[];
+  isRestDay?: boolean;
+  sportHint?: "running" | "cycling" | "swimming" | "strength" | "other";
 }
 
 interface DaySessionSummaryProps {
@@ -16,9 +20,9 @@ interface DaySessionSummaryProps {
 export function DaySessionSummary({ summary, accentColor }: DaySessionSummaryProps) {
   const details = [summary.duration, summary.distance, summary.intensityLabel].filter(Boolean).join(" • ");
   const sessionType = detectSessionType(summary);
-  const blocks = buildMiniSchema(sessionType);
+  const blocks = summary.miniProfile?.length ? summary.miniProfile : buildMiniSchema(sessionType);
   const SportIcon = iconForSession(summary);
-  const isRest = sessionType === "rest";
+  const isRest = summary.isRestDay || sessionType === "rest";
 
   return (
     <div className="flex min-w-0 items-start gap-2.5">
@@ -115,6 +119,10 @@ function buildMiniSchema(type: SessionType): MiniBlock[] {
 }
 
 function iconForSession(summary: SessionSummaryView) {
+  if (summary.sportHint === "cycling") return Bike;
+  if (summary.sportHint === "swimming") return Waves;
+  if (summary.sportHint === "strength") return Dumbbell;
+  if (summary.sportHint === "other") return Moon;
   const text = `${summary.title} ${summary.intensityLabel || ""}`.toLowerCase();
   if (text.includes("velo") || text.includes("vélo") || text.includes("cycling")) return Bike;
   if (text.includes("natation") || text.includes("swim")) return Waves;

@@ -3,6 +3,7 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { parseRCC, computeRCCSummary, formatParsedBlockSummary } from "@/lib/rccParser";
+import { buildWorkoutSegments, computeWorkoutDistance, computeWorkoutDuration } from "@/lib/workoutVisualization";
 import { ModelTabs } from "@/components/coaching/models/ModelTabs";
 import { ModelFilters } from "@/components/coaching/models/ModelFilters";
 import { ModelCard } from "@/components/coaching/models/ModelCard";
@@ -125,13 +126,16 @@ export function ModelsPage({
         <div className="flex flex-col divide-y divide-border border-b border-border bg-card">
           {filtered.map((model) => {
             const parsed = parseRCC(model.rccCode);
+            const segments = buildWorkoutSegments(parsed.blocks);
             const summary = computeRCCSummary(parsed.blocks);
+            const durationMin = computeWorkoutDuration(segments) || summary.totalDurationMin;
+            const distanceKm = computeWorkoutDistance(segments) || summary.totalDistanceKm;
             const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
             return (
               <ModelCard
                 key={model.id}
                 model={model}
-                summaryLine={`${summary.totalDurationMin} min • ${summary.totalDistanceKm} km • ${summary.intensity}`}
+                summaryLine={`${durationMin} min • ${distanceKm} km • ${summary.intensity}`}
                 previewLine={preview}
                 accentColor={getAccentColor(model)}
                 onOpen={() => setSelectedModel(model)}
