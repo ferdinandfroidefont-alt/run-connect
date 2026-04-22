@@ -2887,69 +2887,77 @@ export function CoachPlanningExperience() {
                 );
               })()}
 
-              <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
-                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {blockForm.type === "steady" ? "Volume estimé" : "Volume"}
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  {draft.sport !== "strength" && (
-                    <Button
-                      variant="secondary"
-                      className="h-10 justify-start rounded-xl text-[13px]"
-                      onClick={() => {
-                        const derivedPace =
-                          blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
-                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
-                            : undefined;
-                        setWheelUnit("min/km");
-                        const pace = blockForm.paceSecPerKm || derivedPace || 330;
-                        const nextA = String(Math.floor(pace / 60));
-                        const nextB = String(pace % 60);
-                        setWheelAValue(nextA);
-                        setWheelBValue(nextB);
-                        openWheelColumns(
-                          "Allure moyenne estimée",
-                          [
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextA, onChange: setWheelAValue, suffix: "'" },
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "''" },
-                            { items: [{ value: "min/km", label: "/km" }, { value: "min/mi", label: "/mi" }, { value: "s/100", label: "/100m" }], value: wheelUnit, onChange: setWheelUnit },
-                          ],
-                          () => {
-                            const unit = wheelUnit;
-                            if (unit === "s/100") {
-                              const sec100 = Number.parseInt(wheelARef.current, 10);
-                              const pacePerKm = sec100 * 10;
-                              setBlockForm((prev) => {
-                                if (!prev) return prev;
-                                const draftNext = { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined };
-                                return draft.sport === "running" ? deriveRunningVolume(draftNext, "pace") : draftNext;
-                              });
-                              return;
-                            }
-                            const secBase =
-                              Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                            const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
+              <div className="rounded-[26px] border border-border bg-card p-3 shadow-[0_16px_40px_-28px_hsl(var(--foreground)/0.22)]">
+                <div className="overflow-hidden rounded-[22px] border border-border/80 bg-background">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
+                    onClick={() => {
+                      const derivedPace =
+                        blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
+                          ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
+                          : undefined;
+                      setWheelUnit("min/km");
+                      const pace = blockForm.paceSecPerKm || derivedPace || 330;
+                      const nextA = String(Math.floor(pace / 60));
+                      const nextB = String(pace % 60);
+                      setWheelAValue(nextA);
+                      setWheelBValue(nextB);
+                      openWheelColumns(
+                        "Allure moyenne estimée",
+                        [
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextA, onChange: setWheelAValue, suffix: "'" },
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "''" },
+                          { items: [{ value: "min/km", label: "/km" }, { value: "min/mi", label: "/mi" }, { value: "s/100", label: "/100m" }], value: wheelUnit, onChange: setWheelUnit },
+                        ],
+                        () => {
+                          const unit = wheelUnit;
+                          if (unit === "s/100") {
+                            const sec100 = Number.parseInt(wheelARef.current, 10);
+                            const pacePerKm = sec100 * 10;
                             setBlockForm((prev) => {
                               if (!prev) return prev;
                               const draftNext = { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined };
                               return draft.sport === "running" ? deriveRunningVolume(draftNext, "pace") : draftNext;
                             });
+                            return;
                           }
-                        );
-                      }}
-                    >
-                      Allure moyenne estimée:{" "}
-                      {paceToLabel(
-                        blockForm.paceSecPerKm ||
-                          (blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
-                            ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
-                            : undefined)
-                      ) || "Non définie"}
-                    </Button>
-                  )}
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[13px]"
+                          const secBase = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
+                          const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
+                          setBlockForm((prev) => {
+                            if (!prev) return prev;
+                            const draftNext = { ...prev, paceSecPerKm: pacePerKm, powerWatts: undefined };
+                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "pace") : draftNext;
+                          });
+                        }
+                      );
+                    }}
+                  >
+                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Gauge className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[16px] text-foreground">Allure</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">
+                        {paceCardLabel(
+                          blockForm.paceSecPerKm ||
+                            (blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
+                              ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
+                              : undefined)
+                        )}
+                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">/km</span>
+                      </p>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
+
+                  <div className="mx-4 h-px bg-border/70" aria-hidden />
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
                     onClick={() => {
                       const meters = blockForm.distanceM || 0;
                       let selectedUnit: "km" | "mi" = wheelUnit === "mi" ? "mi" : "km";
@@ -3015,11 +3023,26 @@ export function CoachPlanningExperience() {
                       );
                     }}
                   >
-                    Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[13px]"
+                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Ruler className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[16px] text-foreground">Distance</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">
+                        {distanceCardLabel(blockForm.distanceM)}
+                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">km</span>
+                      </p>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
+
+                  <div className="mx-4 h-px bg-border/70" aria-hidden />
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
                     onClick={() => {
                       const total = blockForm.durationSec || 0;
                       const nextA = String(Math.floor(total / 3600));
@@ -3049,19 +3072,38 @@ export function CoachPlanningExperience() {
                       );
                     }}
                   >
-                    Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
-                  </Button>
+                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Clock3 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[16px] text-foreground">Temps</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">{durationClockLabel(blockForm.durationSec)}</p>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
                 </div>
+
                 {hasVolumeConflict && draft.sport === "running" ? (
                   <p className="mt-2 px-1 text-[11px] text-chart-3">
                     Valeurs incohérentes: l’allure est automatiquement ajustée selon durée + distance.
                   </p>
                 ) : null}
-                {draft.sport === "running" ? (
-                  <p className="mt-1 px-1 text-[11px] text-muted-foreground">
-                    L’allure est dérivée automatiquement dès que 2 valeurs de volume sont renseignées.
-                  </p>
-                ) : null}
+
+                <div className="mt-3 rounded-[22px] border border-primary/10 bg-primary/5 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Crosshair className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] text-foreground">Zone estimée</p>
+                      <p className="mt-0.5 text-[17px] font-semibold text-foreground">
+                        {formatZoneBadge(blockForm.zone)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {blockForm.type === "interval" && (
@@ -3122,68 +3164,61 @@ export function CoachPlanningExperience() {
                 );
               })()}
 
-              <div className="rounded-2xl border border-border bg-secondary/40 p-2">
-                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Intensité
-                </p>
-                <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
+              <div className="rounded-[26px] border border-border bg-card p-4 shadow-[0_16px_40px_-28px_hsl(var(--foreground)/0.18)]">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[17px] font-semibold text-foreground">RPE <span className="font-normal text-muted-foreground">(optionnel)</span></p>
+                  </div>
                   <button
                     type="button"
-                    className={cn(
-                      "rounded-lg py-1.5 text-[12px] font-semibold",
-                      (blockForm.intensityMode ?? "zones") === "zones"
-                        ? "bg-card text-foreground"
-                        : "text-muted-foreground"
-                    )}
-                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: "zones" } : prev))}
+                    className="rounded-full border border-border bg-secondary px-3 py-1 text-[12px] font-medium text-foreground"
+                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: prev.intensityMode === "rpe" ? "zones" : "rpe" } : prev))}
                   >
-                    Zones
-                  </button>
-                  <button
-                    type="button"
-                    className={cn(
-                      "rounded-lg py-1.5 text-[12px] font-semibold",
-                      blockForm.intensityMode === "rpe" ? "bg-card text-foreground" : "text-muted-foreground"
-                    )}
-                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: "rpe" } : prev))}
-                  >
-                    RPE
+                    {(blockForm.intensityMode ?? "zones") === "rpe" ? "Mode RPE" : "Mode zone"}
                   </button>
                 </div>
 
                 {(blockForm.intensityMode ?? "zones") === "zones" ? (
-                  <div className="grid grid-cols-2 gap-1">
+                  <div className="grid grid-cols-3 gap-2">
                     {ZONE_META.map((zone) => (
                       <button
                         key={zone.zone}
                         type="button"
                         className={cn(
-                          "rounded-xl px-2 py-2 text-left",
-                          zone.tone,
-                          blockForm.zone === zone.zone && "ring-2 ring-primary"
+                          "rounded-2xl border px-3 py-3 text-left transition-all",
+                          blockForm.zone === zone.zone ? "border-primary bg-primary/10 shadow-[0_10px_24px_-18px_hsl(var(--primary)/0.8)]" : "border-border bg-secondary/35"
                         )}
                         onClick={() => setBlockForm((prev) => (prev ? { ...prev, zone: zone.zone } : prev))}
                       >
-                        <p className="text-[12px] font-semibold">{zone.label}</p>
-                        <p className="text-[11px]">{zone.description}</p>
+                        <p className="text-[13px] font-semibold text-foreground">{zone.label}</p>
+                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{zone.description}</p>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <Button
-                    variant="secondary"
-                    className="h-10 w-full justify-start rounded-xl text-[13px]"
-                    onClick={() =>
-                      openWheel(
-                        "RPE",
-                        Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })),
-                        String(blockForm.rpe ?? 5),
-                        (next) => setBlockForm((prev) => (prev ? { ...prev, rpe: Number(next) } : prev))
-                      )
-                    }
-                  >
-                    RPE: {blockForm.rpe ?? 5}
-                  </Button>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-5 gap-2 min-[360px]:grid-cols-10">
+                      {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => {
+                        const selected = (blockForm.rpe ?? 3) === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setBlockForm((prev) => (prev ? { ...prev, rpe: value } : prev))}
+                            className={cn(
+                              "flex h-11 items-center justify-center rounded-2xl border text-[18px] font-semibold tabular-nums transition-all",
+                              selected ? "border-primary bg-primary text-primary-foreground shadow-[0_14px_30px_-20px_hsl(var(--primary)/0.95)]" : "border-border bg-secondary/30 text-foreground"
+                            )}
+                          >
+                            {value}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-center text-[15px] text-muted-foreground">
+                      {(blockForm.rpe ?? 3) <= 3 ? "Facile" : (blockForm.rpe ?? 3) <= 6 ? "Modéré" : (blockForm.rpe ?? 3) <= 8 ? "Soutenu" : "Très intense"}
+                    </p>
+                  </div>
                 )}
               </div>
 
