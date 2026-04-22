@@ -1028,6 +1028,20 @@ export function CoachPlanningExperience() {
     [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
+  const enrichedFilteredSessions = useMemo(
+    () =>
+      filteredSessions.map((session) => {
+        const directAthlete = session.athleteId ? athletes.find((athlete) => athlete.id === session.athleteId) : undefined;
+        const groupAthlete = !directAthlete && activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
+        return {
+          ...session,
+          athleteIntensity:
+            session.athleteIntensity ?? athleteIntensityFromRunningRecords(directAthlete?.runningRecords ?? groupAthlete?.runningRecords ?? null),
+        };
+      }),
+    [filteredSessions, athletes, activeAthleteId]
+  );
+
   const activeAthleteIntensity = useMemo(() => {
     if (effectiveAthleteMode) {
       return athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null);
