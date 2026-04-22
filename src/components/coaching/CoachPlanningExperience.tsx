@@ -75,8 +75,11 @@ type SessionBlock = {
   speedKmh?: number;
   powerWatts?: number;
   repetitions?: number;
+  blockRepetitions?: number;
   recoveryDurationSec?: number;
   recoveryDistanceM?: number;
+  blockRecoveryDurationSec?: number;
+  blockRecoveryDistanceM?: number;
   recoveryType?: "walk" | "jog" | "easy";
   intensityMode?: IntensityMode;
   zone?: ZoneKey;
@@ -351,6 +354,82 @@ function paceStringToSecPerKm(pace?: string) {
   const [min, sec] = pace.split(":").map(Number);
   if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
   return min * 60 + sec;
+}
+
+function parseNumericField(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
+  }
+  return undefined;
+}
+
+function normalizeStoredZone(source: Record<string, unknown>): ZoneKey | undefined {
+  const raw =
+    typeof source.zone === "string"
+      ? source.zone
+      : typeof source.intensity === "string"
+        ? source.intensity
+        : typeof source.effortIntensity === "string"
+          ? source.effortIntensity
+          : undefined;
+  const upper = raw?.toUpperCase();
+  return upper && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(upper) ? (upper as ZoneKey) : undefined;
+}
+
+function mapStoredBlockToSessionBlock(block: unknown, index: number): SessionBlock {
+  const source = block as Record<string, unknown>;
+  const intensityMode: "rpe" | "zones" = source.intensityMode === "rpe" ? "rpe" : "zones";
+  const recoveryType =
+    source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
+      ? source.recoveryType
+      : source.recoveryType === "marche"
+        ? "walk"
+        : source.recoveryType === "trot"
+          ? "jog"
+          : source.recoveryType === "statique"
+            ? "easy"
+            : undefined;
+
+  return {
+    id: typeof source.id === "string" ? source.id : uid(),
+    order: typeof source.order === "number" ? source.order : index + 1,
+    type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
+    durationSec: typeof source.durationSec === "number" ? source.durationSec : parseNumericField(source.effortDuration ?? source.duration),
+    distanceM: typeof source.distanceM === "number" ? source.distanceM : parseNumericField(source.effortDistance ?? source.distance),
+    paceSecPerKm:
+      typeof source.paceSecPerKm === "number"
+        ? source.paceSecPerKm
+        : paceStringToSecPerKm(
+            typeof source.effortPace === "string"
+              ? source.effortPace
+              : typeof source.pace === "string"
+                ? source.pace
+                : undefined
+          ),
+    speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
+    powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
+    repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
+    blockRepetitions: typeof source.blockRepetitions === "number" ? source.blockRepetitions : undefined,
+    recoveryDurationSec:
+      typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : parseNumericField(source.recoveryDuration),
+    recoveryDistanceM:
+      typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : parseNumericField(source.recoveryDistance),
+    blockRecoveryDurationSec:
+      typeof source.blockRecoveryDurationSec === "number"
+        ? source.blockRecoveryDurationSec
+        : parseNumericField(source.blockRecoveryDuration),
+    blockRecoveryDistanceM:
+      typeof source.blockRecoveryDistanceM === "number"
+        ? source.blockRecoveryDistanceM
+        : parseNumericField(source.blockRecoveryDistance),
+    recoveryType,
+    intensityMode,
+    zone: normalizeStoredZone(source),
+    rpe: typeof source.rpe === "number" ? source.rpe : undefined,
+    notes: typeof source.notes === "string" ? source.notes : undefined,
+  } satisfies SessionBlock;
 }
 
 function parsedRccToSessionBlocks(rccCode: string): SessionBlock[] {
