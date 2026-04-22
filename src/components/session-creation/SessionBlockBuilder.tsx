@@ -4,6 +4,7 @@ import { Plus, Flame, Zap, Activity, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SessionBlock, BlockType, BLOCK_TYPES } from './types';
 import { SessionBlockComponent } from './SessionBlock';
+import { SessionStructurePreview } from './SessionStructurePreview';
 import { cn } from '@/lib/utils';
 
 interface SessionBlockBuilderProps {
@@ -120,6 +121,82 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
         </span>
       </div>
 
+      {blocks.length > 0 && (
+        <div ref={rootRef} className="relative">
+          <div className="mb-3 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              aria-expanded={showAddMenu}
+              aria-controls={addMenuId}
+              aria-haspopup="menu"
+              className="h-8 rounded-full px-3 text-xs font-semibold text-primary"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              Ajouter un bloc
+            </Button>
+          </div>
+
+          <SessionStructurePreview blocks={blocks} />
+
+          <AnimatePresence>
+            {showAddMenu && (
+              <motion.div
+                id={addMenuId}
+                role="menu"
+                aria-label="Types de blocs"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-border bg-card p-2 shadow-lg"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {BLOCK_TYPES.map((blockType) => {
+                    const IconComponent = BLOCK_ICONS[blockType.value as BlockType];
+                    return (
+                      <button
+                        key={blockType.value}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => addBlock(blockType.value as BlockType)}
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                          BLOCK_COLORS[blockType.value as BlockType]
+                        )}
+                      >
+                        <IconComponent className="h-4 w-4 shrink-0" aria-hidden />
+                        {blockType.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {blocks.length === 0 && (
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => addBlock('warmup')}
+              className="h-8 rounded-full px-3 text-xs font-semibold text-primary"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+              Ajouter un bloc
+            </Button>
+          </div>
+
+          <SessionStructurePreview blocks={blocks} />
+        </div>
+      )}
+
       <AnimatePresence mode="popLayout">
         {blocks.map((block, index) => (
           <SessionBlockComponent
@@ -132,80 +209,6 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
           />
         ))}
       </AnimatePresence>
-
-      {blocks.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-xl border-2 border-dashed border-border p-6 text-center"
-        >
-          <p className="text-sm text-muted-foreground mb-3">
-            Construisez votre séance bloc par bloc
-          </p>
-          <div className="flex justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => addBlock('warmup')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-600 text-sm font-medium hover:bg-green-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
-              <Flame className="w-4 h-4 shrink-0" aria-hidden />
-              Échauffement
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {blocks.length > 0 && (
-        <div ref={rootRef} className="relative">
-          <AnimatePresence>
-            {showAddMenu && (
-              <motion.div
-                id={addMenuId}
-                role="menu"
-                aria-label="Types de blocs"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-card rounded-xl border border-border shadow-lg z-20"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {BLOCK_TYPES.map((blockType) => {
-                    const IconComponent = BLOCK_ICONS[blockType.value as BlockType];
-                    return (
-                      <button
-                        key={blockType.value}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => addBlock(blockType.value as BlockType)}
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                          BLOCK_COLORS[blockType.value as BlockType]
-                        )}
-                      >
-                        <IconComponent className="w-4 h-4 shrink-0" aria-hidden />
-                        {blockType.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowAddMenu(!showAddMenu)}
-            aria-expanded={showAddMenu}
-            aria-controls={addMenuId}
-            aria-haspopup="menu"
-            className="w-full h-12 border-dashed"
-          >
-            <Plus className="w-4 h-4 mr-2 shrink-0" aria-hidden />
-            Ajouter un bloc
-          </Button>
-        </div>
-      )}
 
       {blocks.length > 0 && blocks.length < 5 && !showAddMenu && (
         <div className="flex gap-2 justify-center flex-wrap" role="group" aria-label="Ajouts rapides">
