@@ -1161,7 +1161,7 @@ export function CoachPlanningExperience() {
   const saveSession = async () => {
     if (!draft.blocks.length || !activeClubId || !user) return;
     const normalizedTitle = draft.title.trim() || "Séance sans titre";
-    const totalDistanceKm = previewMetrics.distanceKm || 0;
+    const totalDistanceKm = computeSessionDistanceKm(draft.blocks, draft.sport);
     const targetAthletes = draft.athleteId ? [draft.athleteId] : activeAthleteId ? [activeAthleteId] : null;
       const dbPayload = {
       club_id: activeClubId,
@@ -1236,8 +1236,7 @@ export function CoachPlanningExperience() {
       send_mode: session.groupId ? "group" : "club",
       status: "draft",
       session_blocks: session.blocks,
-      distance_km:
-        session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000 || null,
+      distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
     };
     const { data, error } = await supabase.from("coaching_sessions").insert(clonePayload).select("id").single();
     if (error) {
@@ -1345,8 +1344,7 @@ export function CoachPlanningExperience() {
         send_mode: session.groupId ? "group" : "club",
         status: session.sent ? "sent" : "draft",
         session_blocks: session.blocks,
-        distance_km:
-          session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000 || null,
+        distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
       };
       const { data, error } = await supabase.from("coaching_sessions").insert(payload).select("id").single();
       if (error) {
@@ -1407,8 +1405,7 @@ export function CoachPlanningExperience() {
       await removeSession(existing.id);
     }
     const blocks = parsedRccToSessionBlocks(model.rccCode);
-    const totalDistanceKm =
-      blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000;
+    const totalDistanceKm = computeSessionDistanceKm(blocks, model.activityType as SportType);
     const targetAthletes = activeAthleteId ? [activeAthleteId] : null;
     const payload = {
       club_id: activeClubId,
