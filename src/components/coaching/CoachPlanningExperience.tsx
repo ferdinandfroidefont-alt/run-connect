@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   Dumbbell,
   Flame,
+  GripVertical,
   Leaf,
   Minus,
   Plus,
@@ -461,7 +462,8 @@ export function CoachPlanningExperience() {
   const [blockStep, setBlockStep] = useState<"type" | "config">("type");
   const [blockForm, setBlockForm] = useState<SessionBlock | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
-  const [selectedEditorBlockId, setSelectedEditorBlockId] = useState<string | null>(null);
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
   const [wheelColumns, setWheelColumns] = useState<Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>>([]);
@@ -472,6 +474,8 @@ export function CoachPlanningExperience() {
   const wheelARef = useRef("0");
   const wheelBRef = useRef("0");
   const wheelCRef = useRef("0");
+  const blockReorderPressTimerRef = useRef<number | null>(null);
+  const blockReorderSourceRef = useRef<string | null>(null);
   const setWheelAValue = useCallback((value: string) => {
     wheelARef.current = value;
     setWheelA(value);
@@ -1093,10 +1097,6 @@ export function CoachPlanningExperience() {
     [draft.blocks]
   );
   const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
-  const selectedDraftBlock = useMemo(
-    () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
-    [draft.blocks, selectedEditorBlockId]
-  );
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
@@ -1497,18 +1497,45 @@ export function CoachPlanningExperience() {
     setEditingBlockId(null);
   };
 
-  const moveBlock = (blockId: string, direction: -1 | 1) => {
+  const moveBlockToIndex = useCallback((blockId: string, targetIndex: number) => {
     setDraft((prev) => {
       const index = prev.blocks.findIndex((b) => b.id === blockId);
-      const target = index + direction;
+      const target = Math.max(0, Math.min(targetIndex, prev.blocks.length - 1));
       if (index < 0 || target < 0 || target >= prev.blocks.length) return prev;
+      if (index === target) return prev;
       const next = [...prev.blocks];
-      const temp = next[index];
-      next[index] = next[target];
-      next[target] = temp;
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
       return { ...prev, blocks: next.map((block, idx) => ({ ...block, order: idx + 1 })) };
     });
-  };
+  }, []);
+
+  const clearBlockReorderPress = useCallback(() => {
+    if (blockReorderPressTimerRef.current !== null) {
+      window.clearTimeout(blockReorderPressTimerRef.current);
+      blockReorderPressTimerRef.current = null;
+    }
+    blockReorderSourceRef.current = null;
+  }, []);
+
+  const startBlockReorderPress = useCallback((blockId: string) => {
+    clearBlockReorderPress();
+    blockReorderSourceRef.current = blockId;
+    blockReorderPressTimerRef.current = window.setTimeout(() => {
+      setDraggedBlockId(blockId);
+      setDragOverBlockId(blockId);
+    }, 220);
+  }, [clearBlockReorderPress]);
+
+  const finishBlockReorder = useCallback(() => {
+    clearBlockReorderPress();
+    if (draggedBlockId && dragOverBlockId && draggedBlockId !== dragOverBlockId) {
+      const targetIndex = draft.blocks.findIndex((block) => block.id === dragOverBlockId);
+      if (targetIndex >= 0) moveBlockToIndex(draggedBlockId, targetIndex);
+    }
+    setDraggedBlockId(null);
+    setDragOverBlockId(null);
+  }, [clearBlockReorderPress, dragOverBlockId, draggedBlockId, draft.blocks, moveBlockToIndex]);
 
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
