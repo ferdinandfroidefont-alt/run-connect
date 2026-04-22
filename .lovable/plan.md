@@ -1,58 +1,96 @@
 
-Objectif: rendre le bouton “+” entre les blocs immédiatement visible et compréhensible dans “Créer une séance”.
+Objectif: corriger le vrai problème de visibilité en appliquant le bouton d’insertion entre blocs dans l’écran que l’utilisateur voit réellement sur `/coaching`, y compris en mode aperçu.
 
-1. Renforcer visuellement l’insert entre deux blocs
-- Modifier `src/components/session-creation/SessionBlockBuilder.tsx` pour remplacer le petit bouton rond actuel par un séparateur d’insertion beaucoup plus visible.
-- Nouveau rendu prévu :
-  - ligne horizontale discrète de chaque côté
-  - bouton central plus grand
-  - fond blanc / secondaire contrasté
-  - icône `Plus` plus nette
-  - libellé explicite du type “Ajouter ici”
-- Garder une cible tactile iOS premium (44px mini).
+1. Corriger la source du problème
+- Aujourd’hui, `/coaching` bifurque entre :
+  - `CoachPlanningExperience` en mode normal
+  - `CoachingPreviewExperience` en mode aperçu
+- Les derniers correctifs ont surtout touché des surfaces qui ne sont pas forcément celles affichées dans la preview actuelle.
+- Résultat : le “Ajouter ici” peut exister dans le code, mais pas dans l’expérience que l’utilisateur est en train de regarder.
 
-2. Éviter que le “+” se fonde dans le fond
-- Augmenter le contraste :
+2. Aligner l’écran visible avec le vrai builder coaching
+- Modifier `src/pages/Coaching.tsx` et/ou `src/components/coaching/CoachingPreviewExperience.tsx` pour que le mode aperçu expose aussi le vrai éditeur de séance structuré, au lieu d’un mock trop simplifié.
+- Principe :
+  - garder les données mock si besoin
+  - mais réutiliser le même composant de structure/blocs que l’expérience coach réelle
+  - désactiver seulement la persistance backend, pas l’UI d’édition
+
+3. Unifier le composant d’insertion entre blocs
+- Éviter deux implémentations différentes du builder :
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+  - logique embarquée dans `src/components/coaching/CoachPlanningExperience.tsx`
+- Extraire ou réutiliser un composant commun pour :
+  - la liste des blocs
+  - le séparateur visible entre blocs
+  - le bouton central “Ajouter ici”
+  - le menu de choix de type de bloc
+- Ainsi, le même rendu sera visible partout : wizard, coaching, preview.
+
+4. Rendre le séparateur impossible à manquer
+- Renforcer visuellement le séparateur entre deux blocs dans le composant partagé :
+  - largeur pleine
+  - lignes latérales discrètes
+  - bouton central plus contrasté
+  - libellé explicite “Ajouter ici”
+  - cible tactile minimum 44px
+- Style RunConnect light / Premium iOS :
+  - `bg-card` / `bg-background`
   - bordure plus marquée
-  - ombre légère
-  - couleur primaire pour l’icône
-  - fond `bg-card` ou `bg-background` au lieu d’un fond trop proche du conteneur
-- Ajouter un état `hover/active` plus clair pour qu’on sente que c’est interactif.
+  - ombre douce mais visible
+  - icône `Plus` primaire
+  - espacement flush propre sur 390px de large
 
-3. Rendre l’action compréhensible sans ambiguïté
-- Aujourd’hui le bouton ajoute directement un `interval`, ce qui peut sembler “invisible” ou inattendu.
-- Faire en sorte que l’action d’insertion ouvre le même menu de types de blocs que “Ajouter un bloc”, mais ancré sur l’emplacement visé.
-- Résultat :
-  - le coach clique sur le `+` entre deux blocs
-  - il choisit échauffement / intervalle / continu / retour au calme
-  - le bloc est inséré exactement à cet endroit
+5. Afficher le menu exactement à l’endroit cliqué
+- Conserver une logique d’ancrage claire :
+  - `top` pour ajout général
+  - `index` pour insertion entre deux blocs
+- Le clic sur “Ajouter ici” doit ouvrir inline le menu des types :
+  - Échauffement
+  - Série / Fractionné
+  - Bloc constant
+  - Retour au calme
+- L’ajout doit insérer le bloc au bon index, sans l’envoyer en fin de liste.
 
-4. Garder la cohérence Premium iOS / coaching
-- Aligner ce séparateur avec le design RunConnect :
-  - espacement propre
-  - composant centré
-  - pas trop technique
-  - lisible sur mobile 390px
-- Conserver la hiérarchie visuelle :
-  - bloc
-  - séparateur d’insertion
-  - bloc suivant
+6. Appliquer aussi la correction au vrai écran “Créer une séance”
+- Vérifier et harmoniser l’intégration dans :
+  - `src/components/session-creation/steps/DetailsStep.tsx`
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+- Objectif :
+  - même séparateur
+  - même comportement
+  - même hiérarchie visuelle
+  - aucun écart entre le wizard et le coaching planner
 
-5. Vérifier les cas d’affichage
-- Entre deux blocs existants : le `+` doit être évident au premier regard
-- Avec plusieurs blocs : chaque zone d’insertion doit rester visible sans surcharger
-- En bas de liste : garder les quick actions existantes si elles restent utiles
-- Avec menu ouvert : éviter les chevauchements visuels avec le schéma de séance
+7. Vérifications UX à couvrir
+- Cas à valider après implémentation :
+  - 2 blocs : le séparateur est visible immédiatement
+  - 3 à 5 blocs : chaque zone d’insertion reste lisible
+  - menu ouvert : pas de chevauchement avec le schéma de séance
+  - mobile 390px : le libellé reste lisible
+  - preview mode : l’utilisateur peut enfin voir et tester l’insert
+  - mode normal : comportement identique
 
 Détails techniques
-- Fichier principal : `src/components/session-creation/SessionBlockBuilder.tsx`
-- Ajustements probables :
-  - introduire un `pendingInsertIndex`
-  - réutiliser le menu de sélection de type pour insertion entre blocs
-  - remplacer le bouton actuel `h-8 w-8` par un composant d’insertion plus visible
-- Aucun changement métier nécessaire sur le moteur de calcul ; c’est un correctif UX/UI ciblé.
+- Fichiers principaux :
+  - `src/pages/Coaching.tsx`
+  - `src/components/coaching/CoachingPreviewExperience.tsx`
+  - `src/components/coaching/CoachPlanningExperience.tsx`
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+  - `src/components/session-creation/steps/DetailsStep.tsx`
+- Architecture recommandée :
+```text
+Coaching.tsx
+  -> mode normal: CoachPlanningExperience
+  -> mode aperçu: Preview qui réutilise le même builder visuel
+
+Builder partagé
+  -> rendu des blocs
+  -> séparateurs d’insertion
+  -> menu de types
+  -> insertion par index
+```
 
 Résultat attendu
-- Le “petit plus” est enfin visible immédiatement
-- L’utilisateur comprend qu’il sert à ajouter un bloc entre deux blocs
-- L’insertion est plus claire, plus premium et plus cohérente avec le reste du builder
+- Le bouton “+” entre les blocs devient réellement visible dans la page que l’utilisateur consulte.
+- Le mode aperçu n’affiche plus une version déconnectée des correctifs.
+- L’ajout entre blocs est clair, premium et cohérent partout dans l’app.
