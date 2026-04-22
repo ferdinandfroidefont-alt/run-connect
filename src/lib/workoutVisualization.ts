@@ -13,6 +13,8 @@ export interface WorkoutSegment {
   distanceKm: number;
   intensityBand: IntensityBand;
   intensitySource?: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
+  repeatCount?: number;
+  visualStyle?: "default" | "pyramid";
 }
 
 export interface MiniProfileBlock {
@@ -28,8 +30,10 @@ type ParsedLikeBlock = {
   distance?: number;
   repetitions?: number;
   recoveryDuration?: number;
+  recoveryDistance?: number;
   pace?: string;
   zone?: string;
+  notes?: string;
 };
 
 type SessionLikeBlock = {
@@ -38,13 +42,17 @@ type SessionLikeBlock = {
   distanceM?: number;
   repetitions?: number;
   recoveryDurationSec?: number;
+  recoveryDistanceM?: number;
   paceSecPerKm?: number;
   zone?: string;
+  notes?: string;
 };
 
 const DEFAULT_RECOVERY_SPEED_KM_PER_MIN = 1 / 7.2; // ~7:12/km
 const DEFAULT_STEADY_PACE_SEC_PER_KM = 330;
 const DEFAULT_RECOVERY_DISTANCE_KM = 0.15;
+const DEFAULT_TEMPO_PACE_SEC_PER_KM = 285;
+const DEFAULT_INTERVAL_PACE_SEC_PER_KM = 240;
 
 function toPaceSecPerKmFromString(pace?: string): number | null {
   if (!pace) return null;
@@ -97,12 +105,17 @@ export function buildWorkoutSegments(
       "recoveryDurationSec" in raw
         ? clampPositive((sessionRaw.recoveryDurationSec || 0) / 60)
         : clampPositive((parsedRaw.recoveryDuration || 0) / 60);
+    const recoveryDistanceKm =
+      "recoveryDistanceM" in raw
+        ? clampPositive((sessionRaw.recoveryDistanceM || 0) / 1000)
+        : clampPositive((parsedRaw.recoveryDistance || 0) / 1000);
     const distanceKm =
       "distanceM" in raw
         ? clampPositive((sessionRaw.distanceM || 0) / 1000)
         : clampPositive((parsedRaw.distance || 0) / 1000);
     const paceSecPerKm =
       "paceSecPerKm" in raw ? sessionRaw.paceSecPerKm || null : toPaceSecPerKmFromString(parsedRaw.pace);
+    const isPyramid = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Pyramid]"));
 
     if (raw.type === "interval") {
       const durationFromDistance =
@@ -132,18 +145,24 @@ export function buildWorkoutSegments(
         distanceKm: clampPositive(effortDistance),
         intensityBand: repIntensity.band,
         intensitySource: repIntensity.source,
+        repeatCount: repetitions,
       });
 
       if (recoveryDurationMin > 0 && repetitions > 1) {
         const totalRecoveryDuration = recoveryDurationMin * (repetitions - 1);
+        const totalRecoveryDistance =
+          recoveryDistanceKm > 0
+            ? recoveryDistanceKm * (repetitions - 1)
+            : totalRecoveryDuration > 0
+              ? totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN
+              : Math.max(0, repetitions - 1) * DEFAULT_RECOVERY_DISTANCE_KM;
         segments.push({
           kind: "recovery",
           durationMin: totalRecoveryDuration,
-          distanceKm:
-            totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN ||
-            Math.max(0, repetitions - 1) * DEFAULT_RECOVERY_DISTANCE_KM,
+          distanceKm: clampPositive(totalRecoveryDistance),
           intensityBand: "recovery",
           intensitySource: refResolution.source,
+          repeatCount: Math.max(0, repetitions - 1),
         });
       }
       continue;
@@ -177,6 +196,8 @@ export function buildWorkoutSegments(
       distanceKm: clampPositive(segDistance),
       intensityBand: steadyIntensity.band,
       intensitySource: steadyIntensity.source,
+      repeatCount: repetitions > 1 ? repetitions : undefined,
+      visualStyle: isPyramid ? "pyramid" : "default",
     });
   }
 
@@ -197,39 +218,75 @@ export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfil
   if (!meaningful.length) return [{ width: 100, height: 8, color: "hsl(var(--muted))", opacity: 0.8 }];
 
   // Keep simple sessions simple: one steady-like segment => one block.
-  if (meaningful.length === 1 && (meaningful[0].kind === "steady" || meaningful[0].kind === "warmup" || meaningful[0].kind === "cooldown")) {
+  if (
+    meaningful.length === 1 &&
+    meaningful[0].repeatCount == null &&
+    meaningful[0].visualStyle !== "pyramid" &&
+    (meaningful[0].kind === "steady" || meaningful[0].kind === "warmup" || meaningful[0].kind === "cooldown")
+  ) {
     const only = meaningful[0];
     return [{ width: 100, height: heightForBand(only.intensityBand), color: colorForBand(only.intensityBand), opacity: 1 }];
   }
 
-  const total = Math.max(
-    meaningful.reduce((acc, s) => acc + Math.max(s.durationMin, s.distanceKm * 8), 0),
-    1
-  );
-
-  // Compact repeated work: large rep + recovery pairs become alternating chunks.
   const compact: WorkoutSegment[] = [];
-  for (const seg of meaningful) {
-    if (seg.kind === "rep" && seg.durationMin >= 12) {
-      const chunks = seg.durationMin >= 24 ? 5 : 3;
-      for (let i = 0; i < chunks; i += 1) {
-        compact.push({ ...seg, durationMin: seg.durationMin / chunks, distanceKm: seg.distanceKm / chunks });
-        if (i < chunks - 1) {
-          compact.push({ kind: "recovery", durationMin: 0.8, distanceKm: 0.1, intensityBand: "recovery" });
-        }
-      }
+  for (let index = 0; index < meaningful.length; index += 1) {
+    const seg = meaningful[index];
+
+    if (seg.visualStyle === "pyramid") {
+      const steps = [0.42, 0.58, 0.76, 1, 0.78, 0.58];
+      steps.forEach((ratio) => {
+        compact.push({
+          ...seg,
+          durationMin: seg.durationMin / steps.length,
+          distanceKm: seg.distanceKm / steps.length,
+          intensityBand: ratio > 0.88 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
+        });
+      });
       continue;
     }
+
+    const next = meaningful[index + 1];
+    const repeatedPair =
+      seg.kind === "rep" &&
+      (seg.repeatCount || 0) > 1 &&
+      next?.kind === "recovery" &&
+      (next.repeatCount || 0) >= Math.max(1, (seg.repeatCount || 1) - 1);
+
+    if (repeatedPair) {
+      const chunks = Math.min(5, Math.max(3, Math.ceil((seg.repeatCount || 1) / 2)));
+      for (let i = 0; i < chunks; i += 1) {
+        compact.push({
+          ...seg,
+          durationMin: seg.durationMin / chunks,
+          distanceKm: seg.distanceKm / chunks,
+          repeatCount: undefined,
+        });
+        if (i < chunks - 1) {
+          compact.push({
+            ...next,
+            durationMin: next.durationMin / Math.max(1, chunks - 1),
+            distanceKm: next.distanceKm / Math.max(1, chunks - 1),
+            repeatCount: undefined,
+          });
+        }
+      }
+      index += 1;
+      continue;
+    }
+
     compact.push(seg);
   }
 
-  return compact.slice(0, 12).map((seg) => {
-    const weight = Math.max(seg.durationMin, seg.distanceKm * 8);
+  const trimmed = compact.slice(0, 14);
+  const total = Math.max(trimmed.reduce((acc, s) => acc + Math.max(s.durationMin, s.distanceKm * 8, 0.6), 0), 1);
+
+  return trimmed.map((seg) => {
+    const weight = Math.max(seg.durationMin, seg.distanceKm * 8, 0.6);
     return {
-      width: Math.max(8, Math.round((weight / total) * 100)),
+      width: Math.max(1, (weight / total) * 100),
       height: heightForBand(seg.intensityBand),
       color: colorForBand(seg.intensityBand),
-      opacity: 1,
+      opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
     };
   });
 }
