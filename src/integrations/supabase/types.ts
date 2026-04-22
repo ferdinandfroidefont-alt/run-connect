@@ -241,6 +241,45 @@ export type Database = {
           },
         ]
       }
+      coach_athlete_private_records: {
+        Row: {
+          athlete_user_id: string
+          club_id: string
+          coach_id: string
+          created_at: string
+          event_label: string
+          id: string
+          note: string | null
+          record_value: string
+          sport_key: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_user_id: string
+          club_id: string
+          coach_id: string
+          created_at?: string
+          event_label: string
+          id?: string
+          note?: string | null
+          record_value: string
+          sport_key?: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_user_id?: string
+          club_id?: string
+          coach_id?: string
+          created_at?: string
+          event_label?: string
+          id?: string
+          note?: string | null
+          record_value?: string
+          sport_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coaching_drafts: {
         Row: {
           club_id: string
