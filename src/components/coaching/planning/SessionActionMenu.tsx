@@ -16,15 +16,15 @@ export function SessionActionMenu({ onSend, onDuplicate, onDelete }: SessionActi
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={onSend}>
+        <DropdownMenuItem onSelect={onSend}>
           <Send className="mr-2 h-4 w-4" />
           Envoyer à l'athlète
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onDuplicate}>
+        <DropdownMenuItem onSelect={onDuplicate}>
           <Copy className="mr-2 h-4 w-4" />
           Dupliquer
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+        <DropdownMenuItem className="text-destructive" onSelect={onDelete}>
           <Trash2 className="mr-2 h-4 w-4" />
           Supprimer
         </DropdownMenuItem>
