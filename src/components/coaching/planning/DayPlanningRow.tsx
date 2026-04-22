@@ -11,6 +11,7 @@ interface DayPlanningRowProps {
   session?: SessionSummaryView;
   isSent?: boolean;
   accentColor?: string;
+  emptyLabel?: string;
   onAdd: () => void;
   onOpen?: () => void;
   onEdit?: () => void;
@@ -19,6 +20,7 @@ interface DayPlanningRowProps {
   onDelete?: () => void;
   onUnsend?: () => void;
   allowSessionActions?: boolean;
+  hideActionSlot?: boolean;
 }
 
 export function DayPlanningRow({
@@ -28,6 +30,7 @@ export function DayPlanningRow({
   session,
   isSent = false,
   accentColor = "#9CA3AF",
+  emptyLabel,
   onAdd,
   onOpen,
   onEdit,
@@ -36,6 +39,7 @@ export function DayPlanningRow({
   onDelete,
   onUnsend,
   allowSessionActions = true,
+  hideActionSlot = false,
 }: DayPlanningRowProps) {
   return (
     <div
@@ -55,11 +59,11 @@ export function DayPlanningRow({
             <DaySessionSummary summary={session} accentColor={accentColor} />
           </button>
         ) : (
-          <DayEmptyStateInline />
+          <DayEmptyStateInline label={emptyLabel} />
         )}
 
         <div className="flex items-center justify-end">
-          {!session ? (
+          {hideActionSlot ? null : !session ? (
             <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
               <SessionStatusAction mode="add" onAdd={onAdd} />
             </div>
