@@ -73,12 +73,7 @@ export function DayPlanningRow({
             </div>
           ) : (
             <div className={!allowSessionActions ? "pointer-events-none opacity-45" : undefined}>
-              <SessionActionMenu
-                onEdit={onEdit || onOpen || onAdd}
-                onSend={onSend || onAdd}
-                onDuplicate={onDuplicate || onAdd}
-                onDelete={onDelete || onAdd}
-              />
+                <SessionActionMenu onSend={onSend || onAdd} onDuplicate={onDuplicate || onAdd} onDelete={onDelete || onAdd} />
             </div>
           )}
         </div>
