@@ -240,6 +240,7 @@ const Messages = () => {
   const [threadSearch, setThreadSearch] = useState("");
   const [keyboardInsetBottom, setKeyboardInsetBottom] = useState(0);
   const [composerHeight, setComposerHeight] = useState(0);
+  const viewportBaseHeightRef = useRef(0);
   const emptyStateSx = useMemo(() => getIosEmptyStateSpacing(), []);
   const conversationParam = searchParams.get("conversation");
   const tabParam = searchParams.get("tab");
@@ -328,6 +329,7 @@ const Messages = () => {
   useEffect(() => {
     if (!selectedConversation) {
       setKeyboardInsetBottom(0);
+      viewportBaseHeightRef.current = 0;
       return;
     }
 
@@ -335,8 +337,24 @@ const Messages = () => {
     if (!vv) return;
 
     const syncKeyboardInset = () => {
-      // Keyboard overlap over layout viewport (iOS Safari/App WebView).
-      const nextInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      const viewportBottom = vv.height + vv.offsetTop;
+      const hasBaseline = viewportBaseHeightRef.current > 0;
+
+      if (!hasBaseline || viewportBottom > viewportBaseHeightRef.current - 8) {
+        viewportBaseHeightRef.current = viewportBottom;
+      }
+
+      const active = document.activeElement as HTMLElement | null;
+      const hasInputFocus = !!active && (
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        active.isContentEditable
+      );
+
+      // Use a stable visual viewport baseline to avoid iOS innerHeight jumps.
+      const nextInset = hasInputFocus
+        ? Math.max(0, viewportBaseHeightRef.current - viewportBottom)
+        : 0;
       setKeyboardInsetBottom((prev) => (Math.abs(prev - nextInset) > 1 ? nextInset : prev));
     };
 
