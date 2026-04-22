@@ -6,6 +6,7 @@ import { SessionBlock, BlockType, BLOCK_TYPES } from './types';
 import { SessionBlockComponent } from './SessionBlock';
 import { SessionStructurePreview } from './SessionStructurePreview';
 import { cn } from '@/lib/utils';
+import { resolveSessionBlocks } from '@/lib/sessionBlockCalculations';
 
 interface SessionBlockBuilderProps {
   blocks: SessionBlock[];
@@ -76,28 +77,32 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
       ...(type === 'cooldown' && { duration: '10', intensity: 'z1' }),
       ...(type === 'interval' && {
         repetitions: 10,
-        effortDuration: '400',
+        effortDistance: '400',
+        effortDuration: '96',
+        effortPace: '4:00/km',
         effortIntensity: 'z5',
         recoveryDuration: '90',
+        recoveryDistance: '214',
         recoveryType: 'trot' as const,
         blockRepetitions: 1,
         blockRecoveryDuration: '180',
+        blockRecoveryDistance: '300',
         blockRecoveryType: 'marche' as const,
       }),
-      ...(type === 'steady' && { duration: '20', intensity: 'z3' }),
+      ...(type === 'steady' && { duration: '20', intensity: 'z3', pace: '5:00/km', distance: '4000' }),
     };
-    onBlocksChange([...blocks, newBlock]);
+    onBlocksChange(resolveSessionBlocks([...blocks, newBlock]));
     setShowAddMenu(false);
   };
 
   const updateBlock = (id: string, updates: Partial<SessionBlock>) => {
-    onBlocksChange(blocks.map(block => 
+    onBlocksChange(resolveSessionBlocks(blocks.map(block => 
       block.id === id ? { ...block, ...updates } : block
-    ));
+    )));
   };
 
   const removeBlock = (id: string) => {
-    onBlocksChange(blocks.filter(block => block.id !== id));
+    onBlocksChange(resolveSessionBlocks(blocks.filter(block => block.id !== id)));
   };
 
   const getQuickAddSuggestions = (): BlockType[] => {

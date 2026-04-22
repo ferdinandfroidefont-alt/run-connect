@@ -18,6 +18,7 @@ import { calculateSessionLevel } from '@/lib/sessionLevelCalculator';
 import { reverseGeocodeMapbox } from '@/lib/mapboxGeocode';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
 import { DEFAULT_SESSION_CALENDAR_DURATION_MIN, estimateSessionDurationMinutes } from '@/lib/estimateSessionDurationMinutes';
+import { normalizeBlocksForStorage, resolveSessionTotals } from '@/lib/sessionBlockCalculations';
 
 import { useSessionWizard, CoachingSessionPrefill } from './useSessionWizard';
 import { ProgressIndicator } from './ProgressIndicator';
@@ -211,7 +212,9 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
       });
 
       // Calculate session level automatically (only for endurance sports)
-      const calculatedLevel = calculateSessionLevel({ ...formData, title: resolvedTitle });
+      const normalizedBlocks = normalizeBlocksForStorage(formData.blocks);
+      const resolvedTotals = resolveSessionTotals(normalizedBlocks);
+      const calculatedLevel = calculateSessionLevel({ ...formData, title: resolvedTitle, blocks: normalizedBlocks, distance_km: resolvedTotals.distanceKm?.toString() ?? formData.distance_km });
 
       const sessionPayloadCore = {
         title: resolvedTitle,
@@ -223,7 +226,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         location_name: formData.location_name,
         scheduled_at: formData.scheduled_at,
         max_participants: parseInt(formData.max_participants) || null,
-        distance_km: formData.distance_km ? parseFloat(formData.distance_km) : null,
+        distance_km: resolvedTotals.distanceKm ?? (formData.distance_km ? parseFloat(formData.distance_km) : null),
         pace_general: formData.pace_general || null,
         pace_unit: formData.pace_unit || 'speed',
         interval_distance: formData.interval_distance ? parseFloat(formData.interval_distance) : null,
@@ -236,8 +239,8 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
         club_id: formData.club_id,
         calculated_level: calculatedLevel,
         session_mode: formData.session_mode || 'simple',
-        session_blocks: formData.blocks && formData.blocks.length > 0 
-          ? JSON.parse(JSON.stringify(formData.blocks)) 
+        session_blocks: normalizedBlocks.length > 0 
+          ? JSON.parse(JSON.stringify(normalizedBlocks)) 
           : null,
         visibility_type: formData.visibility_type || 'friends',
         hidden_from_users: formData.hidden_from_users || [],
@@ -502,9 +505,10 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
   };
 
   const renderStep = () => {
+    const resolvedTotals = resolveSessionTotals(normalizeBlocksForStorage(wizard.formData.blocks));
     const estimatedDurationMin = estimateSessionDurationMinutes({
       session_blocks: wizard.formData.blocks,
-      distance_km: wizard.formData.distance_km ? Number.parseFloat(wizard.formData.distance_km) : null,
+      distance_km: resolvedTotals.distanceKm ?? (wizard.formData.distance_km ? Number.parseFloat(wizard.formData.distance_km) : null),
       interval_distance: wizard.formData.interval_distance ? Number.parseFloat(wizard.formData.interval_distance) : null,
       interval_count: wizard.formData.interval_count ? Number.parseInt(wizard.formData.interval_count, 10) : null,
       interval_pace: wizard.formData.interval_pace || null,

@@ -13,6 +13,7 @@ import {
   SessionMode,
   getWizardSteps,
 } from './types';
+import { normalizeBlocksForStorage } from '@/lib/sessionBlockCalculations';
 
 export interface CoachingSessionPrefill {
   id: string;
@@ -72,7 +73,7 @@ export const useSessionWizard = ({
 
     const blocks: SessionBlock[] =
       coachingSession.session_blocks && Array.isArray(coachingSession.session_blocks)
-        ? (coachingSession.session_blocks as SessionBlock[])
+        ? normalizeBlocksForStorage(coachingSession.session_blocks as SessionBlock[])
         : [];
 
     const activityType = coachingSession.activity_type || 'course';
@@ -156,7 +157,7 @@ export const useSessionWizard = ({
         club_id: initialSession.club_id || null,
         intensity: initialSession.intensity || '',
         session_mode: initialSession.session_mode || 'simple',
-        blocks: initialSession.session_blocks || [],
+        blocks: normalizeBlocksForStorage(initialSession.session_blocks || []),
         route_id: initialSession.route_id || null,
         visibility_type: initialSession.visibility_type || 'friends',
         hidden_from_users: initialSession.hidden_from_users || [],
@@ -208,6 +209,9 @@ export const useSessionWizard = ({
   }, []);
 
   const updateFormData = useCallback((updates: Partial<SessionFormData>) => {
+    if (updates.blocks) {
+      updates = { ...updates, blocks: normalizeBlocksForStorage(updates.blocks) };
+    }
     setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
@@ -224,7 +228,7 @@ export const useSessionWizard = ({
   }, []);
 
   const updateBlocks = useCallback((blocks: SessionBlock[]) => {
-    setFormData((prev) => ({ ...prev, blocks }));
+    setFormData((prev) => ({ ...prev, blocks: normalizeBlocksForStorage(blocks) }));
   }, []);
 
   const setSessionMode = useCallback((mode: SessionMode) => {
