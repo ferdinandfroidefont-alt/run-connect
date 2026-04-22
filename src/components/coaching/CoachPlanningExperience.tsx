@@ -551,6 +551,7 @@ export function CoachPlanningExperience() {
   const [blockStep, setBlockStep] = useState<"type" | "config">("type");
   const [blockForm, setBlockForm] = useState<SessionBlock | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -1504,9 +1505,30 @@ export function CoachPlanningExperience() {
     const base: SessionBlock = existing ?? createDefaultBlock(type ?? "steady", draft.blocks.length + 1);
     setBlockForm(base);
     setEditingBlockId(existing?.id ?? null);
+    setPendingInsertIndex(null);
     setBlockStep(type ? "config" : "type");
     setBlockSheetOpen(true);
   };
+
+  const openInsertBlockPicker = (insertIndex: number) => {
+    setPendingInsertIndex(insertIndex);
+    setEditingBlockId(null);
+    setBlockForm(createDefaultBlock("steady", insertIndex + 1));
+    setBlockStep("type");
+    setBlockSheetOpen(true);
+  };
+
+  const insertDraftBlock = useCallback((block: SessionBlock, insertIndex?: number | null) => {
+    setDraft((prev) => {
+      const nextBlocks = [...prev.blocks];
+      const targetIndex = typeof insertIndex === "number" ? Math.max(0, Math.min(insertIndex, nextBlocks.length)) : nextBlocks.length;
+      nextBlocks.splice(targetIndex, 0, block);
+      return {
+        ...prev,
+        blocks: nextBlocks.map((entry, idx) => ({ ...entry, order: idx + 1 })),
+      };
+    });
+  }, []);
 
   const updateDraftBlock = useCallback((blockId: string, updater: (block: SessionBlock) => SessionBlock) => {
     setDraft((prev) => ({
@@ -1519,7 +1541,13 @@ export function CoachPlanningExperience() {
     if (!blockForm) return;
     setDraft((prev) => {
       if (!editingBlockId) {
-        return { ...prev, blocks: [...prev.blocks, { ...blockForm, order: prev.blocks.length + 1 }] };
+        const nextBlocks = [...prev.blocks];
+        const targetIndex = typeof pendingInsertIndex === "number" ? Math.max(0, Math.min(pendingInsertIndex, nextBlocks.length)) : nextBlocks.length;
+        nextBlocks.splice(targetIndex, 0, blockForm);
+        return {
+          ...prev,
+          blocks: nextBlocks.map((block, idx) => ({ ...block, order: idx + 1 })),
+        };
       }
       return {
         ...prev,
@@ -1529,6 +1557,7 @@ export function CoachPlanningExperience() {
     setBlockSheetOpen(false);
     setBlockForm(null);
     setEditingBlockId(null);
+    setPendingInsertIndex(null);
   };
 
   const moveBlockToIndex = useCallback((blockId: string, targetIndex: number) => {
