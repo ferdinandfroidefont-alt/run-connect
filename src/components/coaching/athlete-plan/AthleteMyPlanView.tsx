@@ -87,7 +87,10 @@ export function AthleteMyPlanView(props: Props) {
         summaries[key] = { sport: "rest", value: "Repos" };
         return;
       }
-      const primarySegments = buildWorkoutSegments(row.primarySession.blocks, { sport: row.primarySession.sport });
+      const primarySegments = buildWorkoutSegments(row.primarySession.blocks, {
+        sport: row.primarySession.sport,
+        athleteIntensity: row.primarySession.athleteIntensity ?? undefined,
+      });
       const metrics = resolveWorkoutMetrics({
         segments: primarySegments,
         explicitDistanceKm: row.primarySession.distanceKm,
@@ -125,7 +128,10 @@ export function AthleteMyPlanView(props: Props) {
             const dayLabel = format(row.day, "EEEE", { locale: fr });
             const hasSession = row.sessions.length > 0;
             const segments = row.primarySession
-              ? buildWorkoutSegments(row.primarySession.blocks, { sport: row.primarySession.sport })
+              ? buildWorkoutSegments(row.primarySession.blocks, {
+                  sport: row.primarySession.sport,
+                  athleteIntensity: row.primarySession.athleteIntensity ?? undefined,
+                })
               : [];
             const metrics = row.primarySession
               ? resolveWorkoutMetrics({

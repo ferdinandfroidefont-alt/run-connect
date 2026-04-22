@@ -410,6 +410,7 @@ const BASE_MODELS: SessionModelItem[] = [
 ];
 
 export function CoachPlanningExperience() {
+  const { userProfile } = useUserProfile();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
