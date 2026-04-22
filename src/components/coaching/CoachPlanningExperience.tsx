@@ -54,6 +54,7 @@ import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboa
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
+import { formatCalendarDistance, isExplicitRestDay, toCalendarSummarySport } from "@/components/coaching/athlete-plan/planUtils";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 import { runningRecordsFromPrivateRows, type CoachPrivateRecordRow } from "@/lib/coachPrivateRunningRecords";
@@ -328,14 +329,6 @@ function blockEstimatedLoad(block: SessionBlock) {
     block.type === "recovery" || block.type === "cooldown" ? 0.7 :
     1;
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
-}
-
-function isRestLikeSession(session: TrainingSession): boolean {
-  const title = session.title.toLowerCase();
-  const onlyRecoveryBlocks =
-    session.blocks.length > 0 &&
-    session.blocks.every((block) => block.type === "recovery" || block.type === "warmup" || block.type === "cooldown");
-  return title.includes("repos") || onlyRecoveryBlocks;
 }
 
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
@@ -1543,8 +1536,13 @@ export function CoachPlanningExperience() {
     });
 
     const output: Record<string, DaySessionSummary> = {};
-    groupedByDate.forEach((list, key) => {
-      if (!list.length) return;
+    weekDays.forEach((day) => {
+      const key = format(day, "yyyy-MM-dd");
+      const list = groupedByDate.get(key) ?? [];
+      if (isExplicitRestDay(list)) {
+        output[key] = { sport: "rest", value: "Repos" };
+        return;
+      }
       const sorted = [...list].sort((a, b) => {
         const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport, athleteIntensity: a.athleteIntensity ?? undefined }) });
         const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport, athleteIntensity: b.athleteIntensity ?? undefined }) });
@@ -1553,10 +1551,6 @@ export function CoachPlanningExperience() {
         return loadB - loadA;
       });
       const primary = sorted[0];
-      if (sorted.length === 1 && isRestLikeSession(primary)) {
-        output[key] = { sport: "rest", value: "Repos" };
-        return;
-      }
       const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport, athleteIntensity: primary.athleteIntensity ?? undefined }) });
       const totalDistance = sorted.reduce((acc, session) => {
         const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport, athleteIntensity: session.athleteIntensity ?? undefined }) });
@@ -1565,15 +1559,15 @@ export function CoachPlanningExperience() {
       const value =
         sorted.length > 1
           ? totalDistance > 0
-            ? `${Math.round(totalDistance * 10) / 10} km`
+            ? formatCalendarDistance(totalDistance)
             : primaryMetrics.distanceLabel || primaryMetrics.durationLabel
           : primaryMetrics.distanceLabel || primaryMetrics.durationLabel;
       if (!value) return;
-      output[key] = { sport: primary.sport, value };
+      output[key] = { sport: toCalendarSummarySport(primary.sport), value };
     });
 
     return output;
-  }, [enrichedFilteredSessions]);
+  }, [enrichedFilteredSessions, weekDays]);
 
   const existingSessionsByDay = useMemo(() => {
     const map: Record<string, string | undefined> = {};
