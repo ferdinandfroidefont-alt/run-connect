@@ -70,6 +70,13 @@ const BLOCK_LIBRARY: Array<{ kind: BuilderKind; label: string; color: string }> 
   { kind: "rest", label: "Repos", color: "#94A3B8" },
 ];
 
+const QUICK_SPORTS = [
+  { value: "course", label: "Course", emoji: "🏃" },
+  { value: "trail", label: "Trail", emoji: "⛰️" },
+  { value: "velo", label: "Vélo", emoji: "🚴" },
+  { value: "natation", label: "Natation", emoji: "🏊" },
+] as const;
+
 function paceToRcc(pace?: string): string {
   if (!pace) return "5'30";
   const [m, s] = pace.split(":");
