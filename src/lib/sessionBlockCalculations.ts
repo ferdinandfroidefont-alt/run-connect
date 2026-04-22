@@ -194,7 +194,7 @@ export function resolveMetricTriplet(params: {
 export function normalizeSessionBlock(block: SessionBlock): SessionBlock {
   if (block.type === 'interval') {
     const effortDistance = parseDistanceMeters(block.effortDistance ?? ((block.effortType ?? 'distance') === 'distance' ? block.effortDuration : null));
-    const effortDuration = parseDurationSeconds((block.effortType ?? 'distance') === 'time' ? block.effortDuration : null);
+    const effortDuration = parseDurationSeconds(block.effortDuration);
     const recoveryDuration = parseDurationSeconds(block.recoveryDuration);
     const recoveryDistance = parseDistanceMeters(block.recoveryDistance);
     const blockRecoveryDuration = parseDurationSeconds(block.blockRecoveryDuration);
@@ -257,7 +257,7 @@ export function resolveRecoveryMetrics(params: {
   const resolved = resolveMetricTriplet({
     distanceM: parseDistanceMeters(params.distance),
     durationSec: parseDurationSeconds(params.duration),
-    paceSecPerKm: parsePaceToSecondsPerKm(params.pace) ?? params.fallbackPaceSecPerKm ?? null,
+    paceSecPerKm: parsePaceToSecondsPerKm(params.pace),
     lastEdited: params.lastEdited,
   });
 
@@ -271,8 +271,8 @@ export function resolveRecoveryMetrics(params: {
 export function resolveIntervalEffortMetrics(block: SessionBlock): SessionBlock {
   const normalized = normalizeSessionBlock(block);
   const resolved = resolveMetricTriplet({
-    distanceM: parseDistanceMeters(normalized.effortDistance ?? (normalized.effortType === 'distance' ? normalized.effortDuration : null)),
-    durationSec: parseDurationSeconds(normalized.effortType === 'time' ? normalized.effortDuration : null),
+    distanceM: parseDistanceMeters(normalized.effortDistance),
+    durationSec: parseDurationSeconds(normalized.effortDuration),
     paceSecPerKm: parsePaceToSecondsPerKm(normalized.effortPace),
     lastEdited: normalized.lastEditedMetric,
   });
@@ -299,7 +299,7 @@ export function resolveIntervalEffortMetrics(block: SessionBlock): SessionBlock 
     effortDistance: formatDistanceMeters(resolved.distanceM),
     effortDuration: formatDurationSeconds(resolved.durationSec),
     effortPace: paceSecPerKm ? formatPaceLabel(`${Math.floor(paceSecPerKm / 60)}:${String(Math.round(paceSecPerKm % 60)).padStart(2, '0')}`) : '',
-    effortType: 'distance',
+    effortType: resolved.computedField === 'distance' ? 'distance' : resolved.computedField === 'duration' ? 'time' : normalized.effortType,
     effortIntensity: normalized.effortIntensity || inferZoneFromPace(paceSecPerKm) || undefined,
     recoveryDuration: recovery.duration,
     recoveryDistance: recovery.distance,
@@ -337,13 +337,15 @@ export function resolveSessionTotals(blocks: SessionBlock[]): ResolvedSessionTot
       const recoveryDuration = parseDurationSeconds(block.recoveryDuration);
       const seriesRecoveryDistance = parseDistanceMeters(block.blockRecoveryDistance);
       const seriesRecoveryDuration = parseDurationSeconds(block.blockRecoveryDuration);
+      const estimatedRecoveryDistance = recoveryDistance ?? ((recoveryDuration ?? 0) > 0 && block.recoveryType !== 'statique' ? Math.round((recoveryDuration ?? 0) / DEFAULT_RECOVERY_PACE_SEC_PER_KM * 1000) : 0);
+      const estimatedSeriesRecoveryDistance = seriesRecoveryDistance ?? ((seriesRecoveryDuration ?? 0) > 0 && block.blockRecoveryType !== 'statique' ? Math.round((seriesRecoveryDuration ?? 0) / DEFAULT_RECOVERY_PACE_SEC_PER_KM * 1000) : 0);
       const effortZone = block.effortIntensity || inferZoneFromPace(parsePaceToSecondsPerKm(block.effortPace)) || 'z4';
 
       totalDistanceM += (effortDistance ?? 0) * reps * series;
       totalDurationSec += (effortDuration ?? 0) * reps * series;
-      totalDistanceM += (recoveryDistance ?? 0) * Math.max(reps - 1, 0) * series;
+      totalDistanceM += estimatedRecoveryDistance * Math.max(reps - 1, 0) * series;
       totalDurationSec += (recoveryDuration ?? 0) * Math.max(reps - 1, 0) * series;
-      totalDistanceM += (seriesRecoveryDistance ?? 0) * Math.max(series - 1, 0);
+      totalDistanceM += estimatedSeriesRecoveryDistance * Math.max(series - 1, 0);
       totalDurationSec += (seriesRecoveryDuration ?? 0) * Math.max(series - 1, 0);
 
       zoneWeights.set(effortZone, (zoneWeights.get(effortZone) ?? 0) + ((effortDuration ?? 0) || (effortDistance ?? 0)) * reps * series);
