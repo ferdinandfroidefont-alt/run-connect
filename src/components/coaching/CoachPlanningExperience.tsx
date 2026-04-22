@@ -2251,7 +2251,7 @@ export function CoachPlanningExperience() {
         <SheetContent
           side="bottom"
           showCloseButton={false}
-          className="h-[78dvh] rounded-t-[20px] border-border bg-card p-0"
+          className="flex h-[78dvh] flex-col overflow-hidden rounded-t-[20px] border-border bg-card p-0"
         >
           <div className="border-b border-border px-4 py-3">
             <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted" />
@@ -2260,8 +2260,9 @@ export function CoachPlanningExperience() {
             </p>
           </div>
 
-          {blockStep === "type" ? (
-            <div className="space-y-2 px-4 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {blockStep === "type" ? (
+              <div className="space-y-2 px-4 py-4">
               {BLOCK_TYPES.map((entry) => (
                 <button
                   key={entry.id}
@@ -2289,10 +2290,10 @@ export function CoachPlanningExperience() {
                   </div>
                 </button>
               ))}
-            </div>
-          ) : blockForm ? (
-            <div className="space-y-3 px-4 py-4">
-              {(() => {
+              </div>
+            ) : blockForm ? (
+              <div className="space-y-3 px-4 py-4">
+                {(() => {
                 const hasDuration = isPositive(blockForm.durationSec);
                 const hasDistance = isPositive(blockForm.distanceM);
                 const hasPace = isPositive(blockForm.paceSecPerKm);
@@ -2546,34 +2547,6 @@ export function CoachPlanningExperience() {
                 </div>
               )}
 
-              {draft.sport !== "strength" && (
-                <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
-                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Cible
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {draft.sport === "cycling" ? (
-                      <Button
-                        variant="secondary"
-                        className="h-10 justify-start rounded-xl text-[12px]"
-                        onClick={() =>
-                          openWheel(
-                            "Puissance",
-                            Array.from({ length: 351 }, (_, i) => ({ value: String(i + 50), label: `${i + 50} W` })),
-                            String(blockForm.powerWatts || 180),
-                            (next) =>
-                              setBlockForm((prev) =>
-                                prev ? { ...prev, powerWatts: Number(next), paceSecPerKm: undefined } : prev
-                              )
-                          )
-                        }
-                      >
-                        {blockForm.powerWatts ? `${blockForm.powerWatts} W` : "Puissance"}
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              )}
                   </>
                 );
               })()}
@@ -2646,8 +2619,9 @@ export function CoachPlanningExperience() {
               <Button onClick={confirmBlock} className="h-11 w-full rounded-xl text-[15px] font-semibold">
                 Valider le bloc
               </Button>
-            </div>
-          ) : null}
+              </div>
+            ) : null}
+          </div>
         </SheetContent>
       </Sheet>
 
