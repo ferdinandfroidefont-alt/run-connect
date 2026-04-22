@@ -1860,6 +1860,17 @@ export function CoachPlanningExperience() {
                   : [];
                 const durationMin = session ? computeWorkoutDuration(normalizedSegments) : 0;
                 const distanceKm = session ? computeWorkoutDistance(normalizedSegments) : 0;
+                const sportHint = session
+                  ? ((session.sport === "cycling"
+                      ? "cycling"
+                      : session.sport === "swimming"
+                        ? "swimming"
+                        : session.sport === "strength"
+                          ? "strength"
+                          : session.sport === "running"
+                            ? "running"
+                            : "other") as const)
+                  : undefined;
                 const summary = session
                   ? {
                       title: session.title,
@@ -1875,7 +1886,7 @@ export function CoachPlanningExperience() {
                       isRestDay:
                         session.blocks.length > 0 &&
                         session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown"),
-                      sportHint: session.sport === "cycling" ? "cycling" : session.sport === "swimming" ? "swimming" : session.sport === "strength" ? "strength" : session.sport === "running" ? "running" : "other",
+                      sportHint,
                     }
                   : undefined;
                 const accentColor =

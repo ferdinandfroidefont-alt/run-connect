@@ -6,6 +6,7 @@ export interface ParsedBlock {
   raw: string;
   duration?: number; // minutes
   pace?: string; // "5:15"
+  zone?: string;
   distance?: number; // meters (for intervals)
   repetitions?: number;
   recoveryDuration?: number; // seconds

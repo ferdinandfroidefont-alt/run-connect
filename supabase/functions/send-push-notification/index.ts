@@ -73,7 +73,7 @@ type ProfileRow = Record<string, unknown>;
  * On essaie du schéma complet au minimal (push_token seul).
  */
 async function fetchProfileRowsForPush(
-  client: ReturnType<typeof createClient>,
+  client: any,
   userId: string,
   traceId: string,
 ): Promise<{ rows: ProfileRow[]; lastError: { code?: string; message?: string; details?: string } | null }> {
