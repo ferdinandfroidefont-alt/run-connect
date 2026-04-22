@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -1536,6 +1536,14 @@ export function CoachPlanningExperience() {
     setDraggedBlockId(null);
     setDragOverBlockId(null);
   }, [clearBlockReorderPress, dragOverBlockId, draggedBlockId, draft.blocks, moveBlockToIndex]);
+
+  const handleBlockReorderPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (!draggedBlockId) return;
+    const hovered = document.elementFromPoint(event.clientX, event.clientY);
+    const overBlock = hovered instanceof HTMLElement ? hovered.closest<HTMLElement>("[data-block-id]") : null;
+    const overId = overBlock?.dataset.blockId;
+    if (overId) setDragOverBlockId(overId);
+  }, [draggedBlockId]);
 
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
