@@ -2445,6 +2445,51 @@ export function CoachPlanningExperience() {
                   )}
                   onClick={() => {
                     if (!blockForm) return;
+                    if (entry.id === "steady") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [...prev.blocks, createDefaultBlock("steady", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
+                    if (entry.id === "interval") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [...prev.blocks, createDefaultBlock("interval", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
+                    if (entry.id === "warmup") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [...prev.blocks, createDefaultBlock("warmup", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
+                    if (entry.id === "cooldown") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [...prev.blocks, createDefaultBlock("cooldown", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
+                    if (entry.id === "recovery") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [...prev.blocks, createDefaultBlock("recovery", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
                     setBlockForm({ ...blockForm, type: entry.id });
                     setBlockStep("config");
                   }}
@@ -2670,7 +2715,7 @@ export function CoachPlanningExperience() {
                   </Button>
                 </div>
                 {hasVolumeConflict && draft.sport === "running" ? (
-                  <p className="mt-2 px-1 text-[11px] text-amber-600 dark:text-amber-400">
+                  <p className="mt-2 px-1 text-[11px] text-chart-3">
                     Valeurs incohérentes: l’allure est automatiquement ajustée selon durée + distance.
                   </p>
                 ) : null}
