@@ -50,7 +50,14 @@ export function MiniWorkoutProfile({
           return (
             <span
               key={`${index}-${block.width}-${block.height}`}
-              className={cn("min-w-0 shrink-0", variant === "premiumCompact" ? "rounded-[2px]" : "rounded-md")}
+              className={cn(
+                "min-w-0 shrink-0",
+                variant === "premiumCompact"
+                  ? resolvedHeight <= 6
+                    ? "rounded-[2px]"
+                    : "rounded-[4px]"
+                  : "rounded-full"
+              )}
               style={{
                 flexBasis: `${Math.max(block.width, 2)}%`,
                 minWidth: compact ? (variant === "premiumCompact" ? "1.5px" : "3px") : "4px",
