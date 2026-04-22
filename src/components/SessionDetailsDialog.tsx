@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronLeft, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, ChevronDown } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, User, Trash2, Share2, Loader2, CheckCircle2, ChevronRight, Zap, Pencil, Copy, ExternalLink, Files, CalendarPlus, Navigation, MoreHorizontal, BadgeCheck, Footprints, Mountain, MessageCircle, Download, ChevronDown, ArrowLeft } from "lucide-react";
 import { downloadICSFile, openGoogleCalendarLink } from "@/lib/calendarExport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -779,9 +779,12 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
                 <button
                   onClick={onClose}
-                  className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
                   aria-label="Retour"
-                />
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Retour
+                </button>
                 <button
                   onClick={() => setShowSessionShare(true)}
                   className="h-10 rounded-full bg-white/95 shadow-md px-3 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
