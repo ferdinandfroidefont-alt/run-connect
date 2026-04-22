@@ -12,7 +12,6 @@ import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
-import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -119,8 +118,6 @@ export default function Participants() {
 
   useEffect(() => {
     let cancelled = false;
-    const hasTrackingUserPosition = isValidLngLat(userPosition);
-    if (hasTrackingUserPosition) return;
     void (async () => {
       const pos = await getCurrentPosition(0, { mode: "fast" });
       if (cancelled || !isValidLngLat(pos)) return;
@@ -150,18 +147,6 @@ export default function Participants() {
     }
     return rows;
   }, [participantPositions]);
-
-  const staticFallbackCenter = normalizeLngLat(effectiveUserPosition);
-  const staticFallbackMapUrl = useMemo(
-    () =>
-      buildSessionStaticMapUrl({
-        routePath: [],
-        pin: staticFallbackCenter,
-        width: 1280,
-        height: 1280,
-      }),
-    [staticFallbackCenter.lat, staticFallbackCenter.lng]
-  );
 
   const computedLiveState = useMemo<"none" | "upcoming" | "live">(() => {
     if (!session || !sessionAllowsLive) return "none";
@@ -504,22 +489,11 @@ export default function Participants() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      {computedLiveState === "none" && staticFallbackMapUrl ? (
-        <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
-          <img src={staticFallbackMapUrl} alt="" className="h-full w-full object-cover" />
-          <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-full flex-col items-center">
-            <div className="rounded-full bg-background p-1 shadow-[0_10px_24px_-12px_rgba(0,0,0,0.45)]">
-              <Navigation className="h-5 w-5 text-primary" />
-            </div>
-            <div className="-mt-1 h-3 w-3 rotate-45 rounded-[2px] bg-background shadow-[0_10px_24px_-12px_rgba(0,0,0,0.35)]" />
-          </div>
-        </div>
-      ) : null}
       <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-secondary" />
       <div
         className={cn(
           "pointer-events-none absolute inset-0 z-[2] bg-secondary/80 transition-opacity duration-200",
-          mapReady || (computedLiveState === "none" && !!staticFallbackMapUrl) ? "opacity-0" : "opacity-100"
+          mapReady ? "opacity-0" : "opacity-100"
         )}
         aria-hidden
       />
