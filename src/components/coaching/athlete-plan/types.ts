@@ -1,5 +1,6 @@
 import type { SportType } from "./sportTokens";
 import type { SessionBlockLite } from "./sessionBlockTypes";
+import type { AthleteIntensityContext } from "@/lib/athleteIntensity";
 
 export type AthleteSessionUiStatus =
   | "planned"
@@ -28,6 +29,7 @@ export type AthletePlanSessionModel = {
   locationName: string | null;
   description: string | null;
   hasConflict: boolean;
+  athleteIntensity?: AthleteIntensityContext | null;
 };
 
 export type AthleteCoachBrief = {
