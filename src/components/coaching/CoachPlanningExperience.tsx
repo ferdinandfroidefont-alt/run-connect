@@ -985,22 +985,15 @@ export function CoachPlanningExperience() {
     [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
-  const totalDurationSec = useMemo(
-    () => draft.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0),
-    [draft.blocks]
-  );
-  const totalDistanceM = useMemo(
-    () => draft.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0),
-    [draft.blocks]
-  );
+  const previewSegments = useMemo(() => buildWorkoutSegments(draft.blocks, { sport: draft.sport }), [draft.blocks, draft.sport]);
+  const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
+  const totalDurationSec = useMemo(() => Math.round((previewMetrics.durationMin || 0) * 60), [previewMetrics.durationMin]);
+  const totalDistanceM = useMemo(() => Math.round((previewMetrics.distanceKm || 0) * 1000), [previewMetrics.distanceKm]);
   const totalEstimatedLoad = useMemo(
     () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
     [draft.blocks]
   );
-  const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(buildWorkoutSegments(draft.blocks, { sport: draft.sport })),
-    [draft.blocks, draft.sport]
-  );
+  const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
   const selectedDraftBlock = useMemo(
     () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
     [draft.blocks, selectedEditorBlockId]
@@ -1922,9 +1915,6 @@ export function CoachPlanningExperience() {
                 const workoutMetrics = session
                   ? resolveWorkoutMetrics({
                       segments: normalizedSegments,
-                      explicitDistanceKm: session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000,
-                      explicitDurationMin:
-                        session.blocks.reduce((acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60, 0) || null,
                     })
                   : null;
                 const summary = session
@@ -2281,7 +2271,7 @@ export function CoachPlanningExperience() {
                     <div className="rounded-2xl border border-border bg-card p-3">
                       <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
                         <div className="relative">
-                          <MiniWorkoutProfile blocks={previewBars} className="h-[116px] items-end rounded-[16px] bg-transparent px-0 py-0" />
+                          <MiniWorkoutProfile blocks={previewBars} className="h-[76px] rounded-[16px] bg-transparent px-0 py-0" />
                         </div>
                       {draft.blocks.length === 0 ? (
                         <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">

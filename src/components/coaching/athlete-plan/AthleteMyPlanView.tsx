@@ -103,11 +103,6 @@ export function AthleteMyPlanView(props: Props) {
               ? resolveWorkoutMetrics({
                   segments,
                   explicitDistanceKm: row.primarySession.distanceKm,
-                  explicitDurationMin:
-                    row.primarySession.blocks.reduce(
-                      (acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60,
-                      0
-                    ) || null,
                 })
               : null;
             return (

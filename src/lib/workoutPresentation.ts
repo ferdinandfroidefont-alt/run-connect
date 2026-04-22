@@ -67,12 +67,16 @@ export function resolveWorkoutMetrics(params: {
   explicitDistanceKm?: number | null;
   explicitDurationMin?: number | null;
 }) {
-  const durationMin = params.explicitDurationMin && params.explicitDurationMin > 0
-    ? Math.round(params.explicitDurationMin)
-    : computeWorkoutDuration(params.segments);
-  const distanceKm = params.explicitDistanceKm && params.explicitDistanceKm > 0
-    ? Math.round(params.explicitDistanceKm * 10) / 10
-    : computeWorkoutDistance(params.segments);
+  const computedDurationMin = computeWorkoutDuration(params.segments);
+  const computedDistanceKm = computeWorkoutDistance(params.segments);
+  const explicitDurationMin = params.explicitDurationMin ?? null;
+  const explicitDistanceKm = params.explicitDistanceKm ?? null;
+  const durationMin = explicitDurationMin && explicitDurationMin > computedDurationMin
+    ? Math.round(explicitDurationMin)
+    : computedDurationMin;
+  const distanceKm = explicitDistanceKm && explicitDistanceKm > computedDistanceKm
+    ? Math.round(explicitDistanceKm * 10) / 10
+    : computedDistanceKm;
 
   return {
     durationMin,
