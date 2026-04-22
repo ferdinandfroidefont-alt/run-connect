@@ -73,9 +73,8 @@ export function AthleteMyPlanView(props: Props) {
   const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
     const summaries: Record<string, DaySessionSummary> = {};
     dayRows.forEach((row) => {
-      if (!row.primarySession) return;
       const key = format(row.day, "yyyy-MM-dd");
-      if (row.isRest) {
+      if (!row.primarySession || row.isRest) {
         summaries[key] = { sport: "rest", value: "Repos" };
         return;
       }
