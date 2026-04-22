@@ -38,6 +38,7 @@ import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
+import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
@@ -1838,15 +1839,9 @@ export function CoachPlanningExperience() {
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
                 const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
                 const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
-                const targetedAthleteId = session?.athleteId ?? activeAthleteId;
-                const targetedAthlete = targetedAthleteId ? athletes.find((athlete) => athlete.id === targetedAthleteId) : undefined;
                 const normalizedSegments = session
                   ? buildWorkoutSegments(session.blocks, {
                       sport: session.sport,
-                      athleteIntensity: {
-                        coachValidatedRecords: targetedAthlete?.coachRunningEstimate,
-                        athleteRecords: targetedAthlete?.runningRecords,
-                      },
                     })
                   : [];
                 const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
