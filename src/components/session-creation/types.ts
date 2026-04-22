@@ -8,15 +8,19 @@ export interface SessionBlock {
   // For warmup/cooldown/steady blocks
   duration?: string;
   durationType?: 'time' | 'distance';
+  distance?: string;
   intensity?: string;
   pace?: string;
   // For interval blocks
   repetitions?: number;
   effortDuration?: string;
   effortType?: 'time' | 'distance';
+  effortDistance?: string;
   effortIntensity?: string;
   effortPace?: string;
   recoveryDuration?: string;
+  recoveryDistance?: string;
+  recoveryPace?: string;
   recoveryType?: 'trot' | 'marche' | 'statique';
   /** RPE 1–10 pour ce segment */
   rpe?: number;
@@ -26,8 +30,24 @@ export interface SessionBlock {
   blockRepetitions?: number;
   /** Récup entre blocs (en secondes) */
   blockRecoveryDuration?: string;
+  blockRecoveryDistance?: string;
+  blockRecoveryPace?: string;
   /** Type de récup entre blocs */
   blockRecoveryType?: 'trot' | 'marche' | 'statique';
+  /** Dernier champ édité pour résoudre la 3e métrique automatiquement */
+  lastEditedMetric?:
+    | 'pace'
+    | 'distance'
+    | 'duration'
+    | 'effortPace'
+    | 'effortDistance'
+    | 'effortDuration'
+    | 'recoveryPace'
+    | 'recoveryDistance'
+    | 'recoveryDuration'
+    | 'blockRecoveryPace'
+    | 'blockRecoveryDistance'
+    | 'blockRecoveryDuration';
 }
 
 export type SessionMode = 'simple' | 'structured';
