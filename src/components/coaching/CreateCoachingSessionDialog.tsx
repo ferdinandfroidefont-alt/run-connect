@@ -48,6 +48,109 @@ interface ClubMember {
   avatar_url: string | null;
 }
 
+<<<<<<< HEAD
+=======
+type BuilderTab = "build" | "models";
+type BuilderKind = "warmup" | "steady" | "recovery" | "interval" | "tempo" | "cooldown" | "progressive" | "rest";
+
+type TemplateRow = {
+  id: string;
+  name: string;
+  rcc_code: string;
+  activity_type: string | null;
+  objective: string | null;
+};
+
+const BLOCK_LIBRARY: Array<{ kind: BuilderKind; label: string; color: string }> = [
+  { kind: "warmup", label: "Échauffement", color: "#9CA3AF" },
+  { kind: "steady", label: "Endurance", color: "#60A5FA" },
+  { kind: "recovery", label: "Récupération", color: "#22C55E" },
+  { kind: "interval", label: "Fractionné", color: "#F97316" },
+  { kind: "tempo", label: "Seuil / tempo", color: "#8B5CF6" },
+  { kind: "cooldown", label: "Retour au calme", color: "#9CA3AF" },
+  { kind: "progressive", label: "Rampe", color: "#8B5CF6" },
+  { kind: "rest", label: "Repos", color: "#94A3B8" },
+];
+
+const QUICK_SPORTS = [
+  { value: "course", label: "Course", emoji: "🏃" },
+  { value: "trail", label: "Trail", emoji: "⛰️" },
+  { value: "velo", label: "Vélo", emoji: "🚴" },
+  { value: "natation", label: "Natation", emoji: "🏊" },
+] as const;
+
+function paceToRcc(pace?: string): string {
+  if (!pace) return "5'30";
+  const [m, s] = pace.split(":");
+  return `${m || "5"}'${String(Number.parseInt(s || "0", 10)).padStart(2, "0")}`;
+}
+
+function blockToRcc(block: ParsedBlock): string {
+  if (block.type === "interval") {
+    const reps = Math.max(1, block.repetitions || 1);
+    const effort = block.distance ? `${Math.max(100, block.distance)}` : `${Math.max(1, block.duration || 3)}'`;
+    const pace = paceToRcc(block.pace);
+    const rec =
+      reps > 1 && (block.recoveryDuration || 0) > 0
+        ? ` r${Math.floor((block.recoveryDuration || 0) / 60)}'${String((block.recoveryDuration || 0) % 60).padStart(2, "0")}>${block.recoveryType || "trot"}`
+        : "";
+    return `${reps}x${effort}>${pace}${rec}`;
+  }
+  if (block.duration) {
+    return `${Math.max(1, block.duration)}'${block.pace ? `>${paceToRcc(block.pace)}` : ""}`;
+  }
+  return "10'";
+}
+
+function defaultBlock(kind: BuilderKind): ParsedBlock {
+  switch (kind) {
+    case "warmup":
+      return { type: "warmup", raw: "15'>6'00", duration: 15, pace: "6:00" };
+    case "recovery":
+      return { type: "recovery", raw: "10'>6'30", duration: 10, pace: "6:30" };
+    case "interval":
+      return {
+        type: "interval",
+        raw: "5x400>4'00 r1'00>trot",
+        distance: 400,
+        repetitions: 5,
+        pace: "4:00",
+        recoveryDuration: 60,
+        recoveryType: "trot",
+      };
+    case "tempo":
+      return { type: "steady", raw: "20'>4'30", duration: 20, pace: "4:30" };
+    case "cooldown":
+      return { type: "cooldown", raw: "10'>6'00", duration: 10, pace: "6:00" };
+    case "progressive":
+      return { type: "steady", raw: "30'>5'15", duration: 30, pace: "5:15" };
+    case "rest":
+      return { type: "recovery", raw: "20'>6'45", duration: 20, pace: "6:45" };
+    default:
+      return { type: "steady", raw: "30'>5'30", duration: 30, pace: "5:30" };
+  }
+}
+
+function colorForBlock(block: ParsedBlock): string {
+  const paceSecPerKm = block.pace
+    ? Number.parseInt(block.pace.split(":")[0], 10) * 60 + Number.parseInt(block.pace.split(":")[1] || "0", 10)
+    : undefined;
+  const intensity = classifyRunningBlockIntensity({
+    type: block.type,
+    zone: block.zone,
+    paceSecPerKm,
+    distanceM: block.distance,
+    references: null,
+    source: "fallback",
+  });
+  if (intensity.band === "interval") return "#F97316";
+  if (intensity.band === "tempo") return "#8B5CF6";
+  if (intensity.band === "recovery") return "#22C55E";
+  if (intensity.band === "transition") return "#9CA3AF";
+  return "#60A5FA";
+}
+
+>>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
 export const CreateCoachingSessionDialog = ({
   isOpen,
   onClose,
@@ -315,6 +418,7 @@ export const CreateCoachingSessionDialog = ({
           >
             <div className="space-y-4">
               <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+<<<<<<< HEAD
                 <div className="grid grid-cols-2 gap-3">
                   <div className="min-w-0 space-y-1.5">
                     <Label className="text-xs">Sport</Label>
@@ -331,6 +435,71 @@ export const CreateCoachingSessionDialog = ({
                   </div>
                   <div className="min-w-0 space-y-1.5">
                     <Label className="text-xs">Objectif *</Label>
+=======
+                <div className="flex rounded-2xl border border-border/70 bg-card p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBuilderTab("build");
+                      setSelectedBlockIndex(null);
+                    }}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "build" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Construire
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBuilderTab("models");
+                      setSelectedBlockIndex(null);
+                    }}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "models" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Modèles
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label className="text-xs">Sport</Label>
+                    <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
+                      <p className="text-sm font-semibold capitalize text-foreground">{dateLabel}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {QUICK_SPORTS.map((sport) => {
+                      const isActive = activityType === sport.value;
+                      return (
+                        <button
+                          key={sport.value}
+                          type="button"
+                          onClick={() => setActivityType(sport.value)}
+                          className={`flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition-colors ${isActive ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-card text-foreground"}`}
+                        >
+                          <span className="text-2xl" aria-hidden>{sport.emoji}</span>
+                          <span className="text-[11px] font-semibold leading-tight">{sport.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-10 rounded-xl border-border bg-card text-xs text-muted-foreground">
+                      <SelectValue placeholder="Autres sports" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {builderTab === "build" ? (
+                <>
+                  <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                    <Label className="text-xs">Nom de la séance</Label>
+>>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
                     <Input
                       placeholder="VMA, Seuil, Footing..."
                       value={objective}
@@ -338,6 +507,443 @@ export const CreateCoachingSessionDialog = ({
                       className="h-11 rounded-xl border-border bg-card"
                     />
                   </div>
+<<<<<<< HEAD
+=======
+
+                  <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Structure de la séance</p>
+                      <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <GripHorizontal className="h-3.5 w-3.5" />
+                        Glisser pour réorganiser
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="secondary" className="h-9 rounded-xl text-xs font-semibold" onClick={() => applyBlocks([...parsedBlocks, defaultBlock("steady")])}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un bloc
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-lg text-xs"
+                        disabled={!selectedBlock || selectedBlock.type !== "interval"}
+                        onClick={() => {
+                          if (!selectedBlock || selectedBlockIndex == null || selectedBlock.type !== "interval") return;
+                          const next = [...parsedBlocks];
+                          next[selectedBlockIndex] = { ...selectedBlock, repetitions: Math.max(1, (selectedBlock.repetitions || 1) + 1) };
+                          applyBlocks(next);
+                        }}
+                      >
+                        + Répétition
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-lg text-xs"
+                        disabled={!selectedBlock || selectedBlock.type !== "interval" || (selectedBlock.repetitions || 1) <= 1}
+                        onClick={() => {
+                          if (!selectedBlock || selectedBlockIndex == null || selectedBlock.type !== "interval") return;
+                          const next = [...parsedBlocks];
+                          next[selectedBlockIndex] = { ...selectedBlock, repetitions: Math.max(1, (selectedBlock.repetitions || 1) - 1) };
+                          applyBlocks(next);
+                        }}
+                      >
+                        - Répétition
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-lg text-xs"
+                        disabled={selectedBlockIndex == null}
+                        onClick={() => {
+                          if (selectedBlockIndex == null) return;
+                          const copy = { ...parsedBlocks[selectedBlockIndex] };
+                          const next = [...parsedBlocks];
+                          next.splice(selectedBlockIndex + 1, 0, copy);
+                          applyBlocks(next);
+                          setSelectedBlockIndex(selectedBlockIndex + 1);
+                        }}
+                      >
+                        <Copy className="mr-1 h-3.5 w-3.5" /> Dupliquer
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-lg text-xs"
+                        disabled={selectedBlockIndex == null}
+                        onClick={() => {
+                          if (selectedBlockIndex == null) return;
+                          const next = parsedBlocks.filter((_, idx) => idx !== selectedBlockIndex);
+                          applyBlocks(next);
+                        }}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer
+                      </Button>
+                    </div>
+
+                    <div
+                      className="space-y-2 rounded-xl border border-border/70 bg-card/60 p-3"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        const kind = e.dataTransfer.getData("application/x-runconnect-block-kind") as BuilderKind;
+                        if (!kind) return;
+                        applyBlocks([...parsedBlocks, defaultBlock(kind)]);
+                      }}
+                    >
+                      {parsedBlocks.length === 0 ? (
+                        <div className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+                          Ajoute un bloc pour commencer la timeline.
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+                          {parsedBlocks.map((block, index) => {
+                            const width = Math.max(12, block.distance ? Math.round(block.distance / 80) : Math.round((block.duration || 10) * 2.2));
+                            const height = Math.max(10, 10 + (blockRpe[index] || 5) * 2);
+                            const isActive = selectedBlockIndex === index;
+                            return (
+                              <button
+                                key={`${block.raw}-${index}`}
+                                type="button"
+                                draggable
+                                onDragStart={() => setDragIndex(index)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={() => {
+                                  if (dragIndex == null || dragIndex === index) return;
+                                  const next = [...parsedBlocks];
+                                  const [moved] = next.splice(dragIndex, 1);
+                                  next.splice(index, 0, moved);
+                                  applyBlocks(next);
+                                  setSelectedBlockIndex(index);
+                                  setDragIndex(null);
+                                }}
+                                onClick={() => setSelectedBlockIndex(index)}
+                                className={`shrink-0 rounded-xl border p-2 transition ${isActive ? "border-primary bg-primary/10" : "border-border/70 bg-card"}`}
+                                style={{ minWidth: 72 }}
+                              >
+                                <div className="flex items-end gap-1">
+                                  <span
+                                    className="rounded-md"
+                                    style={{ width: `${width}px`, height: `${height}px`, backgroundColor: colorForBlock(block) }}
+                                  />
+                                </div>
+                                <p className="mt-2 text-left text-[11px] font-medium text-foreground">
+                                  {block.type === "interval" ? `${block.repetitions || 1}x ${block.distance || block.duration || 0}` : `${block.duration || 0} min`}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedBlock ? (
+                      <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Édition bloc</p>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 rounded-md"
+                              disabled={selectedBlockIndex == null || selectedBlockIndex <= 0}
+                              onClick={() => {
+                                if (selectedBlockIndex == null || selectedBlockIndex <= 0) return;
+                                const next = [...parsedBlocks];
+                                [next[selectedBlockIndex - 1], next[selectedBlockIndex]] = [next[selectedBlockIndex], next[selectedBlockIndex - 1]];
+                                applyBlocks(next);
+                                setSelectedBlockIndex(selectedBlockIndex - 1);
+                              }}
+                            >
+                              <MoveLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 rounded-md"
+                              disabled={selectedBlockIndex == null || selectedBlockIndex >= parsedBlocks.length - 1}
+                              onClick={() => {
+                                if (selectedBlockIndex == null || selectedBlockIndex >= parsedBlocks.length - 1) return;
+                                const next = [...parsedBlocks];
+                                [next[selectedBlockIndex], next[selectedBlockIndex + 1]] = [next[selectedBlockIndex + 1], next[selectedBlockIndex]];
+                                applyBlocks(next);
+                                setSelectedBlockIndex(selectedBlockIndex + 1);
+                              }}
+                            >
+                              <MoveRight className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Type</Label>
+                            <Select
+                              value={selectedBlock.type}
+                              onValueChange={(v) => {
+                                if (selectedBlockIndex == null) return;
+                                const next = [...parsedBlocks];
+                                next[selectedBlockIndex] = { ...selectedBlock, type: v as ParsedBlock["type"] };
+                                applyBlocks(next);
+                              }}
+                            >
+                              <SelectTrigger className="h-9 rounded-lg bg-card"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="warmup">Échauffement</SelectItem>
+                                <SelectItem value="steady">Endurance</SelectItem>
+                                <SelectItem value="recovery">Récupération</SelectItem>
+                                <SelectItem value="interval">Fractionné</SelectItem>
+                                <SelectItem value="cooldown">Retour au calme</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Allure</Label>
+                            <Input
+                              value={selectedBlock.pace || ""}
+                              onChange={(e) => {
+                                if (selectedBlockIndex == null) return;
+                                const next = [...parsedBlocks];
+                                next[selectedBlockIndex] = { ...selectedBlock, pace: e.target.value || undefined };
+                                applyBlocks(next);
+                              }}
+                              placeholder="5:00"
+                              className="h-9 rounded-lg bg-card"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Durée (min)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-8 w-8 rounded-md"
+                                onClick={() => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, duration: Math.max(1, (selectedBlock.duration || 10) - 1) };
+                                  applyBlocks(next);
+                                }}
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </Button>
+                              <Input
+                                value={String(selectedBlock.duration || 0)}
+                                onChange={(e) => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, duration: Math.max(0, Number.parseInt(e.target.value || "0", 10)) || 0 };
+                                  applyBlocks(next);
+                                }}
+                                className="h-8 rounded-md bg-card text-center"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-8 w-8 rounded-md"
+                                onClick={() => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, duration: (selectedBlock.duration || 0) + 1 };
+                                  applyBlocks(next);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Distance (m)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-8 w-8 rounded-md"
+                                onClick={() => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, distance: Math.max(0, (selectedBlock.distance || 0) - 100) };
+                                  applyBlocks(next);
+                                }}
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </Button>
+                              <Input
+                                value={String(selectedBlock.distance || 0)}
+                                onChange={(e) => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, distance: Math.max(0, Number.parseInt(e.target.value || "0", 10)) || 0 };
+                                  applyBlocks(next);
+                                }}
+                                className="h-8 rounded-md bg-card text-center"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-8 w-8 rounded-md"
+                                onClick={() => {
+                                  if (selectedBlockIndex == null) return;
+                                  const next = [...parsedBlocks];
+                                  next[selectedBlockIndex] = { ...selectedBlock, distance: (selectedBlock.distance || 0) + 100 };
+                                  applyBlocks(next);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                          {selectedBlock.type === "interval" ? (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">Répétitions</Label>
+                                <div className="flex items-center gap-1">
+                                  <Button type="button" size="icon" variant="secondary" className="h-8 w-8 rounded-md" onClick={() => {
+                                    if (selectedBlockIndex == null) return;
+                                    const next = [...parsedBlocks];
+                                    next[selectedBlockIndex] = { ...selectedBlock, repetitions: Math.max(1, (selectedBlock.repetitions || 1) - 1) };
+                                    applyBlocks(next);
+                                  }}><Minus className="h-3.5 w-3.5" /></Button>
+                                  <Input value={String(selectedBlock.repetitions || 1)} readOnly className="h-8 rounded-md bg-card text-center" />
+                                  <Button type="button" size="icon" variant="secondary" className="h-8 w-8 rounded-md" onClick={() => {
+                                    if (selectedBlockIndex == null) return;
+                                    const next = [...parsedBlocks];
+                                    next[selectedBlockIndex] = { ...selectedBlock, repetitions: (selectedBlock.repetitions || 1) + 1 };
+                                    applyBlocks(next);
+                                  }}><Plus className="h-3.5 w-3.5" /></Button>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">Récup (sec)</Label>
+                                <Input
+                                  value={String(selectedBlock.recoveryDuration || 0)}
+                                  onChange={(e) => {
+                                    if (selectedBlockIndex == null) return;
+                                    const next = [...parsedBlocks];
+                                    next[selectedBlockIndex] = { ...selectedBlock, recoveryDuration: Math.max(0, Number.parseInt(e.target.value || "0", 10)) || 0 };
+                                    applyBlocks(next);
+                                  }}
+                                  className="h-9 rounded-lg bg-card"
+                                />
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {[2, 4, 6, 8].map((rpeValue) => (
+                            <button
+                              key={rpeValue}
+                              type="button"
+                              onClick={() => {
+                                if (selectedBlockIndex == null) return;
+                                const next = [...blockRpe];
+                                next[selectedBlockIndex] = rpeValue;
+                                setBlockRpe(normalizeBlockRpeLength(next, parsedBlocks.length));
+                              }}
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold ${((blockRpe[selectedBlockIndex ?? 0] || 5) === rpeValue) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+                            >
+                              Intensité {rpeValue}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {BLOCK_LIBRARY.map((item) => (
+                          <button
+                            key={item.kind}
+                            type="button"
+                            draggable
+                            onDragStart={(e) => e.dataTransfer.setData("application/x-runconnect-block-kind", item.kind)}
+                            onClick={() => applyBlocks([...parsedBlocks, defaultBlock(item.kind)])}
+                            className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2 text-left"
+                          >
+                            <span className="h-3 w-8 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="text-xs font-medium text-foreground">{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="ios-card rounded-xl border border-primary/20 bg-primary/5 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Résumé automatique</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {summaryDuration} min • {summaryDistance.toFixed(1).replace(".", ",")} km • {summaryLoad} pts
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Intensité moyenne: {summaryIntensity}/10 • Classification auto: {autoIntensityEnabled ? "active" : "mode neutre"}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <div className="ios-card flex items-center justify-between border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
+                    <p className="text-[17px] font-semibold text-foreground">Modèles</p>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="secondary" size="sm" className="h-9 rounded-xl text-[12px] font-semibold" onClick={() => setBuilderTab("build")}>
+                        Construire modèle
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl text-[12px] font-semibold" onClick={() => setShowTemplates(true)}>
+                        <BookOpen className="mr-1.5 h-4 w-4" /> Bibliothèque
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                    {loadingTemplateRows ? (
+                      <p className="text-sm text-muted-foreground">Chargement des modèles…</p>
+                    ) : templateRows.length === 0 ? (
+                      <div className="rounded-xl border border-border/70 bg-card px-4 py-10 text-center">
+                        <BookOpen className="mx-auto mb-2 h-9 w-9 text-muted-foreground/60" />
+                        <p className="text-[15px] font-medium text-foreground">Aucun modèle enregistré</p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">Crée une séance puis sauvegarde-la comme modèle.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                      {templateRows.map((tpl) => {
+                        const parsed = parseRCC(tpl.rcc_code);
+                        const segs = buildWorkoutSegments(parsed.blocks);
+                        const dist = computeWorkoutDistance(segs);
+                        const dur = computeWorkoutDuration(segs);
+                        return (
+                          <button
+                            type="button"
+                            key={tpl.id}
+                            className="w-full rounded-2xl border border-border/70 bg-card p-4 text-left"
+                            onClick={() => {
+                              setRccCode(tpl.rcc_code);
+                              setObjective(tpl.objective || tpl.name);
+                              if (tpl.activity_type) setActivityType(tpl.activity_type);
+                              handleParsedChange(parseRCC(tpl.rcc_code));
+                              setBuilderTab("build");
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground">{tpl.name}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">{tpl.objective || "Séance modèle"}</p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">Utiliser</span>
+                            </div>
+                            <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{tpl.rcc_code}</p>
+                            <p className="mt-2 text-xs text-muted-foreground">{dur} min • {dist.toFixed(1).replace(".", ",")} km</p>
+                          </button>
+                        );
+                      })}
+                      </div>
+                    )}
+                  </div>
+>>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
                 </div>
                 <Button
                   type="button"
