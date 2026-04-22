@@ -542,6 +542,18 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       .slice(0, 3)
       .map((row) => `${normalizeRunningEventKey(row.event_label).toUpperCase()} ${row.record_value}`);
   }, [selectedAthlete]);
+  const selectedDayData = selectedAthlete && selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
+  const selectedFeedback = useMemo(() => {
+    const threshold = selectedAthletePaces?.thresholdPaceSecPerKm;
+    const selectedPace = selectedDayData?.session.pace_target;
+    if (!threshold || !selectedPace) return undefined;
+    const [min, sec] = selectedPace.split(":").map(Number);
+    if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
+    const pace = min * 60 + sec;
+    if (pace >= threshold * 1.12) return zoneToFeedback("Z2");
+    if (pace >= threshold * 1.02) return zoneToFeedback("Z4");
+    return zoneToFeedback("Z5");
+  }, [selectedAthletePaces, selectedDayData]);
 
   const openRecordsEditor = useCallback(() => {
     if (!selectedAthlete) return;
@@ -853,18 +865,6 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
-  const selectedDayData = selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
-  const selectedFeedback = useMemo(() => {
-    const threshold = selectedAthletePaces?.thresholdPaceSecPerKm;
-    const selectedPace = selectedDayData?.session.pace_target;
-    if (!threshold || !selectedPace) return undefined;
-    const [min, sec] = selectedPace.split(":").map(Number);
-    if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
-    const pace = min * 60 + sec;
-    if (pace >= threshold * 1.12) return zoneToFeedback("Z2");
-    if (pace >= threshold * 1.02) return zoneToFeedback("Z4");
-    return zoneToFeedback("Z5");
-  }, [selectedAthletePaces, selectedDayData]);
   const selectedStatus = toUiStatus(selectedDayData?.status);
   const selectedFelt = selectedDayData ? parseAthleteBlockRpeFelt(selectedDayData.athleteRpeFelt, 12) : [];
   const selectedAvgRpe = selectedFelt.length > 0 ? Math.round(selectedFelt.reduce((a, b) => a + b, 0) / selectedFelt.length) : null;
