@@ -56,7 +56,6 @@ interface SessionInfo {
   objective: string | null;
   pace_target: string | null;
   rpe: number | null;
-  rpe_phases: unknown;
 }
 
 type CalendarSport = "running" | "cycling" | "swimming" | "strength" | "rest";
@@ -278,7 +277,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
         supabase
           .from("coaching_sessions")
-          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
+          .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe")
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
           .lte("scheduled_at", weekEnd.toISOString()),
@@ -328,7 +327,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
         const { data: participations } = await supabase
           .from("coaching_participations")
-          .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
+          .select("coaching_session_id, user_id, status, athlete_note, completed_at")
           .in("coaching_session_id", sessionIds);
 
         (participations || []).forEach(p => {
@@ -342,7 +341,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             sessionTitle: session.title,
             sessionId: session.id,
             session,
-            athleteRpeFelt: (p as { athlete_rpe_felt?: unknown }).athlete_rpe_felt ?? null,
+            athleteRpeFelt: null,
           };
           athleteMap[p.user_id].totalCount++;
           athleteMap[p.user_id].weeklyVolumeKm += Number(session.distance_km) || 0;

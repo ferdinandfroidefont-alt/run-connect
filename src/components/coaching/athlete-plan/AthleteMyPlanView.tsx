@@ -96,7 +96,10 @@ export function AthleteMyPlanView(props: Props) {
       const aggregatedDistance = totalDistanceKm > 0 ? `${Math.round(totalDistanceKm * 10) / 10} km` : undefined;
       const value = row.sessions.length > 1 ? aggregatedDistance || metrics.distanceLabel || metrics.durationLabel : metrics.distanceLabel || metrics.durationLabel;
       if (!value) return;
-      summaries[key] = { sport: row.primarySession.sport, value };
+      summaries[key] = {
+        sport: row.isRest ? "rest" : row.primarySession.sport === "other" ? "strength" : row.primarySession.sport,
+        value,
+      };
     });
     return summaries;
   }, [dayRows]);
