@@ -463,15 +463,15 @@ export const CreateCoachingSessionDialog = ({
             scrollClassName="bg-secondary px-4 py-4"
           >
             <div className="space-y-4">
-              <div className="ios-card space-y-3 border border-border/60 p-4 shadow-[var(--shadow-card)]">
-                <div className="flex rounded-xl border border-border/70 bg-card p-1">
+              <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+                <div className="flex rounded-2xl border border-border/70 bg-card p-1">
                   <button
                     type="button"
                     onClick={() => {
                       setBuilderTab("build");
                       setSelectedBlockIndex(null);
                     }}
-                    className={`h-9 flex-1 rounded-lg text-sm font-semibold ${builderTab === "build" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "build" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                   >
                     Construire
                   </button>
@@ -481,29 +481,45 @@ export const CreateCoachingSessionDialog = ({
                       setBuilderTab("models");
                       setSelectedBlockIndex(null);
                     }}
-                    className={`h-9 flex-1 rounded-lg text-sm font-semibold ${builderTab === "models" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    className={`h-10 flex-1 rounded-xl text-sm font-semibold ${builderTab === "models" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                   >
                     Modèles
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
                     <Label className="text-xs">Sport</Label>
-                    <Select value={activityType} onValueChange={setActivityType}>
-                      <SelectTrigger className="h-10 rounded-xl border-border bg-card">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTIVITY_TYPES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
+                      <p className="text-sm font-semibold capitalize text-foreground">{dateLabel}</p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-border/70 bg-card px-3 py-2 text-right">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Date</p>
-                    <p className="text-sm font-semibold capitalize text-foreground">{dateLabel}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {QUICK_SPORTS.map((sport) => {
+                      const isActive = activityType === sport.value;
+                      return (
+                        <button
+                          key={sport.value}
+                          type="button"
+                          onClick={() => setActivityType(sport.value)}
+                          className={`flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-3 text-center transition-colors ${isActive ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-card text-foreground"}`}
+                        >
+                          <span className="text-2xl" aria-hidden>{sport.emoji}</span>
+                          <span className="text-[11px] font-semibold leading-tight">{sport.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  <Select value={activityType} onValueChange={setActivityType}>
+                    <SelectTrigger className="h-10 rounded-xl border-border bg-card text-xs text-muted-foreground">
+                      <SelectValue placeholder="Autres sports" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTIVITY_TYPES.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -529,8 +545,8 @@ export const CreateCoachingSessionDialog = ({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant="secondary" className="h-8 rounded-lg text-xs" onClick={() => applyBlocks([...parsedBlocks, defaultBlock("steady")])}>
-                        <Plus className="mr-1 h-3.5 w-3.5" /> Bloc
+                      <Button type="button" size="sm" variant="secondary" className="h-9 rounded-xl text-xs font-semibold" onClick={() => applyBlocks([...parsedBlocks, defaultBlock("steady")])}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un bloc
                       </Button>
                       <Button
                         type="button"
