@@ -37,8 +37,18 @@ export function classifyRunningBlockIntensity(input: RunningBlockInput): {
   band: IntensityBand;
   source: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
 } {
-  if (input.type === "recovery" || input.type === "cooldown" || input.type === "warmup") {
-    return { band: input.type === "warmup" ? "transition" : "recovery", source: input.source };
+  if (input.type === "cooldown" || input.type === "recovery") {
+    return { band: "recovery", source: input.source };
+  }
+
+  if (input.type === "warmup") {
+    if (input.paceSecPerKm && input.references?.easyPaceSecPerKm) {
+      return {
+        band: input.paceSecPerKm <= input.references.easyPaceSecPerKm * 0.93 ? "endurance" : "recovery",
+        source: input.source,
+      };
+    }
+    return { band: "recovery", source: input.source };
   }
 
   if (input.zone === "Z4" || input.zone === "Z5" || input.zone === "Z6" || input.type === "interval") {
@@ -55,6 +65,9 @@ export function classifyRunningBlockIntensity(input: RunningBlockInput): {
     }
     if (input.paceSecPerKm <= input.references.thresholdPaceSecPerKm * 1.03) {
       return { band: "tempo", source: input.source === "fallback" ? "auto_estimate" : input.source };
+    }
+    if (input.references.easyPaceSecPerKm && input.paceSecPerKm >= input.references.easyPaceSecPerKm * 1.06) {
+      return { band: "recovery", source: input.source === "fallback" ? "auto_estimate" : input.source };
     }
   }
 

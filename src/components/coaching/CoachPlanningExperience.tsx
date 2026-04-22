@@ -175,12 +175,12 @@ const ADD_BLOCK_CHOICES = [
 ];
 
 const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone: string }> = [
-  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-blue-500/12 text-blue-700 dark:text-blue-300" },
-  { zone: "Z2", label: "Z2", description: "Endurance", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
-  { zone: "Z3", label: "Z3", description: "Tempo", tone: "bg-yellow-500/12 text-yellow-700 dark:text-yellow-300" },
-  { zone: "Z4", label: "Z4", description: "Seuil", tone: "bg-orange-500/12 text-orange-700 dark:text-orange-300" },
-  { zone: "Z5", label: "Z5", description: "VO2max", tone: "bg-red-500/12 text-red-700 dark:text-red-300" },
-  { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-violet-500/12 text-violet-700 dark:text-violet-300" },
+  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
+  { zone: "Z2", label: "Z2", description: "Endurance fondamentale", tone: "bg-primary/12 text-primary" },
+  { zone: "Z3", label: "Z3", description: "Endurance active", tone: "bg-green-500/12 text-green-700 dark:text-green-300" },
+  { zone: "Z4", label: "Z4", description: "Seuil", tone: "bg-amber-500/12 text-amber-700 dark:text-amber-300" },
+  { zone: "Z5", label: "Z5", description: "VO2 max", tone: "bg-orange-500/12 text-orange-700 dark:text-orange-300" },
+  { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-red-500/12 text-red-700 dark:text-red-300" },
 ];
 
 const DISTANCE_KM_WHOLE_OPTIONS = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
@@ -233,6 +233,19 @@ function paceToLabel(paceSecPerKm?: number) {
   const min = Math.floor(paceSecPerKm / 60);
   const sec = paceSecPerKm % 60;
   return `${min}'${sec.toString().padStart(2, "0")}''/km`;
+}
+
+function compactPaceLabel(paceSecPerKm?: number) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return "—";
+  const min = Math.floor(paceSecPerKm / 60);
+  const sec = paceSecPerKm % 60;
+  return `${min}'${sec.toString().padStart(2, "0")}`;
+}
+
+function formatZoneBadge(zone?: ZoneKey) {
+  if (!zone) return "Zone auto";
+  const meta = ZONE_META.find((item) => item.zone === zone);
+  return meta ? `${zone} · ${meta.description}` : zone;
 }
 
 function isPositive(value?: number) {
@@ -2388,7 +2401,7 @@ export function CoachPlanningExperience() {
                   className="h-11 rounded-2xl border-border bg-card text-[15px]"
                 />
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[15px] font-semibold text-foreground">Structure de la séance</h3>
                     <button
@@ -2406,23 +2419,40 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
 
-                    <div className="rounded-2xl border border-border bg-card p-3">
-                      <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
-                        <div className="relative">
-                          <MiniWorkoutProfile blocks={previewBars} className="h-[76px] rounded-[16px] bg-transparent px-0 py-0" />
+                  <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_12px_32px_-24px_hsl(var(--foreground)/0.28)]">
+                    <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                          <p className="text-[12px] text-muted-foreground">
+                            {draft.blocks.length > 0
+                              ? `${draft.blocks.length} bloc${draft.blocks.length > 1 ? "s" : ""} • aperçu recalculé selon l’athlète`
+                              : "Ajoute un bloc pour construire le schéma validé"}
+                          </p>
                         </div>
-                      {draft.blocks.length === 0 ? (
-                        <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
-                          <div>
-                            <p className="text-[14px] font-medium text-foreground">Aperçu de séance</p>
-                            <p className="text-[12px] text-muted-foreground">Le graph s’anime dès qu’un bloc est ajouté.</p>
-                          </div>
-                          <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">Placeholder</span>
+                        <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                          {previewMetrics.feedbackLabel ?? "Aperçu"}
+                        </span>
+                      </div>
+                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[86px] rounded-[16px] bg-transparent px-0 py-0" />
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="rounded-2xl bg-background/85 px-3 py-2">
+                          <p className="text-[11px] text-muted-foreground">Durée</p>
+                          <p className="text-[14px] font-semibold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
                         </div>
-                      ) : null}
+                        <div className="rounded-2xl bg-background/85 px-3 py-2">
+                          <p className="text-[11px] text-muted-foreground">Distance</p>
+                          <p className="text-[14px] font-semibold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
+                        </div>
+                        <div className="rounded-2xl bg-background/85 px-3 py-2">
+                          <p className="text-[11px] text-muted-foreground">Charge</p>
+                          <p className="text-[14px] font-semibold text-foreground">{totalEstimatedLoad > 0 ? `${totalEstimatedLoad} ch` : "—"}</p>
+                        </div>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
                       {draft.blocks.map((block, index) => {
                         const meta = blockTypeMeta(block.type);
                         const isEditing = editingBlockId === block.id && blockSheetOpen && blockStep === "config";
@@ -2446,17 +2476,116 @@ export function CoachPlanningExperience() {
                     {draft.blocks.length > 0 ? (
                       <div className="mt-3 space-y-2">
                         {selectedDraftBlock ? (
-                          <div className="rounded-2xl border border-border bg-secondary/40 p-3">
+                          <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)]">
                             <div className="mb-3 flex items-center justify-between gap-2">
                               <div>
                                 <p className="text-[14px] font-semibold text-foreground">
-                                  Éditer : {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
+                                  {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
                                 </p>
-                                <p className="text-[12px] text-muted-foreground">Modification en direct sur le graph et les totaux.</p>
+                                <p className="text-[12px] text-muted-foreground">Modification en direct sur le schéma, les zones et les totaux.</p>
                               </div>
-                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => startBlockCreation(undefined, selectedDraftBlock)}>
+                              <Button variant="secondary" size="sm" className="h-8 rounded-xl text-[12px]" onClick={() => startBlockCreation(undefined, selectedDraftBlock)}>
                                 Plus d’options
                               </Button>
+                            </div>
+
+                            <div className="mb-3 grid grid-cols-3 gap-2">
+                              <button
+                                type="button"
+                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
+                                onClick={() => {
+                                  const pace = selectedDraftBlock.paceSecPerKm || 330;
+                                  setWheelAValue(String(Math.floor(pace / 60)));
+                                  setWheelBValue(String(pace % 60));
+                                  setWheelUnit("min/km");
+                                  openWheelColumns(
+                                    "Allure du bloc",
+                                    [
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
+                                    ],
+                                    () => {
+                                      const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, paceSecPerKm: next }, "pace")
+                                          : { ...block, paceSecPerKm: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                <p className="text-[11px] text-muted-foreground">Allure</p>
+                                <p className="text-[16px] font-semibold text-foreground">{compactPaceLabel(selectedDraftBlock.paceSecPerKm)}</p>
+                                <p className="text-[11px] text-muted-foreground">/km</p>
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
+                                onClick={() => {
+                                  const meters = selectedDraftBlock.distanceM || 0;
+                                  const wholeKm = Math.floor(meters / 1000);
+                                  const remMeters = Math.max(0, meters - wholeKm * 1000);
+                                  setWheelAValue(String(wholeKm));
+                                  setWheelBValue(String(Math.round(remMeters / 25) * 25));
+                                  setWheelUnit("km");
+                                  openWheelColumns(
+                                    "Distance du bloc",
+                                    [
+                                      { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
+                                      { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
+                                    ],
+                                    () => {
+                                      const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, distanceM: next }, "distance")
+                                          : { ...block, distanceM: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                <p className="text-[11px] text-muted-foreground">Distance</p>
+                                <p className="text-[16px] font-semibold text-foreground">{selectedDraftBlock.distanceM ? (selectedDraftBlock.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}</p>
+                                <p className="text-[11px] text-muted-foreground">km</p>
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
+                                onClick={() => {
+                                  const total = selectedDraftBlock.durationSec || 0;
+                                  const nextA = String(Math.floor(total / 3600));
+                                  const nextB = String(Math.floor((total % 3600) / 60));
+                                  const nextC = String(total % 60);
+                                  setWheelAValue(nextA);
+                                  setWheelBValue(nextB);
+                                  setWheelCValue(nextC);
+                                  openWheelColumns(
+                                    "Durée du bloc",
+                                    [
+                                      { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
+                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
+                                    ],
+                                    () => {
+                                      const next =
+                                        Number.parseInt(wheelARef.current, 10) * 3600 +
+                                        Number.parseInt(wheelBRef.current, 10) * 60 +
+                                        Number.parseInt(wheelCRef.current, 10);
+                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                        draft.sport === "running"
+                                          ? deriveRunningVolume({ ...block, durationSec: next }, "duration")
+                                          : { ...block, durationSec: next }
+                                      );
+                                    }
+                                  );
+                                }}
+                              >
+                                <p className="text-[11px] text-muted-foreground">Temps</p>
+                                <p className="text-[16px] font-semibold text-foreground">{secondsToLabel(selectedDraftBlock.durationSec) || "—"}</p>
+                                <p className="text-[11px] text-muted-foreground">estimé</p>
+                              </button>
                             </div>
 
                             <div className="grid grid-cols-1 gap-2">
@@ -2569,6 +2698,11 @@ export function CoachPlanningExperience() {
                                   {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)}
                                 </Button>
                               ) : null}
+
+                              <div className="rounded-2xl border border-border bg-secondary/30 px-3 py-2">
+                                <p className="text-[11px] text-muted-foreground">Zone cible</p>
+                                <p className="text-[13px] font-semibold text-foreground">{formatZoneBadge(selectedDraftBlock.zone)}</p>
+                              </div>
                             </div>
                           </div>
                         ) : null}
@@ -2617,7 +2751,6 @@ export function CoachPlanningExperience() {
                       </div>
                     ) : null}
                   </div>
-                </div>
               </div>
             ) : (
               <ModelsPage

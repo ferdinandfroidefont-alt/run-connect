@@ -8,6 +8,9 @@ export type CoachPrivateRecordRow = {
 };
 
 const RUNNING_EVENT_ALIASES: Record<string, string> = {
+  "1500 m": "1500m",
+  "1500m": "1500m",
+  "1 500 m": "1500m",
   "3 km": "3k",
   "3km": "3k",
   "3000 m": "3k",
