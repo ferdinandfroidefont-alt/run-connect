@@ -247,10 +247,10 @@ export default function Participants() {
     if (!mapRef.current || !mapReady || !effectiveUserPosition) return;
     const rect = mapRef.current.getContainer()?.getBoundingClientRect();
     if (!rect || rect.width < 8 || rect.height < 8) return;
-    const nextZoom = hasAutoCentered ? undefined : 15.2;
+    const nextZoom = hasAutoCentered ? null : 15.2;
     mapRef.current.easeTo({
       center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
-      zoom: nextZoom,
+      ...(nextZoom != null ? { zoom: nextZoom } : {}),
       duration: 420,
       essential: true,
     });
