@@ -5,7 +5,7 @@ import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
-import { applyConflictFlags, kmForSession } from "./planUtils";
+import { applyConflictFlags, formatCalendarDistance, isExplicitRestDay, kmForSession, toCalendarSummarySport } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { sportDotClass } from "./sportTokens";
@@ -74,7 +74,7 @@ export function AthleteMyPlanView(props: Props) {
     const summaries: Record<string, DaySessionSummary> = {};
     dayRows.forEach((row) => {
       const key = format(row.day, "yyyy-MM-dd");
-      if (!row.primarySession || row.isRest) {
+      if (isExplicitRestDay(row.sessions)) {
         summaries[key] = { sport: "rest", value: "Repos" };
         return;
       }
@@ -87,11 +87,11 @@ export function AthleteMyPlanView(props: Props) {
         explicitDistanceKm: row.primarySession.distanceKm,
       });
       const totalDistanceKm = row.sessions.reduce((acc, session) => acc + kmForSession(session), 0);
-      const aggregatedDistance = totalDistanceKm > 0 ? `${Math.round(totalDistanceKm * 10) / 10} km` : undefined;
+      const aggregatedDistance = formatCalendarDistance(totalDistanceKm) ?? undefined;
       const value = row.sessions.length > 1 ? aggregatedDistance || metrics.distanceLabel || metrics.durationLabel : metrics.distanceLabel || metrics.durationLabel;
       if (!value) return;
       summaries[key] = {
-        sport: row.isRest ? "rest" : row.primarySession.sport === "other" ? "strength" : row.primarySession.sport,
+        sport: toCalendarSummarySport(row.primarySession.sport),
         value,
       };
     });
