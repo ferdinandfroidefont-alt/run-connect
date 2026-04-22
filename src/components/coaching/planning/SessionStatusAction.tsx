@@ -13,11 +13,11 @@ export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusA
       <button
         type="button"
         onClick={onSentClick}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-secondary px-3 text-[12px] font-semibold text-foreground transition-transform active:scale-95"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 bg-background transition-transform active:scale-95"
+        style={{ borderColor: "hsl(var(--chart-2) / 0.35)", color: "hsl(var(--chart-2))" }}
         aria-label="Annuler l'envoi"
       >
         <Check className="h-4.5 w-4.5" />
-        <span>Annuler l&apos;envoi</span>
       </button>
     );
   }
