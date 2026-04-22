@@ -1250,7 +1250,7 @@ export function CoachPlanningExperience() {
 
   const copyAthleteWeek = () => {
     if (!activeAthleteId) return;
-    const source = filteredSessions
+      const source = enrichedFilteredSessions
       .filter((session) => session.athleteId === activeAthleteId)
       .map((session) => ({ ...session, blocks: session.blocks.map((b) => ({ ...b })) }));
     if (!source.length) {
@@ -1482,7 +1482,7 @@ export function CoachPlanningExperience() {
 
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       const type = session.blocks[0]?.type;
       const color =
@@ -1495,11 +1495,11 @@ export function CoachPlanningExperience() {
       map[key].push({ color });
     });
     return map;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const daySessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
     const groupedByDate = new Map<string, TrainingSession[]>();
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       if (!groupedByDate.has(key)) groupedByDate.set(key, []);
       groupedByDate.get(key)!.push(session);
@@ -1536,16 +1536,16 @@ export function CoachPlanningExperience() {
     });
 
     return output;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const existingSessionsByDay = useMemo(() => {
     const map: Record<string, string | undefined> = {};
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       map[key] = session.title;
     });
     return map;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const activeClubName = clubs.find((club) => club.id === activeClubId)?.name;
   const activeAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
