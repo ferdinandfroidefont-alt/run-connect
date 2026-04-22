@@ -1157,9 +1157,9 @@ export function CoachPlanningExperience() {
   const saveSession = async () => {
     if (!draft.blocks.length || !activeClubId || !user) return;
     const normalizedTitle = draft.title.trim() || "Séance sans titre";
-    const totalDistanceKm = draft.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000;
+    const totalDistanceKm = previewMetrics.distanceKm || 0;
     const targetAthletes = draft.athleteId ? [draft.athleteId] : activeAthleteId ? [activeAthleteId] : null;
-    const dbPayload = {
+      const dbPayload = {
       club_id: activeClubId,
       coach_id: user.id,
       title: normalizedTitle,
