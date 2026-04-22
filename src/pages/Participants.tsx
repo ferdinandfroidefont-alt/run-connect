@@ -15,7 +15,7 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { MAPBOX_NAVIGATION_DAY_STYLE } from "@/lib/mapboxConfig";
+import { MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -26,12 +26,39 @@ type Participant = {
   active: boolean;
 };
 
-const FALLBACK_POINT = { lat: 48.8668, lng: 2.3339 };
+type LngLatPoint = { lat: number; lng: number };
+
+const FALLBACK_POINT: LngLatPoint = { lat: 48.8668, lng: 2.3339 };
 type LiveSessionRow = {
   id: string;
   title: string;
   scheduled_at: string;
 };
+
+function isValidLngLat(value: Partial<LngLatPoint> | null | undefined): value is LngLatPoint {
+  const lat = Number(value?.lat);
+  const lng = Number(value?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function normalizeLngLat(value: Partial<LngLatPoint> | null | undefined, fallback: LngLatPoint = FALLBACK_POINT): LngLatPoint {
+  if (isValidLngLat(value)) {
+    return { lat: Number(value.lat), lng: Number(value.lng) };
+  }
+  return fallback;
+}
+
+function safeMapResize(map: MapboxMap | null) {
+  if (!map) return;
+  try {
+    const container = map.getContainer();
+    const rect = container?.getBoundingClientRect();
+    if (!rect || rect.width < 8 || rect.height < 8) return;
+    map.resize();
+  } catch {
+    // Ignore transient Mapbox resize failures during style/init transitions.
+  }
+}
 
 function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElement {
   const el = document.createElement("div");
@@ -60,7 +87,7 @@ export default function Participants() {
   const [showLiveSessionsPanel, setShowLiveSessionsPanel] = useState(false);
   const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
   const [liveSessionsFilter, setLiveSessionsFilter] = useState<"live" | "upcoming" | "recent">("live");
-  const [fallbackUserPosition, setFallbackUserPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [fallbackUserPosition, setFallbackUserPosition] = useState<LngLatPoint | null>(null);
   const [hasAutoCentered, setHasAutoCentered] = useState(false);
   const { getCurrentPosition } = useGeolocation();
   const {
@@ -78,20 +105,24 @@ export default function Participants() {
   const userMarkerRef = useRef<Marker | null>(null);
   const rdvMarkerRef = useRef<Marker | null>(null);
   const participantMarkersRef = useRef<Map<string, Marker>>(new Map());
-  const effectiveUserPosition = userPosition ?? fallbackUserPosition;
-  const userPositionRef = useRef(effectiveUserPosition);
+  const effectiveUserPosition = isValidLngLat(userPosition)
+    ? userPosition
+    : isValidLngLat(fallbackUserPosition)
+      ? fallbackUserPosition
+      : null;
+  const userPositionRef = useRef<LngLatPoint>(normalizeLngLat(effectiveUserPosition));
 
   useEffect(() => {
-    userPositionRef.current = effectiveUserPosition;
+    userPositionRef.current = normalizeLngLat(effectiveUserPosition);
   }, [effectiveUserPosition]);
 
   useEffect(() => {
     let cancelled = false;
-    const hasTrackingUserPosition = !!userPosition;
+    const hasTrackingUserPosition = isValidLngLat(userPosition);
     if (hasTrackingUserPosition) return;
     void (async () => {
       const pos = await getCurrentPosition(0, { mode: "fast" });
-      if (cancelled || !pos) return;
+      if (cancelled || !isValidLngLat(pos)) return;
       setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
     })();
     return () => {
@@ -99,18 +130,25 @@ export default function Participants() {
     };
   }, [getCurrentPosition, userPosition?.lat, userPosition?.lng]);
 
-  const participants = useMemo<Participant[]>(
-    () =>
-      Array.from(participantPositions.entries()).map(([id, pos]) => ({
-      id,
-      name: pos.display_name || pos.username || "Participant",
-      avatar: pos.avatar_url,
-      lat: pos.lat,
-      lng: pos.lng,
-      active: true,
-      })),
-    [participantPositions]
-  );
+  const participants = useMemo<Participant[]>(() => {
+    const rows: Participant[] = [];
+    for (const [id, pos] of participantPositions.entries()) {
+      const lat = Number(pos.lat);
+      const lng = Number(pos.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        continue;
+      }
+      rows.push({
+        id,
+        name: pos.display_name || pos.username || "Participant",
+        avatar: pos.avatar_url,
+        lat,
+        lng,
+        active: true,
+      });
+    }
+    return rows;
+  }, [participantPositions]);
 
   const computedLiveState = useMemo<"none" | "upcoming" | "live">(() => {
     if (!session || !sessionAllowsLive) return "none";
@@ -121,7 +159,7 @@ export default function Participants() {
   const fitDefaultView = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    const center = userPositionRef.current ?? FALLBACK_POINT;
+    const center = normalizeLngLat(userPositionRef.current);
     map.easeTo({
       center: [center.lng, center.lat],
       zoom: 14.3,
@@ -138,10 +176,10 @@ export default function Participants() {
     const bootMap = async () => {
       try {
         const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
-          center: userPositionRef.current ?? FALLBACK_POINT,
+          center: normalizeLngLat(userPositionRef.current),
           zoom: 14.3,
           interactive: true,
-          style: MAPBOX_NAVIGATION_DAY_STYLE,
+          style: MAPBOX_STREETS_STYLE,
         });
         if (cancelled) {
           map.remove();
@@ -152,11 +190,11 @@ export default function Participants() {
         const styleFallbackTimer = window.setTimeout(() => {
           if (!armedFallback || cancelled || !mapRef.current) return;
           try {
-            mapRef.current.setStyle(MAPBOX_NAVIGATION_DAY_STYLE);
+            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
           } catch {
             // Ignore, on garde la carte même si le style custom échoue.
           }
-          mapRef.current.resize();
+          safeMapResize(mapRef.current);
           setMapReady(true);
         }, 1200);
 
@@ -170,10 +208,9 @@ export default function Participants() {
           clearFallback();
           setMapReady(true);
           fitDefaultView();
-          // iOS/WebView: force plusieurs resize au boot pour éviter la carte blanche.
-          const t1 = window.setTimeout(() => mapRef.current?.resize(), 0);
-          const t2 = window.setTimeout(() => mapRef.current?.resize(), 120);
-          const t3 = window.setTimeout(() => mapRef.current?.resize(), 360);
+          const t1 = window.setTimeout(() => safeMapResize(mapRef.current), 0);
+          const t2 = window.setTimeout(() => safeMapResize(mapRef.current), 120);
+          const t3 = window.setTimeout(() => safeMapResize(mapRef.current), 360);
           window.setTimeout(() => {
             window.clearTimeout(t1);
             window.clearTimeout(t2);
@@ -186,17 +223,15 @@ export default function Participants() {
 
         map.on("error", () => {
           if (cancelled || !mapRef.current) return;
-          // Si le style préféré échoue, fallback immédiat vers style stable.
           try {
-            mapRef.current.setStyle(MAPBOX_NAVIGATION_DAY_STYLE);
+            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
           } catch {
             // no-op
           }
-          mapRef.current.resize();
+          safeMapResize(mapRef.current);
           setMapReady(true);
         });
       } catch {
-        // Retry léger pour éviter un échec transitoire d'init mapbox.
         window.setTimeout(() => {
           if (!cancelled && !mapRef.current) void bootMap();
         }, 240);
@@ -232,7 +267,7 @@ export default function Participants() {
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible") {
-        mapRef.current?.resize();
+        safeMapResize(mapRef.current);
       }
     };
     document.addEventListener("visibilitychange", onVis);
@@ -248,8 +283,9 @@ export default function Participants() {
       myProfile?.avatar_url ??
       (typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null) ??
       null;
+    const currentUserPosition = effectiveUserPosition;
 
-    if (effectiveUserPosition) {
+    if (currentUserPosition) {
       void (async () => {
         const mapboxgl = await loadMapboxGl();
         if (cancelled || !mapRef.current) {
@@ -257,7 +293,7 @@ export default function Participants() {
         }
         const existing = userMarkerRef.current;
         if (existing) {
-          existing.setLngLat([effectiveUserPosition.lng, effectiveUserPosition.lat]);
+          existing.setLngLat([currentUserPosition.lng, currentUserPosition.lat]);
           return;
         }
 
@@ -275,7 +311,6 @@ export default function Participants() {
           });
           wrap.appendChild(myPin);
         } catch {
-          // Fallback dur: si le pin perso échoue, on garde un marker simple pour ne jamais bloquer la carte.
           const fallback = document.createElement("div");
           fallback.style.width = "18px";
           fallback.style.height = "18px";
@@ -289,7 +324,7 @@ export default function Participants() {
         }
 
         const marker = new mapboxgl.Marker({ element: wrap, anchor: "bottom" })
-          .setLngLat([effectiveUserPosition.lng, effectiveUserPosition.lat])
+          .setLngLat([currentUserPosition.lng, currentUserPosition.lat])
           .addTo(mapRef.current);
         userMarkerRef.current = marker;
       })();
@@ -298,7 +333,11 @@ export default function Participants() {
       userMarkerRef.current = null;
     }
 
-    if (session && !rdvMarkerRef.current) {
+    const sessionLat = Number(session?.location_lat);
+    const sessionLng = Number(session?.location_lng);
+    const hasValidSessionPoint = Number.isFinite(sessionLat) && Number.isFinite(sessionLng);
+
+    if (session && hasValidSessionPoint && !rdvMarkerRef.current) {
       const rdvEl = document.createElement("div");
       rdvEl.className =
         "h-5 w-5 rounded-full border-2 border-white bg-[#FF3B30] shadow-[0_6px_14px_-8px_rgba(0,0,0,0.7)]";
@@ -306,11 +345,11 @@ export default function Participants() {
         const mapboxgl = await loadMapboxGl();
         if (cancelled || !mapRef.current || rdvMarkerRef.current) return;
         rdvMarkerRef.current = new mapboxgl.Marker({ element: rdvEl })
-          .setLngLat([Number(session.location_lng), Number(session.location_lat)])
+          .setLngLat([sessionLng, sessionLat])
           .addTo(mapRef.current);
       })();
     }
-    if (!session) {
+    if (!session || !hasValidSessionPoint) {
       rdvMarkerRef.current?.remove();
       rdvMarkerRef.current = null;
     }
