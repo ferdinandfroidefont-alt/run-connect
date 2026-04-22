@@ -2445,16 +2445,10 @@ export function CoachPlanningExperience() {
                       <div className="mt-3 space-y-2">
                         {selectedDraftBlock ? (
                           <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)]">
-                            <div className="mb-3 flex items-center justify-between gap-2">
-                              <div>
-                                <p className="text-[14px] font-semibold text-foreground">
-                                  {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
-                                </p>
-                                <p className="text-[12px] text-muted-foreground">Modification en direct sur le schéma, les zones et les totaux.</p>
-                              </div>
-                              <Button variant="secondary" size="sm" className="h-8 rounded-xl text-[12px]" onClick={() => startBlockCreation(undefined, selectedDraftBlock)}>
-                                Plus d’options
-                              </Button>
+                            <div className="mb-3">
+                              <p className="text-[14px] font-semibold text-foreground">
+                                {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
+                              </p>
                             </div>
 
                             <div className="mb-3 grid grid-cols-3 gap-2">
