@@ -119,9 +119,13 @@ export default function Participants() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const pos = await getCurrentPosition(0, { mode: "fast" });
-      if (cancelled || !isValidLngLat(pos)) return;
-      setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
+      try {
+        const pos = await getCurrentPosition(0, { mode: "fast" });
+        if (cancelled || !isValidLngLat(pos)) return;
+        setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
+      } catch {
+        if (!cancelled) setFallbackUserPosition(null);
+      }
     })();
     return () => {
       cancelled = true;
@@ -472,15 +476,9 @@ export default function Participants() {
   return (
     <div className="fixed inset-0 bg-background">
       <div className="absolute inset-0 z-0" style={{ isolation: "isolate" }}>
-        <div ref={mapContainerRef} className="h-full w-full bg-secondary" />
+        <div ref={mapContainerRef} className="h-full w-full bg-muted" />
       </div>
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 z-[2] bg-secondary/80 transition-opacity duration-200",
-          mapReady ? "opacity-0" : "opacity-100"
-        )}
-        aria-hidden
-      />
+      {!mapReady ? <div className="pointer-events-none absolute inset-0 z-[2] bg-muted/60" aria-hidden /> : null}
 
       <div className="absolute left-0 right-0 top-0 z-20 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
         <IosPageHeaderBar
