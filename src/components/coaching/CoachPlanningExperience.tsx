@@ -4,13 +4,18 @@ import { fr } from "date-fns/locale";
 import {
   Activity,
   Bike,
+  Clock3,
+  Crosshair,
+  ChevronRight,
   ChevronLeft,
   Dumbbell,
   Flame,
+  Gauge,
   GripVertical,
   Leaf,
   Minus,
   Plus,
+  Ruler,
   Waves,
   Zap,
 } from "lucide-react";
@@ -245,6 +250,30 @@ function compactPaceLabel(paceSecPerKm?: number) {
   const min = Math.floor(paceSecPerKm / 60);
   const sec = paceSecPerKm % 60;
   return `${min}'${sec.toString().padStart(2, "0")}`;
+}
+
+function paceCardLabel(paceSecPerKm?: number) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return "—";
+  const min = Math.floor(paceSecPerKm / 60);
+  const sec = paceSecPerKm % 60;
+  return `${min}’${sec.toString().padStart(2, "0")}`;
+}
+
+function durationClockLabel(total?: number) {
+  if (!total || total <= 0) return "00:00";
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  if (hours > 0) return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function distanceCardLabel(distance?: number) {
+  if (!distance || distance <= 0) return "0,00";
+  return (distance / 1000).toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatZoneBadge(zone?: ZoneKey) {
