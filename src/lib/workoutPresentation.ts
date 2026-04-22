@@ -1,5 +1,6 @@
 import type { WorkoutSegment } from "@/lib/workoutVisualization";
 import { computeWorkoutDistance, computeWorkoutDuration } from "@/lib/workoutVisualization";
+import { zoneToFeedback } from "@/lib/athleteWorkoutContext";
 
 type SportHint = "running" | "cycling" | "swimming" | "strength" | "other";
 
@@ -30,6 +31,15 @@ export function inferWorkoutIntensityLabel(segments: WorkoutSegment[]): string |
     return "Tempo / seuil";
   }
   return "Endurance";
+}
+
+export function inferWorkoutFeedback(segments: WorkoutSegment[]): string | undefined {
+  const meaningful = segments.filter((segment) => segment.kind !== "rest");
+  if (!meaningful.length) return undefined;
+  const leadZone = meaningful
+    .slice()
+    .sort((a, b) => (b.durationMin + b.distanceKm) - (a.durationMin + a.distanceKm))[0]?.computedZone;
+  return leadZone ? zoneToFeedback(leadZone) : undefined;
 }
 
 export function buildWorkoutHeadline(params: {
@@ -84,6 +94,7 @@ export function resolveWorkoutMetrics(params: {
     durationLabel: formatWorkoutDurationMinutes(durationMin),
     distanceLabel: formatWorkoutDistanceKm(distanceKm),
     intensityLabel: inferWorkoutIntensityLabel(params.segments),
+    feedbackLabel: inferWorkoutFeedback(params.segments),
   };
 }
 

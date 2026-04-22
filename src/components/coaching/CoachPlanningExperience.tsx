@@ -54,6 +54,8 @@ import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboa
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -90,6 +92,7 @@ type TrainingSession = {
   groupId?: string;
   sent: boolean;
   blocks: SessionBlock[];
+  athleteIntensity?: ReturnType<typeof buildAthleteIntensityContext>;
 };
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
@@ -194,8 +197,11 @@ const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
 });
 
 type CoachClub = { id: string; name: string };
-type AthleteEntry = { id: string; name: string };
+type AthleteEntry = { id: string; name: string; runningRecords?: Record<string, unknown> | null };
 type GroupEntry = { id: string; name: string };
+
+const athleteIntensityFromRunningRecords = (runningRecords?: Record<string, unknown> | null) =>
+  buildAthleteIntensityContext({ runningRecords: runningRecords ?? null });
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -408,6 +414,7 @@ const BASE_MODELS: SessionModelItem[] = [
 ];
 
 export function CoachPlanningExperience() {
+  const { userProfile } = useUserProfile();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -589,7 +596,7 @@ export function CoachPlanningExperience() {
         .eq("conversation_id", activeClubId);
       const memberIds = (members || []).map((m) => m.user_id);
       const { data: profiles } = memberIds.length
-        ? await supabase.from("profiles").select("user_id, display_name").in("user_id", memberIds)
+        ? await supabase.from("profiles").select("user_id, display_name, running_records").in("user_id", memberIds)
         : { data: [] };
       const { data: clubGroups } = await supabase
         .from("club_groups")
@@ -610,6 +617,10 @@ export function CoachPlanningExperience() {
         (profiles || []).map((profile) => ({
           id: profile.user_id,
           name: profile.display_name || "Athlète",
+          runningRecords:
+            profile.running_records && typeof profile.running_records === "object"
+              ? (profile.running_records as Record<string, unknown>)
+              : null,
         }))
       );
       setGroups((clubGroups || []).map((group) => ({ id: group.id, name: group.name })));
@@ -970,6 +981,7 @@ export function CoachPlanningExperience() {
           locationName: row.default_location_name,
           description: row.description,
           hasConflict: false,
+            athleteIntensity: athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null),
         };
       });
       setAthletePlanSessions(mapped);
@@ -1017,7 +1029,32 @@ export function CoachPlanningExperience() {
     [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
-  const previewSegments = useMemo(() => buildWorkoutSegments(draft.blocks, { sport: draft.sport }), [draft.blocks, draft.sport]);
+  const enrichedFilteredSessions = useMemo(
+    () =>
+      filteredSessions.map((session) => {
+        const directAthlete = session.athleteId ? athletes.find((athlete) => athlete.id === session.athleteId) : undefined;
+        const groupAthlete = !directAthlete && activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
+        return {
+          ...session,
+          athleteIntensity:
+            session.athleteIntensity ?? athleteIntensityFromRunningRecords(directAthlete?.runningRecords ?? groupAthlete?.runningRecords ?? null),
+        };
+      }),
+    [filteredSessions, athletes, activeAthleteId]
+  );
+
+  const activeAthleteIntensity = useMemo(() => {
+    if (effectiveAthleteMode) {
+      return athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null);
+    }
+    const selectedAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
+    return athleteIntensityFromRunningRecords(selectedAthlete?.runningRecords ?? null);
+  }, [activeAthleteId, athletes, effectiveAthleteMode, userProfile?.running_records]);
+
+  const previewSegments = useMemo(
+    () => buildWorkoutSegments(draft.blocks, { sport: draft.sport, athleteIntensity: activeAthleteIntensity ?? undefined }),
+    [draft.blocks, draft.sport, activeAthleteIntensity]
+  );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const totalDurationSec = useMemo(() => Math.round((previewMetrics.durationMin || 0) * 60), [previewMetrics.durationMin]);
   const totalDistanceM = useMemo(() => Math.round((previewMetrics.distanceKm || 0) * 1000), [previewMetrics.distanceKm]);
@@ -1213,7 +1250,7 @@ export function CoachPlanningExperience() {
 
   const copyAthleteWeek = () => {
     if (!activeAthleteId) return;
-    const source = filteredSessions
+      const source = enrichedFilteredSessions
       .filter((session) => session.athleteId === activeAthleteId)
       .map((session) => ({ ...session, blocks: session.blocks.map((b) => ({ ...b })) }));
     if (!source.length) {
@@ -1445,7 +1482,7 @@ export function CoachPlanningExperience() {
 
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       const type = session.blocks[0]?.type;
       const color =
@@ -1458,11 +1495,11 @@ export function CoachPlanningExperience() {
       map[key].push({ color });
     });
     return map;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const daySessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
     const groupedByDate = new Map<string, TrainingSession[]>();
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       if (!groupedByDate.has(key)) groupedByDate.set(key, []);
       groupedByDate.get(key)!.push(session);
@@ -1472,8 +1509,8 @@ export function CoachPlanningExperience() {
     groupedByDate.forEach((list, key) => {
       if (!list.length) return;
       const sorted = [...list].sort((a, b) => {
-        const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport }) });
-        const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport }) });
+        const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport, athleteIntensity: a.athleteIntensity ?? undefined }) });
+        const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport, athleteIntensity: b.athleteIntensity ?? undefined }) });
         const loadA = (metricsA.distanceKm || 0) * 10 + (metricsA.durationMin || 0);
         const loadB = (metricsB.distanceKm || 0) * 10 + (metricsB.durationMin || 0);
         return loadB - loadA;
@@ -1483,9 +1520,9 @@ export function CoachPlanningExperience() {
         output[key] = { sport: "rest", value: "Repos" };
         return;
       }
-      const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport }) });
+      const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport, athleteIntensity: primary.athleteIntensity ?? undefined }) });
       const totalDistance = sorted.reduce((acc, session) => {
-        const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport }) });
+        const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport, athleteIntensity: session.athleteIntensity ?? undefined }) });
         return acc + (metrics.distanceKm || 0);
       }, 0);
       const value =
@@ -1499,16 +1536,16 @@ export function CoachPlanningExperience() {
     });
 
     return output;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const existingSessionsByDay = useMemo(() => {
     const map: Record<string, string | undefined> = {};
-    filteredSessions.forEach((session) => {
+    enrichedFilteredSessions.forEach((session) => {
       const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
       map[key] = session.title;
     });
     return map;
-  }, [filteredSessions]);
+  }, [enrichedFilteredSessions]);
 
   const activeClubName = clubs.find((club) => club.id === activeClubId)?.name;
   const activeAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
@@ -1968,12 +2005,13 @@ export function CoachPlanningExperience() {
 
                 <div className="flex flex-col border-t border-border">
                   {weekDays.map((day) => {
-                const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
                 const normalizedSegments = session
                   ? buildWorkoutSegments(session.blocks, {
                       sport: session.sport,
+                      athleteIntensity: session.athleteIntensity ?? undefined,
                     })
                   : [];
                 const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
@@ -1998,7 +2036,7 @@ export function CoachPlanningExperience() {
                       subtitle: session.title,
                       duration: workoutMetrics?.durationLabel,
                       distance: workoutMetrics?.distanceLabel,
-                      intensityLabel: workoutMetrics?.intensityLabel,
+                      intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
                       isRestDay:
                         session.blocks.length > 0 &&
@@ -2281,6 +2319,7 @@ export function CoachPlanningExperience() {
                       {secondsToLabel(totalDurationSec)}
                       {totalDistanceM > 0 ? ` • ${metersToLabel(totalDistanceM)}` : ""}
                       {totalEstimatedLoad > 0 ? ` • ${totalEstimatedLoad} ch` : ""}
+                      {previewMetrics.feedbackLabel ? ` • ${previewMetrics.feedbackLabel}` : ""}
                     </span>
                   </div>
                   <Button

@@ -43,6 +43,7 @@ interface Profile {
   triathlon_records: any;
   favorite_sport: string | null;
   country: string | null;
+  is_private?: boolean;
 }
 
 interface ProfilePreviewDialogProps {

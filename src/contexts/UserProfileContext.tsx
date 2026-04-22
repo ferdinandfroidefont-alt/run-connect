@@ -39,6 +39,7 @@ export interface UserProfile {
   distance_unit?: string | null;
   favorite_sport?: string | null;
   country?: string | null;
+  is_private?: boolean;
   /** Ville (partage profil, certaines vues) */
   city?: string | null;
   organizer_avg_rating?: number | null;

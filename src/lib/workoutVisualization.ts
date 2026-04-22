@@ -4,6 +4,7 @@ import {
   type AthleteIntensityContext,
   type IntensityBand,
 } from "@/lib/athleteIntensity";
+import { bandToComputedZone, zoneToColorToken, type ComputedZone } from "@/lib/athleteWorkoutContext";
 
 export type WorkoutSegmentKind = "warmup" | "steady" | "rep" | "recovery" | "cooldown" | "rest";
 
@@ -12,6 +13,8 @@ export interface WorkoutSegment {
   durationMin: number;
   distanceKm: number;
   intensityBand: IntensityBand;
+  computedZone?: ComputedZone;
+  color?: string;
   intensitySource?: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
   repeatCount?: number;
   visualStyle?: "default" | "pyramid";
@@ -148,6 +151,8 @@ export function buildWorkoutSegments(
         durationMin: clampPositive(effortDuration || durationMin * repetitions),
         distanceKm: clampPositive(effortDistance),
         intensityBand: repIntensity.band,
+        computedZone: bandToComputedZone(repIntensity.band),
+        color: zoneToColorToken(bandToComputedZone(repIntensity.band)),
         intensitySource: repIntensity.source,
         repeatCount: repetitions,
       });
@@ -165,6 +170,8 @@ export function buildWorkoutSegments(
           durationMin: totalRecoveryDuration,
           distanceKm: clampPositive(totalRecoveryDistance),
           intensityBand: "recovery",
+          computedZone: bandToComputedZone("recovery"),
+          color: zoneToColorToken(bandToComputedZone("recovery")),
           intensitySource: refResolution.source,
           repeatCount: Math.max(0, repetitions - 1),
         });
@@ -199,6 +206,8 @@ export function buildWorkoutSegments(
       durationMin: clampPositive(segDuration),
       distanceKm: clampPositive(segDistance),
       intensityBand: steadyIntensity.band,
+      computedZone: bandToComputedZone(steadyIntensity.band),
+      color: zoneToColorToken(bandToComputedZone(steadyIntensity.band)),
       intensitySource: steadyIntensity.source,
       repeatCount: repetitions > 1 ? repetitions : undefined,
       visualStyle: isPyramid ? "pyramid" : "default",
@@ -303,11 +312,7 @@ export function renderWorkoutMiniProfile(
 }
 
 function colorForBand(band: WorkoutSegment["intensityBand"]): string {
-  if (band === "interval") return "hsl(var(--destructive))";
-  if (band === "tempo") return "hsl(var(--chart-4))";
-  if (band === "recovery") return "hsl(var(--chart-2))";
-  if (band === "transition") return "hsl(var(--muted-foreground))";
-  return "hsl(var(--primary))";
+  return zoneToColorToken(bandToComputedZone(band));
 }
 
 function heightForBand(band: WorkoutSegment["intensityBand"]): number {
