@@ -15,7 +15,6 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -204,7 +203,6 @@ export default function Participants() {
           center: normalizeLngLat(userPositionRef.current),
           zoom: 14.3,
           interactive: true,
-          style: MAPBOX_STREETS_STYLE,
         });
         if (cancelled) {
           map.remove();
