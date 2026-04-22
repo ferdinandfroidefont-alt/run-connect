@@ -40,6 +40,8 @@ import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearch
 import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
+import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
@@ -299,63 +301,6 @@ function blockEstimatedLoad(block: SessionBlock) {
     block.type === "recovery" || block.type === "cooldown" ? 0.7 :
     1;
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
-}
-
-function buildPreviewBars(blocks: SessionBlock[]) {
-  if (!blocks.length) {
-    return Array.from({ length: 10 }, (_, index) => ({
-      key: `placeholder-${index}`,
-      width: 10,
-      height: index % 3 === 1 ? 22 : index % 3 === 2 ? 34 : 16,
-      color: "hsl(var(--muted))",
-      opacity: index > 5 ? 0.45 : 0.72,
-    }));
-  }
-
-  return blocks.flatMap((block, blockIndex) => {
-    const repetitions = Math.max(1, block.repetitions || 1);
-    const durationWeight = Math.max(1, Math.round((block.durationSec || 900) / 180));
-    const baseWidth = Math.min(24, Math.max(8, durationWeight * (block.type === "interval" ? 2 : 3)));
-
-    if (block.type === "interval") {
-      return Array.from({ length: repetitions * 2 - 1 }, (_, segmentIndex) => {
-        const isRecovery = segmentIndex % 2 === 1;
-        return {
-          key: `${block.id}-${segmentIndex}`,
-          width: isRecovery ? Math.max(8, Math.round(baseWidth * 0.75)) : baseWidth,
-          height: isRecovery ? 20 : 42,
-          color: blockGraphColor(block.type, isRecovery),
-          opacity: 1,
-        };
-      });
-    }
-
-    if (block.notes?.includes("[Pyramid]")) {
-      const steps = Math.max(3, Math.min(7, repetitions || 5));
-      const peak = Math.ceil(steps / 2);
-      return Array.from({ length: steps }, (_, segmentIndex) => {
-        const level = segmentIndex < peak ? segmentIndex + 1 : steps - segmentIndex;
-        return {
-          key: `${block.id}-${segmentIndex}`,
-          width: Math.max(8, Math.round(baseWidth * 0.9)),
-          height: 16 + level * 8,
-          color: "hsl(var(--chart-4))",
-          opacity: 1,
-        };
-      });
-    }
-
-    return [{
-      key: `${block.id}-${blockIndex}`,
-      width: Math.max(10, baseWidth * Math.max(1, repetitions)),
-      height:
-        block.type === "warmup" ? 18 :
-        block.type === "cooldown" || block.type === "recovery" ? 14 :
-        28,
-      color: blockGraphColor(block.type),
-      opacity: 1,
-    }];
-  });
 }
 
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
