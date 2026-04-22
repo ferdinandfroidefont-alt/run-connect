@@ -2069,9 +2069,7 @@ export function CoachPlanningExperience() {
                       distance: workoutMetrics?.distanceLabel,
                       intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
-                      isRestDay:
-                        session.blocks.length > 0 &&
-                        session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown"),
+                      isRestDay: isExplicitRestDay([session]),
                       sportHint,
                     }
                   : undefined;
