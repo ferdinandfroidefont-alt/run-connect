@@ -15,7 +15,7 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
+import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -471,7 +471,9 @@ export default function Participants() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-secondary" />
+      <div className="absolute inset-0 z-0" style={{ isolation: "isolate" }}>
+        <div ref={mapContainerRef} className="h-full w-full bg-secondary" />
+      </div>
       <div
         className={cn(
           "pointer-events-none absolute inset-0 z-[2] bg-secondary/80 transition-opacity duration-200",
