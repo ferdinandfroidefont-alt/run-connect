@@ -59,7 +59,7 @@ export const WeeklyTrackingDialog = ({ isOpen, onClose, clubId }: WeeklyTracking
             headerWrapperClassName="shrink-0"
             header={
               <CoachingFullscreenHeader
-                title={selectedAthleteId ? "Fiche athlète" : "Suivi équipe"}
+                title={selectedAthleteId ? "Fiche athlète" : "Coaching"}
                 onBack={handleBack}
               />
             }

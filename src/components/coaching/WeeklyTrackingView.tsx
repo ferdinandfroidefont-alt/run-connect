@@ -10,12 +10,14 @@ import {
   ChevronRight,
   Search,
   ChevronRight as ChevronRightIcon,
-  ClipboardList,
   Bell,
   Loader2,
   CalendarDays,
-  MessageCircle,
-  Send,
+  Bike,
+  Dumbbell,
+  Footprints,
+  Moon,
+  Waves,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -57,6 +59,8 @@ interface SessionInfo {
   rpe_phases: unknown;
 }
 
+type CalendarSport = "running" | "cycling" | "swimming" | "strength" | "rest";
+
 interface DayData {
   status: string;
   note: string | null;
@@ -81,6 +85,26 @@ interface AthleteData {
   weeklyVolumeKm: number;
 }
 
+interface GroupData {
+  id: string;
+  name: string;
+  color: string;
+  avatarUrl: string | null;
+  memberCount: number;
+  memberIds: string[];
+}
+
+const GROUP_COLORS = [
+  "#3B82F6",
+  "#EF4444",
+  "#10B981",
+  "#F59E0B",
+  "#8B5CF6",
+  "#EC4899",
+  "#06B6D4",
+  "#F97316",
+];
+
 const normalizeSearchValue = (value: string) =>
   value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").replace(/^@/, "").trim();
 
@@ -95,34 +119,7 @@ const getObjectiveColor = (objective: string | null): string => {
   return "bg-primary/10 text-primary";
 };
 
-const ProgressRing = ({ percent, size = 64, strokeWidth = 5 }: { percent: number; size?: number; strokeWidth?: number }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percent / 100) * circumference;
-  const color = percent >= 80 ? "stroke-green-500" : percent >= 50 ? "stroke-orange-500" : "stroke-red-500";
-
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-secondary" />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth} className={color}
-        strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-        style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" className="fill-foreground text-[15px] font-bold"
-        style={{ transform: "rotate(90deg)", transformOrigin: "center" }}>
-        {percent}%
-      </text>
-    </svg>
-  );
-};
-
 type UiDayStatus = "done" | "missed" | "pending" | "none";
-
-const STATUS_CHIP_BY_DAY: Record<UiDayStatus, { short: string; className: string }> = {
-  done: { short: "Fait", className: "bg-emerald-500 text-white" },
-  missed: { short: "Non fait", className: "bg-red-500 text-white" },
-  pending: { short: "En attente", className: "bg-orange-400 text-white" },
-  none: { short: "Aucune", className: "bg-zinc-300 text-white dark:bg-zinc-600" },
-};
 
 const toUiStatus = (status?: string): UiDayStatus => {
   if (status === "completed") return "done";
@@ -130,6 +127,65 @@ const toUiStatus = (status?: string): UiDayStatus => {
   if (status === "pending") return "pending";
   return "none";
 };
+
+function sessionTone(sport: CalendarSport) {
+  switch (sport) {
+    case "running":
+      return "text-sky-500";
+    case "cycling":
+      return "text-emerald-500";
+    case "swimming":
+      return "text-cyan-500";
+    case "strength":
+      return "text-violet-500";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
+function SessionIcon({ sport, className }: { sport: CalendarSport; className?: string }) {
+  switch (sport) {
+    case "running":
+      return <Footprints className={className} />;
+    case "cycling":
+      return <Bike className={className} />;
+    case "swimming":
+      return <Waves className={className} />;
+    case "strength":
+      return <Dumbbell className={className} />;
+    default:
+      return <Moon className={className} />;
+  }
+}
+
+function isRestSession(session: SessionInfo): boolean {
+  const title = (session.title || "").toLowerCase();
+  const objective = (session.objective || "").toLowerCase();
+  return title.includes("repos") || objective.includes("repos");
+}
+
+function sessionSummaryValue(session: SessionInfo): string | null {
+  if (isRestSession(session)) return "Repos";
+  const distanceKm = Number(session.distance_km || 0);
+  if (distanceKm > 0) return `${Math.round(distanceKm * 10) / 10} km`;
+  if (!session.rcc_code) return null;
+  const code = session.rcc_code.toLowerCase();
+  const hourMatch = code.match(/(\d+)\s*h(?:\s*(\d{1,2}))?/);
+  if (hourMatch) {
+    const h = Number(hourMatch[1]);
+    const m = Number(hourMatch[2] || 0);
+    return `${h}h${m.toString().padStart(2, "0")}`;
+  }
+  const minMatches = [...code.matchAll(/(\d+)\s*['m]/g)];
+  const totalMin = minMatches.reduce((acc, match) => acc + Number(match[1] || 0), 0);
+  if (totalMin >= 60) {
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h${m.toString().padStart(2, "0")}`;
+  }
+  if (totalMin > 0) return `${totalMin} min`;
+  return null;
+}
 
 export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
@@ -140,9 +196,12 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const [athletes, setAthletes] = useState<AthleteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [groups, setGroups] = useState<GroupData[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [creatingGroup, setCreatingGroup] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
-  const [fourWeekVolume, setFourWeekVolume] = useState<{ current: number; previous: number } | null>(null);
-  const [completionStreak, setCompletionStreak] = useState(0);
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
   const openConversationWithAthlete = useCallback(
     async (athleteId: string) => {
@@ -215,9 +274,9 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       // Load profiles, groups, and sessions in parallel
       const [profilesRes, groupsRes, groupMembersRes, sessionsRes] = await Promise.all([
         supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
-        supabase.from("club_groups").select("id, name, color").eq("club_id", clubId),
+        supabase.from("club_groups").select("id, name, color, avatar_url").eq("club_id", clubId).order("created_at"),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
-        (supabase as any)
+        supabase
           .from("coaching_sessions")
           .select("id, title, scheduled_at, distance_km, rcc_code, activity_type, objective, pace_target, rpe, rpe_phases")
           .eq("club_id", clubId)
@@ -246,13 +305,28 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         };
       });
 
+      const groupMemberMap: Record<string, string[]> = {};
+      (groupMembersRes.data || []).forEach((membership) => {
+        if (!groupMemberMap[membership.group_id]) groupMemberMap[membership.group_id] = [];
+        groupMemberMap[membership.group_id].push(membership.user_id);
+      });
+      const loadedGroups: GroupData[] = (groupsRes.data || []).map((group) => ({
+        id: group.id,
+        name: group.name,
+        color: group.color,
+        avatarUrl: group.avatar_url || null,
+        memberCount: (groupMemberMap[group.id] || []).length,
+        memberIds: groupMemberMap[group.id] || [],
+      }));
+      setGroups(loadedGroups);
+
       const sessions = sessionsRes.data;
       if (sessions && sessions.length > 0) {
         const sessionIds = sessions.map(s => s.id);
         const sessionMap: Record<string, SessionInfo> = {};
         sessions.forEach(s => { sessionMap[s.id] = s; });
 
-        const { data: participations } = await (supabase as any)
+        const { data: participations } = await supabase
           .from("coaching_participations")
           .select("coaching_session_id, user_id, status, athlete_note, completed_at, athlete_rpe_felt")
           .in("coaching_session_id", sessionIds);
@@ -324,53 +398,6 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     };
   }, [clubId, user, loadTracking]);
 
-  // Load 4-week volume stats for selected athlete
-  useEffect(() => {
-    if (!selectedAthleteId) return;
-    const load4WeekStats = async () => {
-      const w0 = startOfWeek(currentWeek, { weekStartsOn: 1 });
-      const w4ago = subWeeks(w0, 4);
-      const { data: sessions4w } = await supabase
-        .from("coaching_sessions")
-        .select("id, distance_km, scheduled_at")
-        .eq("club_id", clubId)
-        .gte("scheduled_at", w4ago.toISOString())
-        .lte("scheduled_at", endOfWeek(currentWeek, { weekStartsOn: 1 }).toISOString());
-      if (!sessions4w || sessions4w.length === 0) { setFourWeekVolume(null); return; }
-      const sessionIds = sessions4w.map(s => s.id);
-      const { data: parts } = await supabase
-        .from("coaching_participations")
-        .select("coaching_session_id, status")
-        .eq("user_id", selectedAthleteId)
-        .in("coaching_session_id", sessionIds);
-      if (!parts) { setFourWeekVolume(null); return; }
-
-      const completedIds = new Set(parts.filter(p => p.status === "completed").map(p => p.coaching_session_id));
-      let currentVol = 0, prevVol = 0;
-      const w2ago = subWeeks(w0, 2);
-      sessions4w.forEach(s => {
-        if (!completedIds.has(s.id)) return;
-        const km = Number(s.distance_km) || 0;
-        if (new Date(s.scheduled_at) >= w2ago) currentVol += km;
-        else prevVol += km;
-      });
-      setFourWeekVolume({ current: currentVol, previous: prevVol });
-
-      // Compute streak
-      let streak = 0;
-      const allParts = parts.filter(p => p.status === "completed").map(p => p.coaching_session_id);
-      const weekSessions = sessions4w
-        .filter(s => new Date(s.scheduled_at) <= new Date())
-        .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime());
-      for (const s of weekSessions) {
-        if (allParts.includes(s.id)) streak++;
-        else break;
-      }
-      setCompletionStreak(streak);
-    };
-    load4WeekStats();
-  }, [selectedAthleteId, clubId, currentWeek]);
-
   // Send reminder to athletes who haven't completed past sessions
   const handleSendReminder = async () => {
     const now = new Date();
@@ -400,17 +427,73 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
   const filtered = useMemo(() => {
     const q = normalizeSearchValue(search);
-    if (!q) return athletes;
-    return athletes.filter(a => {
+    const byGroup = selectedGroupId ? athletes.filter((a) => a.groupId === selectedGroupId) : athletes;
+    if (!q) return byGroup;
+    return byGroup.filter(a => {
       const searchable = normalizeSearchValue(a.displayName) + normalizeSearchValue(a.username || "") + normalizeSearchValue(a.groupName || "");
       return searchable.includes(q);
     });
-  }, [athletes, search]);
+  }, [athletes, search, selectedGroupId]);
+
+  const filteredGroups = useMemo(() => {
+    const q = normalizeSearchValue(search);
+    if (!q) return groups;
+    return groups.filter((group) => normalizeSearchValue(group.name).includes(q));
+  }, [groups, search]);
+
+  const selectedGroup = useMemo(() => {
+    if (!selectedGroupId) return null;
+    return groups.find((group) => group.id === selectedGroupId) || null;
+  }, [groups, selectedGroupId]);
+
+  const selectedGroupAthletes = useMemo(() => {
+    if (!selectedGroup) return [];
+    return athletes.filter((athlete) => athlete.groupId === selectedGroup.id);
+  }, [athletes, selectedGroup]);
+
+  const createGroup = useCallback(async () => {
+    const name = newGroupName.trim();
+    if (!name || creatingGroup) return;
+    setCreatingGroup(true);
+    try {
+      const color = GROUP_COLORS[groups.length % GROUP_COLORS.length];
+      const { error } = await supabase.from("club_groups").insert({
+        club_id: clubId,
+        name,
+        color,
+      });
+      if (error) {
+        toast.error("Impossible de créer le groupe");
+        return;
+      }
+      setNewGroupName("");
+      await loadTracking();
+      toast.success("Groupe créé");
+    } catch (error) {
+      toast.error("Impossible de créer le groupe");
+    } finally {
+      setCreatingGroup(false);
+    }
+  }, [clubId, creatingGroup, groups.length, loadTracking, newGroupName]);
 
   const selectedAthlete = useMemo(() => {
     if (!selectedAthleteId) return null;
     return athletes.find(a => a.userId === selectedAthleteId) || null;
   }, [athletes, selectedAthleteId]);
+
+  useEffect(() => {
+    if (!selectedAthlete) {
+      setSelectedDayKey(null);
+      return;
+    }
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    if (selectedAthlete.days[todayKey]) {
+      setSelectedDayKey(todayKey);
+      return;
+    }
+    const firstWithSession = weekDays.find((day) => !!selectedAthlete.days[format(day, "yyyy-MM-dd")]);
+    setSelectedDayKey(firstWithSession ? format(firstWithSession, "yyyy-MM-dd") : format(weekStart, "yyyy-MM-dd"));
+  }, [selectedAthlete, weekDays, weekStart]);
 
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
@@ -421,6 +504,103 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   if (!selectedAthlete) {
     return (
       <div className="space-y-0">
+        <div className="border-b border-border bg-card px-4 py-3">
+          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 pt-0.5">
+            {filteredGroups.map((group) => {
+              const isSelected = selectedGroupId === group.id;
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => setSelectedGroupId((current) => (current === group.id ? null : group.id))}
+                  className="flex min-w-[86px] flex-col items-center gap-1.5 py-1"
+                >
+                  <div
+                    className={`flex h-[68px] w-[68px] items-center justify-center overflow-hidden rounded-full border transition-colors ${
+                      isSelected ? "border-primary ring-2 ring-primary/20" : "border-border/60"
+                    }`}
+                    style={{ backgroundColor: group.avatarUrl ? undefined : `${group.color}1a` }}
+                  >
+                    {group.avatarUrl ? (
+                      <img src={group.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[22px] font-semibold" style={{ color: group.color }}>
+                        {group.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span className="max-w-[80px] truncate text-center text-[12px] font-medium text-foreground">
+                    {group.name.replace(/^\[ARCHIVE\]\s*/, "")}
+                  </span>
+                </button>
+              );
+            })}
+            {!loading && filteredGroups.length === 0 && (
+              <div className="flex h-[92px] items-center text-[13px] text-muted-foreground">
+                Aucun groupe
+              </div>
+            )}
+          </div>
+        </div>
+
+        {selectedGroup && (
+          <div className="border-b border-border bg-card px-4 py-3">
+            <div className="rounded-2xl border border-border/60 bg-secondary/30 p-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full"
+                  style={{ backgroundColor: selectedGroup.avatarUrl ? undefined : `${selectedGroup.color}26` }}
+                >
+                  {selectedGroup.avatarUrl ? (
+                    <img src={selectedGroup.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-[16px] font-semibold" style={{ color: selectedGroup.color }}>
+                      {selectedGroup.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-foreground">{selectedGroup.name.replace(/^\[ARCHIVE\]\s*/, "")}</p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {selectedGroup.memberCount} athlète{selectedGroup.memberCount > 1 ? "s" : ""}
+                  </p>
+                </div>
+                <Badge className="rounded-lg border-0 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                  Sélectionné
+                </Badge>
+              </div>
+
+              {selectedGroupAthletes.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Membres</p>
+                  <div className="flex -space-x-2">
+                    {selectedGroupAthletes.slice(0, 6).map((athlete) => (
+                      <div
+                        key={athlete.userId}
+                        className="h-8 w-8 overflow-hidden rounded-full border-2 border-card bg-secondary"
+                        title={athlete.displayName}
+                      >
+                        {athlete.avatarUrl ? (
+                          <img src={athlete.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-muted-foreground">
+                            {athlete.displayName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {selectedGroupAthletes.length > 6 && (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-muted text-[11px] font-medium text-muted-foreground">
+                        +{selectedGroupAthletes.length - 6}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Reminder button */}
         <div className="border-b border-border bg-card px-4 py-2.5">
           <Button
@@ -446,8 +626,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un athlète..."
-              className="h-10 rounded-lg border-border/60 bg-background pl-9 text-[15px]"
+              placeholder="Rechercher un athlète ou un groupe..."
+              className="h-10 rounded-full border-border/60 bg-background pl-9 text-[15px]"
             />
           </div>
         </div>
@@ -469,7 +649,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           </div>
         ) : (
           <div className="divide-y divide-border border-b border-border bg-card">
-            {filtered.map((athlete, idx) => {
+            {filtered.map((athlete) => {
               const pct = athlete.totalCount > 0 ? Math.round((athlete.completedCount / athlete.totalCount) * 100) : -1;
               return (
                 <div key={athlete.userId}>
@@ -524,53 +704,51 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             })}
           </div>
         )}
+
+        <div className="border-b border-border bg-card px-4 py-3">
+          <p className="mb-2 text-[13px] font-semibold text-foreground">Créer un groupe</p>
+          <div className="flex gap-2">
+            <Input
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="Nom du groupe"
+              className="h-10 rounded-full border-border/60 bg-background text-[14px]"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void createGroup();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void createGroup()}
+              disabled={!newGroupName.trim() || creatingGroup}
+              className="h-10 rounded-full px-4 text-[13px] font-semibold"
+            >
+              {creatingGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajouter"}
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
-  const sessionsForWeek = weekDays
-    .map((day) => {
-      const dayKey = format(day, "yyyy-MM-dd");
-      const dayData = selectedAthlete.days[dayKey];
-      if (!dayData) return null;
-      const status = toUiStatus(dayData.status);
-      const felt = parseAthleteBlockRpeFelt(dayData.athleteRpeFelt, 12);
-      const avgRpe = felt.length > 0 ? Math.round(felt.reduce((a, b) => a + b, 0) / felt.length) : null;
-      const details = [
-        dayData.session.distance_km ? `${Math.round(Number(dayData.session.distance_km) * 10) / 10} km` : "",
-        dayData.session.pace_target ? `Allure ${dayData.session.pace_target}` : "",
+  const selectedDayData = selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
+  const selectedStatus = toUiStatus(selectedDayData?.status);
+  const selectedFelt = selectedDayData ? parseAthleteBlockRpeFelt(selectedDayData.athleteRpeFelt, 12) : [];
+  const selectedAvgRpe = selectedFelt.length > 0 ? Math.round(selectedFelt.reduce((a, b) => a + b, 0) / selectedFelt.length) : null;
+  const selectedDetails = selectedDayData
+    ? [
+        selectedDayData.session.distance_km ? `${Math.round(Number(selectedDayData.session.distance_km) * 10) / 10} km` : "",
+        selectedDayData.session.pace_target ? `Allure ${selectedDayData.session.pace_target}` : "",
       ]
         .filter(Boolean)
-        .join(" • ");
-      return {
-        day,
-        dayData,
-        status,
-        avgRpe,
-        details: details || "Séance planifiée",
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-  const trendPct = fourWeekVolume
-    ? Math.round((((fourWeekVolume.current || 0) - (fourWeekVolume.previous || 0)) / Math.max(1, fourWeekVolume.previous || 0)) * 100)
-    : 0;
-
-  const handleResendSession = async () => {
-    if (!selectedAthleteId) return;
-    try {
-      await sendPushNotification(
-        selectedAthleteId,
-        "📩 Rappel séance",
-        "Ton coach vient de renvoyer la séance. Pense à la valider dès qu'elle est faite.",
-        "coaching_session_resend"
-      );
-      toast.success("Séance renvoyée à l'athlète");
-    } catch {
-      toast.error("Impossible de renvoyer la séance");
-    }
-  };
+        .join(" • ") || "Séance planifiée"
+    : "";
 
   return (
     <div className="space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
@@ -609,113 +787,67 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           {weekDays.map((day) => {
             const dayKey = format(day, "yyyy-MM-dd");
             const dayData = selectedAthlete.days[dayKey];
-            const status = toUiStatus(dayData?.status);
-            const conf = STATUS_CHIP_BY_DAY[status];
+            const isSelected = dayKey === selectedDayKey;
+            const value = dayData ? sessionSummaryValue(dayData.session) : null;
+            const sport: CalendarSport = !dayData
+              ? "rest"
+              : isRestSession(dayData.session)
+              ? "rest"
+              : dayData.session.activity_type === "cycling"
+              ? "cycling"
+              : dayData.session.activity_type === "swimming"
+              ? "swimming"
+              : dayData.session.activity_type === "strength"
+              ? "strength"
+              : "running";
             return (
-              <div key={dayKey} className="text-center">
-                <p className="text-[11px] font-semibold text-foreground">{format(day, "EEE", { locale: fr }).slice(0, 3)}</p>
-                <p className="text-[10px] text-muted-foreground">{format(day, "d", { locale: fr })}</p>
-                <div className="mt-1 flex justify-center">
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold shadow-sm ${conf.className}`}>
-                    {status === "done" ? "✓" : status === "missed" ? "✕" : status === "pending" ? "⏳" : "–"}
-                  </span>
-                </div>
-                <p className="mt-1 text-[10px] text-muted-foreground">{conf.short}</p>
-              </div>
+              <button
+                key={dayKey}
+                type="button"
+                onClick={() => setSelectedDayKey(dayKey)}
+                className={`flex flex-col items-center rounded-lg px-1.5 py-2 transition-all ${isSelected ? "bg-[#2563EB]" : "bg-secondary"}`}
+              >
+                <p className={`text-[16px] font-semibold leading-none ${isSelected ? "text-white" : "text-foreground"}`}>{format(day, "d", { locale: fr })}</p>
+                <p className={`mt-1 text-[11px] font-medium leading-none ${isSelected ? "text-white/90" : "text-muted-foreground"}`}>
+                  {format(day, "EEE", { locale: fr }).slice(0, 1).toUpperCase()}
+                </p>
+                {value ? (
+                  <div className="mt-1.5 flex min-h-[24px] flex-col items-center justify-center">
+                    <SessionIcon sport={sport} className={`h-3 w-3 ${sessionTone(sport)}`} />
+                    <p className={`mt-0.5 text-[10px] font-medium leading-none ${sessionTone(sport)}`}>{value}</p>
+                  </div>
+                ) : (
+                  <div className="min-h-[24px]" />
+                )}
+              </button>
             );
           })}
         </div>
       </div>
 
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <ProgressRing percent={pct} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[18px] font-semibold text-foreground">Cette semaine</p>
-            <p className="text-[34px] font-black leading-none text-emerald-500">
-              {selectedAthlete.completedCount} / {selectedAthlete.totalCount}
-              <span className="ml-1 text-[21px] font-semibold text-foreground/70">séances</span>
-            </p>
-            <p className="text-[13px] text-muted-foreground">{pct}% complété</p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-secondary/40 px-2.5 py-2 text-right">
-            <p className={`text-[16px] font-semibold ${trendPct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-              {trendPct >= 0 ? "+" : ""}
-              {trendPct}%
-            </p>
-            <p className="text-[11px] text-muted-foreground">vs semaine dernière</p>
-          </div>
-        </div>
-      </div>
-
       <div className="border-b border-border bg-card px-4 pb-3 pt-2">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-[17px] font-semibold leading-tight text-foreground">Séances de la semaine</p>
-          <button type="button" className="text-[13px] font-semibold text-primary">
-            Tout voir
-          </button>
-        </div>
         <div className="flex flex-col divide-y divide-border border-t border-border">
-          {sessionsForWeek.length === 0 ? (
-            <div className="bg-secondary/20 px-3 py-6 text-center">
-              <p className="text-[13px] text-muted-foreground">Aucune séance planifiée cette semaine.</p>
-            </div>
+          {selectedDayData ? (
+            <AthleteSessionCard
+              key={`${selectedDayData.sessionId}-${selectedDayKey}`}
+              dayLabel={format(new Date(selectedDayData.session.scheduled_at), "EEE", { locale: fr }).toUpperCase()}
+              dayNumber={format(new Date(selectedDayData.session.scheduled_at), "d", { locale: fr })}
+              title={selectedDayData.sessionTitle}
+              details={selectedDetails}
+              status={selectedStatus === "none" ? "pending" : selectedStatus}
+              note={selectedDayData.note}
+              rpeLabel={selectedAvgRpe != null ? `RPE ${selectedAvgRpe}/10` : undefined}
+              objective={selectedDayData.session.objective}
+              onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
+              onOpen={() => void handleRescheduleSession(selectedDayData.sessionId)}
+            />
           ) : (
-            sessionsForWeek.map(({ day, dayData, status, avgRpe, details }) => (
-              <AthleteSessionCard
-                key={`${dayData.sessionId}-${format(day, "yyyy-MM-dd")}`}
-                dayLabel={format(day, "EEE", { locale: fr }).toUpperCase()}
-                dayNumber={format(day, "d", { locale: fr })}
-                title={dayData.sessionTitle}
-                details={details}
-                status={status === "none" ? "pending" : status}
-                note={dayData.note}
-                rpeLabel={avgRpe != null ? `RPE ${avgRpe}/10` : undefined}
-                objective={dayData.session.objective}
-                onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
-                onOpen={() => void handleRescheduleSession(dayData.sessionId)}
-              />
-            ))
+            <div className="bg-secondary/20 px-3 py-6 text-center">
+              <p className="text-[13px] text-muted-foreground">Aucune séance sur ce jour.</p>
+            </div>
           )}
         </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-px border-b border-border bg-border pt-0">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
-          onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
-        >
-          <MessageCircle className="mr-1.5 h-4 w-4" />
-          Envoyer message
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card"
-          onClick={() =>
-            onOpenPlanForAthlete?.(
-              selectedAthlete.userId,
-              selectedAthlete.displayName,
-              selectedAthlete.groupId || undefined,
-              currentWeek
-            )
-          }
-        >
-          <ClipboardList className="mr-1.5 h-4 w-4" />
-          Modifier semaine
-        </Button>
-        <Button type="button" variant="outline" className="h-12 rounded-none border-0 text-[11px] font-semibold bg-card" onClick={() => void handleResendSession()}>
-          <Send className="mr-1.5 h-4 w-4" />
-          Renvoyer séance
-        </Button>
-      </div>
-      {completionStreak > 0 ? (
-        <p className="border-b border-border bg-secondary/20 px-4 py-2 text-center text-[11px] font-medium text-muted-foreground">
-          Série en cours: {completionStreak} séance{completionStreak > 1 ? "s" : ""} validée{completionStreak > 1 ? "s" : ""}
-        </p>
-      ) : null}
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
     </div>
   );
