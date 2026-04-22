@@ -825,17 +825,17 @@ export function CoachPlanningExperience() {
     const prevWeekStart = subWeeks(weekAnchor, 1);
     const prevWeekEnd = weekAnchor;
     try {
-      const { data, error } = await supabase
-        .from("coaching_sessions")
+      const { data: participations, error } = await supabase
+        .from("coaching_participations")
         .select(
-          "id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks, coach_id, club_id, distance_km, objective, coach_notes, default_location_name, description"
+          "id, coaching_session_id, status, athlete_note, completed_at, scheduled_at, coaching_sessions!inner(id, title, activity_type, scheduled_at, status, target_athletes, target_group_id, session_blocks, coach_id, club_id, distance_km, objective, coach_notes, default_location_name, description)"
         )
-        .in("club_id", memberClubIds)
-        .contains("target_athletes", [user.id])
-        .eq("status", "sent")
-        .gte("scheduled_at", weekAnchor.toISOString())
-        .lt("scheduled_at", weekEnd.toISOString())
-        .order("scheduled_at", { ascending: true });
+        .eq("user_id", user.id)
+        .in("coaching_sessions.club_id", memberClubIds)
+        .eq("coaching_sessions.status", "sent")
+        .gte("coaching_sessions.scheduled_at", weekAnchor.toISOString())
+        .lt("coaching_sessions.scheduled_at", weekEnd.toISOString())
+        .order("scheduled_at", { ascending: true, referencedTable: "coaching_sessions" });
 
       if (error) {
         toast.error("Impossible de charger Mon plan");
@@ -843,21 +843,45 @@ export function CoachPlanningExperience() {
         return;
       }
 
-      const rows = data || [];
-      const sessionIds = rows.map((r) => r.id);
+      const rows = (participations || [])
+        .map((participation) => {
+          const session = Array.isArray(participation.coaching_sessions)
+            ? participation.coaching_sessions[0]
+            : participation.coaching_sessions;
+          if (!session) return null;
+          return {
+            participation,
+            session,
+          };
+        })
+        .filter(Boolean) as Array<{
+        participation: {
+          id: string;
+          coaching_session_id: string;
+          status: string | null;
+          athlete_note: string | null;
+          completed_at: string | null;
+          scheduled_at: string | null;
+        };
+        session: {
+          id: string;
+          title: string;
+          activity_type: string;
+          scheduled_at: string;
+          target_group_id: string | null;
+          session_blocks: unknown;
+          coach_id: string;
+          club_id: string;
+          distance_km: number | null;
+          objective: string | null;
+          coach_notes: string | null;
+          default_location_name: string | null;
+          description: string | null;
+        };
+      }>;
 
-      const { data: participations } = sessionIds.length
-        ? await supabase
-            .from("coaching_participations")
-            .select("id, coaching_session_id, status, athlete_note, completed_at")
-            .eq("user_id", user.id)
-            .in("coaching_session_id", sessionIds)
-        : { data: [] };
-
-      const partBySession = new Map((participations || []).map((p) => [p.coaching_session_id, p]));
-
-      const coachIds = [...new Set(rows.map((r) => r.coach_id))];
-      const clubIds = [...new Set(rows.map((r) => r.club_id))];
+      const coachIds = [...new Set(rows.map((r) => r.session.coach_id))];
+      const clubIds = [...new Set(rows.map((r) => r.session.club_id))];
 
       const [{ data: coachProfiles }, { data: convs }, { data: prevWeekRows }] = await Promise.all([
         coachIds.length
@@ -866,26 +890,27 @@ export function CoachPlanningExperience() {
         clubIds.length
           ? supabase.from("conversations").select("id, group_name").in("id", clubIds)
           : Promise.resolve({ data: [] as Array<{ id: string; group_name: string | null }> }),
-        supabase
-          .from("coaching_sessions")
-          .select("distance_km")
-          .in("club_id", memberClubIds)
-          .contains("target_athletes", [user.id])
-          .eq("status", "sent")
-          .gte("scheduled_at", prevWeekStart.toISOString())
-          .lt("scheduled_at", prevWeekEnd.toISOString()),
+         supabase
+           .from("coaching_participations")
+           .select("coaching_sessions!inner(distance_km)")
+           .eq("user_id", user.id)
+           .in("coaching_sessions.club_id", memberClubIds)
+           .eq("coaching_sessions.status", "sent")
+           .gte("coaching_sessions.scheduled_at", prevWeekStart.toISOString())
+           .lt("coaching_sessions.scheduled_at", prevWeekEnd.toISOString()),
       ]);
 
       const coachById = new Map((coachProfiles || []).map((p) => [p.user_id, p]));
       const clubById = new Map((convs || []).map((c) => [c.id, c.group_name || "Club"]));
 
       const prevKm = (prevWeekRows || []).reduce((acc, row) => {
-        const dk = row.distance_km;
+        const linkedSession = Array.isArray(row.coaching_sessions) ? row.coaching_sessions[0] : row.coaching_sessions;
+        const dk = linkedSession?.distance_km;
         return typeof dk === "number" && dk > 0 ? acc + dk : acc;
       }, 0);
       setPrevWeekAthleteKm(prevKm > 0 ? Math.round(prevKm * 10) / 10 : null);
 
-      const mapped: AthletePlanSessionModel[] = rows.map((row) => {
+      const mapped: AthletePlanSessionModel[] = rows.map(({ participation, session: row }) => {
         const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
         const blocks = rawBlocks.map((block, index) => {
           const source = block as Record<string, unknown>;
@@ -914,7 +939,6 @@ export function CoachPlanningExperience() {
             notes: typeof source.notes === "string" ? source.notes : undefined,
           };
         });
-        const part = partBySession.get(row.id);
         const coach = coachById.get(row.coach_id);
         const coachName = coach?.display_name || coach?.username || "Coach";
         const clubName = clubById.get(row.club_id) || "Club";
@@ -922,16 +946,16 @@ export function CoachPlanningExperience() {
           id: row.id,
           title: row.title,
           sport: parseSport(row.activity_type),
-          assignedDate: row.scheduled_at,
+          assignedDate: participation.scheduled_at || row.scheduled_at,
           blocks,
           coachId: row.coach_id,
           coachName,
           coachAvatarUrl: coach?.avatar_url ?? null,
           clubId: row.club_id,
           clubName,
-          participationId: part?.id ?? null,
-          participationStatus: part?.status ?? null,
-          athleteNote: part?.athlete_note ?? null,
+          participationId: participation.id ?? null,
+          participationStatus: participation.status ?? null,
+          athleteNote: participation.athlete_note ?? null,
           distanceKm: typeof row.distance_km === "number" ? row.distance_km : null,
           objective: row.objective,
           coachNotes: row.coach_notes,
