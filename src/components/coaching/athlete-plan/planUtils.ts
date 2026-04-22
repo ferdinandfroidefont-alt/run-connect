@@ -3,6 +3,42 @@ import type { AthletePlanSessionModel, AthleteWeekSummary } from "./types";
 import { sportLabel } from "./sportTokens";
 import type { SessionBlockLite } from "./sessionBlockTypes";
 
+export type CalendarSummarySport = "running" | "cycling" | "swimming" | "strength" | "rest";
+
+function normalizeRestText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+export function isExplicitRestText(...values: Array<string | null | undefined>) {
+  return values.some((value) => normalizeRestText(value ?? "").includes("repos"));
+}
+
+export function isExplicitRestDay<T extends { title?: string | null; objective?: string | null }>(sessions: T[]) {
+  if (sessions.length === 0) return true;
+  if (sessions.length !== 1) return false;
+  return isExplicitRestText(sessions[0]?.title, sessions[0]?.objective);
+}
+
+export function toCalendarSummarySport(sport: string): CalendarSummarySport {
+  switch (sport) {
+    case "running":
+    case "cycling":
+    case "swimming":
+    case "strength":
+      return sport;
+    default:
+      return "strength";
+  }
+}
+
+export function formatCalendarDistance(distanceKm: number | null | undefined) {
+  if (distanceKm == null || distanceKm <= 0) return null;
+  return `${Math.round(distanceKm * 10) / 10} km`;
+}
+
 export function secondsToLabel(total: number | undefined) {
   if (!total || total <= 0) return "";
   const h = Math.floor(total / 3600);
