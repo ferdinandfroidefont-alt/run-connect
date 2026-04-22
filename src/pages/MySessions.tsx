@@ -1166,16 +1166,12 @@ export default function MySessions() {
                   </div>
                   <div className={emptyStateSx.textBlock}>
                     <h3 className="text-ios-title3 font-semibold text-foreground">
-                      {sessionSource === 'to-confirm'
-                        ? 'Aucune séance à confirmer'
-                        : sessionSource === 'created'
-                          ? 'Aucune séance créée'
-                          : 'Aucune séance rejointe'}
+                      {sessionSource === 'created'
+                        ? 'Aucune séance créée'
+                        : 'Aucune séance rejointe'}
                     </h3>
                     <p className="text-ios-subheadline text-muted-foreground max-w-xs leading-relaxed">
-                      {sessionSource === 'to-confirm'
-                        ? 'Les séances à confirmer s’afficheront ici.'
-                        : sessionSource === 'created'
+                      {sessionSource === 'created'
                         ? 'Créez votre première séance sportive et invitez vos amis à vous rejoindre.'
                         : 'Rejoignez des séances depuis la page d\'accueil pour les retrouver ici.'}
                     </p>
