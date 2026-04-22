@@ -3,7 +3,6 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { parseRCC, computeRCCSummary, formatParsedBlockSummary } from "@/lib/rccParser";
-import { buildWorkoutSegments, computeWorkoutDistance, computeWorkoutDuration } from "@/lib/workoutVisualization";
 import { ModelTabs } from "@/components/coaching/models/ModelTabs";
 import { ModelFilters } from "@/components/coaching/models/ModelFilters";
 import { ModelCard } from "@/components/coaching/models/ModelCard";
@@ -95,8 +94,8 @@ export function ModelsPage({
 
   return (
     <>
-      <div className="space-y-3 pb-6">
-        <div className="ios-card flex items-center justify-between border border-border/60 px-4 py-3 shadow-[var(--shadow-card)]">
+      <div className="space-y-0 pb-6">
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
           <p className="text-[17px] font-semibold text-foreground">Modèles</p>
           <Button type="button" variant="secondary" size="sm" className="h-9 rounded-lg text-[12px] font-semibold" onClick={onCreateModel}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -104,7 +103,7 @@ export function ModelsPage({
           </Button>
         </div>
 
-        <div className="ios-card border border-border/60 px-4 py-2.5 shadow-[var(--shadow-card)]">
+        <div className="border-b border-border bg-card px-4 py-2.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -116,26 +115,23 @@ export function ModelsPage({
           </div>
         </div>
 
-        <div className="ios-card border border-border/60 px-4 py-2 shadow-[var(--shadow-card)]">
+        <div className="border-b border-border bg-card px-4 py-2">
           <ModelFilters value={filter} onChange={setFilter} />
         </div>
-        <div className="ios-card border border-border/60 px-4 py-2 shadow-[var(--shadow-card)]">
+        <div className="border-b border-border bg-card px-4 py-2">
           <ModelTabs value={activeTab} onChange={setActiveTab} />
         </div>
 
-        <div className="ios-card flex flex-col divide-y divide-border border border-border/60 bg-card shadow-[var(--shadow-card)]">
+        <div className="flex flex-col divide-y divide-border border-b border-border bg-card">
           {filtered.map((model) => {
             const parsed = parseRCC(model.rccCode);
-            const segments = buildWorkoutSegments(parsed.blocks);
             const summary = computeRCCSummary(parsed.blocks);
-            const durationMin = computeWorkoutDuration(segments) || summary.totalDurationMin;
-            const distanceKm = computeWorkoutDistance(segments) || summary.totalDistanceKm;
             const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
             return (
               <ModelCard
                 key={model.id}
                 model={model}
-                summaryLine={`${durationMin} min • ${distanceKm} km • ${summary.intensity}`}
+                summaryLine={`${summary.totalDurationMin} min • ${summary.totalDistanceKm} km • ${summary.intensity}`}
                 previewLine={preview}
                 accentColor={getAccentColor(model)}
                 onOpen={() => setSelectedModel(model)}

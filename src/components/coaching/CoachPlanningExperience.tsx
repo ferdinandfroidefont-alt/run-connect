@@ -42,14 +42,12 @@ import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDr
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 import { parseRCC } from "@/lib/rccParser";
-import { buildWorkoutSegments, computeWorkoutDistance, computeWorkoutDuration, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
-import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 
@@ -179,12 +177,7 @@ const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
 });
 
 type CoachClub = { id: string; name: string };
-type AthleteEntry = {
-  id: string;
-  name: string;
-  runningRecords?: unknown;
-  coachRunningEstimate?: unknown;
-};
+type AthleteEntry = { id: string; name: string };
 type GroupEntry = { id: string; name: string };
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -533,10 +526,7 @@ export function CoachPlanningExperience() {
         .eq("conversation_id", activeClubId);
       const memberIds = (members || []).map((m) => m.user_id);
       const { data: profiles } = memberIds.length
-        ? await supabase
-            .from("profiles")
-            .select("user_id, display_name, running_records")
-            .in("user_id", memberIds)
+        ? await supabase.from("profiles").select("user_id, display_name").in("user_id", memberIds)
         : { data: [] };
       const { data: clubGroups } = await supabase
         .from("club_groups")
@@ -557,7 +547,6 @@ export function CoachPlanningExperience() {
         (profiles || []).map((profile) => ({
           id: profile.user_id,
           name: profile.display_name || "Athlète",
-          runningRecords: (profile as { running_records?: unknown }).running_records ?? null,
         }))
       );
       setGroups((clubGroups || []).map((group) => ({ id: group.id, name: group.name })));
@@ -1847,35 +1836,19 @@ export function CoachPlanningExperience() {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const targetedAthleteId = session?.athleteId ?? activeAthleteId;
-                const targetedAthlete = targetedAthleteId ? athletes.find((athlete) => athlete.id === targetedAthleteId) : undefined;
-                const normalizedSegments = session
-                  ? buildWorkoutSegments(session.blocks, {
-                      sport: session.sport,
-                      athleteIntensity: {
-                        coachValidatedRecords: targetedAthlete?.coachRunningEstimate,
-                        athleteRecords: targetedAthlete?.runningRecords,
-                      },
-                    })
-                  : [];
-                const durationMin = session ? computeWorkoutDuration(normalizedSegments) : 0;
-                const distanceKm = session ? computeWorkoutDistance(normalizedSegments) : 0;
+                const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
+                const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
                 const summary = session
                   ? {
                       title: session.title,
-                      duration: durationMin > 0 ? `${durationMin} min` : undefined,
-                      distance: distanceKm > 0 ? `${distanceKm.toFixed(1).replace(".", ",")} km` : undefined,
+                      duration: durationSec > 0 ? secondsToLabel(durationSec) : undefined,
+                      distance: distanceM > 0 ? metersToLabel(distanceM) : undefined,
                       intensityLabel:
                         session.blocks[0]?.intensityMode === "rpe"
                           ? session.blocks[0]?.rpe != null
                             ? `RPE ${session.blocks[0].rpe}`
                             : undefined
-                          : session.blocks[0]?.zone ?? (normalizedSegments.some((seg) => seg.intensitySource && seg.intensitySource !== "fallback") ? "Auto" : undefined),
-                      miniProfile: renderWorkoutMiniProfile(normalizedSegments),
-                      isRestDay:
-                        session.blocks.length > 0 &&
-                        session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown"),
-                      sportHint: session.sport === "cycling" ? "cycling" : session.sport === "swimming" ? "swimming" : session.sport === "strength" ? "strength" : session.sport === "running" ? "running" : "other",
+                          : session.blocks[0]?.zone,
                     }
                   : undefined;
                 const accentColor =
@@ -2084,7 +2057,7 @@ export function CoachPlanningExperience() {
         clubId={activeClubId || undefined}
       />
 
-      {false && coachingTab === "create" && (
+      {coachingTab === "create" && (
         <div className="fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-secondary">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
@@ -2290,19 +2263,6 @@ export function CoachPlanningExperience() {
           </IosFixedPageHeaderShell>
         </div>
       )}
-
-      {coachingTab === "create" && activeClubId ? (
-        <CreateCoachingSessionDialog
-          isOpen={coachingTab === "create"}
-          onClose={() => setCoachingTab("planning")}
-          clubId={activeClubId}
-          preselectedDate={selectedDate}
-          onCreated={() => {
-            setCoachingTab("planning");
-            setWeekAnchor((current) => new Date(current));
-          }}
-        />
-      ) : null}
 
       <Sheet open={blockSheetOpen} onOpenChange={setBlockSheetOpen}>
         <SheetContent

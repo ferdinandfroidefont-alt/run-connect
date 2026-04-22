@@ -262,35 +262,23 @@ export function computeRCCSummary(blocks: ParsedBlock[]): RCCSummary {
   let slowestPaceSec = 0;
 
   for (const b of blocks) {
-    if (b.type === 'interval' && b.repetitions) {
-      const reps = Math.max(1, b.repetitions);
-      const paceSec = b.pace ? paceToSeconds(b.pace) : null;
+    if (b.type === 'interval' && b.distance && b.repetitions) {
+      // Distance from intervals
+      const distKm = (b.distance * b.repetitions) / 1000;
+      totalDistanceKm += distKm;
 
-      // Effort distance
-      if (b.distance) {
-        totalDistanceKm += (b.distance * reps) / 1000;
-      } else if (b.duration && paceSec) {
-        const speedKmPerMin = 60 / paceSec;
-        totalDistanceKm += b.duration * reps * speedKmPerMin;
-      }
-
-      // Effort duration
-      if (b.duration) {
-        totalDurationMin += b.duration * reps;
-      } else if (b.distance && paceSec) {
-        totalDurationMin += ((b.distance / 1000) * (paceSec / 60)) * reps;
-      }
-
-      // Recovery duration + rough recovery distance estimate
-      if (b.recoveryDuration && reps > 1) {
-        const recoveryMin = (b.recoveryDuration * (reps - 1)) / 60;
-        totalDurationMin += recoveryMin;
-        totalDistanceKm += recoveryMin * (1 / 7.2); // ~7:12/km
-      }
-
-      if (paceSec) {
+      // Duration: estimate from pace if available
+      if (b.pace) {
+        const paceSec = paceToSeconds(b.pace);
+        const timePerRepMin = (b.distance / 1000) * (paceSec / 60);
+        totalDurationMin += timePerRepMin * b.repetitions;
         fastestPaceSec = Math.min(fastestPaceSec, paceSec);
         slowestPaceSec = Math.max(slowestPaceSec, paceSec);
+      }
+
+      // Add recovery time
+      if (b.recoveryDuration) {
+        totalDurationMin += (b.recoveryDuration * (b.repetitions - 1)) / 60;
       }
     } else if (b.duration) {
       totalDurationMin += b.duration;
