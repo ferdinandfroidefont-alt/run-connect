@@ -19,6 +19,7 @@ import {
 import type { ProfileSportRecordRow } from "@/components/profile/ProfileRecordsDisplay";
 import { useDistanceUnits } from "@/contexts/DistanceUnitsContext";
 import { kmToMiles, milesToKm } from "@/lib/distanceUnits";
+import { resolveRunningReferences } from "@/lib/athleteIntensity";
 
 type WizardStep = 1 | 2 | 3 | 4;
 type RunningMode = "time" | "pace";
@@ -216,6 +217,20 @@ export default function ProfileSportRecordsEdit() {
 
   const canContinueStep2 = eventLabel.trim().length > 0 && distanceKm > 0;
   const canContinueStep3 = durationSec > 0;
+  const runningZonePreview = useMemo(() => {
+    const runningRows = rows.filter((row) => row.sport_key === "running");
+    const asRecords = runningRows.reduce<Record<string, string>>((acc, row) => {
+      const label = row.event_label.toLowerCase();
+      if (label.includes("5")) acc["5k"] = row.record_value;
+      else if (label.includes("10")) acc["10k"] = row.record_value;
+      else if (label.includes("3000") || label.includes("3")) acc["3k"] = row.record_value;
+      else if (label.includes("1500")) acc["1500m"] = row.record_value;
+      else if (label.includes("800")) acc["800m"] = row.record_value;
+      return acc;
+    }, {});
+    const { refs, source } = resolveRunningReferences({ athleteRecords: asRecords });
+    return { refs, source };
+  }, [rows]);
 
   const resetWizard = () => {
     setStep(1);
@@ -458,6 +473,26 @@ export default function ProfileSportRecordsEdit() {
             <Button variant="outline" className="h-11 flex-1" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1) as WizardStep)}>Retour</Button>
             <Button className="h-11 flex-1" disabled={(step === 2 && !canContinueStep2) || (step === 3 && !canContinueStep3) || step === 4} onClick={() => setStep((s) => Math.min(4, s + 1) as WizardStep)}>
               Suivant
+            </Button>
+          </div>
+
+          <div className="rounded-2xl bg-card p-4">
+            <h3 className="mb-2 text-[14px] font-semibold uppercase tracking-wide text-muted-foreground">Performances / Références</h3>
+            <p className="text-xs text-muted-foreground">
+              Source utilisée pour les zones: {runningZonePreview.source === "athlete_record" ? "records athlète" : "mode neutre"}
+            </p>
+            {runningZonePreview.refs ? (
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg bg-secondary/40 p-2">Endurance: ~{Math.floor(runningZonePreview.refs.easyPaceSecPerKm / 60)}:{String(runningZonePreview.refs.easyPaceSecPerKm % 60).padStart(2, "0")}/km</div>
+                <div className="rounded-lg bg-secondary/40 p-2">Seuil: ~{Math.floor(runningZonePreview.refs.thresholdPaceSecPerKm / 60)}:{String(runningZonePreview.refs.thresholdPaceSecPerKm % 60).padStart(2, "0")}/km</div>
+                <div className="rounded-lg bg-secondary/40 p-2">VMA/VO2: ~{Math.floor(runningZonePreview.refs.vo2PaceSecPerKm / 60)}:{String(runningZonePreview.refs.vo2PaceSecPerKm % 60).padStart(2, "0")}/km</div>
+                <div className="rounded-lg bg-secondary/40 p-2">Sprint: ~{Math.floor(runningZonePreview.refs.sprintPaceSecPerKm / 60)}:{String(runningZonePreview.refs.sprintPaceSecPerKm % 60).padStart(2, "0")}/km</div>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">Ajoute au moins un record running (5k, 10k, 3k, 1500m ou 800m) pour activer le calcul auto.</p>
+            )}
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
+              Recalculer les zones
             </Button>
           </div>
 

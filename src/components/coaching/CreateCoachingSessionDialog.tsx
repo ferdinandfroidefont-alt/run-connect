@@ -31,6 +31,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { buildWorkoutSegments, computeWorkoutDistance, computeWorkoutDuration } from "@/lib/workoutVisualization";
+import { classifyRunningBlockIntensity } from "@/lib/athleteIntensity";
 
 interface CreateCoachingSessionDialogProps {
   isOpen: boolean;
@@ -122,11 +123,21 @@ function defaultBlock(kind: BuilderKind): ParsedBlock {
 }
 
 function colorForBlock(block: ParsedBlock): string {
-  if (block.type === "interval") return "#F97316";
-  if (block.type === "recovery") return "#22C55E";
-  if (block.type === "warmup" || block.type === "cooldown") return "#9CA3AF";
-  const sec = block.pace ? Number.parseInt(block.pace.split(":")[0], 10) * 60 + Number.parseInt(block.pace.split(":")[1] || "0", 10) : 999;
-  if (sec <= 285) return "#8B5CF6";
+  const paceSecPerKm = block.pace
+    ? Number.parseInt(block.pace.split(":")[0], 10) * 60 + Number.parseInt(block.pace.split(":")[1] || "0", 10)
+    : undefined;
+  const intensity = classifyRunningBlockIntensity({
+    type: block.type,
+    zone: block.zone,
+    paceSecPerKm,
+    distanceM: block.distance,
+    references: null,
+    source: "fallback",
+  });
+  if (intensity.band === "interval") return "#F97316";
+  if (intensity.band === "tempo") return "#8B5CF6";
+  if (intensity.band === "recovery") return "#22C55E";
+  if (intensity.band === "transition") return "#9CA3AF";
   return "#60A5FA";
 }
 
@@ -409,6 +420,10 @@ export const CreateCoachingSessionDialog = ({
     if (!blockRpe.length) return 0;
     return Math.round(blockRpe.reduce((a, b) => a + b, 0) / blockRpe.length);
   }, [blockRpe]);
+  const autoIntensityEnabled = useMemo(
+    () => summarySegments.some((segment) => segment.intensitySource && segment.intensitySource !== "fallback"),
+    [summarySegments]
+  );
 
   const canSubmit =
     objective.trim().length > 0 &&
@@ -867,7 +882,9 @@ export const CreateCoachingSessionDialog = ({
                     <p className="mt-1 text-sm font-semibold text-foreground">
                       {summaryDuration} min • {summaryDistance.toFixed(1).replace(".", ",")} km • {summaryLoad} pts
                     </p>
-                    <p className="text-xs text-muted-foreground">Intensité moyenne: {summaryIntensity}/10</p>
+                    <p className="text-xs text-muted-foreground">
+                      Intensité moyenne: {summaryIntensity}/10 • Classification auto: {autoIntensityEnabled ? "active" : "mode neutre"}
+                    </p>
                   </div>
                 </>
               ) : (

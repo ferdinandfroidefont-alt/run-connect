@@ -1,10 +1,18 @@
+import {
+  classifyRunningBlockIntensity,
+  resolveRunningReferences,
+  type AthleteIntensityContext,
+  type IntensityBand,
+} from "@/lib/athleteIntensity";
+
 export type WorkoutSegmentKind = "warmup" | "steady" | "rep" | "recovery" | "cooldown" | "rest";
 
 export interface WorkoutSegment {
   kind: WorkoutSegmentKind;
   durationMin: number;
   distanceKm: number;
-  intensityBand: "endurance" | "interval" | "tempo" | "recovery" | "transition";
+  intensityBand: IntensityBand;
+  intensitySource?: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
 }
 
 export interface MiniProfileBlock {
@@ -53,19 +61,19 @@ function clampPositive(n: number): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function intensityBandFor(kind: string, zone?: string): WorkoutSegment["intensityBand"] {
-  if (kind === "interval" || kind === "rep") return "interval";
-  if (kind === "recovery") return "recovery";
-  if (kind === "warmup" || kind === "cooldown" || kind === "rest") return "transition";
-  if (zone === "Z4" || zone === "Z5" || zone === "Z6") return "tempo";
-  return "endurance";
+export interface BuildWorkoutSegmentsOptions {
+  sport?: "running" | "cycling" | "swimming" | "strength" | "other";
+  athleteIntensity?: AthleteIntensityContext;
 }
 
 export function buildWorkoutSegments(
-  inputBlocks: ParsedLikeBlock[] | SessionLikeBlock[] | undefined | null
+  inputBlocks: ParsedLikeBlock[] | SessionLikeBlock[] | undefined | null,
+  options?: BuildWorkoutSegmentsOptions
 ): WorkoutSegment[] {
   if (!inputBlocks?.length) return [{ kind: "rest", durationMin: 0, distanceKm: 0, intensityBand: "transition" }];
 
+  const sport = options?.sport ?? "running";
+  const refResolution = sport === "running" ? resolveRunningReferences(options?.athleteIntensity) : { refs: null, source: "fallback" as const };
   const segments: WorkoutSegment[] = [];
   for (const raw of inputBlocks) {
     const repetitions = Math.max(1, raw.repetitions || 1);
@@ -94,11 +102,24 @@ export function buildWorkoutSegments(
           ? distanceKm * repetitions
           : estimateDistanceKm(durationMin * repetitions, paceSecPerKm);
 
+      const repIntensity =
+        sport === "running"
+          ? classifyRunningBlockIntensity({
+              type: "interval",
+              zone: raw.zone,
+              paceSecPerKm,
+              distanceM: distanceKm * 1000,
+              durationSec: perRepDuration * 60,
+              references: refResolution.refs,
+              source: refResolution.source,
+            })
+          : { band: "interval" as const, source: "fallback" as const };
       segments.push({
         kind: "rep",
         durationMin: clampPositive(effortDuration || durationMin * repetitions),
         distanceKm: clampPositive(effortDistance),
-        intensityBand: "interval",
+        intensityBand: repIntensity.band,
+        intensitySource: repIntensity.source,
       });
 
       if (recoveryDurationMin > 0 && repetitions > 1) {
@@ -108,6 +129,7 @@ export function buildWorkoutSegments(
           durationMin: totalRecoveryDuration,
           distanceKm: totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN,
           intensityBand: "recovery",
+          intensitySource: refResolution.source,
         });
       }
       continue;
@@ -121,11 +143,24 @@ export function buildWorkoutSegments(
     const segDistance =
       distanceKm > 0 ? distanceKm * repetitions : estimateDistanceKm(segDuration, paceSecPerKm);
 
+    const steadyIntensity =
+      sport === "running"
+        ? classifyRunningBlockIntensity({
+            type: kind,
+            zone: raw.zone,
+            paceSecPerKm,
+            distanceM: distanceKm * 1000,
+            durationSec: segDuration * 60,
+            references: refResolution.refs,
+            source: refResolution.source,
+          })
+        : { band: "endurance" as const, source: "fallback" as const };
     segments.push({
       kind,
       durationMin: clampPositive(segDuration),
       distanceKm: clampPositive(segDistance),
-      intensityBand: intensityBandFor(kind, raw.zone),
+      intensityBand: steadyIntensity.band,
+      intensitySource: steadyIntensity.source,
     });
   }
 
