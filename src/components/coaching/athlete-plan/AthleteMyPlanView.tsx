@@ -240,7 +240,7 @@ function MiniSessionProfile({ session }: { session: AthletePlanSessionModel }) {
   });
 
   return (
-    <div className="flex h-10 items-end gap-1 rounded-[10px] bg-slate-100/80 px-2 py-1">
+    <div className="flex h-10 items-end gap-1 rounded-[10px] bg-muted/80 px-2 py-1">
       {segments.slice(0, 14).map((segment) => (
         <span
           key={segment.key}
