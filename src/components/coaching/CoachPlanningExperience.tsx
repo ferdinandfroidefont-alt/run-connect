@@ -893,33 +893,7 @@ export function CoachPlanningExperience() {
         } else {
           const mapped = (data || []).map<TrainingSession>((row) => {
             const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
-            const blocks = rawBlocks.map((block, index) => {
-              const source = block as Record<string, unknown>;
-              const intensityMode = source.intensityMode === "rpe" ? "rpe" : "zones";
-              const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
-              const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
-              return {
-                id: typeof source.id === "string" ? source.id : uid(),
-                order: typeof source.order === "number" ? source.order : index + 1,
-                type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
-                durationSec: typeof source.durationSec === "number" ? source.durationSec : undefined,
-                distanceM: typeof source.distanceM === "number" ? source.distanceM : undefined,
-                paceSecPerKm: typeof source.paceSecPerKm === "number" ? source.paceSecPerKm : undefined,
-                speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
-                powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
-                repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
-                recoveryDurationSec: typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : undefined,
-                recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
-                recoveryType:
-                  source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                    ? source.recoveryType
-                    : undefined,
-                intensityMode,
-                zone,
-                rpe: typeof source.rpe === "number" ? source.rpe : undefined,
-                notes: typeof source.notes === "string" ? source.notes : undefined,
-              } satisfies SessionBlock;
-            });
+            const blocks = rawBlocks.map(mapStoredBlockToSessionBlock);
             const targetAthletes = Array.isArray(row.target_athletes)
               ? row.target_athletes.filter((value): value is string => typeof value === "string")
               : [];
@@ -1050,33 +1024,7 @@ export function CoachPlanningExperience() {
 
       const mapped: AthletePlanSessionModel[] = rows.map(({ participation, session: row }) => {
         const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
-        const blocks = rawBlocks.map((block, index) => {
-          const source = block as Record<string, unknown>;
-          const intensityMode: "rpe" | "zones" = source.intensityMode === "rpe" ? "rpe" : "zones";
-          const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
-          const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
-          return {
-            id: typeof source.id === "string" ? source.id : uid(),
-            order: typeof source.order === "number" ? source.order : index + 1,
-            type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
-            durationSec: typeof source.durationSec === "number" ? source.durationSec : undefined,
-            distanceM: typeof source.distanceM === "number" ? source.distanceM : undefined,
-            paceSecPerKm: typeof source.paceSecPerKm === "number" ? source.paceSecPerKm : undefined,
-            speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
-            powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
-            repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
-            recoveryDurationSec: typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : undefined,
-            recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
-            recoveryType:
-              source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                ? (source.recoveryType as "walk" | "jog" | "easy")
-                : undefined,
-            intensityMode,
-            zone,
-            rpe: typeof source.rpe === "number" ? source.rpe : undefined,
-            notes: typeof source.notes === "string" ? source.notes : undefined,
-          };
-        });
+        const blocks = rawBlocks.map(mapStoredBlockToSessionBlock);
         const coach = coachById.get(row.coach_id);
         const coachName = coach?.display_name || coach?.username || "Coach";
         const clubName = clubById.get(row.club_id) || "Club";
