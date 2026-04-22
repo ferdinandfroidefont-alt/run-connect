@@ -59,15 +59,7 @@ export function AthleteMyPlanView(props: Props) {
           .filter((s) => isSameDay(parseISO(s.assignedDate), day))
           .sort((a, b) => computeSessionLoad(b) - computeSessionLoad(a));
         const primarySession = daySessions[0] ?? null;
-        const isRest =
-          daySessions.length > 0 &&
-          daySessions.every((session) => {
-            const name = session.title.toLowerCase();
-            const onlyRecoveryBlocks = session.blocks.every(
-              (block) => block.type === "recovery" || block.type === "warmup" || block.type === "cooldown"
-            );
-            return session.sport === "other" || name.includes("repos") || onlyRecoveryBlocks;
-          });
+        const isRest = daySessions.length === 0;
         return {
           day,
           sessions: daySessions,

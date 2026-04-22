@@ -1553,7 +1553,7 @@ export function CoachPlanningExperience() {
         return loadB - loadA;
       });
       const primary = sorted[0];
-      if (isRestLikeSession(primary)) {
+      if (sorted.length === 1 && isRestLikeSession(primary)) {
         output[key] = { sport: "rest", value: "Repos" };
         return;
       }
