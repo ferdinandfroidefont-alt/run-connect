@@ -2,6 +2,7 @@ import type { AthleteIntensityContext, RunningReferenceSet } from "@/lib/athlete
 
 export type AthletePerformanceProfile = {
   runningRecords?: Record<string, unknown> | null;
+  coachRunningRecords?: Record<string, unknown> | null;
 };
 
 export type ComputedZone = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
@@ -60,9 +61,13 @@ export function computeAthletePaces(profile?: AthletePerformanceProfile | null):
 }
 
 export function buildAthleteIntensityContext(profile?: AthletePerformanceProfile | null): AthleteIntensityContext | null {
-  const athleteRecords = computeAthletePaces(profile);
-  if (!athleteRecords) return null;
-  return { athleteRecords };
+  const athleteRecords = computeAthletePaces({ runningRecords: profile?.runningRecords ?? null });
+  const coachValidatedRecords = computeAthletePaces({ runningRecords: profile?.coachRunningRecords ?? null });
+  if (!athleteRecords && !coachValidatedRecords) return null;
+  return {
+    athleteRecords,
+    coachValidatedRecords,
+  };
 }
 
 export function bandToComputedZone(band: "recovery" | "endurance" | "tempo" | "interval" | "transition"): ComputedZone {
