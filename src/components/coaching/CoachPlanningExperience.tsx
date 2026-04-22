@@ -2593,7 +2593,7 @@ export function CoachPlanningExperience() {
           <div className="min-h-0 flex-1 overflow-y-auto">
             {blockStep === "type" ? (
               <div className="space-y-2 px-4 py-4">
-              {BLOCK_TYPES.map((entry) => (
+              {ADD_BLOCK_CHOICES.map((entry) => (
                 <button
                   key={entry.id}
                   type="button"
@@ -2643,6 +2643,23 @@ export function CoachPlanningExperience() {
                       setDraft((prev) => ({
                         ...prev,
                         blocks: [...prev.blocks, createDefaultBlock("recovery", prev.blocks.length + 1)],
+                      }));
+                      setBlockSheetOpen(false);
+                      setBlockForm(null);
+                      return;
+                    }
+                    if (entry.id === "pyramid") {
+                      setDraft((prev) => ({
+                        ...prev,
+                        blocks: [
+                          ...prev.blocks,
+                          {
+                            ...createDefaultBlock("steady", prev.blocks.length + 1),
+                            repetitions: 5,
+                            notes: "[Pyramid]",
+                            zone: "Z3",
+                          },
+                        ],
                       }));
                       setBlockSheetOpen(false);
                       setBlockForm(null);
