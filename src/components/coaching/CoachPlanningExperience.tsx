@@ -1915,9 +1915,6 @@ export function CoachPlanningExperience() {
                 const workoutMetrics = session
                   ? resolveWorkoutMetrics({
                       segments: normalizedSegments,
-                      explicitDistanceKm: session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000,
-                      explicitDurationMin:
-                        session.blocks.reduce((acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60, 0) || null,
                     })
                   : null;
                 const summary = session
