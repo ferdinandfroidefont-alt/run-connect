@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { parseRCC, formatParsedBlockSummary } from "@/lib/rccParser";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
-import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
+import { resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { ModelTabs } from "@/components/coaching/models/ModelTabs";
 import { ModelFilters } from "@/components/coaching/models/ModelFilters";
 import { ModelCard } from "@/components/coaching/models/ModelCard";

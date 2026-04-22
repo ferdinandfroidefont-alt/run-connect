@@ -985,22 +985,15 @@ export function CoachPlanningExperience() {
     [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
-  const totalDurationSec = useMemo(
-    () => draft.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0),
-    [draft.blocks]
-  );
-  const totalDistanceM = useMemo(
-    () => draft.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0),
-    [draft.blocks]
-  );
+  const previewSegments = useMemo(() => buildWorkoutSegments(draft.blocks, { sport: draft.sport }), [draft.blocks, draft.sport]);
+  const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
+  const totalDurationSec = useMemo(() => Math.round((previewMetrics.durationMin || 0) * 60), [previewMetrics.durationMin]);
+  const totalDistanceM = useMemo(() => Math.round((previewMetrics.distanceKm || 0) * 1000), [previewMetrics.distanceKm]);
   const totalEstimatedLoad = useMemo(
     () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
     [draft.blocks]
   );
-  const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(buildWorkoutSegments(draft.blocks, { sport: draft.sport })),
-    [draft.blocks, draft.sport]
-  );
+  const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
   const selectedDraftBlock = useMemo(
     () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
     [draft.blocks, selectedEditorBlockId]
