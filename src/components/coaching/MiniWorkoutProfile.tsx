@@ -25,9 +25,11 @@ export function MiniWorkoutProfile({
   const profile = blocks?.length
     ? blocks
     : [{ width: 100, height: isRestDay ? 6 : compact ? 12 : 16, color: "hsl(var(--muted))", opacity: 0.8 }];
+  const blockGap = variant === "premiumCompact" ? 2 : 4;
+  const availableWidth = 100 - blockGap * Math.max(0, profile.length - 1);
   const totalWidth = profile.reduce((acc, block) => acc + Math.max(block.width, 0), 0);
   const normalized = totalWidth > 0
-    ? profile.map((block) => ({ ...block, width: (block.width / totalWidth) * 100 }))
+    ? profile.map((block) => ({ ...block, width: (Math.max(block.width, 0) / totalWidth) * Math.max(availableWidth, 12) }))
     : profile;
 
   return (
@@ -59,8 +61,9 @@ export function MiniWorkoutProfile({
                   : "rounded-full"
               )}
               style={{
-                flexBasis: `${Math.max(block.width, 2)}%`,
-                minWidth: compact ? (variant === "premiumCompact" ? "1.5px" : "3px") : "4px",
+                flexGrow: Math.max(block.width, 0.001),
+                flexBasis: 0,
+                minWidth: compact ? (variant === "premiumCompact" ? "1px" : "3px") : variant === "premiumCompact" ? "1.5px" : "4px",
                 height: `${resolvedHeight}px`,
                 backgroundColor: block.color,
                 opacity: isFineRecovery ? (block.opacity ?? 1) * 0.65 : (block.opacity ?? 1),

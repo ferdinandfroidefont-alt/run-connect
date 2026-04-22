@@ -296,14 +296,13 @@ export function renderWorkoutMiniProfile(
     compact.push(seg);
   }
 
-  const trimmed = compact.slice(0, compactDensity ? 22 : 14);
   const minWeight = compactDensity ? 0.28 : 0.6;
-  const total = Math.max(trimmed.reduce((acc, s) => acc + Math.max(s.durationMin, s.distanceKm * 8, minWeight), 0), 1);
+  const distributed = compact;
 
-  return trimmed.map((seg) => {
+  return distributed.map((seg) => {
     const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
     return {
-      width: Math.max(1, (weight / total) * 100),
+      width: weight,
       height: heightForBand(seg.intensityBand),
       color: colorForBand(seg.intensityBand),
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
@@ -316,9 +315,9 @@ function colorForBand(band: WorkoutSegment["intensityBand"]): string {
 }
 
 function heightForBand(band: WorkoutSegment["intensityBand"]): number {
-  if (band === "interval") return 30;
-  if (band === "tempo") return 26;
-  if (band === "recovery") return 12;
-  if (band === "transition") return 10;
-  return 16;
+  if (band === "interval") return 34;
+  if (band === "tempo") return 28;
+  if (band === "recovery") return 11;
+  if (band === "transition") return 9;
+  return 18;
 }
