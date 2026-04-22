@@ -12,6 +12,7 @@ import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
+import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
