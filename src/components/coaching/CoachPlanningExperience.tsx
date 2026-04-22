@@ -2647,7 +2647,6 @@ export function CoachPlanningExperience() {
                       </div>
                     ) : null}
                   </div>
-                </div>
               </div>
             ) : (
               <ModelsPage
