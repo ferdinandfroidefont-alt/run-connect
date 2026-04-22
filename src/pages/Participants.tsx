@@ -257,7 +257,7 @@ export default function Participants() {
         }
         const existing = userMarkerRef.current;
         if (existing) {
-          existing.setLngLat([userPosition.lng, userPosition.lat]);
+          existing.setLngLat([effectiveUserPosition.lng, effectiveUserPosition.lat]);
           return;
         }
 
