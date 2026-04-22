@@ -54,6 +54,8 @@ import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboa
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { buildAthleteIntensityContext } from "@/lib/athleteWorkoutContext";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
@@ -194,7 +196,7 @@ const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
 });
 
 type CoachClub = { id: string; name: string };
-type AthleteEntry = { id: string; name: string };
+type AthleteEntry = { id: string; name: string; runningRecords?: Record<string, unknown> | null };
 type GroupEntry = { id: string; name: string };
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
