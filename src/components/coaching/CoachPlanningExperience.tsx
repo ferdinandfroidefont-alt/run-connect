@@ -2287,11 +2287,11 @@ export function CoachPlanningExperience() {
                     <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
                       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_top,hsl(var(--border))_1px,transparent_1px)] bg-[size:32px_100%,100%_28px] opacity-35" />
                       <div className="relative flex min-h-[116px] items-end gap-1.5 overflow-x-auto pb-1">
-                        {previewBars.map((bar) => (
+                        {previewBars.map((bar, index) => (
                           <div
-                            key={bar.key}
+                            key={`${index}-${bar.width}-${bar.height}`}
                             className="shrink-0 rounded-t-[8px] rounded-b-[3px]"
-                            style={{ width: `${bar.width}px`, height: `${bar.height}px`, backgroundColor: bar.color, opacity: bar.opacity }}
+                            style={{ width: `${Math.max(bar.width, 6)}%`, height: `${bar.height}px`, backgroundColor: bar.color, opacity: bar.opacity }}
                           />
                         ))}
                       </div>
