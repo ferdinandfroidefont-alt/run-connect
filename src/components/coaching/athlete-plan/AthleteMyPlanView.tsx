@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { MoreHorizontal } from "lucide-react";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
-import { cn } from "@/lib/utils";
+import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
+import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
@@ -96,13 +96,22 @@ export function AthleteMyPlanView(props: Props) {
             const selected = isSameDay(row.day, selectedDate);
             const dayLabel = format(row.day, "EEEE", { locale: fr });
             const hasSession = row.sessions.length > 0;
-            const summary = row.primarySession ? sessionSummaryLine(row.primarySession) : null;
-            const accentColorClass = row.primarySession ? sportDotClass(row.primarySession.sport) : "bg-muted-foreground/50";
+            const segments = row.primarySession
+              ? buildWorkoutSegments(row.primarySession.blocks, { sport: row.primarySession.sport })
+              : [];
+            const metrics = row.primarySession
+              ? resolveWorkoutMetrics({
+                  segments,
+                  explicitDistanceKm: row.primarySession.distanceKm,
+                  explicitDurationMin:
+                    row.primarySession.blocks.reduce(
+                      (acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60,
+                      0
+                    ) || null,
+                })
+              : null;
             return (
-              <div
-                key={row.day.toISOString()}
-                className={accentColorClass}
-              >
+              <div key={row.day.toISOString()} className={row.primarySession ? sportDotClass(row.primarySession.sport) : "bg-muted-foreground/50"}>
                 <DayPlanningRow
                   dayLabel={dayLabel}
                   dateLabel={format(row.day, "d MMM", { locale: fr })}
@@ -110,14 +119,23 @@ export function AthleteMyPlanView(props: Props) {
                   session={
                     hasSession
                       ? {
-                          title: row.isRest ? "Repos" : row.primarySession?.title ?? "Séance",
-                          duration: row.isRest ? undefined : summary ?? undefined,
-                          distance: undefined,
-                          intensityLabel: row.sessions.length > 1 ? `${row.sessions.length} séances` : undefined,
+                          title: buildWorkoutHeadline({
+                            title: row.primarySession?.title,
+                            segments,
+                            sport: row.primarySession?.sport,
+                            isRestDay: row.isRest,
+                          }),
+                          subtitle: row.primarySession?.title,
+                          duration: row.isRest ? undefined : metrics?.durationLabel,
+                          distance: row.isRest ? undefined : metrics?.distanceLabel,
+                          intensityLabel: row.sessions.length > 1 ? `${row.sessions.length} séances` : metrics?.intensityLabel,
+                          miniProfile: renderWorkoutMiniProfile(segments),
+                          sportHint: row.primarySession?.sport,
+                          isRestDay: row.isRest,
                         }
                       : undefined
                   }
-                  accentColor="hsl(var(--primary))"
+                  accentColor={workoutAccentColor(segments, row.primarySession?.sport, row.isRest)}
                   emptyLabel="Aucune séance"
                   onAdd={() => {
                     onSelectDate(row.day);
@@ -139,14 +157,6 @@ export function AthleteMyPlanView(props: Props) {
                   allowSessionActions={false}
                   hideActionSlot={!hasSession}
                 />
-                {hasSession && !row.isRest ? (
-                  <div className="pointer-events-none -mt-12 ml-[5.5rem] mr-14 mb-3 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <MiniSessionProfile session={row.primarySession!} />
-                      <MoreHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    </div>
-                  </div>
-                ) : null}
               </div>
             );
           })
@@ -195,85 +205,3 @@ function computeSessionLoad(session: AthletePlanSessionModel): number {
   return seconds > 0 ? seconds / 3600 : 0.2;
 }
 
-function sessionSummaryLine(session: AthletePlanSessionModel): string {
-  const totalDurationSec = session.blocks.reduce(
-    (acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1),
-    0
-  );
-  const durationLabel = durationToLabel(totalDurationSec);
-  const distance = kmForSession(session);
-  const distanceLabel = distance > 0 ? `${Number(distance.toFixed(1)).toString().replace(".", ",")} km` : null;
-  const effortLabel = effortLabelForSession(session);
-  return [durationLabel, distanceLabel, effortLabel].filter(Boolean).join(" • ");
-}
-
-function durationToLabel(totalDurationSec: number): string | null {
-  if (!totalDurationSec) return null;
-  const minutes = Math.round(totalDurationSec / 60);
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours}h` : `${hours}h${rest.toString().padStart(2, "0")}`;
-}
-
-function effortLabelForSession(session: AthletePlanSessionModel): string {
-  const intervalBlocks = session.blocks.filter((block) => block.type === "interval").length;
-  if (intervalBlocks > 0) return `${intervalBlocks} x fractionné`;
-  if (session.blocks.some((block) => block.zone === "Z4" || block.zone === "Z5" || block.zone === "Z6")) return "Tempo / seuil";
-  if (session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown")) return "Récup";
-  return "Endurance";
-}
-
-function MiniSessionProfile({ session }: { session: AthletePlanSessionModel }) {
-  const total = Math.max(
-    session.blocks.reduce((acc, block) => acc + estimateSegmentWeight(block.durationSec || 0), 0),
-    1
-  );
-  const segments = session.blocks.flatMap((block) => {
-    const repeated = Math.max(1, block.repetitions || 1);
-    const profile = blockVisualProfile(block.type, block.zone);
-    return Array.from({ length: repeated }, (_, index) => ({
-      key: `${block.id}-${index}`,
-      width: Math.max(8, Math.round((estimateSegmentWeight(block.durationSec || 0) / repeated / total) * 100)),
-      ...profile,
-    }));
-  });
-
-  return (
-    <div className="flex h-10 items-end gap-1 rounded-[10px] bg-muted/80 px-2 py-1">
-      {segments.slice(0, 14).map((segment) => (
-        <span
-          key={segment.key}
-          className={cn("rounded-[7px]", segment.color)}
-          style={{
-            width: `${segment.width}%`,
-            minWidth: "8px",
-            maxWidth: "38%",
-            height: `${segment.height}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function estimateSegmentWeight(durationSec: number): number {
-  if (!durationSec) return 240;
-  return Math.max(120, durationSec);
-}
-
-function blockVisualProfile(type: string, zone?: string) {
-  if (type === "recovery" || type === "cooldown") {
-    return { color: "bg-emerald-500", height: 10 };
-  }
-  if (type === "interval") {
-    return { color: "bg-orange-500", height: 30 };
-  }
-  if (type === "steady" && (zone === "Z4" || zone === "Z5" || zone === "Z6")) {
-    return { color: "bg-violet-500", height: 28 };
-  }
-  if (type === "warmup") {
-    return { color: "bg-slate-300", height: 8 };
-  }
-  return { color: "bg-primary", height: 20 };
-}

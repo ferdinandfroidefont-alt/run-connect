@@ -40,6 +40,8 @@ import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearch
 import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
+import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
 import { ModelsPage } from "@/components/coaching/models/ModelsPage";
 import type { SessionModelItem } from "@/components/coaching/models/types";
@@ -299,63 +301,6 @@ function blockEstimatedLoad(block: SessionBlock) {
     block.type === "recovery" || block.type === "cooldown" ? 0.7 :
     1;
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
-}
-
-function buildPreviewBars(blocks: SessionBlock[]) {
-  if (!blocks.length) {
-    return Array.from({ length: 10 }, (_, index) => ({
-      key: `placeholder-${index}`,
-      width: 10,
-      height: index % 3 === 1 ? 22 : index % 3 === 2 ? 34 : 16,
-      color: "hsl(var(--muted))",
-      opacity: index > 5 ? 0.45 : 0.72,
-    }));
-  }
-
-  return blocks.flatMap((block, blockIndex) => {
-    const repetitions = Math.max(1, block.repetitions || 1);
-    const durationWeight = Math.max(1, Math.round((block.durationSec || 900) / 180));
-    const baseWidth = Math.min(24, Math.max(8, durationWeight * (block.type === "interval" ? 2 : 3)));
-
-    if (block.type === "interval") {
-      return Array.from({ length: repetitions * 2 - 1 }, (_, segmentIndex) => {
-        const isRecovery = segmentIndex % 2 === 1;
-        return {
-          key: `${block.id}-${segmentIndex}`,
-          width: isRecovery ? Math.max(8, Math.round(baseWidth * 0.75)) : baseWidth,
-          height: isRecovery ? 20 : 42,
-          color: blockGraphColor(block.type, isRecovery),
-          opacity: 1,
-        };
-      });
-    }
-
-    if (block.notes?.includes("[Pyramid]")) {
-      const steps = Math.max(3, Math.min(7, repetitions || 5));
-      const peak = Math.ceil(steps / 2);
-      return Array.from({ length: steps }, (_, segmentIndex) => {
-        const level = segmentIndex < peak ? segmentIndex + 1 : steps - segmentIndex;
-        return {
-          key: `${block.id}-${segmentIndex}`,
-          width: Math.max(8, Math.round(baseWidth * 0.9)),
-          height: 16 + level * 8,
-          color: "hsl(var(--chart-4))",
-          opacity: 1,
-        };
-      });
-    }
-
-    return [{
-      key: `${block.id}-${blockIndex}`,
-      width: Math.max(10, baseWidth * Math.max(1, repetitions)),
-      height:
-        block.type === "warmup" ? 18 :
-        block.type === "cooldown" || block.type === "recovery" ? 14 :
-        28,
-      color: blockGraphColor(block.type),
-      opacity: 1,
-    }];
-  });
 }
 
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
@@ -1052,7 +997,10 @@ export function CoachPlanningExperience() {
     () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
     [draft.blocks]
   );
-  const previewBars = useMemo(() => buildPreviewBars(draft.blocks), [draft.blocks]);
+  const previewBars = useMemo(
+    () => renderWorkoutMiniProfile(buildWorkoutSegments(draft.blocks, { sport: draft.sport })),
+    [draft.blocks, draft.sport]
+  );
   const selectedDraftBlock = useMemo(
     () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
     [draft.blocks, selectedEditorBlockId]
@@ -1955,8 +1903,6 @@ export function CoachPlanningExperience() {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
-                const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
                 const normalizedSegments = session
                   ? buildWorkoutSegments(session.blocks, {
                       sport: session.sport,
@@ -1973,17 +1919,21 @@ export function CoachPlanningExperience() {
                           ? "running"
                           : "other"
                   : undefined;
+                const workoutMetrics = session
+                  ? resolveWorkoutMetrics({
+                      segments: normalizedSegments,
+                      explicitDistanceKm: session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000,
+                      explicitDurationMin:
+                        session.blocks.reduce((acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60, 0) || null,
+                    })
+                  : null;
                 const summary = session
                   ? {
-                      title: session.title,
-                      duration: durationSec > 0 ? secondsToLabel(durationSec) : undefined,
-                      distance: distanceM > 0 ? metersToLabel(distanceM) : undefined,
-                      intensityLabel:
-                        session.blocks[0]?.intensityMode === "rpe"
-                          ? session.blocks[0]?.rpe != null
-                            ? `RPE ${session.blocks[0].rpe}`
-                            : undefined
-                          : session.blocks[0]?.zone ?? (normalizedSegments.some((seg) => seg.intensitySource && seg.intensitySource !== "fallback") ? "Auto" : undefined),
+                      title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                      subtitle: session.title,
+                      duration: workoutMetrics?.durationLabel,
+                      distance: workoutMetrics?.distanceLabel,
+                      intensityLabel: workoutMetrics?.intensityLabel,
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
                       isRestDay:
                         session.blocks.length > 0 &&
@@ -1991,14 +1941,7 @@ export function CoachPlanningExperience() {
                       sportHint,
                     }
                   : undefined;
-                const accentColor =
-                  !session ? "#9CA3AF" :
-                  session.sport === "cycling" ? "#EAB308" :
-                  session.blocks[0]?.type === "recovery" ? "#22C55E" :
-                  session.blocks[0]?.type === "interval" ? "#F97316" :
-                  session.blocks[0]?.type === "steady" ? "#8B5CF6" :
-                  session.sport === "running" ? "#60A5FA" :
-                  "#9CA3AF";
+                const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
                 return (
                   <DayPlanningRow
                     key={day.toISOString()}
@@ -2335,18 +2278,11 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-card p-3">
-                    <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
-                      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_top,hsl(var(--border))_1px,transparent_1px)] bg-[size:32px_100%,100%_28px] opacity-35" />
-                      <div className="relative flex min-h-[116px] items-end gap-1.5 overflow-x-auto pb-1">
-                        {previewBars.map((bar) => (
-                          <div
-                            key={bar.key}
-                            className="shrink-0 rounded-t-[8px] rounded-b-[3px]"
-                            style={{ width: `${bar.width}px`, height: `${bar.height}px`, backgroundColor: bar.color, opacity: bar.opacity }}
-                          />
-                        ))}
-                      </div>
+                    <div className="rounded-2xl border border-border bg-card p-3">
+                      <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
+                        <div className="relative">
+                          <MiniWorkoutProfile blocks={previewBars} className="h-[116px] items-end rounded-[16px] bg-transparent px-0 py-0" />
+                        </div>
                       {draft.blocks.length === 0 ? (
                         <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
                           <div>

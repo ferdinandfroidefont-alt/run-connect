@@ -1,5 +1,7 @@
 import { MoreHorizontal, Plus } from "lucide-react";
+import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { Button } from "@/components/ui/button";
+import type { MiniProfileBlock } from "@/lib/workoutVisualization";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 
 interface ModelCardProps {
@@ -7,12 +9,13 @@ interface ModelCardProps {
   summaryLine: string;
   previewLine: string;
   accentColor: string;
+  miniProfile?: MiniProfileBlock[];
   onOpen: () => void;
   onAdd: () => void;
   onMenu?: () => void;
 }
 
-export function ModelCard({ model, summaryLine, previewLine, accentColor, onOpen, onAdd, onMenu }: ModelCardProps) {
+export function ModelCard({ model, summaryLine, previewLine, accentColor, miniProfile, onOpen, onAdd, onMenu }: ModelCardProps) {
   return (
     <div className="overflow-hidden bg-card">
       <div className="flex">
@@ -21,6 +24,9 @@ export function ModelCard({ model, summaryLine, previewLine, accentColor, onOpen
           <button type="button" className="w-full text-left" onClick={onOpen}>
             <p className="truncate text-[15px] font-semibold text-foreground">{model.title}</p>
             <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{summaryLine}</p>
+            <div className="mt-2">
+              <MiniWorkoutProfile blocks={miniProfile} compact />
+            </div>
             <p className="mt-1 truncate text-[12px] text-foreground/80">{previewLine}</p>
           </button>
           <div className="mt-3 flex items-center gap-2">

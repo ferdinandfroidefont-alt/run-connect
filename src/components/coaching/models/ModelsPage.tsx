@@ -3,6 +3,8 @@ import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { parseRCC, computeRCCSummary, formatParsedBlockSummary } from "@/lib/rccParser";
+import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { ModelTabs } from "@/components/coaching/models/ModelTabs";
 import { ModelFilters } from "@/components/coaching/models/ModelFilters";
 import { ModelCard } from "@/components/coaching/models/ModelCard";
@@ -27,16 +29,6 @@ const ACTIVITY_TO_FILTER: Record<string, ModelSportFilter> = {
   cycling: "cycling",
   strength: "strength",
 };
-
-function getAccentColor(model: SessionModelItem) {
-  const category = (model.category || "").toLowerCase();
-  if (category.includes("endurance")) return "#22C55E";
-  if (category.includes("threshold")) return "#8B5CF6";
-  if (category.includes("vo2")) return "#EF4444";
-  if (category.includes("recovery")) return "#3B82F6";
-  if (model.activityType === "cycling") return "#EAB308";
-  return "#60A5FA";
-}
 
 export function ModelsPage({
   weekDays,
@@ -125,15 +117,22 @@ export function ModelsPage({
         <div className="flex flex-col divide-y divide-border border-b border-border bg-card">
           {filtered.map((model) => {
             const parsed = parseRCC(model.rccCode);
-            const summary = computeRCCSummary(parsed.blocks);
+            const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
+            const metrics = resolveWorkoutMetrics({
+              segments,
+              explicitDistanceKm: computeRCCSummary(parsed.blocks).totalDistanceKm,
+              explicitDurationMin: computeRCCSummary(parsed.blocks).totalDurationMin,
+            });
             const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
+            const headline = buildWorkoutHeadline({ title: model.title, segments, sport: model.activityType as any });
             return (
               <ModelCard
                 key={model.id}
                 model={model}
-                summaryLine={`${summary.totalDurationMin} min • ${summary.totalDistanceKm} km • ${summary.intensity}`}
+                summaryLine={[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
                 previewLine={preview}
-                accentColor={getAccentColor(model)}
+                accentColor={workoutAccentColor(segments, model.activityType as any)}
+                miniProfile={renderWorkoutMiniProfile(segments)}
                 onOpen={() => setSelectedModel(model)}
                 onAdd={() => setSheetModel(model)}
                 onMenu={
