@@ -235,6 +235,19 @@ function paceToLabel(paceSecPerKm?: number) {
   return `${min}'${sec.toString().padStart(2, "0")}''/km`;
 }
 
+function compactPaceLabel(paceSecPerKm?: number) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return "—";
+  const min = Math.floor(paceSecPerKm / 60);
+  const sec = paceSecPerKm % 60;
+  return `${min}'${sec.toString().padStart(2, "0")}`;
+}
+
+function formatZoneBadge(zone?: ZoneKey) {
+  if (!zone) return "Zone auto";
+  const meta = ZONE_META.find((item) => item.zone === zone);
+  return meta ? `${zone} · ${meta.description}` : zone;
+}
+
 function isPositive(value?: number) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
