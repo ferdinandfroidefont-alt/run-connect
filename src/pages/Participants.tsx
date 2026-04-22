@@ -151,6 +151,18 @@ export default function Participants() {
     return rows;
   }, [participantPositions]);
 
+  const staticFallbackCenter = normalizeLngLat(effectiveUserPosition);
+  const staticFallbackMapUrl = useMemo(
+    () =>
+      buildSessionStaticMapUrl({
+        routePath: [],
+        pin: staticFallbackCenter,
+        width: 1280,
+        height: 1280,
+      }),
+    [staticFallbackCenter.lat, staticFallbackCenter.lng]
+  );
+
   const computedLiveState = useMemo<"none" | "upcoming" | "live">(() => {
     if (!session || !sessionAllowsLive) return "none";
     if (!inLiveWindow) return "upcoming";
