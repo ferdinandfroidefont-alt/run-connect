@@ -123,6 +123,7 @@ export default function Participants() {
   const userMarkerRef = useRef<Marker | null>(null);
   const rdvMarkerRef = useRef<Marker | null>(null);
   const participantMarkersRef = useRef<Map<string, Marker>>(new Map());
+  const hasInitialCenteredRef = useRef(false);
   const effectiveUserPosition = isValidLngLat(userPosition)
     ? userPosition
     : isValidLngLat(fallbackUserPosition)
@@ -187,6 +188,16 @@ export default function Participants() {
       zoom: 14.3,
     });
   }, []);
+
+  useEffect(() => {
+    if (!effectiveUserPosition) {
+      hasInitialCenteredRef.current = false;
+      return;
+    }
+    if (!mapReady || hasInitialCenteredRef.current) return;
+    fitDefaultView();
+    hasInitialCenteredRef.current = true;
+  }, [effectiveUserPosition, fitDefaultView, mapReady]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
