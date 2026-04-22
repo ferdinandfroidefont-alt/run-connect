@@ -1005,7 +1005,7 @@ export function CoachPlanningExperience() {
           locationName: row.default_location_name,
           description: row.description,
           hasConflict: false,
-            athleteIntensity: athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null),
+            athleteIntensity: athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null, null),
         };
       });
       setAthletePlanSessions(mapped);
@@ -1061,7 +1061,7 @@ export function CoachPlanningExperience() {
         return {
           ...session,
           athleteIntensity:
-            session.athleteIntensity ?? athleteIntensityFromRunningRecords(directAthlete?.runningRecords ?? groupAthlete?.runningRecords ?? null),
+            session.athleteIntensity ?? athleteIntensityFromRunningRecords(directAthlete?.runningRecords ?? groupAthlete?.runningRecords ?? null, directAthlete?.coachRunningRecords ?? groupAthlete?.coachRunningRecords ?? null),
         };
       }),
     [filteredSessions, athletes, activeAthleteId]
@@ -1069,10 +1069,10 @@ export function CoachPlanningExperience() {
 
   const activeAthleteIntensity = useMemo(() => {
     if (effectiveAthleteMode) {
-      return athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null);
+      return athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null, null);
     }
     const selectedAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
-    return athleteIntensityFromRunningRecords(selectedAthlete?.runningRecords ?? null);
+    return athleteIntensityFromRunningRecords(selectedAthlete?.runningRecords ?? null, selectedAthlete?.coachRunningRecords ?? null);
   }, [activeAthleteId, athletes, effectiveAthleteMode, userProfile?.running_records]);
 
   const previewSegments = useMemo(
