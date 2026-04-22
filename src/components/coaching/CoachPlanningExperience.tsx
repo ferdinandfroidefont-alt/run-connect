@@ -2556,101 +2556,8 @@ export function CoachPlanningExperience() {
                               </button>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-2">
-                              <Button
-                                variant="secondary"
-                                className="h-10 justify-start rounded-xl text-[13px]"
-                                onClick={() => {
-                                  const total = selectedDraftBlock.durationSec || 0;
-                                  const nextA = String(Math.floor(total / 3600));
-                                  const nextB = String(Math.floor((total % 3600) / 60));
-                                  const nextC = String(total % 60);
-                                  setWheelAValue(nextA);
-                                  setWheelBValue(nextB);
-                                  setWheelCValue(nextC);
-                                  openWheelColumns(
-                                    "Durée du bloc",
-                                    [
-                                      { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                    ],
-                                    () => {
-                                      const next =
-                                        Number.parseInt(wheelARef.current, 10) * 3600 +
-                                        Number.parseInt(wheelBRef.current, 10) * 60 +
-                                        Number.parseInt(wheelCRef.current, 10);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, durationSec: next }, "duration")
-                                          : { ...block, durationSec: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                Durée: {secondsToLabel(selectedDraftBlock.durationSec) || "Non définie"}
-                              </Button>
-
-                              <Button
-                                variant="secondary"
-                                className="h-10 justify-start rounded-xl text-[13px]"
-                                onClick={() => {
-                                  const meters = selectedDraftBlock.distanceM || 0;
-                                  const wholeKm = Math.floor(meters / 1000);
-                                  const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                  setWheelAValue(String(wholeKm));
-                                  setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                  setWheelUnit("km");
-                                  openWheelColumns(
-                                    "Distance du bloc",
-                                    [
-                                      { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                      { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                    ],
-                                    () => {
-                                      const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, distanceM: next }, "distance")
-                                          : { ...block, distanceM: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                Distance: {metersToLabel(selectedDraftBlock.distanceM) || "Non définie"}
-                              </Button>
-
-                              <Button
-                                variant="secondary"
-                                className="h-10 justify-start rounded-xl text-[13px]"
-                                onClick={() => {
-                                  const pace = selectedDraftBlock.paceSecPerKm || 330;
-                                  setWheelAValue(String(Math.floor(pace / 60)));
-                                  setWheelBValue(String(pace % 60));
-                                  setWheelUnit("min/km");
-                                  openWheelColumns(
-                                    "Allure du bloc",
-                                    [
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                    ],
-                                    () => {
-                                      const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, paceSecPerKm: next }, "pace")
-                                          : { ...block, paceSecPerKm: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                Allure: {paceToLabel(selectedDraftBlock.paceSecPerKm) || "Non définie"}
-                              </Button>
-
-                              {selectedDraftBlock.type === "interval" || selectedDraftBlock.notes?.includes("[Pyramid]") ? (
+                            {selectedDraftBlock.type === "interval" || selectedDraftBlock.notes?.includes("[Pyramid]") ? (
+                              <div className="grid grid-cols-1 gap-2">
                                 <Button
                                   variant="secondary"
                                   className="h-10 justify-start rounded-xl text-[13px]"
@@ -2665,13 +2572,8 @@ export function CoachPlanningExperience() {
                                 >
                                   {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)}
                                 </Button>
-                              ) : null}
-
-                              <div className="rounded-2xl border border-border bg-secondary/30 px-3 py-2">
-                                <p className="text-[11px] text-muted-foreground">Zone cible</p>
-                                <p className="text-[13px] font-semibold text-foreground">{formatZoneBadge(selectedDraftBlock.zone)}</p>
                               </div>
-                            </div>
+                            ) : null}
                           </div>
                         ) : null}
 
