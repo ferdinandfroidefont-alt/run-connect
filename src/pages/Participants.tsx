@@ -157,12 +157,12 @@ export default function Participants() {
   const fitDefaultView = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
+    const rect = map.getContainer()?.getBoundingClientRect();
+    if (!rect || rect.width < 8 || rect.height < 8) return;
     const center = normalizeLngLat(userPositionRef.current);
-    map.easeTo({
+    map.jumpTo({
       center: [center.lng, center.lat],
       zoom: 14.3,
-      duration: 450,
-      essential: true,
     });
   }, []);
 
@@ -184,29 +184,17 @@ export default function Participants() {
           return;
         }
         mapRef.current = map;
-        let armedFallback = true;
-        const styleFallbackTimer = window.setTimeout(() => {
-          if (!armedFallback || cancelled || !mapRef.current) return;
-          try {
-            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
-          } catch {
-            // Ignore, on garde la carte même si le style custom échoue.
-          }
-          safeMapResize(mapRef.current);
-          setMapReady(true);
-        }, 1200);
-
-        const clearFallback = () => {
-          armedFallback = false;
-          window.clearTimeout(styleFallbackTimer);
-        };
+        let didBecomeReady = false;
 
         const onReady = () => {
-          if (cancelled) return;
-          clearFallback();
+          if (cancelled || didBecomeReady) return;
+          didBecomeReady = true;
           setMapReady(true);
-          fitDefaultView();
-          const t1 = window.setTimeout(() => safeMapResize(mapRef.current), 0);
+          safeMapResize(mapRef.current);
+          const t1 = window.setTimeout(() => {
+            safeMapResize(mapRef.current);
+            fitDefaultView();
+          }, 0);
           const t2 = window.setTimeout(() => safeMapResize(mapRef.current), 120);
           const t3 = window.setTimeout(() => safeMapResize(mapRef.current), 360);
           window.setTimeout(() => {
@@ -216,18 +204,10 @@ export default function Participants() {
           }, 420);
         };
         map.once("load", onReady);
-        map.once("style.load", onReady);
-        map.once("idle", onReady);
 
         map.on("error", () => {
-          if (cancelled || !mapRef.current) return;
-          try {
-            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
-          } catch {
-            // no-op
-          }
+          if (cancelled || !mapRef.current || didBecomeReady) return;
           safeMapResize(mapRef.current);
-          setMapReady(true);
         });
       } catch {
         window.setTimeout(() => {
@@ -251,7 +231,9 @@ export default function Participants() {
   }, [fitDefaultView]);
 
   useEffect(() => {
-    if (!mapRef.current || !effectiveUserPosition) return;
+    if (!mapRef.current || !mapReady || !effectiveUserPosition) return;
+    const rect = mapRef.current.getContainer()?.getBoundingClientRect();
+    if (!rect || rect.width < 8 || rect.height < 8) return;
     const nextZoom = hasAutoCentered ? undefined : 15.2;
     mapRef.current.easeTo({
       center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
@@ -260,7 +242,7 @@ export default function Participants() {
       essential: true,
     });
     if (!hasAutoCentered) setHasAutoCentered(true);
-  }, [effectiveUserPosition, hasAutoCentered]);
+  }, [effectiveUserPosition, hasAutoCentered, mapReady]);
 
   useEffect(() => {
     const onVis = () => {
