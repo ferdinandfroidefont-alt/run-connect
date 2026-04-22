@@ -40,11 +40,12 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
   activityType,
   onBlocksChange,
 }) => {
-  const [showAddMenu, setShowAddMenu] = React.useState(false);
+  const [menuAnchor, setMenuAnchor] = React.useState<'top' | number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const addMenuId = useId();
+  const showAddMenu = menuAnchor !== null;
 
-  const closeMenu = useCallback(() => setShowAddMenu(false), []);
+  const closeMenu = useCallback(() => setMenuAnchor(null), []);
 
   useEffect(() => {
     if (!showAddMenu) return;
@@ -68,6 +69,14 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [showAddMenu, closeMenu]);
+
+  const openTopMenu = () => {
+    setMenuAnchor((current) => (current === 'top' ? null : 'top'));
+  };
+
+  const openInsertMenu = (insertIndex: number) => {
+    setMenuAnchor((current) => (current === insertIndex ? null : insertIndex));
+  };
 
   const addBlock = (type: BlockType, insertIndex?: number) => {
     const newBlock: SessionBlock = {
@@ -95,7 +104,7 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
     if (typeof insertIndex === 'number') nextBlocks.splice(insertIndex, 0, newBlock);
     else nextBlocks.push(newBlock);
     onBlocksChange(resolveSessionBlocks(nextBlocks));
-    setShowAddMenu(false);
+    closeMenu();
   };
 
   const updateBlock = (id: string, updates: Partial<SessionBlock>) => {
@@ -120,8 +129,41 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
 
   const quickSuggestions = getQuickAddSuggestions();
 
+  const renderAddMenu = (insertIndex?: number) => (
+    <motion.div
+      id={insertIndex === undefined ? addMenuId : undefined}
+      role="menu"
+      aria-label="Types de blocs"
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.98 }}
+      className="rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-md)] backdrop-blur-sm"
+    >
+      <div className="grid grid-cols-2 gap-2">
+        {BLOCK_TYPES.map((blockType) => {
+          const IconComponent = BLOCK_ICONS[blockType.value as BlockType];
+          return (
+            <button
+              key={`${blockType.value}-${insertIndex ?? 'end'}`}
+              type="button"
+              role="menuitem"
+              onClick={() => addBlock(blockType.value as BlockType, insertIndex)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                BLOCK_COLORS[blockType.value as BlockType]
+              )}
+            >
+              <IconComponent className="h-4 w-4 shrink-0" aria-hidden />
+              {blockType.label}
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+
   return (
-    <div className="space-y-3">
+    <div ref={rootRef} className="space-y-3">
       <div className="flex items-center justify-between gap-2 min-w-0">
         <span className="text-sm font-medium text-foreground truncate">Structure de la séance</span>
         <span className="text-xs text-muted-foreground shrink-0 tabular-nums" aria-live="polite">
@@ -130,15 +172,15 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
       </div>
 
       {blocks.length > 0 && (
-        <div ref={rootRef} className="relative">
+        <div className="relative">
           <div className="mb-3 flex justify-end">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setShowAddMenu(!showAddMenu)}
-              aria-expanded={showAddMenu}
-              aria-controls={addMenuId}
+              onClick={openTopMenu}
+              aria-expanded={menuAnchor === 'top'}
+              aria-controls={menuAnchor === 'top' ? addMenuId : undefined}
               aria-haspopup="menu"
               className="h-8 rounded-full px-3 text-xs font-semibold text-primary"
             >
@@ -150,37 +192,10 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
           <SessionStructurePreview blocks={blocks} />
 
           <AnimatePresence>
-            {showAddMenu && (
-              <motion.div
-                id={addMenuId}
-                role="menu"
-                aria-label="Types de blocs"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-border bg-card p-2 shadow-lg"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {BLOCK_TYPES.map((blockType) => {
-                    const IconComponent = BLOCK_ICONS[blockType.value as BlockType];
-                    return (
-                      <button
-                        key={blockType.value}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => addBlock(blockType.value as BlockType)}
-                        className={cn(
-                          "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                          BLOCK_COLORS[blockType.value as BlockType]
-                        )}
-                      >
-                        <IconComponent className="h-4 w-4 shrink-0" aria-hidden />
-                        {blockType.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
+            {menuAnchor === 'top' && (
+              <div className="absolute left-0 right-0 top-full z-20 mt-2">
+                {renderAddMenu()}
+              </div>
             )}
           </AnimatePresence>
         </div>
@@ -222,16 +237,34 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
                 initial={{ opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.94 }}
-                className="flex justify-center py-1"
+                className="py-2"
               >
-                <button
-                  type="button"
-                  onClick={() => addBlock('interval', index + 1)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary text-primary shadow-[var(--shadow-2xs)] transition-transform active:scale-95"
-                  aria-label="Ajouter un bloc ici"
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                </button>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 px-1">
+                    <div className="h-px flex-1 bg-border/80" aria-hidden />
+                    <button
+                      type="button"
+                      onClick={() => openInsertMenu(index + 1)}
+                      aria-expanded={menuAnchor === index + 1}
+                      aria-haspopup="menu"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-[var(--shadow-sm)] transition-all hover:bg-secondary active:scale-[0.98]"
+                    >
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-primary shadow-[var(--shadow-2xs)]">
+                        <Plus className="h-4 w-4" aria-hidden />
+                      </span>
+                      <span>Ajouter ici</span>
+                    </button>
+                    <div className="h-px flex-1 bg-border/80" aria-hidden />
+                  </div>
+
+                  <AnimatePresence>
+                    {menuAnchor === index + 1 && (
+                      <motion.div layout className="px-1">
+                        {renderAddMenu(index + 1)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </motion.div>
             )}
           </React.Fragment>
