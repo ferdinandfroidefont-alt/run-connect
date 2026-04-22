@@ -2571,47 +2571,6 @@ export function CoachPlanningExperience() {
                           </div>
                         ) : null}
 
-                        {draft.blocks.map((block, index) => (
-                          <div key={block.id} className="rounded-2xl border border-border/70 bg-card p-3">
-                            <button
-                              type="button"
-                              className="w-full text-left"
-                              onClick={() => startBlockCreation(undefined, block)}
-                            >
-                              <p className="text-[13px] font-semibold text-foreground">
-                                {index + 1}. {block.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(block.type)}
-                              </p>
-                              <p className="mt-0.5 text-[12px] text-muted-foreground">{blockSummary(block)}</p>
-                            </button>
-                            <div className="mt-2 flex items-center gap-1">
-                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, -1)}>
-                                Monter
-                              </Button>
-                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, 1)}>
-                                Descendre
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-8 rounded-lg text-[12px]"
-                                onClick={() => {
-                                  const copied = { ...block, id: uid(), order: draft.blocks.length + 1 };
-                                  setDraft((prev) => ({ ...prev, blocks: [...prev.blocks, copied] }));
-                                }}
-                              >
-                                Dupliquer
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="ml-auto h-8 rounded-lg text-[12px] text-destructive"
-                                onClick={() => setDraft((prev) => ({ ...prev, blocks: prev.blocks.filter((item) => item.id !== block.id) }))}
-                              >
-                                Supprimer
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
                       </div>
                     ) : null}
                   </div>
