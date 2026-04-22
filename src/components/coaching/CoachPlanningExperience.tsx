@@ -302,12 +302,18 @@ function blockSummary(block: SessionBlock) {
     : (block.zone || "");
   if (block.type === "interval") {
     const reps = block.repetitions || 1;
+    const series = block.blockRepetitions || 1;
     const rec = block.recoveryDurationSec
       ? `récup ${secondsToLabel(block.recoveryDurationSec)}`
       : block.recoveryDistanceM
       ? `récup ${metersToLabel(block.recoveryDistanceM)}`
       : "";
-    return `${reps} x ${volume}${target ? ` à ${target}` : ""}${rec ? ` - ${rec}` : ""}${intensity ? ` - ${intensity}` : ""}`;
+    const seriesRec = block.blockRecoveryDurationSec
+      ? `inter-séries ${secondsToLabel(block.blockRecoveryDurationSec)}`
+      : block.blockRecoveryDistanceM
+      ? `inter-séries ${metersToLabel(block.blockRecoveryDistanceM)}`
+      : "";
+    return `${series > 1 ? `${series} x ` : ""}${reps} x ${volume}${target ? ` à ${target}` : ""}${rec ? ` - ${rec}` : ""}${seriesRec ? ` - ${seriesRec}` : ""}${intensity ? ` - ${intensity}` : ""}`;
   }
   if (block.notes?.includes("[Pyramid]")) {
     const steps = Math.max(3, block.repetitions || 5);
