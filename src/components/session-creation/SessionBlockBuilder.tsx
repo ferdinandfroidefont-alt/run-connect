@@ -69,7 +69,7 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
     };
   }, [showAddMenu, closeMenu]);
 
-  const addBlock = (type: BlockType) => {
+  const addBlock = (type: BlockType, insertIndex?: number) => {
     const newBlock: SessionBlock = {
       id: generateBlockId(),
       type,
@@ -91,7 +91,10 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
       }),
       ...(type === 'steady' && { duration: '20', intensity: 'z3', pace: '5:00/km', distance: '4000' }),
     };
-    onBlocksChange(resolveSessionBlocks([...blocks, newBlock]));
+    const nextBlocks = [...blocks];
+    if (typeof insertIndex === 'number') nextBlocks.splice(insertIndex, 0, newBlock);
+    else nextBlocks.push(newBlock);
+    onBlocksChange(resolveSessionBlocks(nextBlocks));
     setShowAddMenu(false);
   };
 
@@ -204,14 +207,34 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
 
       <AnimatePresence mode="popLayout">
         {blocks.map((block, index) => (
-          <SessionBlockComponent
-            key={block.id}
-            block={block}
-            activityType={activityType}
-            onUpdate={(updates) => updateBlock(block.id, updates)}
-            onRemove={() => removeBlock(block.id)}
-            index={index}
-          />
+          <React.Fragment key={block.id}>
+            <SessionBlockComponent
+              block={block}
+              activityType={activityType}
+              onUpdate={(updates) => updateBlock(block.id, updates)}
+              onRemove={() => removeBlock(block.id)}
+              index={index}
+            />
+
+            {index < blocks.length - 1 && (
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                className="flex justify-center py-1"
+              >
+                <button
+                  type="button"
+                  onClick={() => addBlock('interval', index + 1)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-secondary text-primary shadow-[var(--shadow-2xs)] transition-transform active:scale-95"
+                  aria-label="Ajouter un bloc ici"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                </button>
+              </motion.div>
+            )}
+          </React.Fragment>
         ))}
       </AnimatePresence>
 
