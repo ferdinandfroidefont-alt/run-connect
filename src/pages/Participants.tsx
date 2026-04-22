@@ -108,7 +108,6 @@ export default function Participants() {
   const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
   const [liveSessionsFilter, setLiveSessionsFilter] = useState<"live" | "upcoming" | "recent">("live");
   const [fallbackUserPosition, setFallbackUserPosition] = useState<LngLatPoint | null>(null);
-  const [hasAutoCentered, setHasAutoCentered] = useState(false);
   const { getCurrentPosition } = useGeolocation();
   const {
     session,
