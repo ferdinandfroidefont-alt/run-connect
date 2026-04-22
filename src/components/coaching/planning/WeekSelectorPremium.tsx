@@ -42,9 +42,11 @@ export function WeekSelectorPremium({
     [indicatorsByDate, selectedDate, weekStart]
   );
 
+  const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} - ${format(addDays(weekStart, 6), "d MMM", { locale: fr })}`;
+
   return (
     <div
-      className="mx-4 mt-2 rounded-[24px] border border-slate-200 bg-[#F7F8FA] px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-3"
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
@@ -61,49 +63,55 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onPreviousWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors active:bg-muted"
           aria-label="Semaine précédente"
         >
-          <ChevronLeft className="h-4.5 w-4.5 text-foreground" />
+          <ChevronLeft className="h-5 w-5 text-foreground" />
         </button>
         <div className="text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">SEMAINE</p>
-          <p className="text-[16px] font-semibold text-foreground">
-            {format(weekStart, "d MMM", { locale: fr })} - {format(addDays(weekStart, 6), "d MMM", { locale: fr })}
-          </p>
+          <p className="text-[16px] font-semibold text-foreground">{weekLabel}</p>
         </div>
         <button
           type="button"
           onClick={onNextWeek}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors active:bg-muted"
           aria-label="Semaine suivante"
         >
-          <ChevronRight className="h-4.5 w-4.5 text-foreground" />
+          <ChevronRight className="h-5 w-5 text-foreground" />
         </button>
       </div>
 
-      <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+      <div className="no-scrollbar flex items-stretch gap-2 overflow-x-auto pb-0.5">
         {days.map((day) => (
           <button
             key={day.key}
             type="button"
             onClick={() => onSelectDate(day.date)}
             className={cn(
-              "flex min-w-[44px] flex-1 flex-col items-center rounded-lg px-1.5 py-2 transition-all",
-              day.isSelected ? "bg-[#2563EB] text-white" : "bg-white text-foreground border border-slate-200"
+              "relative min-w-[52px] flex-1 rounded-2xl border border-transparent px-2 py-2 text-center transition-all duration-200",
+              day.isSelected
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-secondary text-foreground active:bg-muted"
             )}
           >
-            <span className={cn("text-[11px] font-medium", day.isSelected ? "text-white/90" : "text-muted-foreground")}>{day.initial}</span>
-            <span className="text-[15px] font-semibold leading-tight">{day.dayNumber}</span>
-            <div className="mt-1 flex min-h-[6px] items-center justify-center gap-0.5">
-              {day.indicators.slice(0, 2).map((dot, idx) => (
-                <span
-                  key={`${day.key}-${idx}`}
-                  className="h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: day.isSelected ? "rgba(255,255,255,0.9)" : dot.color }}
-                />
-              ))}
-            </div>
+            <p className={cn("text-[16px] font-semibold leading-none", day.isSelected ? "text-primary-foreground" : "text-foreground")}>
+              {day.dayNumber}
+            </p>
+            <p className={cn("mt-1 text-[11px] font-medium leading-none", day.isSelected ? "text-primary-foreground/90" : "text-muted-foreground")}>
+              {day.initial}
+            </p>
+            {day.indicators.length > 0 && (
+              <div className="mt-1.5 flex items-center justify-center gap-1">
+                {day.indicators.slice(0, 3).map((dot, idx) => (
+                  <span
+                    key={`${day.key}-${idx}`}
+                    className={cn("h-1.5 w-1.5 rounded-full", day.isSelected ? "bg-primary-foreground/90" : "")}
+                    style={day.isSelected ? undefined : { backgroundColor: dot.color }}
+                  />
+                ))}
+              </div>
+            )}
           </button>
         ))}
       </div>
