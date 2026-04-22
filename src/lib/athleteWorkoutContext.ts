@@ -37,19 +37,25 @@ function paceFromRecord(distanceKm: number, raw: unknown): number | null {
 
 function pickBestRunningRecord(records?: Record<string, unknown> | null) {
   if (!records) return null;
+  const fifteenHundred = paceFromRecord(1.5, records["1500m"] ?? records["1500 m"] ?? records["1 500 m"]);
   const fiveKm = paceFromRecord(5, records["5k"] ?? records["5km"] ?? records["5000m"]);
   const tenKm = paceFromRecord(10, records["10k"] ?? records["10km"]);
   const threeKm = paceFromRecord(3, records["3k"] ?? records["3000m"]);
-  return { fiveKm, tenKm, threeKm };
+  return { fifteenHundred, fiveKm, tenKm, threeKm };
 }
 
 export function computeAthletePaces(profile?: AthletePerformanceProfile | null): RunningReferenceSet | null {
   const best = pickBestRunningRecord(profile?.runningRecords ?? null);
   if (!best) return null;
 
-  const thresholdPaceSecPerKm = best.tenKm ?? (best.fiveKm ? best.fiveKm * 1.045 : null);
-  const intervalPaceSecPerKm = best.threeKm ?? (best.fiveKm ? best.fiveKm * 0.94 : null);
-  const easyPaceSecPerKm = thresholdPaceSecPerKm ? thresholdPaceSecPerKm * 1.22 : best.fiveKm ? best.fiveKm * 1.16 : null;
+  const anchorFiveKm = best.fiveKm
+    ?? (best.threeKm ? best.threeKm * 1.055 : null)
+    ?? (best.fifteenHundred ? best.fifteenHundred * 1.085 : null)
+    ?? (best.tenKm ? best.tenKm / 1.045 : null);
+
+  const thresholdPaceSecPerKm = best.tenKm ?? (anchorFiveKm ? anchorFiveKm * 1.045 : null);
+  const intervalPaceSecPerKm = best.fifteenHundred ?? best.threeKm ?? (anchorFiveKm ? anchorFiveKm * 0.96 : null);
+  const easyPaceSecPerKm = anchorFiveKm ? anchorFiveKm * 1.28 : thresholdPaceSecPerKm ? thresholdPaceSecPerKm * 1.22 : null;
 
   if (!easyPaceSecPerKm && !thresholdPaceSecPerKm && !intervalPaceSecPerKm) return null;
 
