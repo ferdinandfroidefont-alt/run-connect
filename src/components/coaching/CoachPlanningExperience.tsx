@@ -2415,34 +2415,8 @@ export function CoachPlanningExperience() {
 
                   <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_12px_32px_-24px_hsl(var(--foreground)/0.28)]">
                     <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                          <p className="text-[12px] text-muted-foreground">
-                            {draft.blocks.length > 0
-                              ? `${draft.blocks.length} bloc${draft.blocks.length > 1 ? "s" : ""} • aperçu recalculé selon l’athlète`
-                              : "Ajoute un bloc pour construire le schéma validé"}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-                          {previewMetrics.feedbackLabel ?? "Aperçu"}
-                        </span>
-                      </div>
+                      <p className="mb-3 text-[14px] font-semibold text-foreground">Schéma de séance</p>
                       <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[96px]" />
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        <div className="rounded-2xl bg-background/85 px-3 py-2">
-                          <p className="text-[11px] text-muted-foreground">Durée</p>
-                          <p className="text-[14px] font-semibold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
-                        </div>
-                        <div className="rounded-2xl bg-background/85 px-3 py-2">
-                          <p className="text-[11px] text-muted-foreground">Distance</p>
-                          <p className="text-[14px] font-semibold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
-                        </div>
-                        <div className="rounded-2xl bg-background/85 px-3 py-2">
-                          <p className="text-[11px] text-muted-foreground">Charge</p>
-                          <p className="text-[14px] font-semibold text-foreground">{totalEstimatedLoad > 0 ? `${totalEstimatedLoad} ch` : "—"}</p>
-                        </div>
-                      </div>
                     </div>
                   </div>
 
