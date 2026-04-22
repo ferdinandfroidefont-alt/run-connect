@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { parseRCC, computeRCCSummary, formatParsedBlockSummary } from "@/lib/rccParser";
+import { parseRCC, formatParsedBlockSummary } from "@/lib/rccParser";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { ModelTabs } from "@/components/coaching/models/ModelTabs";
@@ -120,11 +120,8 @@ export function ModelsPage({
             const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
             const metrics = resolveWorkoutMetrics({
               segments,
-              explicitDistanceKm: computeRCCSummary(parsed.blocks).totalDistanceKm,
-              explicitDurationMin: computeRCCSummary(parsed.blocks).totalDurationMin,
             });
             const preview = parsed.blocks[0] ? formatParsedBlockSummary(parsed.blocks[0]) : "Séance modèle";
-            const headline = buildWorkoutHeadline({ title: model.title, segments, sport: model.activityType as any });
             return (
               <ModelCard
                 key={model.id}
