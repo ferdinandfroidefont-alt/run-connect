@@ -543,6 +543,60 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       .map((row) => `${normalizeRunningEventKey(row.event_label).toUpperCase()} ${row.record_value}`);
   }, [selectedAthlete]);
 
+  const openRecordsEditor = useCallback(() => {
+    if (!selectedAthlete) return;
+    const runningRows = selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running");
+    setRecordsDraft(
+      runningRows.length
+        ? runningRows.map((row) => ({ id: row.id, event_label: row.event_label, record_value: row.record_value, note: row.note ?? "" }))
+        : [
+            { event_label: "5 km", record_value: "", note: "" },
+            { event_label: "3 km", record_value: "", note: "" },
+            { event_label: "10 km", record_value: "", note: "" },
+          ]
+    );
+    setRecordsDialogOpen(true);
+  }, [selectedAthlete]);
+
+  const saveCoachPrivateRecords = useCallback(async () => {
+    if (!user || !selectedAthlete) return;
+    setSavingRecords(true);
+    try {
+      const cleaned = recordsDraft
+        .map((row) => ({ ...row, event_label: row.event_label.trim(), record_value: row.record_value.trim(), note: row.note.trim() }))
+        .filter((row) => row.event_label && row.record_value);
+      const existingIds = new Set((selectedAthlete.coachPrivateRows || []).filter((row) => row.sport_key === "running").map((row) => row.id));
+      const keptIds = new Set(cleaned.map((row) => row.id).filter(Boolean) as string[]);
+      const idsToDelete = [...existingIds].filter((id) => !keptIds.has(id));
+      if (idsToDelete.length) {
+        const { error } = await supabase.from("coach_athlete_private_records").delete().in("id", idsToDelete);
+        if (error) throw error;
+      }
+      if (cleaned.length) {
+        const payload = cleaned.map((row) => ({
+          id: row.id,
+          coach_id: user.id,
+          athlete_user_id: selectedAthlete.userId,
+          club_id: clubId,
+          sport_key: "running",
+          event_label: row.event_label,
+          record_value: row.record_value,
+          note: row.note || null,
+        }));
+        const { error } = await supabase.from("coach_athlete_private_records").upsert(payload, { onConflict: "coach_id,athlete_user_id,club_id,sport_key,event_label" });
+        if (error) throw error;
+      }
+      toast.success("Records privés enregistrés");
+      setRecordsDialogOpen(false);
+      await loadTracking();
+    } catch (error) {
+      console.error(error);
+      toast.error("Impossible d'enregistrer les records");
+    } finally {
+      setSavingRecords(false);
+    }
+  }, [clubId, loadTracking, recordsDraft, selectedAthlete, user]);
+
   useEffect(() => {
     if (!selectedAthlete) {
       setSelectedDayKey(null);
@@ -800,57 +854,6 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   // ==================== MODE DETAIL ====================
   const pct = selectedAthlete.totalCount > 0 ? Math.round((selectedAthlete.completedCount / selectedAthlete.totalCount) * 100) : 0;
   const selectedDayData = selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
-  const openRecordsEditor = useCallback(() => {
-    const runningRows = selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running");
-    setRecordsDraft(
-      runningRows.length
-        ? runningRows.map((row) => ({ id: row.id, event_label: row.event_label, record_value: row.record_value, note: row.note ?? "" }))
-        : [
-            { event_label: "5 km", record_value: "", note: "" },
-            { event_label: "3 km", record_value: "", note: "" },
-            { event_label: "10 km", record_value: "", note: "" },
-          ]
-    );
-    setRecordsDialogOpen(true);
-  }, [selectedAthlete]);
-  const saveCoachPrivateRecords = useCallback(async () => {
-    if (!user) return;
-    setSavingRecords(true);
-    try {
-      const cleaned = recordsDraft
-        .map((row) => ({ ...row, event_label: row.event_label.trim(), record_value: row.record_value.trim(), note: row.note.trim() }))
-        .filter((row) => row.event_label && row.record_value);
-      const existingIds = new Set((selectedAthlete.coachPrivateRows || []).filter((row) => row.sport_key === "running").map((row) => row.id));
-      const keptIds = new Set(cleaned.map((row) => row.id).filter(Boolean) as string[]);
-      const idsToDelete = [...existingIds].filter((id) => !keptIds.has(id));
-      if (idsToDelete.length) {
-        const { error } = await supabase.from("coach_athlete_private_records").delete().in("id", idsToDelete);
-        if (error) throw error;
-      }
-      if (cleaned.length) {
-        const payload = cleaned.map((row) => ({
-          id: row.id,
-          coach_id: user.id,
-          athlete_user_id: selectedAthlete.userId,
-          club_id: clubId,
-          sport_key: "running",
-          event_label: row.event_label,
-          record_value: row.record_value,
-          note: row.note || null,
-        }));
-        const { error } = await supabase.from("coach_athlete_private_records").upsert(payload, { onConflict: "coach_id,athlete_user_id,club_id,sport_key,event_label" });
-        if (error) throw error;
-      }
-      toast.success("Records privés enregistrés");
-      setRecordsDialogOpen(false);
-      await loadTracking();
-    } catch (error) {
-      console.error(error);
-      toast.error("Impossible d'enregistrer les records");
-    } finally {
-      setSavingRecords(false);
-    }
-  }, [clubId, loadTracking, recordsDraft, selectedAthlete, user]);
   const selectedFeedback = useMemo(() => {
     const threshold = selectedAthletePaces?.thresholdPaceSecPerKm;
     const selectedPace = selectedDayData?.session.pace_target;
