@@ -25,8 +25,12 @@ export function DaySessionSummary({ summary, accentColor }: DaySessionSummaryPro
     <div className="flex min-w-0 items-start gap-2.5">
       <span className="mt-0.5 h-10 w-1 shrink-0 rounded-full" style={{ backgroundColor: accentColor }} />
       <div className="min-w-0">
-        <p className="truncate text-[13px] text-muted-foreground">{summary.subtitle || summary.sportHint || "Séance"}</p>
-        <p className="truncate text-[14px] font-semibold text-foreground">{summary.title}</p>
+        <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-foreground">
+          <span aria-hidden="true" className="shrink-0 text-[13px] leading-none" style={{ color: accentColor }}>
+            👟
+          </span>
+          <span className="truncate">{summary.title}</span>
+        </p>
         <div className="mt-2">
           <MiniWorkoutProfile
             blocks={summary.miniProfile}
