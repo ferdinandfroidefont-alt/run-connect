@@ -49,6 +49,7 @@ import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
+import { CreateCoachingSessionDialog } from "@/components/coaching/CreateCoachingSessionDialog";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 
@@ -2064,7 +2065,7 @@ export function CoachPlanningExperience() {
         clubId={activeClubId || undefined}
       />
 
-      {coachingTab === "create" && (
+      {false && coachingTab === "create" && (
         <div className="fixed inset-0 z-[120] flex min-h-0 flex-col overflow-hidden bg-secondary">
           <IosFixedPageHeaderShell
             className="min-h-0 h-full"
@@ -2270,6 +2271,19 @@ export function CoachPlanningExperience() {
           </IosFixedPageHeaderShell>
         </div>
       )}
+
+      {coachingTab === "create" && activeClubId ? (
+        <CreateCoachingSessionDialog
+          isOpen={coachingTab === "create"}
+          onClose={() => setCoachingTab("planning")}
+          clubId={activeClubId}
+          preselectedDate={selectedDate}
+          onCreated={() => {
+            setCoachingTab("planning");
+            setWeekAnchor((current) => new Date(current));
+          }}
+        />
+      ) : null}
 
       <Sheet open={blockSheetOpen} onOpenChange={setBlockSheetOpen}>
         <SheetContent
