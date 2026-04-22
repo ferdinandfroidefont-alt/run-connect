@@ -997,7 +997,10 @@ export function CoachPlanningExperience() {
     () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
     [draft.blocks]
   );
-  const previewBars = useMemo(() => buildPreviewBars(draft.blocks), [draft.blocks]);
+  const previewBars = useMemo(
+    () => renderWorkoutMiniProfile(buildWorkoutSegments(draft.blocks, { sport: draft.sport })),
+    [draft.blocks, draft.sport]
+  );
   const selectedDraftBlock = useMemo(
     () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
     [draft.blocks, selectedEditorBlockId]
