@@ -60,6 +60,26 @@ function safeMapResize(map: MapboxMap | null) {
   }
 }
 
+function hasUsableSize(el: HTMLElement | null | undefined) {
+  const rect = el?.getBoundingClientRect();
+  return !!rect && rect.width >= 8 && rect.height >= 8;
+}
+
+function waitForUsableSize(el: HTMLElement): Promise<void> {
+  if (hasUsableSize(el)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const startedAt = Date.now();
+    const tick = () => {
+      if (hasUsableSize(el) || Date.now() - startedAt > 1500) {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(tick);
+    };
+    window.requestAnimationFrame(tick);
+  });
+}
+
 function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "relative h-11 w-11 rounded-full border-[2.5px] border-white shadow-[0_10px_20px_-12px_rgba(0,0,0,0.8)]";
@@ -174,10 +194,14 @@ export default function Participants() {
     if (!mapContainerRef.current || mapRef.current) return;
     let cancelled = false;
     const participantMarkers = participantMarkersRef.current;
+    const container = mapContainerRef.current;
 
     const bootMap = async () => {
       try {
-        const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
+        await waitForUsableSize(container);
+        if (cancelled) return;
+
+        const map = await createEmbeddedMapboxMap(container, {
           center: normalizeLngLat(userPositionRef.current),
           zoom: 14.3,
           interactive: true,
@@ -188,31 +212,16 @@ export default function Participants() {
           return;
         }
         mapRef.current = map;
-        let didBecomeReady = false;
 
         const onReady = () => {
-          if (cancelled || didBecomeReady) return;
-          didBecomeReady = true;
+          if (cancelled) return;
           setMapReady(true);
-          safeMapResize(mapRef.current);
-          const t1 = window.setTimeout(() => {
+          window.requestAnimationFrame(() => {
             safeMapResize(mapRef.current);
-            fitDefaultView();
-          }, 0);
-          const t2 = window.setTimeout(() => safeMapResize(mapRef.current), 120);
-          const t3 = window.setTimeout(() => safeMapResize(mapRef.current), 360);
-          window.setTimeout(() => {
-            window.clearTimeout(t1);
-            window.clearTimeout(t2);
-            window.clearTimeout(t3);
-          }, 420);
+          });
         };
-        map.once("load", onReady);
-
-        map.on("error", () => {
-          if (cancelled || !mapRef.current || didBecomeReady) return;
-          safeMapResize(mapRef.current);
-        });
+        if (map.isStyleLoaded()) onReady();
+        else map.once("load", onReady);
       } catch {
         window.setTimeout(() => {
           if (!cancelled && !mapRef.current) void bootMap();
