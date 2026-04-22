@@ -360,6 +360,250 @@ function blockGraphColor(type: BlockType, recovery = false) {
   return "hsl(var(--primary))";
 }
 
+function blockSurfaceClass(type: BlockType) {
+  switch (type) {
+    case "warmup":
+      return "border-[hsl(var(--chart-3)/0.35)] bg-[linear-gradient(180deg,hsl(var(--chart-3)/0.16),hsl(var(--card))_42%)]";
+    case "interval":
+      return "border-[hsl(var(--destructive)/0.28)] bg-[linear-gradient(180deg,hsl(var(--destructive)/0.12),hsl(var(--card))_44%)]";
+    case "cooldown":
+      return "border-[hsl(var(--chart-2)/0.32)] bg-[linear-gradient(180deg,hsl(var(--chart-2)/0.12),hsl(var(--card))_44%)]";
+    case "recovery":
+      return "border-[hsl(var(--chart-2)/0.26)] bg-[linear-gradient(180deg,hsl(var(--primary)/0.08),hsl(var(--card))_44%)]";
+    default:
+      return "border-[hsl(var(--primary)/0.24)] bg-[linear-gradient(180deg,hsl(var(--primary)/0.1),hsl(var(--card))_44%)]";
+  }
+}
+
+function blockIconSurfaceClass(type: BlockType) {
+  switch (type) {
+    case "warmup":
+      return "bg-[hsl(var(--chart-3)/0.18)] text-[hsl(var(--chart-3))]";
+    case "interval":
+      return "bg-[hsl(var(--destructive)/0.16)] text-[hsl(var(--destructive))]";
+    case "cooldown":
+      return "bg-[hsl(var(--chart-2)/0.16)] text-[hsl(var(--chart-2))]";
+    case "recovery":
+      return "bg-[hsl(var(--primary)/0.12)] text-primary";
+    default:
+      return "bg-[hsl(var(--primary)/0.14)] text-primary";
+  }
+}
+
+function blockHelperText(block: SessionBlock) {
+  switch (block.type) {
+    case "warmup":
+      return "Monte progressivement en température avant le coeur de séance.";
+    case "interval":
+      return "Cadre l’effort, la récupération et les répétitions sans ouvrir la fiche.";
+    case "cooldown":
+      return "Ramène le rythme et laisse redescendre proprement la charge.";
+    case "recovery":
+      return "Bloc facile pour relancer sans fatigue résiduelle.";
+    default:
+      return "Bloc stable pour tenir l’allure cible avec une lecture immédiate.";
+  }
+}
+
+function recoveryTypeLabel(type?: SessionBlock["recoveryType"]) {
+  if (type === "walk") return "Marche";
+  if (type === "jog") return "Trot";
+  if (type === "easy") return "Statique";
+  return "Libre";
+}
+
+type BlockMetricButtonProps = {
+  label: string;
+  value: string;
+  unit: string;
+  onClick: () => void;
+  emphasized?: boolean;
+};
+
+function BlockMetricButton({ label, value, unit, onClick, emphasized = false }: BlockMetricButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex min-h-[86px] flex-col justify-between rounded-[24px] border px-4 py-3 text-left shadow-[0_18px_32px_-28px_hsl(var(--foreground)/0.35)] transition-transform active:scale-[0.985]",
+        emphasized
+          ? "border-[hsl(var(--foreground)/0.08)] bg-card"
+          : "border-border/80 bg-background/90"
+      )}
+    >
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
+      <div>
+        <p className="text-[20px] font-semibold leading-none text-foreground">{value}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">{unit}</p>
+      </div>
+    </button>
+  );
+}
+
+type CoachingSessionBlockCardProps = {
+  block: SessionBlock;
+  index: number;
+  sport: SportType;
+  isDragged: boolean;
+  isDropTarget: boolean;
+  onReorderStart: () => void;
+  onReorderEnd: () => void;
+  onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPaceClick: () => void;
+  onDistanceClick: () => void;
+  onDurationClick: () => void;
+  onEditRepetitions: () => void;
+  onEditSeries: () => void;
+  onEditRecovery: () => void;
+  onEditBlockRecovery: () => void;
+};
+
+function CoachingSessionBlockCard({
+  block,
+  index,
+  sport,
+  isDragged,
+  isDropTarget,
+  onReorderStart,
+  onReorderEnd,
+  onPointerMove,
+  onPaceClick,
+  onDistanceClick,
+  onDurationClick,
+  onEditRepetitions,
+  onEditSeries,
+  onEditRecovery,
+  onEditBlockRecovery,
+}: CoachingSessionBlockCardProps) {
+  const meta = blockTypeMeta(block.type);
+  const Icon = meta.icon;
+  const intervalLike = block.type === "interval" || block.notes?.includes("[Pyramid]");
+  const isRunning = sport === "running";
+  const intensityLabel = block.intensityMode === "rpe"
+    ? `RPE ${block.rpe ?? "—"}`
+    : formatZoneBadge(block.zone);
+  const intensityCaption = block.intensityMode === "rpe" ? "Perception d’effort" : "Cible d’intensité";
+  const paceValue = isRunning ? paceCardLabel(block.paceSecPerKm) : compactPaceLabel(block.paceSecPerKm);
+  const paceUnit = sport === "swimming" ? "/100m" : "/km";
+  const distanceUnit = sport === "swimming" ? "m" : "km";
+  const distanceValue = sport === "swimming"
+    ? metersToLabel(block.distanceM) || "—"
+    : `${distanceCardLabel(block.distanceM)} ${distanceUnit}`;
+  const repetitionLabel = block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions";
+
+  return (
+    <div
+      data-block-id={block.id}
+      className={cn(
+        "overflow-hidden rounded-[30px] border p-4 shadow-[0_22px_40px_-30px_hsl(var(--foreground)/0.38)] transition-all",
+        blockSurfaceClass(block.type),
+        isDropTarget ? "ring-2 ring-primary/35" : "",
+        isDragged && "opacity-70"
+      )}
+      onPointerMove={onPointerMove}
+      onPointerUp={onReorderEnd}
+      onPointerCancel={onReorderEnd}
+    >
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          aria-label={`Déplacer ${meta.label}`}
+          className="mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-border/70 bg-background/90 text-muted-foreground touch-none"
+          onPointerDown={onReorderStart}
+          onPointerUp={onReorderEnd}
+          onPointerCancel={onReorderEnd}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <div className={cn("flex h-12 w-12 items-center justify-center rounded-[20px]", blockIconSurfaceClass(block.type))}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Bloc {index + 1}</p>
+                  <h3 className="text-[19px] font-semibold leading-tight text-foreground">{meta.label}</h3>
+                </div>
+              </div>
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">{blockHelperText(block)}</p>
+            </div>
+
+            <div className="shrink-0 rounded-full border border-border/80 bg-background/80 px-3 py-1.5 text-[12px] font-semibold text-foreground">
+              {intensityLabel}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <BlockMetricButton label="Allure" value={paceValue} unit={paceUnit} onClick={onPaceClick} emphasized />
+            <BlockMetricButton label="Distance" value={distanceValue} unit={sport === "swimming" ? "volume" : "volume cible"} onClick={onDistanceClick} emphasized />
+            <BlockMetricButton label="Temps" value={durationClockLabel(block.durationSec)} unit="durée estimée" onClick={onDurationClick} emphasized />
+          </div>
+
+          <div className="mt-4 rounded-[24px] border border-border/70 bg-background/85 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground">
+                {intensityCaption}
+              </span>
+              <span className="text-[13px] text-muted-foreground">{blockSummary(block)}</span>
+            </div>
+          </div>
+
+          {intervalLike ? (
+            <div className="mt-4 rounded-[26px] border border-border/70 bg-background/92 p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <BlockMetricButton
+                  label={repetitionLabel}
+                  value={String(block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1))}
+                  unit="efforts"
+                  onClick={onEditRepetitions}
+                />
+                <BlockMetricButton
+                  label="Récupération"
+                  value={secondsToLabel(block.recoveryDurationSec) || metersToLabel(block.recoveryDistanceM) || "—"}
+                  unit={recoveryTypeLabel(block.recoveryType)}
+                  onClick={onEditRecovery}
+                />
+                {(block.blockRepetitions || 1) > 1 ? (
+                  <BlockMetricButton
+                    label="Séries"
+                    value={String(block.blockRepetitions || 1)}
+                    unit="blocs"
+                    onClick={onEditSeries}
+                  />
+                ) : (
+                  <div className="rounded-[24px] border border-dashed border-border bg-secondary/35 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Structure</p>
+                    <p className="mt-2 text-[14px] font-semibold text-foreground">1 série</p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">Ajoute des séries si tu veux un palier inter-séries.</p>
+                  </div>
+                )}
+                {(block.blockRepetitions || 1) > 1 ? (
+                  <BlockMetricButton
+                    label="Inter-séries"
+                    value={secondsToLabel(block.blockRecoveryDurationSec) || metersToLabel(block.blockRecoveryDistanceM) || "—"}
+                    unit="entre séries"
+                    onClick={onEditBlockRecovery}
+                  />
+                ) : (
+                  <div className="rounded-[24px] border border-dashed border-border bg-secondary/35 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Lecture rapide</p>
+                    <p className="mt-2 text-[14px] font-semibold text-foreground">Effort + récup</p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">Le bloc affiche déjà l’essentiel pour coacher en un coup d’œil.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function blockEstimatedLoad(block: SessionBlock) {
   const baseDuration = (block.durationSec || 0) * Math.max(1, block.repetitions || 1);
   const baseDistance = (block.distanceM || 0) * Math.max(1, block.repetitions || 1);
