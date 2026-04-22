@@ -2271,7 +2271,7 @@ export function CoachPlanningExperience() {
                     <div className="rounded-2xl border border-border bg-card p-3">
                       <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
                         <div className="relative">
-                          <MiniWorkoutProfile blocks={previewBars} className="h-[116px] items-end rounded-[16px] bg-transparent px-0 py-0" />
+                          <MiniWorkoutProfile blocks={previewBars} className="h-[76px] rounded-[16px] bg-transparent px-0 py-0" />
                         </div>
                       {draft.blocks.length === 0 ? (
                         <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
