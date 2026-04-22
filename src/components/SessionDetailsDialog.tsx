@@ -781,9 +781,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                   onClick={onClose}
                   className="h-10 w-10 rounded-full bg-white/95 shadow-md flex items-center justify-center active:scale-95 transition-transform"
                   aria-label="Retour"
-                >
-                  <ChevronLeft className="h-5 w-5 text-foreground" />
-                </button>
+                />
                 <button
                   onClick={() => setShowSessionShare(true)}
                   className="h-10 rounded-full bg-white/95 shadow-md px-3 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
