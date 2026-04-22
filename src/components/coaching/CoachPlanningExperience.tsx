@@ -2245,7 +2245,9 @@ export function CoachPlanningExperience() {
                   >
                     <span className="text-muted-foreground">Total estimé</span>
                     <span className="font-semibold text-foreground">
-                      {secondsToLabel(totalDurationSec)} {totalDistanceM > 0 ? `• ${metersToLabel(totalDistanceM)}` : ""}
+                      {secondsToLabel(totalDurationSec)}
+                      {totalDistanceM > 0 ? ` • ${metersToLabel(totalDistanceM)}` : ""}
+                      {totalEstimatedLoad > 0 ? ` • ${totalEstimatedLoad} ch` : ""}
                     </span>
                   </div>
                   <Button
@@ -2303,58 +2305,96 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
 
-                  {draft.blocks.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border bg-card px-3 py-5 text-center">
-                      <p className="text-[14px] font-medium text-foreground">Aucun bloc pour le moment</p>
-                      <p className="mt-1 text-[12px] text-muted-foreground">
-                        Ajoute un premier bloc pour construire la séance.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {draft.blocks.map((block, index) => (
-                        <div key={block.id} className="rounded-2xl border border-border/70 bg-card p-3">
-                          <button
-                            type="button"
-                            className="w-full text-left"
-                            onClick={() => startBlockCreation(undefined, block)}
-                          >
-                            <p className="text-[13px] font-semibold text-foreground">
-                              {index + 1}. {blockTitle(block.type)}
-                            </p>
-                            <p className="mt-0.5 text-[12px] text-muted-foreground">{blockSummary(block)}</p>
-                          </button>
-                          <div className="mt-2 flex items-center gap-1">
-                            <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, -1)}>
-                              Monter
-                            </Button>
-                            <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, 1)}>
-                              Descendre
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="h-8 rounded-lg text-[12px]"
-                              onClick={() => {
-                                const copied = { ...block, id: uid(), order: draft.blocks.length + 1 };
-                                setDraft((prev) => ({ ...prev, blocks: [...prev.blocks, copied] }));
-                              }}
-                            >
-                              Dupliquer
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="ml-auto h-8 rounded-lg text-[12px] text-destructive"
-                              onClick={() => setDraft((prev) => ({ ...prev, blocks: prev.blocks.filter((item) => item.id !== block.id) }))}
-                            >
-                              Supprimer
-                            </Button>
+                  <div className="rounded-2xl border border-border bg-card p-3">
+                    <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
+                      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_top,hsl(var(--border))_1px,transparent_1px)] bg-[size:32px_100%,100%_28px] opacity-35" />
+                      <div className="relative flex min-h-[116px] items-end gap-1.5 overflow-x-auto pb-1">
+                        {previewBars.map((bar) => (
+                          <div
+                            key={bar.key}
+                            className="shrink-0 rounded-t-[8px] rounded-b-[3px]"
+                            style={{ width: `${bar.width}px`, height: `${bar.height}px`, backgroundColor: bar.color, opacity: bar.opacity }}
+                          />
+                        ))}
+                      </div>
+                      {draft.blocks.length === 0 ? (
+                        <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
+                          <div>
+                            <p className="text-[14px] font-medium text-foreground">Aperçu de séance</p>
+                            <p className="text-[12px] text-muted-foreground">Le graph s’anime dès qu’un bloc est ajouté.</p>
                           </div>
+                          <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">Placeholder</span>
                         </div>
-                      ))}
+                      ) : null}
                     </div>
-                  )}
+
+                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                      {draft.blocks.map((block, index) => {
+                        const meta = blockTypeMeta(block.type);
+                        const isEditing = editingBlockId === block.id && blockSheetOpen && blockStep === "config";
+                        const label = block.notes?.includes("[Pyramid]") ? "Pyramidal" : meta.label;
+                        return (
+                          <button
+                            key={block.id}
+                            type="button"
+                            onClick={() => startBlockCreation(undefined, block)}
+                            className={cn(
+                              "shrink-0 rounded-full border px-3 py-2 text-left text-[12px] font-medium transition-colors",
+                              isEditing ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary text-foreground"
+                            )}
+                          >
+                            {index + 1}. {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {draft.blocks.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {draft.blocks.map((block, index) => (
+                          <div key={block.id} className="rounded-2xl border border-border/70 bg-card p-3">
+                            <button
+                              type="button"
+                              className="w-full text-left"
+                              onClick={() => startBlockCreation(undefined, block)}
+                            >
+                              <p className="text-[13px] font-semibold text-foreground">
+                                {index + 1}. {block.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(block.type)}
+                              </p>
+                              <p className="mt-0.5 text-[12px] text-muted-foreground">{blockSummary(block)}</p>
+                            </button>
+                            <div className="mt-2 flex items-center gap-1">
+                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, -1)}>
+                                Monter
+                              </Button>
+                              <Button variant="secondary" size="sm" className="h-8 rounded-lg text-[12px]" onClick={() => moveBlock(block.id, 1)}>
+                                Descendre
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 rounded-lg text-[12px]"
+                                onClick={() => {
+                                  const copied = { ...block, id: uid(), order: draft.blocks.length + 1 };
+                                  setDraft((prev) => ({ ...prev, blocks: [...prev.blocks, copied] }));
+                                }}
+                              >
+                                Dupliquer
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-auto h-8 rounded-lg text-[12px] text-destructive"
+                                onClick={() => setDraft((prev) => ({ ...prev, blocks: prev.blocks.filter((item) => item.id !== block.id) }))}
+                              >
+                                Supprimer
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             ) : (
