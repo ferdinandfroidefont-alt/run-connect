@@ -15,7 +15,6 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -60,6 +59,26 @@ function safeMapResize(map: MapboxMap | null) {
   }
 }
 
+function hasUsableSize(el: HTMLElement | null | undefined) {
+  const rect = el?.getBoundingClientRect();
+  return !!rect && rect.width >= 8 && rect.height >= 8;
+}
+
+function waitForUsableSize(el: HTMLElement): Promise<void> {
+  if (hasUsableSize(el)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const startedAt = Date.now();
+    const tick = () => {
+      if (hasUsableSize(el) || Date.now() - startedAt > 1500) {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(tick);
+    };
+    window.requestAnimationFrame(tick);
+  });
+}
+
 function createParticipantMarkerEl(avatar: string, active: boolean): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "relative h-11 w-11 rounded-full border-[2.5px] border-white shadow-[0_10px_20px_-12px_rgba(0,0,0,0.8)]";
@@ -88,7 +107,6 @@ export default function Participants() {
   const [liveSessions, setLiveSessions] = useState<LiveSessionRow[]>([]);
   const [liveSessionsFilter, setLiveSessionsFilter] = useState<"live" | "upcoming" | "recent">("live");
   const [fallbackUserPosition, setFallbackUserPosition] = useState<LngLatPoint | null>(null);
-  const [hasAutoCentered, setHasAutoCentered] = useState(false);
   const { getCurrentPosition } = useGeolocation();
   const {
     session,
@@ -174,45 +192,33 @@ export default function Participants() {
     if (!mapContainerRef.current || mapRef.current) return;
     let cancelled = false;
     const participantMarkers = participantMarkersRef.current;
+    const container = mapContainerRef.current;
 
     const bootMap = async () => {
       try {
-        const map = await createEmbeddedMapboxMap(mapContainerRef.current!, {
+        await waitForUsableSize(container);
+        if (cancelled) return;
+
+        const map = await createEmbeddedMapboxMap(container, {
           center: normalizeLngLat(userPositionRef.current),
           zoom: 14.3,
           interactive: true,
-          style: MAPBOX_STREETS_STYLE,
         });
         if (cancelled) {
           map.remove();
           return;
         }
         mapRef.current = map;
-        let didBecomeReady = false;
 
         const onReady = () => {
-          if (cancelled || didBecomeReady) return;
-          didBecomeReady = true;
+          if (cancelled) return;
           setMapReady(true);
-          safeMapResize(mapRef.current);
-          const t1 = window.setTimeout(() => {
+          window.requestAnimationFrame(() => {
             safeMapResize(mapRef.current);
-            fitDefaultView();
-          }, 0);
-          const t2 = window.setTimeout(() => safeMapResize(mapRef.current), 120);
-          const t3 = window.setTimeout(() => safeMapResize(mapRef.current), 360);
-          window.setTimeout(() => {
-            window.clearTimeout(t1);
-            window.clearTimeout(t2);
-            window.clearTimeout(t3);
-          }, 420);
+          });
         };
-        map.once("load", onReady);
-
-        map.on("error", () => {
-          if (cancelled || !mapRef.current || didBecomeReady) return;
-          safeMapResize(mapRef.current);
-        });
+        if (map.isStyleLoaded()) onReady();
+        else map.once("load", onReady);
       } catch {
         window.setTimeout(() => {
           if (!cancelled && !mapRef.current) void bootMap();
@@ -233,20 +239,6 @@ export default function Participants() {
       mapRef.current = null;
     };
   }, [fitDefaultView]);
-
-  useEffect(() => {
-    if (!mapRef.current || !mapReady || !effectiveUserPosition) return;
-    const rect = mapRef.current.getContainer()?.getBoundingClientRect();
-    if (!rect || rect.width < 8 || rect.height < 8) return;
-    const nextZoom = hasAutoCentered ? undefined : 15.2;
-    mapRef.current.easeTo({
-      center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
-      zoom: nextZoom,
-      duration: 420,
-      essential: true,
-    });
-    if (!hasAutoCentered) setHasAutoCentered(true);
-  }, [effectiveUserPosition, hasAutoCentered, mapReady]);
 
   useEffect(() => {
     const onVis = () => {
