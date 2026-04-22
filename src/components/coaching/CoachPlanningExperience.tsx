@@ -92,6 +92,7 @@ type TrainingSession = {
   groupId?: string;
   sent: boolean;
   blocks: SessionBlock[];
+  athleteIntensity?: ReturnType<typeof buildAthleteIntensityContext>;
 };
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
@@ -198,6 +199,9 @@ const DISTANCE_METERS_ONLY_25_OPTIONS = Array.from({ length: 401 }, (_, i) => {
 type CoachClub = { id: string; name: string };
 type AthleteEntry = { id: string; name: string; runningRecords?: Record<string, unknown> | null };
 type GroupEntry = { id: string; name: string };
+
+const athleteIntensityFromRunningRecords = (runningRecords?: Record<string, unknown> | null) =>
+  buildAthleteIntensityContext({ runningRecords: runningRecords ?? null });
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -592,7 +596,7 @@ export function CoachPlanningExperience() {
         .eq("conversation_id", activeClubId);
       const memberIds = (members || []).map((m) => m.user_id);
       const { data: profiles } = memberIds.length
-        ? await supabase.from("profiles").select("user_id, display_name").in("user_id", memberIds)
+        ? await supabase.from("profiles").select("user_id, display_name, running_records").in("user_id", memberIds)
         : { data: [] };
       const { data: clubGroups } = await supabase
         .from("club_groups")
@@ -613,6 +617,10 @@ export function CoachPlanningExperience() {
         (profiles || []).map((profile) => ({
           id: profile.user_id,
           name: profile.display_name || "Athlète",
+          runningRecords:
+            profile.running_records && typeof profile.running_records === "object"
+              ? (profile.running_records as Record<string, unknown>)
+              : null,
         }))
       );
       setGroups((clubGroups || []).map((group) => ({ id: group.id, name: group.name })));
