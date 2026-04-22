@@ -243,20 +243,6 @@ export default function Participants() {
   }, [fitDefaultView]);
 
   useEffect(() => {
-    if (!mapRef.current || !mapReady || !effectiveUserPosition) return;
-    const rect = mapRef.current.getContainer()?.getBoundingClientRect();
-    if (!rect || rect.width < 8 || rect.height < 8) return;
-    const nextZoom = hasAutoCentered ? null : 15.2;
-    mapRef.current.easeTo({
-      center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
-      ...(nextZoom != null ? { zoom: nextZoom } : {}),
-      duration: 420,
-      essential: true,
-    });
-    if (!hasAutoCentered) setHasAutoCentered(true);
-  }, [effectiveUserPosition, hasAutoCentered, mapReady]);
-
-  useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible") {
         safeMapResize(mapRef.current);
