@@ -341,6 +341,10 @@ function blockEstimatedLoad(block: SessionBlock) {
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
 }
 
+function computeSessionDistanceKm(blocks: SessionBlock[], sport: SportType) {
+  return resolveWorkoutMetrics({ segments: buildWorkoutSegments(blocks, { sport }) }).distanceKm || 0;
+}
+
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
   return {
     id: uid(),
