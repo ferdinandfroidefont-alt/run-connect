@@ -36,8 +36,11 @@ type ParsedLikeBlock = {
   duration?: number;
   distance?: number;
   repetitions?: number;
+  blockRepetitions?: number;
   recoveryDuration?: number;
   recoveryDistance?: number;
+  blockRecoveryDuration?: number;
+  blockRecoveryDistance?: number;
   pace?: string;
   zone?: string;
   notes?: string;
@@ -48,8 +51,11 @@ type SessionLikeBlock = {
   durationSec?: number;
   distanceM?: number;
   repetitions?: number;
+  blockRepetitions?: number;
   recoveryDurationSec?: number;
   recoveryDistanceM?: number;
+  blockRecoveryDurationSec?: number;
+  blockRecoveryDistanceM?: number;
   paceSecPerKm?: number;
   zone?: string;
   notes?: string;
@@ -104,6 +110,7 @@ export function buildWorkoutSegments(
     const parsedRaw = raw as ParsedLikeBlock;
     const sessionRaw = raw as SessionLikeBlock;
     const repetitions = Math.max(1, raw.repetitions || 1);
+    const seriesCount = Math.max(1, ("blockRepetitions" in raw ? raw.blockRepetitions : parsedRaw.blockRepetitions) || 1);
     const durationMin =
       "durationSec" in raw
         ? clampPositive((sessionRaw.durationSec || 0) / 60)
@@ -116,6 +123,14 @@ export function buildWorkoutSegments(
       "recoveryDistanceM" in raw
         ? clampPositive((sessionRaw.recoveryDistanceM || 0) / 1000)
         : clampPositive((parsedRaw.recoveryDistance || 0) / 1000);
+    const blockRecoveryDurationMin =
+      "blockRecoveryDurationSec" in raw
+        ? clampPositive((sessionRaw.blockRecoveryDurationSec || 0) / 60)
+        : clampPositive(((parsedRaw.blockRecoveryDuration || 0)) / 60);
+    const blockRecoveryDistanceKm =
+      "blockRecoveryDistanceM" in raw
+        ? clampPositive((sessionRaw.blockRecoveryDistanceM || 0) / 1000)
+        : clampPositive((parsedRaw.blockRecoveryDistance || 0) / 1000);
     const distanceKm =
       "distanceM" in raw
         ? clampPositive((sessionRaw.distanceM || 0) / 1000)
@@ -128,11 +143,10 @@ export function buildWorkoutSegments(
       const durationFromDistance =
         distanceKm > 0 && paceSecPerKm ? distanceKm * (paceSecPerKm / 60) : 0;
       const perRepDuration = durationMin > 0 ? durationMin : durationFromDistance;
-      const effortDuration = perRepDuration * repetitions;
-      const effortDistance =
+      const effortDistancePerRep =
         distanceKm > 0
-          ? distanceKm * repetitions
-          : estimateDistanceKm(perRepDuration * repetitions, paceSecPerKm) || estimateDistanceFromFallback(perRepDuration * repetitions, "rep");
+          ? distanceKm
+          : estimateDistanceKm(perRepDuration, paceSecPerKm) || estimateDistanceFromFallback(perRepDuration, "rep");
 
       const repIntensity =
         sport === "running"
@@ -146,35 +160,55 @@ export function buildWorkoutSegments(
               source: refResolution.source,
             })
           : { band: "interval" as const, source: "fallback" as const };
-      segments.push({
-        kind: "rep",
-        durationMin: clampPositive(effortDuration || durationMin * repetitions),
-        distanceKm: clampPositive(effortDistance),
-        intensityBand: repIntensity.band,
-        computedZone: bandToComputedZone(repIntensity.band),
-        color: zoneToColorToken(bandToComputedZone(repIntensity.band)),
-        intensitySource: repIntensity.source,
-        repeatCount: repetitions,
-      });
-
-      if (recoveryDurationMin > 0 && repetitions > 1) {
-        const totalRecoveryDuration = recoveryDurationMin * (repetitions - 1);
-        const totalRecoveryDistance =
-          recoveryDistanceKm > 0
-            ? recoveryDistanceKm * (repetitions - 1)
-            : totalRecoveryDuration > 0
-              ? totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN
-              : Math.max(0, repetitions - 1) * DEFAULT_RECOVERY_DISTANCE_KM;
+      for (let seriesIndex = 0; seriesIndex < seriesCount; seriesIndex += 1) {
         segments.push({
-          kind: "recovery",
-          durationMin: totalRecoveryDuration,
-          distanceKm: clampPositive(totalRecoveryDistance),
-          intensityBand: "recovery",
-          computedZone: bandToComputedZone("recovery"),
-          color: zoneToColorToken(bandToComputedZone("recovery")),
-          intensitySource: refResolution.source,
-          repeatCount: Math.max(0, repetitions - 1),
+          kind: "rep",
+          durationMin: clampPositive(perRepDuration * repetitions),
+          distanceKm: clampPositive(effortDistancePerRep * repetitions),
+          intensityBand: repIntensity.band,
+          computedZone: bandToComputedZone(repIntensity.band),
+          color: zoneToColorToken(bandToComputedZone(repIntensity.band)),
+          intensitySource: repIntensity.source,
+          repeatCount: repetitions,
         });
+
+        if (repetitions > 1 && (recoveryDurationMin > 0 || recoveryDistanceKm > 0)) {
+          const totalRecoveryDuration = recoveryDurationMin * (repetitions - 1);
+          const totalRecoveryDistance =
+            recoveryDistanceKm > 0
+              ? recoveryDistanceKm * (repetitions - 1)
+              : totalRecoveryDuration > 0
+                ? totalRecoveryDuration * DEFAULT_RECOVERY_SPEED_KM_PER_MIN
+                : Math.max(0, repetitions - 1) * DEFAULT_RECOVERY_DISTANCE_KM;
+          segments.push({
+            kind: "recovery",
+            durationMin: clampPositive(totalRecoveryDuration),
+            distanceKm: clampPositive(totalRecoveryDistance),
+            intensityBand: "recovery",
+            computedZone: bandToComputedZone("recovery"),
+            color: zoneToColorToken(bandToComputedZone("recovery")),
+            intensitySource: refResolution.source,
+            repeatCount: Math.max(0, repetitions - 1),
+          });
+        }
+
+        if (seriesIndex < seriesCount - 1 && (blockRecoveryDurationMin > 0 || blockRecoveryDistanceKm > 0)) {
+          const resolvedBlockRecoveryDistance =
+            blockRecoveryDistanceKm > 0
+              ? blockRecoveryDistanceKm
+              : blockRecoveryDurationMin > 0
+                ? blockRecoveryDurationMin * DEFAULT_RECOVERY_SPEED_KM_PER_MIN
+                : DEFAULT_RECOVERY_DISTANCE_KM;
+          segments.push({
+            kind: "recovery",
+            durationMin: clampPositive(blockRecoveryDurationMin),
+            distanceKm: clampPositive(resolvedBlockRecoveryDistance),
+            intensityBand: "recovery",
+            computedZone: bandToComputedZone("recovery"),
+            color: zoneToColorToken(bandToComputedZone("recovery")),
+            intensitySource: refResolution.source,
+          });
+        }
       }
       continue;
     }
@@ -245,61 +279,9 @@ export function renderWorkoutMiniProfile(
     return [{ width: 100, height: heightForBand(only.intensityBand), color: colorForBand(only.intensityBand), opacity: 1 }];
   }
 
-  const compact: WorkoutSegment[] = [];
-  for (let index = 0; index < meaningful.length; index += 1) {
-    const seg = meaningful[index];
-
-    if (seg.visualStyle === "pyramid") {
-      const steps = [0.42, 0.58, 0.76, 1, 0.78, 0.58];
-      steps.forEach((ratio) => {
-        compact.push({
-          ...seg,
-          durationMin: seg.durationMin / steps.length,
-          distanceKm: seg.distanceKm / steps.length,
-          intensityBand: ratio > 0.88 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
-        });
-      });
-      continue;
-    }
-
-    const next = meaningful[index + 1];
-    const repeatedPair =
-      seg.kind === "rep" &&
-      (seg.repeatCount || 0) > 1 &&
-      next?.kind === "recovery" &&
-      (next.repeatCount || 0) >= Math.max(1, (seg.repeatCount || 1) - 1);
-
-    if (repeatedPair) {
-      const chunks = compactDensity
-        ? Math.min(10, Math.max(5, Math.ceil((seg.repeatCount || 1) / 1.35)))
-        : Math.min(5, Math.max(3, Math.ceil((seg.repeatCount || 1) / 2)));
-      for (let i = 0; i < chunks; i += 1) {
-        compact.push({
-          ...seg,
-          durationMin: seg.durationMin / chunks,
-          distanceKm: seg.distanceKm / chunks,
-          repeatCount: undefined,
-        });
-        if (i < chunks - 1) {
-          compact.push({
-            ...next,
-            durationMin: next.durationMin / Math.max(1, chunks - 1),
-            distanceKm: next.distanceKm / Math.max(1, chunks - 1),
-            repeatCount: undefined,
-          });
-        }
-      }
-      index += 1;
-      continue;
-    }
-
-    compact.push(seg);
-  }
-
+  const expanded = expandSegmentsForMiniProfile(meaningful);
   const minWeight = compactDensity ? 0.28 : 0.6;
-  const distributed = compact;
-
-  return distributed.map((seg) => {
+  return expanded.map((seg) => {
     const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
     return {
       width: weight,
@@ -308,6 +290,69 @@ export function renderWorkoutMiniProfile(
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
     };
   });
+}
+
+function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegment[] {
+  const expanded: WorkoutSegment[] = [];
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const seg = segments[index];
+
+    if (seg.visualStyle === "pyramid") {
+      const steps = [0.42, 0.58, 0.76, 1, 0.78, 0.58];
+      steps.forEach((ratio) => {
+        expanded.push({
+          ...seg,
+          durationMin: seg.durationMin / steps.length,
+          distanceKm: seg.distanceKm / steps.length,
+          intensityBand: ratio > 0.88 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
+          repeatCount: undefined,
+        });
+      });
+      continue;
+    }
+
+    const next = segments[index + 1];
+    const repCount = Math.max(1, seg.repeatCount || 1);
+    const recoveryCount = Math.max(0, next?.repeatCount || 0);
+    const hasLinkedRecovery =
+      seg.kind === "rep" &&
+      repCount > 1 &&
+      next?.kind === "recovery" &&
+      recoveryCount === repCount - 1;
+
+    if (hasLinkedRecovery) {
+      const effortDuration = seg.durationMin / repCount;
+      const effortDistance = seg.distanceKm / repCount;
+      const recoveryDuration = recoveryCount > 0 ? next.durationMin / recoveryCount : 0;
+      const recoveryDistance = recoveryCount > 0 ? next.distanceKm / recoveryCount : 0;
+
+      for (let repIndex = 0; repIndex < repCount; repIndex += 1) {
+        expanded.push({
+          ...seg,
+          durationMin: clampPositive(effortDuration),
+          distanceKm: clampPositive(effortDistance),
+          repeatCount: undefined,
+        });
+
+        if (repIndex < recoveryCount) {
+          expanded.push({
+            ...next,
+            durationMin: clampPositive(recoveryDuration),
+            distanceKm: clampPositive(recoveryDistance),
+            repeatCount: undefined,
+          });
+        }
+      }
+
+      index += 1;
+      continue;
+    }
+
+    expanded.push({ ...seg, repeatCount: undefined });
+  }
+
+  return expanded;
 }
 
 function colorForBand(band: WorkoutSegment["intensityBand"]): string {
