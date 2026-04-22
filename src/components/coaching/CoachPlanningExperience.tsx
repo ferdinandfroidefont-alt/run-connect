@@ -1910,7 +1910,27 @@ export function CoachPlanningExperience() {
               }
             />
           }
-          scrollClassName="bg-secondary pb-24"
+          scrollClassName="bg-secondary"
+          footer={
+            activeMenuKey === "planning" && !effectiveAthleteMode ? (
+              <div className="border-t border-border bg-card px-4 py-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
+                    Copier la semaine
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="h-10 rounded-xl"
+                    onClick={() => void pasteAthleteWeek()}
+                    disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
+                  >
+                    Coller la semaine
+                  </Button>
+                </div>
+              </div>
+            ) : null
+          }
         >
           <div className="space-y-0 pb-6">
             {activeMenuKey === "planning" && clubs.length > 1 && (
@@ -2099,24 +2119,6 @@ export function CoachPlanningExperience() {
                 );
                   })}
                 </div>
-                {!effectiveAthleteMode && (
-                  <div className="border-t border-border bg-card px-4 py-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button type="button" variant="secondary" className="h-10 rounded-xl" onClick={() => copyAthleteWeek()}>
-                        Copier la semaine
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="h-10 rounded-xl"
-                        onClick={() => void pasteAthleteWeek()}
-                        disabled={!copiedWeekSessions?.length || copiedFromAthleteId === activeAthleteId}
-                      >
-                        Coller la semaine
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </>
             ) : activeMenuKey === "dashboard" ? (
               activeClubId ? (
