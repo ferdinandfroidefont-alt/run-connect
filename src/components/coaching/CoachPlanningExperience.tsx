@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   Dumbbell,
   Flame,
+  GripVertical,
   Leaf,
   Minus,
   Plus,
@@ -461,7 +462,8 @@ export function CoachPlanningExperience() {
   const [blockStep, setBlockStep] = useState<"type" | "config">("type");
   const [blockForm, setBlockForm] = useState<SessionBlock | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
-  const [selectedEditorBlockId, setSelectedEditorBlockId] = useState<string | null>(null);
+  const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
+  const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
   const [wheelColumns, setWheelColumns] = useState<Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>>([]);
@@ -472,6 +474,8 @@ export function CoachPlanningExperience() {
   const wheelARef = useRef("0");
   const wheelBRef = useRef("0");
   const wheelCRef = useRef("0");
+  const blockReorderPressTimerRef = useRef<number | null>(null);
+  const blockReorderSourceRef = useRef<string | null>(null);
   const setWheelAValue = useCallback((value: string) => {
     wheelARef.current = value;
     setWheelA(value);
@@ -1093,10 +1097,6 @@ export function CoachPlanningExperience() {
     [draft.blocks]
   );
   const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
-  const selectedDraftBlock = useMemo(
-    () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
-    [draft.blocks, selectedEditorBlockId]
-  );
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
@@ -1497,18 +1497,53 @@ export function CoachPlanningExperience() {
     setEditingBlockId(null);
   };
 
-  const moveBlock = (blockId: string, direction: -1 | 1) => {
+  const moveBlockToIndex = useCallback((blockId: string, targetIndex: number) => {
     setDraft((prev) => {
       const index = prev.blocks.findIndex((b) => b.id === blockId);
-      const target = index + direction;
+      const target = Math.max(0, Math.min(targetIndex, prev.blocks.length - 1));
       if (index < 0 || target < 0 || target >= prev.blocks.length) return prev;
+      if (index === target) return prev;
       const next = [...prev.blocks];
-      const temp = next[index];
-      next[index] = next[target];
-      next[target] = temp;
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
       return { ...prev, blocks: next.map((block, idx) => ({ ...block, order: idx + 1 })) };
     });
-  };
+  }, []);
+
+  const clearBlockReorderPress = useCallback(() => {
+    if (blockReorderPressTimerRef.current !== null) {
+      window.clearTimeout(blockReorderPressTimerRef.current);
+      blockReorderPressTimerRef.current = null;
+    }
+    blockReorderSourceRef.current = null;
+  }, []);
+
+  const startBlockReorderPress = useCallback((blockId: string) => {
+    clearBlockReorderPress();
+    blockReorderSourceRef.current = blockId;
+    blockReorderPressTimerRef.current = window.setTimeout(() => {
+      setDraggedBlockId(blockId);
+      setDragOverBlockId(blockId);
+    }, 220);
+  }, [clearBlockReorderPress]);
+
+  const finishBlockReorder = useCallback(() => {
+    clearBlockReorderPress();
+    if (draggedBlockId && dragOverBlockId && draggedBlockId !== dragOverBlockId) {
+      const targetIndex = draft.blocks.findIndex((block) => block.id === dragOverBlockId);
+      if (targetIndex >= 0) moveBlockToIndex(draggedBlockId, targetIndex);
+    }
+    setDraggedBlockId(null);
+    setDragOverBlockId(null);
+  }, [clearBlockReorderPress, dragOverBlockId, draggedBlockId, draft.blocks, moveBlockToIndex]);
+
+  const handleBlockReorderPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (!draggedBlockId) return;
+    const hovered = document.elementFromPoint(event.clientX, event.clientY);
+    const overBlock = hovered instanceof HTMLElement ? hovered.closest<HTMLElement>("[data-block-id]") : null;
+    const overId = overBlock?.dataset.blockId;
+    if (overId) setDragOverBlockId(overId);
+  }, [draggedBlockId]);
 
   const dayIndicatorsByDate = useMemo(() => {
     const map: Record<string, Array<{ color: string }>> = {};
@@ -2420,43 +2455,51 @@ export function CoachPlanningExperience() {
                     </div>
                   </div>
 
-                  <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
+                  {draft.blocks.length > 0 ? (
+                    <div className="mt-3 space-y-2">
                       {draft.blocks.map((block, index) => {
-                        const meta = blockTypeMeta(block.type);
-                        const isEditing = editingBlockId === block.id && blockSheetOpen && blockStep === "config";
-                        const label = block.notes?.includes("[Pyramid]") ? "Pyramidal" : meta.label;
-                        return (
-                          <button
-                            key={block.id}
-                            type="button"
-                            onClick={() => setSelectedEditorBlockId(block.id)}
-                            className={cn(
-                              "shrink-0 rounded-full border px-3 py-2 text-left text-[12px] font-medium transition-colors",
-                              selectedDraftBlock?.id === block.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary text-foreground"
-                            )}
-                          >
-                            {index + 1}. {label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                        const label = block.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(block.type);
+                        const isDragged = draggedBlockId === block.id;
+                        const isDropTarget = dragOverBlockId === block.id;
 
-                    {draft.blocks.length > 0 ? (
-                      <div className="mt-3 space-y-2">
-                        {selectedDraftBlock ? (
-                          <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)]">
-                            <div className="mb-3">
-                              <p className="text-[14px] font-semibold text-foreground">
-                                {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(selectedDraftBlock.type)}
-                              </p>
+                        return (
+                          <div
+                            key={block.id}
+                            data-block-id={block.id}
+                            className={cn(
+                              "rounded-[22px] border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)] transition-all",
+                              isDropTarget ? "border-primary/60" : "border-border",
+                              isDragged && "opacity-70"
+                            )}
+                            onPointerMove={handleBlockReorderPointerMove}
+                            onPointerUp={finishBlockReorder}
+                            onPointerCancel={finishBlockReorder}
+                          >
+                            <div className="mb-3 flex items-center gap-2">
+                              <button
+                                type="button"
+                                aria-label={`Déplacer ${label}`}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 text-muted-foreground touch-none"
+                                onPointerDown={() => startBlockReorderPress(block.id)}
+                                onPointerUp={finishBlockReorder}
+                                onPointerCancel={finishBlockReorder}
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[14px] font-semibold text-foreground">
+                                  {index + 1}. {label}
+                                </p>
+                                <p className="text-[12px] text-muted-foreground">{blockSummary(block)}</p>
+                              </div>
                             </div>
 
-                            <div className="mb-3 grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-3 gap-2">
                               <button
                                 type="button"
                                 className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
                                 onClick={() => {
-                                  const pace = selectedDraftBlock.paceSecPerKm || 330;
+                                  const pace = block.paceSecPerKm || 330;
                                   setWheelAValue(String(Math.floor(pace / 60)));
                                   setWheelBValue(String(pace % 60));
                                   setWheelUnit("min/km");
@@ -2468,24 +2511,24 @@ export function CoachPlanningExperience() {
                                     ],
                                     () => {
                                       const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                      updateDraftBlock(block.id, (current) =>
                                         draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, paceSecPerKm: next }, "pace")
-                                          : { ...block, paceSecPerKm: next }
+                                          ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
+                                          : { ...current, paceSecPerKm: next }
                                       );
                                     }
                                   );
                                 }}
                               >
                                 <p className="text-[11px] text-muted-foreground">Allure</p>
-                                <p className="text-[16px] font-semibold text-foreground">{compactPaceLabel(selectedDraftBlock.paceSecPerKm)}</p>
+                                <p className="text-[16px] font-semibold text-foreground">{compactPaceLabel(block.paceSecPerKm)}</p>
                                 <p className="text-[11px] text-muted-foreground">/km</p>
                               </button>
                               <button
                                 type="button"
                                 className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
                                 onClick={() => {
-                                  const meters = selectedDraftBlock.distanceM || 0;
+                                  const meters = block.distanceM || 0;
                                   const wholeKm = Math.floor(meters / 1000);
                                   const remMeters = Math.max(0, meters - wholeKm * 1000);
                                   setWheelAValue(String(wholeKm));
@@ -2499,24 +2542,24 @@ export function CoachPlanningExperience() {
                                     ],
                                     () => {
                                       const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                      updateDraftBlock(block.id, (current) =>
                                         draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, distanceM: next }, "distance")
-                                          : { ...block, distanceM: next }
+                                          ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
+                                          : { ...current, distanceM: next }
                                       );
                                     }
                                   );
                                 }}
                               >
                                 <p className="text-[11px] text-muted-foreground">Distance</p>
-                                <p className="text-[16px] font-semibold text-foreground">{selectedDraftBlock.distanceM ? (selectedDraftBlock.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}</p>
+                                <p className="text-[16px] font-semibold text-foreground">{block.distanceM ? (block.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}</p>
                                 <p className="text-[11px] text-muted-foreground">km</p>
                               </button>
                               <button
                                 type="button"
                                 className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
                                 onClick={() => {
-                                  const total = selectedDraftBlock.durationSec || 0;
+                                  const total = block.durationSec || 0;
                                   const nextA = String(Math.floor(total / 3600));
                                   const nextB = String(Math.floor((total % 3600) / 60));
                                   const nextC = String(total % 60);
@@ -2535,44 +2578,44 @@ export function CoachPlanningExperience() {
                                         Number.parseInt(wheelARef.current, 10) * 3600 +
                                         Number.parseInt(wheelBRef.current, 10) * 60 +
                                         Number.parseInt(wheelCRef.current, 10);
-                                      updateDraftBlock(selectedDraftBlock.id, (block) =>
+                                      updateDraftBlock(block.id, (current) =>
                                         draft.sport === "running"
-                                          ? deriveRunningVolume({ ...block, durationSec: next }, "duration")
-                                          : { ...block, durationSec: next }
+                                          ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
+                                          : { ...current, durationSec: next }
                                       );
                                     }
                                   );
                                 }}
                               >
                                 <p className="text-[11px] text-muted-foreground">Temps</p>
-                                <p className="text-[16px] font-semibold text-foreground">{secondsToLabel(selectedDraftBlock.durationSec) || "—"}</p>
+                                <p className="text-[16px] font-semibold text-foreground">{secondsToLabel(block.durationSec) || "—"}</p>
                                 <p className="text-[11px] text-muted-foreground">estimé</p>
                               </button>
                             </div>
 
-                            {selectedDraftBlock.type === "interval" || selectedDraftBlock.notes?.includes("[Pyramid]") ? (
-                              <div className="grid grid-cols-1 gap-2">
+                            {block.type === "interval" || block.notes?.includes("[Pyramid]") ? (
+                              <div className="mt-2 grid grid-cols-1 gap-2">
                                 <Button
                                   variant="secondary"
                                   className="h-10 justify-start rounded-xl text-[13px]"
                                   onClick={() =>
                                     openWheel(
-                                      selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions",
+                                      block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions",
                                       Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                      String(selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)),
-                                      (next) => updateDraftBlock(selectedDraftBlock.id, (block) => ({ ...block, repetitions: Number(next) }))
+                                      String(block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)),
+                                      (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
                                     )
                                   }
                                 >
-                                  {selectedDraftBlock.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {selectedDraftBlock.repetitions || (selectedDraftBlock.notes?.includes("[Pyramid]") ? 5 : 1)}
+                                  {block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)}
                                 </Button>
                               </div>
                             ) : null}
                           </div>
-                        ) : null}
-
-                      </div>
-                    ) : null}
+                        );
+                      })}
+                    </div>
+                  ) : null}
                   </div>
               </div>
             ) : (
