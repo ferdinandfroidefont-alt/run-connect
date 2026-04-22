@@ -28,6 +28,7 @@ type Participant = {
 type LngLatPoint = { lat: number; lng: number };
 
 const FALLBACK_POINT: LngLatPoint = { lat: 48.8668, lng: 2.3339 };
+const PARTICIPANTS_USER_ZOOM = 12;
 type LiveSessionRow = {
   id: string;
   title: string;
@@ -185,7 +186,7 @@ export default function Participants() {
     const center = normalizeLngLat(userPositionRef.current);
     map.jumpTo({
       center: [center.lng, center.lat],
-      zoom: 14.3,
+      zoom: PARTICIPANTS_USER_ZOOM,
     });
   }, []);
 
@@ -212,7 +213,7 @@ export default function Participants() {
 
         const map = await createEmbeddedMapboxMap(container, {
           center: normalizeLngLat(userPositionRef.current),
-          zoom: 14.3,
+          zoom: PARTICIPANTS_USER_ZOOM,
           interactive: true,
         });
         if (cancelled) {
