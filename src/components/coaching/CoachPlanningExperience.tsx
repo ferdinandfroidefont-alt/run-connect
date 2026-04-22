@@ -2526,38 +2526,56 @@ export function CoachPlanningExperience() {
                         const isDropTarget = dragOverBlockId === block.id;
 
                         return (
-                          <div
-                            key={block.id}
-                            data-block-id={block.id}
-                            className={cn(
-                              "rounded-[22px] border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)] transition-all",
-                              isDropTarget ? "border-primary/60" : "border-border",
-                              isDragged && "opacity-70"
-                            )}
-                            onPointerMove={handleBlockReorderPointerMove}
-                            onPointerUp={finishBlockReorder}
-                            onPointerCancel={finishBlockReorder}
-                          >
-                            <div className="mb-3 flex items-center gap-2">
-                              <button
-                                type="button"
-                                aria-label={`Déplacer ${label}`}
-                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 text-muted-foreground touch-none"
-                                onPointerDown={() => startBlockReorderPress(block.id)}
-                                onPointerUp={finishBlockReorder}
-                                onPointerCancel={finishBlockReorder}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[14px] font-semibold text-foreground">
-                                  {index + 1}. {label}
-                                </p>
-                                <p className="text-[12px] text-muted-foreground">{blockSummary(block)}</p>
+                          <div key={block.id} className="space-y-2">
+                            {index > 0 ? (
+                              <div className="flex items-center gap-3 px-1">
+                                <div className="h-px flex-1 bg-border/80" aria-hidden />
+                                <button
+                                  type="button"
+                                  onClick={() => openInsertBlockPicker(index)}
+                                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 text-[13px] font-semibold text-foreground shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.35)] transition-all hover:bg-secondary/60 active:scale-[0.98]"
+                                  aria-label={`Ajouter un bloc avant ${label}`}
+                                >
+                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-primary shadow-[0_6px_16px_-10px_hsl(var(--foreground)/0.45)]">
+                                    <Plus className="h-4 w-4" />
+                                  </span>
+                                  <span>Ajouter ici</span>
+                                </button>
+                                <div className="h-px flex-1 bg-border/80" aria-hidden />
                               </div>
-                            </div>
+                            ) : null}
 
-                            <div className="grid grid-cols-3 gap-2">
+                            <div
+                              data-block-id={block.id}
+                              className={cn(
+                                "rounded-[22px] border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)] transition-all",
+                                isDropTarget ? "border-primary/60" : "border-border",
+                                isDragged && "opacity-70"
+                              )}
+                              onPointerMove={handleBlockReorderPointerMove}
+                              onPointerUp={finishBlockReorder}
+                              onPointerCancel={finishBlockReorder}
+                            >
+                              <div className="mb-3 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={`Déplacer ${label}`}
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 text-muted-foreground touch-none"
+                                  onPointerDown={() => startBlockReorderPress(block.id)}
+                                  onPointerUp={finishBlockReorder}
+                                  onPointerCancel={finishBlockReorder}
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[14px] font-semibold text-foreground">
+                                    {index + 1}. {label}
+                                  </p>
+                                  <p className="text-[12px] text-muted-foreground">{blockSummary(block)}</p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2">
                               <button
                                 type="button"
                                 className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
@@ -2656,24 +2674,25 @@ export function CoachPlanningExperience() {
                               </button>
                             </div>
 
-                            {block.type === "interval" || block.notes?.includes("[Pyramid]") ? (
-                              <div className="mt-2 grid grid-cols-1 gap-2">
-                                <Button
-                                  variant="secondary"
-                                  className="h-10 justify-start rounded-xl text-[13px]"
-                                  onClick={() =>
-                                    openWheel(
-                                      block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions",
-                                      Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-                                      String(block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)),
-                                      (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
-                                    )
-                                  }
-                                >
-                                  {block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)}
-                                </Button>
-                              </div>
-                            ) : null}
+                              {block.type === "interval" || block.notes?.includes("[Pyramid]") ? (
+                                <div className="mt-2 grid grid-cols-1 gap-2">
+                                  <Button
+                                    variant="secondary"
+                                    className="h-10 justify-start rounded-xl text-[13px]"
+                                    onClick={() =>
+                                      openWheel(
+                                        block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions",
+                                        Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+                                        String(block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)),
+                                        (next) => updateDraftBlock(block.id, (current) => ({ ...current, repetitions: Number(next) }))
+                                      )
+                                    }
+                                  >
+                                    {block.notes?.includes("[Pyramid]") ? "Paliers" : "Répétitions"}: {block.repetitions || (block.notes?.includes("[Pyramid]") ? 5 : 1)}
+                                  </Button>
+                                </div>
+                              ) : null}
+                            </div>
                           </div>
                         );
                       })}
