@@ -2401,7 +2401,7 @@ export function CoachPlanningExperience() {
                   className="h-11 rounded-2xl border-border bg-card text-[15px]"
                 />
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[15px] font-semibold text-foreground">Structure de la séance</h3>
                     <button
@@ -2419,23 +2419,40 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
 
-                    <div className="rounded-2xl border border-border bg-card p-3">
-                      <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
-                        <div className="relative">
-                          <MiniWorkoutProfile blocks={previewBars} className="h-[76px] rounded-[16px] bg-transparent px-0 py-0" />
-                        </div>
-                      {draft.blocks.length === 0 ? (
-                        <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
+                    <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_12px_32px_-24px_hsl(var(--foreground)/0.28)]">
+                      <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
+                        <div className="mb-3 flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-[14px] font-medium text-foreground">Aperçu de séance</p>
-                            <p className="text-[12px] text-muted-foreground">Le graph s’anime dès qu’un bloc est ajouté.</p>
+                            <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                            <p className="text-[12px] text-muted-foreground">
+                              {draft.blocks.length > 0
+                                ? `${draft.blocks.length} bloc${draft.blocks.length > 1 ? "s" : ""} • aperçu recalculé selon l’athlète`
+                                : "Ajoute un bloc pour construire le schéma validé"}
+                            </p>
                           </div>
-                          <span className="rounded-full bg-secondary px-2 py-1 text-[11px] font-medium text-muted-foreground">Placeholder</span>
+                          <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+                            {previewMetrics.feedbackLabel ?? "Aperçu"}
+                          </span>
                         </div>
-                      ) : null}
+                        <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[86px] rounded-[16px] bg-transparent px-0 py-0" />
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          <div className="rounded-2xl bg-background/85 px-3 py-2">
+                            <p className="text-[11px] text-muted-foreground">Durée</p>
+                            <p className="text-[14px] font-semibold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
+                          </div>
+                          <div className="rounded-2xl bg-background/85 px-3 py-2">
+                            <p className="text-[11px] text-muted-foreground">Distance</p>
+                            <p className="text-[14px] font-semibold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
+                          </div>
+                          <div className="rounded-2xl bg-background/85 px-3 py-2">
+                            <p className="text-[11px] text-muted-foreground">Charge</p>
+                            <p className="text-[14px] font-semibold text-foreground">{totalEstimatedLoad > 0 ? `${totalEstimatedLoad} ch` : "—"}</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                    <div className="mt-1 flex gap-2 overflow-x-auto pb-1">
                       {draft.blocks.map((block, index) => {
                         const meta = blockTypeMeta(block.type);
                         const isEditing = editingBlockId === block.id && blockSheetOpen && blockStep === "config";
