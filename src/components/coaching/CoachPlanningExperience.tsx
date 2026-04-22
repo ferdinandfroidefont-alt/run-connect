@@ -155,6 +155,19 @@ const BLOCK_TYPES: Array<{
   },
 ];
 
+const ADD_BLOCK_CHOICES = [
+  ...BLOCK_TYPES,
+  {
+    id: "pyramid" as const,
+    label: "Pyramidal",
+    detail: "Montée puis descente",
+    icon: Activity,
+    emoji: "📈",
+    tone: "border-violet-500/25 bg-violet-500/10",
+    iconTone: "bg-violet-500/20 text-violet-700 dark:text-violet-300",
+  },
+];
+
 const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone: string }> = [
   { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-blue-500/12 text-blue-700 dark:text-blue-300" },
   { zone: "Z2", label: "Z2", description: "Endurance", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
@@ -474,6 +487,7 @@ export function CoachPlanningExperience() {
   const [blockStep, setBlockStep] = useState<"type" | "config">("type");
   const [blockForm, setBlockForm] = useState<SessionBlock | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [selectedEditorBlockId, setSelectedEditorBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("");
   const [wheelColumns, setWheelColumns] = useState<Array<{ items: Array<{ value: string; label: string }>; value: string; onChange: (value: string) => void; suffix?: string }>>([]);
@@ -1039,6 +1053,10 @@ export function CoachPlanningExperience() {
     [draft.blocks]
   );
   const previewBars = useMemo(() => buildPreviewBars(draft.blocks), [draft.blocks]);
+  const selectedDraftBlock = useMemo(
+    () => draft.blocks.find((block) => block.id === selectedEditorBlockId) ?? draft.blocks[0] ?? null,
+    [draft.blocks, selectedEditorBlockId]
+  );
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
@@ -1415,6 +1433,13 @@ export function CoachPlanningExperience() {
     setBlockStep(type ? "config" : "type");
     setBlockSheetOpen(true);
   };
+
+  const updateDraftBlock = useCallback((blockId: string, updater: (block: SessionBlock) => SessionBlock) => {
+    setDraft((prev) => ({
+      ...prev,
+      blocks: prev.blocks.map((block) => (block.id === blockId ? updater(block) : block)),
+    }));
+  }, []);
 
   const confirmBlock = () => {
     if (!blockForm) return;
