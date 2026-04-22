@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
+  Activity,
   Bike,
   ChevronLeft,
   Dumbbell,
@@ -53,7 +54,7 @@ import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/co
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
 
 type SportType = "running" | "cycling" | "swimming" | "strength";
-type BlockType = "warmup" | "interval" | "steady" | "pyramid" | "recovery" | "cooldown";
+type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
 
@@ -133,15 +134,6 @@ const BLOCK_TYPES: Array<{
     emoji: "➖",
     tone: "border-yellow-500/25 bg-yellow-500/10",
     iconTone: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300",
-  },
-  {
-    id: "pyramid",
-    label: "Pyramidal",
-    detail: "Charge progressive",
-    icon: Activity,
-    emoji: "📈",
-    tone: "border-violet-500/25 bg-violet-500/10",
-    iconTone: "bg-violet-500/20 text-violet-700 dark:text-violet-300",
   },
   {
     id: "recovery",
@@ -270,7 +262,7 @@ function blockSummary(block: SessionBlock) {
       : "";
     return `${reps} x ${volume}${target ? ` à ${target}` : ""}${rec ? ` - ${rec}` : ""}${intensity ? ` - ${intensity}` : ""}`;
   }
-  if (block.type === "pyramid") {
+  if (block.notes?.includes("[Pyramid]")) {
     const steps = Math.max(3, block.repetitions || 5);
     return `${steps} paliers${volume ? ` • ${volume}` : ""}${target ? ` • ${target}` : ""}${intensity ? ` • ${intensity}` : ""}`;
   }
@@ -280,7 +272,6 @@ function blockSummary(block: SessionBlock) {
 function blockGraphColor(type: BlockType, recovery = false) {
   if (recovery) return "hsl(var(--chart-2))";
   if (type === "interval") return "hsl(var(--destructive))";
-  if (type === "pyramid") return "hsl(var(--chart-4))";
   if (type === "warmup") return "hsl(var(--chart-3))";
   if (type === "cooldown" || type === "recovery") return "hsl(var(--chart-2))";
   return "hsl(var(--primary))";
@@ -291,7 +282,7 @@ function blockEstimatedLoad(block: SessionBlock) {
   const baseDistance = (block.distanceM || 0) * Math.max(1, block.repetitions || 1);
   const intensityFactor =
     block.type === "interval" ? 1.35 :
-    block.type === "pyramid" ? 1.25 :
+    block.notes?.includes("[Pyramid]") ? 1.25 :
     block.type === "recovery" || block.type === "cooldown" ? 0.7 :
     1;
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
@@ -326,7 +317,7 @@ function buildPreviewBars(blocks: SessionBlock[]) {
       });
     }
 
-    if (block.type === "pyramid") {
+    if (block.notes?.includes("[Pyramid]")) {
       const steps = Math.max(3, Math.min(7, repetitions || 5));
       const peak = Math.ceil(steps / 2);
       return Array.from({ length: steps }, (_, segmentIndex) => {
@@ -335,7 +326,7 @@ function buildPreviewBars(blocks: SessionBlock[]) {
           key: `${block.id}-${segmentIndex}`,
           width: Math.max(8, Math.round(baseWidth * 0.9)),
           height: 16 + level * 8,
-          color: blockGraphColor(block.type),
+          color: "hsl(var(--chart-4))",
           opacity: 1,
         };
       });
@@ -359,12 +350,12 @@ function createDefaultBlock(type: BlockType, order: number): SessionBlock {
     id: uid(),
     order,
     type,
-    durationSec: type === "interval" ? 3 * 60 : type === "pyramid" ? 4 * 60 : 20 * 60,
+    durationSec: type === "interval" ? 3 * 60 : 20 * 60,
     distanceM: type === "interval" ? 400 : undefined,
-    repetitions: type === "interval" ? 6 : type === "pyramid" ? 5 : undefined,
-    recoveryDurationSec: type === "interval" ? 90 : type === "pyramid" ? 60 : undefined,
+    repetitions: type === "interval" ? 6 : undefined,
+    recoveryDurationSec: type === "interval" ? 90 : undefined,
     intensityMode: "zones",
-    zone: type === "interval" ? "Z4" : type === "pyramid" ? "Z3" : type === "recovery" ? "Z1" : "Z2",
+    zone: type === "interval" ? "Z4" : type === "recovery" ? "Z1" : "Z2",
   };
 }
 
