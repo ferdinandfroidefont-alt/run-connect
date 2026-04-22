@@ -5,6 +5,8 @@ import { useSendNotification } from "@/hooks/useSendNotification";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +20,9 @@ import {
   Footprints,
   Moon,
   Waves,
+  Save,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -31,6 +36,13 @@ import { AthleteHeader } from "@/components/coaching/tracking/AthleteHeader";
 import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessionCard";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
+import { buildAthleteIntensityContext, computeAthletePaces, zoneToFeedback } from "@/lib/athleteWorkoutContext";
+import {
+  mergeRunningRecords,
+  normalizeRunningEventKey,
+  runningRecordsFromPrivateRows,
+  type CoachPrivateRecordRow,
+} from "@/lib/coachPrivateRunningRecords";
 
 interface WeeklyTrackingViewProps {
   clubId: string;
@@ -75,6 +87,9 @@ interface AthleteData {
   username: string | null;
   avatarUrl: string | null;
   age: number | null;
+   runningRecords: Record<string, unknown> | null;
+   coachPrivateRunningRecords: Record<string, unknown> | null;
+   coachPrivateRows: CoachPrivateRecordRow[];
   groupId: string | null;
   groupName: string | null;
   groupColor: string | null;
@@ -201,6 +216,9 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
+  const [recordsDraft, setRecordsDraft] = useState<Array<{ id?: string; event_label: string; record_value: string; note: string }>>([]);
+  const [savingRecords, setSavingRecords] = useState(false);
 
   const openConversationWithAthlete = useCallback(
     async (athleteId: string) => {
@@ -271,8 +289,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       if (allUserIds.length === 0) { setAthletes([]); setLoading(false); return; }
 
       // Load profiles, groups, and sessions in parallel
-      const [profilesRes, groupsRes, groupMembersRes, sessionsRes] = await Promise.all([
-        supabase.from("profiles").select("user_id, display_name, username, avatar_url, age").in("user_id", allUserIds),
+      const [profilesRes, groupsRes, groupMembersRes, sessionsRes, coachPrivateRecordsRes] = await Promise.all([
+        supabase.from("profiles").select("user_id, display_name, username, avatar_url, age, running_records").in("user_id", allUserIds),
         supabase.from("club_groups").select("id, name, color, avatar_url").eq("club_id", clubId).order("created_at"),
         supabase.from("club_group_members").select("user_id, group_id").in("user_id", allUserIds),
         supabase
@@ -281,6 +299,14 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
           .eq("club_id", clubId)
           .gte("scheduled_at", weekStart.toISOString())
           .lte("scheduled_at", weekEnd.toISOString()),
+        user
+          ? supabase
+              .from("coach_athlete_private_records")
+              .select("id, athlete_user_id, sport_key, event_label, record_value, note")
+              .eq("club_id", clubId)
+              .eq("coach_id", user.id)
+              .in("athlete_user_id", allUserIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       // Build group lookup: userId -> { name, color }
@@ -291,14 +317,24 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         if (groupMap[gm.group_id]) userGroupMap[gm.user_id] = { id: gm.group_id, ...groupMap[gm.group_id] };
       });
 
+      const privateRowsByAthlete = ((coachPrivateRecordsRes.data || []) as CoachPrivateRecordRow[]).reduce<Record<string, CoachPrivateRecordRow[]>>((acc, row) => {
+        if (!acc[row.athlete_user_id]) acc[row.athlete_user_id] = [];
+        acc[row.athlete_user_id].push(row);
+        return acc;
+      }, {});
+
       const athleteMap: Record<string, AthleteData> = {};
       (profilesRes.data || []).forEach(p => {
         if (!p.user_id) return;
         const grp = userGroupMap[p.user_id];
+        const coachPrivateRows = privateRowsByAthlete[p.user_id] || [];
         athleteMap[p.user_id] = {
           userId: p.user_id, displayName: p.display_name || "Athlète",
           username: p.username || null, avatarUrl: p.avatar_url || null,
           age: p.age || null,
+          runningRecords: p.running_records && typeof p.running_records === "object" ? (p.running_records as Record<string, unknown>) : null,
+          coachPrivateRows,
+          coachPrivateRunningRecords: runningRecordsFromPrivateRows(coachPrivateRows),
           groupId: grp?.id || null, groupName: grp?.name || null, groupColor: grp?.color || null,
           days: {}, completedCount: 0, totalCount: 0, weeklyVolumeKm: 0,
         };
@@ -360,6 +396,64 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       setLoading(false);
     }
   }, [clubId, currentWeek]);
+
+  const openRecordsEditor = useCallback(() => {
+    if (!selectedAthlete) return;
+    const runningRows = selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running");
+    setRecordsDraft(
+      runningRows.length
+        ? runningRows.map((row) => ({ id: row.id, event_label: row.event_label, record_value: row.record_value, note: row.note ?? "" }))
+        : [
+            { event_label: "5 km", record_value: "", note: "" },
+            { event_label: "3 km", record_value: "", note: "" },
+            { event_label: "10 km", record_value: "", note: "" },
+          ]
+    );
+    setRecordsDialogOpen(true);
+  }, [selectedAthlete]);
+
+  const saveCoachPrivateRecords = useCallback(async () => {
+    if (!user || !selectedAthlete) return;
+    setSavingRecords(true);
+    try {
+      const cleaned = recordsDraft
+        .map((row) => ({ ...row, event_label: row.event_label.trim(), record_value: row.record_value.trim(), note: row.note.trim() }))
+        .filter((row) => row.event_label && row.record_value);
+
+      const existingIds = new Set((selectedAthlete.coachPrivateRows || []).filter((row) => row.sport_key === "running").map((row) => row.id));
+      const keptIds = new Set(cleaned.map((row) => row.id).filter(Boolean) as string[]);
+      const idsToDelete = [...existingIds].filter((id) => !keptIds.has(id));
+
+      if (idsToDelete.length) {
+        const { error } = await supabase.from("coach_athlete_private_records").delete().in("id", idsToDelete);
+        if (error) throw error;
+      }
+
+      if (cleaned.length) {
+        const payload = cleaned.map((row) => ({
+          id: row.id,
+          coach_id: user.id,
+          athlete_user_id: selectedAthlete.userId,
+          club_id: clubId,
+          sport_key: "running",
+          event_label: row.event_label,
+          record_value: row.record_value,
+          note: row.note || null,
+        }));
+        const { error } = await supabase.from("coach_athlete_private_records").upsert(payload, { onConflict: "coach_id,athlete_user_id,club_id,sport_key,event_label" });
+        if (error) throw error;
+      }
+
+      toast.success("Records privés enregistrés");
+      setRecordsDialogOpen(false);
+      await loadTracking();
+    } catch (error) {
+      console.error(error);
+      toast.error("Impossible d'enregistrer les records");
+    } finally {
+      setSavingRecords(false);
+    }
+  }, [clubId, loadTracking, recordsDraft, selectedAthlete, user]);
 
   useEffect(() => {
     void loadTracking();
@@ -479,6 +573,45 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     if (!selectedAthleteId) return null;
     return athletes.find(a => a.userId === selectedAthleteId) || null;
   }, [athletes, selectedAthleteId]);
+
+  const selectedMergedRunningRecords = useMemo(
+    () => mergeRunningRecords(selectedAthlete?.runningRecords ?? null, selectedAthlete?.coachPrivateRunningRecords ?? null),
+    [selectedAthlete]
+  );
+
+  const selectedAthleteIntensity = useMemo(
+    () =>
+      buildAthleteIntensityContext({
+        runningRecords: selectedAthlete?.runningRecords ?? null,
+        coachRunningRecords: selectedAthlete?.coachPrivateRunningRecords ?? null,
+      }),
+    [selectedAthlete]
+  );
+
+  const selectedAthletePaces = useMemo(
+    () => computeAthletePaces({ runningRecords: selectedMergedRunningRecords }),
+    [selectedMergedRunningRecords]
+  );
+
+  const selectedFeedback = useMemo(() => {
+    const threshold = selectedAthletePaces?.thresholdPaceSecPerKm;
+    const selectedPace = selectedDayData?.session.pace_target;
+    if (!threshold || !selectedPace) return undefined;
+    const [min, sec] = selectedPace.split(":").map(Number);
+    if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
+    const pace = min * 60 + sec;
+    if (pace >= threshold * 1.12) return zoneToFeedback("Z2");
+    if (pace >= threshold * 1.02) return zoneToFeedback("Z4");
+    return zoneToFeedback("Z5");
+  }, [selectedAthletePaces, selectedDayData]);
+
+  const coachRecordSummary = useMemo(() => {
+    if (!selectedAthlete?.coachPrivateRows?.length) return [];
+    return selectedAthlete.coachPrivateRows
+      .filter((row) => row.sport_key === "running")
+      .slice(0, 3)
+      .map((row) => `${normalizeRunningEventKey(row.event_label).toUpperCase()} ${row.record_value}`);
+  }, [selectedAthlete]);
 
   useEffect(() => {
     if (!selectedAthlete) {
@@ -757,9 +890,42 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         username={selectedAthlete.username}
         groupName={selectedAthlete.groupName}
         status={pct >= 70 ? "active" : "late"}
+        coachRecordsSummary={coachRecordSummary}
         onMessage={() => void openConversationWithAthlete(selectedAthlete.userId)}
         onViewProfile={() => navigateToProfile(selectedAthlete.userId)}
       />
+
+      <div className="border-b border-border bg-card px-4 py-3">
+        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[14px] font-semibold text-foreground">Records privés coach</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                Utilisés en priorité pour calculer les zones et l'intensité réelle de l'athlète.
+              </p>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[12px] font-semibold" onClick={openRecordsEditor}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Gérer
+            </Button>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").length > 0 ? (
+              selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").map((row) => (
+                <div key={row.id} className="rounded-xl bg-background px-3 py-2">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{row.event_label}</p>
+                  <p className="text-[14px] font-semibold text-foreground">{row.record_value}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-[12px] text-muted-foreground">Aucun record privé coach renseigné.</p>
+            )}
+          </div>
+          {selectedAthleteIntensity && selectedFeedback ? (
+            <p className="mt-3 text-[12px] font-medium text-primary">Feedback calculé : {selectedFeedback}</p>
+          ) : null}
+        </div>
+      </div>
 
       <div className="border-b border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
@@ -848,6 +1014,63 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         </div>
       </div>
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
+
+      <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-24px)] rounded-3xl p-0 sm:max-w-lg">
+          <DialogTitle className="sr-only">Records privés coach</DialogTitle>
+          <div className="space-y-4 p-4">
+            <div>
+              <p className="text-[18px] font-semibold text-foreground">Records privés coach</p>
+              <p className="text-[13px] text-muted-foreground">Ces temps servent au calcul automatique des zones pour cet athlète.</p>
+            </div>
+            <div className="space-y-3">
+              {recordsDraft.map((row, index) => (
+                <div key={row.id ?? `draft-${index}`} className="rounded-2xl border border-border/60 bg-card p-3">
+                  <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                    <Input
+                      value={row.event_label}
+                      onChange={(e) => setRecordsDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, event_label: e.target.value } : item))}
+                      placeholder="Épreuve (ex: 5 km)"
+                      className="h-10 rounded-xl"
+                    />
+                    <Input
+                      value={row.record_value}
+                      onChange={(e) => setRecordsDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, record_value: e.target.value } : item))}
+                      placeholder="Temps (ex: 15:30)"
+                      className="h-10 rounded-xl"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 rounded-xl"
+                      onClick={() => setRecordsDraft((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={row.note}
+                    onChange={(e) => setRecordsDraft((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, note: e.target.value } : item))}
+                    placeholder="Note privée coach (optionnel)"
+                    className="mt-2 min-h-[72px] rounded-xl"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button type="button" variant="outline" className="rounded-full" onClick={() => setRecordsDraft((current) => [...current, { event_label: "", record_value: "", note: "" }])}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Ajouter un record
+              </Button>
+              <Button type="button" className="rounded-full" onClick={() => void saveCoachPrivateRecords()} disabled={savingRecords}>
+                <Save className="mr-1.5 h-4 w-4" />
+                {savingRecords ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
