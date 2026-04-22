@@ -1903,8 +1903,6 @@ export function CoachPlanningExperience() {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-                const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
-                const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
                 const normalizedSegments = session
                   ? buildWorkoutSegments(session.blocks, {
                       sport: session.sport,
@@ -1921,17 +1919,21 @@ export function CoachPlanningExperience() {
                           ? "running"
                           : "other"
                   : undefined;
+                const workoutMetrics = session
+                  ? resolveWorkoutMetrics({
+                      segments: normalizedSegments,
+                      explicitDistanceKm: session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000,
+                      explicitDurationMin:
+                        session.blocks.reduce((acc, block) => acc + ((block.durationSec || 0) * (block.repetitions || 1)) / 60, 0) || null,
+                    })
+                  : null;
                 const summary = session
                   ? {
-                      title: session.title,
-                      duration: durationSec > 0 ? secondsToLabel(durationSec) : undefined,
-                      distance: distanceM > 0 ? metersToLabel(distanceM) : undefined,
-                      intensityLabel:
-                        session.blocks[0]?.intensityMode === "rpe"
-                          ? session.blocks[0]?.rpe != null
-                            ? `RPE ${session.blocks[0].rpe}`
-                            : undefined
-                          : session.blocks[0]?.zone ?? (normalizedSegments.some((seg) => seg.intensitySource && seg.intensitySource !== "fallback") ? "Auto" : undefined),
+                      title: buildWorkoutHeadline({ title: session.title, segments: normalizedSegments, sport: sportHint }),
+                      subtitle: session.title,
+                      duration: workoutMetrics?.durationLabel,
+                      distance: workoutMetrics?.distanceLabel,
+                      intensityLabel: workoutMetrics?.intensityLabel,
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
                       isRestDay:
                         session.blocks.length > 0 &&
@@ -1939,14 +1941,7 @@ export function CoachPlanningExperience() {
                       sportHint,
                     }
                   : undefined;
-                const accentColor =
-                  !session ? "#9CA3AF" :
-                  session.sport === "cycling" ? "#EAB308" :
-                  session.blocks[0]?.type === "recovery" ? "#22C55E" :
-                  session.blocks[0]?.type === "interval" ? "#F97316" :
-                  session.blocks[0]?.type === "steady" ? "#8B5CF6" :
-                  session.sport === "running" ? "#60A5FA" :
-                  "#9CA3AF";
+                const accentColor = workoutAccentColor(normalizedSegments, sportHint, summary?.isRestDay);
                 return (
                   <DayPlanningRow
                     key={day.toISOString()}
@@ -2283,18 +2278,11 @@ export function CoachPlanningExperience() {
                     </button>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-card p-3">
-                    <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
-                      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_top,hsl(var(--border))_1px,transparent_1px)] bg-[size:32px_100%,100%_28px] opacity-35" />
-                      <div className="relative flex min-h-[116px] items-end gap-1.5 overflow-x-auto pb-1">
-                        {previewBars.map((bar, index) => (
-                          <div
-                            key={`${index}-${bar.width}-${bar.height}`}
-                            className="shrink-0 rounded-t-[8px] rounded-b-[3px]"
-                            style={{ width: `${Math.max(bar.width, 6)}%`, height: `${bar.height}px`, backgroundColor: bar.color, opacity: bar.opacity }}
-                          />
-                        ))}
-                      </div>
+                    <div className="rounded-2xl border border-border bg-card p-3">
+                      <div className="relative overflow-hidden rounded-[18px] border border-border bg-secondary/40 px-3 py-4">
+                        <div className="relative">
+                          <MiniWorkoutProfile blocks={previewBars} className="h-[116px] items-end rounded-[16px] bg-transparent px-0 py-0" />
+                        </div>
                       {draft.blocks.length === 0 ? (
                         <div className="relative mt-3 flex items-center justify-between rounded-xl bg-background/85 px-3 py-2">
                           <div>
