@@ -175,12 +175,12 @@ const ADD_BLOCK_CHOICES = [
 ];
 
 const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone: string }> = [
-  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-blue-500/12 text-blue-700 dark:text-blue-300" },
-  { zone: "Z2", label: "Z2", description: "Endurance", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
-  { zone: "Z3", label: "Z3", description: "Tempo", tone: "bg-yellow-500/12 text-yellow-700 dark:text-yellow-300" },
-  { zone: "Z4", label: "Z4", description: "Seuil", tone: "bg-orange-500/12 text-orange-700 dark:text-orange-300" },
-  { zone: "Z5", label: "Z5", description: "VO2max", tone: "bg-red-500/12 text-red-700 dark:text-red-300" },
-  { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-violet-500/12 text-violet-700 dark:text-violet-300" },
+  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
+  { zone: "Z2", label: "Z2", description: "Endurance fondamentale", tone: "bg-primary/12 text-primary" },
+  { zone: "Z3", label: "Z3", description: "Endurance active", tone: "bg-green-500/12 text-green-700 dark:text-green-300" },
+  { zone: "Z4", label: "Z4", description: "Seuil", tone: "bg-amber-500/12 text-amber-700 dark:text-amber-300" },
+  { zone: "Z5", label: "Z5", description: "VO2 max", tone: "bg-orange-500/12 text-orange-700 dark:text-orange-300" },
+  { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-red-500/12 text-red-700 dark:text-red-300" },
 ];
 
 const DISTANCE_KM_WHOLE_OPTIONS = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
