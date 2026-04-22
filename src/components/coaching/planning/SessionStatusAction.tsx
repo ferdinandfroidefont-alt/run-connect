@@ -13,7 +13,7 @@ export function SessionStatusAction({ mode, onAdd, onSentClick }: SessionStatusA
       <button
         type="button"
         onClick={onSentClick}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 text-[12px] font-semibold text-emerald-600 transition-transform active:scale-95"
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-secondary px-3 text-[12px] font-semibold text-foreground transition-transform active:scale-95"
         aria-label="Annuler l'envoi"
       >
         <Check className="h-4.5 w-4.5" />
