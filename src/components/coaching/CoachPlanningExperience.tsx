@@ -1836,10 +1836,8 @@ export function CoachPlanningExperience() {
                 const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-<<<<<<< HEAD
                 const durationSec = session?.blocks.reduce((acc, block) => acc + (block.durationSec || 0) * (block.repetitions || 1), 0) || 0;
                 const distanceM = session?.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) || 0;
-=======
                 const targetedAthleteId = session?.athleteId ?? activeAthleteId;
                 const targetedAthlete = targetedAthleteId ? athletes.find((athlete) => athlete.id === targetedAthleteId) : undefined;
                 const normalizedSegments = session
@@ -1851,8 +1849,6 @@ export function CoachPlanningExperience() {
                       },
                     })
                   : [];
-                const durationMin = session ? computeWorkoutDuration(normalizedSegments) : 0;
-                const distanceKm = session ? computeWorkoutDistance(normalizedSegments) : 0;
                 const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
                   ? session.sport === "cycling"
                     ? "cycling"
@@ -1864,7 +1860,6 @@ export function CoachPlanningExperience() {
                           ? "running"
                           : "other"
                   : undefined;
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
                 const summary = session
                   ? {
                       title: session.title,
@@ -1875,16 +1870,12 @@ export function CoachPlanningExperience() {
                           ? session.blocks[0]?.rpe != null
                             ? `RPE ${session.blocks[0].rpe}`
                             : undefined
-<<<<<<< HEAD
-                          : session.blocks[0]?.zone,
-=======
                           : session.blocks[0]?.zone ?? (normalizedSegments.some((seg) => seg.intensitySource && seg.intensitySource !== "fallback") ? "Auto" : undefined),
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
                       isRestDay:
                         session.blocks.length > 0 &&
                         session.blocks.every((block) => block.type === "recovery" || block.type === "cooldown"),
                       sportHint,
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
                     }
                   : undefined;
                 const accentColor =

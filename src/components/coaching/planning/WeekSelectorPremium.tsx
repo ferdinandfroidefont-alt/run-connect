@@ -46,11 +46,7 @@ export function WeekSelectorPremium({
 
   return (
     <div
-<<<<<<< HEAD
       className="border-b border-border bg-card px-4 py-3"
-=======
-      className="ios-card rounded-2xl border border-border/70 bg-card px-3 py-3"
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
@@ -67,11 +63,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onPreviousWeek}
-<<<<<<< HEAD
           className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
-=======
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors active:bg-muted"
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
           aria-label="Semaine précédente"
         >
           <ChevronLeft className="h-5 w-5 text-foreground" />
@@ -83,11 +75,7 @@ export function WeekSelectorPremium({
         <button
           type="button"
           onClick={onNextWeek}
-<<<<<<< HEAD
           className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-secondary"
-=======
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary transition-colors active:bg-muted"
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
           aria-label="Semaine suivante"
         >
           <ChevronRight className="h-5 w-5 text-foreground" />
@@ -101,15 +89,8 @@ export function WeekSelectorPremium({
             type="button"
             onClick={() => onSelectDate(day.date)}
             className={cn(
-<<<<<<< HEAD
               "flex min-w-[44px] flex-1 flex-col items-center rounded-lg px-1.5 py-2 transition-all",
               day.isSelected ? "bg-[#2563EB] text-white" : "bg-secondary text-foreground"
-=======
-              "relative min-w-[52px] flex-1 rounded-2xl border border-transparent px-2 py-2 text-center transition-all duration-200",
-              day.isSelected
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-secondary text-foreground active:bg-muted"
->>>>>>> 160794c7be11e90bd18fed3dd97c822c3e251ac3
             )}
           >
             <p className={cn("text-[16px] font-semibold leading-none", day.isSelected ? "text-primary-foreground" : "text-foreground")}>
