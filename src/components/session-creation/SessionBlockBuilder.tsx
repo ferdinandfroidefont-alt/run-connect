@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { SessionBlock, BlockType, BLOCK_TYPES } from './types';
 import { SessionBlockComponent } from './SessionBlock';
 import { SessionStructurePreview } from './SessionStructurePreview';
+import { BlockInsertSeparator } from './BlockInsertSeparator';
 import { cn } from '@/lib/utils';
 import { resolveSessionBlocks } from '@/lib/sessionBlockCalculations';
 
@@ -240,22 +241,10 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
                 className="py-2"
               >
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 px-1">
-                    <div className="h-px flex-1 bg-border/80" aria-hidden />
-                    <button
-                      type="button"
-                      onClick={() => openInsertMenu(index + 1)}
-                      aria-expanded={menuAnchor === index + 1}
-                      aria-haspopup="menu"
-                      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground shadow-[var(--shadow-sm)] transition-all hover:bg-secondary active:scale-[0.98]"
-                    >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-primary shadow-[var(--shadow-2xs)]">
-                        <Plus className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span>Ajouter ici</span>
-                    </button>
-                    <div className="h-px flex-1 bg-border/80" aria-hidden />
-                  </div>
+                  <BlockInsertSeparator
+                    onClick={() => openInsertMenu(index + 1)}
+                    ariaLabel="Ajouter un bloc ici"
+                  />
 
                   <AnimatePresence>
                     {menuAnchor === index + 1 && (
