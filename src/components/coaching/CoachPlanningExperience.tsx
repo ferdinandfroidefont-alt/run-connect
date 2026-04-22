@@ -1860,16 +1860,16 @@ export function CoachPlanningExperience() {
                   : [];
                 const durationMin = session ? computeWorkoutDuration(normalizedSegments) : 0;
                 const distanceKm = session ? computeWorkoutDistance(normalizedSegments) : 0;
-                const sportHint = session
-                  ? ((session.sport === "cycling"
-                      ? "cycling"
-                      : session.sport === "swimming"
-                        ? "swimming"
-                        : session.sport === "strength"
-                          ? "strength"
-                          : session.sport === "running"
-                            ? "running"
-                            : "other") as const)
+                const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
+                  ? session.sport === "cycling"
+                    ? "cycling"
+                    : session.sport === "swimming"
+                      ? "swimming"
+                      : session.sport === "strength"
+                        ? "strength"
+                        : session.sport === "running"
+                          ? "running"
+                          : "other"
                   : undefined;
                 const summary = session
                   ? {

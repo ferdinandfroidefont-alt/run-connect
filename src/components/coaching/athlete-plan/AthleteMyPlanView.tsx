@@ -155,36 +155,42 @@ export function AthleteMyPlanView(props: Props) {
   ];
 
   return (
-    <div className="space-y-4 px-4 pb-28 pt-2">
-      <div className="rounded-[24px] border border-slate-200 bg-[#F7F8FA] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <div className="space-y-4 px-4 pb-28 pt-2">
+      <div className="ios-card rounded-[24px] border border-border/70 bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <button type="button" onClick={onPreviousWeek} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+          <button type="button" onClick={onPreviousWeek} className="rounded-2xl border border-border/70 bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors active:bg-muted">
             ←
           </button>
           <div className="text-center">
-            <p className="text-sm font-semibold text-slate-900">
+            <p className="text-sm font-semibold text-foreground">
               {calendarMode === "week"
                 ? `Semaine du ${format(weekStart, "d MMM", { locale: fr })}`
                 : format(selectedDate, "MMMM yyyy", { locale: fr })}
             </p>
-            <p className="text-xs text-slate-500">Vue athlete</p>
+            <p className="text-xs text-muted-foreground">Vue athlete</p>
           </div>
-          <button type="button" onClick={onNextWeek} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+          <button type="button" onClick={onNextWeek} className="rounded-2xl border border-border/70 bg-secondary px-3 py-2 text-sm font-medium text-foreground transition-colors active:bg-muted">
             →
           </button>
         </div>
 
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-3 inline-flex items-center gap-1 rounded-2xl bg-secondary p-1">
           <button
             type="button"
-            className={cn("border px-4 py-1.5 text-xs font-semibold", calendarMode === "week" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}
+            className={cn(
+              "rounded-xl px-4 py-1.5 text-xs font-semibold transition-colors",
+              calendarMode === "week" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+            )}
             onClick={() => setCalendarMode("week")}
           >
             Semaine
           </button>
           <button
             type="button"
-            className={cn("border px-4 py-1.5 text-xs font-semibold", calendarMode === "month" ? "bg-blue-600 text-white" : "bg-white text-slate-600")}
+            className={cn(
+              "rounded-xl px-4 py-1.5 text-xs font-semibold transition-colors",
+              calendarMode === "month" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+            )}
             onClick={() => setCalendarMode("month")}
           >
             Mois
@@ -200,15 +206,19 @@ export function AthleteMyPlanView(props: Props) {
                 key={card.day.toISOString()}
                 type="button"
                 onClick={() => onSelectDate(card.day)}
-                className={cn("border bg-white px-1.5 py-2 text-center transition", isCurrent ? "border-blue-500" : "border-slate-200", !inMonth && "opacity-40")}
+                className={cn(
+                  "rounded-2xl border bg-card px-1.5 py-2 text-center transition-colors",
+                  isCurrent ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border/70",
+                  !inMonth && "opacity-40"
+                )}
               >
-                <p className="text-[9px] font-semibold uppercase text-slate-400">{format(card.day, "EEE", { locale: fr })}</p>
-                <p className="text-sm font-semibold text-slate-900">{format(card.day, "d")}</p>
-                <div className={cn("mx-auto mt-1 flex h-7 w-7 items-center justify-center", sportSurfaceClass(card.mainSport))}>
+                <p className={cn("text-[9px] font-semibold uppercase", isCurrent ? "text-primary-foreground/80" : "text-muted-foreground")}>{format(card.day, "EEE", { locale: fr })}</p>
+                <p className={cn("text-sm font-semibold", isCurrent ? "text-primary-foreground" : "text-foreground")}>{format(card.day, "d")}</p>
+                <div className={cn("mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full", sportSurfaceClass(card.mainSport), isCurrent && "bg-primary-foreground/15 text-primary-foreground")}>
                   <span className="scale-[0.85]">{sportIcon(card.mainSport)}</span>
                 </div>
-                <div className="mx-auto mt-1 h-1 w-8 bg-slate-200/80">
-                  <div className={cn("h-1", sportBarClass(card.mainSport))} style={{ width: `${card.barPercent}%` }} />
+                <div className={cn("mx-auto mt-1 h-1 w-8 overflow-hidden rounded-full", isCurrent ? "bg-primary-foreground/25" : "bg-muted") }>
+                  <div className={cn("h-1 rounded-full", sportBarClass(card.mainSport), isCurrent && "bg-primary-foreground")} style={{ width: `${card.barPercent}%` }} />
                 </div>
               </button>
             );
@@ -230,7 +240,7 @@ export function AthleteMyPlanView(props: Props) {
         </div>
       </div>
 
-      <div className="border border-border/70 bg-card">
+      <div className="ios-card overflow-hidden rounded-[24px] border border-border/70 bg-card">
         <p className="border-b border-border px-4 py-2 text-xs font-semibold uppercase text-muted-foreground">Plan semaine</p>
         {weeklyRows.map((row) => {
           const durationSec = row.primary
@@ -278,23 +288,23 @@ export function AthleteMyPlanView(props: Props) {
         })}
       </div>
 
-      <div className="rounded-[24px] border border-slate-200 bg-[#F7F8FA] p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="ios-card rounded-[24px] border border-border/70 bg-card p-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-lg font-semibold text-slate-900">Ma progression</p>
-          <div className="flex rounded-xl border border-slate-200 bg-white">
+          <p className="text-lg font-semibold text-foreground">Ma progression</p>
+          <div className="inline-flex rounded-2xl bg-secondary p-1">
             {(["1m", "3m", "6m", "1y"] as const).map((range) => (
               <button
                 key={range}
                 type="button"
                 onClick={() => setProgressionRange(range)}
-                className={cn("px-2 py-1 text-[11px] font-semibold", progressionRange === range ? "bg-slate-100 text-slate-900" : "text-slate-600")}
+                className={cn("rounded-xl px-2 py-1 text-[11px] font-semibold transition-colors", progressionRange === range ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
               >
                 {range}
               </button>
             ))}
           </div>
         </div>
-        <div className="border border-slate-200 bg-white p-3">
+        <div className="rounded-2xl border border-border/70 bg-card p-3">
           <div className="flex h-[96px] items-end justify-between gap-2">
             {progressionColumns.map((column) => (
               <div key={column.monthDate.toISOString()} className="flex min-w-0 flex-1 flex-col items-center gap-1">
@@ -311,9 +321,9 @@ export function AthleteMyPlanView(props: Props) {
             <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 bg-slate-400" />Repos</span>
           </div>
         </div>
-        <div className="-mx-1 mt-2 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+      <div className="-mx-1 mt-2 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
           {metrics.map((metric) => (
-            <div key={metric.id} className="h-[110px] w-[144px] shrink-0 snap-start border border-slate-200 bg-white p-2.5">
+            <div key={metric.id} className="ios-card h-[110px] w-[144px] shrink-0 snap-start rounded-2xl border border-border/70 bg-card p-2.5">
               <div className="mb-1.5 flex items-center gap-1.5">
                 <span className="bg-slate-100 p-1 text-slate-600"><metric.icon className="h-3 w-3" /></span>
                 <p className="truncate text-[10px] font-semibold text-slate-500">{metric.label}</p>
@@ -330,25 +340,25 @@ export function AthleteMyPlanView(props: Props) {
         </div>
       </div>
 
-      <div className="border border-border/70 bg-card p-4">
+      <div className="ios-card rounded-[24px] border border-border/70 bg-card p-4">
         <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Cette semaine</p>
         {loading ? (
           <div className="h-20 animate-pulse bg-muted/40" />
         ) : sessionsThisWeek.length === 0 ? (
-          <div className="border border-dashed border-border p-3 text-sm text-muted-foreground">Aucune seance cette semaine.</div>
+            <div className="rounded-2xl border border-dashed border-border p-3 text-sm text-muted-foreground">Aucune seance cette semaine.</div>
         ) : (
           <div className="space-y-2">
             {sessionsThisWeek.map((session) => {
               const status = mapParticipationToUiStatus(session.participationStatus, session.hasConflict);
               return (
-                <button key={session.id} type="button" onClick={() => setDetail(session)} className="flex w-full items-center justify-between border border-border/70 px-3 py-2 text-left">
+                <button key={session.id} type="button" onClick={() => setDetail(session)} className="flex w-full items-center justify-between rounded-2xl border border-border/70 bg-card px-3 py-2 text-left transition-colors active:bg-secondary">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{session.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {format(parseISO(session.assignedDate), "EEE d MMM", { locale: fr })} · {Math.round(kmForSession(session) * 10) / 10} km
                     </p>
                   </div>
-                  <span className="ml-2 bg-secondary px-2 py-1 text-xs font-semibold">{status === "done" ? "Faite" : "A faire"}</span>
+                  <span className="ml-2 rounded-full bg-secondary px-2 py-1 text-xs font-semibold">{status === "done" ? "Faite" : "A faire"}</span>
                 </button>
               );
             })}
@@ -356,14 +366,14 @@ export function AthleteMyPlanView(props: Props) {
         )}
       </div>
 
-      <div className="border border-border/70 bg-card p-4">
+      <div className="ios-card rounded-[24px] border border-border/70 bg-card p-4">
         <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{format(selectedDate, "EEEE d MMMM", { locale: fr })}</p>
         {sessionsForSelectedDay.length === 0 ? (
           <p className="text-sm text-muted-foreground">Aucune seance prevue sur ce jour.</p>
         ) : (
           <div className="space-y-2">
             {sessionsForSelectedDay.map((session) => (
-              <button key={session.id} type="button" onClick={() => setDetail(session)} className="w-full border border-border/70 px-3 py-2 text-left">
+              <button key={session.id} type="button" onClick={() => setDetail(session)} className="w-full rounded-2xl border border-border/70 bg-card px-3 py-2 text-left transition-colors active:bg-secondary">
                 <p className="text-sm font-semibold text-foreground">{session.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {session.coachName} · {Math.round(kmForSession(session) * 10) / 10} km
