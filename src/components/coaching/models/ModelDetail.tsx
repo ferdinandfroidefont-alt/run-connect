@@ -35,7 +35,7 @@ export function ModelDetail({ model, onBack, onAdd }: ModelDetailProps) {
           {[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
         </p>
         <div className="mt-3">
-          <MiniWorkoutProfile blocks={miniProfile} />
+          <MiniWorkoutProfile blocks={miniProfile} variant="premiumCompact" className="h-10" />
         </div>
       </div>
 
