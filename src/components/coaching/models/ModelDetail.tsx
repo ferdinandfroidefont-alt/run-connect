@@ -1,8 +1,9 @@
 import { ChevronLeft, Plus } from "lucide-react";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { Button } from "@/components/ui/button";
-import { parseRCC, formatParsedBlockSummary, computeRCCSummary } from "@/lib/rccParser";
+import { parseRCC, formatParsedBlockSummary } from "@/lib/rccParser";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { resolveWorkoutMetrics } from "@/lib/workoutPresentation";
 import type { SessionModelItem } from "@/components/coaching/models/types";
 
 interface ModelDetailProps {
@@ -13,8 +14,9 @@ interface ModelDetailProps {
 
 export function ModelDetail({ model, onBack, onAdd }: ModelDetailProps) {
   const parsed = parseRCC(model.rccCode);
-  const summary = computeRCCSummary(parsed.blocks);
-  const miniProfile = renderWorkoutMiniProfile(buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any }));
+  const segments = buildWorkoutSegments(parsed.blocks, { sport: model.activityType as any });
+  const metrics = resolveWorkoutMetrics({ segments });
+  const miniProfile = renderWorkoutMiniProfile(segments);
 
   return (
     <div className="space-y-3">
@@ -30,7 +32,7 @@ export function ModelDetail({ model, onBack, onAdd }: ModelDetailProps) {
       <div className="rounded-2xl border border-border bg-card p-3">
         <p className="text-[16px] font-semibold text-foreground">{model.title}</p>
         <p className="mt-0.5 text-[12px] text-muted-foreground">
-          {summary.totalDurationMin} min • {summary.totalDistanceKm} km • {summary.intensity}
+          {[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
         </p>
         <div className="mt-3">
           <MiniWorkoutProfile blocks={miniProfile} />
