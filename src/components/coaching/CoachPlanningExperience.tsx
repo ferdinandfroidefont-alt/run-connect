@@ -2748,66 +2748,55 @@ export function CoachPlanningExperience() {
                   )}
                   onClick={() => {
                     if (!blockForm) return;
+                    const nextOrder = (pendingInsertIndex ?? draft.blocks.length) + 1;
                     if (entry.id === "steady") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [...prev.blocks, createDefaultBlock("steady", prev.blocks.length + 1)],
-                      }));
+                      insertDraftBlock(createDefaultBlock("steady", nextOrder), pendingInsertIndex);
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     if (entry.id === "interval") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [...prev.blocks, createDefaultBlock("interval", prev.blocks.length + 1)],
-                      }));
+                      insertDraftBlock(createDefaultBlock("interval", nextOrder), pendingInsertIndex);
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     if (entry.id === "warmup") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [...prev.blocks, createDefaultBlock("warmup", prev.blocks.length + 1)],
-                      }));
+                      insertDraftBlock(createDefaultBlock("warmup", nextOrder), pendingInsertIndex);
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     if (entry.id === "cooldown") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [...prev.blocks, createDefaultBlock("cooldown", prev.blocks.length + 1)],
-                      }));
+                      insertDraftBlock(createDefaultBlock("cooldown", nextOrder), pendingInsertIndex);
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     if (entry.id === "recovery") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [...prev.blocks, createDefaultBlock("recovery", prev.blocks.length + 1)],
-                      }));
+                      insertDraftBlock(createDefaultBlock("recovery", nextOrder), pendingInsertIndex);
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     if (entry.id === "pyramid") {
-                      setDraft((prev) => ({
-                        ...prev,
-                        blocks: [
-                          ...prev.blocks,
-                          {
-                            ...createDefaultBlock("steady", prev.blocks.length + 1),
-                            repetitions: 5,
-                            notes: "[Pyramid]",
-                            zone: "Z3",
-                          },
-                        ],
-                      }));
+                      insertDraftBlock(
+                        {
+                          ...createDefaultBlock("steady", nextOrder),
+                          repetitions: 5,
+                          notes: "[Pyramid]",
+                          zone: "Z3",
+                        },
+                        pendingInsertIndex
+                      );
                       setBlockSheetOpen(false);
                       setBlockForm(null);
+                      setPendingInsertIndex(null);
                       return;
                     }
                     setBlockForm({ ...blockForm, type: entry.id });
