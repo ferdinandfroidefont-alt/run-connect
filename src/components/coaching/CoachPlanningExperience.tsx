@@ -1034,6 +1034,11 @@ export function CoachPlanningExperience() {
     () => draft.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0),
     [draft.blocks]
   );
+  const totalEstimatedLoad = useMemo(
+    () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
+    [draft.blocks]
+  );
+  const previewBars = useMemo(() => buildPreviewBars(draft.blocks), [draft.blocks]);
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
@@ -1404,14 +1409,7 @@ export function CoachPlanningExperience() {
   };
 
   const startBlockCreation = (type?: BlockType, existing?: SessionBlock) => {
-    const base: SessionBlock = existing ?? {
-      id: uid(),
-      order: draft.blocks.length + 1,
-      type: type ?? "steady",
-      durationSec: 20 * 60,
-      intensityMode: "zones",
-      zone: "Z2",
-    };
+    const base: SessionBlock = existing ?? createDefaultBlock(type ?? "steady", draft.blocks.length + 1);
     setBlockForm(base);
     setEditingBlockId(existing?.id ?? null);
     setBlockStep(type ? "config" : "type");
