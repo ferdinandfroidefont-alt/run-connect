@@ -2853,35 +2853,53 @@ export function CoachPlanningExperience() {
                   <>
               {(() => {
                 const meta = blockTypeMeta(blockForm.type);
+                const guidance =
+                  blockForm.type === "warmup"
+                    ? "Pose le rythme de départ avec une montée progressive et lisible."
+                    : blockForm.type === "interval"
+                      ? "Cadre l’effort, les répétitions et la récupération dans une seule fiche."
+                      : blockForm.type === "cooldown"
+                        ? "Termine la séance avec un retour au calme simple et propre."
+                        : blockForm.type === "recovery"
+                          ? "Garde un bloc facile pour faire redescendre la charge."
+                          : "Crée un bloc stable avec un volume clair et une intensité nette.";
+
                 return (
-                  <div className={cn("rounded-2xl border p-3", meta.tone)}>
-                    <div className="flex items-center gap-3">
-                      <div className={cn("inline-flex h-10 w-10 items-center justify-center rounded-xl", meta.iconTone)}>
+                  <div className={cn("rounded-[28px] border p-4 shadow-[0_18px_42px_-30px_hsl(var(--foreground)/0.2)]", meta.tone)}>
+                    <div className="flex items-start gap-3">
+                      <div className={cn("inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[0_12px_28px_-20px_hsl(var(--foreground)/0.3)]", meta.iconTone)}>
                         <meta.icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[15px] font-semibold text-foreground">
-                          {meta.emoji} {meta.label}
-                        </p>
-                        <p className="text-[12px] text-muted-foreground">{meta.detail}</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[17px] font-semibold text-foreground">
+                              {meta.emoji} {meta.label}
+                            </p>
+                            <p className="mt-0.5 text-[13px] text-muted-foreground">{meta.detail}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setBlockStep("type")}
+                            className="rounded-full border border-border/70 bg-background/90 px-3 py-1.5 text-[12px] font-medium text-primary shadow-[0_10px_20px_-18px_hsl(var(--foreground)/0.35)]"
+                          >
+                            Changer
+                          </button>
+                        </div>
+                        <div className="mt-3 rounded-[20px] border border-border/60 bg-background/90 px-4 py-3">
+                          <p className="text-[13px] leading-relaxed text-foreground">{guidance}</p>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setBlockStep("type")}
-                        className="rounded-lg bg-card/80 px-2.5 py-1 text-[12px] font-medium text-primary"
-                      >
-                        Changer
-                      </button>
                     </div>
                   </div>
                 );
               })()}
 
-              <div className="rounded-[26px] border border-border bg-card p-3 shadow-[0_16px_40px_-28px_hsl(var(--foreground)/0.22)]">
-                <div className="overflow-hidden rounded-[22px] border border-border/80 bg-background">
+              <div className="rounded-[30px] border border-border/80 bg-card p-3 shadow-[0_20px_44px_-30px_hsl(var(--foreground)/0.24)]">
+                <div className="overflow-hidden rounded-[24px] border border-border/80 bg-background">
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
+                    className="flex min-h-[84px] w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-secondary/35"
                     onClick={() => {
                       const derivedPace =
                         blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
@@ -2923,21 +2941,23 @@ export function CoachPlanningExperience() {
                       );
                     }}
                   >
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-primary/10 text-primary">
                       <Gauge className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[16px] text-foreground">Allure</p>
+                      <p className="text-[17px] font-medium text-foreground">Allure</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">
+                      <p className="text-right text-[18px] font-semibold tabular-nums text-foreground">
                         {paceCardLabel(
                           blockForm.paceSecPerKm ||
                             (blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
                               ? Math.round((blockForm.durationSec / blockForm.distanceM) * 1000)
                               : undefined)
                         )}
-                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">/km</span>
+                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">
+                          {draft.sport === "swimming" ? "/100m" : "/km"}
+                        </span>
                       </p>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -2947,7 +2967,7 @@ export function CoachPlanningExperience() {
 
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
+                    className="flex min-h-[84px] w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-secondary/35"
                     onClick={() => {
                       const meters = blockForm.distanceM || 0;
                       let selectedUnit: "km" | "mi" = wheelUnit === "mi" ? "mi" : "km";
@@ -3013,16 +3033,20 @@ export function CoachPlanningExperience() {
                       );
                     }}
                   >
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-primary/10 text-primary">
                       <Ruler className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[16px] text-foreground">Distance</p>
+                      <p className="text-[17px] font-medium text-foreground">Distance</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">
-                        {distanceCardLabel(blockForm.distanceM)}
-                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">km</span>
+                      <p className="text-right text-[18px] font-semibold tabular-nums text-foreground">
+                        {draft.sport === "swimming"
+                          ? Math.round(blockForm.distanceM || 0).toLocaleString("fr-FR")
+                          : distanceCardLabel(blockForm.distanceM)}
+                        <span className="ml-1 text-[15px] font-medium text-muted-foreground">
+                          {draft.sport === "swimming" ? "m" : "km"}
+                        </span>
                       </p>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -3032,7 +3056,7 @@ export function CoachPlanningExperience() {
 
                   <button
                     type="button"
-                    className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary/35"
+                    className="flex min-h-[84px] w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-secondary/35"
                     onClick={() => {
                       const total = blockForm.durationSec || 0;
                       const nextA = String(Math.floor(total / 3600));
@@ -3062,14 +3086,14 @@ export function CoachPlanningExperience() {
                       );
                     }}
                   >
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-primary/10 text-primary">
                       <Clock3 className="h-5 w-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[16px] text-foreground">Temps</p>
+                      <p className="text-[17px] font-medium text-foreground">Temps</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-right text-[17px] font-semibold tabular-nums text-foreground">{durationClockLabel(blockForm.durationSec)}</p>
+                      <p className="text-right text-[18px] font-semibold tabular-nums text-foreground">{durationClockLabel(blockForm.durationSec)}</p>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </button>
@@ -3081,14 +3105,14 @@ export function CoachPlanningExperience() {
                   </p>
                 ) : null}
 
-                <div className="mt-3 rounded-[22px] border border-primary/10 bg-primary/5 px-4 py-3">
+                <div className="mt-4 rounded-[24px] border border-primary/10 bg-primary/5 px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-primary/10 text-primary">
                       <Crosshair className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[13px] text-foreground">Zone estimée</p>
-                      <p className="mt-0.5 text-[17px] font-semibold text-foreground">
+                      <p className="text-[15px] text-foreground">Zone estimée</p>
+                      <p className="mt-0.5 text-[18px] font-semibold text-foreground">
                         {formatZoneBadge(blockForm.zone)}
                       </p>
                     </div>
@@ -3097,14 +3121,15 @@ export function CoachPlanningExperience() {
               </div>
 
               {blockForm.type === "interval" && (
-                <div className="rounded-2xl border border-border bg-secondary/40 p-2.5">
-                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Répétitions & récupération
-                  </p>
+                <div className="rounded-[28px] border border-border/80 bg-card p-3 shadow-[0_18px_40px_-30px_hsl(var(--foreground)/0.22)]">
+                  <div className="mb-3 px-1">
+                    <p className="text-[17px] font-semibold text-foreground">Intervalles</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">Réglage rapide des répétitions et de la récupération.</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="secondary"
-                      className="h-10 justify-start rounded-xl text-[13px]"
+                      className="h-14 justify-start rounded-[18px] border border-border/70 bg-background px-4 text-[14px] font-semibold shadow-none"
                       onClick={() =>
                         openWheel(
                           "Répétitions",
@@ -3114,11 +3139,11 @@ export function CoachPlanningExperience() {
                         )
                       }
                     >
-                      Répétitions: {blockForm.repetitions || 1}
+                      Répétitions · {blockForm.repetitions || 1}
                     </Button>
                     <Button
                       variant="secondary"
-                      className="h-10 justify-start rounded-xl text-[13px]"
+                      className="h-14 justify-start rounded-[18px] border border-border/70 bg-background px-4 text-[14px] font-semibold shadow-none"
                       onClick={() => {
                         const total = blockForm.recoveryDurationSec || 0;
                         const nextA = String(Math.floor(total / 3600));
@@ -3144,7 +3169,7 @@ export function CoachPlanningExperience() {
                         );
                       }}
                     >
-                      Récup: {secondsToLabel(blockForm.recoveryDurationSec) || "Aucune"}
+                      Récup · {secondsToLabel(blockForm.recoveryDurationSec) || "Aucune"}
                     </Button>
                   </div>
                 </div>
@@ -3154,17 +3179,36 @@ export function CoachPlanningExperience() {
                 );
               })()}
 
-              <div className="rounded-[26px] border border-border bg-card p-4 shadow-[0_16px_40px_-28px_hsl(var(--foreground)/0.18)]">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[17px] font-semibold text-foreground">RPE <span className="font-normal text-muted-foreground">(optionnel)</span></p>
-                  </div>
+              <div className="rounded-[28px] border border-border/80 bg-card p-4 shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.2)]">
+                <div className="mb-3">
+                  <p className="text-[17px] font-semibold text-foreground">Intensité</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Choisis une zone cardio ou un ressenti RPE pour ce bloc.</p>
+                </div>
+
+                <div className="mb-4 grid grid-cols-2 gap-1 rounded-[18px] bg-secondary/55 p-1">
                   <button
                     type="button"
-                    className="rounded-full border border-border bg-secondary px-3 py-1 text-[12px] font-medium text-foreground"
-                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: prev.intensityMode === "rpe" ? "zones" : "rpe" } : prev))}
+                    className={cn(
+                      "rounded-[14px] px-3 py-2.5 text-[13px] font-semibold transition-all",
+                      (blockForm.intensityMode ?? "zones") === "zones"
+                        ? "bg-card text-foreground shadow-[0_10px_22px_-18px_hsl(var(--foreground)/0.35)]"
+                        : "text-muted-foreground"
+                    )}
+                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: "zones" } : prev))}
                   >
-                    {(blockForm.intensityMode ?? "zones") === "rpe" ? "Mode RPE" : "Mode zone"}
+                    Mode zone
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "rounded-[14px] px-3 py-2.5 text-[13px] font-semibold transition-all",
+                      (blockForm.intensityMode ?? "zones") === "rpe"
+                        ? "bg-card text-foreground shadow-[0_10px_22px_-18px_hsl(var(--foreground)/0.35)]"
+                        : "text-muted-foreground"
+                    )}
+                    onClick={() => setBlockForm((prev) => (prev ? { ...prev, intensityMode: "rpe" } : prev))}
+                  >
+                    Mode RPE
                   </button>
                 </div>
 
