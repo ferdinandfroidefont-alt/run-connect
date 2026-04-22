@@ -37,7 +37,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
-import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
+import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
@@ -301,6 +301,14 @@ function blockEstimatedLoad(block: SessionBlock) {
     block.type === "recovery" || block.type === "cooldown" ? 0.7 :
     1;
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
+}
+
+function isRestLikeSession(session: TrainingSession): boolean {
+  const title = session.title.toLowerCase();
+  const onlyRecoveryBlocks =
+    session.blocks.length > 0 &&
+    session.blocks.every((block) => block.type === "recovery" || block.type === "warmup" || block.type === "cooldown");
+  return title.includes("repos") || onlyRecoveryBlocks;
 }
 
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
@@ -1452,6 +1460,47 @@ export function CoachPlanningExperience() {
     return map;
   }, [filteredSessions]);
 
+  const daySessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
+    const groupedByDate = new Map<string, TrainingSession[]>();
+    filteredSessions.forEach((session) => {
+      const key = format(new Date(session.assignedDate), "yyyy-MM-dd");
+      if (!groupedByDate.has(key)) groupedByDate.set(key, []);
+      groupedByDate.get(key)!.push(session);
+    });
+
+    const output: Record<string, DaySessionSummary> = {};
+    groupedByDate.forEach((list, key) => {
+      if (!list.length) return;
+      const sorted = [...list].sort((a, b) => {
+        const metricsA = resolveWorkoutMetrics({ segments: buildWorkoutSegments(a.blocks, { sport: a.sport }) });
+        const metricsB = resolveWorkoutMetrics({ segments: buildWorkoutSegments(b.blocks, { sport: b.sport }) });
+        const loadA = (metricsA.distanceKm || 0) * 10 + (metricsA.durationMin || 0);
+        const loadB = (metricsB.distanceKm || 0) * 10 + (metricsB.durationMin || 0);
+        return loadB - loadA;
+      });
+      const primary = sorted[0];
+      if (isRestLikeSession(primary)) {
+        output[key] = { sport: "rest", value: "Repos" };
+        return;
+      }
+      const primaryMetrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(primary.blocks, { sport: primary.sport }) });
+      const totalDistance = sorted.reduce((acc, session) => {
+        const metrics = resolveWorkoutMetrics({ segments: buildWorkoutSegments(session.blocks, { sport: session.sport }) });
+        return acc + (metrics.distanceKm || 0);
+      }, 0);
+      const value =
+        sorted.length > 1
+          ? totalDistance > 0
+            ? `${Math.round(totalDistance * 10) / 10} km`
+            : primaryMetrics.distanceLabel || primaryMetrics.durationLabel
+          : primaryMetrics.distanceLabel || primaryMetrics.durationLabel;
+      if (!value) return;
+      output[key] = { sport: primary.sport, value };
+    });
+
+    return output;
+  }, [filteredSessions]);
+
   const existingSessionsByDay = useMemo(() => {
     const map: Record<string, string | undefined> = {};
     filteredSessions.forEach((session) => {
@@ -1913,6 +1962,8 @@ export function CoachPlanningExperience() {
                   onPreviousWeek={() => setWeekAnchor((current) => subWeeks(current, 1))}
                   onNextWeek={() => setWeekAnchor((current) => addWeeks(current, 1))}
                   indicatorsByDate={dayIndicatorsByDate}
+                  sessionSummaryByDate={daySessionSummaryByDate}
+                  showLegend
                 />
 
                 <div className="flex flex-col border-t border-border">

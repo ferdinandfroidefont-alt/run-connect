@@ -24,6 +24,10 @@ export interface MiniProfileBlock {
   opacity?: number;
 }
 
+interface RenderWorkoutMiniProfileOptions {
+  density?: "default" | "compact";
+}
+
 type ParsedLikeBlock = {
   type: string;
   duration?: number;
@@ -213,7 +217,11 @@ export function computeWorkoutDuration(segments: WorkoutSegment[]): number {
   return Math.round(segments.reduce((acc, s) => acc + s.durationMin, 0));
 }
 
-export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfileBlock[] {
+export function renderWorkoutMiniProfile(
+  segments: WorkoutSegment[],
+  options: RenderWorkoutMiniProfileOptions = {}
+): MiniProfileBlock[] {
+  const compactDensity = options.density === "compact";
   const meaningful = segments.filter((s) => s.kind !== "rest");
   if (!meaningful.length) return [{ width: 100, height: 8, color: "hsl(var(--muted))", opacity: 0.8 }];
 
@@ -253,7 +261,9 @@ export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfil
       (next.repeatCount || 0) >= Math.max(1, (seg.repeatCount || 1) - 1);
 
     if (repeatedPair) {
-      const chunks = Math.min(5, Math.max(3, Math.ceil((seg.repeatCount || 1) / 2)));
+      const chunks = compactDensity
+        ? Math.min(10, Math.max(5, Math.ceil((seg.repeatCount || 1) / 1.35)))
+        : Math.min(5, Math.max(3, Math.ceil((seg.repeatCount || 1) / 2)));
       for (let i = 0; i < chunks; i += 1) {
         compact.push({
           ...seg,
@@ -277,11 +287,12 @@ export function renderWorkoutMiniProfile(segments: WorkoutSegment[]): MiniProfil
     compact.push(seg);
   }
 
-  const trimmed = compact.slice(0, 14);
-  const total = Math.max(trimmed.reduce((acc, s) => acc + Math.max(s.durationMin, s.distanceKm * 8, 0.6), 0), 1);
+  const trimmed = compact.slice(0, compactDensity ? 22 : 14);
+  const minWeight = compactDensity ? 0.28 : 0.6;
+  const total = Math.max(trimmed.reduce((acc, s) => acc + Math.max(s.durationMin, s.distanceKm * 8, minWeight), 0), 1);
 
   return trimmed.map((seg) => {
-    const weight = Math.max(seg.durationMin, seg.distanceKm * 8, 0.6);
+    const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
     return {
       width: Math.max(1, (weight / total) * 100),
       height: heightForBand(seg.intensityBand),

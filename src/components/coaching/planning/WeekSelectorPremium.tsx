@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { addDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Bike, ChevronLeft, ChevronRight, Dumbbell, Footprints, Moon, Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WeekSelectorPremiumProps {
@@ -11,9 +11,71 @@ interface WeekSelectorPremiumProps {
   onPreviousWeek: () => void;
   onNextWeek: () => void;
   indicatorsByDate?: Record<string, Array<{ color: string }>>;
+  sessionSummaryByDate?: Record<string, DaySessionSummary>;
+  showLegend?: boolean;
 }
 
 const DAY_INITIALS = ["L", "M", "M", "J", "V", "S", "D"];
+
+type CalendarSport = "running" | "cycling" | "swimming" | "strength" | "rest";
+
+export type DaySessionSummary = {
+  sport: CalendarSport;
+  value: string;
+};
+
+const LEGEND_ITEMS: Array<{ sport: CalendarSport; label: string }> = [
+  { sport: "running", label: "Course à pied" },
+  { sport: "cycling", label: "Vélo" },
+  { sport: "swimming", label: "Natation" },
+  { sport: "strength", label: "Renforcement" },
+  { sport: "rest", label: "Repos" },
+];
+
+function sessionTone(sport: CalendarSport) {
+  switch (sport) {
+    case "running":
+      return "text-sky-500";
+    case "cycling":
+      return "text-emerald-500";
+    case "swimming":
+      return "text-cyan-500";
+    case "strength":
+      return "text-violet-500";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
+function legendDotTone(sport: CalendarSport) {
+  switch (sport) {
+    case "running":
+      return "bg-sky-500";
+    case "cycling":
+      return "bg-emerald-500";
+    case "swimming":
+      return "bg-cyan-500";
+    case "strength":
+      return "bg-violet-500";
+    default:
+      return "bg-muted-foreground/70";
+  }
+}
+
+function SessionIcon({ sport, className }: { sport: CalendarSport; className?: string }) {
+  switch (sport) {
+    case "running":
+      return <Footprints className={className} />;
+    case "cycling":
+      return <Bike className={className} />;
+    case "swimming":
+      return <Waves className={className} />;
+    case "strength":
+      return <Dumbbell className={className} />;
+    default:
+      return <Moon className={className} />;
+  }
+}
 
 export function WeekSelectorPremium({
   weekStart,
@@ -22,6 +84,8 @@ export function WeekSelectorPremium({
   onPreviousWeek,
   onNextWeek,
   indicatorsByDate = {},
+  sessionSummaryByDate = {},
+  showLegend = false,
 }: WeekSelectorPremiumProps) {
   const touchStartX = useRef<number | null>(null);
 
@@ -37,9 +101,10 @@ export function WeekSelectorPremium({
           initial: DAY_INITIALS[idx],
           isSelected: key === format(selectedDate, "yyyy-MM-dd"),
           indicators: indicatorsByDate[key] ?? [],
+          summary: sessionSummaryByDate[key],
         };
       }),
-    [indicatorsByDate, selectedDate, weekStart]
+    [indicatorsByDate, selectedDate, sessionSummaryByDate, weekStart]
   );
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} - ${format(addDays(weekStart, 6), "d MMM", { locale: fr })}`;
@@ -99,8 +164,23 @@ export function WeekSelectorPremium({
             <p className={cn("mt-1 text-[11px] font-medium leading-none", day.isSelected ? "text-primary-foreground/90" : "text-muted-foreground")}>
               {day.initial}
             </p>
-            {day.indicators.length > 0 && (
-              <div className="mt-1.5 flex items-center justify-center gap-1">
+            {day.summary ? (
+              <div className="mt-1.5 flex min-h-[24px] flex-col items-center justify-center">
+                <SessionIcon
+                  sport={day.summary.sport}
+                  className={cn("h-3 w-3", sessionTone(day.summary.sport))}
+                />
+                <p
+                  className={cn(
+                    "mt-0.5 text-[10px] font-medium leading-none",
+                    sessionTone(day.summary.sport)
+                  )}
+                >
+                  {day.summary.value}
+                </p>
+              </div>
+            ) : day.indicators.length > 0 ? (
+              <div className="mt-1.5 flex min-h-[24px] items-center justify-center gap-1">
                 {day.indicators.slice(0, 3).map((dot, idx) => (
                   <span
                     key={`${day.key}-${idx}`}
@@ -109,10 +189,24 @@ export function WeekSelectorPremium({
                   />
                 ))}
               </div>
+            ) : (
+              <div className="min-h-[24px]" />
             )}
           </button>
         ))}
       </div>
+      {showLegend && (
+        <div className="mt-2.5 flex items-center justify-center gap-2.5 overflow-x-auto pb-0.5 text-[10px] text-muted-foreground/80">
+          {LEGEND_ITEMS.map((item) => (
+            <div key={item.sport} className="flex flex-shrink-0 items-center gap-1">
+              <span className={cn("h-1.5 w-1.5 rounded-full", legendDotTone(item.sport))}>
+                <span className="sr-only">{item.label}</span>
+              </span>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

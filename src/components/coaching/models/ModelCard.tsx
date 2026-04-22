@@ -25,7 +25,7 @@ export function ModelCard({ model, summaryLine, previewLine, accentColor, miniPr
             <p className="truncate text-[15px] font-semibold text-foreground">{model.title}</p>
             <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{summaryLine}</p>
             <div className="mt-2">
-              <MiniWorkoutProfile blocks={miniProfile} compact />
+              <MiniWorkoutProfile blocks={miniProfile} compact variant="premiumCompact" />
             </div>
             <p className="mt-1 truncate text-[12px] text-foreground/80">{previewLine}</p>
           </button>

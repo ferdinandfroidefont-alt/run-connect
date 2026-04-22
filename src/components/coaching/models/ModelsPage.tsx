@@ -129,7 +129,7 @@ export function ModelsPage({
                 summaryLine={[metrics.durationLabel, metrics.distanceLabel, metrics.intensityLabel].filter(Boolean).join(" • ")}
                 previewLine={preview}
                 accentColor={workoutAccentColor(segments, model.activityType as any)}
-                miniProfile={renderWorkoutMiniProfile(segments)}
+                miniProfile={renderWorkoutMiniProfile(segments, { density: "compact" })}
                 onOpen={() => setSelectedModel(model)}
                 onAdd={() => setSheetModel(model)}
                 onMenu={

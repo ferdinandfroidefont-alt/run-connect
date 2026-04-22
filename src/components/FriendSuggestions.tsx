@@ -325,22 +325,36 @@ export const FriendSuggestions = ({ onClose, compact = false }: FriendSuggestion
     if (!user) return;
 
     try {
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('is_private')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      const targetStatus = targetProfile?.is_private ? 'pending' : 'accepted';
+
       const { error } = await supabase
         .from('user_follows')
         .insert([{
           follower_id: user.id,
           following_id: targetUserId,
-          status: 'pending'
+          status: targetStatus
         }]);
 
       if (error) throw error;
 
       // Remove from suggestions and refresh to get new ones
       setSuggestions(prev => prev.filter(s => s.user_id !== targetUserId));
-      toast({ 
-        title: "Demande envoyée", 
-        description: "Votre demande de suivi a été envoyée" 
-      });
+      if (targetStatus === 'pending') {
+        toast({
+          title: "Demande envoyée",
+          description: "Votre demande de suivi a été envoyée"
+        });
+      } else {
+        toast({
+          title: "Succès",
+          description: "Vous suivez maintenant cette personne"
+        });
+      }
 
       // Refresh suggestions to fill the gap
       setTimeout(() => {

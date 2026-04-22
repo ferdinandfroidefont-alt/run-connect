@@ -218,6 +218,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
     if (data) {
       setIsFollowing(data.status === 'accepted');
       setFollowRequestSent(data.status === 'pending');
+    } else {
+      setIsFollowing(false);
+      setFollowRequestSent(false);
     }
   };
 
@@ -264,13 +267,24 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
         setIsFollowing(false);
         setFollowRequestSent(false);
       } else {
-        const { error } = await supabase.from('user_follows').insert({ follower_id: user.id, following_id: userId, status: 'pending' });
+        const targetStatus = profile?.is_private ? 'pending' : 'accepted';
+        const { error } = await supabase
+          .from('user_follows')
+          .insert({ follower_id: user.id, following_id: userId, status: targetStatus });
         if (error) {
           if (error.code === '23505') { toast({ title: "Demande déjà envoyée" }); return; }
           throw error;
         }
-        setFollowRequestSent(true);
-        toast({ title: "Demande de suivi envoyée" });
+        if (targetStatus === 'pending') {
+          setFollowRequestSent(true);
+          setIsFollowing(false);
+          toast({ title: "Demande de suivi envoyée" });
+        } else {
+          setIsFollowing(true);
+          setFollowRequestSent(false);
+          setFollowerCount(prev => prev + 1);
+          toast({ title: "Vous suivez maintenant cette personne" });
+        }
       }
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });

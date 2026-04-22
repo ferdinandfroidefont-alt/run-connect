@@ -7,7 +7,7 @@ import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVis
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
-import { WeekSelectorPremium } from "@/components/coaching/planning/WeekSelectorPremium";
+import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { sportDotClass } from "./sportTokens";
 
 type Props = {
@@ -78,6 +78,29 @@ export function AthleteMyPlanView(props: Props) {
     [sessions, weekDays]
   );
 
+  const sessionSummaryByDate = useMemo<Record<string, DaySessionSummary>>(() => {
+    const summaries: Record<string, DaySessionSummary> = {};
+    dayRows.forEach((row) => {
+      if (!row.primarySession) return;
+      const key = format(row.day, "yyyy-MM-dd");
+      if (row.isRest) {
+        summaries[key] = { sport: "rest", value: "Repos" };
+        return;
+      }
+      const primarySegments = buildWorkoutSegments(row.primarySession.blocks, { sport: row.primarySession.sport });
+      const metrics = resolveWorkoutMetrics({
+        segments: primarySegments,
+        explicitDistanceKm: row.primarySession.distanceKm,
+      });
+      const totalDistanceKm = row.sessions.reduce((acc, session) => acc + kmForSession(session), 0);
+      const aggregatedDistance = totalDistanceKm > 0 ? `${Math.round(totalDistanceKm * 10) / 10} km` : undefined;
+      const value = row.sessions.length > 1 ? aggregatedDistance || metrics.distanceLabel || metrics.durationLabel : metrics.distanceLabel || metrics.durationLabel;
+      if (!value) return;
+      summaries[key] = { sport: row.primarySession.sport, value };
+    });
+    return summaries;
+  }, [dayRows]);
+
   return (
     <div className="bg-secondary pb-28 pt-2">
       <WeekSelectorPremium
@@ -86,6 +109,8 @@ export function AthleteMyPlanView(props: Props) {
         onSelectDate={onSelectDate}
         onPreviousWeek={props.onPreviousWeek}
         onNextWeek={props.onNextWeek}
+        sessionSummaryByDate={sessionSummaryByDate}
+        showLegend
       />
 
       <div className="flex flex-col border-t border-border bg-card">
