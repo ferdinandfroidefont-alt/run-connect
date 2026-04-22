@@ -9,6 +9,7 @@ interface AthleteHeaderProps {
   username: string | null;
   groupName: string | null;
   status?: "active" | "late" | "injured";
+  coachRecordsSummary?: string[];
   onMessage: () => void;
   onViewProfile: () => void;
 }
@@ -31,6 +32,7 @@ export function AthleteHeader({
   username,
   groupName,
   status = "active",
+  coachRecordsSummary,
   onMessage,
   onViewProfile,
 }: AthleteHeaderProps) {
@@ -59,6 +61,14 @@ export function AthleteHeader({
             >
               {STATUS_LABEL[status]}
             </span>
+            {coachRecordsSummary?.map((item) => (
+              <span
+                key={item}
+                className="inline-flex shrink-0 items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-foreground"
+              >
+                {item}
+              </span>
+            ))}
           </div>
         </div>
       </div>
