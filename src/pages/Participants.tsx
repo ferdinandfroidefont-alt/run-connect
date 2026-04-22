@@ -15,7 +15,7 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { MAPBOX_NAVIGATION_DAY_STYLE, MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
+import { MAPBOX_STREETS_STYLE } from "@/lib/mapboxConfig";
 
 type Participant = {
   id: string;
@@ -119,9 +119,13 @@ export default function Participants() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const pos = await getCurrentPosition(0, { mode: "fast" });
-      if (cancelled || !isValidLngLat(pos)) return;
-      setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
+      try {
+        const pos = await getCurrentPosition(0, { mode: "fast" });
+        if (cancelled || !isValidLngLat(pos)) return;
+        setFallbackUserPosition({ lat: pos.lat, lng: pos.lng });
+      } catch {
+        if (!cancelled) setFallbackUserPosition(null);
+      }
     })();
     return () => {
       cancelled = true;
@@ -157,12 +161,12 @@ export default function Participants() {
   const fitDefaultView = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
+    const rect = map.getContainer()?.getBoundingClientRect();
+    if (!rect || rect.width < 8 || rect.height < 8) return;
     const center = normalizeLngLat(userPositionRef.current);
-    map.easeTo({
+    map.jumpTo({
       center: [center.lng, center.lat],
       zoom: 14.3,
-      duration: 450,
-      essential: true,
     });
   }, []);
 
@@ -184,29 +188,17 @@ export default function Participants() {
           return;
         }
         mapRef.current = map;
-        let armedFallback = true;
-        const styleFallbackTimer = window.setTimeout(() => {
-          if (!armedFallback || cancelled || !mapRef.current) return;
-          try {
-            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
-          } catch {
-            // Ignore, on garde la carte même si le style custom échoue.
-          }
-          safeMapResize(mapRef.current);
-          setMapReady(true);
-        }, 1200);
-
-        const clearFallback = () => {
-          armedFallback = false;
-          window.clearTimeout(styleFallbackTimer);
-        };
+        let didBecomeReady = false;
 
         const onReady = () => {
-          if (cancelled) return;
-          clearFallback();
+          if (cancelled || didBecomeReady) return;
+          didBecomeReady = true;
           setMapReady(true);
-          fitDefaultView();
-          const t1 = window.setTimeout(() => safeMapResize(mapRef.current), 0);
+          safeMapResize(mapRef.current);
+          const t1 = window.setTimeout(() => {
+            safeMapResize(mapRef.current);
+            fitDefaultView();
+          }, 0);
           const t2 = window.setTimeout(() => safeMapResize(mapRef.current), 120);
           const t3 = window.setTimeout(() => safeMapResize(mapRef.current), 360);
           window.setTimeout(() => {
@@ -216,18 +208,10 @@ export default function Participants() {
           }, 420);
         };
         map.once("load", onReady);
-        map.once("style.load", onReady);
-        map.once("idle", onReady);
 
         map.on("error", () => {
-          if (cancelled || !mapRef.current) return;
-          try {
-            mapRef.current.setStyle(MAPBOX_STREETS_STYLE);
-          } catch {
-            // no-op
-          }
+          if (cancelled || !mapRef.current || didBecomeReady) return;
           safeMapResize(mapRef.current);
-          setMapReady(true);
         });
       } catch {
         window.setTimeout(() => {
@@ -251,7 +235,9 @@ export default function Participants() {
   }, [fitDefaultView]);
 
   useEffect(() => {
-    if (!mapRef.current || !effectiveUserPosition) return;
+    if (!mapRef.current || !mapReady || !effectiveUserPosition) return;
+    const rect = mapRef.current.getContainer()?.getBoundingClientRect();
+    if (!rect || rect.width < 8 || rect.height < 8) return;
     const nextZoom = hasAutoCentered ? undefined : 15.2;
     mapRef.current.easeTo({
       center: [effectiveUserPosition.lng, effectiveUserPosition.lat],
@@ -260,7 +246,7 @@ export default function Participants() {
       essential: true,
     });
     if (!hasAutoCentered) setHasAutoCentered(true);
-  }, [effectiveUserPosition, hasAutoCentered]);
+  }, [effectiveUserPosition, hasAutoCentered, mapReady]);
 
   useEffect(() => {
     const onVis = () => {
@@ -489,14 +475,10 @@ export default function Participants() {
 
   return (
     <div className="fixed inset-0 bg-background">
-      <div ref={mapContainerRef} className="absolute inset-0 z-0 bg-secondary" />
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-0 z-[2] bg-secondary/80 transition-opacity duration-200",
-          mapReady ? "opacity-0" : "opacity-100"
-        )}
-        aria-hidden
-      />
+      <div className="absolute inset-0 z-0" style={{ isolation: "isolate" }}>
+        <div ref={mapContainerRef} className="h-full w-full bg-muted" />
+      </div>
+      {!mapReady ? <div className="pointer-events-none absolute inset-0 z-[2] bg-muted/60" aria-hidden /> : null}
 
       <div className="absolute left-0 right-0 top-0 z-20 border-b border-border bg-card/95 pt-[var(--safe-area-top)]">
         <IosPageHeaderBar
