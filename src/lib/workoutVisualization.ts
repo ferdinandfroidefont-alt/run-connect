@@ -76,21 +76,23 @@ export function buildWorkoutSegments(
   const refResolution = sport === "running" ? resolveRunningReferences(options?.athleteIntensity) : { refs: null, source: "fallback" as const };
   const segments: WorkoutSegment[] = [];
   for (const raw of inputBlocks) {
+    const parsedRaw = raw as ParsedLikeBlock;
+    const sessionRaw = raw as SessionLikeBlock;
     const repetitions = Math.max(1, raw.repetitions || 1);
     const durationMin =
       "durationSec" in raw
-        ? clampPositive((raw.durationSec || 0) / 60)
-        : clampPositive(raw.duration || 0);
+        ? clampPositive((sessionRaw.durationSec || 0) / 60)
+        : clampPositive(parsedRaw.duration || 0);
     const recoveryDurationMin =
       "recoveryDurationSec" in raw
-        ? clampPositive((raw.recoveryDurationSec || 0) / 60)
-        : clampPositive((raw.recoveryDuration || 0) / 60);
+        ? clampPositive((sessionRaw.recoveryDurationSec || 0) / 60)
+        : clampPositive((parsedRaw.recoveryDuration || 0) / 60);
     const distanceKm =
       "distanceM" in raw
-        ? clampPositive((raw.distanceM || 0) / 1000)
-        : clampPositive((raw.distance || 0) / 1000);
+        ? clampPositive((sessionRaw.distanceM || 0) / 1000)
+        : clampPositive((parsedRaw.distance || 0) / 1000);
     const paceSecPerKm =
-      "paceSecPerKm" in raw ? raw.paceSecPerKm || null : toPaceSecPerKmFromString(raw.pace);
+      "paceSecPerKm" in raw ? sessionRaw.paceSecPerKm || null : toPaceSecPerKmFromString(parsedRaw.pace);
 
     if (raw.type === "interval") {
       const durationFromDistance =
