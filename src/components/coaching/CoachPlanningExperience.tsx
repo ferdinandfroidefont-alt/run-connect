@@ -603,9 +603,19 @@ export function CoachPlanningExperience() {
         .select("user_id")
         .eq("conversation_id", activeClubId);
       const memberIds = (members || []).map((m) => m.user_id);
-      const { data: profiles } = memberIds.length
-        ? await supabase.from("profiles").select("user_id, display_name, running_records").in("user_id", memberIds)
-        : { data: [] };
+      const [{ data: profiles }, { data: coachPrivateRecords }] = memberIds.length
+        ? await Promise.all([
+            supabase.from("profiles").select("user_id, display_name, running_records").in("user_id", memberIds),
+            user
+              ? supabase
+                  .from("coach_athlete_private_records")
+                  .select("id, athlete_user_id, sport_key, event_label, record_value, note")
+                  .eq("club_id", activeClubId)
+                  .eq("coach_id", user.id)
+                  .in("athlete_user_id", memberIds)
+              : Promise.resolve({ data: [], error: null }),
+          ])
+        : [{ data: [] }, { data: [] }];
       const { data: clubGroups } = await supabase
         .from("club_groups")
         .select("id, name")
@@ -620,6 +630,11 @@ export function CoachPlanningExperience() {
         acc[row.group_id].push(row.user_id);
         return acc;
       }, {});
+      const privateRowsByAthlete = ((coachPrivateRecords || []) as CoachPrivateRecordRow[]).reduce<Record<string, CoachPrivateRecordRow[]>>((acc, row) => {
+        if (!acc[row.athlete_user_id]) acc[row.athlete_user_id] = [];
+        acc[row.athlete_user_id].push(row);
+        return acc;
+      }, {});
       if (ignore) return;
       setAthletes(
         (profiles || []).map((profile) => ({
@@ -629,6 +644,7 @@ export function CoachPlanningExperience() {
             profile.running_records && typeof profile.running_records === "object"
               ? (profile.running_records as Record<string, unknown>)
               : null,
+          coachRunningRecords: runningRecordsFromPrivateRows(privateRowsByAthlete[profile.user_id] || []),
         }))
       );
       setGroups((clubGroups || []).map((group) => ({ id: group.id, name: group.name })));
@@ -638,7 +654,7 @@ export function CoachPlanningExperience() {
     return () => {
       ignore = true;
     };
-  }, [activeClubId]);
+  }, [activeClubId, user]);
 
   useEffect(() => {
     if (!activeClubId) return;
