@@ -75,8 +75,11 @@ type SessionBlock = {
   speedKmh?: number;
   powerWatts?: number;
   repetitions?: number;
+  blockRepetitions?: number;
   recoveryDurationSec?: number;
   recoveryDistanceM?: number;
+  blockRecoveryDurationSec?: number;
+  blockRecoveryDistanceM?: number;
   recoveryType?: "walk" | "jog" | "easy";
   intensityMode?: IntensityMode;
   zone?: ZoneKey;
@@ -299,12 +302,18 @@ function blockSummary(block: SessionBlock) {
     : (block.zone || "");
   if (block.type === "interval") {
     const reps = block.repetitions || 1;
+    const series = block.blockRepetitions || 1;
     const rec = block.recoveryDurationSec
       ? `récup ${secondsToLabel(block.recoveryDurationSec)}`
       : block.recoveryDistanceM
       ? `récup ${metersToLabel(block.recoveryDistanceM)}`
       : "";
-    return `${reps} x ${volume}${target ? ` à ${target}` : ""}${rec ? ` - ${rec}` : ""}${intensity ? ` - ${intensity}` : ""}`;
+    const seriesRec = block.blockRecoveryDurationSec
+      ? `inter-séries ${secondsToLabel(block.blockRecoveryDurationSec)}`
+      : block.blockRecoveryDistanceM
+      ? `inter-séries ${metersToLabel(block.blockRecoveryDistanceM)}`
+      : "";
+    return `${series > 1 ? `${series} x ` : ""}${reps} x ${volume}${target ? ` à ${target}` : ""}${rec ? ` - ${rec}` : ""}${seriesRec ? ` - ${seriesRec}` : ""}${intensity ? ` - ${intensity}` : ""}`;
   }
   if (block.notes?.includes("[Pyramid]")) {
     const steps = Math.max(3, block.repetitions || 5);
@@ -332,6 +341,10 @@ function blockEstimatedLoad(block: SessionBlock) {
   return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
 }
 
+function computeSessionDistanceKm(blocks: SessionBlock[], sport: SportType) {
+  return resolveWorkoutMetrics({ segments: buildWorkoutSegments(blocks, { sport }) }).distanceKm || 0;
+}
+
 function createDefaultBlock(type: BlockType, order: number): SessionBlock {
   return {
     id: uid(),
@@ -351,6 +364,82 @@ function paceStringToSecPerKm(pace?: string) {
   const [min, sec] = pace.split(":").map(Number);
   if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
   return min * 60 + sec;
+}
+
+function parseNumericField(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
+  }
+  return undefined;
+}
+
+function normalizeStoredZone(source: Record<string, unknown>): ZoneKey | undefined {
+  const raw =
+    typeof source.zone === "string"
+      ? source.zone
+      : typeof source.intensity === "string"
+        ? source.intensity
+        : typeof source.effortIntensity === "string"
+          ? source.effortIntensity
+          : undefined;
+  const upper = raw?.toUpperCase();
+  return upper && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(upper) ? (upper as ZoneKey) : undefined;
+}
+
+function mapStoredBlockToSessionBlock(block: unknown, index: number): SessionBlock {
+  const source = block as Record<string, unknown>;
+  const intensityMode: "rpe" | "zones" = source.intensityMode === "rpe" ? "rpe" : "zones";
+  const recoveryType =
+    source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
+      ? source.recoveryType
+      : source.recoveryType === "marche"
+        ? "walk"
+        : source.recoveryType === "trot"
+          ? "jog"
+          : source.recoveryType === "statique"
+            ? "easy"
+            : undefined;
+
+  return {
+    id: typeof source.id === "string" ? source.id : uid(),
+    order: typeof source.order === "number" ? source.order : index + 1,
+    type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
+    durationSec: typeof source.durationSec === "number" ? source.durationSec : parseNumericField(source.effortDuration ?? source.duration),
+    distanceM: typeof source.distanceM === "number" ? source.distanceM : parseNumericField(source.effortDistance ?? source.distance),
+    paceSecPerKm:
+      typeof source.paceSecPerKm === "number"
+        ? source.paceSecPerKm
+        : paceStringToSecPerKm(
+            typeof source.effortPace === "string"
+              ? source.effortPace
+              : typeof source.pace === "string"
+                ? source.pace
+                : undefined
+          ),
+    speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
+    powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
+    repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
+    blockRepetitions: typeof source.blockRepetitions === "number" ? source.blockRepetitions : undefined,
+    recoveryDurationSec:
+      typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : parseNumericField(source.recoveryDuration),
+    recoveryDistanceM:
+      typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : parseNumericField(source.recoveryDistance),
+    blockRecoveryDurationSec:
+      typeof source.blockRecoveryDurationSec === "number"
+        ? source.blockRecoveryDurationSec
+        : parseNumericField(source.blockRecoveryDuration),
+    blockRecoveryDistanceM:
+      typeof source.blockRecoveryDistanceM === "number"
+        ? source.blockRecoveryDistanceM
+        : parseNumericField(source.blockRecoveryDistance),
+    recoveryType,
+    intensityMode,
+    zone: normalizeStoredZone(source),
+    rpe: typeof source.rpe === "number" ? source.rpe : undefined,
+    notes: typeof source.notes === "string" ? source.notes : undefined,
+  } satisfies SessionBlock;
 }
 
 function parsedRccToSessionBlocks(rccCode: string): SessionBlock[] {
@@ -808,33 +897,7 @@ export function CoachPlanningExperience() {
         } else {
           const mapped = (data || []).map<TrainingSession>((row) => {
             const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
-            const blocks = rawBlocks.map((block, index) => {
-              const source = block as Record<string, unknown>;
-              const intensityMode = source.intensityMode === "rpe" ? "rpe" : "zones";
-              const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
-              const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
-              return {
-                id: typeof source.id === "string" ? source.id : uid(),
-                order: typeof source.order === "number" ? source.order : index + 1,
-                type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
-                durationSec: typeof source.durationSec === "number" ? source.durationSec : undefined,
-                distanceM: typeof source.distanceM === "number" ? source.distanceM : undefined,
-                paceSecPerKm: typeof source.paceSecPerKm === "number" ? source.paceSecPerKm : undefined,
-                speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
-                powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
-                repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
-                recoveryDurationSec: typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : undefined,
-                recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
-                recoveryType:
-                  source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                    ? source.recoveryType
-                    : undefined,
-                intensityMode,
-                zone,
-                rpe: typeof source.rpe === "number" ? source.rpe : undefined,
-                notes: typeof source.notes === "string" ? source.notes : undefined,
-              } satisfies SessionBlock;
-            });
+            const blocks = rawBlocks.map(mapStoredBlockToSessionBlock);
             const targetAthletes = Array.isArray(row.target_athletes)
               ? row.target_athletes.filter((value): value is string => typeof value === "string")
               : [];
@@ -965,33 +1028,7 @@ export function CoachPlanningExperience() {
 
       const mapped: AthletePlanSessionModel[] = rows.map(({ participation, session: row }) => {
         const rawBlocks = Array.isArray(row.session_blocks) ? row.session_blocks : [];
-        const blocks = rawBlocks.map((block, index) => {
-          const source = block as Record<string, unknown>;
-          const intensityMode: "rpe" | "zones" = source.intensityMode === "rpe" ? "rpe" : "zones";
-          const zoneValue = typeof source.zone === "string" ? source.zone : undefined;
-          const zone = zoneValue && ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"].includes(zoneValue) ? (zoneValue as ZoneKey) : undefined;
-          return {
-            id: typeof source.id === "string" ? source.id : uid(),
-            order: typeof source.order === "number" ? source.order : index + 1,
-            type: (typeof source.type === "string" ? source.type : "steady") as BlockType,
-            durationSec: typeof source.durationSec === "number" ? source.durationSec : undefined,
-            distanceM: typeof source.distanceM === "number" ? source.distanceM : undefined,
-            paceSecPerKm: typeof source.paceSecPerKm === "number" ? source.paceSecPerKm : undefined,
-            speedKmh: typeof source.speedKmh === "number" ? source.speedKmh : undefined,
-            powerWatts: typeof source.powerWatts === "number" ? source.powerWatts : undefined,
-            repetitions: typeof source.repetitions === "number" ? source.repetitions : undefined,
-            recoveryDurationSec: typeof source.recoveryDurationSec === "number" ? source.recoveryDurationSec : undefined,
-            recoveryDistanceM: typeof source.recoveryDistanceM === "number" ? source.recoveryDistanceM : undefined,
-            recoveryType:
-              source.recoveryType === "walk" || source.recoveryType === "jog" || source.recoveryType === "easy"
-                ? (source.recoveryType as "walk" | "jog" | "easy")
-                : undefined,
-            intensityMode,
-            zone,
-            rpe: typeof source.rpe === "number" ? source.rpe : undefined,
-            notes: typeof source.notes === "string" ? source.notes : undefined,
-          };
-        });
+        const blocks = rawBlocks.map(mapStoredBlockToSessionBlock);
         const coach = coachById.get(row.coach_id);
         const coachName = coach?.display_name || coach?.username || "Coach";
         const clubName = clubById.get(row.club_id) || "Club";
@@ -1124,9 +1161,9 @@ export function CoachPlanningExperience() {
   const saveSession = async () => {
     if (!draft.blocks.length || !activeClubId || !user) return;
     const normalizedTitle = draft.title.trim() || "Séance sans titre";
-    const totalDistanceKm = draft.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000;
+    const totalDistanceKm = computeSessionDistanceKm(draft.blocks, draft.sport);
     const targetAthletes = draft.athleteId ? [draft.athleteId] : activeAthleteId ? [activeAthleteId] : null;
-    const dbPayload = {
+      const dbPayload = {
       club_id: activeClubId,
       coach_id: user.id,
       title: normalizedTitle,
@@ -1199,8 +1236,7 @@ export function CoachPlanningExperience() {
       send_mode: session.groupId ? "group" : "club",
       status: "draft",
       session_blocks: session.blocks,
-      distance_km:
-        session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000 || null,
+      distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
     };
     const { data, error } = await supabase.from("coaching_sessions").insert(clonePayload).select("id").single();
     if (error) {
@@ -1308,8 +1344,7 @@ export function CoachPlanningExperience() {
         send_mode: session.groupId ? "group" : "club",
         status: session.sent ? "sent" : "draft",
         session_blocks: session.blocks,
-        distance_km:
-          session.blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000 || null,
+        distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
       };
       const { data, error } = await supabase.from("coaching_sessions").insert(payload).select("id").single();
       if (error) {
@@ -1370,8 +1405,7 @@ export function CoachPlanningExperience() {
       await removeSession(existing.id);
     }
     const blocks = parsedRccToSessionBlocks(model.rccCode);
-    const totalDistanceKm =
-      blocks.reduce((acc, block) => acc + (block.distanceM || 0) * (block.repetitions || 1), 0) / 1000;
+    const totalDistanceKm = computeSessionDistanceKm(blocks, model.activityType as SportType);
     const targetAthletes = activeAthleteId ? [activeAthleteId] : null;
     const payload = {
       club_id: activeClubId,
