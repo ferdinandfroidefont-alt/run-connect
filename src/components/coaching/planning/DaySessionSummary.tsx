@@ -27,8 +27,14 @@ export function DaySessionSummary({ summary, accentColor }: DaySessionSummaryPro
       <div className="min-w-0">
         <p className="truncate text-[13px] text-muted-foreground">{summary.subtitle || summary.sportHint || "Séance"}</p>
         <p className="truncate text-[14px] font-semibold text-foreground">{summary.title}</p>
-        <div className="mt-1.5">
-          <MiniWorkoutProfile blocks={summary.miniProfile} isRestDay={summary.isRestDay} compact />
+        <div className="mt-2">
+          <MiniWorkoutProfile
+            blocks={summary.miniProfile}
+            isRestDay={summary.isRestDay}
+            compact
+            variant="premiumCompact"
+            className="h-8"
+          />
         </div>
         <p className={cn("mt-1 truncate text-[12px] text-muted-foreground", !details && "opacity-0")}>{details || "Aucune donnée"}</p>
       </div>

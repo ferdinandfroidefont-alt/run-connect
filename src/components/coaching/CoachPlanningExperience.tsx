@@ -2434,7 +2434,7 @@ export function CoachPlanningExperience() {
                           {previewMetrics.feedbackLabel ?? "Aperçu"}
                         </span>
                       </div>
-                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[86px] rounded-[16px] bg-transparent px-0 py-0" />
+                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[96px]" />
                       <div className="mt-3 grid grid-cols-3 gap-2">
                         <div className="rounded-2xl bg-background/85 px-3 py-2">
                           <p className="text-[11px] text-muted-foreground">Durée</p>

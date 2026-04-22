@@ -11,8 +11,8 @@ interface MiniWorkoutProfileProps {
 
 function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["variant"]): number {
   if (variant !== "premiumCompact") return height;
-  // Keep intensity hierarchy but tighten the overall profile footprint.
-  return Math.max(3, Math.round(height * 0.48));
+  // Keep intensity hierarchy while preserving enough vertical presence for list previews.
+  return Math.max(4, Math.round(height * 0.62));
 }
 
 export function MiniWorkoutProfile({
@@ -35,9 +35,9 @@ export function MiniWorkoutProfile({
       className={cn(
         "flex w-full overflow-hidden",
         variant === "premiumCompact"
-          ? "items-end gap-px rounded-md border border-border/25 bg-muted/15 px-1.5 py-1"
+          ? "items-end gap-[2px] px-0 py-0"
           : "items-center gap-1 rounded-xl bg-muted/45 px-2 py-2",
-        compact ? (variant === "premiumCompact" ? "h-6" : "h-9") : "h-10",
+        compact ? (variant === "premiumCompact" ? "h-8" : "h-9") : variant === "premiumCompact" ? "h-12" : "h-10",
         className
       )}
     >
