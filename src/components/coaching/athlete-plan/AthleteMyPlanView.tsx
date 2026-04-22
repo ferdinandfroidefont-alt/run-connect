@@ -3,6 +3,7 @@ import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MoreHorizontal } from "lucide-react";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
+import { cn } from "@/lib/utils";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "./types";
 import { applyConflictFlags, kmForSession } from "./planUtils";
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
@@ -263,16 +264,16 @@ function estimateSegmentWeight(durationSec: number): number {
 
 function blockVisualProfile(type: string, zone?: string) {
   if (type === "recovery" || type === "cooldown") {
-    return { color: "bg-[#22C55E]", height: 10 };
+    return { color: "bg-emerald-500", height: 10 };
   }
   if (type === "interval") {
-    return { color: "bg-[#F97316]", height: 30 };
+    return { color: "bg-orange-500", height: 30 };
   }
   if (type === "steady" && (zone === "Z4" || zone === "Z5" || zone === "Z6")) {
-    return { color: "bg-[#8B5CF6]", height: 28 };
+    return { color: "bg-violet-500", height: 28 };
   }
   if (type === "warmup") {
     return { color: "bg-slate-300", height: 8 };
   }
-  return { color: "bg-[#2563EB]", height: 20 };
+  return { color: "bg-primary", height: 20 };
 }
