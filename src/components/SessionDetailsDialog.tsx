@@ -787,11 +787,11 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </button>
                 <button
                   onClick={() => setShowSessionShare(true)}
-                  className="h-10 rounded-full bg-white/95 shadow-md px-3 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
                   aria-label="Partager"
                 >
-                  <Share2 className="h-4 w-4 text-foreground" />
-                  <span className="text-[12px] font-semibold text-foreground">Partager</span>
+                  <Share2 className="h-4 w-4" />
+                  <span>Partager</span>
                 </button>
               </div>
             </div>
