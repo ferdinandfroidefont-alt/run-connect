@@ -2004,7 +2004,7 @@ export function CoachPlanningExperience() {
 
                 <div className="flex flex-col border-t border-border">
                   {weekDays.map((day) => {
-                const daySessions = filteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
+                const daySessions = enrichedFilteredSessions.filter((session) => isSameDay(new Date(session.assignedDate), day));
                 const session = daySessions[0];
                 const isSelectedDay = format(day, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
                 const normalizedSegments = session
@@ -2035,7 +2035,7 @@ export function CoachPlanningExperience() {
                       subtitle: session.title,
                       duration: workoutMetrics?.durationLabel,
                       distance: workoutMetrics?.distanceLabel,
-                      intensityLabel: workoutMetrics?.intensityLabel,
+                      intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
                       miniProfile: renderWorkoutMiniProfile(normalizedSegments),
                       isRestDay:
                         session.blocks.length > 0 &&
@@ -2318,6 +2318,7 @@ export function CoachPlanningExperience() {
                       {secondsToLabel(totalDurationSec)}
                       {totalDistanceM > 0 ? ` • ${metersToLabel(totalDistanceM)}` : ""}
                       {totalEstimatedLoad > 0 ? ` • ${totalEstimatedLoad} ch` : ""}
+                      {previewMetrics.feedbackLabel ? ` • ${previewMetrics.feedbackLabel}` : ""}
                     </span>
                   </div>
                   <Button
