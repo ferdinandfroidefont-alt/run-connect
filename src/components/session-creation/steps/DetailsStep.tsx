@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 import { computeBlocksDistanceKm, formatDistanceForInput } from '../utils/computeBlocksDistance';
 import { resolveSessionTitle } from '@/lib/sessionTitleDefaults';
+import { normalizeBlocksForStorage, resolveSessionTotals, zoneLabel } from '@/lib/sessionBlockCalculations';
 
 interface DetailsStepProps {
   formData: SessionFormData;
@@ -89,9 +90,11 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
   // Auto-compute distance from structured blocks
   const isStructured = formData.session_mode === 'structured';
+  const resolvedBlocks = React.useMemo(() => normalizeBlocksForStorage(formData.blocks), [formData.blocks]);
+  const resolvedTotals = React.useMemo(() => resolveSessionTotals(resolvedBlocks), [resolvedBlocks]);
   const computedDistanceKm = React.useMemo(
-    () => (isStructured ? computeBlocksDistanceKm(formData.blocks) : null),
-    [isStructured, formData.blocks]
+    () => (isStructured ? computeBlocksDistanceKm(resolvedBlocks) : null),
+    [isStructured, resolvedBlocks]
   );
   useEffect(() => {
     if (!isStructured || computedDistanceKm == null) return;
@@ -117,7 +120,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   };
 
   const handleBlocksChange = (blocks: SessionBlock[]) => {
-    onFormDataChange({ blocks });
+    onFormDataChange({ blocks: normalizeBlocksForStorage(blocks) });
   };
 
   const handleRouteAutoFill = (data: { distance_km: string; elevation_gain: string }) => {
@@ -273,9 +276,35 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
 
         {/* Structured Mode - Block Builder */}
         {formData.session_mode === 'structured' && showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4">
+          <div className="space-y-3 rounded-[28px] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
+            <div className="rounded-[22px] border border-border bg-secondary/50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Vue coach</p>
+                  <p className="mt-1 text-[18px] font-semibold text-foreground">Structure intelligente</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Deux métriques renseignées suffisent, la troisième est calculée automatiquement.</p>
+                </div>
+                <div className="rounded-full bg-background px-3 py-1 text-[11px] font-semibold text-foreground shadow-[var(--shadow-2xs)]">
+                  {zoneLabel(resolvedTotals.dominantZone)}
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-[18px] bg-background px-3 py-3 shadow-[var(--shadow-2xs)]">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Distance</p>
+                  <p className="mt-1 text-[16px] font-semibold text-foreground">{resolvedTotals.distanceKm != null ? `${resolvedTotals.distanceKm.toFixed(1)} km` : '—'}</p>
+                </div>
+                <div className="rounded-[18px] bg-background px-3 py-3 shadow-[var(--shadow-2xs)]">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Durée</p>
+                  <p className="mt-1 text-[16px] font-semibold text-foreground">{resolvedTotals.durationMin != null ? `${resolvedTotals.durationMin} min` : '—'}</p>
+                </div>
+                <div className="rounded-[18px] bg-background px-3 py-3 shadow-[var(--shadow-2xs)]">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Blocs visibles</p>
+                  <p className="mt-1 text-[16px] font-semibold text-foreground">{resolvedTotals.blockCount}</p>
+                </div>
+              </div>
+            </div>
             <SessionBlockBuilder
-              blocks={formData.blocks}
+              blocks={resolvedBlocks}
               activityType={formData.activity_type}
               onBlocksChange={handleBlocksChange}
             />
