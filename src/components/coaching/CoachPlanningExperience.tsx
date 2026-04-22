@@ -1028,7 +1028,18 @@ export function CoachPlanningExperience() {
     [sessions, activeAthleteId, activeGroupId, effectiveAthleteMode, groupMembers]
   );
 
-  const previewSegments = useMemo(() => buildWorkoutSegments(draft.blocks, { sport: draft.sport }), [draft.blocks, draft.sport]);
+  const activeAthleteIntensity = useMemo(() => {
+    if (effectiveAthleteMode) {
+      return athleteIntensityFromRunningRecords((userProfile?.running_records as Record<string, unknown> | null | undefined) ?? null);
+    }
+    const selectedAthlete = activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined;
+    return athleteIntensityFromRunningRecords(selectedAthlete?.runningRecords ?? null);
+  }, [activeAthleteId, athletes, effectiveAthleteMode, userProfile?.running_records]);
+
+  const previewSegments = useMemo(
+    () => buildWorkoutSegments(draft.blocks, { sport: draft.sport, athleteIntensity: activeAthleteIntensity ?? undefined }),
+    [draft.blocks, draft.sport, activeAthleteIntensity]
+  );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const totalDurationSec = useMemo(() => Math.round((previewMetrics.durationMin || 0) * 60), [previewMetrics.durationMin]);
   const totalDistanceM = useMemo(() => Math.round((previewMetrics.distanceKm || 0) * 1000), [previewMetrics.distanceKm]);
@@ -1985,6 +1996,7 @@ export function CoachPlanningExperience() {
                 const normalizedSegments = session
                   ? buildWorkoutSegments(session.blocks, {
                       sport: session.sport,
+                      athleteIntensity: session.athleteIntensity ?? undefined,
                     })
                   : [];
                 const sportHint: "running" | "cycling" | "swimming" | "strength" | "other" | undefined = session
