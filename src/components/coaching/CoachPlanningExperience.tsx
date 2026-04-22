@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -385,6 +385,21 @@ export function CoachPlanningExperience() {
   const [wheelA, setWheelA] = useState("0");
   const [wheelB, setWheelB] = useState("0");
   const [wheelC, setWheelC] = useState("0");
+  const wheelARef = useRef("0");
+  const wheelBRef = useRef("0");
+  const wheelCRef = useRef("0");
+  const setWheelAValue = useCallback((value: string) => {
+    wheelARef.current = value;
+    setWheelA(value);
+  }, []);
+  const setWheelBValue = useCallback((value: string) => {
+    wheelBRef.current = value;
+    setWheelB(value);
+  }, []);
+  const setWheelCValue = useCallback((value: string) => {
+    wheelCRef.current = value;
+    setWheelC(value);
+  }, []);
   const [wheelUnit, setWheelUnit] = useState("min/km");
   const [savePulse, setSavePulse] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1286,8 +1301,10 @@ export function CoachPlanningExperience() {
     currentValue: string,
     onConfirm: (next: string) => void
   ) => {
-    setWheelA(currentValue);
-    openWheelColumns(title, [{ items, value: currentValue, onChange: setWheelA }], () => onConfirm(wheelA));
+    setWheelAValue(currentValue);
+    openWheelColumns(title, [{ items, value: currentValue, onChange: setWheelAValue }], () =>
+      onConfirm(wheelARef.current)
+    );
   };
 
   const startBlockCreation = (type?: BlockType, existing?: SessionBlock) => {
@@ -2337,107 +2354,10 @@ export function CoachPlanningExperience() {
                   {blockForm.type === "steady" ? "Volume estimé" : "Volume"}
                 </p>
                 <div className="grid grid-cols-1 gap-2">
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[13px]"
-                    onClick={() => {
-                      const total = blockForm.durationSec || 0;
-                      setWheelA(String(Math.floor(total / 3600)));
-                      setWheelB(String(Math.floor((total % 3600) / 60)));
-                      setWheelC(String(total % 60));
-                      openWheelColumns(
-                        "Durée",
-                        [
-                          { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
-                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
-                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
-                        ],
-                        () => {
-                          const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
-                          setBlockForm((prev) => {
-                            if (!prev) return prev;
-                            const draftNext = { ...prev, durationSec: next };
-                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "duration") : draftNext;
-                          });
-                        }
-                      );
-                    }}
-                  >
-                    Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="h-10 justify-start rounded-xl text-[13px]"
-                    onClick={() => {
-                      const meters = blockForm.distanceM || 0;
-                      let selectedUnit: "km" | "mi" = wheelUnit === "mi" ? "mi" : "km";
-                      if (draft.sport === "swimming") {
-                        const snapped = Math.max(0, Math.round(meters / 25) * 25);
-                        setWheelA(String(snapped));
-                        setWheelB("0");
-                        setWheelUnit("m");
-                      } else if (selectedUnit === "mi") {
-                        const miles = meters / 1609.344;
-                        const wholeMi = Math.floor(miles);
-                        const decMi = Math.max(0, Math.min(99, Math.round((miles - wholeMi) * 100)));
-                        setWheelA(String(wholeMi));
-                        setWheelB(String(decMi));
-                      } else {
-                        selectedUnit = "km";
-                        const wholeKm = Math.floor(meters / 1000);
-                        const remMeters = Math.max(0, meters - wholeKm * 1000);
-                        const snapped = Math.min(975, Math.max(0, Math.round(remMeters / 25) * 25));
-                        setWheelA(String(wholeKm));
-                        setWheelB(String(snapped));
-                        setWheelUnit("km");
-                      }
-                      openWheelColumns(
-                        "Distance",
-                        draft.sport === "swimming"
-                          ? [{ items: DISTANCE_METERS_ONLY_25_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "m" }]
-                          : selectedUnit === "mi"
-                            ? [
-                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "mi" },
-                                { items: DISTANCE_MI_DEC_OPTIONS, value: wheelB, onChange: setWheelB },
-                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
-                              ]
-                            : [
-                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: wheelA, onChange: setWheelA, suffix: "km" },
-                                { items: DISTANCE_METERS_25_OPTIONS, value: wheelB, onChange: setWheelB, suffix: "m" },
-                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
-                              ],
-                        () => {
-                          let next = 0;
-                          if (draft.sport === "swimming") {
-                            next = Math.max(0, Number.parseInt(wheelA, 10) || 0);
-                          } else if (wheelUnit === "mi") {
-                            const wholeMi = Math.max(0, Number.parseInt(wheelA, 10) || 0);
-                            const decMi = Math.max(0, Math.min(99, Number.parseInt(wheelB, 10) || 0));
-                            next = Math.round((wholeMi + decMi / 100) * 1609.344);
-                          } else {
-                            const wholeKm = Math.max(0, Number.parseInt(wheelA, 10) || 0);
-                            const remMeters = Math.min(975, Math.max(0, Number.parseInt(wheelB, 10) || 0));
-                            next = wholeKm * 1000 + remMeters;
-                          }
-                          setBlockForm((prev) => {
-                            if (!prev) return prev;
-                            const nextDistance = Number.isFinite(next) ? next : 0;
-                            const draftNext = { ...prev, distanceM: nextDistance };
-                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "distance") : draftNext;
-                          });
-                        }
-                      );
-                    }}
-                  >
-                    Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
-                  </Button>
                   {draft.sport !== "strength" && (
                     <Button
-                      variant={draft.sport === "running" ? "default" : "secondary"}
-                      className={cn(
-                        "h-10 justify-start rounded-xl text-[12px]",
-                        draft.sport === "running" && "bg-primary/90 text-primary-foreground hover:bg-primary"
-                      )}
+                      variant="secondary"
+                      className="h-10 justify-start rounded-xl text-[13px]"
                       onClick={() => {
                         const derivedPace =
                           blockForm.durationSec && blockForm.distanceM && blockForm.distanceM > 0
@@ -2445,19 +2365,21 @@ export function CoachPlanningExperience() {
                             : undefined;
                         setWheelUnit("min/km");
                         const pace = blockForm.paceSecPerKm || derivedPace || 330;
-                        setWheelA(String(Math.floor(pace / 60)));
-                        setWheelB(String(pace % 60));
+                        const nextA = String(Math.floor(pace / 60));
+                        const nextB = String(pace % 60);
+                        setWheelAValue(nextA);
+                        setWheelBValue(nextB);
                         openWheelColumns(
                           "Allure moyenne estimée",
                           [
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelA, onChange: setWheelA, suffix: "'" },
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "''" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextA, onChange: setWheelAValue, suffix: "'" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "''" },
                             { items: [{ value: "min/km", label: "/km" }, { value: "min/mi", label: "/mi" }, { value: "s/100", label: "/100m" }], value: wheelUnit, onChange: setWheelUnit },
                           ],
                           () => {
                             const unit = wheelUnit;
                             if (unit === "s/100") {
-                              const sec100 = Number.parseInt(wheelA, 10);
+                              const sec100 = Number.parseInt(wheelARef.current, 10);
                               const pacePerKm = sec100 * 10;
                               setBlockForm((prev) => {
                                 if (!prev) return prev;
@@ -2466,7 +2388,8 @@ export function CoachPlanningExperience() {
                               });
                               return;
                             }
-                            const secBase = Number.parseInt(wheelA, 10) * 60 + Number.parseInt(wheelB, 10);
+                            const secBase =
+                              Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
                             const pacePerKm = unit === "min/mi" ? Math.round(secBase / 1.609344) : secBase;
                             setBlockForm((prev) => {
                               if (!prev) return prev;
@@ -2486,6 +2409,110 @@ export function CoachPlanningExperience() {
                       ) || "Non définie"}
                     </Button>
                   )}
+                  <Button
+                    variant="secondary"
+                    className="h-10 justify-start rounded-xl text-[13px]"
+                    onClick={() => {
+                      const meters = blockForm.distanceM || 0;
+                      let selectedUnit: "km" | "mi" = wheelUnit === "mi" ? "mi" : "km";
+                      let nextA = "0";
+                      let nextB = "0";
+                      if (draft.sport === "swimming") {
+                        const snapped = Math.max(0, Math.round(meters / 25) * 25);
+                        nextA = String(snapped);
+                        nextB = "0";
+                        setWheelUnit("m");
+                      } else if (selectedUnit === "mi") {
+                        const miles = meters / 1609.344;
+                        const wholeMi = Math.floor(miles);
+                        const decMi = Math.max(0, Math.min(99, Math.round((miles - wholeMi) * 100)));
+                        nextA = String(wholeMi);
+                        nextB = String(decMi);
+                      } else {
+                        selectedUnit = "km";
+                        const wholeKm = Math.floor(meters / 1000);
+                        const remMeters = Math.max(0, meters - wholeKm * 1000);
+                        const snapped = Math.min(975, Math.max(0, Math.round(remMeters / 25) * 25));
+                        nextA = String(wholeKm);
+                        nextB = String(snapped);
+                        setWheelUnit("km");
+                      }
+                      setWheelAValue(nextA);
+                      setWheelBValue(nextB);
+                      openWheelColumns(
+                        "Distance",
+                        draft.sport === "swimming"
+                          ? [{ items: DISTANCE_METERS_ONLY_25_OPTIONS, value: nextA, onChange: setWheelAValue, suffix: "m" }]
+                          : selectedUnit === "mi"
+                            ? [
+                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: nextA, onChange: setWheelAValue, suffix: "mi" },
+                                { items: DISTANCE_MI_DEC_OPTIONS, value: nextB, onChange: setWheelBValue },
+                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                              ]
+                            : [
+                                { items: DISTANCE_KM_WHOLE_OPTIONS, value: nextA, onChange: setWheelAValue, suffix: "km" },
+                                { items: DISTANCE_METERS_25_OPTIONS, value: nextB, onChange: setWheelBValue, suffix: "m" },
+                                { items: [{ value: "km", label: "km" }, { value: "mi", label: "mi" }], value: wheelUnit, onChange: setWheelUnit },
+                              ],
+                        () => {
+                          let next = 0;
+                          if (draft.sport === "swimming") {
+                            next = Math.max(0, Number.parseInt(wheelARef.current, 10) || 0);
+                          } else if (wheelUnit === "mi") {
+                            const wholeMi = Math.max(0, Number.parseInt(wheelARef.current, 10) || 0);
+                            const decMi = Math.max(0, Math.min(99, Number.parseInt(wheelBRef.current, 10) || 0));
+                            next = Math.round((wholeMi + decMi / 100) * 1609.344);
+                          } else {
+                            const wholeKm = Math.max(0, Number.parseInt(wheelARef.current, 10) || 0);
+                            const remMeters = Math.min(975, Math.max(0, Number.parseInt(wheelBRef.current, 10) || 0));
+                            next = wholeKm * 1000 + remMeters;
+                          }
+                          setBlockForm((prev) => {
+                            if (!prev) return prev;
+                            const nextDistance = Number.isFinite(next) ? next : 0;
+                            const draftNext = { ...prev, distanceM: nextDistance };
+                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "distance") : draftNext;
+                          });
+                        }
+                      );
+                    }}
+                  >
+                    Distance: {metersToLabel(blockForm.distanceM) || "Non définie"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="h-10 justify-start rounded-xl text-[13px]"
+                    onClick={() => {
+                      const total = blockForm.durationSec || 0;
+                      const nextA = String(Math.floor(total / 3600));
+                      const nextB = String(Math.floor((total % 3600) / 60));
+                      const nextC = String(total % 60);
+                      setWheelAValue(nextA);
+                      setWheelBValue(nextB);
+                      setWheelCValue(nextC);
+                      openWheelColumns(
+                        "Durée",
+                        [
+                          { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
+                          { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
+                        ],
+                        () => {
+                          const next =
+                            Number.parseInt(wheelARef.current, 10) * 3600 +
+                            Number.parseInt(wheelBRef.current, 10) * 60 +
+                            Number.parseInt(wheelCRef.current, 10);
+                          setBlockForm((prev) => {
+                            if (!prev) return prev;
+                            const draftNext = { ...prev, durationSec: next };
+                            return draft.sport === "running" ? deriveRunningVolume(draftNext, "duration") : draftNext;
+                          });
+                        }
+                      );
+                    }}
+                  >
+                    Durée: {secondsToLabel(blockForm.durationSec) || "Non définie"}
+                  </Button>
                 </div>
                 {hasVolumeConflict && draft.sport === "running" ? (
                   <p className="mt-2 px-1 text-[11px] text-amber-600 dark:text-amber-400">
@@ -2524,18 +2551,24 @@ export function CoachPlanningExperience() {
                       className="h-10 justify-start rounded-xl text-[13px]"
                       onClick={() => {
                         const total = blockForm.recoveryDurationSec || 0;
-                        setWheelA(String(Math.floor(total / 3600)));
-                        setWheelB(String(Math.floor((total % 3600) / 60)));
-                        setWheelC(String(total % 60));
+                        const nextA = String(Math.floor(total / 3600));
+                        const nextB = String(Math.floor((total % 3600) / 60));
+                        const nextC = String(total % 60);
+                        setWheelAValue(nextA);
+                        setWheelBValue(nextB);
+                        setWheelCValue(nextC);
                         openWheelColumns(
                           "Récupération",
                           [
-                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: wheelA, onChange: setWheelA, suffix: "h" },
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelB, onChange: setWheelB, suffix: "m" },
-                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: wheelC, onChange: setWheelC, suffix: "s" },
+                            { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
+                            { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
                           ],
                           () => {
-                            const next = Number.parseInt(wheelA, 10) * 3600 + Number.parseInt(wheelB, 10) * 60 + Number.parseInt(wheelC, 10);
+                            const next =
+                              Number.parseInt(wheelARef.current, 10) * 3600 +
+                              Number.parseInt(wheelBRef.current, 10) * 60 +
+                              Number.parseInt(wheelCRef.current, 10);
                             setBlockForm((prev) => (prev ? { ...prev, recoveryDurationSec: next } : prev));
                           }
                         );
