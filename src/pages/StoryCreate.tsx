@@ -2717,14 +2717,6 @@ export default function StoryCreate() {
         {/* Barre du haut : boutons flottants, sans bandeau opaque (type Instagram) */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-30 pt-[max(8px,env(safe-area-inset-top,8px))]">
           <div className="pointer-events-auto flex items-center justify-between gap-2 px-3">
-            <button
-              type="button"
-              onClick={() => void requestExitWithDraftPrompt("back")}
-              className="inline-flex min-h-11 min-w-11 items-center gap-1 rounded-full bg-transparent px-2.5 py-2 text-[15px] font-medium text-primary transition active:scale-[0.97] active:opacity-85"
-            >
-              <ArrowLeft className="h-5 w-5 shrink-0" />
-              <span className="pr-0.5">Retour</span>
-            </button>
             {selectedMusic && (
               <button
                 type="button"
