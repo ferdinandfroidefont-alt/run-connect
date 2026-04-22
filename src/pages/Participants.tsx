@@ -12,7 +12,6 @@ import { loadMapboxGl } from "@/lib/mapboxLazy";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAuth } from "@/hooks/useAuth";
 import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessionPin";
-import { buildSessionStaticMapUrl } from "@/lib/mapboxStaticImage";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -119,8 +118,6 @@ export default function Participants() {
 
   useEffect(() => {
     let cancelled = false;
-    const hasTrackingUserPosition = isValidLngLat(userPosition);
-    if (hasTrackingUserPosition) return;
     void (async () => {
       const pos = await getCurrentPosition(0, { mode: "fast" });
       if (cancelled || !isValidLngLat(pos)) return;
@@ -150,18 +147,6 @@ export default function Participants() {
     }
     return rows;
   }, [participantPositions]);
-
-  const staticFallbackCenter = normalizeLngLat(effectiveUserPosition);
-  const staticFallbackMapUrl = useMemo(
-    () =>
-      buildSessionStaticMapUrl({
-        routePath: [],
-        pin: staticFallbackCenter,
-        width: 1280,
-        height: 1280,
-      }),
-    [staticFallbackCenter.lat, staticFallbackCenter.lng]
-  );
 
   const computedLiveState = useMemo<"none" | "upcoming" | "live">(() => {
     if (!session || !sessionAllowsLive) return "none";
