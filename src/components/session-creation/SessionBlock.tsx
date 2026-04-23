@@ -148,7 +148,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
         {resolvedBlock.type === 'interval' ? (
           <>
             <SectionCard>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-6 gap-1.5">
                 <MetricPill
                   label="Blocs"
                   value={`${resolvedBlock.blockRepetitions ?? 1}`}
@@ -176,45 +176,36 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                   }}
                   emphasized
                 />
-              </div>
-              {(resolvedBlock.blockRepetitions ?? 1) > 1 && (
-                <div className="grid grid-cols-2 gap-2">
-                  <MetricPill
-                    label="Récup séries"
-                    value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) || 'Temps'}
-                    onClick={() => openDuration('blockRecoveryDuration', resolvedBlock.blockRecoveryDuration)}
-                  />
-                  <MetricPill
-                    label="Dist. séries"
-                    value={formatDistanceLabel(resolvedBlock.blockRecoveryDistance)}
-                    onClick={() => openDistance('blockRecoveryDistance', resolvedBlock.blockRecoveryDistance)}
-                  />
-                </div>
-              )}
-            </SectionCard>
-
-            <SectionCard>
-              <div className="grid grid-cols-3 gap-2">
+                <MetricPill
+                  label="Distance répétition"
+                  value={formatDistanceLabel(resolvedBlock.effortDistance)}
+                  onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
+                  emphasized
+                />
+                <MetricPill
+                  label="Temps répétition"
+                  value={formatDurationLabel(resolvedBlock.effortDuration)}
+                  onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)}
+                  emphasized
+                />
                 <MetricPill
                   label="Allure"
                   value={formatPaceLabel(resolvedBlock.effortPace)}
                   onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
                   emphasized
                 />
-                <MetricPill
-                  label="Distance"
-                  value={formatDistanceLabel(resolvedBlock.effortDistance)}
-                  onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
-                  emphasized
-                />
-                <MetricPill
-                  label="Temps"
-                  value={formatDurationLabel(resolvedBlock.effortDuration)}
-                  onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)}
-                  emphasized
-                />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <MetricPill
+                  label="Récup blocs"
+                  value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) || 'Temps'}
+                  onClick={() => openDuration('blockRecoveryDuration', resolvedBlock.blockRecoveryDuration)}
+                />
+                <MetricPill
+                  label="Récup séries"
+                  value={formatDurationLabel(resolvedBlock.recoveryDuration)}
+                  onClick={() => openDuration('recoveryDuration', resolvedBlock.recoveryDuration)}
+                />
                 <MetricPill
                   label="RPE"
                   value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : 'RPE'}
@@ -223,45 +214,6 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                     setPicker('rpe');
                   }}
                 />
-              </div>
-            </SectionCard>
-
-            <SectionCard>
-              <div className="grid grid-cols-3 gap-2">
-                <MetricPill
-                  label="Allure"
-                  value={formatPaceLabel(resolvedBlock.recoveryPace)}
-                  onClick={() => openPace('recoveryPace', resolvedBlock.recoveryPace)}
-                />
-                <MetricPill
-                  label="Distance"
-                  value={formatDistanceLabel(resolvedBlock.recoveryDistance)}
-                  onClick={() => openDistance('recoveryDistance', resolvedBlock.recoveryDistance)}
-                />
-                <MetricPill
-                  label="Temps"
-                  value={formatDurationLabel(resolvedBlock.recoveryDuration)}
-                  onClick={() => openDuration('recoveryDuration', resolvedBlock.recoveryDuration)}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { value: 'trot', label: 'Trot' },
-                  { value: 'marche', label: 'Marche' },
-                  { value: 'statique', label: 'Statique' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => commit({ recoveryType: option.value as SessionBlockType['recoveryType'] })}
-                    className={cn(
-                      'rounded-lg border px-2 py-2 text-[11px] font-medium transition-colors',
-                      resolvedBlock.recoveryType === option.value ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground',
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
               </div>
             </SectionCard>
           </>
