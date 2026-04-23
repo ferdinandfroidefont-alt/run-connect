@@ -1,9 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Flame, Snowflake, X, Zap } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WheelValuePickerModal } from '@/components/ui/ios-wheel-picker';
 import { cn } from '@/lib/utils';
 import type { SessionBlock as SessionBlockType, BlockType } from './types';
@@ -41,11 +39,11 @@ type PickerKind =
   | 'rpe'
   | 'recoveryRpe';
 
-const BLOCK_CONFIG: Record<BlockType, { icon: React.ElementType; label: string }> = {
-  warmup: { icon: Flame, label: 'Échauffement' },
-  interval: { icon: Zap, label: 'Intervalle' },
-  steady: { icon: Activity, label: 'Bloc continu' },
-  cooldown: { icon: Snowflake, label: 'Retour au calme' },
+const BLOCK_CONFIG: Record<BlockType, { emoji: string; label: string }> = {
+  warmup: { emoji: '🔥', label: 'Échauffement' },
+  interval: { emoji: '⚡', label: 'Intervalle' },
+  steady: { emoji: '🏃', label: 'Bloc continu' },
+  cooldown: { emoji: '❄️', label: 'Retour au calme' },
 };
 
 const minuteItems = Array.from({ length: 91 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, '0') }));
@@ -62,23 +60,23 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
       type="button"
       onClick={onClick}
       className={cn(
-        'flex min-h-[74px] flex-1 flex-col justify-center rounded-2xl border border-border px-3 py-3 text-left transition-transform active:scale-[0.98]',
-        emphasized ? 'bg-card' : 'bg-muted/30',
+        'min-w-0 rounded-xl border border-border px-2.5 py-2 text-left transition-transform active:scale-[0.98]',
+        emphasized ? 'bg-card' : 'bg-muted/30'
       )}
     >
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <span className="mt-1.5 flex h-11 items-center rounded-xl border border-border bg-background px-3 text-[15px] font-medium text-foreground">
-        {value}
-      </span>
+      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
+      <div className="mt-1 flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-[13px] font-medium text-foreground">
+        <span className="truncate">{value}</span>
+      </div>
     </button>
   );
 }
 
 function SectionCard({ title, children }: React.PropsWithChildren<{ title: string }>) {
   return (
-    <div className="rounded-2xl bg-card p-4 space-y-4">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <div className="space-y-3">{children}</div>
+    <div className="rounded-xl border border-border bg-muted/25 p-2.5">
+      <p className="mb-2 text-[11px] font-medium text-muted-foreground">{title}</p>
+      <div className="space-y-2">{children}</div>
     </div>
   );
 }
@@ -86,7 +84,6 @@ function SectionCard({ title, children }: React.PropsWithChildren<{ title: strin
 export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUpdate, onRemove, index }) => {
   const resolvedBlock = React.useMemo(() => resolveStructuredBlock(block), [block]);
   const config = BLOCK_CONFIG[resolvedBlock.type];
-  const Icon = config.icon;
   const [picker, setPicker] = React.useState<PickerKind | null>(null);
   const [draftA, setDraftA] = React.useState('0');
   const [draftB, setDraftB] = React.useState('0');
@@ -126,69 +123,124 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -40 }}
       transition={{ delay: index * 0.04 }}
-      className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]"
+      className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]"
     >
-      <div className="border-b border-border px-4 py-3.5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[15px] font-semibold text-foreground">{config.label}</p>
-                <p className="truncate text-[12px] text-muted-foreground">{summary}</p>
-              </div>
-            </div>
-          </div>
+      <div className="flex items-start justify-between gap-3 border-b border-border px-3 py-2.5">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold text-foreground">
-              {zoneLabel(autoZone)}
+            <span className="text-[18px] leading-none" aria-hidden>
+              {config.emoji}
             </span>
-            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" onClick={onRemove}>
-              <X className="h-4 w-4" />
-            </Button>
+            <p className="truncate text-[14px] font-semibold text-foreground">{config.label}</p>
           </div>
+          {summary && <p className="mt-1 truncate text-[11px] text-muted-foreground">{summary}</p>}
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="rounded-full bg-secondary px-2 py-1 text-[10px] font-semibold text-foreground">
+            {zoneLabel(autoZone)}
+          </span>
+          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={onRemove}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-2.5 p-3">
         {resolvedBlock.type === 'interval' ? (
           <>
             <SectionCard title="Structure">
-              <div className="flex gap-2">
-                <MetricPill label="Répétitions" value={`${resolvedBlock.repetitions ?? 1} reps`} onClick={() => { setDraftA(String(resolvedBlock.repetitions ?? 1)); setPicker('repetitions'); }} emphasized />
-                <MetricPill label="Séries" value={`${resolvedBlock.blockRepetitions ?? 1} séries`} onClick={() => { setDraftA(String(resolvedBlock.blockRepetitions ?? 1)); setPicker('series'); }} emphasized />
+              <div className="grid grid-cols-2 gap-2">
+                <MetricPill
+                  label="Répétitions"
+                  value={`${resolvedBlock.repetitions ?? 1}`}
+                  onClick={() => {
+                    setDraftA(String(resolvedBlock.repetitions ?? 1));
+                    setPicker('repetitions');
+                  }}
+                  emphasized
+                />
+                <MetricPill
+                  label="Séries"
+                  value={`${resolvedBlock.blockRepetitions ?? 1}`}
+                  onClick={() => {
+                    setDraftA(String(resolvedBlock.blockRepetitions ?? 1));
+                    setPicker('series');
+                  }}
+                  emphasized
+                />
               </div>
               {(resolvedBlock.blockRepetitions ?? 1) > 1 && (
-                <div className="flex gap-2">
-                  <MetricPill label="Récup séries" value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) || 'Temps'} onClick={() => openDuration('blockRecoveryDuration', resolvedBlock.blockRecoveryDuration)} />
-                  <MetricPill label="Distance récup" value={formatDistanceLabel(resolvedBlock.blockRecoveryDistance)} onClick={() => openDistance('blockRecoveryDistance', resolvedBlock.blockRecoveryDistance)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <MetricPill
+                    label="Récup séries"
+                    value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) || 'Temps'}
+                    onClick={() => openDuration('blockRecoveryDuration', resolvedBlock.blockRecoveryDuration)}
+                  />
+                  <MetricPill
+                    label="Dist. séries"
+                    value={formatDistanceLabel(resolvedBlock.blockRecoveryDistance)}
+                    onClick={() => openDistance('blockRecoveryDistance', resolvedBlock.blockRecoveryDistance)}
+                  />
                 </div>
               )}
             </SectionCard>
 
             <SectionCard title="Effort">
-              <div className="flex gap-2">
-                <MetricPill label="Distance" value={formatDistanceLabel(resolvedBlock.effortDistance)} onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)} emphasized />
-                <MetricPill label="Temps" value={formatDurationLabel(resolvedBlock.effortDuration)} onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)} emphasized />
-                <MetricPill label="Allure" value={formatPaceLabel(resolvedBlock.effortPace)} onClick={() => openPace('effortPace', resolvedBlock.effortPace)} emphasized />
+              <div className="grid grid-cols-3 gap-2">
+                <MetricPill
+                  label="Allure"
+                  value={formatPaceLabel(resolvedBlock.effortPace)}
+                  onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
+                  emphasized
+                />
+                <MetricPill
+                  label="Distance"
+                  value={formatDistanceLabel(resolvedBlock.effortDistance)}
+                  onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
+                  emphasized
+                />
+                <MetricPill
+                  label="Temps"
+                  value={formatDurationLabel(resolvedBlock.effortDuration)}
+                  onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)}
+                  emphasized
+                />
               </div>
-              <div className="flex gap-2">
-                <MetricPill label="RPE" value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : 'RPE'} onClick={() => { setDraftA(String(resolvedBlock.rpe ?? 8)); setPicker('rpe'); }} />
-                <div className="flex flex-1 items-center rounded-2xl border border-border bg-muted/30 px-4 py-3 text-[13px] text-muted-foreground">
-                  Zone calculée automatiquement · {zoneLabel(resolvedBlock.effortIntensity)}
+              <div className="grid grid-cols-2 gap-2">
+                <MetricPill
+                  label="RPE"
+                  value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : 'RPE'}
+                  onClick={() => {
+                    setDraftA(String(resolvedBlock.rpe ?? 8));
+                    setPicker('rpe');
+                  }}
+                />
+                <div className="rounded-xl border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+                  Zone auto · {zoneLabel(resolvedBlock.effortIntensity)}
                 </div>
               </div>
             </SectionCard>
 
-            <SectionCard title="Récup">
-              <div className="flex gap-2">
-                <MetricPill label="Temps" value={formatDurationLabel(resolvedBlock.recoveryDuration)} onClick={() => openDuration('recoveryDuration', resolvedBlock.recoveryDuration)} />
-                <MetricPill label="Distance" value={formatDistanceLabel(resolvedBlock.recoveryDistance)} onClick={() => openDistance('recoveryDistance', resolvedBlock.recoveryDistance)} />
-                <MetricPill label="Allure" value={formatPaceLabel(resolvedBlock.recoveryPace)} onClick={() => openPace('recoveryPace', resolvedBlock.recoveryPace)} />
-              </div>
+            <SectionCard title="Récupération">
               <div className="grid grid-cols-3 gap-2">
+                <MetricPill
+                  label="Allure"
+                  value={formatPaceLabel(resolvedBlock.recoveryPace)}
+                  onClick={() => openPace('recoveryPace', resolvedBlock.recoveryPace)}
+                />
+                <MetricPill
+                  label="Distance"
+                  value={formatDistanceLabel(resolvedBlock.recoveryDistance)}
+                  onClick={() => openDistance('recoveryDistance', resolvedBlock.recoveryDistance)}
+                />
+                <MetricPill
+                  label="Temps"
+                  value={formatDurationLabel(resolvedBlock.recoveryDuration)}
+                  onClick={() => openDuration('recoveryDuration', resolvedBlock.recoveryDuration)}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
                 {[
                   { value: 'trot', label: 'Trot' },
                   { value: 'marche', label: 'Marche' },
@@ -199,7 +251,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                     type="button"
                     onClick={() => commit({ recoveryType: option.value as SessionBlockType['recoveryType'] })}
                     className={cn(
-                      'rounded-xl border px-3 py-2.5 text-[12px] font-semibold transition-colors',
+                      'rounded-lg border px-2 py-2 text-[11px] font-medium transition-colors',
                       resolvedBlock.recoveryType === option.value ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground',
                     )}
                   >
@@ -210,14 +262,29 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
             </SectionCard>
           </>
         ) : (
-          <SectionCard title="Bloc">
-            <div className="flex gap-2">
-              <MetricPill label="Allure" value={formatPaceLabel(resolvedBlock.pace)} onClick={() => openPace('simplePace', resolvedBlock.pace)} emphasized />
-              <MetricPill label="Distance" value={formatDistanceLabel(resolvedBlock.distance)} onClick={() => openDistance('simpleDistance', resolvedBlock.distance)} emphasized />
-              <MetricPill label="Temps" value={formatDurationLabel(resolvedBlock.duration)} onClick={() => openDuration('simpleDuration', resolvedBlock.duration)} emphasized />
+          <SectionCard title="Réglages">
+            <div className="grid grid-cols-3 gap-2">
+              <MetricPill
+                label="Allure"
+                value={formatPaceLabel(resolvedBlock.pace)}
+                onClick={() => openPace('simplePace', resolvedBlock.pace)}
+                emphasized
+              />
+              <MetricPill
+                label="Distance"
+                value={formatDistanceLabel(resolvedBlock.distance)}
+                onClick={() => openDistance('simpleDistance', resolvedBlock.distance)}
+                emphasized
+              />
+              <MetricPill
+                label="Temps"
+                value={formatDurationLabel(resolvedBlock.duration)}
+                onClick={() => openDuration('simpleDuration', resolvedBlock.duration)}
+                emphasized
+              />
             </div>
-            <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3 text-[13px] text-muted-foreground">
-              2 valeurs renseignées suffisent · la 3e se met à jour automatiquement.
+            <div className="rounded-xl border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
+              2 valeurs suffisent · la 3e se calcule automatiquement.
             </div>
           </SectionCard>
         )}
