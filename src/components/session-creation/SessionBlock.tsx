@@ -55,20 +55,18 @@ const meterItems = Array.from({ length: 121 }, (_, i) => ({ value: String(i * 50
 const kmItems = Array.from({ length: 31 }, (_, i) => ({ value: String(i), label: String(i) }));
 const paceMinuteItems = Array.from({ length: 11 }, (_, i) => ({ value: String(i + 2), label: String(i + 2) }));
 
-function MetricPill({ label, value, onClick, emphasized = false }: { label: string; value: string; onClick: () => void; emphasized?: boolean }) {
+function MetricPill({ label, value, placeholder, onClick }: { label: string; value?: string; placeholder: string; onClick: () => void }) {
+  const hasValue = Boolean(value && value.trim());
   return (
     <div className="min-w-0">
       <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
       <button
         type="button"
         onClick={onClick}
-        className={cn(
-          'inline-flex max-w-full rounded-xl border border-border px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]',
-          emphasized ? 'bg-card' : 'bg-muted/30'
-        )}
+        className="inline-flex max-w-full rounded-xl border border-border bg-card px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]"
       >
-        <div className="text-[13px] font-medium text-foreground">
-          <span className="truncate">{value}</span>
+        <div className={cn('text-[13px] font-medium', hasValue ? 'text-foreground' : 'text-muted-foreground/70')}>
+          <span className="truncate">{hasValue ? value : placeholder}</span>
         </div>
       </button>
     </div>
@@ -152,65 +150,68 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                 <MetricPill
                   label="Blocs"
                   value={`${resolvedBlock.blockRepetitions ?? 1}`}
+                  placeholder="1"
                   onClick={() => {
                     setDraftA(String(resolvedBlock.blockRepetitions ?? 1));
                     setPicker('blocks');
                   }}
-                  emphasized
                 />
                 <MetricPill
                   label="Séries"
                   value={`${resolvedBlock.seriesCount ?? 1}`}
+                  placeholder="1"
                   onClick={() => {
                     setDraftA(String(resolvedBlock.seriesCount ?? 1));
                     setPicker('series');
                   }}
-                  emphasized
                 />
                 <MetricPill
                   label="Répétitions"
                   value={`${resolvedBlock.repetitions ?? 1}`}
+                  placeholder="1"
                   onClick={() => {
                     setDraftA(String(resolvedBlock.repetitions ?? 1));
                     setPicker('repetitions');
                   }}
-                  emphasized
                 />
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <MetricPill
                   label="Distance"
-                  value={formatDistanceLabel(resolvedBlock.effortDistance)}
+                  value={formatDistanceLabel(resolvedBlock.effortDistance) === 'Distance' ? '' : formatDistanceLabel(resolvedBlock.effortDistance)}
+                  placeholder="250"
                   onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
-                  emphasized
                 />
                 <MetricPill
                   label="Temps"
-                  value={formatDurationLabel(resolvedBlock.effortDuration)}
+                  value={formatDurationLabel(resolvedBlock.effortDuration) === 'Temps' ? '' : formatDurationLabel(resolvedBlock.effortDuration)}
+                  placeholder="45"
                   onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)}
-                  emphasized
                 />
                 <MetricPill
                   label="Allure"
-                  value={formatPaceLabel(resolvedBlock.effortPace)}
+                  value={formatPaceLabel(resolvedBlock.effortPace) === 'Allure' ? '' : formatPaceLabel(resolvedBlock.effortPace)}
+                  placeholder="4:30"
                   onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
-                  emphasized
                 />
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <MetricPill
                   label="Récup blocs"
-                  value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) || 'Temps'}
+                  value={formatDurationLabel(resolvedBlock.blockRecoveryDuration) === 'Temps' ? '' : formatDurationLabel(resolvedBlock.blockRecoveryDuration)}
+                  placeholder="60"
                   onClick={() => openDuration('blockRecoveryDuration', resolvedBlock.blockRecoveryDuration)}
                 />
                 <MetricPill
                   label="Récup séries"
-                  value={formatDurationLabel(resolvedBlock.recoveryDuration)}
+                  value={formatDurationLabel(resolvedBlock.recoveryDuration) === 'Temps' ? '' : formatDurationLabel(resolvedBlock.recoveryDuration)}
+                  placeholder="30"
                   onClick={() => openDuration('recoveryDuration', resolvedBlock.recoveryDuration)}
                 />
                 <MetricPill
                   label="RPE"
-                  value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : 'RPE'}
+                  value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : ''}
+                  placeholder="8"
                   onClick={() => {
                     setDraftA(String(resolvedBlock.rpe ?? 8));
                     setPicker('rpe');
@@ -224,21 +225,21 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
             <div className="grid grid-cols-3 gap-2">
               <MetricPill
                 label="Allure"
-                value={formatPaceLabel(resolvedBlock.pace)}
+                  value={formatPaceLabel(resolvedBlock.pace) === 'Allure' ? '' : formatPaceLabel(resolvedBlock.pace)}
+                  placeholder="5:30"
                 onClick={() => openPace('simplePace', resolvedBlock.pace)}
-                emphasized
               />
               <MetricPill
                 label="Distance"
-                value={formatDistanceLabel(resolvedBlock.distance)}
+                  value={formatDistanceLabel(resolvedBlock.distance) === 'Distance' ? '' : formatDistanceLabel(resolvedBlock.distance)}
+                  placeholder="5"
                 onClick={() => openDistance('simpleDistance', resolvedBlock.distance)}
-                emphasized
               />
               <MetricPill
                 label="Temps"
-                value={formatDurationLabel(resolvedBlock.duration)}
+                  value={formatDurationLabel(resolvedBlock.duration) === 'Temps' ? '' : formatDurationLabel(resolvedBlock.duration)}
+                  placeholder="30"
                 onClick={() => openDuration('simpleDuration', resolvedBlock.duration)}
-                emphasized
               />
             </div>
           </SectionCard>
