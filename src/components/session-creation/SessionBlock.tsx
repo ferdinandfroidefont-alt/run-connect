@@ -176,12 +176,6 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                   }}
                   emphasized
                 />
-                <MetricPill
-                  label="Allure"
-                  value={formatPaceLabel(resolvedBlock.effortPace)}
-                  onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
-                  emphasized
-                />
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <MetricPill
