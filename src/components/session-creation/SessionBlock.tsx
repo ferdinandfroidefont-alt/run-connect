@@ -148,7 +148,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
         {resolvedBlock.type === 'interval' ? (
           <>
             <SectionCard>
-              <div className="grid grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 gap-2">
                 <MetricPill
                   label="Blocs"
                   value={`${resolvedBlock.blockRepetitions ?? 1}`}
@@ -177,6 +177,14 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                   emphasized
                 />
                 <MetricPill
+                  label="Allure"
+                  value={formatPaceLabel(resolvedBlock.effortPace)}
+                  onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
+                  emphasized
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <MetricPill
                   label="Distance répétition"
                   value={formatDistanceLabel(resolvedBlock.effortDistance)}
                   onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
@@ -189,7 +197,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                   emphasized
                 />
                 <MetricPill
-                  label="Allure"
+                  label="Allure répétition"
                   value={formatPaceLabel(resolvedBlock.effortPace)}
                   onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
                   emphasized
