@@ -3165,15 +3165,11 @@ export function CoachPlanningExperience() {
                                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                                       <span className="inline-flex items-center gap-1.5">
                                         <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(effortZone), effortZone === "Z1" && "border border-slate-200")} />
-                                        Effort ({intervalEffortSec || 0} s) · {effortZone}
+                                        Effort ({intervalEffortSec || 0} s)
                                       </span>
                                       <span className="inline-flex items-center gap-1.5">
                                         <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(recoveryZone), recoveryZone === "Z1" && "border border-slate-200")} />
-                                        Récupération ({intervalRecoverySec || 0} s) · {recoveryZone}
-                                      </span>
-                                      <span className="inline-flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
-                                        Intensité {block.intensityMode === "rpe" ? `RPE ${block.rpe ?? "—"}` : (block.zone || "Z3")}
+                                        Récupération ({intervalRecoverySec || 0} s)
                                       </span>
                                     </div>
                                   </div>
@@ -3378,37 +3374,6 @@ export function CoachPlanningExperience() {
                                 </div>
                               )}
 
-                              <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
-                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                                  Résumé du bloc
-                                </p>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                                    <p className="text-[10px] text-muted-foreground">Distance totale</p>
-                                    <p className="text-[13px] font-semibold text-foreground">
-                                      {totals.distanceM > 0 ? metersToLabel(totals.distanceM) : "—"}
-                                    </p>
-                                  </div>
-                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                                    <p className="text-[10px] text-muted-foreground">Temps total</p>
-                                    <p className="text-[13px] font-semibold text-foreground">
-                                      {totals.durationSec > 0 ? secondsToLabel(totals.durationSec) : "—"}
-                                    </p>
-                                  </div>
-                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                                    <p className="text-[10px] text-muted-foreground">Allure moyenne</p>
-                                    <p className="text-[13px] font-semibold text-foreground">
-                                      {totals.paceSecPerKm ? paceToLabel(totals.paceSecPerKm) : "—"}
-                                    </p>
-                                  </div>
-                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
-                                    <p className="text-[10px] text-muted-foreground">RPE moyen</p>
-                                    <p className="text-[13px] font-semibold text-foreground">
-                                      {totals.rpe ? `${totals.rpe}/10` : "—"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
                             </div>
                           </div>
                         );

@@ -11,8 +11,8 @@ interface MiniWorkoutProfileProps {
 
 function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["variant"]): number {
   if (variant !== "premiumCompact") return height;
-  // Keep intensity hierarchy while preserving enough vertical presence for list previews.
-  return Math.max(4, Math.round(height * 0.62));
+  // Preserve hierarchy and keep a stronger visual delta for zone previews.
+  return Math.max(5, Math.round(height * 0.74));
 }
 
 export function MiniWorkoutProfile({
@@ -25,7 +25,7 @@ export function MiniWorkoutProfile({
   const profile = blocks?.length
     ? blocks
     : [{ width: 100, height: isRestDay ? 6 : compact ? 12 : 16, color: "hsl(var(--muted))", opacity: 0.8 }];
-  const blockGap = variant === "premiumCompact" ? 2 : 4;
+  const blockGap = variant === "premiumCompact" ? 0 : 4;
   const availableWidth = 100 - blockGap * Math.max(0, profile.length - 1);
   const totalWidth = profile.reduce((acc, block) => acc + Math.max(block.width, 0), 0);
   const normalized = totalWidth > 0
@@ -37,7 +37,7 @@ export function MiniWorkoutProfile({
       className={cn(
         "flex w-full overflow-hidden",
         variant === "premiumCompact"
-          ? "items-end gap-[2px] px-0 py-0"
+          ? "items-end gap-0 rounded-[10px] border border-slate-100 bg-white px-0.5 py-0.5"
           : "items-center gap-1 rounded-xl bg-muted/45 px-2 py-2",
         compact ? (variant === "premiumCompact" ? "h-8" : "h-9") : variant === "premiumCompact" ? "h-12" : "h-10",
         className
@@ -55,15 +55,13 @@ export function MiniWorkoutProfile({
               className={cn(
                 "min-w-0 shrink-0",
                 variant === "premiumCompact"
-                  ? resolvedHeight <= 6
-                    ? "rounded-[2px]"
-                    : "rounded-[4px]"
+                  ? "rounded-[1px]"
                   : "rounded-full"
               )}
               style={{
                 flexGrow: Math.max(block.width, 0.001),
                 flexBasis: 0,
-                minWidth: compact ? (variant === "premiumCompact" ? "1px" : "3px") : variant === "premiumCompact" ? "1.5px" : "4px",
+                minWidth: compact ? (variant === "premiumCompact" ? "1px" : "3px") : variant === "premiumCompact" ? "1px" : "4px",
                 height: `${resolvedHeight}px`,
                 backgroundColor: block.color,
                 opacity: isFineRecovery ? (block.opacity ?? 1) * 0.65 : (block.opacity ?? 1),

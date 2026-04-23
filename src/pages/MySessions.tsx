@@ -22,7 +22,7 @@ import { IOSListItem, IOSListGroup } from '@/components/ui/ios-list-item';
 import { getIosEmptyStateSpacing } from '@/lib/iosEmptyStateLayout';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SessionCalendarView } from '@/components/SessionCalendarView';
-import { StravaActivitiesPanel } from '@/components/sessions/StravaActivitiesPanel';
+import ConfirmPresencePage from '@/pages/ConfirmPresence';
 import { buildSessionSharePayload } from '@/lib/sessionSharePayload';
 import { SessionShareScreen } from '@/components/session-share/SessionShareScreen';
 import { ShareSessionToConversationDialog } from '@/components/ShareSessionToConversationDialog';
@@ -1087,11 +1087,9 @@ export default function MySessions() {
         <div className="ios-scroll-region min-h-0 flex-1 overflow-y-auto pt-ios-2 pb-ios-6">
           <>
               {sessionSource === "to-confirm" ? (
-                <StravaActivitiesPanel
-                  userId={user?.id}
-                  enabled={!!user}
-                  onConfirmSession={(sessionId) => navigate(`/my-sessions/confirm/${sessionId}`)}
-                />
+                <div className="min-h-0 px-ios-4 pb-ios-6">
+                  <ConfirmPresencePage embedded />
+                </div>
               ) : (
                 <>
               {/* List/Calendar toggle */}
