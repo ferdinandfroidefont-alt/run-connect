@@ -260,7 +260,7 @@ function paceCardLabel(paceSecPerKm?: number) {
   return `${min}’${sec.toString().padStart(2, "0")}`;
 }
 
-function coachingMetricPill({
+function CoachingMetricPill({
   label,
   value,
   placeholder,
@@ -2628,7 +2628,7 @@ export function CoachPlanningExperience() {
                               </div>
 
                               <div className="grid grid-cols-3 gap-2">
-                                <coachingMetricPill
+                                <CoachingMetricPill
                                   label="Allure"
                                   value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
                                   placeholder="5'30"
@@ -2654,7 +2654,7 @@ export function CoachPlanningExperience() {
                                     );
                                   }}
                                 />
-                                <coachingMetricPill
+                                <CoachingMetricPill
                                   label="Distance"
                                   value={simpleBlockDistanceValue(block.distanceM)}
                                   placeholder="5"
@@ -2682,7 +2682,7 @@ export function CoachPlanningExperience() {
                                     );
                                   }}
                                 />
-                                <coachingMetricPill
+                                <CoachingMetricPill
                                   label="Temps"
                                   value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
                                   placeholder="30"
