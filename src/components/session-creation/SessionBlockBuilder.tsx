@@ -83,23 +83,10 @@ export const SessionBlockBuilder: React.FC<SessionBlockBuilderProps> = ({
     const newBlock: SessionBlock = {
       id: generateBlockId(),
       type,
-      ...(type === 'warmup' && { duration: '15', intensity: 'z2' }),
-      ...(type === 'cooldown' && { duration: '10', intensity: 'z1' }),
       ...(type === 'interval' && {
-        repetitions: 10,
-        effortDistance: '400',
-        effortDuration: '96',
-        effortPace: '4:00/km',
-        effortIntensity: 'z5',
-        recoveryDuration: '90',
-        recoveryDistance: '214',
         recoveryType: 'trot' as const,
-        blockRepetitions: 1,
-        blockRecoveryDuration: '180',
-        blockRecoveryDistance: '300',
         blockRecoveryType: 'marche' as const,
       }),
-      ...(type === 'steady' && { duration: '20', intensity: 'z3', pace: '5:00/km', distance: '4000' }),
     };
     const nextBlocks = [...blocks];
     if (typeof insertIndex === 'number') nextBlocks.splice(insertIndex, 0, newBlock);
