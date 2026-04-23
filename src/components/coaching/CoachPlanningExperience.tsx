@@ -260,6 +260,44 @@ function paceCardLabel(paceSecPerKm?: number) {
   return `${min}’${sec.toString().padStart(2, "0")}`;
 }
 
+function coachingMetricPill({
+  label,
+  value,
+  placeholder,
+  onClick,
+}: {
+  label: string;
+  value?: string;
+  placeholder: string;
+  onClick: () => void;
+}) {
+  const hasValue = Boolean(value && value.trim());
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex max-w-full rounded-xl border border-border bg-card px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]"
+      >
+        <div className={cn("text-[13px] font-medium", hasValue ? "text-foreground" : "text-muted-foreground/70")}>
+          <span className="truncate">{hasValue ? value : placeholder}</span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function simpleBlockDistanceValue(distanceM?: number) {
+  if (!distanceM || distanceM <= 0) return "";
+  if (distanceM >= 1000) {
+    const km = distanceM / 1000;
+    return `${km.toLocaleString("fr-FR", { maximumFractionDigits: distanceM % 1000 === 0 ? 0 : 1 })} km`;
+  }
+  return `${Math.round(distanceM)} m`;
+}
+
 function durationClockLabel(total?: number) {
   if (!total || total <= 0) return "00:00";
   const hours = Math.floor(total / 3600);
