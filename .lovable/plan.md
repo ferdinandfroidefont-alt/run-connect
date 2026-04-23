@@ -1,100 +1,96 @@
 
-Objectif: modifier enfin les vrais blocs visibles sur `/coaching` — Échauffement, Intervalle, Bloc continu, Retour au calme — et non seulement le séparateur “+” ou la fiche de configuration.
+Objectif: corriger le vrai problème de visibilité en appliquant le bouton d’insertion entre blocs dans l’écran que l’utilisateur voit réellement sur `/coaching`, y compris en mode aperçu.
 
-1. Corriger la vraie surface affichée
-- Le problème est dans `src/components/coaching/CoachPlanningExperience.tsx`, dans la liste `draft.blocks.map(...)`.
-- Aujourd’hui, les blocs visibles restent des cartes compactes legacy :
-  - petit header
-  - 3 mini boutons “Allure / Distance / Temps”
-  - très peu de différenciation visuelle entre Échauffement / Intervalle / Retour au calme
-- Les changements déjà faits dans la sheet de config ne modifient pas assez cette liste principale, qui est précisément ce que l’utilisateur regarde.
+1. Corriger la source du problème
+- Aujourd’hui, `/coaching` bifurque entre :
+  - `CoachPlanningExperience` en mode normal
+  - `CoachingPreviewExperience` en mode aperçu
+- Les derniers correctifs ont surtout touché des surfaces qui ne sont pas forcément celles affichées dans la preview actuelle.
+- Résultat : le “Ajouter ici” peut exister dans le code, mais pas dans l’expérience que l’utilisateur est en train de regarder.
 
-2. Remplacer les cartes compactes par de vrais blocs premium visibles
-- Refaire le rendu de chaque bloc affiché dans la liste principale avec une carte beaucoup plus lisible, inspirée de la référence fournie :
-  - header fort avec icône + nom du type
-  - sous-texte explicite selon le type
-  - gros groupe central pour Allure / Distance / Temps
-  - zone ou RPE clairement visible
-  - meilleure hiérarchie visuelle
-- Chaque type aura sa personnalité visuelle :
-  - Échauffement: ton orange / progressif
-  - Intervalle: ton rouge / effort-récup
-  - Bloc continu: ton jaune/bleu stable
-  - Retour au calme / Récupération: ton vert/bleu doux
+2. Aligner l’écran visible avec le vrai builder coaching
+- Modifier `src/pages/Coaching.tsx` et/ou `src/components/coaching/CoachingPreviewExperience.tsx` pour que le mode aperçu expose aussi le vrai éditeur de séance structuré, au lieu d’un mock trop simplifié.
+- Principe :
+  - garder les données mock si besoin
+  - mais réutiliser le même composant de structure/blocs que l’expérience coach réelle
+  - désactiver seulement la persistance backend, pas l’UI d’édition
 
-3. Faire en sorte que le bloc visible ressemble à la maquette, pas seulement la sheet
-- Le design déjà commencé dans la configuration de bloc (`blockStep === "config"`) servira de base visuelle.
-- Le même langage UI sera remonté dans les cartes visibles de la liste :
-  - grands rayons
-  - contrastes plus nets
-  - rangées tactiles larges
-  - icônes plus présentes
-  - texte plus gros et plus structuré
-- Résultat attendu : dès qu’un bloc est ajouté, il ressemble immédiatement à un “vrai bloc Échauffement / Intervalle”.
+3. Unifier le composant d’insertion entre blocs
+- Éviter deux implémentations différentes du builder :
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+  - logique embarquée dans `src/components/coaching/CoachPlanningExperience.tsx`
+- Extraire ou réutiliser un composant commun pour :
+  - la liste des blocs
+  - le séparateur visible entre blocs
+  - le bouton central “Ajouter ici”
+  - le menu de choix de type de bloc
+- Ainsi, le même rendu sera visible partout : wizard, coaching, preview.
 
-4. Gérer correctement les différences entre types
-- Blocs simples (`warmup`, `steady`, `cooldown`, `recovery`) :
-  - carte volume premium avec Allure / Distance / Temps
-  - badge Zone estimée ou RPE
-  - message d’aide court et spécifique au type
-- Bloc `interval` :
-  - structure dédiée avec :
-    - répétitions
-    - effort
-    - récupération
-    - éventuellement inter-séries
-  - affichage clair des infos clés sans devoir ouvrir la config
-- Le résumé visuel devra permettre de comprendre le bloc en un coup d’œil.
+4. Rendre le séparateur impossible à manquer
+- Renforcer visuellement le séparateur entre deux blocs dans le composant partagé :
+  - largeur pleine
+  - lignes latérales discrètes
+  - bouton central plus contrasté
+  - libellé explicite “Ajouter ici”
+  - cible tactile minimum 44px
+- Style RunConnect light / Premium iOS :
+  - `bg-card` / `bg-background`
+  - bordure plus marquée
+  - ombre douce mais visible
+  - icône `Plus` primaire
+  - espacement flush propre sur 390px de large
 
-5. Éviter de garder deux UIs contradictoires
-- Extraire si nécessaire un composant partagé, par exemple :
-```text
-src/components/coaching/CoachingSessionBlockCard.tsx
-```
-- Ce composant recevra :
-  - le bloc
-  - le sport
-  - les callbacks d’édition
-  - l’état drag/reorder
-- `CoachPlanningExperience.tsx` utilisera ce composant au lieu du rendu inline actuel.
-- Si pertinent, harmoniser ensuite avec `src/components/session-creation/SessionBlock.tsx` pour éviter que “Créer une séance” et “Coaching” divergent visuellement.
+5. Afficher le menu exactement à l’endroit cliqué
+- Conserver une logique d’ancrage claire :
+  - `top` pour ajout général
+  - `index` pour insertion entre deux blocs
+- Le clic sur “Ajouter ici” doit ouvrir inline le menu des types :
+  - Échauffement
+  - Série / Fractionné
+  - Bloc constant
+  - Retour au calme
+- L’ajout doit insérer le bloc au bon index, sans l’envoyer en fin de liste.
 
-6. Conserver l’édition existante, mais sur la nouvelle carte
-- Garder les wheel pickers et la logique déjà en place (`openWheelColumns`, `updateDraftBlock`, `deriveRunningVolume`).
-- Rebrancher ces actions sur les nouvelles zones tactiles du bloc :
-  - tap Allure -> picker allure
-  - tap Distance -> picker distance
-  - tap Temps -> picker durée
-  - tap Répétitions / récup -> picker adapté
-- Ne pas casser :
-  - insertion entre blocs
-  - réordonnancement
-  - calcul auto de la 3e métrique
-  - résumé du schéma de séance
+6. Appliquer aussi la correction au vrai écran “Créer une séance”
+- Vérifier et harmoniser l’intégration dans :
+  - `src/components/session-creation/steps/DetailsStep.tsx`
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+- Objectif :
+  - même séparateur
+  - même comportement
+  - même hiérarchie visuelle
+  - aucun écart entre le wizard et le coaching planner
 
 7. Vérifications UX à couvrir
-- Sur `/coaching` en largeur mobile 390px :
-  - un bloc Échauffement ajouté doit être visiblement différent immédiatement
-  - un bloc Intervalle doit afficher sa structure spécifique
-  - les cartes ne doivent plus ressembler à de simples mini boutons génériques
-  - le “+ Ajouter ici” doit rester entre les nouvelles cartes
-  - la fiche de config et la carte visible doivent enfin être cohérentes
-- Vérifier aussi le mode aperçu coach, puisqu’il rend `CoachPlanningExperience`.
+- Cas à valider après implémentation :
+  - 2 blocs : le séparateur est visible immédiatement
+  - 3 à 5 blocs : chaque zone d’insertion reste lisible
+  - menu ouvert : pas de chevauchement avec le schéma de séance
+  - mobile 390px : le libellé reste lisible
+  - preview mode : l’utilisateur peut enfin voir et tester l’insert
+  - mode normal : comportement identique
 
 Détails techniques
-- Fichier principal à corriger :
+- Fichiers principaux :
+  - `src/pages/Coaching.tsx`
+  - `src/components/coaching/CoachingPreviewExperience.tsx`
   - `src/components/coaching/CoachPlanningExperience.tsx`
-- Fichiers probables :
-  - `src/components/coaching/CoachPlanningExperience.tsx`
-  - `src/components/session-creation/SessionBlock.tsx` (si harmonisation)
-  - éventuellement un nouveau composant partagé type `CoachingSessionBlockCard.tsx`
-- Zone exacte concernée :
-  - le rendu actuel des blocs dans `draft.blocks.map(...)`
-  - pas seulement la `Sheet` de configuration du bloc
-  - pas seulement `SessionBlockBuilder.tsx`
-  - pas seulement `BlockInsertSeparator.tsx`
+  - `src/components/session-creation/SessionBlockBuilder.tsx`
+  - `src/components/session-creation/steps/DetailsStep.tsx`
+- Architecture recommandée :
+```text
+Coaching.tsx
+  -> mode normal: CoachPlanningExperience
+  -> mode aperçu: Preview qui réutilise le même builder visuel
+
+Builder partagé
+  -> rendu des blocs
+  -> séparateurs d’insertion
+  -> menu de types
+  -> insertion par index
+```
 
 Résultat attendu
-- Les blocs visibles Échauffement / Intervalle / Bloc continu / Retour au calme sont enfin réellement redesignés dans l’écran que l’utilisateur regarde.
-- Le rendu n’est plus une carte compacte générique.
-- Le style est premium iOS, lisible, distinct par type, et fidèle à la référence montrée.
+- Le bouton “+” entre les blocs devient réellement visible dans la page que l’utilisateur consulte.
+- Le mode aperçu n’affiche plus une version déconnectée des correctifs.
+- L’ajout entre blocs est clair, premium et cohérent partout dans l’app.
