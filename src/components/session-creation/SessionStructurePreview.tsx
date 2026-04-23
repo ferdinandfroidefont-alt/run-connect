@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type { SessionBlock } from './types';
 import { cn } from '@/lib/utils';
 import { MiniWorkoutProfile } from '@/components/coaching/MiniWorkoutProfile';
+import { useUserProfile } from '@/contexts/UserProfileContext';
+import { buildAthleteIntensityContext } from '@/lib/athleteWorkoutContext';
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from '@/lib/workoutVisualization';
 import { blockToVisualizationInput, resolveSessionBlocks } from '@/lib/sessionBlockCalculations';
 
@@ -26,7 +28,18 @@ function buildPreviewBars(blocks: SessionBlock[]) {
 }
 
 export function SessionStructurePreview({ blocks, className }: SessionStructurePreviewProps) {
-  const profile = useMemo(() => buildPreviewBars(blocks), [blocks]);
+  const { userProfile } = useUserProfile();
+  const athleteIntensity = useMemo(
+    () => buildAthleteIntensityContext({ runningRecords: userProfile?.running_records ?? null }),
+    [userProfile?.running_records]
+  );
+  const profile = useMemo(() => {
+    if (!blocks.length) return PLACEHOLDER_BARS;
+    const resolved = resolveSessionBlocks(blocks).map(blockToVisualizationInput);
+    return renderWorkoutMiniProfile(
+      buildWorkoutSegments(resolved, { sport: 'running', athleteIntensity })
+    );
+  }, [athleteIntensity, blocks]);
   const totalWeight = profile.reduce((sum, item) => sum + item.width, 0) || 1;
 
   return (
