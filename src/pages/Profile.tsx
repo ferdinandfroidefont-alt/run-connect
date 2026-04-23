@@ -719,9 +719,9 @@ const Profile = () => {
                 {profile?.display_name || profile?.username}
               </h2>
               {profile?.is_admin || isAdmin ? (
-                <BadgeCheck className="h-4 w-4 text-amber-500" />
+                <BadgeCheck className="h-4 w-4 fill-amber-500 text-white" />
               ) : profile?.is_premium ? (
-                <BadgeCheck className="h-4 w-4 text-blue-500" />
+                <BadgeCheck className="h-4 w-4 fill-blue-500 text-white" />
               ) : null}
             </div>
 

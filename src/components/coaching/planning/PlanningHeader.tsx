@@ -34,7 +34,7 @@ export function PlanningHeader({ onOpenMenu, title, subtitle }: PlanningHeaderPr
             ) : null}
           </span>
         }
-        right={<NotificationCenter />}
+        right={<NotificationCenter scope="coaching" />}
       />
     </div>
   );

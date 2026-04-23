@@ -88,6 +88,7 @@ const IMAGE_DURATION_MS = 5500;
 const LONG_PRESS_MS = 380;
 const SWIPE_CLOSE_PX = 110;
 const SWIPE_INSIGHTS_PX = 90;
+const SWIPE_NAV_PX = 70;
 const TAP_EDGE = 0.32;
 /** Laisse la zone des boutons bas hors du layer de gestes (tap / pause). */
 const GESTURE_BOTTOM_CLEAR = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
@@ -130,7 +131,7 @@ export function SessionStoryDialog({
   const videoRef = useRef<HTMLVideoElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressRef = useRef<{ t: number; x: number; y: number; longFired: boolean } | null>(null);
-  const swipeRef = useRef<{ y0: number } | null>(null);
+  const swipeRef = useRef<{ x0: number; y0: number } | null>(null);
   const progressRaf = useRef<number | null>(null);
 
   const current = stories[index];
@@ -662,15 +663,31 @@ export function SessionStoryDialog({
 
   const onTouchStartSwipe = (e: React.TouchEvent) => {
     if (actionMode) return;
-    swipeRef.current = { y0: e.touches[0].clientY };
+    swipeRef.current = {
+      x0: e.touches[0].clientX,
+      y0: e.touches[0].clientY,
+    };
   };
 
   const onTouchEndSwipe = (e: React.TouchEvent) => {
     const s = swipeRef.current;
     swipeRef.current = null;
     if (!s || actionMode) return;
+    const x = e.changedTouches[0].clientX;
     const y = e.changedTouches[0].clientY;
+    const deltaX = x - s.x0;
     const deltaY = y - s.y0;
+    const isHorizontalSwipe = Math.abs(deltaX) >= SWIPE_NAV_PX && Math.abs(deltaX) > Math.abs(deltaY);
+    if (isHorizontalSwipe) {
+      if (deltaX < 0) {
+        triggerTapHaptic();
+        goNext();
+      } else {
+        triggerTapHaptic();
+        goPrev();
+      }
+      return;
+    }
     if (deltaY > SWIPE_CLOSE_PX) {
       onOpenChange(false);
       return;

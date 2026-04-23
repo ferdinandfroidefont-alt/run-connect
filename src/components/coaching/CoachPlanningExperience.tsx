@@ -194,6 +194,8 @@ const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone
   { zone: "Z6", label: "Z6", description: "Anaérobie", tone: "bg-red-500/12 text-red-700 dark:text-red-300" },
 ];
 
+const PREVIEW_ZONE_ORDER = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const;
+
 const DISTANCE_KM_WHOLE_OPTIONS = Array.from({ length: 201 }, (_, i) => ({ value: String(i), label: String(i) }));
 const DISTANCE_METERS_25_OPTIONS = Array.from({ length: 40 }, (_, i) => {
   const meters = i * 25;
@@ -454,42 +456,39 @@ function computeBlockTotals(block: SessionBlock) {
   };
 }
 
-function resolveBlockIntensityLevel(block: SessionBlock) {
-  if (block.intensityMode === "rpe" && block.rpe) {
-    // 1-10 -> 1-6 (zones-like scale for preview heights)
-    return Math.max(1, Math.min(6, Math.round((block.rpe / 10) * 6)));
-  }
-  const zoneMatch = typeof block.zone === "string" ? block.zone.toUpperCase().match(/^Z([1-6])$/) : null;
-  if (zoneMatch) return Number.parseInt(zoneMatch[1], 10);
-  return 3;
-}
-
-function zoneLevelToPreviewColor(level: number) {
-  switch (Math.max(1, Math.min(6, level))) {
-    case 1:
+function zoneToPreviewColorClass(zone?: string) {
+  const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  switch (normalized) {
+    case "Z1":
       return "bg-white";
-    case 2:
+    case "Z2":
       return "bg-[#2563EB]";
-    case 3:
+    case "Z3":
       return "bg-emerald-500";
-    case 4:
+    case "Z4":
       return "bg-yellow-400";
-    case 5:
+    case "Z5":
       return "bg-orange-500";
-    case 6:
+    case "Z6":
       return "bg-red-500";
     default:
-      return "bg-[#2563EB]";
+      return "bg-emerald-500";
   }
 }
 
-function buildIntervalPreviewSegments(block: SessionBlock) {
+function zoneToLevel(zone?: string) {
+  const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  const match = normalized.match(/^Z([1-6])$/);
+  return match ? Number.parseInt(match[1], 10) : 3;
+}
+
+function buildIntervalPreviewSegments(block: SessionBlock, effortLevel: number) {
   const series = Math.max(1, block.blockRepetitions || 1);
   const repsPerSeries = Math.max(1, block.repetitions || 1);
   const effortDuration = Math.max(1, block.durationSec || 45);
   const repRecoveryDuration = Math.max(1, block.recoveryDurationSec || 30);
   const seriesRecoveryDuration = Math.max(1, block.blockRecoveryDurationSec || repRecoveryDuration);
-  const level = resolveBlockIntensityLevel(block);
+  const level = Math.max(1, Math.min(6, effortLevel));
 
   const effortHeight = 12 + level * 3;
   const recoveryHeight = Math.max(8, Math.round(effortHeight * 0.52));
@@ -1336,6 +1335,20 @@ export function CoachPlanningExperience() {
     [draft.blocks]
   );
   const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
+  const selectedAthlete = useMemo(
+    () => (activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined),
+    [activeAthleteId, athletes]
+  );
+  const selectedAthleteRunningRefs = useMemo(
+    () => activeAthleteIntensity?.coachValidatedRecords ?? activeAthleteIntensity?.athleteRecords ?? null,
+    [activeAthleteIntensity]
+  );
+  const shouldShowAthleteZoneLegend =
+    !effectiveAthleteMode &&
+    draft.sport === "running" &&
+    Boolean(activeAthleteId) &&
+    !activeGroupId &&
+    Boolean(selectedAthleteRunningRefs?.zones);
 
   const openCreateForDate = (date: Date) => {
     setEditingSessionId(null);
@@ -2746,6 +2759,30 @@ export function CoachPlanningExperience() {
                       </div>
                     </div>
                   </div>
+                  {shouldShowAthleteZoneLegend ? (
+                    <div className="mb-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-[0_12px_30px_-26px_rgba(15,23,42,0.35)]">
+                      <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        Zones de {selectedAthlete?.name ?? "l'athlète"}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {PREVIEW_ZONE_ORDER.map((zone) => {
+                          const range = selectedAthleteRunningRefs?.zones?.[zone];
+                          if (!range) return null;
+                          return (
+                            <div key={`zone-legend-${zone}`} className="rounded-xl border border-slate-100 bg-slate-50/70 px-2.5 py-2">
+                              <div className="mb-1 inline-flex items-center gap-1.5">
+                                <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(zone), zone === "Z1" && "border border-slate-200")} />
+                                <span className="text-[12px] font-semibold text-foreground">{zone}</span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">
+                                {paceToLabel(range.maxPace)} - {paceToLabel(range.minPace)}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                   <Button
                     onClick={() => void saveSession()}
                     className="h-11 w-full rounded-xl text-[15px] font-semibold"
@@ -2826,11 +2863,13 @@ export function CoachPlanningExperience() {
                         const intervalEffortSec = Math.max(0, block.durationSec || 0);
                         const intervalRecoverySec = Math.max(0, block.recoveryDurationSec || 0);
                         const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
-                        const intervalPreviewSegments = buildIntervalPreviewSegments(block);
-                        const effortZoneLevel = resolveBlockIntensityLevel(block);
-                        const recoveryZoneLevel = block.recoveryRpe
-                          ? Math.max(1, Math.min(6, Math.round((block.recoveryRpe / 10) * 6)))
-                          : 1;
+                        const intervalComputedSegments = buildWorkoutSegments([block], {
+                          sport: draft.sport,
+                          athleteIntensity: activeAthleteIntensity ?? undefined,
+                        });
+                        const effortZone = intervalComputedSegments.find((segment) => segment.kind === "rep")?.computedZone ?? "Z3";
+                        const recoveryZone = intervalComputedSegments.find((segment) => segment.kind === "recovery")?.computedZone ?? "Z1";
+                        const intervalPreviewSegments = buildIntervalPreviewSegments(block, zoneToLevel(effortZone));
 
                         return (
                           <div key={block.id} className="space-y-2">
@@ -3104,16 +3143,16 @@ export function CoachPlanningExperience() {
                                         Durée totale {secondsToLabel(totals.durationSec) || "—"}
                                       </p>
                                     </div>
-                                    <div className="flex h-10 items-end gap-1 overflow-hidden rounded-xl bg-white p-1">
+                                    <div className="flex h-10 items-end gap-0 overflow-hidden rounded-xl bg-white p-1">
                                       {intervalPreviewSegments.map((segment) => (
                                         <span
                                           key={`${block.id}-${segment.id}`}
                                           className={cn(
-                                            "min-w-[2px] rounded-[6px]",
+                                            "min-w-[2px] rounded-[2px]",
                                             segment.effort
-                                              ? zoneLevelToPreviewColor(effortZoneLevel)
-                                              : zoneLevelToPreviewColor(recoveryZoneLevel),
-                                            (segment.effort ? effortZoneLevel : recoveryZoneLevel) === 1 && "border border-slate-200"
+                                              ? zoneToPreviewColorClass(effortZone)
+                                              : zoneToPreviewColorClass(recoveryZone),
+                                            (segment.effort ? effortZone : recoveryZone) === "Z1" && "border border-slate-200"
                                           )}
                                           style={{
                                             flexGrow: Math.max(1, segment.duration),
@@ -3125,12 +3164,12 @@ export function CoachPlanningExperience() {
                                     </div>
                                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                                       <span className="inline-flex items-center gap-1.5">
-                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneLevelToPreviewColor(effortZoneLevel), effortZoneLevel === 1 && "border border-slate-200")} />
-                                        Effort ({intervalEffortSec || 0} s) · Z{effortZoneLevel}
+                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(effortZone), effortZone === "Z1" && "border border-slate-200")} />
+                                        Effort ({intervalEffortSec || 0} s) · {effortZone}
                                       </span>
                                       <span className="inline-flex items-center gap-1.5">
-                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneLevelToPreviewColor(recoveryZoneLevel), recoveryZoneLevel === 1 && "border border-slate-200")} />
-                                        Récupération ({intervalRecoverySec || 0} s) · Z{recoveryZoneLevel}
+                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(recoveryZone), recoveryZone === "Z1" && "border border-slate-200")} />
+                                        Récupération ({intervalRecoverySec || 0} s) · {recoveryZone}
                                       </span>
                                       <span className="inline-flex items-center gap-1.5">
                                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />

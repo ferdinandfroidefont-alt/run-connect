@@ -485,9 +485,9 @@ const PublicProfile = () => {
                     {profile.display_name || profile.username}
                   </h1>
                   {profile.is_admin ? (
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+                    <BadgeCheck className="h-4 w-4 shrink-0 fill-amber-500 text-white" aria-hidden />
                   ) : profile.is_premium ? (
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" aria-hidden />
+                    <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" aria-hidden />
                   ) : null}
                 </div>
                 <p className="truncate text-ios-subheadline text-muted-foreground">

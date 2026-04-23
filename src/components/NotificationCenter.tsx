@@ -37,9 +37,11 @@ interface Notification {
 }
 interface NotificationCenterProps {
   onSessionUpdated?: () => void;
+  scope?: "all" | "coaching";
 }
 export const NotificationCenter = ({
-  onSessionUpdated
+  onSessionUpdated,
+  scope = "all",
 }: NotificationCenterProps) => {
   const { setBottomNavSuppressed } = useAppContext();
   const {
@@ -620,8 +622,14 @@ export const NotificationCenter = ({
       return true;
     });
   })();
+  const isCoachingNotification = (notification: Notification) =>
+    notification.type.startsWith("coaching_");
+  const visibleNotifications =
+    scope === "coaching"
+      ? deduplicatedNotifications.filter(isCoachingNotification)
+      : deduplicatedNotifications;
 
-  const unreadCount = deduplicatedNotifications.filter(n => !n.read).length;
+  const unreadCount = visibleNotifications.filter(n => !n.read).length;
   const badgeLabel = String(unreadCount);
   const isIosPhone = useIsIosPhoneLayout();
   return <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -701,9 +709,9 @@ export const NotificationCenter = ({
         </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100vh-7.25rem)] w-full min-w-0 max-w-full overflow-x-hidden">
           <div className={cn("min-w-0 max-w-full space-y-ios-3", isIosPhone ? "px-1" : "w-full pr-4")}>
-            {deduplicatedNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
+            {visibleNotifications.length === 0 ? <p className="text-center text-muted-foreground py-8">
                 Aucune notification
-              </p> : deduplicatedNotifications.map(notification => {
+              </p> : visibleNotifications.map(notification => {
               // For follow_request, determine actual state from source of truth
               const followerStatus = notification.type === 'follow_request' && notification.data?.follower_id 
                 ? followStatuses.get(notification.data.follower_id) || 'unknown'

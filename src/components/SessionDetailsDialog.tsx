@@ -826,7 +826,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                     <p className="text-[15px] font-semibold text-foreground truncate">
                       {session.profiles.username || session.profiles.display_name}
                     </p>
-                    <BadgeCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                    <BadgeCheck className="h-4 w-4 flex-shrink-0 fill-primary text-white" />
                   </div>
                   <p className="text-[13px] text-muted-foreground">Voir le profil ›</p>
                 </div>

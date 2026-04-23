@@ -517,9 +517,9 @@ export const ProfilePreviewDialog = ({ userId, onClose }: ProfilePreviewDialogPr
                         {profile.display_name || profile.username}
                       </h2>
                       {profile.is_admin ? (
-                        <BadgeCheck className="h-4 w-4 shrink-0 text-amber-500" />
+                        <BadgeCheck className="h-4 w-4 shrink-0 fill-amber-500 text-white" />
                       ) : profile.is_premium ? (
-                        <BadgeCheck className="h-4 w-4 shrink-0 text-blue-500" />
+                        <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />
                       ) : null}
                     </div>
                     <p className="truncate text-[13px] text-muted-foreground">
