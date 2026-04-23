@@ -179,19 +179,19 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <MetricPill
-                  label="Distance répétition"
+                  label="Distance"
                   value={formatDistanceLabel(resolvedBlock.effortDistance)}
                   onClick={() => openDistance('effortDistance', resolvedBlock.effortDistance)}
                   emphasized
                 />
                 <MetricPill
-                  label="Temps répétition"
+                  label="Temps"
                   value={formatDurationLabel(resolvedBlock.effortDuration)}
                   onClick={() => openDuration('effortDuration', resolvedBlock.effortDuration)}
                   emphasized
                 />
                 <MetricPill
-                  label="Allure répétition"
+                  label="Allure"
                   value={formatPaceLabel(resolvedBlock.effortPace)}
                   onClick={() => openPace('effortPace', resolvedBlock.effortPace)}
                   emphasized
