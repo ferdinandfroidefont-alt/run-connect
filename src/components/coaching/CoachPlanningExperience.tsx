@@ -2538,7 +2538,7 @@ export function CoachPlanningExperience() {
 
                   <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_12px_32px_-24px_hsl(var(--foreground)/0.28)]">
                     <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
-                      <p className="mb-3 text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                      <p className="mb-1.5 text-[14px] font-semibold text-foreground">Schéma de séance</p>
                       <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[96px]" />
                     </div>
                   </div>
