@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { SessionBlock } from './types';
 import { cn } from '@/lib/utils';
+import { MiniWorkoutProfile } from '@/components/coaching/MiniWorkoutProfile';
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from '@/lib/workoutVisualization';
 import { blockToVisualizationInput, resolveSessionBlocks } from '@/lib/sessionBlockCalculations';
 
@@ -35,19 +36,15 @@ export function SessionStructurePreview({ blocks, className }: SessionStructureP
         className,
       )}
     >
-      <div className="flex h-16 items-end gap-1 rounded-[18px] bg-secondary px-2 py-2">
-        {profile.map((bar, index) => (
-          <span
-            key={`${index}-${bar.width}-${bar.height}`}
-            className="min-w-[4px] shrink-0 rounded-full"
-            style={{
-              flexBasis: `${(bar.width / totalWeight) * 100}%`,
-              height: `${bar.height}px`,
-              backgroundColor: bar.color,
-              opacity: bar.opacity ?? 1,
-            }}
-          />
-        ))}
+      <div className="rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
+        <MiniWorkoutProfile
+          blocks={profile.map((bar) => ({
+            ...bar,
+            width: (bar.width / totalWeight) * 100,
+          }))}
+          variant="premiumCompact"
+          className="h-10"
+        />
       </div>
     </div>
   );
