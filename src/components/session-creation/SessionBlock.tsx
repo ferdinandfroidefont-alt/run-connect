@@ -55,20 +55,18 @@ const meterItems = Array.from({ length: 121 }, (_, i) => ({ value: String(i * 50
 const kmItems = Array.from({ length: 31 }, (_, i) => ({ value: String(i), label: String(i) }));
 const paceMinuteItems = Array.from({ length: 11 }, (_, i) => ({ value: String(i + 2), label: String(i + 2) }));
 
-function MetricPill({ label, value, onClick, emphasized = false }: { label: string; value: string; onClick: () => void; emphasized?: boolean }) {
+function MetricPill({ label, value, placeholder, onClick }: { label: string; value?: string; placeholder: string; onClick: () => void }) {
+  const hasValue = Boolean(value && value.trim());
   return (
     <div className="min-w-0">
       <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
       <button
         type="button"
         onClick={onClick}
-        className={cn(
-          'inline-flex max-w-full rounded-xl border border-border px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]',
-          emphasized ? 'bg-card' : 'bg-muted/30'
-        )}
+        className="inline-flex max-w-full rounded-xl border border-border bg-card px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]"
       >
-        <div className="text-[13px] font-medium text-foreground">
-          <span className="truncate">{value}</span>
+        <div className={cn('text-[13px] font-medium', hasValue ? 'text-foreground' : 'text-muted-foreground/70')}>
+          <span className="truncate">{hasValue ? value : placeholder}</span>
         </div>
       </button>
     </div>
