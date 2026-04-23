@@ -159,15 +159,15 @@ export function buildWorkoutSegments(
               references: refResolution.refs,
               source: refResolution.source,
             })
-          : { band: "interval" as const, source: "fallback" as const };
+          : { band: "interval" as const, zone: "Z5" as const, source: "fallback" as const };
       for (let seriesIndex = 0; seriesIndex < seriesCount; seriesIndex += 1) {
         segments.push({
           kind: "rep",
           durationMin: clampPositive(perRepDuration * repetitions),
           distanceKm: clampPositive(effortDistancePerRep * repetitions),
           intensityBand: repIntensity.band,
-          computedZone: bandToComputedZone(repIntensity.band),
-          color: zoneToColorToken(bandToComputedZone(repIntensity.band)),
+          computedZone: repIntensity.zone,
+          color: zoneToColorToken(repIntensity.zone),
           intensitySource: repIntensity.source,
           repeatCount: repetitions,
         });
@@ -234,14 +234,14 @@ export function buildWorkoutSegments(
             references: refResolution.refs,
             source: refResolution.source,
           })
-        : { band: "endurance" as const, source: "fallback" as const };
+        : { band: "endurance" as const, zone: "Z2" as const, source: "fallback" as const };
     segments.push({
       kind,
       durationMin: clampPositive(segDuration),
       distanceKm: clampPositive(segDistance),
       intensityBand: steadyIntensity.band,
-      computedZone: bandToComputedZone(steadyIntensity.band),
-      color: zoneToColorToken(bandToComputedZone(steadyIntensity.band)),
+      computedZone: steadyIntensity.zone,
+      color: zoneToColorToken(steadyIntensity.zone),
       intensitySource: steadyIntensity.source,
       repeatCount: repetitions > 1 ? repetitions : undefined,
       visualStyle: isPyramid ? "pyramid" : "default",
@@ -286,7 +286,7 @@ export function renderWorkoutMiniProfile(
     return {
       width: weight,
       height: heightForBand(seg.intensityBand),
-      color: colorForBand(seg.intensityBand),
+      color: seg.color ?? colorForSegment(seg),
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
     };
   });
@@ -357,6 +357,10 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
 
 function colorForBand(band: WorkoutSegment["intensityBand"]): string {
   return zoneToColorToken(bandToComputedZone(band));
+}
+
+function colorForSegment(segment: WorkoutSegment): string {
+  return segment.computedZone ? zoneToColorToken(segment.computedZone) : colorForBand(segment.intensityBand);
 }
 
 function heightForBand(band: WorkoutSegment["intensityBand"]): number {

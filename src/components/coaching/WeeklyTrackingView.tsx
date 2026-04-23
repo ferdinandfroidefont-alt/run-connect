@@ -37,6 +37,7 @@ import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessio
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { buildAthleteIntensityContext, computeAthletePaces, zoneToFeedback } from "@/lib/athleteWorkoutContext";
+import { getZoneFromPace } from "@/lib/athleteIntensity";
 import {
   mergeRunningRecords,
   normalizeRunningEventKey,
@@ -544,15 +545,14 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   }, [selectedAthlete]);
   const selectedDayData = selectedAthlete && selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
   const selectedFeedback = useMemo(() => {
-    const threshold = selectedAthletePaces?.thresholdPaceSecPerKm;
+    const zones = selectedAthletePaces?.zones;
     const selectedPace = selectedDayData?.session.pace_target;
-    if (!threshold || !selectedPace) return undefined;
+    if (!zones || !selectedPace) return undefined;
     const [min, sec] = selectedPace.split(":").map(Number);
     if (!Number.isFinite(min) || !Number.isFinite(sec)) return undefined;
     const pace = min * 60 + sec;
-    if (pace >= threshold * 1.12) return zoneToFeedback("Z2");
-    if (pace >= threshold * 1.02) return zoneToFeedback("Z4");
-    return zoneToFeedback("Z5");
+    const zone = getZoneFromPace(pace, zones);
+    return zone ? zoneToFeedback(zone) : undefined;
   }, [selectedAthletePaces, selectedDayData]);
 
   const openRecordsEditor = useCallback(() => {
