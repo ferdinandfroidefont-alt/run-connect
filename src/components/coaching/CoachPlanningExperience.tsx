@@ -380,12 +380,7 @@ function createDefaultBlock(type: BlockType, order: number): SessionBlock {
     id: uid(),
     order,
     type,
-    durationSec: type === "interval" ? 3 * 60 : 20 * 60,
-    distanceM: type === "interval" ? 400 : undefined,
-    repetitions: type === "interval" ? 6 : undefined,
-    recoveryDurationSec: type === "interval" ? 90 : undefined,
     intensityMode: "zones",
-    zone: type === "interval" ? "Z4" : type === "recovery" ? "Z1" : "Z2",
   };
 }
 
