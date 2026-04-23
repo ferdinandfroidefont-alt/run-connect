@@ -72,10 +72,9 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
   );
 }
 
-function SectionCard({ title, children }: React.PropsWithChildren<{ title: string }>) {
+function SectionCard({ children }: React.PropsWithChildren) {
   return (
     <div className="rounded-xl border border-border bg-muted/25 p-2.5">
-      <p className="mb-2 text-[11px] font-medium text-muted-foreground">{title}</p>
       <div className="space-y-2">{children}</div>
     </div>
   );
@@ -149,7 +148,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
       <div className="space-y-2.5 p-3">
         {resolvedBlock.type === 'interval' ? (
           <>
-            <SectionCard title="Structure">
+            <SectionCard>
               <div className="grid grid-cols-2 gap-2">
                 <MetricPill
                   label="Répétitions"
@@ -186,7 +185,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
               )}
             </SectionCard>
 
-            <SectionCard title="Effort">
+            <SectionCard>
               <div className="grid grid-cols-3 gap-2">
                 <MetricPill
                   label="Allure"
@@ -216,13 +215,10 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                     setPicker('rpe');
                   }}
                 />
-                <div className="rounded-xl border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-                  Zone auto · {zoneLabel(resolvedBlock.effortIntensity)}
-                </div>
               </div>
             </SectionCard>
 
-            <SectionCard title="Récupération">
+            <SectionCard>
               <div className="grid grid-cols-3 gap-2">
                 <MetricPill
                   label="Allure"
@@ -262,7 +258,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
             </SectionCard>
           </>
         ) : (
-          <SectionCard title="Réglages">
+          <SectionCard>
             <div className="grid grid-cols-3 gap-2">
               <MetricPill
                 label="Allure"
@@ -282,9 +278,6 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                 onClick={() => openDuration('simpleDuration', resolvedBlock.duration)}
                 emphasized
               />
-            </div>
-            <div className="rounded-xl border border-border bg-background px-2.5 py-2 text-[11px] text-muted-foreground">
-              2 valeurs suffisent · la 3e se calcule automatiquement.
             </div>
           </SectionCard>
         )}
