@@ -28,6 +28,8 @@ export interface SessionBlock {
   recoveryRpe?: number;
   /** Nombre de blocs (groupes de séries) pour les intervalles */
   blockRepetitions?: number;
+  /** Nombre de séries par bloc interval */
+  seriesCount?: number;
   /** Récup entre blocs (en secondes) */
   blockRecoveryDuration?: string;
   blockRecoveryDistance?: string;
