@@ -74,11 +74,7 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
 }
 
 function SectionCard({ children }: React.PropsWithChildren) {
-  return (
-    <div className="rounded-xl border border-border bg-muted/25 p-2.5">
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
+  return <div className="space-y-2">{children}</div>;
 }
 
 export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUpdate, onRemove, index }) => {
