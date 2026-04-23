@@ -57,19 +57,21 @@ const paceMinuteItems = Array.from({ length: 11 }, (_, i) => ({ value: String(i 
 
 function MetricPill({ label, value, onClick, emphasized = false }: { label: string; value: string; onClick: () => void; emphasized?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'min-w-0 rounded-xl border border-border px-2.5 py-2 text-left transition-transform active:scale-[0.98]',
-        emphasized ? 'bg-card' : 'bg-muted/30'
-      )}
-    >
-      <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 text-[13px] font-medium text-foreground">
-        <span className="truncate">{value}</span>
-      </div>
-    </button>
+    <div className="min-w-0">
+      <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          'w-full rounded-xl border border-border px-2.5 py-2 text-left transition-transform active:scale-[0.98]',
+          emphasized ? 'bg-card' : 'bg-muted/30'
+        )}
+      >
+        <div className="text-[13px] font-medium text-foreground">
+          <span className="truncate">{value}</span>
+        </div>
+      </button>
+    </div>
   );
 }
 
