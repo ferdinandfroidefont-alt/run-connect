@@ -62,20 +62,22 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
       type="button"
       onClick={onClick}
       className={cn(
-        'flex min-h-[64px] flex-1 flex-col justify-center rounded-[20px] border border-border px-4 py-3 text-left shadow-[var(--shadow-2xs)] transition-transform active:scale-[0.98]',
-        emphasized ? 'bg-secondary' : 'bg-background',
+        'flex min-h-[74px] flex-1 flex-col justify-center rounded-2xl border border-border px-3 py-3 text-left transition-transform active:scale-[0.98]',
+        emphasized ? 'bg-card' : 'bg-muted/30',
       )}
     >
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <span className="mt-1 text-[18px] font-semibold text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="mt-1.5 flex h-11 items-center rounded-xl border border-border bg-background px-3 text-[15px] font-medium text-foreground">
+        {value}
+      </span>
     </button>
   );
 }
 
 function SectionCard({ title, children }: React.PropsWithChildren<{ title: string }>) {
   return (
-    <div className="rounded-[22px] border border-border bg-secondary/60 p-3">
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
+    <div className="rounded-2xl bg-card p-4 space-y-4">
+      <p className="text-sm font-medium text-foreground">{title}</p>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -124,13 +126,13 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -40 }}
       transition={{ delay: index * 0.04 }}
-      className="overflow-hidden rounded-[28px] border border-border bg-card shadow-[var(--shadow-card)]"
+      className="overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)]"
     >
-      <div className="border-b border-border px-4 py-3">
+      <div className="border-b border-border px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-secondary text-foreground">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground">
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">
@@ -174,7 +176,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
               </div>
               <div className="flex gap-2">
                 <MetricPill label="RPE" value={resolvedBlock.rpe ? `${resolvedBlock.rpe}/10` : 'RPE'} onClick={() => { setDraftA(String(resolvedBlock.rpe ?? 8)); setPicker('rpe'); }} />
-                <div className="flex flex-1 items-center rounded-[20px] border border-border bg-background px-4 py-3 text-[13px] text-muted-foreground">
+                <div className="flex flex-1 items-center rounded-2xl border border-border bg-muted/30 px-4 py-3 text-[13px] text-muted-foreground">
                   Zone calculée automatiquement · {zoneLabel(resolvedBlock.effortIntensity)}
                 </div>
               </div>
@@ -197,7 +199,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
                     type="button"
                     onClick={() => commit({ recoveryType: option.value as SessionBlockType['recoveryType'] })}
                     className={cn(
-                      'rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors',
+                      'rounded-xl border px-3 py-2.5 text-[12px] font-semibold transition-colors',
                       resolvedBlock.recoveryType === option.value ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground',
                     )}
                   >
@@ -214,7 +216,7 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
               <MetricPill label="Distance" value={formatDistanceLabel(resolvedBlock.distance)} onClick={() => openDistance('simpleDistance', resolvedBlock.distance)} emphasized />
               <MetricPill label="Temps" value={formatDurationLabel(resolvedBlock.duration)} onClick={() => openDuration('simpleDuration', resolvedBlock.duration)} emphasized />
             </div>
-            <div className="rounded-[18px] border border-border bg-background px-4 py-3 text-[13px] text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3 text-[13px] text-muted-foreground">
               2 valeurs renseignées suffisent · la 3e se met à jour automatiquement.
             </div>
           </SectionCard>
