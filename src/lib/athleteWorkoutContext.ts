@@ -6,6 +6,8 @@ import {
   type RunningReferenceSet,
 } from "@/lib/athleteIntensity";
 
+export type { ComputedZone } from "@/lib/athleteIntensity";
+
 export type AthletePerformanceProfile = {
   runningRecords?: Record<string, unknown> | null;
   coachRunningRecords?: Record<string, unknown> | null;
