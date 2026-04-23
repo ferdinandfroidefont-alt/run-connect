@@ -66,7 +66,7 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
       )}
     >
       <div className="text-[11px] font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 flex h-8 items-center rounded-lg border border-border bg-background px-2.5 text-[13px] font-medium text-foreground">
+      <div className="mt-1 text-[13px] font-medium text-foreground">
         <span className="truncate">{value}</span>
       </div>
     </button>
