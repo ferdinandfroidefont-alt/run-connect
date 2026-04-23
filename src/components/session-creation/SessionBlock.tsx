@@ -29,6 +29,7 @@ type PickerKind =
   | 'effortDistance'
   | 'effortDuration'
   | 'effortPace'
+  | 'blocks'
   | 'repetitions'
   | 'series'
   | 'recoveryDuration'
@@ -149,22 +150,31 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
         {resolvedBlock.type === 'interval' ? (
           <>
             <SectionCard>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <MetricPill
+                  label="Blocs"
+                  value={`${resolvedBlock.blockRepetitions ?? 1}`}
+                  onClick={() => {
+                    setDraftA(String(resolvedBlock.blockRepetitions ?? 1));
+                    setPicker('blocks');
+                  }}
+                  emphasized
+                />
+                <MetricPill
+                  label="Séries"
+                  value={`${resolvedBlock.seriesCount ?? 1}`}
+                  onClick={() => {
+                    setDraftA(String(resolvedBlock.seriesCount ?? 1));
+                    setPicker('series');
+                  }}
+                  emphasized
+                />
                 <MetricPill
                   label="Répétitions"
                   value={`${resolvedBlock.repetitions ?? 1}`}
                   onClick={() => {
                     setDraftA(String(resolvedBlock.repetitions ?? 1));
                     setPicker('repetitions');
-                  }}
-                  emphasized
-                />
-                <MetricPill
-                  label="Séries"
-                  value={`${resolvedBlock.blockRepetitions ?? 1}`}
-                  onClick={() => {
-                    setDraftA(String(resolvedBlock.blockRepetitions ?? 1));
-                    setPicker('series');
                   }}
                   emphasized
                 />
@@ -337,14 +347,15 @@ export const SessionBlockComponent: React.FC<SessionBlockProps> = ({ block, onUp
       />
 
       <WheelValuePickerModal
-        open={picker === 'repetitions' || picker === 'series'}
+        open={picker === 'blocks' || picker === 'repetitions' || picker === 'series'}
         onClose={() => setPicker(null)}
-        title={picker === 'series' ? 'Séries' : 'Répétitions'}
+        title={picker === 'blocks' ? 'Blocs' : picker === 'series' ? 'Séries' : 'Répétitions'}
         columns={[{ items: repsItems, value: draftA, onChange: setDraftA }]}
         onConfirm={() => {
           const value = Number.parseInt(draftA, 10) || 1;
+          if (picker === 'blocks') commit({ blockRepetitions: value });
           if (picker === 'repetitions') commit({ repetitions: value });
-          if (picker === 'series') commit({ blockRepetitions: value });
+          if (picker === 'series') commit({ seriesCount: value });
           setPicker(null);
         }}
       />
