@@ -930,7 +930,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       />
 
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3 lg:p-4">
+        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3 lg:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[14px] font-semibold text-foreground">Records privés coach</p>
@@ -943,7 +943,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               Gérer
             </Button>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
             {selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").length > 0 ? (
               selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").map((row) => (
                 <div key={row.id} className="rounded-xl border border-border/50 bg-background px-3 py-2">
@@ -955,37 +955,39 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               <p className="text-[12px] text-muted-foreground">Aucun record privé coach renseigné.</p>
             )}
           </div>
-          {selectedAthleteProfileRecords.length > 0 ? (
-            <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Records du profil athlète</p>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {selectedAthleteProfileRecords.map((record) => (
-                  <div key={`${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-2.5 py-2">
-                    <p className="text-[11px] font-medium text-muted-foreground">
-                      {record.distanceKm >= 1
-                        ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
-                        : `${Math.round(record.distanceM)} m`}
-                    </p>
-                    <p className="text-[13px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
-                    <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
-                  </div>
-                ))}
+          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
+            {selectedAthleteProfileRecords.length > 0 ? (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Records du profil athlète</p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {selectedAthleteProfileRecords.map((record) => (
+                    <div key={`${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-2.5 py-2">
+                      <p className="text-[11px] font-medium text-muted-foreground">
+                        {record.distanceKm >= 1
+                          ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
+                          : `${Math.round(record.distanceM)} m`}
+                      </p>
+                      <p className="text-[13px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
+                      <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-          {selectedAthleteZoneCards.length > 0 ? (
-            <div className="mt-3 rounded-xl border border-border/60 bg-background/80 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Repères zones d'entraînement</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {selectedAthleteZoneCards.map((zone) => (
-                  <div key={zone.zone} className="rounded-lg bg-secondary/50 px-2.5 py-2">
-                    <p className="text-[12px] font-semibold text-foreground">{zone.zone}</p>
-                    <p className="text-[11px] text-muted-foreground">{zone.minPace} → {zone.maxPace}</p>
-                  </div>
-                ))}
+            ) : null}
+            {selectedAthleteZoneCards.length > 0 ? (
+              <div className="rounded-xl border border-border/60 bg-background/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Repères zones d'entraînement</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {selectedAthleteZoneCards.map((zone) => (
+                    <div key={zone.zone} className="rounded-lg bg-secondary/50 px-2.5 py-2">
+                      <p className="text-[12px] font-semibold text-foreground">{zone.zone}</p>
+                      <p className="text-[11px] text-muted-foreground">{zone.minPace} → {zone.maxPace}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           {selectedAthleteIntensity && selectedFeedback ? (
             <p className="mt-3 text-[12px] font-medium text-primary">Feedback calculé : {selectedFeedback}</p>
           ) : null}
@@ -1081,34 +1083,39 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
 
       <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-24px)] rounded-3xl p-0 sm:max-w-2xl">
+        <DialogContent className="w-[min(1100px,96vw)] max-w-[96vw] rounded-3xl p-0">
           <DialogTitle className="sr-only">Records privés coach</DialogTitle>
           <div className="space-y-4 p-4">
             <div>
               <p className="text-[18px] font-semibold text-foreground">Records privés coach</p>
               <p className="text-[13px] text-muted-foreground">Ces temps servent au calcul automatique des zones pour cet athlète. Les records profil sont visibles juste en dessous.</p>
             </div>
-            {selectedAthleteProfileRecords.length > 0 ? (
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Déjà sur le profil athlète</p>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {selectedAthleteProfileRecords.map((record) => (
-                    <div key={`profile-record-${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-3 py-2">
-                      <p className="text-[11px] text-muted-foreground">
-                        {record.distanceKm >= 1
-                          ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
-                          : `${Math.round(record.distanceM)} m`}
-                      </p>
-                      <p className="text-[14px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
-                      <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.95fr_1.25fr]">
+              {selectedAthleteProfileRecords.length > 0 ? (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Déjà sur le profil athlète</p>
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {selectedAthleteProfileRecords.map((record) => (
+                      <div key={`profile-record-${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-3 py-2">
+                        <p className="text-[11px] text-muted-foreground">
+                          {record.distanceKm >= 1
+                            ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
+                            : `${Math.round(record.distanceM)} m`}
+                        </p>
+                        <p className="text-[14px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
+                        <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-            <div className="space-y-3">
-              {recordsDraft.map((row, index) => (
-                <div key={row.id ?? `draft-${index}`} className="rounded-2xl border border-border/60 bg-card p-3">
+              ) : (
+                <div className="rounded-2xl border border-dashed border-border/70 bg-secondary/20 p-3 text-[12px] text-muted-foreground">
+                  Aucun record détecté sur le profil athlète.
+                </div>
+              )}
+              <div className="space-y-3">
+                {recordsDraft.map((row, index) => (
+                  <div key={row.id ?? `draft-${index}`} className="rounded-2xl border border-border/60 bg-card p-3">
                   <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                     <Input
                       value={row.event_label}
@@ -1138,8 +1145,9 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                     placeholder="Note privée coach (optionnel)"
                     className="mt-2 min-h-[72px] rounded-xl"
                   />
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="flex items-center justify-between gap-2">
               <Button type="button" variant="outline" className="rounded-full" onClick={() => setRecordsDraft((current) => [...current, { event_label: "", record_value: "", note: "" }])}>

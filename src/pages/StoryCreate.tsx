@@ -272,6 +272,7 @@ export default function StoryCreate() {
 
   // Share
   const [sharing, setSharing] = useState(false);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [pendingExitTarget, setPendingExitTarget] = useState<"back" | "feed" | "entry" | null>(null);
@@ -698,6 +699,29 @@ export default function StoryCreate() {
             }}
           >
             Enregistrer et quitter
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  const publishConfirmDialog = (
+    <AlertDialog open={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Publier la story ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Ta story sera visible immédiatement par tes abonnés.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              void onShare();
+            }}
+          >
+            Publier
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -2765,7 +2789,7 @@ export default function StoryCreate() {
                   closeEditorMode();
                   return;
                 }
-                void onShare();
+                setPublishConfirmOpen(true);
               }}
               className="h-10 shrink-0 rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition active:scale-[0.98]"
             >
@@ -3325,6 +3349,7 @@ export default function StoryCreate() {
           </div>
         )}
       {exitDraftDialog}
+      {publishConfirmDialog}
     </div>
   );
 }

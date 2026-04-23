@@ -464,6 +464,25 @@ function resolveBlockIntensityLevel(block: SessionBlock) {
   return 3;
 }
 
+function zoneLevelToPreviewColor(level: number) {
+  switch (Math.max(1, Math.min(6, level))) {
+    case 1:
+      return "bg-white";
+    case 2:
+      return "bg-[#2563EB]";
+    case 3:
+      return "bg-emerald-500";
+    case 4:
+      return "bg-yellow-400";
+    case 5:
+      return "bg-orange-500";
+    case 6:
+      return "bg-red-500";
+    default:
+      return "bg-[#2563EB]";
+  }
+}
+
 function buildIntervalPreviewSegments(block: SessionBlock) {
   const series = Math.max(1, block.blockRepetitions || 1);
   const repsPerSeries = Math.max(1, block.repetitions || 1);
@@ -2726,9 +2745,6 @@ export function CoachPlanningExperience() {
                         <p className="text-[16px] font-bold text-foreground">{totalEstimatedLoad > 0 ? totalEstimatedLoad : "—"}</p>
                       </div>
                     </div>
-                    {previewMetrics.feedbackLabel ? (
-                      <p className="mt-1.5 text-center text-[12px] font-medium text-[#2563EB]">{previewMetrics.feedbackLabel}</p>
-                    ) : null}
                   </div>
                   <Button
                     onClick={() => void saveSession()}
@@ -2811,6 +2827,10 @@ export function CoachPlanningExperience() {
                         const intervalRecoverySec = Math.max(0, block.recoveryDurationSec || 0);
                         const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
                         const intervalPreviewSegments = buildIntervalPreviewSegments(block);
+                        const effortZoneLevel = resolveBlockIntensityLevel(block);
+                        const recoveryZoneLevel = block.recoveryRpe
+                          ? Math.max(1, Math.min(6, Math.round((block.recoveryRpe / 10) * 6)))
+                          : 1;
 
                         return (
                           <div key={block.id} className="space-y-2">
@@ -3090,7 +3110,10 @@ export function CoachPlanningExperience() {
                                           key={`${block.id}-${segment.id}`}
                                           className={cn(
                                             "min-w-[2px] rounded-[6px]",
-                                            segment.effort ? "bg-[#2563EB]" : "bg-slate-200"
+                                            segment.effort
+                                              ? zoneLevelToPreviewColor(effortZoneLevel)
+                                              : zoneLevelToPreviewColor(recoveryZoneLevel),
+                                            (segment.effort ? effortZoneLevel : recoveryZoneLevel) === 1 && "border border-slate-200"
                                           )}
                                           style={{
                                             flexGrow: Math.max(1, segment.duration),
@@ -3102,12 +3125,12 @@ export function CoachPlanningExperience() {
                                     </div>
                                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                                       <span className="inline-flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-[#2563EB]" />
-                                        Effort ({intervalEffortSec || 0} s)
+                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneLevelToPreviewColor(effortZoneLevel), effortZoneLevel === 1 && "border border-slate-200")} />
+                                        Effort ({intervalEffortSec || 0} s) · Z{effortZoneLevel}
                                       </span>
                                       <span className="inline-flex items-center gap-1.5">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                                        Récupération ({intervalRecoverySec || 0} s)
+                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneLevelToPreviewColor(recoveryZoneLevel), recoveryZoneLevel === 1 && "border border-slate-200")} />
+                                        Récupération ({intervalRecoverySec || 0} s) · Z{recoveryZoneLevel}
                                       </span>
                                       <span className="inline-flex items-center gap-1.5">
                                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />

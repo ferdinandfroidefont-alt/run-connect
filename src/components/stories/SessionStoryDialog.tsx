@@ -87,6 +87,7 @@ interface SessionStoryDialogProps {
 const IMAGE_DURATION_MS = 5500;
 const LONG_PRESS_MS = 380;
 const SWIPE_CLOSE_PX = 110;
+const SWIPE_INSIGHTS_PX = 90;
 const TAP_EDGE = 0.32;
 /** Laisse la zone des boutons bas hors du layer de gestes (tap / pause). */
 const GESTURE_BOTTOM_CLEAR = "calc(5.75rem + env(safe-area-inset-bottom, 0px))";
@@ -669,7 +670,15 @@ export function SessionStoryDialog({
     swipeRef.current = null;
     if (!s || actionMode) return;
     const y = e.changedTouches[0].clientY;
-    if (y - s.y0 > SWIPE_CLOSE_PX) onOpenChange(false);
+    const deltaY = y - s.y0;
+    if (deltaY > SWIPE_CLOSE_PX) {
+      onOpenChange(false);
+      return;
+    }
+    if (deltaY < -SWIPE_INSIGHTS_PX && isOwnStory) {
+      void Promise.all([loadViewers(), loadLikers()]);
+      setActionMode("insights");
+    }
   };
 
   const displayName = authorProfile?.display_name?.trim() || authorProfile?.username || "Membre";
