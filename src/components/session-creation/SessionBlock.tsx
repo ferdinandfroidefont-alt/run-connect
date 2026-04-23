@@ -63,7 +63,7 @@ function MetricPill({ label, value, onClick, emphasized = false }: { label: stri
         type="button"
         onClick={onClick}
         className={cn(
-          'w-full rounded-xl border border-border px-2.5 py-2 text-left transition-transform active:scale-[0.98]',
+          'inline-flex max-w-full rounded-xl border border-border px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]',
           emphasized ? 'bg-card' : 'bg-muted/30'
         )}
       >
