@@ -454,6 +454,48 @@ function computeBlockTotals(block: SessionBlock) {
   };
 }
 
+function resolveBlockIntensityLevel(block: SessionBlock) {
+  if (block.intensityMode === "rpe" && block.rpe) {
+    // 1-10 -> 1-6 (zones-like scale for preview heights)
+    return Math.max(1, Math.min(6, Math.round((block.rpe / 10) * 6)));
+  }
+  const zoneMatch = typeof block.zone === "string" ? block.zone.toUpperCase().match(/^Z([1-6])$/) : null;
+  if (zoneMatch) return Number.parseInt(zoneMatch[1], 10);
+  return 3;
+}
+
+function buildIntervalPreviewSegments(block: SessionBlock) {
+  const series = Math.max(1, block.blockRepetitions || 1);
+  const repsPerSeries = Math.max(1, block.repetitions || 1);
+  const effortDuration = Math.max(1, block.durationSec || 45);
+  const repRecoveryDuration = Math.max(1, block.recoveryDurationSec || 30);
+  const seriesRecoveryDuration = Math.max(1, block.blockRecoveryDurationSec || repRecoveryDuration);
+  const level = resolveBlockIntensityLevel(block);
+
+  const effortHeight = 12 + level * 3;
+  const recoveryHeight = Math.max(8, Math.round(effortHeight * 0.52));
+
+  const segments: Array<{ id: string; duration: number; effort: boolean; height: number }> = [];
+  let cursor = 0;
+
+  for (let s = 0; s < series; s += 1) {
+    for (let r = 0; r < repsPerSeries; r += 1) {
+      segments.push({ id: `effort-${cursor}`, duration: effortDuration, effort: true, height: effortHeight });
+      cursor += 1;
+      if (r < repsPerSeries - 1) {
+        segments.push({ id: `recovery-${cursor}`, duration: repRecoveryDuration, effort: false, height: recoveryHeight });
+        cursor += 1;
+      }
+    }
+    if (s < series - 1) {
+      segments.push({ id: `series-recovery-${cursor}`, duration: seriesRecoveryDuration, effort: false, height: recoveryHeight });
+      cursor += 1;
+    }
+  }
+
+  return segments;
+}
+
 function blockGraphColor(type: BlockType, recovery = false) {
   if (recovery) return "hsl(var(--chart-2))";
   if (type === "interval") return "hsl(var(--destructive))";
@@ -2430,16 +2472,21 @@ export function CoachPlanningExperience() {
               />
             ) : activeMenuKey === "groups" ? (
               activeClubId ? (
-                <div className="border-b border-border bg-card">
-                  <ClubGroupsManager
-                    clubId={activeClubId}
-                    onMessageGroup={(group) => void openOrCreateGroupConversation(group)}
-                  />
-                </div>
+                <CoachingDraftsPage
+                  clubId={activeClubId}
+                  onOpenDraft={(weekStart, groupId) => {
+                    setWeekAnchor(startOfWeek(weekStart, { weekStartsOn: 1 }));
+                    setActiveGroupId(groupId === "club" ? undefined : groupId);
+                    setActiveAthleteId(undefined);
+                    setActiveMenuKey("planning");
+                    setCoachingTab("planning");
+                    toast.success("Brouillon repris");
+                  }}
+                />
               ) : (
                 <div className="border-b border-border bg-secondary/30 px-4 py-6">
-                  <p className="text-[16px] font-semibold text-foreground">Groupes</p>
-                  <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher les groupes.</p>
+                  <p className="text-[16px] font-semibold text-foreground">Brouillons</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">Sélectionnez un club pour afficher les brouillons.</p>
                 </div>
               )
             ) : activeMenuKey === "club" ? (
@@ -2649,30 +2696,30 @@ export function CoachPlanningExperience() {
                 <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
                   <div
                     className={cn(
-                      "mb-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.4)]",
+                      "mb-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.4)]",
                       savePulse && "animate-pulse"
                     )}
                   >
-                    <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                       Résumé de la séance
                     </p>
                     <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
-                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
+                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
                           <Ruler className="h-3.5 w-3.5" />
                         </span>
                         <p className="text-[11px] text-muted-foreground">Distance</p>
                         <p className="text-[16px] font-bold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
                       </div>
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
-                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
+                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
                           <Clock3 className="h-3.5 w-3.5" />
                         </span>
                         <p className="text-[11px] text-muted-foreground">Durée</p>
                         <p className="text-[16px] font-bold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
                       </div>
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
-                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
+                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
                           <Activity className="h-3.5 w-3.5" />
                         </span>
                         <p className="text-[11px] text-muted-foreground">Charge</p>
@@ -2680,7 +2727,7 @@ export function CoachPlanningExperience() {
                       </div>
                     </div>
                     {previewMetrics.feedbackLabel ? (
-                      <p className="mt-2 text-center text-[12px] font-medium text-[#2563EB]">{previewMetrics.feedbackLabel}</p>
+                      <p className="mt-1.5 text-center text-[12px] font-medium text-[#2563EB]">{previewMetrics.feedbackLabel}</p>
                     ) : null}
                   </div>
                   <Button
@@ -2763,10 +2810,7 @@ export function CoachPlanningExperience() {
                         const intervalEffortSec = Math.max(0, block.durationSec || 0);
                         const intervalRecoverySec = Math.max(0, block.recoveryDurationSec || 0);
                         const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
-                        const previewSegmentCount = Math.min(24, intervalRepetitions * 2);
-                        const effortWidth = intervalEffortSec + intervalRecoverySec > 0
-                          ? Math.max(10, Math.round((intervalEffortSec / (intervalEffortSec + intervalRecoverySec)) * 100))
-                          : 58;
+                        const intervalPreviewSegments = buildIntervalPreviewSegments(block);
 
                         return (
                           <div key={block.id} className="space-y-2">
@@ -3040,20 +3084,21 @@ export function CoachPlanningExperience() {
                                         Durée totale {secondsToLabel(totals.durationSec) || "—"}
                                       </p>
                                     </div>
-                                    <div className="flex gap-1 overflow-hidden rounded-xl bg-white p-1">
-                                      {Array.from({ length: previewSegmentCount }, (_, segmentIndex) => {
-                                        const isEffort = segmentIndex % 2 === 0;
-                                        return (
-                                          <span
-                                            key={`${block.id}-preview-${segmentIndex}`}
-                                            className={cn(
-                                              "h-5 rounded-[6px]",
-                                              isEffort ? "bg-[#2563EB]" : "bg-slate-200"
-                                            )}
-                                            style={{ width: `${isEffort ? effortWidth : Math.max(8, 100 - effortWidth)}%` }}
-                                          />
-                                        );
-                                      })}
+                                    <div className="flex h-10 items-end gap-1 overflow-hidden rounded-xl bg-white p-1">
+                                      {intervalPreviewSegments.map((segment) => (
+                                        <span
+                                          key={`${block.id}-${segment.id}`}
+                                          className={cn(
+                                            "min-w-[2px] rounded-[6px]",
+                                            segment.effort ? "bg-[#2563EB]" : "bg-slate-200"
+                                          )}
+                                          style={{
+                                            flexGrow: Math.max(1, segment.duration),
+                                            flexBasis: 0,
+                                            height: `${segment.height}px`,
+                                          }}
+                                        />
+                                      ))}
                                     </div>
                                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                                       <span className="inline-flex items-center gap-1.5">
@@ -3063,6 +3108,10 @@ export function CoachPlanningExperience() {
                                       <span className="inline-flex items-center gap-1.5">
                                         <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
                                         Récupération ({intervalRecoverySec || 0} s)
+                                      </span>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
+                                        Intensité {block.intensityMode === "rpe" ? `RPE ${block.rpe ?? "—"}` : (block.zone || "Z3")}
                                       </span>
                                     </div>
                                   </div>

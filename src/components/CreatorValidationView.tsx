@@ -155,8 +155,10 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
   const [participantCommentDrafts, setParticipantCommentDrafts] = useState<Record<string, string>>({});
   const [publishingComment, setPublishingComment] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingStrava, setLoadingStrava] = useState(false);
   const [validating, setValidating] = useState<string | null>(null);
   const [bulkConfirming, setBulkConfirming] = useState(false);
+  const [candidateActivitiesByParticipant, setCandidateActivitiesByParticipant] = useState<Record<string, CandidateActivity[]>>({});
 
   useEffect(() => {
     void bootstrap();
@@ -165,7 +167,33 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
   const bootstrap = async () => {
     setLoading(true);
     await Promise.all([fetchParticipants(), fetchComments(), fetchOrganizer()]);
+    await fetchStravaCandidates();
     setLoading(false);
+  };
+
+  const fetchStravaCandidates = async () => {
+    setLoadingStrava(true);
+    const { data, error } = await supabase.functions.invoke('strava-session-candidates', {
+      body: { sessionId: session.id },
+    });
+
+    if (error) {
+      console.error('Error fetching strava candidates:', error);
+      setLoadingStrava(false);
+      return;
+    }
+
+    const nextMap: Record<string, CandidateActivity[]> = {};
+    const byParticipant = data?.byParticipant as Record<string, CandidateActivity[]> | undefined;
+    Object.entries(byParticipant || {}).forEach(([participantId, activities]) => {
+      nextMap[participantId] = (activities || []).map((item, idx) => ({
+        ...item,
+        participantId,
+        isTopMatch: idx === 0,
+      }));
+    });
+    setCandidateActivitiesByParticipant(nextMap);
+    setLoadingStrava(false);
   };
 
   const fetchOrganizer = async () => {
@@ -392,35 +420,6 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
     await addComment(`[@${label}] ${raw.trim()}`);
     setParticipantCommentDrafts(prev => ({ ...prev, [participant.id]: '' }));
   };
-
-  const candidateActivitiesByParticipant = useMemo(() => {
-    const map = new Map<string, CandidateActivity[]>();
-    participants.forEach(participant => {
-      const generated: CandidateActivity[] = [];
-
-      if (participant.confirmed_by_gps && participant.gps_validation_time) {
-        generated.push({
-          id: `gps-${participant.id}`,
-          participantId: participant.id,
-          title: 'Sortie détectée proche de la séance',
-          sportType: session.activity_type,
-          distanceKm: session.distance_km ?? null,
-          durationMin: null,
-          startDate: participant.gps_validation_time,
-          paceOrSpeed: null,
-          compatibilityScore: 78,
-          isTopMatch: true,
-        });
-      }
-
-      map.set(
-        participant.id,
-        generated.sort((a, b) => b.compatibilityScore - a.compatibilityScore)
-      );
-    });
-
-    return map;
-  }, [participants, session.activity_type, session.distance_km]);
 
   const handleAssociateActivity = async (participantId: string, activity: CandidateActivity) => {
     await updateParticipant(participantId, {
@@ -665,7 +664,7 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
         <div className="space-y-3">
           {participants.map(participant => {
             const label = participant.display_name || participant.username || 'Participant';
-            const activities = candidateActivitiesByParticipant.get(participant.id) || [];
+            const activities = candidateActivitiesByParticipant[participant.id] || [];
             return (
               <div key={participant.id} className="ios-card space-y-3 p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -724,7 +723,9 @@ export const CreatorValidationView = ({ session, onComplete }: CreatorValidation
                   </div>
                 ) : (
                   <div className="rounded-[10px] border border-dashed border-border p-4 text-[13px] text-muted-foreground">
-                    Les suggestions Strava sont triées par proximité horaire, sport, cohérence distance/durée et localisation.
+                    {loadingStrava
+                      ? 'Chargement des activités Strava...'
+                      : 'Les suggestions Strava sont triées par proximité horaire, sport, cohérence distance/durée et localisation.'}
                   </div>
                 )}
               </div>
