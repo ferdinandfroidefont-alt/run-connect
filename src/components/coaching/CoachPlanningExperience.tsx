@@ -260,6 +260,44 @@ function paceCardLabel(paceSecPerKm?: number) {
   return `${min}’${sec.toString().padStart(2, "0")}`;
 }
 
+function CoachingMetricPill({
+  label,
+  value,
+  placeholder,
+  onClick,
+}: {
+  label: string;
+  value?: string;
+  placeholder: string;
+  onClick: () => void;
+}) {
+  const hasValue = Boolean(value && value.trim());
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex max-w-full rounded-xl border border-border bg-card px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]"
+      >
+        <div className={cn("text-[13px] font-medium", hasValue ? "text-foreground" : "text-muted-foreground/70")}>
+          <span className="truncate">{hasValue ? value : placeholder}</span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+function simpleBlockDistanceValue(distanceM?: number) {
+  if (!distanceM || distanceM <= 0) return "";
+  if (distanceM >= 1000) {
+    const km = distanceM / 1000;
+    return `${km.toLocaleString("fr-FR", { maximumFractionDigits: distanceM % 1000 === 0 ? 0 : 1 })} km`;
+  }
+  return `${Math.round(distanceM)} m`;
+}
+
 function durationClockLabel(total?: number) {
   if (!total || total <= 0) return "00:00";
   const hours = Math.floor(total / 3600);
@@ -2590,103 +2628,94 @@ export function CoachPlanningExperience() {
                               </div>
 
                               <div className="grid grid-cols-3 gap-2">
-                              <button
-                                type="button"
-                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
-                                onClick={() => {
-                                  const pace = block.paceSecPerKm || 330;
-                                  setWheelAValue(String(Math.floor(pace / 60)));
-                                  setWheelBValue(String(pace % 60));
-                                  setWheelUnit("min/km");
-                                  openWheelColumns(
-                                    "Allure du bloc",
-                                    [
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
-                                    ],
-                                    () => {
-                                      const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
-                                      updateDraftBlock(block.id, (current) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
-                                          : { ...current, paceSecPerKm: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                <p className="text-[11px] text-muted-foreground">Allure</p>
-                                <p className="text-[16px] font-semibold text-foreground">{compactPaceLabel(block.paceSecPerKm)}</p>
-                                <p className="text-[11px] text-muted-foreground">/km</p>
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
-                                onClick={() => {
-                                  const meters = block.distanceM || 0;
-                                  const wholeKm = Math.floor(meters / 1000);
-                                  const remMeters = Math.max(0, meters - wholeKm * 1000);
-                                  setWheelAValue(String(wholeKm));
-                                  setWheelBValue(String(Math.round(remMeters / 25) * 25));
-                                  setWheelUnit("km");
-                                  openWheelColumns(
-                                    "Distance du bloc",
-                                    [
-                                      { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
-                                      { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
-                                    ],
-                                    () => {
-                                      const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
-                                      updateDraftBlock(block.id, (current) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
-                                          : { ...current, distanceM: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                <p className="text-[11px] text-muted-foreground">Distance</p>
-                                <p className="text-[16px] font-semibold text-foreground">{block.distanceM ? (block.distanceM / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—"}</p>
-                                <p className="text-[11px] text-muted-foreground">km</p>
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-2xl border border-border bg-secondary/35 px-3 py-2 text-left"
-                                onClick={() => {
-                                  const total = block.durationSec || 0;
-                                  const nextA = String(Math.floor(total / 3600));
-                                  const nextB = String(Math.floor((total % 3600) / 60));
-                                  const nextC = String(total % 60);
-                                  setWheelAValue(nextA);
-                                  setWheelBValue(nextB);
-                                  setWheelCValue(nextC);
-                                  openWheelColumns(
-                                    "Durée du bloc",
-                                    [
-                                      { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
-                                      { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
-                                    ],
-                                    () => {
-                                      const next =
-                                        Number.parseInt(wheelARef.current, 10) * 3600 +
-                                        Number.parseInt(wheelBRef.current, 10) * 60 +
-                                        Number.parseInt(wheelCRef.current, 10);
-                                      updateDraftBlock(block.id, (current) =>
-                                        draft.sport === "running"
-                                          ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
-                                          : { ...current, durationSec: next }
-                                      );
-                                    }
-                                  );
-                                }}
-                              >
-                                <p className="text-[11px] text-muted-foreground">Temps</p>
-                                <p className="text-[16px] font-semibold text-foreground">{secondsToLabel(block.durationSec) || "—"}</p>
-                                <p className="text-[11px] text-muted-foreground">estimé</p>
-                              </button>
-                            </div>
+                                <CoachingMetricPill
+                                  label="Allure"
+                                  value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
+                                  placeholder="5'30"
+                                  onClick={() => {
+                                    const pace = block.paceSecPerKm || 330;
+                                    setWheelAValue(String(Math.floor(pace / 60)));
+                                    setWheelBValue(String(pace % 60));
+                                    setWheelUnit("min/km");
+                                    openWheelColumns(
+                                      "Allure du bloc",
+                                      [
+                                        { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(Math.floor(pace / 60)), onChange: setWheelAValue, suffix: "'" },
+                                        { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: String(pace % 60), onChange: setWheelBValue, suffix: "''" },
+                                      ],
+                                      () => {
+                                        const next = Number.parseInt(wheelARef.current, 10) * 60 + Number.parseInt(wheelBRef.current, 10);
+                                        updateDraftBlock(block.id, (current) =>
+                                          draft.sport === "running"
+                                            ? deriveRunningVolume({ ...current, paceSecPerKm: next }, "pace")
+                                            : { ...current, paceSecPerKm: next }
+                                        );
+                                      }
+                                    );
+                                  }}
+                                />
+                                <CoachingMetricPill
+                                  label="Distance"
+                                  value={simpleBlockDistanceValue(block.distanceM)}
+                                  placeholder="5"
+                                  onClick={() => {
+                                    const meters = block.distanceM || 0;
+                                    const wholeKm = Math.floor(meters / 1000);
+                                    const remMeters = Math.max(0, meters - wholeKm * 1000);
+                                    setWheelAValue(String(wholeKm));
+                                    setWheelBValue(String(Math.round(remMeters / 25) * 25));
+                                    setWheelUnit("km");
+                                    openWheelColumns(
+                                      "Distance du bloc",
+                                      [
+                                        { items: DISTANCE_KM_WHOLE_OPTIONS, value: String(wholeKm), onChange: setWheelAValue, suffix: "km" },
+                                        { items: DISTANCE_METERS_25_OPTIONS, value: String(Math.round(remMeters / 25) * 25), onChange: setWheelBValue, suffix: "m" },
+                                      ],
+                                      () => {
+                                        const next = (Number.parseInt(wheelARef.current, 10) || 0) * 1000 + (Number.parseInt(wheelBRef.current, 10) || 0);
+                                        updateDraftBlock(block.id, (current) =>
+                                          draft.sport === "running"
+                                            ? deriveRunningVolume({ ...current, distanceM: next }, "distance")
+                                            : { ...current, distanceM: next }
+                                        );
+                                      }
+                                    );
+                                  }}
+                                />
+                                <CoachingMetricPill
+                                  label="Temps"
+                                  value={block.durationSec ? secondsToLabel(block.durationSec) : ""}
+                                  placeholder="30"
+                                  onClick={() => {
+                                    const total = block.durationSec || 0;
+                                    const nextA = String(Math.floor(total / 3600));
+                                    const nextB = String(Math.floor((total % 3600) / 60));
+                                    const nextC = String(total % 60);
+                                    setWheelAValue(nextA);
+                                    setWheelBValue(nextB);
+                                    setWheelCValue(nextC);
+                                    openWheelColumns(
+                                      "Durée du bloc",
+                                      [
+                                        { items: Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) })), value: nextA, onChange: setWheelAValue, suffix: "h" },
+                                        { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextB, onChange: setWheelBValue, suffix: "m" },
+                                        { items: Array.from({ length: 60 }, (_, i) => ({ value: String(i), label: String(i).padStart(2, "0") })), value: nextC, onChange: setWheelCValue, suffix: "s" },
+                                      ],
+                                      () => {
+                                        const next =
+                                          Number.parseInt(wheelARef.current, 10) * 3600 +
+                                          Number.parseInt(wheelBRef.current, 10) * 60 +
+                                          Number.parseInt(wheelCRef.current, 10);
+                                        updateDraftBlock(block.id, (current) =>
+                                          draft.sport === "running"
+                                            ? deriveRunningVolume({ ...current, durationSec: next }, "duration")
+                                            : { ...current, durationSec: next }
+                                        );
+                                      }
+                                    );
+                                  }}
+                                />
+                              </div>
 
                               {block.type === "interval" || block.notes?.includes("[Pyramid]") ? (
                                 <div className="mt-2 grid grid-cols-1 gap-2">
