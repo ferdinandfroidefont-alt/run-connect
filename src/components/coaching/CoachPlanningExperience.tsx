@@ -55,7 +55,7 @@ import { parseRCC } from "@/lib/rccParser";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
-import { ClubGroupsManager } from "@/components/coaching/ClubGroupsManager";
+import { CoachingDraftsPage } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { BlockInsertSeparator } from "@/components/session-creation/BlockInsertSeparator";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
@@ -275,13 +275,13 @@ function CoachingMetricPill({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</div>
+      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex max-w-full rounded-xl border border-border bg-card px-2.5 py-1.5 text-left transition-transform active:scale-[0.98]"
+        className="inline-flex w-full items-center justify-center rounded-full border border-slate-200/90 bg-white px-3 py-2 text-center shadow-[0_8px_20px_-18px_rgba(37,99,235,0.6)] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/45"
       >
-        <div className={cn("text-[13px] font-medium", hasValue ? "text-foreground" : "text-muted-foreground/70")}>
+        <div className={cn("text-[14px] font-semibold tabular-nums", hasValue ? "text-foreground" : "text-muted-foreground/75")}>
           <span className="truncate">{hasValue ? value : placeholder}</span>
         </div>
       </button>
@@ -388,6 +388,70 @@ function blockSummary(block: SessionBlock) {
     return `${steps} paliers${volume ? ` • ${volume}` : ""}${target ? ` • ${target}` : ""}${intensity ? ` • ${intensity}` : ""}`;
   }
   return `${volume}${target ? ` à ${target}` : ""}${intensity ? ` - ${intensity}` : ""}`;
+}
+
+function blockAccent(type: BlockType) {
+  switch (type) {
+    case "interval":
+      return {
+        iconWrap: "bg-[#2563EB]",
+        iconColor: "text-white",
+        tint: "from-[#2563EB]/14 via-[#2563EB]/8 to-transparent",
+      };
+    case "warmup":
+      return {
+        iconWrap: "bg-orange-500",
+        iconColor: "text-white",
+        tint: "from-orange-500/16 via-orange-500/8 to-transparent",
+      };
+    case "recovery":
+    case "cooldown":
+      return {
+        iconWrap: "bg-emerald-500",
+        iconColor: "text-white",
+        tint: "from-emerald-500/16 via-emerald-500/8 to-transparent",
+      };
+    default:
+      return {
+        iconWrap: "bg-slate-500",
+        iconColor: "text-white",
+        tint: "from-slate-500/12 via-slate-500/6 to-transparent",
+      };
+  }
+}
+
+function computeBlockTotals(block: SessionBlock) {
+  if (block.type !== "interval") {
+    const distanceM = Math.max(0, block.distanceM || 0);
+    const durationSec = Math.max(0, block.durationSec || 0);
+    return {
+      distanceM,
+      durationSec,
+      paceSecPerKm: distanceM > 0 && durationSec > 0 ? Math.round((durationSec / distanceM) * 1000) : block.paceSecPerKm,
+      rpe: block.rpe,
+    };
+  }
+
+  const series = Math.max(1, block.blockRepetitions || 1);
+  const repsPerSeries = Math.max(1, block.repetitions || 1);
+  const totalEfforts = series * repsPerSeries;
+  const betweenReps = Math.max(0, totalEfforts - series);
+  const betweenSeries = Math.max(0, series - 1);
+  const distanceM =
+    (Math.max(0, block.distanceM || 0) * totalEfforts) +
+    (Math.max(0, block.recoveryDistanceM || 0) * betweenReps) +
+    (Math.max(0, block.blockRecoveryDistanceM || 0) * betweenSeries);
+  const durationSec =
+    (Math.max(0, block.durationSec || 0) * totalEfforts) +
+    (Math.max(0, block.recoveryDurationSec || 0) * betweenReps) +
+    (Math.max(0, block.blockRecoveryDurationSec || 0) * betweenSeries);
+
+  return {
+    distanceM,
+    durationSec,
+    paceSecPerKm: distanceM > 0 && durationSec > 0 ? Math.round((durationSec / distanceM) * 1000) : block.paceSecPerKm,
+    rpe: block.rpe,
+  };
 }
 
 function blockGraphColor(type: BlockType, recovery = false) {
@@ -615,6 +679,7 @@ export function CoachPlanningExperience() {
   const [blockForm, setBlockForm] = useState<SessionBlock | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -656,8 +721,20 @@ export function CoachPlanningExperience() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeMenuKey, setActiveMenuKey] = useState<CoachMenuKey>("planning");
+  const [showExitDraftDialog, setShowExitDraftDialog] = useState(false);
+  const [pendingDrawerKey, setPendingDrawerKey] = useState<CoachMenuKey | null>(null);
   const [copiedWeekSessions, setCopiedWeekSessions] = useState<TrainingSession[] | null>(null);
   const [copiedFromAthleteId, setCopiedFromAthleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!draft.blocks.length) {
+      setSelectedBlockId(null);
+      return;
+    }
+    if (!selectedBlockId || !draft.blocks.some((item) => item.id === selectedBlockId)) {
+      setSelectedBlockId(draft.blocks[0].id);
+    }
+  }, [draft.blocks, selectedBlockId]);
   const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
 
   const rotateActiveClub = () => {
@@ -1222,8 +1299,8 @@ export function CoachPlanningExperience() {
     setCoachingTab("create");
   };
 
-  const saveSession = async () => {
-    if (!draft.blocks.length || !activeClubId || !user) return;
+  const saveSession = async (): Promise<boolean> => {
+    if (!draft.blocks.length || !activeClubId || !user) return false;
     const normalizedTitle = draft.title.trim() || "Séance sans titre";
     const totalDistanceKm = computeSessionDistanceKm(draft.blocks, draft.sport);
     const targetAthletes = draft.athleteId ? [draft.athleteId] : activeAthleteId ? [activeAthleteId] : null;
@@ -1246,13 +1323,13 @@ export function CoachPlanningExperience() {
       const { error } = await supabase.from("coaching_sessions").update(dbPayload).eq("id", editingSessionId);
       if (error) {
         toast.error("Enregistrement impossible", error.message);
-        return;
+        return false;
       }
     } else {
       const { data, error } = await supabase.from("coaching_sessions").insert(dbPayload).select("id").single();
       if (error) {
         toast.error("Création impossible", error.message);
-        return;
+        return false;
       }
       dbId = data.id;
     }
@@ -1275,6 +1352,7 @@ export function CoachPlanningExperience() {
     setSavePulse(true);
     window.setTimeout(() => setSavePulse(false), 900);
     toast.success("Séance enregistrée");
+    return true;
   };
 
   const removeSession = async (sessionId: string) => {
@@ -1759,8 +1837,40 @@ export function CoachPlanningExperience() {
       ? "Gérer le club"
       : activeMenuKey === "dashboard"
       ? "Tableau de bord"
+      : activeMenuKey === "groups"
+      ? "Brouillons"
       : "Coaching";
   const [showCoachRequiredDialog, setShowCoachRequiredDialog] = useState(false);
+  const hasCreateDraftWork = useMemo(
+    () => Boolean(draft.title.trim()) || draft.blocks.length > 0,
+    [draft.blocks.length, draft.title]
+  );
+
+  const goToCoachSection = useCallback(
+    (key: CoachMenuKey) => {
+      setActiveMenuKey(key);
+      setDrawerOpen(false);
+      if (key === "planning" || key === "my-plan") {
+        setViewAsAthlete(key === "my-plan");
+        setCoachingTab("planning");
+        return;
+      }
+      if (key === "messages") {
+        navigate("/messages");
+        return;
+      }
+      if (key === "settings") {
+        navigate("/profile/edit");
+        return;
+      }
+      if (key === "tracking") {
+        setTrackingSelectedAthleteId(null);
+      }
+      setCoachingTab("planning");
+    },
+    [navigate]
+  );
+
   const handleDrawerSelect = (key: CoachMenuKey) => {
     // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
     if (!isCoachMode && key !== "my-plan") {
@@ -1768,26 +1878,13 @@ export function CoachPlanningExperience() {
       setShowCoachRequiredDialog(true);
       return;
     }
-    setActiveMenuKey(key);
-    setDrawerOpen(false);
-    if (key === "planning" || key === "my-plan") {
-      setViewAsAthlete(key === "my-plan");
-      setCoachingTab("planning");
+    if (coachingTab === "create" && hasCreateDraftWork) {
+      setPendingDrawerKey(key);
+      setDrawerOpen(false);
+      setShowExitDraftDialog(true);
       return;
     }
-    if (key === "messages") {
-      navigate("/messages");
-      return;
-    }
-    if (key === "settings") {
-      navigate("/profile/edit");
-      return;
-    }
-    if (key === "tracking") {
-      setTrackingSelectedAthleteId(null);
-    }
-    // Keep in-coaching sections in place
-    setCoachingTab("planning");
+    goToCoachSection(key);
   };
 
   const openDirectMessage = async (memberId: string) => {
@@ -2429,6 +2526,49 @@ export function CoachPlanningExperience() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showExitDraftDialog} onOpenChange={setShowExitDraftDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enregistrer le brouillon ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ta séance en cours n&apos;est pas encore enregistrée. Tu peux la reprendre plus tard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                const nextKey = pendingDrawerKey;
+                setPendingDrawerKey(null);
+                setShowExitDraftDialog(false);
+                if (nextKey) {
+                  goToCoachSection(nextKey);
+                } else {
+                  setCoachingTab("planning");
+                }
+              }}
+            >
+              Quitter sans enregistrer
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const saved = await saveSession();
+                if (!saved) return;
+                const nextKey = pendingDrawerKey;
+                setPendingDrawerKey(null);
+                setShowExitDraftDialog(false);
+                if (nextKey) {
+                  goToCoachSection(nextKey);
+                } else {
+                  setCoachingTab("planning");
+                }
+              }}
+            >
+              Enregistrer et quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <InviteMembersDialog
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
@@ -2447,7 +2587,14 @@ export function CoachPlanningExperience() {
                     <button
                       type="button"
                       className="inline-flex items-center gap-1 text-[16px] font-medium text-primary"
-                      onClick={() => setCoachingTab("planning")}
+                      onClick={() => {
+                        if (hasCreateDraftWork) {
+                          setPendingDrawerKey("planning");
+                          setShowExitDraftDialog(true);
+                          return;
+                        }
+                        setCoachingTab("planning");
+                      }}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Retour
@@ -2502,17 +2649,39 @@ export function CoachPlanningExperience() {
                 <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
                   <div
                     className={cn(
-                      "mb-2 flex items-center justify-between rounded-xl bg-secondary px-3 py-2 text-[13px]",
+                      "mb-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.4)]",
                       savePulse && "animate-pulse"
                     )}
                   >
-                    <span className="text-muted-foreground">Total estimé</span>
-                    <span className="font-semibold text-foreground">
-                      {secondsToLabel(totalDurationSec)}
-                      {totalDistanceM > 0 ? ` • ${metersToLabel(totalDistanceM)}` : ""}
-                      {totalEstimatedLoad > 0 ? ` • ${totalEstimatedLoad} ch` : ""}
-                      {previewMetrics.feedbackLabel ? ` • ${previewMetrics.feedbackLabel}` : ""}
-                    </span>
+                    <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                      Résumé de la séance
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
+                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                          <Ruler className="h-3.5 w-3.5" />
+                        </span>
+                        <p className="text-[11px] text-muted-foreground">Distance</p>
+                        <p className="text-[16px] font-bold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
+                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                          <Clock3 className="h-3.5 w-3.5" />
+                        </span>
+                        <p className="text-[11px] text-muted-foreground">Durée</p>
+                        <p className="text-[16px] font-bold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
+                      </div>
+                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2.5 text-center">
+                        <span className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#2563EB]">
+                          <Activity className="h-3.5 w-3.5" />
+                        </span>
+                        <p className="text-[11px] text-muted-foreground">Charge</p>
+                        <p className="text-[16px] font-bold text-foreground">{totalEstimatedLoad > 0 ? totalEstimatedLoad : "—"}</p>
+                      </div>
+                    </div>
+                    {previewMetrics.feedbackLabel ? (
+                      <p className="mt-2 text-center text-[12px] font-medium text-[#2563EB]">{previewMetrics.feedbackLabel}</p>
+                    ) : null}
                   </div>
                   <Button
                     onClick={() => void saveSession()}
@@ -2587,6 +2756,17 @@ export function CoachPlanningExperience() {
                         const label = block.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(block.type);
                         const isDragged = draggedBlockId === block.id;
                         const isDropTarget = dragOverBlockId === block.id;
+                        const isSelected = selectedBlockId === block.id;
+                        const typeMeta = blockTypeMeta(block.type);
+                        const accents = blockAccent(block.type);
+                        const totals = computeBlockTotals(block);
+                        const intervalEffortSec = Math.max(0, block.durationSec || 0);
+                        const intervalRecoverySec = Math.max(0, block.recoveryDurationSec || 0);
+                        const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
+                        const previewSegmentCount = Math.min(24, intervalRepetitions * 2);
+                        const effortWidth = intervalEffortSec + intervalRecoverySec > 0
+                          ? Math.max(10, Math.round((intervalEffortSec / (intervalEffortSec + intervalRecoverySec)) * 100))
+                          : 58;
 
                         return (
                           <div key={block.id} className="space-y-2">
@@ -2600,31 +2780,62 @@ export function CoachPlanningExperience() {
                             <div
                               data-block-id={block.id}
                               className={cn(
-                                "rounded-[22px] border bg-card p-3 shadow-[0_10px_28px_-24px_hsl(var(--foreground)/0.3)] transition-all",
-                                isDropTarget ? "border-primary/60" : "border-border",
+                                "relative rounded-[20px] border bg-card p-3 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] transition-all",
+                                isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "border-border/80",
                                 isDragged && "opacity-70"
                               )}
+                              onClick={() => setSelectedBlockId(block.id)}
                               onPointerMove={handleBlockReorderPointerMove}
                               onPointerUp={finishBlockReorder}
                               onPointerCancel={finishBlockReorder}
                             >
-                              <div className="mb-3 flex items-center gap-2">
+                              <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
+                              {index < draft.blocks.length - 1 ? (
+                                <span
+                                  aria-hidden
+                                  className="absolute -bottom-5 left-[27px] h-5 w-px bg-[#2563EB]/35"
+                                />
+                              ) : null}
+
+                              <div className="relative mb-3 flex items-center gap-2">
                                 <button
                                   type="button"
                                   aria-label={`Déplacer ${label}`}
-                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/50 text-muted-foreground touch-none"
+                                  className={cn(
+                                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 text-white touch-none shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
+                                    accents.iconWrap
+                                  )}
+                                  onPointerDown={() => startBlockReorderPress(block.id)}
+                                  onPointerUp={finishBlockReorder}
+                                  onPointerCancel={finishBlockReorder}
+                                >
+                                  <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[14px] font-bold uppercase tracking-[0.06em] text-foreground">
+                                      {label}
+                                    </p>
+                                    {block.type === "interval" ? (
+                                      <span className="rounded-full bg-[#2563EB]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB]">
+                                        x{intervalRepetitions}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <p className="text-[12px] text-muted-foreground">
+                                    {index + 1}. {blockSummary(block)}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  aria-label={`Déplacer ${label}`}
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-muted-foreground touch-none"
                                   onPointerDown={() => startBlockReorderPress(block.id)}
                                   onPointerUp={finishBlockReorder}
                                   onPointerCancel={finishBlockReorder}
                                 >
                                   <GripVertical className="h-4 w-4" />
                                 </button>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-[14px] font-semibold text-foreground">
-                                    {index + 1}. {label}
-                                  </p>
-                                  <p className="text-[12px] text-muted-foreground">{blockSummary(block)}</p>
-                                </div>
                               </div>
 
                               {block.type === "interval" ? (
@@ -2761,9 +2972,9 @@ export function CoachPlanningExperience() {
                                     />
                                   </div>
 
-                                  <div className="grid grid-cols-3 gap-2">
+                                  <div className="grid grid-cols-2 gap-2">
                                     <CoachingMetricPill
-                                      label="Récup blocs"
+                                      label="Récup effort"
                                       value={block.blockRecoveryDurationSec ? secondsToLabel(block.blockRecoveryDurationSec) : ""}
                                       placeholder="60"
                                       onClick={() => {
@@ -2792,7 +3003,7 @@ export function CoachPlanningExperience() {
                                       }}
                                     />
                                     <CoachingMetricPill
-                                      label="Récup séries"
+                                      label="Récup série"
                                       value={block.recoveryDurationSec ? secondsToLabel(block.recoveryDurationSec) : ""}
                                       placeholder="30"
                                       onClick={() => {
@@ -2820,7 +3031,40 @@ export function CoachPlanningExperience() {
                                         );
                                       }}
                                     />
-                                    <div />
+                                  </div>
+
+                                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <p className="text-[12px] font-semibold text-foreground">Aperçu du bloc</p>
+                                      <p className="text-[11px] font-medium text-muted-foreground">
+                                        Durée totale {secondsToLabel(totals.durationSec) || "—"}
+                                      </p>
+                                    </div>
+                                    <div className="flex gap-1 overflow-hidden rounded-xl bg-white p-1">
+                                      {Array.from({ length: previewSegmentCount }, (_, segmentIndex) => {
+                                        const isEffort = segmentIndex % 2 === 0;
+                                        return (
+                                          <span
+                                            key={`${block.id}-preview-${segmentIndex}`}
+                                            className={cn(
+                                              "h-5 rounded-[6px]",
+                                              isEffort ? "bg-[#2563EB]" : "bg-slate-200"
+                                            )}
+                                            style={{ width: `${isEffort ? effortWidth : Math.max(8, 100 - effortWidth)}%` }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2.5 w-2.5 rounded-full bg-[#2563EB]" />
+                                        Effort ({intervalEffortSec || 0} s)
+                                      </span>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                                        Récupération ({intervalRecoverySec || 0} s)
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               ) : block.notes?.includes("[Pyramid]") ? (
@@ -3022,6 +3266,38 @@ export function CoachPlanningExperience() {
                                   />
                                 </div>
                               )}
+
+                              <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-2.5">
+                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                  Résumé du bloc
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[10px] text-muted-foreground">Distance totale</p>
+                                    <p className="text-[13px] font-semibold text-foreground">
+                                      {totals.distanceM > 0 ? metersToLabel(totals.distanceM) : "—"}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[10px] text-muted-foreground">Temps total</p>
+                                    <p className="text-[13px] font-semibold text-foreground">
+                                      {totals.durationSec > 0 ? secondsToLabel(totals.durationSec) : "—"}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[10px] text-muted-foreground">Allure moyenne</p>
+                                    <p className="text-[13px] font-semibold text-foreground">
+                                      {totals.paceSecPerKm ? paceToLabel(totals.paceSecPerKm) : "—"}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-xl bg-white px-2 py-2 text-center">
+                                    <p className="text-[10px] text-muted-foreground">RPE moyen</p>
+                                    <p className="text-[13px] font-semibold text-foreground">
+                                      {totals.rpe ? `${totals.rpe}/10` : "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         );

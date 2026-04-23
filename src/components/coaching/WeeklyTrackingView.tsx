@@ -44,6 +44,7 @@ import {
   runningRecordsFromPrivateRows,
   type CoachPrivateRecordRow,
 } from "@/lib/coachPrivateRunningRecords";
+import { parseAthleteRecords } from "@/lib/athleteIntensity";
 
 interface WeeklyTrackingViewProps {
   clubId: string;
@@ -142,6 +143,26 @@ const toUiStatus = (status?: string): UiDayStatus => {
   if (status === "pending") return "pending";
   return "none";
 };
+
+function formatPaceFromSeconds(totalSec?: number | null): string {
+  if (!totalSec || !Number.isFinite(totalSec) || totalSec <= 0) return "—";
+  const rounded = Math.round(totalSec);
+  const min = Math.floor(rounded / 60);
+  const sec = rounded % 60;
+  return `${min}:${String(sec).padStart(2, "0")}/km`;
+}
+
+function formatDurationFromSeconds(totalSec?: number | null): string {
+  if (!totalSec || !Number.isFinite(totalSec) || totalSec <= 0) return "—";
+  const rounded = Math.round(totalSec);
+  const hours = Math.floor(rounded / 3600);
+  const minutes = Math.floor((rounded % 3600) / 60);
+  const seconds = rounded % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
 
 function sessionTone(sport: CalendarSport) {
   switch (sport) {
@@ -535,6 +556,21 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     () => computeAthletePaces({ runningRecords: selectedMergedRunningRecords }),
     [selectedMergedRunningRecords]
   );
+  const selectedAthleteProfileRecords = useMemo(() => {
+    return parseAthleteRecords(selectedAthlete?.runningRecords ?? null).sort((a, b) => a.distanceM - b.distanceM);
+  }, [selectedAthlete]);
+  const selectedAthleteZoneCards = useMemo(() => {
+    const zones = selectedAthletePaces?.zones;
+    if (!zones) return [];
+    return (["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const).map((zone) => {
+      const range = zones[zone];
+      return {
+        zone,
+        minPace: formatPaceFromSeconds(range.maxPace),
+        maxPace: formatPaceFromSeconds(range.minPace),
+      };
+    });
+  }, [selectedAthletePaces]);
 
   const coachRecordSummary = useMemo(() => {
     if (!selectedAthlete?.coachPrivateRows?.length) return [];
@@ -558,14 +594,17 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const openRecordsEditor = useCallback(() => {
     if (!selectedAthlete) return;
     const runningRows = selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running");
+    const athleteRows = parseAthleteRecords(selectedAthlete.runningRecords).map((record) => ({
+      event_label: `${record.distanceKm >= 1 ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km` : `${Math.round(record.distanceM)} m`}`,
+      record_value: formatDurationFromSeconds(record.timeSec),
+      note: "Importé depuis le profil athlète",
+    }));
     setRecordsDraft(
       runningRows.length
         ? runningRows.map((row) => ({ id: row.id, event_label: row.event_label, record_value: row.record_value, note: row.note ?? "" }))
-        : [
-            { event_label: "5 km", record_value: "", note: "" },
-            { event_label: "3 km", record_value: "", note: "" },
-            { event_label: "10 km", record_value: "", note: "" },
-          ]
+        : athleteRows.length
+        ? athleteRows
+        : [{ event_label: "5 km", record_value: "", note: "" }, { event_label: "3 km", record_value: "", note: "" }, { event_label: "10 km", record_value: "", note: "" }]
     );
     setRecordsDialogOpen(true);
   }, [selectedAthlete]);
@@ -878,7 +917,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     : "";
 
   return (
-    <div className="space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
+    <div className="mx-auto w-full max-w-[1180px] space-y-0 pb-[calc(1.25rem+var(--safe-area-bottom))]">
       <AthleteHeader
         displayName={selectedAthlete.displayName}
         avatarUrl={selectedAthlete.avatarUrl}
@@ -891,7 +930,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       />
 
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3">
+        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3 lg:p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[14px] font-semibold text-foreground">Records privés coach</p>
@@ -904,10 +943,10 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               Gérer
             </Button>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").length > 0 ? (
               selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").map((row) => (
-                <div key={row.id} className="rounded-xl bg-background px-3 py-2">
+                <div key={row.id} className="rounded-xl border border-border/50 bg-background px-3 py-2">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{row.event_label}</p>
                   <p className="text-[14px] font-semibold text-foreground">{row.record_value}</p>
                 </div>
@@ -916,6 +955,37 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               <p className="text-[12px] text-muted-foreground">Aucun record privé coach renseigné.</p>
             )}
           </div>
+          {selectedAthleteProfileRecords.length > 0 ? (
+            <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Records du profil athlète</p>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {selectedAthleteProfileRecords.map((record) => (
+                  <div key={`${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-2.5 py-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      {record.distanceKm >= 1
+                        ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
+                        : `${Math.round(record.distanceM)} m`}
+                    </p>
+                    <p className="text-[13px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
+                    <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {selectedAthleteZoneCards.length > 0 ? (
+            <div className="mt-3 rounded-xl border border-border/60 bg-background/80 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Repères zones d'entraînement</p>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {selectedAthleteZoneCards.map((zone) => (
+                  <div key={zone.zone} className="rounded-lg bg-secondary/50 px-2.5 py-2">
+                    <p className="text-[12px] font-semibold text-foreground">{zone.zone}</p>
+                    <p className="text-[11px] text-muted-foreground">{zone.minPace} → {zone.maxPace}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {selectedAthleteIntensity && selectedFeedback ? (
             <p className="mt-3 text-[12px] font-medium text-primary">Feedback calculé : {selectedFeedback}</p>
           ) : null}
@@ -1011,13 +1081,31 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
 
       <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
-        <DialogContent className="max-w-[calc(100vw-24px)] rounded-3xl p-0 sm:max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-24px)] rounded-3xl p-0 sm:max-w-2xl">
           <DialogTitle className="sr-only">Records privés coach</DialogTitle>
           <div className="space-y-4 p-4">
             <div>
               <p className="text-[18px] font-semibold text-foreground">Records privés coach</p>
-              <p className="text-[13px] text-muted-foreground">Ces temps servent au calcul automatique des zones pour cet athlète.</p>
+              <p className="text-[13px] text-muted-foreground">Ces temps servent au calcul automatique des zones pour cet athlète. Les records profil sont visibles juste en dessous.</p>
             </div>
+            {selectedAthleteProfileRecords.length > 0 ? (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Déjà sur le profil athlète</p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {selectedAthleteProfileRecords.map((record) => (
+                    <div key={`profile-record-${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-3 py-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        {record.distanceKm >= 1
+                          ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
+                          : `${Math.round(record.distanceM)} m`}
+                      </p>
+                      <p className="text-[14px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
+                      <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="space-y-3">
               {recordsDraft.map((row, index) => (
                 <div key={row.id ?? `draft-${index}`} className="rounded-2xl border border-border/60 bg-card p-3">

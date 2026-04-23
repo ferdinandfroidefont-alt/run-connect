@@ -3,7 +3,7 @@ import {
   Building2,
   ChevronDown,
   LayoutDashboard,
-  UsersRound,
+  FileText,
   Activity,
   CalendarDays,
   FolderKanban,
@@ -157,7 +157,7 @@ export function AppDrawer({
           : [
               { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
               { key: "planning", label: "Planification", icon: CalendarDays },
-              { key: "groups", label: "Groupes", icon: UsersRound },
+              { key: "groups", label: "Brouillons", icon: FileText },
               { key: "tracking", label: "Suivi athlète", icon: Activity },
               { key: "club", label: "Gérer le club", icon: Building2 },
             ],
@@ -177,7 +177,7 @@ export function AppDrawer({
               items: [
                 { key: "dashboard" as CoachMenuKey, label: "Tableau de bord", icon: LayoutDashboard },
                 { key: "planning" as CoachMenuKey, label: "Planification", icon: CalendarDays },
-                { key: "groups" as CoachMenuKey, label: "Groupes", icon: UsersRound },
+                { key: "groups" as CoachMenuKey, label: "Brouillons", icon: FileText },
                 { key: "tracking" as CoachMenuKey, label: "Suivi athlète", icon: Activity },
                 { key: "club" as CoachMenuKey, label: "Gérer le club", icon: Building2 },
               ],
