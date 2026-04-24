@@ -41,7 +41,7 @@ export function FloatingCreateSessionButton() {
         "active:scale-[0.97] touch-manipulation dark:ring-background",
         isIosPhone
           ? "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]"
-          : "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap)-1.25rem)]",
+          : "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap)-0.5rem)]",
         "left-1/2 -translate-x-1/2"
       )}
       data-tutorial="create-session"
