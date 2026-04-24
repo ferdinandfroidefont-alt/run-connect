@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
+import { ChevronLeft, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
@@ -610,19 +610,17 @@ export default function Participants() {
       {showLiveSessionsPanel && (
         <div className="absolute inset-0 z-50 bg-background">
           <div className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 pb-3 pt-[var(--safe-area-top)]">
-            <div className="mb-2 flex items-center justify-between">
-              <Button
+            <div className="relative mb-2 flex min-h-[44px] items-center">
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full"
                 onClick={() => setShowLiveSessionsPanel(false)}
+                className="flex min-w-0 items-center gap-ios-1 text-primary active:opacity-70"
                 aria-label="Retour"
               >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <p className="text-[17px] font-semibold">Mes séances live</p>
-              <div className="w-9" />
+                <ChevronLeft className="h-6 w-6 shrink-0" />
+                <span className="truncate text-ios-headline">Retour</span>
+              </button>
+              <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold">Mes séances live</p>
             </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

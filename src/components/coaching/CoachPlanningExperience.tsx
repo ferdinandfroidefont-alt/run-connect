@@ -276,8 +276,9 @@ function paceToTranscriptLabel(paceSecPerKm?: number) {
 
 function compactPaceLabel(paceSecPerKm?: number) {
   if (!paceSecPerKm || paceSecPerKm <= 0) return "—";
-  const min = Math.floor(paceSecPerKm / 60);
-  const sec = paceSecPerKm % 60;
+  const rounded = Math.max(1, Math.round(paceSecPerKm));
+  const min = Math.floor(rounded / 60);
+  const sec = rounded % 60;
   return `${min}'${sec.toString().padStart(2, "0")}`;
 }
 
@@ -2990,7 +2991,7 @@ export function CoachPlanningExperience() {
                               {index < draft.blocks.length - 1 ? (
                                 <span
                                   aria-hidden
-                                  className="absolute -bottom-4 left-6 h-4 w-px bg-[#2563EB]/45"
+                                  className="absolute -bottom-8 left-1/2 h-8 w-[3px] -translate-x-1/2 rounded-full bg-[#2563EB]/55"
                                 />
                               ) : null}
 

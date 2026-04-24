@@ -1083,13 +1083,29 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
 
       <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
-        <DialogContent className="w-[min(1100px,96vw)] max-w-[96vw] rounded-3xl p-0">
+        <DialogContent fullScreen hideCloseButton className="overflow-hidden bg-secondary p-0">
           <DialogTitle className="sr-only">Records privés coach</DialogTitle>
-          <div className="space-y-4 p-4">
-            <div>
-              <p className="text-[18px] font-semibold text-foreground">Records privés coach</p>
-              <p className="text-[13px] text-muted-foreground">Ces temps servent au calcul automatique des zones pour cet athlète. Les records profil sont visibles juste en dessous.</p>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <div className="relative flex min-h-[44px] items-center">
+                <button
+                  type="button"
+                  onClick={() => setRecordsDialogOpen(false)}
+                  className="flex min-w-0 items-center gap-ios-1 text-primary active:opacity-70"
+                  aria-label="Retour"
+                >
+                  <ChevronLeft className="h-6 w-6 shrink-0" />
+                  <span className="truncate text-ios-headline">Retour</span>
+                </button>
+                <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-foreground">
+                  Records privés coach
+                </p>
+              </div>
+              <p className="text-[13px] text-muted-foreground">
+                Ces temps servent au calcul automatique des zones pour cet athlète. Les records profil sont visibles juste en dessous.
+              </p>
             </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[0.95fr_1.25fr]">
               {selectedAthleteProfileRecords.length > 0 ? (
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
@@ -1158,6 +1174,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                 <Save className="mr-1.5 h-4 w-4" />
                 {savingRecords ? "Enregistrement..." : "Enregistrer"}
               </Button>
+            </div>
             </div>
           </div>
         </DialogContent>
