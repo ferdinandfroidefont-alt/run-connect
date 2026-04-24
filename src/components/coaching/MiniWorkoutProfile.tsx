@@ -7,6 +7,7 @@ interface MiniWorkoutProfileProps {
   isRestDay?: boolean;
   className?: string;
   variant?: "default" | "premiumCompact";
+  barHeightScale?: number;
 }
 
 function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["variant"]): number {
@@ -21,6 +22,7 @@ export function MiniWorkoutProfile({
   isRestDay = false,
   className,
   variant = "default",
+  barHeightScale = 1,
 }: MiniWorkoutProfileProps) {
   const profile = blocks?.length
     ? blocks
@@ -48,7 +50,8 @@ export function MiniWorkoutProfile({
       ) : (
         normalized.map((block, index) => {
           const resolvedHeight = resolveBlockHeight(block.height, variant);
-          const isFineRecovery = variant === "premiumCompact" && resolvedHeight <= 7;
+          const scaledHeight = Math.max(2, Math.round(resolvedHeight * barHeightScale));
+          const isFineRecovery = variant === "premiumCompact" && scaledHeight <= 7;
           return (
             <span
               key={`${index}-${block.width}-${block.height}`}
@@ -62,7 +65,7 @@ export function MiniWorkoutProfile({
                 flexGrow: Math.max(block.width, 0.001),
                 flexBasis: 0,
                 minWidth: compact ? (variant === "premiumCompact" ? "1px" : "3px") : variant === "premiumCompact" ? "1px" : "4px",
-                height: `${resolvedHeight}px`,
+                height: `${scaledHeight}px`,
                 backgroundColor: block.color,
                 opacity: isFineRecovery ? (block.opacity ?? 1) * 0.65 : (block.opacity ?? 1),
               }}
