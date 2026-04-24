@@ -2,6 +2,7 @@ import { CalendarClock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,6 +14,7 @@ export function FloatingCreateSessionButton() {
   const navigate = useNavigate();
   const { openCreateSession, hideBottomNav, homeMapImmersive, homeFeedSheetSnap } = useAppContext();
   const { t } = useLanguage();
+  const isIosPhone = useIsIosPhoneLayout();
 
   if (hideBottomNav || homeMapImmersive || homeFeedSheetSnap > 0 || location.pathname !== "/")
     return null;
@@ -37,7 +39,9 @@ export function FloatingCreateSessionButton() {
         "border border-primary/20 bg-primary px-4 py-2.5 text-primary-foreground shadow-lg",
         "text-sm font-semibold leading-tight ring-[3px] ring-background transition-transform duration-200 ease-ios",
         "active:scale-[0.97] touch-manipulation dark:ring-background",
-        "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]",
+        isIosPhone
+          ? "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap))]"
+          : "bottom-[calc(var(--layout-bottom-inset)+0.65rem+var(--home-bottom-stack-gap)-1.25rem)]",
         "left-1/2 -translate-x-1/2"
       )}
       data-tutorial="create-session"

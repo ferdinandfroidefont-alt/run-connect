@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useAppContext, type HomeFeedSheetSnap } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
@@ -66,6 +67,7 @@ export function HomeFeedBottomSheet() {
   const reduceMotion = useReducedMotion();
   const ih = useInnerHeight();
   const safeTop = useSafeAreaTopPx();
+  const isIosPhone = useIsIosPhoneLayout();
   const { homeFeedSheetRequest, clearHomeFeedSheetRequest, setHomeFeedSheetSnap } = useAppContext();
 
   const heights = useMemo(() => {
@@ -165,8 +167,9 @@ export function HomeFeedBottomSheet() {
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-[102] flex flex-col justify-end"
       style={{
-        bottom:
-          "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap)))",
+        bottom: isIosPhone
+          ? "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap)))"
+          : "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap) - 1.25rem))",
       }}
     >
       <motion.button
