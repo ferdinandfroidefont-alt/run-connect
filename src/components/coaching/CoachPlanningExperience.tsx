@@ -3,7 +3,6 @@ import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "dat
 import { fr } from "date-fns/locale";
 import {
   Activity,
-  ArrowLeftRight,
   Bike,
   Clock3,
   Crosshair,
@@ -737,6 +736,8 @@ export function CoachPlanningExperience() {
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
   const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
+  const schemaDragFromAddCardStartRef = useRef<{ x: number; y: number } | null>(null);
+  const addBlockFromCardGestureMovedRef = useRef(false);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -1881,11 +1882,14 @@ export function CoachPlanningExperience() {
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
+      schemaDragFromAddCardStartRef.current = null;
     },
     [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool]
   );
 
-  const handleSchemaDragStart = useCallback((tool: SchemaDragToolKind, event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleSchemaDragStart = useCallback((tool: SchemaDragToolKind, event: ReactPointerEvent<HTMLElement>) => {
+    schemaDragFromAddCardStartRef.current = { x: event.clientX, y: event.clientY };
+    addBlockFromCardGestureMovedRef.current = false;
     setSchemaDraggingTool(tool);
     setSchemaDragPointer({ x: event.clientX, y: event.clientY });
   }, []);
@@ -1904,6 +1908,11 @@ export function CoachPlanningExperience() {
   useEffect(() => {
     if (!schemaDraggingTool) return;
     const onPointerMove = (event: PointerEvent) => {
+      const start = schemaDragFromAddCardStartRef.current;
+      if (start) {
+        const dist = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+        if (dist > 10) addBlockFromCardGestureMovedRef.current = true;
+      }
       setSchemaDragPointer({ x: event.clientX, y: event.clientY });
       const target = schemaPreviewRef.current;
       if (!target) return;
@@ -1916,6 +1925,7 @@ export function CoachPlanningExperience() {
       setSchemaDropRatio(bounds.width > 0 ? x / bounds.width : 0);
     };
     const onPointerUp = () => {
+      schemaDragFromAddCardStartRef.current = null;
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
@@ -2938,33 +2948,39 @@ export function CoachPlanningExperience() {
           >
             {editorTab === "build" ? (
               <div className="space-y-4 px-4 pb-6">
-                <Input
-                  value={draft.title}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Nom de la séance"
-                  className="h-11 rounded-2xl border-border bg-card text-[15px]"
-                />
+                <div
+                  className="ios-card -mx-4 overflow-hidden border-x-0 border-border/70 bg-secondary/35 shadow-[var(--shadow-card)] sm:mx-0 sm:rounded-2xl sm:border-x"
+                >
+                  <div className="space-y-3 px-4 py-3">
+                    <Input
+                      value={draft.title}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Nom de la séance"
+                      className="h-11 rounded-2xl border-border bg-white text-[15px] dark:bg-card"
+                    />
 
-                <div className="grid grid-cols-4 gap-2">
-                  {SPORTS.map((sport) => (
-                    <button
-                      key={sport.id}
-                      type="button"
-                      onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
-                      className={cn(
-                        "flex h-14 items-center justify-center rounded-2xl border transition-all",
-                        draft.sport === sport.id
-                          ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
-                          : "border-border/80 bg-card text-foreground"
-                      )}
-                      title={sport.label}
-                      aria-label={sport.label}
-                    >
-                      <span className="text-[24px] leading-none" aria-hidden="true">
-                        {sport.emoji}
-                      </span>
-                    </button>
-                  ))}
+                    <div className="grid grid-cols-4 gap-2">
+                      {SPORTS.map((sport) => (
+                        <button
+                          key={sport.id}
+                          type="button"
+                          onClick={() => setDraft((prev) => ({ ...prev, sport: sport.id }))}
+                          className={cn(
+                            "flex h-14 items-center justify-center rounded-2xl border transition-all",
+                            draft.sport === sport.id
+                              ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
+                              : "border-border/80 bg-white text-foreground dark:bg-card"
+                          )}
+                          title={sport.label}
+                          aria-label={sport.label}
+                        >
+                          <span className="text-[24px] leading-none" aria-hidden="true">
+                            {sport.emoji}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div
@@ -3059,38 +3075,28 @@ export function CoachPlanningExperience() {
                       ).map((card) => (
                         <div
                           key={card.key}
-                          className="group relative flex aspect-square w-[4.75rem] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white transition hover:border-[#2563EB]/45 sm:w-20"
+                          role="button"
+                          tabIndex={0}
+                          onPointerDown={(e) => handleSchemaDragStart(card.key, e)}
+                          onClick={() => {
+                            if (addBlockFromCardGestureMovedRef.current) {
+                              addBlockFromCardGestureMovedRef.current = false;
+                              return;
+                            }
+                            addQuickSchemaBlock(card.key);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              addQuickSchemaBlock(card.key);
+                            }
+                          }}
+                          className="group flex aspect-square w-[4.75rem] shrink-0 cursor-grab flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing sm:w-20"
                         >
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                addQuickSchemaBlock(card.key);
-                              }
-                            }}
-                            onClick={() => addQuickSchemaBlock(card.key)}
-                            className="flex h-full w-full min-h-0 flex-1 cursor-pointer flex-col p-1.5 text-center"
-                          >
-                            <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center">
-                              {card.mini}
-                            </div>
-                            <p className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">{card.title}</p>
+                          <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
+                            {card.mini}
                           </div>
-                          <button
-                            type="button"
-                            data-schema-drag-handle
-                            aria-label={`Placer ${card.title} sur le schéma`}
-                            className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-md text-[#2563EB] transition hover:bg-[#2563EB]/10"
-                            onPointerDown={(event) => {
-                              event.stopPropagation();
-                              handleSchemaDragStart(card.key, event);
-                            }}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <ArrowLeftRight className="h-3 w-3" aria-hidden />
-                          </button>
+                          <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">{card.title}</p>
                         </div>
                       ))}
 
@@ -3155,7 +3161,7 @@ export function CoachPlanningExperience() {
                 </div>
 
                   {draft.blocks.length > 0 ? (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 -mx-4 space-y-2 sm:mx-0">
                       {draft.blocks.map((block, index) => {
                         const label = blockDisplayLabel(block);
                         const isDragged = draggedBlockId === block.id;
@@ -3170,8 +3176,8 @@ export function CoachPlanningExperience() {
                             <div
                               data-block-id={block.id}
                               className={cn(
-                                "relative rounded-[20px] border bg-card pl-12 pr-3 py-3 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] transition-all",
-                                isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "border-border/80",
+                                "ios-card relative rounded-none border-x-0 border-border/80 bg-card pl-12 pr-3 py-3 shadow-[var(--shadow-card)] transition-all sm:rounded-[20px] sm:border-x",
+                                isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "",
                                 isDragged && "opacity-70"
                               )}
                               onClick={() => setSelectedBlockId(block.id)}
