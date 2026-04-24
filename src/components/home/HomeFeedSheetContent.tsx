@@ -204,7 +204,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         <div className="w-full min-w-0 pb-ios-4">
           {mode === "friends" ? (
             <>
-              <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
+              <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 rounded-none sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
                 <div className="flex items-center justify-between px-ios-3 pt-3">
                   <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Stories
