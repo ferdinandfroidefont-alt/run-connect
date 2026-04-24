@@ -3261,53 +3261,6 @@ export function CoachPlanningExperience() {
                         </p>
                       </div>
 
-                      <Popover open={schemaAddMoreOpen} onOpenChange={setSchemaAddMoreOpen}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="flex aspect-square w-[4.75rem] shrink-0 flex-col items-stretch rounded-xl border border-dashed border-slate-300/90 bg-white p-1.5 text-center transition hover:border-[#2563EB]/50 sm:w-20"
-                            aria-label="Autres types de blocs"
-                          >
-                            <span className="flex min-h-0 flex-1 items-center justify-center">
-                              <MoreHorizontal className="h-5 w-5 text-[#2563EB] sm:h-6 sm:w-6" strokeWidth={2.2} />
-                            </span>
-                            <span className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">Autres</span>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[min(100vw-2rem,240px)] border-slate-200 p-1.5 shadow-lg" align="end" sideOffset={6}>
-                          <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">Autres blocs</p>
-                          <div className="flex flex-col gap-0.5">
-                            {(
-                              [
-                                { kind: "libre" as const, label: "Libre" },
-                                { kind: "repetition" as const, label: "Répétition" },
-                              ] as const
-                            ).map((row) => (
-                              <button
-                                key={row.kind}
-                                type="button"
-                                className="rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-foreground transition hover:bg-[#2563EB]/8"
-                                onClick={() => {
-                                  setSchemaAddMoreOpen(false);
-                                  addQuickSchemaBlock(row.kind);
-                                }}
-                              >
-                                {row.label}
-                              </button>
-                            ))}
-                            <button
-                              type="button"
-                              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#2563EB] transition hover:bg-[#2563EB]/8"
-                              onClick={() => {
-                                setSchemaAddMoreOpen(false);
-                                openInsertBlockPicker(draft.blocks.length);
-                              }}
-                            >
-                              Personnalisé
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
                     </div>
                     {schemaDraggingTool && schemaDragPointer ? (
                       <div
