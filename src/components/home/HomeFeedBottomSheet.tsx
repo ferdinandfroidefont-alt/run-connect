@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useAppContext, type HomeFeedSheetSnap } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { HomeFeedSheetContent } from "./HomeFeedSheetContent";
 
 /** Sync avec `index.css` → `--home-feed-sheet-peek` (colonne carte). */
