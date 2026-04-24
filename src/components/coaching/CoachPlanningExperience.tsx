@@ -3421,7 +3421,7 @@ export function CoachPlanningExperience() {
 
                               {block.type === "interval" ? (
                                 <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-2">
+                                  <div className="grid grid-cols-3 gap-1.5">
                                     <CoachingMetricPill
                                       label="Blocs"
                                       value={`${block.blockRepetitions ?? 1}`}
@@ -3463,7 +3463,7 @@ export function CoachPlanningExperience() {
                                     />
                                   </div>
 
-                                  <div className="grid grid-cols-3 gap-2">
+                                  <div className="grid grid-cols-3 gap-1.5">
                                     <CoachingMetricPill
                                       label="Distance"
                                       value={simpleBlockDistanceValue(block.distanceM)}
@@ -3617,7 +3617,7 @@ export function CoachPlanningExperience() {
                                 </div>
                               ) : block.notes?.includes("[Pyramid]") ? (
                                 <div className="space-y-2">
-                                  <div className="grid grid-cols-3 gap-2">
+                                  <div className="grid grid-cols-3 gap-1.5">
                                     <CoachingMetricPill
                                       label="Allure"
                                       value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
@@ -3724,7 +3724,7 @@ export function CoachPlanningExperience() {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-3 gap-1.5">
                                   <CoachingMetricPill
                                     label="Allure"
                                     value={block.paceSecPerKm ? compactPaceLabel(block.paceSecPerKm) : ""}
@@ -4340,7 +4340,7 @@ export function CoachPlanningExperience() {
                 </div>
 
                 {(blockForm.intensityMode ?? "zones") === "zones" ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {ZONE_META.map((zone) => (
                       <button
                         key={zone.zone}
