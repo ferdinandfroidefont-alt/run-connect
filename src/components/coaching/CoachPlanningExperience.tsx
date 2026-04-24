@@ -463,40 +463,6 @@ function blockAccent(type: BlockType) {
   }
 }
 
-function computeBlockTotals(block: SessionBlock) {
-  if (block.type !== "interval") {
-    const distanceM = Math.max(0, block.distanceM || 0);
-    const durationSec = Math.max(0, block.durationSec || 0);
-    return {
-      distanceM,
-      durationSec,
-      paceSecPerKm: distanceM > 0 && durationSec > 0 ? Math.round((durationSec / distanceM) * 1000) : block.paceSecPerKm,
-      rpe: block.rpe,
-    };
-  }
-
-  const series = Math.max(1, block.blockRepetitions || 1);
-  const repsPerSeries = Math.max(1, block.repetitions || 1);
-  const totalEfforts = series * repsPerSeries;
-  const betweenReps = Math.max(0, totalEfforts - series);
-  const betweenSeries = Math.max(0, series - 1);
-  const distanceM =
-    (Math.max(0, block.distanceM || 0) * totalEfforts) +
-    (Math.max(0, block.recoveryDistanceM || 0) * betweenReps) +
-    (Math.max(0, block.blockRecoveryDistanceM || 0) * betweenSeries);
-  const durationSec =
-    (Math.max(0, block.durationSec || 0) * totalEfforts) +
-    (Math.max(0, block.recoveryDurationSec || 0) * betweenReps) +
-    (Math.max(0, block.blockRecoveryDurationSec || 0) * betweenSeries);
-
-  return {
-    distanceM,
-    durationSec,
-    paceSecPerKm: distanceM > 0 && durationSec > 0 ? Math.round((durationSec / distanceM) * 1000) : block.paceSecPerKm,
-    rpe: block.rpe,
-  };
-}
-
 function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
   switch (normalized) {
@@ -515,44 +481,6 @@ function zoneToPreviewColorClass(zone?: string) {
     default:
       return "bg-yellow-400";
   }
-}
-
-function zoneToLevel(zone?: string) {
-  const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
-  const match = normalized.match(/^Z([1-6])$/);
-  return match ? Number.parseInt(match[1], 10) : 3;
-}
-
-function buildIntervalPreviewSegments(block: SessionBlock, effortLevel: number) {
-  const series = Math.max(1, block.blockRepetitions || 1);
-  const repsPerSeries = Math.max(1, block.repetitions || 1);
-  const effortDuration = Math.max(1, block.durationSec || 45);
-  const repRecoveryDuration = Math.max(1, block.recoveryDurationSec || 30);
-  const seriesRecoveryDuration = Math.max(1, block.blockRecoveryDurationSec || repRecoveryDuration);
-  const level = Math.max(1, Math.min(6, effortLevel));
-
-  const effortHeight = 12 + level * 3;
-  const recoveryHeight = Math.max(8, Math.round(effortHeight * 0.52));
-
-  const segments: Array<{ id: string; duration: number; effort: boolean; height: number }> = [];
-  let cursor = 0;
-
-  for (let s = 0; s < series; s += 1) {
-    for (let r = 0; r < repsPerSeries; r += 1) {
-      segments.push({ id: `effort-${cursor}`, duration: effortDuration, effort: true, height: effortHeight });
-      cursor += 1;
-      if (r < repsPerSeries - 1) {
-        segments.push({ id: `recovery-${cursor}`, duration: repRecoveryDuration, effort: false, height: recoveryHeight });
-        cursor += 1;
-      }
-    }
-    if (s < series - 1) {
-      segments.push({ id: `series-recovery-${cursor}`, duration: seriesRecoveryDuration, effort: false, height: recoveryHeight });
-      cursor += 1;
-    }
-  }
-
-  return segments;
 }
 
 function blockGraphColor(type: BlockType, recovery = false) {
@@ -792,6 +720,10 @@ export function CoachPlanningExperience() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [schemaInsertTool, setSchemaInsertTool] = useState<"steady" | "interval" | "pyramid" | null>(null);
+  const [schemaDraggingTool, setSchemaDraggingTool] = useState<"steady" | "interval" | "pyramid" | null>(null);
+  const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
+  const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -837,6 +769,7 @@ export function CoachPlanningExperience() {
   const [pendingDrawerKey, setPendingDrawerKey] = useState<CoachMenuKey | null>(null);
   const [copiedWeekSessions, setCopiedWeekSessions] = useState<TrainingSession[] | null>(null);
   const [copiedFromAthleteId, setCopiedFromAthleteId] = useState<string | null>(null);
+  const schemaPreviewRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!draft.blocks.length) {
@@ -1876,6 +1809,83 @@ export function CoachPlanningExperience() {
       };
     });
   }, []);
+
+  const createQuickSchemaBlock = useCallback((kind: "steady" | "interval" | "pyramid"): SessionBlock => {
+    if (kind === "pyramid") {
+      return {
+        ...createDefaultBlock("steady", draft.blocks.length + 1),
+        repetitions: 5,
+        notes: "[Pyramid]",
+        zone: "Z3",
+      };
+    }
+    return createDefaultBlock(kind === "interval" ? "interval" : "steady", draft.blocks.length + 1);
+  }, [draft.blocks.length]);
+
+  const handleSchemaInsertAtPointer = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!schemaInsertTool && !schemaDraggingTool) return;
+    const target = schemaPreviewRef.current;
+    if (!target) return;
+    const bounds = target.getBoundingClientRect();
+    const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+    const ratio = bounds.width > 0 ? x / bounds.width : 1;
+    const insertIndex = Math.max(0, Math.min(draft.blocks.length, Math.round(ratio * draft.blocks.length)));
+    const tool = schemaDraggingTool ?? schemaInsertTool;
+    if (!tool) return;
+    const block = createQuickSchemaBlock(tool);
+    insertDraftBlock(block, insertIndex);
+    setSelectedBlockId(block.id);
+    setSchemaInsertTool(null);
+    setSchemaDraggingTool(null);
+    setSchemaDragPointer(null);
+    setSchemaDropRatio(null);
+  }, [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool, schemaInsertTool]);
+
+  const handleSchemaDragStart = useCallback((tool: "steady" | "interval" | "pyramid", event: ReactPointerEvent<HTMLButtonElement>) => {
+    setSchemaDraggingTool(tool);
+    setSchemaDragPointer({ x: event.clientX, y: event.clientY });
+    setSchemaInsertTool(null);
+  }, []);
+
+  const handleSchemaPreviewPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!schemaDraggingTool) return;
+    const target = schemaPreviewRef.current;
+    if (!target) return;
+    const bounds = target.getBoundingClientRect();
+    const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+    const ratio = bounds.width > 0 ? x / bounds.width : 0;
+    setSchemaDragPointer({ x: event.clientX, y: event.clientY });
+    setSchemaDropRatio(ratio);
+  }, [schemaDraggingTool]);
+
+  useEffect(() => {
+    if (!schemaDraggingTool) return;
+    const onPointerMove = (event: PointerEvent) => {
+      setSchemaDragPointer({ x: event.clientX, y: event.clientY });
+      const target = schemaPreviewRef.current;
+      if (!target) return;
+      const bounds = target.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+        setSchemaDropRatio(null);
+        return;
+      }
+      const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+      setSchemaDropRatio(bounds.width > 0 ? x / bounds.width : 0);
+    };
+    const onPointerUp = () => {
+      setSchemaDraggingTool(null);
+      setSchemaDragPointer(null);
+      setSchemaDropRatio(null);
+    };
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerUp, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [schemaDraggingTool]);
 
   const updateDraftBlock = useCallback((blockId: string, updater: (block: SessionBlock) => SessionBlock) => {
     setDraft((prev) => ({
@@ -2917,26 +2927,72 @@ export function CoachPlanningExperience() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[15px] font-semibold text-foreground">Structure de la séance</h3>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[12px] font-medium text-primary"
-                      onClick={() => {
-                        setBlockStep("type");
-                        setBlockForm(createDefaultBlock("steady", draft.blocks.length + 1));
-                        setEditingBlockId(null);
-                        setBlockSheetOpen(true);
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Ajouter un bloc
-                    </button>
                   </div>
 
-                  <div className="rounded-[22px] border border-border bg-card p-3 shadow-[0_12px_32px_-24px_hsl(var(--foreground)/0.28)]">
-                    <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
-                      <p className="mb-1.5 text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[96px]" />
+                  <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
+                    <p className="mb-1.5 text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                    <div
+                      ref={schemaPreviewRef}
+                      onPointerMove={handleSchemaPreviewPointerMove}
+                      onPointerUp={handleSchemaInsertAtPointer}
+                      className={cn(
+                        "relative rounded-xl",
+                        schemaInsertTool || schemaDraggingTool ? "cursor-copy ring-2 ring-[#2563EB]/35" : ""
+                      )}
+                      title={schemaInsertTool || schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
+                    >
+                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" className="h-[288px]" />
+                      {schemaDropRatio != null ? (
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-y-2 w-1 rounded-full bg-[#2563EB]/80 shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
+                          style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 2px)` }}
+                        />
+                      ) : null}
                     </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
+                          schemaInsertTool === "steady" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
+                        )}
+                        onPointerDown={(event) => handleSchemaDragStart("steady", event)}
+                        onClick={() => setSchemaInsertTool((prev) => (prev === "steady" ? null : "steady"))}
+                      >
+                        Bloc continu
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
+                          schemaInsertTool === "interval" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
+                        )}
+                        onPointerDown={(event) => handleSchemaDragStart("interval", event)}
+                        onClick={() => setSchemaInsertTool((prev) => (prev === "interval" ? null : "interval"))}
+                      >
+                        Bloc intervalle
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
+                          schemaInsertTool === "pyramid" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
+                        )}
+                        onPointerDown={(event) => handleSchemaDragStart("pyramid", event)}
+                        onClick={() => setSchemaInsertTool((prev) => (prev === "pyramid" ? null : "pyramid"))}
+                      >
+                        Bloc pyramide
+                      </button>
+                    </div>
+                    {schemaDraggingTool && schemaDragPointer ? (
+                      <div
+                        className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
+                        style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
+                      >
+                        {schemaDraggingTool === "steady" ? "Bloc continu" : schemaDraggingTool === "interval" ? "Bloc intervalle" : "Bloc pyramide"}
+                      </div>
+                    ) : null}
                   </div>
 
                   {draft.blocks.length > 0 ? (
@@ -2948,17 +3004,7 @@ export function CoachPlanningExperience() {
                         const isSelected = selectedBlockId === block.id;
                         const typeMeta = blockTypeMeta(block.type);
                         const accents = blockAccent(block.type);
-                        const totals = computeBlockTotals(block);
-                        const intervalEffortSec = Math.max(0, block.durationSec || 0);
-                        const intervalRecoverySec = Math.max(0, block.recoveryDurationSec || 0);
                         const intervalRepetitions = Math.max(1, (block.repetitions || 1) * (block.blockRepetitions || 1));
-                        const intervalComputedSegments = buildWorkoutSegments([block], {
-                          sport: draft.sport,
-                          athleteIntensity: activeAthleteIntensity ?? undefined,
-                        });
-                        const effortZone = intervalComputedSegments.find((segment) => segment.kind === "rep")?.computedZone ?? "Z3";
-                        const recoveryZone = intervalComputedSegments.find((segment) => segment.kind === "recovery")?.computedZone ?? "Z1";
-                        const intervalPreviewSegments = buildIntervalPreviewSegments(block, zoneToLevel(effortZone));
 
                         return (
                           <div key={block.id} className="relative">
@@ -3235,43 +3281,6 @@ export function CoachPlanningExperience() {
                                     />
                                   </div>
 
-                                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-2.5">
-                                    <div className="mb-2 flex items-center justify-between">
-                                      <p className="text-[12px] font-semibold text-foreground">Aperçu du bloc</p>
-                                      <p className="text-[11px] font-medium text-muted-foreground">
-                                        Durée totale {secondsToLabel(totals.durationSec) || "—"}
-                                      </p>
-                                    </div>
-                                    <div className="flex h-10 items-end gap-0 overflow-hidden rounded-xl bg-white p-1">
-                                      {intervalPreviewSegments.map((segment) => (
-                                        <span
-                                          key={`${block.id}-${segment.id}`}
-                                          className={cn(
-                                            "min-w-[2px] rounded-[2px]",
-                                            segment.effort
-                                              ? zoneToPreviewColorClass(effortZone)
-                                              : zoneToPreviewColorClass(recoveryZone),
-                                            (segment.effort ? effortZone : recoveryZone) === "Z1" && "border border-slate-200"
-                                          )}
-                                          style={{
-                                            flexGrow: Math.max(1, segment.duration),
-                                            flexBasis: 0,
-                                            height: `${segment.height}px`,
-                                          }}
-                                        />
-                                      ))}
-                                    </div>
-                                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                                      <span className="inline-flex items-center gap-1.5">
-                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(effortZone), effortZone === "Z1" && "border border-slate-200")} />
-                                        Effort ({intervalEffortSec || 0} s)
-                                      </span>
-                                      <span className="inline-flex items-center gap-1.5">
-                                        <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(recoveryZone), recoveryZone === "Z1" && "border border-slate-200")} />
-                                        Récupération ({intervalRecoverySec || 0} s)
-                                      </span>
-                                    </div>
-                                  </div>
                                 </div>
                               ) : block.notes?.includes("[Pyramid]") ? (
                                 <div className="space-y-2">
