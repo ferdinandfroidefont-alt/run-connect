@@ -276,7 +276,8 @@ export function renderWorkoutMiniProfile(
     (meaningful[0].kind === "steady" || meaningful[0].kind === "warmup" || meaningful[0].kind === "cooldown")
   ) {
     const only = meaningful[0];
-    return [{ width: 100, height: heightForBand(only.intensityBand), color: colorForBand(only.intensityBand), opacity: 1 }];
+    const zone = only.computedZone ?? bandToComputedZone(only.intensityBand);
+    return [{ width: 100, height: heightForZone(zone), color: colorForZone(zone), opacity: 1 }];
   }
 
   const expanded = expandSegmentsForMiniProfile(meaningful);
@@ -354,14 +355,6 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
   }
 
   return expanded;
-}
-
-function colorForBand(band: WorkoutSegment["intensityBand"]): string {
-  return zoneToColorToken(bandToComputedZone(band));
-}
-
-function colorForSegment(segment: WorkoutSegment): string {
-  return segment.computedZone ? zoneToColorToken(segment.computedZone) : colorForBand(segment.intensityBand);
 }
 
 function colorForZone(zone: ComputedZone): string {
