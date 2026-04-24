@@ -2941,7 +2941,7 @@ export function CoachPlanningExperience() {
                       )}
                       title={schemaInsertTool || schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                     >
-                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" barHeightScale={3} className="h-[288px]" />
+                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" barHeightScale={3} className="h-[72px]" />
                       {schemaDropRatio != null ? (
                         <span
                           aria-hidden
