@@ -114,7 +114,7 @@ export function SessionStoriesStrip({
   const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
   return (
-    <div className="overflow-x-auto px-3 pb-3">
+    <div className="overflow-x-auto pb-3">
       <div className="flex gap-3">
         <button
           type="button"
@@ -155,7 +155,7 @@ export function SessionStoriesStrip({
           ))}
       </div>
       {!authors.length && (
-        <div className="mt-3 rounded-ios-md border p-3 text-center text-xs text-muted-foreground">
+        <div className="mt-2 text-center text-xs text-muted-foreground">
           Pas de stories pour le moment. Cree une story depuis le bouton +.
         </div>
       )}

@@ -39,10 +39,10 @@ export const DiscoverCard = ({ session, onJoin, onCardClick, index = 0 }: Discov
 
   return (
     <>
-      <div 
+      <div
         className={cn(
-          "bg-card border-y border-border overflow-hidden border-l-4 animate-fade-in cursor-pointer active:bg-secondary/80 transition-colors",
-          session.visibility_state === 'boosted' && "ring-2 ring-primary/25",
+          "w-full overflow-hidden border-l-4 bg-transparent animate-fade-in cursor-pointer active:bg-secondary/30 transition-colors",
+          session.visibility_state === "boosted" && "ring-2 ring-primary/20 ring-inset",
           getActivityBorderLeftClass(session.activity_type)
         )}
         style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}

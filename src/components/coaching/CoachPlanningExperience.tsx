@@ -48,7 +48,7 @@ import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
-import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { buildWorkoutSegments, miniProfileZoneColor, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
@@ -2968,15 +2968,18 @@ export function CoachPlanningExperience() {
                 />
 
                 <div className="space-y-3">
-                  <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
-                    <p className="mb-1.5 text-[14px] font-semibold text-foreground">Schéma de séance</p>
+                    <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="flex gap-1.5">
                       <div
-                        className="flex h-[72px] w-5 shrink-0 flex-col justify-between border-r border-slate-200/60 pr-1 pt-0.5 text-[8px] font-bold leading-[1.1] text-slate-500"
+                        className="flex h-[72px] w-5 shrink-0 flex-col justify-between border-r border-slate-200/60 pr-1 pt-0.5 text-[8px] font-bold leading-[1.1]"
                         aria-hidden
                       >
-                        {["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"].map((z) => (
-                          <span key={z} className="text-right text-[#2563EB]/80">
+                        {(["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"] as const).map((z) => (
+                          <span
+                            key={z}
+                            className="text-right"
+                            style={{ color: miniProfileZoneColor(z) }}
+                          >
                             {z}
                           </span>
                         ))}
@@ -2987,8 +2990,8 @@ export function CoachPlanningExperience() {
                           onPointerMove={handleSchemaPreviewPointerMove}
                           onPointerUp={handleSchemaInsertAtPointer}
                           className={cn(
-                            "relative rounded-xl border border-slate-200/50 bg-white/50",
-                            schemaDraggingTool ? "cursor-copy ring-2 ring-[#2563EB]/35" : ""
+                            "relative",
+                            schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
                           )}
                           title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                         >
@@ -3011,7 +3014,7 @@ export function CoachPlanningExperience() {
                       </div>
                     </div>
 
-                    <p className="mb-2 mt-4 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
+                    <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
                     <div className="flex gap-2.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {(
                         [
@@ -3152,7 +3155,6 @@ export function CoachPlanningExperience() {
                         {schemaDraggingTool === "steady" ? "Continu" : schemaDraggingTool === "interval" ? "Intervalle" : "Pyramide"}
                       </div>
                     ) : null}
-                  </div>
 
                   {draft.blocks.length > 0 ? (
                     <div className="mt-3 space-y-2">

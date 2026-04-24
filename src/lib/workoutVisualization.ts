@@ -66,6 +66,8 @@ const DEFAULT_STEADY_PACE_SEC_PER_KM = 330;
 const DEFAULT_RECOVERY_DISTANCE_KM = 0.15;
 const DEFAULT_TEMPO_PACE_SEC_PER_KM = 285;
 const DEFAULT_INTERVAL_PACE_SEC_PER_KM = 240;
+/** Minuscule durée (min) pour le rendu profil seulement — somme ≈0 après arrondi, n’influe pas le volume réel. */
+const PREVIEW_EPS_MIN = 0.01;
 
 function toPaceSecPerKmFromString(pace?: string): number | null {
   if (!pace) return null;
@@ -83,6 +85,65 @@ function estimateDistanceKm(durationMin: number, paceSecPerKm: number | null): n
 
 function clampPositive(n: number): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Gabarit « carte Ajouter un bloc » : 4 barres effort / récup / effort / récup (même grammaire visuelle). */
+function placeholderIntervalProfileSegments(
+  options: { sport: BuildWorkoutSegmentsOptions["sport"]; zone?: string; refs: ReturnType<typeof resolveRunningReferences>["refs"] | null; refSource: "athlete_record" | "coach_validated" | "auto_estimate" | "fallback" }
+): WorkoutSegment[] {
+  const { sport, zone, refs, refSource } = options;
+  const repIntensity =
+    sport === "running"
+      ? classifyRunningBlockIntensity({
+          type: "interval",
+          zone: (zone as ComputedZone | undefined) ?? "Z3",
+          paceSecPerKm: null,
+          distanceM: 0,
+          durationSec: 0,
+          references: refs,
+          source: refSource,
+        })
+      : { band: "interval" as const, zone: "Z4" as ComputedZone, source: "fallback" as const };
+  const recZone = bandToComputedZone("recovery");
+  const segs: WorkoutSegment[] = [
+    {
+      kind: "rep",
+      durationMin: PREVIEW_EPS_MIN,
+      distanceKm: 0,
+      intensityBand: repIntensity.band,
+      computedZone: repIntensity.zone,
+      color: zoneToColorToken(repIntensity.zone),
+      intensitySource: repIntensity.source,
+    },
+    {
+      kind: "recovery",
+      durationMin: PREVIEW_EPS_MIN,
+      distanceKm: 0,
+      intensityBand: "recovery",
+      computedZone: recZone,
+      color: zoneToColorToken(recZone),
+      intensitySource: refSource,
+    },
+    {
+      kind: "rep",
+      durationMin: PREVIEW_EPS_MIN,
+      distanceKm: 0,
+      intensityBand: repIntensity.band,
+      computedZone: repIntensity.zone,
+      color: zoneToColorToken(repIntensity.zone),
+      intensitySource: repIntensity.source,
+    },
+    {
+      kind: "recovery",
+      durationMin: PREVIEW_EPS_MIN,
+      distanceKm: 0,
+      intensityBand: "recovery",
+      computedZone: recZone,
+      color: zoneToColorToken(recZone),
+      intensitySource: refSource,
+    },
+  ];
+  return segs;
 }
 
 function estimateDistanceFromFallback(durationMin: number, kind: WorkoutSegmentKind): number {
@@ -142,6 +203,18 @@ export function buildWorkoutSegments(
     if (raw.type === "interval") {
       const durationFromDistance =
         distanceKm > 0 && paceSecPerKm ? distanceKm * (paceSecPerKm / 60) : 0;
+      const hasEffortVolume = durationMin > 0 || distanceKm > 0 || durationFromDistance > 0;
+      if (!hasEffortVolume) {
+        segments.push(
+          ...placeholderIntervalProfileSegments({
+            sport,
+            zone: typeof raw.zone === "string" ? raw.zone : undefined,
+            refs: refResolution.refs,
+            refSource: refResolution.source,
+          })
+        );
+        continue;
+      }
       const perRepDuration = durationMin > 0 ? durationMin : durationFromDistance;
       const effortDistancePerRep =
         distanceKm > 0
@@ -235,6 +308,23 @@ export function buildWorkoutSegments(
             source: refResolution.source,
           })
         : { band: "endurance" as const, zone: "Z2" as const, source: "fallback" as const };
+
+    const hasSteadyVolume = segDuration > 0 || segDistance > 0;
+    if (!hasSteadyVolume) {
+      segments.push({
+        kind,
+        durationMin: PREVIEW_EPS_MIN,
+        distanceKm: 0,
+        intensityBand: steadyIntensity.band,
+        computedZone: steadyIntensity.zone,
+        color: zoneToColorToken(steadyIntensity.zone),
+        intensitySource: steadyIntensity.source,
+        repeatCount: repetitions > 1 ? repetitions : undefined,
+        visualStyle: isPyramid ? "pyramid" : "default",
+      });
+      continue;
+    }
+
     segments.push({
       kind,
       durationMin: clampPositive(segDuration),
@@ -301,7 +391,8 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
     const seg = segments[index];
 
     if (seg.visualStyle === "pyramid") {
-      const steps = [0.42, 0.58, 0.76, 1, 0.78, 0.58];
+      // 5 paliers : aligné sur la carte « Pyramide » (montée puis descente)
+      const steps = [0.45, 0.68, 1, 0.68, 0.45];
       steps.forEach((ratio) => {
         expanded.push({
           ...seg,
@@ -364,6 +455,11 @@ function colorForZone(zone: ComputedZone): string {
   if (zone === "Z4") return "#F97316";
   if (zone === "Z5") return "#EF4444";
   return "#000000";
+}
+
+/** Couleur des barres et des libellés d’axes zone (aligné sur le mini profil) */
+export function miniProfileZoneColor(zone: ComputedZone): string {
+  return colorForZone(zone);
 }
 
 function heightForZone(zone: ComputedZone): number {

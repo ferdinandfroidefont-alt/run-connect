@@ -204,38 +204,36 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
         <div className="mx-auto max-w-2xl pb-ios-4">
           {mode === "friends" ? (
             <>
-              <div className="px-ios-3 pt-ios-2">
-                <div className="ios-card overflow-hidden border border-border/60">
-                  <div className="flex items-center justify-between px-4 pt-3">
-                    <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Stories
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void refreshFriends();
-                        setStoriesRefreshToken((t) => t + 1);
-                      }}
-                      className="text-[12px] font-medium text-primary"
-                    >
-                      Actualiser
-                    </button>
-                  </div>
-                  <SessionStoriesStrip
-                    currentUserId={user?.id ?? null}
-                    refreshToken={storiesRefreshToken}
-                    onOpenStory={(authorId) => setStoryAuthorId(authorId)}
-                    onCreateStory={() => navigate("/stories/create")}
-                  />
+              <div className="border-b border-border/40 px-ios-3 pt-ios-2 pb-1">
+                <div className="flex items-center justify-between px-0 pb-2">
+                  <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Stories
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void refreshFriends();
+                      setStoriesRefreshToken((t) => t + 1);
+                    }}
+                    className="text-[12px] font-medium text-primary"
+                  >
+                    Actualiser
+                  </button>
                 </div>
+                <SessionStoriesStrip
+                  currentUserId={user?.id ?? null}
+                  refreshToken={storiesRefreshToken}
+                  onOpenStory={(authorId) => setStoryAuthorId(authorId)}
+                  onCreateStory={() => navigate("/stories/create")}
+                />
               </div>
 
               {loading && feedItems.length === 0 ? (
-                <div className="space-y-ios-3 px-ios-3 pt-ios-2">
+                <div className="divide-y divide-border/40 px-ios-3 pt-ios-2">
                   {[...Array(3)].map((_, i) => (
                     <div
                       key={i}
-                      className="ios-card space-y-ios-3 p-ios-4 animate-fade-in"
+                      className="space-y-ios-3 py-ios-4 animate-fade-in"
                       style={{ animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
                     >
                       <div className="flex items-center gap-ios-3">
@@ -254,7 +252,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               ) : feedItems.length === 0 ? (
                 <FeedEmptyState />
               ) : (
-                <div className="space-y-ios-3 px-ios-3 pb-ios-2 pt-ios-1">
+                <div className="divide-y divide-border/40 px-ios-3 pb-ios-2 pt-ios-1">
                   {feedItems.map((session, index) => (
                     <FeedCard
                       key={session.id}
@@ -296,18 +294,16 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               )}
             </>
           ) : loading ? (
-            <div className="py-ios-4">
-              <div className="ios-card flex flex-col items-center justify-center gap-ios-3 p-ios-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
-              </div>
+            <div className="flex flex-col items-center justify-center gap-ios-3 py-ios-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
             </div>
           ) : discoverSessions.length === 0 ? (
             <div className="py-ios-4">
               <DiscoverEmptyState hasLocation={hasLocation} onResetFilters={resetFilters} />
             </div>
           ) : (
-            <div className="py-ios-4">
+            <div className="divide-y divide-border/40 px-ios-3">
               {discoverSessions.map((session, index) => (
                 <DiscoverCard
                   key={session.id}

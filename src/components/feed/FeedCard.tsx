@@ -132,9 +132,9 @@ export const FeedCard = ({
   const handleOpenDetails = () => onOpenDetails?.(session);
 
   return (
-    <div 
-      className="ios-card overflow-hidden animate-fade-in"
-      style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
+    <div
+      className="w-full overflow-hidden bg-transparent animate-fade-in"
+      style={{ animationDelay: `${index * 80}ms`, animationFillMode: "both" }}
     >
       <button type="button" className="w-full text-left" onClick={handleOpenDetails}>
         {/* Header */}
