@@ -250,11 +250,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                   ))}
                 </div>
               ) : feedItems.length === 0 ? (
-                <div className="px-ios-3 sm:mx-auto sm:max-w-2xl">
+                <div className="px-ios-4 sm:mx-auto sm:max-w-2xl">
                   <FeedEmptyState />
                 </div>
               ) : (
-                <div className="space-y-ios-3 px-ios-3 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
+                <div className="space-y-ios-3 px-ios-4 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
                   {feedItems.map((session, index) => (
                     <FeedCard
                       key={session.id}
