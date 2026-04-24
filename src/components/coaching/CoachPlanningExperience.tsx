@@ -56,7 +56,7 @@ import { parseRCC } from "@/lib/rccParser";
 import { ClubManagementPage, type ClubMemberItem, type ClubGroupItem, type ClubInvitationItem, type ClubRole } from "@/components/coaching/club/ClubManagementPage";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
-import { CoachingDraftsPage } from "@/components/coaching/CoachingDraftsPage";
+import { CoachingDraftsPage, type CoachingDraftListItem } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
@@ -236,9 +236,28 @@ function secondsToLabel(total: number | undefined) {
   return `${s} s`;
 }
 
+function secondsToTranscriptLabel(total: number | undefined) {
+  if (!total || total <= 0) return "";
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h${m.toString().padStart(2, "0")}`;
+  if (m > 0) return `${m}'`;
+  return `${s}"`;
+}
+
 function metersToLabel(distance: number | undefined) {
   if (!distance || distance <= 0) return "";
   return `${Math.round(distance).toLocaleString("fr-FR")} m`;
+}
+
+function metersToTranscriptLabel(distanceM?: number) {
+  if (!distanceM || distanceM <= 0) return "";
+  if (distanceM >= 1000) {
+    const km = distanceM / 1000;
+    return `${km.toLocaleString("fr-FR", { minimumFractionDigits: Number.isInteger(km) ? 0 : 1, maximumFractionDigits: 1 })}km`;
+  }
+  return `${Math.round(distanceM)}m`;
 }
 
 function paceToLabel(paceSecPerKm?: number) {
@@ -246,6 +265,13 @@ function paceToLabel(paceSecPerKm?: number) {
   const min = Math.floor(paceSecPerKm / 60);
   const sec = paceSecPerKm % 60;
   return `${min}'${sec.toString().padStart(2, "0")}''/km`;
+}
+
+function paceToTranscriptLabel(paceSecPerKm?: number) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return "";
+  const min = Math.floor(paceSecPerKm / 60);
+  const sec = paceSecPerKm % 60;
+  return `${min}'${sec.toString().padStart(2, "0")}min/km`;
 }
 
 function compactPaceLabel(paceSecPerKm?: number) {
@@ -392,6 +418,20 @@ function blockSummary(block: SessionBlock) {
   return `${volume}${target ? ` à ${target}` : ""}${intensity ? ` - ${intensity}` : ""}`;
 }
 
+function blockTranscript(block: SessionBlock) {
+  const pace = paceToTranscriptLabel(block.paceSecPerKm);
+  if (block.type === "interval") {
+    const series = Math.max(1, block.blockRepetitions || 1);
+    const reps = Math.max(1, block.repetitions || 1);
+    const effortVolume = block.distanceM ? metersToTranscriptLabel(block.distanceM) : secondsToTranscriptLabel(block.durationSec);
+    const prefix = `${series > 1 ? `${series}x` : ""}${reps}x${effortVolume || "effort"}`;
+    return `${prefix}${pace ? ` à ${pace}` : ""}`;
+  }
+  const volume = block.durationSec ? secondsToTranscriptLabel(block.durationSec) : metersToTranscriptLabel(block.distanceM);
+  if (!volume) return blockTitle(block.type);
+  return `${volume}${pace ? ` à ${pace}` : ""}`;
+}
+
 function blockAccent(type: BlockType) {
   switch (type) {
     case "interval":
@@ -522,17 +562,6 @@ function blockGraphColor(type: BlockType, recovery = false) {
   return "hsl(var(--primary))";
 }
 
-function blockEstimatedLoad(block: SessionBlock) {
-  const baseDuration = (block.durationSec || 0) * Math.max(1, block.repetitions || 1);
-  const baseDistance = (block.distanceM || 0) * Math.max(1, block.repetitions || 1);
-  const intensityFactor =
-    block.type === "interval" ? 1.35 :
-    block.notes?.includes("[Pyramid]") ? 1.25 :
-    block.type === "recovery" || block.type === "cooldown" ? 0.7 :
-    1;
-  return Math.round((baseDuration / 60 + baseDistance / 200) * intensityFactor);
-}
-
 function computeSessionDistanceKm(blocks: SessionBlock[], sport: SportType) {
   return resolveWorkoutMetrics({ segments: buildWorkoutSegments(blocks, { sport }) }).distanceKm || 0;
 }
@@ -654,6 +683,28 @@ function emptyDraft(dateIso: string): SessionDraft {
     assignedDate: dateIso,
     blocks: [],
   };
+}
+
+function normalizeDraftSport(value: unknown): SportType {
+  return value === "cycling" || value === "swimming" || value === "strength" ? value : "running";
+}
+
+function draftSessionDateIso(row: Record<string, unknown>, weekStart: Date): string {
+  if (typeof row.assignedDate === "string" && row.assignedDate) return row.assignedDate;
+  if (typeof row.scheduled_at === "string" && row.scheduled_at) return row.scheduled_at;
+  const dayIndex = typeof row.dayIndex === "number" ? row.dayIndex : 0;
+  return addDays(weekStart, Math.max(0, Math.min(6, dayIndex))).toISOString();
+}
+
+function draftSessionBlocks(row: Record<string, unknown>): SessionBlock[] {
+  if (Array.isArray(row.blocks)) {
+    return row.blocks.map((block, idx) => mapStoredBlockToSessionBlock(block, idx));
+  }
+  if (Array.isArray(row.session_blocks)) {
+    return row.session_blocks.map((block, idx) => mapStoredBlockToSessionBlock(block, idx));
+  }
+  const maybeRcc = typeof row.rccCode === "string" ? row.rccCode : typeof row.rcc_code === "string" ? row.rcc_code : "";
+  return maybeRcc.trim().length ? parsedRccToSessionBlocks(maybeRcc) : [];
 }
 
 const BASE_MODELS: SessionModelItem[] = [
@@ -1328,13 +1379,11 @@ export function CoachPlanningExperience() {
     [draft.blocks, draft.sport, activeAthleteIntensity]
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
-  const totalDurationSec = useMemo(() => Math.round((previewMetrics.durationMin || 0) * 60), [previewMetrics.durationMin]);
-  const totalDistanceM = useMemo(() => Math.round((previewMetrics.distanceKm || 0) * 1000), [previewMetrics.distanceKm]);
-  const totalEstimatedLoad = useMemo(
-    () => draft.blocks.reduce((acc, block) => acc + blockEstimatedLoad(block), 0),
-    [draft.blocks]
-  );
   const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
+  const sessionTranscript = useMemo(() => {
+    if (!draft.blocks.length) return "Séance vide";
+    return draft.blocks.map((block) => blockTranscript(block)).filter(Boolean).join(" + ");
+  }, [draft.blocks]);
   const selectedAthlete = useMemo(
     () => (activeAthleteId ? athletes.find((athlete) => athlete.id === activeAthleteId) : undefined),
     [activeAthleteId, athletes]
@@ -1470,6 +1519,88 @@ export function CoachPlanningExperience() {
         blocks: session.blocks.map((b) => ({ ...b, id: uid() })),
       },
     ]);
+  };
+
+  const openDraftFromList = async (draftItem: CoachingDraftListItem) => {
+    if (!activeClubId || !user) return;
+    const weekStart = startOfWeek(new Date(draftItem.week_start), { weekStartsOn: 1 });
+    const nextGroupId = draftItem.group_id === "club" ? undefined : draftItem.group_id;
+    const draftRows = Array.isArray(draftItem.sessions) ? draftItem.sessions : [];
+
+    const restored = draftRows
+      .map((raw, index): TrainingSession | null => {
+        if (!raw || typeof raw !== "object") return null;
+        const row = raw as Record<string, unknown>;
+        const sport = normalizeDraftSport(row.sport ?? row.activityType ?? row.activity_type);
+        const blocks = draftSessionBlocks(row).map((block, blockIndex) => ({
+          ...block,
+          id: typeof block.id === "string" ? block.id : uid(),
+          order: blockIndex + 1,
+        }));
+        const assignedDate = draftSessionDateIso(row, weekStart);
+        const athleteId = typeof row.athleteId === "string" ? row.athleteId : undefined;
+        const title =
+          (typeof row.title === "string" && row.title.trim()) ||
+          (typeof row.objective === "string" && row.objective.trim()) ||
+          "Séance sans titre";
+        return {
+          id: `draft-${draftItem.id}-${index}-${uid()}`,
+          title,
+          sport,
+          assignedDate,
+          athleteId,
+          athleteIds: athleteId ? [athleteId] : undefined,
+          groupId: nextGroupId,
+          sent: false,
+          blocks,
+        };
+      })
+      .filter((item): item is TrainingSession => Boolean(item));
+
+    const weekEnd = addDays(weekStart, 7);
+    let cleanup = supabase
+      .from("coaching_sessions")
+      .delete()
+      .eq("club_id", activeClubId)
+      .eq("coach_id", user.id)
+      .eq("status", "draft")
+      .gte("scheduled_at", weekStart.toISOString())
+      .lt("scheduled_at", weekEnd.toISOString());
+    cleanup = nextGroupId ? cleanup.eq("target_group_id", nextGroupId) : cleanup.is("target_group_id", null);
+    await cleanup;
+
+    if (restored.length > 0) {
+      const targetAthletes = Array.isArray(draftItem.target_athletes)
+        ? draftItem.target_athletes.filter((value): value is string => typeof value === "string")
+        : [];
+      const insertPayload = restored.map((session) => ({
+        club_id: activeClubId,
+        coach_id: user.id,
+        title: session.title,
+        objective: session.title,
+        activity_type: session.sport,
+        scheduled_at: session.assignedDate,
+        target_group_id: nextGroupId ?? null,
+        target_athletes: session.athleteId ? [session.athleteId] : targetAthletes.length ? targetAthletes : null,
+        send_mode: nextGroupId ? "group" : "club",
+        status: "draft",
+        session_blocks: session.blocks,
+        distance_km: computeSessionDistanceKm(session.blocks, session.sport) || null,
+      }));
+      const { error } = await supabase.from("coaching_sessions").insert(insertPayload);
+      if (error) {
+        toast.error("Impossible de reprendre le brouillon", error.message);
+        return;
+      }
+    }
+
+    setWeekAnchor(weekStart);
+    setActiveGroupId(nextGroupId);
+    setActiveAthleteId(undefined);
+    setSessions(restored);
+    setActiveMenuKey("planning");
+    setCoachingTab("planning");
+    toast.success("Brouillon repris");
   };
 
   const sendSession = async (sessionId: string) => {
@@ -2517,14 +2648,7 @@ export function CoachPlanningExperience() {
               activeClubId ? (
                 <CoachingDraftsPage
                   clubId={activeClubId}
-                  onOpenDraft={(weekStart, groupId) => {
-                    setWeekAnchor(startOfWeek(weekStart, { weekStartsOn: 1 }));
-                    setActiveGroupId(groupId === "club" ? undefined : groupId);
-                    setActiveAthleteId(undefined);
-                    setActiveMenuKey("planning");
-                    setCoachingTab("planning");
-                    toast.success("Brouillon repris");
-                  }}
+                  onOpenDraft={(draftItem) => void openDraftFromList(draftItem)}
                 />
               ) : (
                 <div className="border-b border-border bg-secondary/30 px-4 py-6">
@@ -2737,63 +2861,16 @@ export function CoachPlanningExperience() {
             footer={
               editorTab === "build" && (
                 <div className="border-t border-border bg-card px-4 py-3 pb-[max(0.9rem,var(--safe-area-bottom))]">
-                  <div
+                  <button
+                    type="button"
                     className={cn(
-                      "mb-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.4)]",
+                      "mb-2 inline-flex h-8 w-full items-center rounded-full border border-slate-200 bg-white px-3 text-left text-[12px] font-medium text-foreground shadow-[0_10px_26px_-24px_rgba(15,23,42,0.45)]",
                       savePulse && "animate-pulse"
                     )}
+                    title={sessionTranscript}
                   >
-                    <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                      Résumé de la séance
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
-                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
-                          <Ruler className="h-3.5 w-3.5" />
-                        </span>
-                        <p className="text-[11px] text-muted-foreground">Distance</p>
-                        <p className="text-[16px] font-bold text-foreground">{totalDistanceM > 0 ? metersToLabel(totalDistanceM) : "—"}</p>
-                      </div>
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
-                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
-                          <Clock3 className="h-3.5 w-3.5" />
-                        </span>
-                        <p className="text-[11px] text-muted-foreground">Durée</p>
-                        <p className="text-[16px] font-bold text-foreground">{secondsToLabel(totalDurationSec) || "—"}</p>
-                      </div>
-                      <div className="rounded-2xl bg-[#2563EB]/8 px-2 py-2 text-center">
-                        <span className="mb-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2563EB]">
-                          <Activity className="h-3.5 w-3.5" />
-                        </span>
-                        <p className="text-[11px] text-muted-foreground">Charge</p>
-                        <p className="text-[16px] font-bold text-foreground">{totalEstimatedLoad > 0 ? totalEstimatedLoad : "—"}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {shouldShowAthleteZoneLegend ? (
-                    <div className="mb-2 rounded-2xl border border-slate-100 bg-white p-2.5 shadow-[0_12px_30px_-26px_rgba(15,23,42,0.35)]">
-                      <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                        Zones de {selectedAthlete?.name ?? "l'athlète"}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {PREVIEW_ZONE_ORDER.map((zone) => {
-                          const range = selectedAthleteRunningRefs?.zones?.[zone];
-                          if (!range) return null;
-                          return (
-                            <div key={`zone-legend-${zone}`} className="rounded-xl border border-slate-100 bg-slate-50/70 px-2.5 py-2">
-                              <div className="mb-1 inline-flex items-center gap-1.5">
-                                <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(zone), zone === "Z1" && "border border-slate-200")} />
-                                <span className="text-[12px] font-semibold text-foreground">{zone}</span>
-                              </div>
-                              <p className="text-[11px] text-muted-foreground">
-                                {paceToLabel(range.maxPace)} - {paceToLabel(range.minPace)}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
+                    <span className="truncate">{sessionTranscript}</span>
+                  </button>
                   <Button
                     onClick={() => void saveSession()}
                     className="h-11 w-full rounded-xl text-[15px] font-semibold"
@@ -2910,7 +2987,12 @@ export function CoachPlanningExperience() {
                                 <GripVertical className={cn("h-5 w-5", accents.iconColor)} />
                               </button>
                               <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
-                              {index < draft.blocks.length - 1 ? <span aria-hidden className="absolute -bottom-2 left-6 right-3 h-px bg-[#2563EB]/45" /> : null}
+                              {index < draft.blocks.length - 1 ? (
+                                <span
+                                  aria-hidden
+                                  className="absolute -bottom-4 left-6 h-4 w-px bg-[#2563EB]/45"
+                                />
+                              ) : null}
 
                               <div className="relative mb-3 flex items-center gap-2">
                                 <span
@@ -3394,6 +3476,30 @@ export function CoachPlanningExperience() {
                           </div>
                         );
                       })}
+                    </div>
+                  ) : null}
+                  {shouldShowAthleteZoneLegend ? (
+                    <div className="mt-2 rounded-xl border border-slate-100 bg-white/95 px-2.5 py-2">
+                      <p className="mb-1 text-[11px] font-semibold text-muted-foreground">
+                        Légende zones {selectedAthlete?.name ?? "athlète"}
+                      </p>
+                      <div className="overflow-x-auto">
+                        <div className="inline-flex min-w-full items-center gap-3 whitespace-nowrap text-[12px] text-foreground">
+                          {PREVIEW_ZONE_ORDER.map((zone) => {
+                            const range = selectedAthleteRunningRefs?.zones?.[zone];
+                            if (!range) return null;
+                            return (
+                              <span key={`zone-legend-inline-${zone}`} className="inline-flex items-center gap-1.5">
+                                <span className={cn("h-2.5 w-2.5 rounded-full", zoneToPreviewColorClass(zone))} />
+                                <span className="font-semibold">{zone}</span>
+                                <span className="text-muted-foreground">
+                                  {compactPaceLabel(range.maxPace)}-{compactPaceLabel(range.minPace)}/km
+                                </span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   ) : null}
                   </div>

@@ -11,13 +11,16 @@ interface Draft {
   week_start: string;
   group_id: string;
   sessions: unknown[];
+  target_athletes?: string[];
   sent_at: string | null;
   updated_at: string;
 }
 
+export type CoachingDraftListItem = Draft;
+
 interface CoachingDraftsPageProps {
   clubId: string;
-  onOpenDraft: (weekStart: Date, groupId: string) => void;
+  onOpenDraft: (draft: CoachingDraftListItem) => void | Promise<void>;
 }
 
 export function CoachingDraftsPage({ clubId, onOpenDraft }: CoachingDraftsPageProps) {
@@ -34,7 +37,7 @@ export function CoachingDraftsPage({ clubId, onOpenDraft }: CoachingDraftsPagePr
       setLoading(true);
       const [{ data: draftsData }, { data: groupsData }] = await Promise.all([
         supabase
-          .from("coaching_drafts" as any)
+          .from("coaching_drafts")
           .select("*")
           .eq("club_id", clubId)
           .eq("coach_id", user.id)
@@ -61,7 +64,7 @@ export function CoachingDraftsPage({ clubId, onOpenDraft }: CoachingDraftsPagePr
   const hasDrafts = useMemo(() => drafts.length > 0, [drafts]);
 
   const deleteDraft = async (id: string) => {
-    await supabase.from("coaching_drafts" as any).delete().eq("id", id);
+    await supabase.from("coaching_drafts").delete().eq("id", id);
     setDrafts((prev) => prev.filter((d) => d.id !== id));
   };
 
@@ -91,7 +94,7 @@ export function CoachingDraftsPage({ clubId, onOpenDraft }: CoachingDraftsPagePr
               key={draft.id}
               className="ios-card flex items-center gap-3 border border-border/60 px-4 py-3 shadow-[var(--shadow-card)] transition-transform active:scale-[0.99]"
             >
-              <button onClick={() => onOpenDraft(parseISO(draft.week_start), draft.group_id)} className="flex-1 text-left">
+              <button onClick={() => void onOpenDraft(draft)} className="flex-1 text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-[15px] font-medium text-foreground">Sem. {weekLabel}</span>
                   {draft.sent_at ? (

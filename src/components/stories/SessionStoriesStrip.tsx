@@ -28,6 +28,22 @@ export function SessionStoriesStrip({
   refreshToken = 0,
 }: SessionStoriesStripProps) {
   const [authors, setAuthors] = useState<StoryAuthor[]>([]);
+  const [myAvatarUrl, setMyAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setMyAvatarUrl(null);
+      return;
+    }
+    void (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+      setMyAvatarUrl((data?.avatar_url as string | null) ?? null);
+    })();
+  }, [currentUserId]);
 
   useEffect(() => {
     if (!currentUserId) return;
@@ -91,6 +107,11 @@ export function SessionStoriesStrip({
   }, [currentUserId, refreshToken]);
 
   const hasMyStory = useMemo(() => authors.some((a) => a.author_id === currentUserId), [authors, currentUserId]);
+  const myStoryAuthor = useMemo(
+    () => authors.find((a) => a.author_id === currentUserId) ?? null,
+    [authors, currentUserId],
+  );
+  const myStoryAvatarUrl = myStoryAuthor?.avatar_url ?? myAvatarUrl;
 
   return (
     <div className="overflow-x-auto px-3 pb-3">
@@ -102,6 +123,7 @@ export function SessionStoriesStrip({
         >
           <div className="relative">
             <Avatar className="h-14 w-14 border-2 border-primary/40">
+              <AvatarImage src={myStoryAvatarUrl ?? ""} />
               <AvatarFallback>MOI</AvatarFallback>
             </Avatar>
             {!hasMyStory && (

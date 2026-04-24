@@ -776,10 +776,10 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
               />
               {/* Bottom gradient */}
               <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
+              <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),12px)]">
                 <button
                   onClick={onClose}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/95 shadow-sm backdrop-blur px-2.5 py-1.5 text-[15px] font-medium text-foreground active:opacity-70"
                   aria-label="Retour"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -787,7 +787,7 @@ export const SessionDetailsDialog = ({ session, onClose, onSessionUpdated }: Ses
                 </button>
                 <button
                   onClick={() => setShowSessionShare(true)}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[15px] font-medium text-primary active:opacity-70"
+                  className="inline-flex items-center gap-1 rounded-full bg-white/95 shadow-sm backdrop-blur px-2.5 py-1.5 text-[15px] font-medium text-foreground active:opacity-70"
                   aria-label="Partager"
                 >
                   <Share2 className="h-4 w-4" />
