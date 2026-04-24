@@ -1887,7 +1887,7 @@ export const InteractiveMap = ({
                     )}
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <p className="select-none text-lg font-semibold leading-tight tracking-tight text-foreground">
-                        <span className="line-clamp-2 break-words">
+                        <span className="line-clamp-2 break-words text-primary">
                           {userProfile
                             ? formatProfileFirstLastName(userProfile.display_name, userProfile.username)
                             : null}
