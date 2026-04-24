@@ -250,11 +250,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                   ))}
                 </div>
               ) : feedItems.length === 0 ? (
-                <div className="px-ios-3 sm:mx-auto sm:max-w-2xl">
+                <div className="px-ios-4 sm:mx-auto sm:max-w-2xl">
                   <FeedEmptyState />
                 </div>
               ) : (
-                <div className="space-y-ios-3 px-ios-3 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
+                <div className="space-y-ios-3 px-ios-4 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
                   {feedItems.map((session, index) => (
                     <FeedCard
                       key={session.id}
@@ -296,18 +296,18 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               )}
             </>
           ) : loading ? (
-            <div className="px-ios-3 py-ios-4 sm:mx-auto sm:max-w-2xl">
+            <div className="px-ios-4 py-ios-4 sm:mx-auto sm:max-w-2xl">
               <div className="ios-card flex flex-col items-center justify-center gap-ios-3 p-ios-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
               </div>
             </div>
           ) : discoverSessions.length === 0 ? (
-            <div className="px-ios-3 py-ios-4 sm:mx-auto sm:max-w-2xl">
+            <div className="px-ios-4 py-ios-4 sm:mx-auto sm:max-w-2xl">
               <DiscoverEmptyState hasLocation={hasLocation} onResetFilters={resetFilters} />
             </div>
           ) : (
-            <div className="space-y-ios-3 px-ios-3 sm:mx-auto sm:max-w-2xl">
+            <div className="space-y-ios-3 px-ios-4 sm:mx-auto sm:max-w-2xl">
               {discoverSessions.map((session, index) => (
                 <DiscoverCard
                   key={session.id}
