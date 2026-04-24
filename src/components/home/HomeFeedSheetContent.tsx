@@ -307,7 +307,7 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               <DiscoverEmptyState hasLocation={hasLocation} onResetFilters={resetFilters} />
             </div>
           ) : (
-            <div className="space-y-ios-3 px-ios-4 sm:mx-auto sm:max-w-2xl">
+            <div className="space-y-ios-3 sm:mx-auto sm:max-w-2xl">
               {discoverSessions.map((session, index) => (
                 <DiscoverCard
                   key={session.id}
