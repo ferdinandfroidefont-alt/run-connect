@@ -283,10 +283,11 @@ export function renderWorkoutMiniProfile(
   const minWeight = compactDensity ? 0.28 : 0.6;
   return expanded.map((seg) => {
     const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
+    const previewZone = seg.computedZone ?? bandToComputedZone(seg.intensityBand);
     return {
       width: weight,
-      height: heightForBand(seg.intensityBand),
-      color: seg.color ?? colorForSegment(seg),
+      height: heightForZone(previewZone),
+      color: colorForZone(previewZone),
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
     };
   });
@@ -363,10 +364,20 @@ function colorForSegment(segment: WorkoutSegment): string {
   return segment.computedZone ? zoneToColorToken(segment.computedZone) : colorForBand(segment.intensityBand);
 }
 
-function heightForBand(band: WorkoutSegment["intensityBand"]): number {
-  if (band === "interval") return 34;
-  if (band === "tempo") return 28;
-  if (band === "recovery") return 11;
-  if (band === "transition") return 9;
-  return 18;
+function colorForZone(zone: ComputedZone): string {
+  if (zone === "Z1") return "#FFFFFF";
+  if (zone === "Z2") return "#2563EB";
+  if (zone === "Z3") return "#10B981";
+  if (zone === "Z4") return "#FACC15";
+  if (zone === "Z5") return "#F97316";
+  return "#EF4444";
+}
+
+function heightForZone(zone: ComputedZone): number {
+  if (zone === "Z1") return 10;
+  if (zone === "Z2") return 14;
+  if (zone === "Z3") return 18;
+  if (zone === "Z4") return 22;
+  if (zone === "Z5") return 28;
+  return 34;
 }
