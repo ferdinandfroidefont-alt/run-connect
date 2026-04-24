@@ -847,9 +847,9 @@ html, body {
     box-sizing: border-box;
   }
 
-  /** Centrage horizontal : un seul transform (évite conflit Tailwind translate + sous-calques iOS). */
+  /** Avatar positionné en flux normal (pas de translation horizontale qui le coupait). */
   .map-header-profile-anchor {
-    transform: translate3d(-50%, 0, 0);
+    transform: none;
   }
 }
 
