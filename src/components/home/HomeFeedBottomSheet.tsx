@@ -167,8 +167,9 @@ export function HomeFeedBottomSheet() {
     <div
       className="pointer-events-none fixed inset-x-0 top-0 z-[102] flex flex-col justify-end"
       style={{
-        bottom:
-          "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap)))",
+        bottom: isIosPhone
+          ? "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap)))"
+          : "max(0px, calc(var(--layout-bottom-inset, 0px) - var(--safe-area-bottom, 0px) + var(--home-bottom-stack-gap) - 1.25rem))",
       }}
     >
       <motion.button
