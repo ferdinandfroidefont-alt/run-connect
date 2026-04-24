@@ -2938,6 +2938,13 @@ export function CoachPlanningExperience() {
           >
             {editorTab === "build" ? (
               <div className="space-y-4 px-4 pb-6">
+                <Input
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Nom de la séance"
+                  className="h-11 rounded-2xl border-border bg-card text-[15px]"
+                />
+
                 <div className="grid grid-cols-4 gap-2">
                   {SPORTS.map((sport) => (
                     <button
@@ -2959,13 +2966,6 @@ export function CoachPlanningExperience() {
                     </button>
                   ))}
                 </div>
-
-                <Input
-                  value={draft.title}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Nom de la séance"
-                  className="h-11 rounded-2xl border-border bg-card text-[15px]"
-                />
 
                 <div className="space-y-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
