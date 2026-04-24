@@ -25,10 +25,14 @@ export interface MiniProfileBlock {
   height: number;
   color: string;
   opacity?: number;
+  /** 1=Z1 … 6=Z6 — hauteur relative aux bandes (mode schéma séance) */
+  zoneBandLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
 interface RenderWorkoutMiniProfileOptions {
   density?: "default" | "compact";
+  /** Barres = Z1=1/6 … Z6=hauteur utile, pour aligner l’ordonnée sur 6 bandes */
+  sessionSchema?: boolean;
 }
 
 type ParsedLikeBlock = {
@@ -350,11 +354,21 @@ export function computeWorkoutDuration(segments: WorkoutSegment[]): number {
   return Math.round(segments.reduce((acc, s) => acc + s.durationMin, 0));
 }
 
+function zoneToBandLevel(zone: ComputedZone): 1 | 2 | 3 | 4 | 5 | 6 {
+  if (zone === "Z1") return 1;
+  if (zone === "Z2") return 2;
+  if (zone === "Z3") return 3;
+  if (zone === "Z4") return 4;
+  if (zone === "Z5") return 5;
+  return 6;
+}
+
 export function renderWorkoutMiniProfile(
   segments: WorkoutSegment[],
   options: RenderWorkoutMiniProfileOptions = {}
 ): MiniProfileBlock[] {
   const compactDensity = options.density === "compact";
+  const sessionSchema = options.sessionSchema === true;
   const meaningful = segments.filter((s) => s.kind !== "rest");
   if (!meaningful.length) return [{ width: 100, height: 8, color: "hsl(var(--muted))", opacity: 0.8 }];
 
@@ -367,7 +381,9 @@ export function renderWorkoutMiniProfile(
   ) {
     const only = meaningful[0];
     const zone = only.computedZone ?? bandToComputedZone(only.intensityBand);
-    return [{ width: 100, height: heightForZone(zone), color: colorForZone(zone), opacity: 1 }];
+    const block: MiniProfileBlock = { width: 100, height: heightForZone(zone), color: colorForZone(zone), opacity: 1 };
+    if (sessionSchema) block.zoneBandLevel = zoneToBandLevel(zone);
+    return [block];
   }
 
   const expanded = expandSegmentsForMiniProfile(meaningful);
@@ -375,12 +391,14 @@ export function renderWorkoutMiniProfile(
   return expanded.map((seg) => {
     const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
     const previewZone = seg.computedZone ?? bandToComputedZone(seg.intensityBand);
-    return {
+    const block: MiniProfileBlock = {
       width: weight,
       height: heightForZone(previewZone),
       color: colorForZone(previewZone),
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
     };
+    if (sessionSchema) block.zoneBandLevel = zoneToBandLevel(previewZone);
+    return block;
   });
 }
 

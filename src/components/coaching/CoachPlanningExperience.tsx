@@ -14,6 +14,7 @@ import {
   GripVertical,
   Leaf,
   Minus,
+  MoreHorizontal,
   Plus,
   Ruler,
   Trash2,
@@ -73,7 +74,7 @@ type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
 
 type SchemaToolKind = "steady" | "interval" | "pyramid" | "progressif" | "degressif" | "libre" | "repetition";
-type SchemaDragToolKind = "steady" | "interval" | "pyramid";
+type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "progressif" | "degressif";
 
 type SessionBlock = {
   id: string;
@@ -734,6 +735,14 @@ export function CoachPlanningExperience() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [schemaDraggingTool, setSchemaDraggingTool] = useState<SchemaDragToolKind | null>(null);
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
+  const [schemaProgressPick, setSchemaProgressPick] = useState<"progressif" | "degressif">("progressif");
+  const schemaProgressPickRef = useRef<"progressif" | "degressif">("progressif");
+  const progressDegressPtrRef = useRef<{ id: number; t: number; x: number; y: number } | null>(null);
+  const progressDegressLongPressTimerRef = useRef<number | null>(null);
+  const progressDegressFromLongPressRef = useRef(false);
+  const progressDegressClickSuppressRef = useRef(false);
+  const progressDegressNudgeCancelsLongPressRef = useRef(false);
+  schemaProgressPickRef.current = schemaProgressPick;
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
   const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
   const schemaDragFromAddCardStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -1327,7 +1336,10 @@ export function CoachPlanningExperience() {
     [draft.blocks, draft.sport, activeAthleteIntensity]
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
-  const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
+  const previewBars = useMemo(
+    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
+    [previewSegments]
+  );
   const sessionTimeAxisLabels = useMemo(() => {
     const d = Math.max(0, Math.round(previewMetrics.durationMin));
     const end = Math.max(60, Math.ceil(Math.max(1, d) / 15) * 15);
@@ -1867,31 +1879,126 @@ export function CoachPlanningExperience() {
     [createQuickSchemaBlock, insertDraftBlock]
   );
 
-  const handleSchemaInsertAtPointer = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+  /** Fin du glisser-déposer : insère le bloc si le relâchement est sur le schéma (géré ici en global, car onPointerUp sur la div ne reçoit pas toujours l’événement, ex. certains cas tactiles). */
+  const finalizeSchemaDragAtClientPoint = useCallback(
+    (clientX: number, clientY: number) => {
       if (!schemaDraggingTool) return;
-      const target = schemaPreviewRef.current;
-      if (!target) return;
-      const bounds = target.getBoundingClientRect();
-      const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-      const ratio = bounds.width > 0 ? x / bounds.width : 1;
-      const insertIndex = Math.max(0, Math.min(draft.blocks.length, Math.round(ratio * draft.blocks.length)));
-      const block = createQuickSchemaBlock(schemaDraggingTool);
-      insertDraftBlock(block, insertIndex);
-      setSelectedBlockId(block.id);
+      const el = schemaPreviewRef.current;
+      if (!el) {
+        schemaDragFromAddCardStartRef.current = null;
+        progressDegressPtrRef.current = null;
+        setSchemaDraggingTool(null);
+        setSchemaDragPointer(null);
+        setSchemaDropRatio(null);
+        return;
+      }
+      const bounds = el.getBoundingClientRect();
+      const inside =
+        clientX >= bounds.left && clientX <= bounds.right && clientY >= bounds.top && clientY <= bounds.bottom;
+      if (inside) {
+        const x = Math.max(0, Math.min(bounds.width, clientX - bounds.left));
+        const ratio = bounds.width > 0 ? x / bounds.width : 1;
+        const insertIndex = Math.max(0, Math.min(draft.blocks.length, Math.round(ratio * draft.blocks.length)));
+        const block = createQuickSchemaBlock(schemaDraggingTool);
+        insertDraftBlock(block, insertIndex);
+        setSelectedBlockId(block.id);
+      }
+      schemaDragFromAddCardStartRef.current = null;
+      progressDegressFromLongPressRef.current = false;
+      progressDegressPtrRef.current = null;
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
-      schemaDragFromAddCardStartRef.current = null;
     },
     [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool]
   );
+
+  const clearProgressDegressLongPressTimer = useCallback(() => {
+    if (progressDegressLongPressTimerRef.current !== null) {
+      window.clearTimeout(progressDegressLongPressTimerRef.current);
+      progressDegressLongPressTimerRef.current = null;
+    }
+  }, []);
 
   const handleSchemaDragStart = useCallback((tool: SchemaDragToolKind, event: ReactPointerEvent<HTMLElement>) => {
     schemaDragFromAddCardStartRef.current = { x: event.clientX, y: event.clientY };
     addBlockFromCardGestureMovedRef.current = false;
     setSchemaDraggingTool(tool);
     setSchemaDragPointer({ x: event.clientX, y: event.clientY });
+  }, []);
+
+  const onProgressDegressBlockPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      clearProgressDegressLongPressTimer();
+      progressDegressNudgeCancelsLongPressRef.current = false;
+      progressDegressFromLongPressRef.current = false;
+      progressDegressPtrRef.current = {
+        id: event.pointerId,
+        t: performance.now(),
+        x: event.clientX,
+        y: event.clientY,
+      };
+      const startX = event.clientX;
+      const startY = event.clientY;
+      progressDegressLongPressTimerRef.current = window.setTimeout(() => {
+        progressDegressLongPressTimerRef.current = null;
+        if (progressDegressNudgeCancelsLongPressRef.current) return;
+        const tool = schemaProgressPickRef.current;
+        progressDegressFromLongPressRef.current = true;
+        addBlockFromCardGestureMovedRef.current = true;
+        schemaDragFromAddCardStartRef.current = { x: startX, y: startY };
+        setSchemaDraggingTool(tool);
+        setSchemaDragPointer({ x: startX, y: startY });
+      }, 420);
+    },
+    [clearProgressDegressLongPressTimer]
+  );
+
+  const onProgressDegressBlockPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const p = progressDegressPtrRef.current;
+    if (!p || p.id !== event.pointerId) return;
+    const dist = Math.hypot(event.clientX - p.x, event.clientY - p.y);
+    if (dist > 12) {
+      progressDegressNudgeCancelsLongPressRef.current = true;
+      clearProgressDegressLongPressTimer();
+    }
+  }, [clearProgressDegressLongPressTimer]);
+
+  const onProgressDegressBlockPointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const p = progressDegressPtrRef.current;
+      if (!p || p.id !== event.pointerId) return;
+      progressDegressPtrRef.current = null;
+      if (progressDegressLongPressTimerRef.current !== null) {
+        clearProgressDegressLongPressTimer();
+        if (!progressDegressNudgeCancelsLongPressRef.current) {
+          setSchemaProgressPick((m) => (m === "progressif" ? "degressif" : "progressif"));
+          progressDegressClickSuppressRef.current = true;
+        }
+        progressDegressNudgeCancelsLongPressRef.current = false;
+        return;
+      }
+      if (!progressDegressFromLongPressRef.current) {
+        progressDegressNudgeCancelsLongPressRef.current = false;
+        return;
+      }
+      progressDegressNudgeCancelsLongPressRef.current = false;
+    },
+    [clearProgressDegressLongPressTimer]
+  );
+
+  const onProgressDegressBlockPointerCancel = useCallback(() => {
+    clearProgressDegressLongPressTimer();
+    progressDegressPtrRef.current = null;
+    progressDegressNudgeCancelsLongPressRef.current = false;
+  }, [clearProgressDegressLongPressTimer]);
+
+  const onProgressDegressBlockClick = useCallback((event: React.MouseEvent) => {
+    if (progressDegressClickSuppressRef.current) {
+      event.preventDefault();
+      progressDegressClickSuppressRef.current = false;
+    }
   }, []);
 
   const handleSchemaPreviewPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
@@ -1924,21 +2031,26 @@ export function CoachPlanningExperience() {
       const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
       setSchemaDropRatio(bounds.width > 0 ? x / bounds.width : 0);
     };
-    const onPointerUp = () => {
+    const onPointerUp = (event: PointerEvent) => {
+      finalizeSchemaDragAtClientPoint(event.clientX, event.clientY);
+    };
+    const onPointerCancel = () => {
       schemaDragFromAddCardStartRef.current = null;
+      progressDegressFromLongPressRef.current = false;
+      progressDegressPtrRef.current = null;
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
     };
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
-    window.addEventListener("pointercancel", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerCancel, { passive: true });
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
     };
-  }, [schemaDraggingTool]);
+  }, [schemaDraggingTool, finalizeSchemaDragAtClientPoint]);
 
   const updateDraftBlock = useCallback((blockId: string, updater: (block: SessionBlock) => SessionBlock) => {
     setDraft((prev) => ({
@@ -2990,35 +3102,40 @@ export function CoachPlanningExperience() {
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="flex gap-1.5">
                       <div
-                        className="flex h-[72px] w-5 shrink-0 flex-col justify-between border-r border-slate-200/60 pr-1 pt-0.5 text-[8px] font-bold leading-[1.1]"
+                        className="flex h-[96px] w-5 shrink-0 flex-col border-r border-slate-200/60 pt-1.5 pb-2.5 pr-1 text-[8px] font-bold leading-none"
                         aria-hidden
                       >
-                        {(["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"] as const).map((z) => (
-                          <span
-                            key={z}
-                            className="text-right"
-                            style={{ color: miniProfileZoneColor(z) }}
-                          >
-                            {z}
-                          </span>
-                        ))}
+                        <div className="grid min-h-0 w-full flex-1 grid-rows-6">
+                          {(["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"] as const).map((z) => (
+                            <div key={z} className="flex min-h-0 items-center justify-end">
+                              <span className="text-right" style={{ color: miniProfileZoneColor(z) }}>
+                                {z}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div
                           ref={schemaPreviewRef}
                           onPointerMove={handleSchemaPreviewPointerMove}
-                          onPointerUp={handleSchemaInsertAtPointer}
                           className={cn(
                             "relative",
                             schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
                           )}
                           title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
                         >
-                          <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" barHeightScale={3} className="h-[72px]" />
+                          <MiniWorkoutProfile
+                            blocks={previewBars}
+                            variant="premiumCompact"
+                            barHeightScale={1}
+                            zoneBandMode
+                            className="h-[96px] w-full"
+                          />
                           {schemaDropRatio != null ? (
                             <span
                               aria-hidden
-                              className="pointer-events-none absolute inset-y-2 w-1 rounded-full bg-[#2563EB] shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
+                              className="pointer-events-none absolute inset-y-2.5 w-1 rounded-full bg-[#2563EB] shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
                               style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 2px)` }}
                             />
                           ) : null}
@@ -3100,16 +3217,61 @@ export function CoachPlanningExperience() {
                         </div>
                       ))}
 
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={
+                          schemaProgressPick === "progressif"
+                            ? "Progressif — appui court pour passer en dégressif, maintenir puis glisser vers le schéma pour placer"
+                            : "Dégressif — appui court pour passer en progressif, maintenir puis glisser vers le schéma pour placer"
+                        }
+                        aria-pressed={schemaProgressPick === "degressif"}
+                        onPointerDown={onProgressDegressBlockPointerDown}
+                        onPointerMove={onProgressDegressBlockPointerMove}
+                        onPointerUp={onProgressDegressBlockPointerUp}
+                        onPointerCancel={onProgressDegressBlockPointerCancel}
+                        onClick={onProgressDegressBlockClick}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSchemaProgressPick((m) => (m === "progressif" ? "degressif" : "progressif"));
+                          }
+                        }}
+                        className="group flex aspect-square w-[4.75rem] shrink-0 cursor-grab flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing sm:w-20"
+                      >
+                        <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
+                          {schemaProgressPick === "progressif" ? (
+                            <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+                              <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
+                              <rect x="26" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
+                              <rect x="44" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                              <rect x="62" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+                              <rect x="8" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
+                              <rect x="26" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                              <rect x="44" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
+                              <rect x="62" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
+                            </svg>
+                          )}
+                        </div>
+                        <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
+                          {schemaProgressPick === "progressif" ? "Progressif" : "Dégressif"}
+                        </p>
+                      </div>
+
                       <Popover open={schemaAddMoreOpen} onOpenChange={setSchemaAddMoreOpen}>
                         <PopoverTrigger asChild>
                           <button
                             type="button"
                             className="flex aspect-square w-[4.75rem] shrink-0 flex-col items-stretch rounded-xl border border-dashed border-slate-300/90 bg-white p-1.5 text-center transition hover:border-[#2563EB]/50 sm:w-20"
+                            aria-label="Autres types de blocs"
                           >
                             <span className="flex min-h-0 flex-1 items-center justify-center">
-                              <Plus className="h-5 w-5 text-[#2563EB] sm:h-6 sm:w-6" strokeWidth={2.2} />
+                              <MoreHorizontal className="h-5 w-5 text-[#2563EB] sm:h-6 sm:w-6" strokeWidth={2.2} />
                             </span>
-                            <span className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">Plus</span>
+                            <span className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">Autres</span>
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[min(100vw-2rem,240px)] border-slate-200 p-1.5 shadow-lg" align="end" sideOffset={6}>
@@ -3117,8 +3279,6 @@ export function CoachPlanningExperience() {
                           <div className="flex flex-col gap-0.5">
                             {(
                               [
-                                { kind: "progressif" as const, label: "Progressif" },
-                                { kind: "degressif" as const, label: "Dégressif" },
                                 { kind: "libre" as const, label: "Libre" },
                                 { kind: "repetition" as const, label: "Répétition" },
                               ] as const
@@ -3154,7 +3314,15 @@ export function CoachPlanningExperience() {
                         className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
                         style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
                       >
-                        {schemaDraggingTool === "steady" ? "Continu" : schemaDraggingTool === "interval" ? "Intervalle" : "Pyramide"}
+                        {schemaDraggingTool === "steady"
+                          ? "Continu"
+                          : schemaDraggingTool === "interval"
+                            ? "Intervalle"
+                            : schemaDraggingTool === "pyramid"
+                              ? "Pyramide"
+                              : schemaDraggingTool === "progressif"
+                                ? "Progressif"
+                                : "Dégressif"}
                       </div>
                     ) : null}
                 </div>

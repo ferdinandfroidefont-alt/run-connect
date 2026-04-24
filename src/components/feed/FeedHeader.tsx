@@ -4,8 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
+import { cn, formatProfileFirstLastName } from '@/lib/utils';
 import { StreakBadge } from '@/components/StreakBadge';
+import { formatPlannedSessionsLine, usePlannedSessionCount } from '@/hooks/usePlannedSessionCount';
 
 const NotificationCenter = lazy(() =>
   import('@/components/NotificationCenter').then((m) => ({ default: m.NotificationCenter }))
@@ -24,8 +25,6 @@ interface FeedHeaderProps {
   sheetSnap?: 1 | 2;
   /** Remplace navigation vers / quand défini (ex. replier la sheet). */
   onBrandClick?: () => void;
-  /** Titre à gauche (défaut : libellé « RunConnect »). */
-  brandTitle?: string;
 }
 
 export const FeedHeader = ({
@@ -36,10 +35,9 @@ export const FeedHeader = ({
   layoutVariant = "page",
   sheetSnap = 2,
   onBrandClick,
-  brandTitle,
 }: FeedHeaderProps) => {
-  const resolvedBrandTitle = brandTitle ?? 'RunConnect';
   const { user } = useAuth();
+  const plannedSessionCount = usePlannedSessionCount(user?.id);
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; username: string | null; display_name: string | null }>({
     avatar_url: null,
@@ -75,35 +73,26 @@ export const FeedHeader = ({
           : "pt-[var(--safe-area-top)]",
       )}
     >
-      {/* Top row: titre de page + avatar centré + cloche + réglages */}
+      {/* Top row: avatar + salutation à gauche, cloche + réglages à droite */}
       <div
         className={cn(
           "relative flex items-center justify-between gap-2 px-4 pb-3",
           isSheet ? "min-h-[2.75rem] pt-3" : "min-h-[3rem] pt-2",
         )}
       >
-        <button
-          type="button"
-          onClick={() => (onBrandClick ? onBrandClick() : navigate("/"))}
-          className="flex min-w-0 shrink items-center text-lg font-semibold leading-none tracking-tight text-primary transition-opacity touch-manipulation active:opacity-70"
-        >
-          {resolvedBrandTitle}
-        </button>
-
-        {/* Centered profile avatar */}
         {profile && (
-          <div className="absolute left-1/2 z-[1] -translate-x-1/2 flex [isolation:isolate]">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <div
               role="button"
               tabIndex={0}
               onClick={onProfileClick}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   onProfileClick?.();
                 }
               }}
-              className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+              className="relative flex shrink-0 cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
             >
               <Avatar
                 className={cn(
@@ -113,17 +102,33 @@ export const FeedHeader = ({
               >
                 <AvatarImage
                   src={profile.avatar_url || undefined}
-                  alt={profile.username || profile.display_name || 'Profile'}
+                  alt={profile.username || profile.display_name || "Profile"}
                   className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
                 />
                 <AvatarFallback className="text-2xl font-semibold">
-                  {(profile.username || profile.display_name || 'U').charAt(0).toUpperCase()}
+                  {(profile.username || profile.display_name || "U").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               {user && (
                 <div className="absolute -bottom-1 -right-1 scale-75">
                   <StreakBadge userId={user.id} variant="compact" />
                 </div>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <button
+                type="button"
+                onClick={() => (onBrandClick ? onBrandClick() : navigate("/"))}
+                className="min-w-0 text-left text-lg font-semibold leading-tight tracking-tight text-foreground transition-opacity touch-manipulation active:opacity-70"
+              >
+                <span className="line-clamp-2 break-words">
+                  {formatProfileFirstLastName(profile.display_name, profile.username)}
+                </span>
+              </button>
+              {plannedSessionCount !== null && (
+                <p className="text-[12px] font-medium leading-tight text-muted-foreground">
+                  {formatPlannedSessionsLine(plannedSessionCount)}
+                </p>
               )}
             </div>
           </div>

@@ -36,9 +36,10 @@ import { format, isSameDay, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useShareProfile } from '@/hooks/useShareProfile';
+import { formatPlannedSessionsLine, usePlannedSessionCount } from '@/hooks/usePlannedSessionCount';
 import { QRShareDialog } from './QRShareDialog';
 import { ProfileShareScreen } from '@/components/profile-share/ProfileShareScreen';
-import { cn } from '@/lib/utils';
+import { cn, formatProfileFirstLastName } from '@/lib/utils';
 import {
   createSessionPinButton,
   resolveSessionPinVariant,
@@ -349,6 +350,7 @@ export const InteractiveMap = ({
   const {
     user,
   } = useAuth();
+  const plannedSessionCount = usePlannedSessionCount(user?.id);
   const {
     setRefreshSessions,
     setOpenCreateSession,
@@ -1843,48 +1845,63 @@ export const InteractiveMap = ({
               "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:z-0 after:h-[22px] after:bg-white dark:after:bg-black",
             )}
           >
-            {/* Même rangée que Feed : titre | avatar centré | cloche + paramètres */}
+            {/* Même rangée que Feed : avatar + salutation | cloche + paramètres */}
             <div className="relative z-[1] pt-[var(--safe-area-top)]">
               <div className="relative flex min-h-[3rem] items-center justify-between gap-2 px-4 pb-4 pt-2">
-                <span className="flex min-w-0 shrink select-none items-center text-lg font-semibold leading-none tracking-tight text-primary">
-                  RunConnect
-                </span>
-
-                {userProfile && (
-                  <div
-                    className="map-header-profile-anchor absolute left-1/2 z-[1] flex [isolation:isolate]"
-                    data-tutorial="profile-avatar"
-                  >
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setShowProfileDialog(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setShowProfileDialog(true);
-                        }
-                      }}
-                      className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
-                    >
-                      <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
-                        <AvatarImage
-                          src={userProfile.avatar_url || undefined}
-                          alt={userProfile.username || userProfile.display_name}
-                          className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
-                        />
-                        <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
-                          {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user && (
-                        <div className="absolute -bottom-1 -right-1 scale-75">
-                          <StreakBadge userId={user.id} variant="compact" />
+                {user && (
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {userProfile && (
+                      <div
+                        className="map-header-profile-anchor flex shrink-0 [isolation:isolate]"
+                        data-tutorial="profile-avatar"
+                      >
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setShowProfileDialog(true)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setShowProfileDialog(true);
+                            }
+                          }}
+                          className="relative flex cursor-pointer flex-col items-center outline-none transition-opacity duration-200 active:opacity-85 hover:opacity-95"
+                        >
+                          <Avatar className="map-header-profile-avatar h-14 w-14 avatar-fixed ring-2 ring-primary/15 transition-[box-shadow] duration-200 hover:ring-primary/35">
+                            <AvatarImage
+                              src={userProfile.avatar_url || undefined}
+                              alt={userProfile.username || userProfile.display_name}
+                              className="block h-full min-h-0 w-full min-w-0 object-cover object-center"
+                            />
+                            <AvatarFallback className="map-header-profile-fallback text-2xl font-semibold">
+                              {(userProfile.username || userProfile.display_name || "U").charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user && (
+                            <div className="absolute -bottom-1 -right-1 scale-75">
+                              <StreakBadge userId={user.id} variant="compact" />
+                            </div>
+                          )}
                         </div>
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <p className="select-none text-lg font-semibold leading-tight tracking-tight text-foreground">
+                        <span className="line-clamp-2 break-words">
+                          {userProfile
+                            ? formatProfileFirstLastName(userProfile.display_name, userProfile.username)
+                            : null}
+                        </span>
+                      </p>
+                      {plannedSessionCount !== null && (
+                        <p className="text-[12px] font-medium leading-tight text-muted-foreground">
+                          {formatPlannedSessionsLine(plannedSessionCount)}
+                        </p>
                       )}
                     </div>
                   </div>
                 )}
+                {!user && <div className="min-w-0 flex-1" />}
 
                 <div className="home-map-header-actions flex shrink-0 items-center gap-2">
                   <div data-tutorial="notifications" className="flex shrink-0 items-center justify-center">
