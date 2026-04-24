@@ -358,12 +358,12 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
 }
 
 function colorForZone(zone: ComputedZone): string {
-  if (zone === "Z1") return "#FFFFFF";
-  if (zone === "Z2") return "#2563EB";
-  if (zone === "Z3") return "#10B981";
-  if (zone === "Z4") return "#FACC15";
-  if (zone === "Z5") return "#F97316";
-  return "#EF4444";
+  if (zone === "Z1") return "#2563EB";
+  if (zone === "Z2") return "#10B981";
+  if (zone === "Z3") return "#FACC15";
+  if (zone === "Z4") return "#F97316";
+  if (zone === "Z5") return "#EF4444";
+  return "#000000";
 }
 
 function heightForZone(zone: ComputedZone): number {

@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  X,
   Heart,
   MoreHorizontal,
   ChevronLeft,
@@ -1052,26 +1051,6 @@ export function SessionStoryDialog({
                     {(relativeStoryTime || format(new Date(current.created_at), "HH:mm", { locale: fr }))} · {index + 1}/{stories.length}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/25 text-white/90 backdrop-blur-sm transition-opacity active:opacity-70"
-                  aria-label="Options"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActionMode("menu");
-                  }}
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-                <DialogClose asChild>
-                  <button
-                    type="button"
-                    className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/25 text-white/95 backdrop-blur-sm transition-opacity active:opacity-70"
-                    aria-label="Fermer"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </DialogClose>
               </div>
 
               <div

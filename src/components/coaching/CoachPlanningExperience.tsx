@@ -16,6 +16,7 @@ import {
   Minus,
   Plus,
   Ruler,
+  Trash2,
   Waves,
   Zap,
 } from "lucide-react";
@@ -57,7 +58,6 @@ import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { WeeklyTrackingView } from "@/components/coaching/WeeklyTrackingView";
 import { CoachingDraftsPage } from "@/components/coaching/CoachingDraftsPage";
 import { CoachDashboardPage } from "@/components/coaching/dashboard/CoachDashboardPage";
-import { BlockInsertSeparator } from "@/components/session-creation/BlockInsertSeparator";
 import { AthleteMyPlanView } from "@/components/coaching/athlete-plan/AthleteMyPlanView";
 import type { AthleteCoachBrief, AthletePlanSessionModel } from "@/components/coaching/athlete-plan/types";
 import { parseSport, sportLabel } from "@/components/coaching/athlete-plan/sportTokens";
@@ -460,19 +460,19 @@ function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
   switch (normalized) {
     case "Z1":
-      return "bg-white";
-    case "Z2":
       return "bg-[#2563EB]";
+    case "Z2":
+      return "bg-emerald-500";
     case "Z3":
-      return "bg-emerald-500";
-    case "Z4":
       return "bg-yellow-400";
-    case "Z5":
+    case "Z4":
       return "bg-orange-500";
-    case "Z6":
+    case "Z5":
       return "bg-red-500";
+    case "Z6":
+      return "bg-black";
     default:
-      return "bg-emerald-500";
+      return "bg-yellow-400";
   }
 }
 
@@ -1752,6 +1752,17 @@ export function CoachPlanningExperience() {
     }));
   }, []);
 
+  const removeDraftBlock = useCallback((blockId: string) => {
+    setDraft((prev) => {
+      const filtered = prev.blocks.filter((block) => block.id !== blockId);
+      return {
+        ...prev,
+        blocks: filtered.map((block, idx) => ({ ...block, order: idx + 1 })),
+      };
+    });
+    setSelectedBlockId((prevSelected) => (prevSelected === blockId ? null : prevSelected));
+  }, []);
+
   const confirmBlock = () => {
     if (!blockForm) return;
     setDraft((prev) => {
@@ -2872,18 +2883,11 @@ export function CoachPlanningExperience() {
                         const intervalPreviewSegments = buildIntervalPreviewSegments(block, zoneToLevel(effortZone));
 
                         return (
-                          <div key={block.id} className="space-y-2">
-                            {index > 0 ? (
-                              <BlockInsertSeparator
-                                onClick={() => openInsertBlockPicker(index)}
-                                ariaLabel={`Ajouter un bloc avant ${label}`}
-                              />
-                            ) : null}
-
+                          <div key={block.id} className="relative">
                             <div
                               data-block-id={block.id}
                               className={cn(
-                                "relative rounded-[20px] border bg-card p-3 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] transition-all",
+                                "relative rounded-[20px] border bg-card pl-12 pr-3 py-3 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] transition-all",
                                 isDropTarget || isSelected ? "border-[#2563EB]/60 bg-[#2563EB]/[0.04]" : "border-border/80",
                                 isDragged && "opacity-70"
                               )}
@@ -2892,28 +2896,32 @@ export function CoachPlanningExperience() {
                               onPointerUp={finishBlockReorder}
                               onPointerCancel={finishBlockReorder}
                             >
+                              <button
+                                type="button"
+                                aria-label={`Déplacer ${label}`}
+                                className={cn(
+                                  "absolute inset-y-2 left-2 inline-flex w-8 items-center justify-center rounded-xl border border-white/60 text-white touch-none shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
+                                  accents.iconWrap
+                                )}
+                                onPointerDown={() => startBlockReorderPress(block.id)}
+                                onPointerUp={finishBlockReorder}
+                                onPointerCancel={finishBlockReorder}
+                              >
+                                <GripVertical className={cn("h-5 w-5", accents.iconColor)} />
+                              </button>
                               <div className={cn("pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b opacity-100", accents.tint)} />
-                              {index < draft.blocks.length - 1 ? (
-                                <span
-                                  aria-hidden
-                                  className="absolute -bottom-5 left-[27px] h-5 w-px bg-[#2563EB]/35"
-                                />
-                              ) : null}
+                              {index < draft.blocks.length - 1 ? <span aria-hidden className="absolute -bottom-2 left-6 right-3 h-px bg-[#2563EB]/45" /> : null}
 
                               <div className="relative mb-3 flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  aria-label={`Déplacer ${label}`}
+                                <span
                                   className={cn(
-                                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 text-white touch-none shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
+                                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/60 text-white shadow-[0_8px_18px_-12px_rgba(0,0,0,0.45)]",
                                     accents.iconWrap
                                   )}
-                                  onPointerDown={() => startBlockReorderPress(block.id)}
-                                  onPointerUp={finishBlockReorder}
-                                  onPointerCancel={finishBlockReorder}
+                                  aria-hidden
                                 >
                                   <typeMeta.icon className={cn("h-4 w-4", accents.iconColor)} />
-                                </button>
+                                </span>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <p className="text-[14px] font-bold uppercase tracking-[0.06em] text-foreground">
@@ -2929,16 +2937,24 @@ export function CoachPlanningExperience() {
                                     {index + 1}. {blockSummary(block)}
                                   </p>
                                 </div>
-                                <button
-                                  type="button"
-                                  aria-label={`Déplacer ${label}`}
-                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-muted-foreground touch-none"
-                                  onPointerDown={() => startBlockReorderPress(block.id)}
-                                  onPointerUp={finishBlockReorder}
-                                  onPointerCancel={finishBlockReorder}
-                                >
-                                  <GripVertical className="h-4 w-4" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    aria-label={`Ajouter un bloc après ${label}`}
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-primary"
+                                    onClick={() => openInsertBlockPicker(index + 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={`Supprimer ${label}`}
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-white text-red-500"
+                                    onClick={() => removeDraftBlock(block.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
 
                               {block.type === "interval" ? (

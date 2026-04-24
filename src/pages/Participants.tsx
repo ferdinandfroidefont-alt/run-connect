@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Expand, Minimize2, Navigation, Search, Users, X } from "lucide-react";
+import { ChevronLeft, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
@@ -610,16 +610,16 @@ export default function Participants() {
       {showLiveSessionsPanel && (
         <div className="absolute inset-0 z-50 bg-background">
           <div className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 pb-3 pt-[var(--safe-area-top)]">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[17px] font-semibold">Mes séances live</p>
+            <div className="mb-2 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowLiveSessionsPanel(false)}
                 className="rounded-full p-2 text-foreground/80 active:bg-secondary"
-                aria-label="Fermer"
+                aria-label="Retour"
               >
-                <X className="h-4 w-4" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
+              <p className="text-[17px] font-semibold">Mes séances live</p>
             </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -634,7 +634,7 @@ export default function Participants() {
               {[
                 { key: "live" as const, label: "En cours" },
                 { key: "upcoming" as const, label: "À venir" },
-                { key: "recent" as const, label: "Récentes" },
+                { key: "recent" as const, label: "Terminées" },
               ].map((f) => (
                 <button
                   key={f.key}
