@@ -3,6 +3,7 @@ import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "dat
 import { fr } from "date-fns/locale";
 import {
   Activity,
+  ArrowLeftRight,
   Bike,
   Clock3,
   Crosshair,
@@ -24,6 +25,7 @@ import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderS
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   AlertDialog,
@@ -70,6 +72,9 @@ type SportType = "running" | "cycling" | "swimming" | "strength";
 type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
+
+type SchemaToolKind = "steady" | "interval" | "pyramid" | "progressif" | "degressif" | "libre" | "repetition";
+type SchemaDragToolKind = "steady" | "interval" | "pyramid";
 
 type SessionBlock = {
   id: string;
@@ -382,6 +387,14 @@ function deriveRunningVolume(
 
 function blockTitle(type: BlockType) {
   return BLOCK_TYPES.find((b) => b.id === type)?.label ?? "Bloc";
+}
+
+function blockDisplayLabel(block: SessionBlock) {
+  if (block.notes?.includes("[Pyramid]")) return "Pyramidal";
+  if (block.notes?.includes("[Progressif]")) return "Progressif";
+  if (block.notes?.includes("[Dégressif]")) return "Dégressif";
+  if (block.notes?.includes("[Libre]")) return "Libre";
+  return blockTitle(block.type);
 }
 
 function blockTypeMeta(type: BlockType) {
@@ -720,8 +733,8 @@ export function CoachPlanningExperience() {
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [pendingInsertIndex, setPendingInsertIndex] = useState<number | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [schemaInsertTool, setSchemaInsertTool] = useState<"steady" | "interval" | "pyramid" | null>(null);
-  const [schemaDraggingTool, setSchemaDraggingTool] = useState<"steady" | "interval" | "pyramid" | null>(null);
+  const [schemaDraggingTool, setSchemaDraggingTool] = useState<SchemaDragToolKind | null>(null);
+  const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
   const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
@@ -1314,6 +1327,15 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(() => renderWorkoutMiniProfile(previewSegments), [previewSegments]);
+  const sessionTimeAxisLabels = useMemo(() => {
+    const d = Math.max(0, Math.round(previewMetrics.durationMin));
+    const end = Math.max(60, Math.ceil(Math.max(1, d) / 15) * 15);
+    const labels: string[] = [];
+    for (let m = 0; m <= end; m += 15) {
+      labels.push(`${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`);
+    }
+    return labels;
+  }, [previewMetrics.durationMin]);
   const sessionTranscript = useMemo(() => {
     if (!draft.blocks.length) return "Séance vide";
     return draft.blocks.map((block) => blockTranscript(block)).filter(Boolean).join(" + ");
@@ -1810,41 +1832,62 @@ export function CoachPlanningExperience() {
     });
   }, []);
 
-  const createQuickSchemaBlock = useCallback((kind: "steady" | "interval" | "pyramid"): SessionBlock => {
+  const createQuickSchemaBlock = useCallback((kind: SchemaToolKind): SessionBlock => {
+    const nextOrder = draft.blocks.length + 1;
     if (kind === "pyramid") {
       return {
-        ...createDefaultBlock("steady", draft.blocks.length + 1),
+        ...createDefaultBlock("steady", nextOrder),
         repetitions: 5,
         notes: "[Pyramid]",
         zone: "Z3",
       };
     }
-    return createDefaultBlock(kind === "interval" ? "interval" : "steady", draft.blocks.length + 1);
+    if (kind === "interval" || kind === "repetition") {
+      return createDefaultBlock("interval", nextOrder);
+    }
+    if (kind === "progressif") {
+      return { ...createDefaultBlock("steady", nextOrder), notes: "[Progressif]", zone: "Z3" };
+    }
+    if (kind === "degressif") {
+      return { ...createDefaultBlock("steady", nextOrder), notes: "[Dégressif]", zone: "Z3" };
+    }
+    if (kind === "libre") {
+      return { ...createDefaultBlock("steady", nextOrder), notes: "[Libre]" };
+    }
+    return createDefaultBlock("steady", nextOrder);
   }, [draft.blocks.length]);
 
-  const handleSchemaInsertAtPointer = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!schemaInsertTool && !schemaDraggingTool) return;
-    const target = schemaPreviewRef.current;
-    if (!target) return;
-    const bounds = target.getBoundingClientRect();
-    const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
-    const ratio = bounds.width > 0 ? x / bounds.width : 1;
-    const insertIndex = Math.max(0, Math.min(draft.blocks.length, Math.round(ratio * draft.blocks.length)));
-    const tool = schemaDraggingTool ?? schemaInsertTool;
-    if (!tool) return;
-    const block = createQuickSchemaBlock(tool);
-    insertDraftBlock(block, insertIndex);
-    setSelectedBlockId(block.id);
-    setSchemaInsertTool(null);
-    setSchemaDraggingTool(null);
-    setSchemaDragPointer(null);
-    setSchemaDropRatio(null);
-  }, [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool, schemaInsertTool]);
+  const addQuickSchemaBlock = useCallback(
+    (kind: SchemaToolKind) => {
+      const block = createQuickSchemaBlock(kind);
+      insertDraftBlock(block, null);
+      setSelectedBlockId(block.id);
+    },
+    [createQuickSchemaBlock, insertDraftBlock]
+  );
 
-  const handleSchemaDragStart = useCallback((tool: "steady" | "interval" | "pyramid", event: ReactPointerEvent<HTMLButtonElement>) => {
+  const handleSchemaInsertAtPointer = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!schemaDraggingTool) return;
+      const target = schemaPreviewRef.current;
+      if (!target) return;
+      const bounds = target.getBoundingClientRect();
+      const x = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+      const ratio = bounds.width > 0 ? x / bounds.width : 1;
+      const insertIndex = Math.max(0, Math.min(draft.blocks.length, Math.round(ratio * draft.blocks.length)));
+      const block = createQuickSchemaBlock(schemaDraggingTool);
+      insertDraftBlock(block, insertIndex);
+      setSelectedBlockId(block.id);
+      setSchemaDraggingTool(null);
+      setSchemaDragPointer(null);
+      setSchemaDropRatio(null);
+    },
+    [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool]
+  );
+
+  const handleSchemaDragStart = useCallback((tool: SchemaDragToolKind, event: ReactPointerEvent<HTMLButtonElement>) => {
     setSchemaDraggingTool(tool);
     setSchemaDragPointer({ x: event.clientX, y: event.clientY });
-    setSchemaInsertTool(null);
   }, []);
 
   const handleSchemaPreviewPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
@@ -2925,72 +2968,188 @@ export function CoachPlanningExperience() {
                 />
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[15px] font-semibold text-foreground">Structure de la séance</h3>
-                  </div>
-
                   <div className="overflow-hidden rounded-[18px] border border-border/70 bg-secondary/35 px-3 py-3">
                     <p className="mb-1.5 text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                    <div
-                      ref={schemaPreviewRef}
-                      onPointerMove={handleSchemaPreviewPointerMove}
-                      onPointerUp={handleSchemaInsertAtPointer}
-                      className={cn(
-                        "relative rounded-xl",
-                        schemaInsertTool || schemaDraggingTool ? "cursor-copy ring-2 ring-[#2563EB]/35" : ""
-                      )}
-                      title={schemaInsertTool || schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
-                    >
-                      <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" barHeightScale={3} className="h-[72px]" />
-                      {schemaDropRatio != null ? (
-                        <span
-                          aria-hidden
-                          className="pointer-events-none absolute inset-y-2 w-1 rounded-full bg-[#2563EB]/80 shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
-                          style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 2px)` }}
-                        />
-                      ) : null}
+                    <div className="flex gap-1.5">
+                      <div
+                        className="flex h-[72px] w-5 shrink-0 flex-col justify-between border-r border-slate-200/60 pr-1 pt-0.5 text-[8px] font-bold leading-[1.1] text-slate-500"
+                        aria-hidden
+                      >
+                        {["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"].map((z) => (
+                          <span key={z} className="text-right text-[#2563EB]/80">
+                            {z}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div
+                          ref={schemaPreviewRef}
+                          onPointerMove={handleSchemaPreviewPointerMove}
+                          onPointerUp={handleSchemaInsertAtPointer}
+                          className={cn(
+                            "relative rounded-xl border border-slate-200/50 bg-white/50",
+                            schemaDraggingTool ? "cursor-copy ring-2 ring-[#2563EB]/35" : ""
+                          )}
+                          title={schemaDraggingTool ? "Placez le bloc sur le schéma" : undefined}
+                        >
+                          <MiniWorkoutProfile blocks={previewBars} variant="premiumCompact" barHeightScale={3} className="h-[72px]" />
+                          {schemaDropRatio != null ? (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-y-2 w-1 rounded-full bg-[#2563EB] shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
+                              style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 2px)` }}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="mt-1 flex min-h-[14px] justify-between gap-0.5 pl-0.5 text-[7px] font-semibold tabular-nums text-slate-500 sm:text-[8px]">
+                          {sessionTimeAxisLabels.map((t) => (
+                            <span key={t} className="min-w-0 max-w-[3rem] flex-1 truncate text-center text-[#2563EB]/70">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        className={cn(
-                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
-                          schemaInsertTool === "steady" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
-                        )}
-                        onPointerDown={(event) => handleSchemaDragStart("steady", event)}
-                        onClick={() => setSchemaInsertTool((prev) => (prev === "steady" ? null : "steady"))}
-                      >
-                        Bloc continu
-                      </button>
-                      <button
-                        type="button"
-                        className={cn(
-                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
-                          schemaInsertTool === "interval" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
-                        )}
-                        onPointerDown={(event) => handleSchemaDragStart("interval", event)}
-                        onClick={() => setSchemaInsertTool((prev) => (prev === "interval" ? null : "interval"))}
-                      >
-                        Bloc intervalle
-                      </button>
-                      <button
-                        type="button"
-                        className={cn(
-                          "rounded-full border px-2 py-1.5 text-[11px] font-semibold",
-                          schemaInsertTool === "pyramid" ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]" : "border-slate-200 bg-white text-foreground"
-                        )}
-                        onPointerDown={(event) => handleSchemaDragStart("pyramid", event)}
-                        onClick={() => setSchemaInsertTool((prev) => (prev === "pyramid" ? null : "pyramid"))}
-                      >
-                        Bloc pyramide
-                      </button>
+
+                    <p className="mb-2 mt-4 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
+                    <div className="flex gap-2.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {(
+                        [
+                          {
+                            key: "steady" as const,
+                            title: "Continu",
+                            sub: "Effort stable",
+                            mini: (
+                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                                <rect x="8" y="12" width="72" height="12" rx="4" fill="#2563EB" fillOpacity="0.92" />
+                              </svg>
+                            ),
+                          },
+                          {
+                            key: "interval" as const,
+                            title: "Intervalle",
+                            sub: "Effort / récupération",
+                            mini: (
+                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                                <rect x="6" y="14" width="16" height="14" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                                <rect x="26" y="20" width="16" height="8" rx="2" fill="#e2e8f0" />
+                                <rect x="46" y="12" width="16" height="16" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                                <rect x="66" y="20" width="16" height="8" rx="2" fill="#e2e8f0" />
+                              </svg>
+                            ),
+                          },
+                          {
+                            key: "pyramid" as const,
+                            title: "Pyramide",
+                            sub: "Montée puis descente",
+                            mini: (
+                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                                <rect x="8" y="24" width="10" height="6" rx="1.5" fill="#2563EB" fillOpacity="0.85" />
+                                <rect x="22" y="18" width="10" height="12" rx="1.5" fill="#2563EB" fillOpacity="0.88" />
+                                <rect x="36" y="10" width="12" height="20" rx="2" fill="#2563EB" fillOpacity="0.95" />
+                                <rect x="52" y="18" width="10" height="12" rx="1.5" fill="#2563EB" fillOpacity="0.88" />
+                                <rect x="66" y="24" width="10" height="6" rx="1.5" fill="#2563EB" fillOpacity="0.85" />
+                              </svg>
+                            ),
+                          },
+                        ] as const
+                      ).map((card) => (
+                        <div
+                          key={card.key}
+                          className="group relative flex min-w-[150px] max-w-[170px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition hover:border-[#2563EB]/45 hover:shadow-md"
+                        >
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                addQuickSchemaBlock(card.key);
+                              }
+                            }}
+                            onClick={() => addQuickSchemaBlock(card.key)}
+                            className="flex flex-1 cursor-pointer flex-col p-2.5 text-left"
+                          >
+                            <div className="pointer-events-none mb-1.5 flex h-10 items-center justify-center rounded-xl bg-slate-50/95 ring-1 ring-slate-200/60">
+                              {card.mini}
+                            </div>
+                            <p className="text-[13px] font-bold text-foreground">{card.title}</p>
+                            <p className="text-[11px] leading-snug text-slate-500">{card.sub}</p>
+                          </div>
+                          <button
+                            type="button"
+                            data-schema-drag-handle
+                            aria-label={`Placer ${card.title} sur le schéma`}
+                            className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-[#2563EB] shadow-sm transition hover:bg-[#2563EB]/5"
+                            onPointerDown={(event) => {
+                              event.stopPropagation();
+                              handleSchemaDragStart(card.key, event);
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        </div>
+                      ))}
+
+                      <Popover open={schemaAddMoreOpen} onOpenChange={setSchemaAddMoreOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex min-w-[150px] max-w-[170px] shrink-0 flex-col items-stretch justify-between rounded-2xl border border-dashed border-slate-300/90 bg-white p-2.5 text-left shadow-sm transition hover:border-[#2563EB]/50 hover:shadow-md"
+                          >
+                            <div className="mb-1.5 flex h-10 items-center justify-center rounded-xl bg-slate-50/90 ring-1 ring-slate-200/50">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#2563EB]/35 bg-white text-[#2563EB]">
+                                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                              </div>
+                            </div>
+                            <p className="text-[13px] font-bold text-foreground">Plus</p>
+                            <p className="text-[11px] text-slate-500">Autres types</p>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[min(100vw-2rem,240px)] border-slate-200 p-1.5 shadow-lg" align="end" sideOffset={6}>
+                          <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">Autres blocs</p>
+                          <div className="flex flex-col gap-0.5">
+                            {(
+                              [
+                                { kind: "progressif" as const, label: "Progressif" },
+                                { kind: "degressif" as const, label: "Dégressif" },
+                                { kind: "libre" as const, label: "Libre" },
+                                { kind: "repetition" as const, label: "Répétition" },
+                              ] as const
+                            ).map((row) => (
+                              <button
+                                key={row.kind}
+                                type="button"
+                                className="rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-foreground transition hover:bg-[#2563EB]/8"
+                                onClick={() => {
+                                  setSchemaAddMoreOpen(false);
+                                  addQuickSchemaBlock(row.kind);
+                                }}
+                              >
+                                {row.label}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              className="rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-[#2563EB] transition hover:bg-[#2563EB]/8"
+                              onClick={() => {
+                                setSchemaAddMoreOpen(false);
+                                openInsertBlockPicker(draft.blocks.length);
+                              }}
+                            >
+                              Personnalisé
+                            </button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     {schemaDraggingTool && schemaDragPointer ? (
                       <div
-                        className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
+                        className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
                         style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
                       >
-                        {schemaDraggingTool === "steady" ? "Bloc continu" : schemaDraggingTool === "interval" ? "Bloc intervalle" : "Bloc pyramide"}
+                        {schemaDraggingTool === "steady" ? "Continu" : schemaDraggingTool === "interval" ? "Intervalle" : "Pyramide"}
                       </div>
                     ) : null}
                   </div>
@@ -2998,7 +3157,7 @@ export function CoachPlanningExperience() {
                   {draft.blocks.length > 0 ? (
                     <div className="mt-3 space-y-2">
                       {draft.blocks.map((block, index) => {
-                        const label = block.notes?.includes("[Pyramid]") ? "Pyramidal" : blockTitle(block.type);
+                        const label = blockDisplayLabel(block);
                         const isDragged = draggedBlockId === block.id;
                         const isDropTarget = dragOverBlockId === block.id;
                         const isSelected = selectedBlockId === block.id;
