@@ -201,11 +201,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
           </div>
         )}
 
-        <div className="mx-auto max-w-2xl pb-ios-4">
+        <div className="w-full min-w-0 pb-ios-4">
           {mode === "friends" ? (
             <>
-              <div className="border-b border-border/40 px-ios-3 pt-ios-2 pb-1">
-                <div className="flex items-center justify-between px-0 pb-2">
+              <div className="ios-card w-full overflow-hidden border border-border/60 border-x-0 sm:mx-auto sm:max-w-2xl sm:rounded-2xl sm:border-x">
+                <div className="flex items-center justify-between px-ios-3 pt-3">
                   <p className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Stories
                   </p>
@@ -229,11 +229,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               </div>
 
               {loading && feedItems.length === 0 ? (
-                <div className="divide-y divide-border/40 px-ios-3 pt-ios-2">
+                <div className="space-y-ios-3 px-ios-3 pt-ios-2 sm:mx-auto sm:max-w-2xl">
                   {[...Array(3)].map((_, i) => (
                     <div
                       key={i}
-                      className="space-y-ios-3 py-ios-4 animate-fade-in"
+                      className="ios-card space-y-ios-3 p-ios-4 animate-fade-in"
                       style={{ animationDelay: `${i * 100}ms`, animationFillMode: "both" }}
                     >
                       <div className="flex items-center gap-ios-3">
@@ -250,9 +250,11 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
                   ))}
                 </div>
               ) : feedItems.length === 0 ? (
-                <FeedEmptyState />
+                <div className="px-ios-3 sm:mx-auto sm:max-w-2xl">
+                  <FeedEmptyState />
+                </div>
               ) : (
-                <div className="divide-y divide-border/40 px-ios-3 pb-ios-2 pt-ios-1">
+                <div className="space-y-ios-3 px-ios-3 pb-ios-2 pt-ios-1 sm:mx-auto sm:max-w-2xl">
                   {feedItems.map((session, index) => (
                     <FeedCard
                       key={session.id}
@@ -294,16 +296,18 @@ export function HomeFeedSheetContent({ sheetSnap, onBrandClick, scrollClassName 
               )}
             </>
           ) : loading ? (
-            <div className="flex flex-col items-center justify-center gap-ios-3 py-ios-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
+            <div className="px-ios-3 py-ios-4 sm:mx-auto sm:max-w-2xl">
+              <div className="ios-card flex flex-col items-center justify-center gap-ios-3 p-ios-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-ios-subheadline text-muted-foreground">Recherche...</p>
+              </div>
             </div>
           ) : discoverSessions.length === 0 ? (
-            <div className="py-ios-4">
+            <div className="px-ios-3 py-ios-4 sm:mx-auto sm:max-w-2xl">
               <DiscoverEmptyState hasLocation={hasLocation} onResetFilters={resetFilters} />
             </div>
           ) : (
-            <div className="divide-y divide-border/40 px-ios-3">
+            <div className="space-y-ios-3 px-ios-3 sm:mx-auto sm:max-w-2xl">
               {discoverSessions.map((session, index) => (
                 <DiscoverCard
                   key={session.id}

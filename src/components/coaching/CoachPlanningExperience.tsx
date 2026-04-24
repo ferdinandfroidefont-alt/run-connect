@@ -2967,7 +2967,10 @@ export function CoachPlanningExperience() {
                   ))}
                 </div>
 
-                <div className="space-y-3">
+                <div
+                  className="ios-card -mx-4 overflow-hidden border-x-0 border-border/70 bg-secondary/35 shadow-[var(--shadow-card)] sm:mx-0 sm:rounded-2xl sm:border-x"
+                >
+                  <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
                     <div className="flex gap-1.5">
                       <div
@@ -3015,15 +3018,14 @@ export function CoachPlanningExperience() {
                     </div>
 
                     <p className="mb-2 mt-5 text-[12px] font-semibold text-slate-600">Ajouter un bloc</p>
-                    <div className="flex gap-2.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {(
                         [
                           {
                             key: "steady" as const,
                             title: "Continu",
-                            sub: "Effort stable",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
                                 <rect x="8" y="12" width="72" height="12" rx="4" fill="#2563EB" fillOpacity="0.92" />
                               </svg>
                             ),
@@ -3031,9 +3033,8 @@ export function CoachPlanningExperience() {
                           {
                             key: "interval" as const,
                             title: "Intervalle",
-                            sub: "Effort / récupération",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
                                 <rect x="6" y="14" width="16" height="14" rx="2" fill="#2563EB" fillOpacity="0.92" />
                                 <rect x="26" y="20" width="16" height="8" rx="2" fill="#e2e8f0" />
                                 <rect x="46" y="12" width="16" height="16" rx="2" fill="#2563EB" fillOpacity="0.92" />
@@ -3044,9 +3045,8 @@ export function CoachPlanningExperience() {
                           {
                             key: "pyramid" as const,
                             title: "Pyramide",
-                            sub: "Montée puis descente",
                             mini: (
-                              <svg viewBox="0 0 88 36" className="h-9 w-full" aria-hidden>
+                              <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
                                 <rect x="8" y="24" width="10" height="6" rx="1.5" fill="#2563EB" fillOpacity="0.85" />
                                 <rect x="22" y="18" width="10" height="12" rx="1.5" fill="#2563EB" fillOpacity="0.88" />
                                 <rect x="36" y="10" width="12" height="20" rx="2" fill="#2563EB" fillOpacity="0.95" />
@@ -3059,7 +3059,7 @@ export function CoachPlanningExperience() {
                       ).map((card) => (
                         <div
                           key={card.key}
-                          className="group relative flex min-w-[150px] max-w-[170px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition hover:border-[#2563EB]/45 hover:shadow-md"
+                          className="group relative flex aspect-square w-[4.75rem] shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white transition hover:border-[#2563EB]/45 sm:w-20"
                         >
                           <div
                             role="button"
@@ -3071,26 +3071,25 @@ export function CoachPlanningExperience() {
                               }
                             }}
                             onClick={() => addQuickSchemaBlock(card.key)}
-                            className="flex flex-1 cursor-pointer flex-col p-2.5 text-left"
+                            className="flex h-full w-full min-h-0 flex-1 cursor-pointer flex-col p-1.5 text-center"
                           >
-                            <div className="pointer-events-none mb-1.5 flex h-10 items-center justify-center rounded-xl bg-slate-50/95 ring-1 ring-slate-200/60">
+                            <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center">
                               {card.mini}
                             </div>
-                            <p className="text-[13px] font-bold text-foreground">{card.title}</p>
-                            <p className="text-[11px] leading-snug text-slate-500">{card.sub}</p>
+                            <p className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">{card.title}</p>
                           </div>
                           <button
                             type="button"
                             data-schema-drag-handle
                             aria-label={`Placer ${card.title} sur le schéma`}
-                            className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200/90 bg-white text-[#2563EB] shadow-sm transition hover:bg-[#2563EB]/5"
+                            className="absolute right-0.5 top-0.5 flex h-6 w-6 items-center justify-center rounded-md text-[#2563EB] transition hover:bg-[#2563EB]/10"
                             onPointerDown={(event) => {
                               event.stopPropagation();
                               handleSchemaDragStart(card.key, event);
                             }}
                             onClick={(event) => event.stopPropagation()}
                           >
-                            <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
+                            <ArrowLeftRight className="h-3 w-3" aria-hidden />
                           </button>
                         </div>
                       ))}
@@ -3099,15 +3098,12 @@ export function CoachPlanningExperience() {
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="flex min-w-[150px] max-w-[170px] shrink-0 flex-col items-stretch justify-between rounded-2xl border border-dashed border-slate-300/90 bg-white p-2.5 text-left shadow-sm transition hover:border-[#2563EB]/50 hover:shadow-md"
+                            className="flex aspect-square w-[4.75rem] shrink-0 flex-col items-stretch rounded-xl border border-dashed border-slate-300/90 bg-white p-1.5 text-center transition hover:border-[#2563EB]/50 sm:w-20"
                           >
-                            <div className="mb-1.5 flex h-10 items-center justify-center rounded-xl bg-slate-50/90 ring-1 ring-slate-200/50">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#2563EB]/35 bg-white text-[#2563EB]">
-                                <Plus className="h-4 w-4" strokeWidth={2.5} />
-                              </div>
-                            </div>
-                            <p className="text-[13px] font-bold text-foreground">Plus</p>
-                            <p className="text-[11px] text-slate-500">Autres types</p>
+                            <span className="flex min-h-0 flex-1 items-center justify-center">
+                              <Plus className="h-5 w-5 text-[#2563EB] sm:h-6 sm:w-6" strokeWidth={2.2} />
+                            </span>
+                            <span className="shrink-0 text-[11px] font-bold leading-tight text-foreground sm:text-xs">Plus</span>
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[min(100vw-2rem,240px)] border-slate-200 p-1.5 shadow-lg" align="end" sideOffset={6}>
@@ -3155,6 +3151,8 @@ export function CoachPlanningExperience() {
                         {schemaDraggingTool === "steady" ? "Continu" : schemaDraggingTool === "interval" ? "Intervalle" : "Pyramide"}
                       </div>
                     ) : null}
+                </div>
+                </div>
 
                   {draft.blocks.length > 0 ? (
                     <div className="mt-3 space-y-2">
@@ -3673,7 +3671,6 @@ export function CoachPlanningExperience() {
                       </div>
                     </div>
                   ) : null}
-                  </div>
               </div>
             ) : (
               <ModelsPage

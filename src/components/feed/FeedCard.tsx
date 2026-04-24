@@ -133,7 +133,7 @@ export const FeedCard = ({
 
   return (
     <div
-      className="w-full overflow-hidden bg-transparent animate-fade-in"
+      className="ios-card w-full overflow-hidden animate-fade-in"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: "both" }}
     >
       <button type="button" className="w-full text-left" onClick={handleOpenDetails}>
