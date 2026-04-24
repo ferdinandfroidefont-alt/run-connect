@@ -67,6 +67,7 @@ export function HomeFeedBottomSheet() {
   const reduceMotion = useReducedMotion();
   const ih = useInnerHeight();
   const safeTop = useSafeAreaTopPx();
+  const isIosPhone = useIsIosPhoneLayout();
   const { homeFeedSheetRequest, clearHomeFeedSheetRequest, setHomeFeedSheetSnap } = useAppContext();
 
   const heights = useMemo(() => {
