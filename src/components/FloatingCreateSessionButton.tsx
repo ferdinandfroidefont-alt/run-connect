@@ -2,6 +2,7 @@ import { CalendarClock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useIsIosPhoneLayout } from "@/hooks/useIsIosPhoneLayout";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,6 +14,7 @@ export function FloatingCreateSessionButton() {
   const navigate = useNavigate();
   const { openCreateSession, hideBottomNav, homeMapImmersive, homeFeedSheetSnap } = useAppContext();
   const { t } = useLanguage();
+  const isIosPhone = useIsIosPhoneLayout();
 
   if (hideBottomNav || homeMapImmersive || homeFeedSheetSnap > 0 || location.pathname !== "/")
     return null;
