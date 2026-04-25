@@ -424,6 +424,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               >
                 <MapPin style={{ width: 28, height: 28, color: RC_LIGHT }} strokeWidth={2.3} />
                 {payload.locationLine}
+                {payload.countryCode ? (
+                  <img
+                    src={`https://flagcdn.com/w80/${payload.countryCode}.png`}
+                    alt=""
+                    crossOrigin="anonymous"
+                    style={{ width: 36, height: 'auto', borderRadius: 3, boxShadow: '0 1px 2px rgba(0,0,0,0.15)' }}
+                  />
+                ) : null}
                 <span
                   style={{
                     display: 'inline-block',
@@ -670,6 +678,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                 <MapPin style={{ width: 19, height: 19, flexShrink: 0, color: '#0f172a' }} strokeWidth={2.3} />
                 <span style={{ minWidth: 0, overflowWrap: 'anywhere' as const }}>{payload.locationLine}</span>
+                {payload.countryCode ? (
+                  <img
+                    src={`https://flagcdn.com/w40/${payload.countryCode}.png`}
+                    alt=""
+                    crossOrigin="anonymous"
+                    style={{ width: 22, height: 'auto', borderRadius: 2, flexShrink: 0 }}
+                  />
+                ) : null}
               </span>
               <span style={{ display: 'inline-block', height: 20, width: 1, flexShrink: 0, background: '#cbd5e1' }} aria-hidden="true" />
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>

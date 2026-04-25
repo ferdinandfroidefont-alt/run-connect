@@ -14,8 +14,10 @@ export interface ProfileSharePayload {
   roleLineSecondary: string | null;
   /** Libellé sport en français, sans emoji */
   sportLabel: string;
-  /** Ex. « Lyon, 🇫🇷 » ou « France, 🇫🇷 » — jamais « FR France » */
+  /** Texte ville/pays sans emoji. Le drapeau est rendu via countryCode. */
   locationLine: string;
+  /** Code ISO du pays (ex: "fr") pour rendre le drapeau via image. */
+  countryCode: string | null;
   /** URL Mapbox light en fond (1080×1080) ou null si pas de token */
   mapBackgroundUrl: string | null;
   sessionsCreated: number;
@@ -70,7 +72,13 @@ export function buildProfileSharePayloadFromData(input: {
       .join('') || input.username.slice(0, 2).toUpperCase();
 
   const sportLabel = sportLabelFromProfile(input.favorite_sport);
-  const locationLine = formatProfileShareLocationRow(input.city, input.country);
+  const rawLocationLine = formatProfileShareLocationRow(input.city, input.country);
+  // Retire le drapeau emoji (rendu séparément via <img>) et la virgule de fin éventuelle.
+  const locationLine = rawLocationLine
+    .replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu, '')
+    .replace(/,\s*$/, '')
+    .trim() || 'RunConnect';
+  const countryCode = input.country?.trim().toLowerCase() || null;
   const roleShort = input.isCoach ? 'Coach' : 'Athlète';
   const club = input.clubName?.trim();
   const roleLinePrimary = `Rôle (${roleShort})`;
@@ -85,6 +93,7 @@ export function buildProfileSharePayloadFromData(input: {
     roleLineSecondary,
     sportLabel,
     locationLine,
+    countryCode,
     mapBackgroundUrl: input.mapBackgroundUrl,
     sessionsCreated: input.sessionsCreated,
     sessionsJoined: input.sessionsJoined,
