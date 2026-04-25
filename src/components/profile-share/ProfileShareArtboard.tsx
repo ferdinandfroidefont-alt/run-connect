@@ -564,8 +564,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               ) : (
                 <div
                   style={{
-                    width: 164,
-                    height: 164,
+                    width: 144,
+                    height: 144,
                     borderRadius: 8,
                     border: '3px solid rgba(255,255,255,0.6)',
                     background: 'rgba(255,255,255,0.12)',
