@@ -19,7 +19,7 @@ function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: num
   const s = size ?? (compact ? 32 : 36);
   return (
     <span
-      style={{ display: 'inline-flex', flexShrink: 0, width: s, height: s }}
+      style={{ display: 'inline-flex', flexShrink: 0, width: s, height: s, transform: 'translateY(2px)' }}
       title="Premium"
       aria-hidden
     >
@@ -28,7 +28,7 @@ function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: num
           d="M12 1.5c-.5 0-.9.2-1.2.5l-1.1 1.2c-.2.2-.4.3-.7.3h-1.6c-.9 0-1.6.7-1.6 1.6V6.7c0 .3-.1.5-.3.7L4.3 8.5c-.6.6-.6 1.6 0 2.2l1.2 1.1c.2.2.3.4.3.7v1.6c0 .9.7 1.6 1.6 1.6h1.6c.3 0 .5.1.7.3l1.1 1.2c.6.6 1.6.6 2.2 0l1.1-1.2c.2-.2.4-.3.7-.3h1.6c.9 0 1.6-.7 1.6-1.6v-1.6c0-.3.1-.5.3-.7l1.2-1.1c.6-.6.6-1.6 0-2.2l-1.2-1.1c-.2-.2-.3-.4-.3-.7V5.1c0-.9-.7-1.6-1.6-1.6h-1.6c-.3 0-.5-.1-.7-.3L13.2 2c-.3-.3-.7-.5-1.2-.5Z"
           fill={RC_LIGHT}
         />
-        <path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M8.5 9.7l2.3 2.3 4.7-4.7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 0.3)" />
       </svg>
     </span>
   );
