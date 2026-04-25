@@ -93,6 +93,7 @@ export function buildProfileSharePayloadFromData(input: {
     roleLineSecondary,
     sportLabel,
     locationLine,
+    countryCode,
     mapBackgroundUrl: input.mapBackgroundUrl,
     sessionsCreated: input.sessionsCreated,
     sessionsJoined: input.sessionsJoined,
