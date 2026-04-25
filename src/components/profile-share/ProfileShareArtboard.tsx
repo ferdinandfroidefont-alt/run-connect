@@ -19,7 +19,7 @@ function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: num
   const s = size ?? (compact ? 32 : 36);
   return (
     <span
-      style={{ display: 'inline-flex', flexShrink: 0, width: s, height: s, transform: 'translateY(2px)' }}
+      style={{ display: 'inline-flex', flexShrink: 0, width: s, height: s, transform: 'translateY(5px)' }}
       title="Premium"
       aria-hidden
     >
