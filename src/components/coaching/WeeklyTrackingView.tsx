@@ -46,6 +46,19 @@ import {
 } from "@/lib/coachPrivateRunningRecords";
 import { parseAthleteRecords } from "@/lib/athleteIntensity";
 
+const PREVIEW_ZONE_ORDER = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const;
+
+function zoneToPreviewColorClass(zone?: string) {
+  const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
+  if (normalized === "Z1") return "bg-emerald-500";
+  if (normalized === "Z2") return "bg-primary";
+  if (normalized === "Z3") return "bg-green-500";
+  if (normalized === "Z4") return "bg-amber-500";
+  if (normalized === "Z5") return "bg-orange-500";
+  if (normalized === "Z6") return "bg-red-500";
+  return "bg-muted-foreground";
+}
+
 interface WeeklyTrackingViewProps {
   clubId: string;
   onClose: () => void;
@@ -562,7 +575,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const selectedAthleteZoneCards = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
     if (!zones) return [];
-    return (["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const).map((zone) => {
+    return PREVIEW_ZONE_ORDER.map((zone) => {
       const range = zones[zone];
       return {
         zone,
@@ -931,34 +944,19 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
 
       <div className="border-b border-border bg-card px-4 py-3">
         <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3 lg:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[14px] font-semibold text-foreground">Records privés coach</p>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
-                Utilisés en priorité pour calculer les zones et l'intensité réelle de l'athlète.
-              </p>
-            </div>
-            <Button type="button" variant="outline" size="sm" className="h-8 rounded-full px-3 text-[12px] font-semibold" onClick={openRecordsEditor}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Gérer
-            </Button>
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").length > 0 ? (
-              selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running").map((row) => (
-                <div key={row.id} className="rounded-xl border border-border/50 bg-background px-3 py-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{row.event_label}</p>
-                  <p className="text-[14px] font-semibold text-foreground">{row.record_value}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-[12px] text-muted-foreground">Aucun record privé coach renseigné.</p>
-            )}
-          </div>
           <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-            {selectedAthleteProfileRecords.length > 0 ? (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Records du profil athlète</p>
+                <button
+                  type="button"
+                  onClick={openRecordsEditor}
+                  className="text-[11px] font-semibold text-primary hover:underline"
+                >
+                  (+ gérer)
+                </button>
+              </div>
+              {selectedAthleteProfileRecords.length > 0 ? (
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {selectedAthleteProfileRecords.map((record) => (
                     <div key={`${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-2.5 py-2">
@@ -972,16 +970,19 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : null}
+              ) : (
+                <p className="mt-2 text-[12px] text-muted-foreground">Aucun record détecté sur le profil athlète.</p>
+              )}
+            </div>
             {selectedAthleteZoneCards.length > 0 ? (
               <div className="rounded-xl border border-border/60 bg-background/80 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Repères zones d'entraînement</p>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {selectedAthleteZoneCards.map((zone) => (
-                    <div key={zone.zone} className="rounded-lg bg-secondary/50 px-2.5 py-2">
-                      <p className="text-[12px] font-semibold text-foreground">{zone.zone}</p>
-                      <p className="text-[11px] text-muted-foreground">{zone.minPace} → {zone.maxPace}</p>
+                    <div key={zone.zone} className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/50 px-2.5 py-2 text-[12px] text-foreground">
+                      <span className={`h-2.5 w-2.5 rounded-full ${zoneToPreviewColorClass(zone.zone)}`} />
+                      <span className="font-semibold">{zone.zone}</span>
+                      <span className="text-muted-foreground">{zone.minPace} → {zone.maxPace}</span>
                     </div>
                   ))}
                 </div>
