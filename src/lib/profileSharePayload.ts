@@ -14,8 +14,10 @@ export interface ProfileSharePayload {
   roleLineSecondary: string | null;
   /** Libellé sport en français, sans emoji */
   sportLabel: string;
-  /** Ex. « Lyon, 🇫🇷 » ou « France, 🇫🇷 » — jamais « FR France » */
+  /** Texte ville/pays sans emoji. Le drapeau est rendu via countryCode. */
   locationLine: string;
+  /** Code ISO du pays (ex: "fr") pour rendre le drapeau via image. */
+  countryCode: string | null;
   /** URL Mapbox light en fond (1080×1080) ou null si pas de token */
   mapBackgroundUrl: string | null;
   sessionsCreated: number;
