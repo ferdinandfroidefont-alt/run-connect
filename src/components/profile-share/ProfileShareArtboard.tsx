@@ -539,7 +539,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             <div
               style={{
                 position: 'absolute',
-                right: 84,
+                right: 120,
                 bottom: 26,
                 zIndex: 3,
                 display: 'flex',
@@ -575,6 +575,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               <p
                 style={{
                   margin: 0,
+                  marginRight: -28,
                   textAlign: 'right',
                   fontSize: 16,
                   fontWeight: 500,
