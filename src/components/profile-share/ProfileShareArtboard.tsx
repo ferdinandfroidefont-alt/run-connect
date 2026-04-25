@@ -424,6 +424,14 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               >
                 <MapPin style={{ width: 28, height: 28, color: RC_LIGHT }} strokeWidth={2.3} />
                 {payload.locationLine}
+                {payload.countryCode ? (
+                  <img
+                    src={`https://flagcdn.com/w80/${payload.countryCode}.png`}
+                    alt=""
+                    crossOrigin="anonymous"
+                    style={{ width: 36, height: 'auto', borderRadius: 3, boxShadow: '0 1px 2px rgba(0,0,0,0.15)' }}
+                  />
+                ) : null}
                 <span
                   style={{
                     display: 'inline-block',
