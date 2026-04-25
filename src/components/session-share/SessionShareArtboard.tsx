@@ -19,7 +19,7 @@ const RC_MUTED = '#64748b';
 const FONT_SANS =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Inter, sans-serif';
 
-function RunnerIcon({ size = 26, color = RC_BLUE }: { size?: number; color?: string }) {
+function RunnerIcon({ size = 36, color = RC_BLUE }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
@@ -30,7 +30,7 @@ function RunnerIcon({ size = 26, color = RC_BLUE }: { size?: number; color?: str
   );
 }
 
-function ActivityGlyph({ type, size = 26 }: { type: string; size?: number }) {
+function ActivityGlyph({ type, size = 36 }: { type: string; size?: number }) {
   const t = type.toLowerCase();
   if (t === 'cycling' || t === 'velo' || t === 'mtb')
     return <Bike style={{ width: size, height: size, color: RC_BLUE }} />;
@@ -57,7 +57,6 @@ function BluePinMarker({
 
   return (
     <div style={{ position: 'relative', width: PIN_W, height: PIN_H }}>
-      {/* Ombre au sol */}
       <div
         style={{
           position: 'absolute',
@@ -72,7 +71,6 @@ function BluePinMarker({
           zIndex: 0,
         }}
       />
-      {/* Halo lumineux */}
       <div
         style={{
           position: 'absolute',
@@ -87,7 +85,6 @@ function BluePinMarker({
           zIndex: 0,
         }}
       />
-      {/* Cercle (gradient depth) */}
       <div
         style={{
           position: 'absolute',
@@ -104,7 +101,6 @@ function BluePinMarker({
           zIndex: 1,
         }}
       />
-      {/* Pointe triangulaire */}
       <div
         style={{
           position: 'absolute',
@@ -119,7 +115,6 @@ function BluePinMarker({
           zIndex: 1,
         }}
       />
-      {/* Anneau blanc + avatar */}
       <div
         style={{
           position: 'absolute',
@@ -157,7 +152,7 @@ function BluePinMarker({
   );
 }
 
-function RunConnectPinIcon({ size = 64, color = '#ffffff' }: { size?: number; color?: string }) {
+function RunConnectPinIcon({ size = 88, color = '#ffffff' }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
@@ -172,15 +167,15 @@ function RunConnectPinIcon({ size = 64, color = '#ffffff' }: { size?: number; co
   );
 }
 
-function MetaIcon({ children }: { children: ReactNode }) {
+function MetaIcon({ size = 36, children }: { size?: number; children: ReactNode }) {
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 36,
-        height: 36,
+        width: size,
+        height: size,
         flexShrink: 0,
       }}
     >
@@ -189,13 +184,17 @@ function MetaIcon({ children }: { children: ReactNode }) {
   );
 }
 
-function SessionJoinBar({ inset = false }: { inset?: boolean }) {
+/**
+ * Bandeau bleu CTA — inset (margins gauche/droite/bas) avec coins arrondis sur les 4 côtés,
+ * fidèle à la maquette « Retrouve cette séance sur RunConnect » + bouton blanc.
+ */
+function SessionJoinBar() {
   return (
     <div
       style={{
         position: 'relative',
         width: '100%',
-        borderRadius: inset ? 28 : '32px 32px 36px 36px',
+        borderRadius: 28,
         overflow: 'hidden',
         background: `linear-gradient(110deg, ${RC_LIGHT} 0%, #0759dc 50%, #0352d6 100%)`,
         boxShadow: '0 16px 44px rgba(9, 86, 220, 0.25), inset 0 1px 0 rgba(255,255,255,0.28)',
@@ -209,15 +208,16 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
           pointerEvents: 'none',
         }}
       />
+      {/* Cercles décoratifs en bas-droite (style maquette) */}
       <div
         style={{
           position: 'absolute',
-          right: -20,
-          bottom: -52,
+          right: -40,
+          bottom: -100,
           width: 380,
           height: 220,
           borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.16)',
+          border: '1px solid rgba(255,255,255,0.18)',
           pointerEvents: 'none',
         }}
       />
@@ -225,7 +225,7 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
         style={{
           position: 'absolute',
           right: 30,
-          bottom: -58,
+          bottom: -110,
           width: 300,
           height: 190,
           borderRadius: '50%',
@@ -237,24 +237,32 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
         style={{
           position: 'relative',
           zIndex: 1,
-          minHeight: 174,
+          minHeight: 168,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 20,
-          padding: '24px 30px',
+          gap: 18,
+          padding: '20px 26px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
-          <RunConnectPinIcon size={64} color="#ffffff" />
+          <RunConnectPinIcon size={88} color="#ffffff" />
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 17, fontWeight: 500, color: 'rgba(255,255,255,0.92)' }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 500,
+                lineHeight: 1.15,
+                color: 'rgba(255,255,255,0.94)',
+              }}
+            >
               Retrouve cette séance sur
             </p>
             <p
               style={{
                 margin: '2px 0 0 0',
-                fontSize: 30,
+                fontSize: 44,
                 fontWeight: 800,
                 lineHeight: 1.02,
                 letterSpacing: '-0.02em',
@@ -270,8 +278,8 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
             display: 'flex',
             alignItems: 'center',
             gap: 14,
-            borderRadius: 26,
-            padding: '18px 22px',
+            borderRadius: 22,
+            padding: '16px 22px',
             background: '#ffffff',
             color: '#0f172a',
             boxShadow: '0 10px 24px rgba(2, 16, 45, 0.2)',
@@ -280,8 +288,8 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
         >
           <div
             style={{
-              width: 46,
-              height: 46,
+              width: 50,
+              height: 50,
               borderRadius: 999,
               background: RC_LIGHT,
               display: 'flex',
@@ -290,7 +298,7 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
               flexShrink: 0,
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M5 12h14M13 5l7 7-7 7"
                 stroke="#fff"
@@ -300,9 +308,9 @@ function SessionJoinBar({ inset = false }: { inset?: boolean }) {
               />
             </svg>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.08 }}>Ouvrir avec RunConnect</span>
-            <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.15, color: '#475569' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+            <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.08 }}>Ouvrir avec RunConnect</span>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.15, color: '#475569' }}>
               Rejoins la séance dans l&apos;app
             </span>
           </div>
@@ -325,42 +333,25 @@ export const SessionShareArtboard = forwardRef<HTMLDivElement, SessionShareArtbo
     const isStory = templateId === 'instagram_story';
 
     if (isStory) {
-      return (
-        <StoryArtboard
-          ref={ref}
-          payload={payload}
-          mapImageUrl={mapImageUrl}
-          width={w}
-          height={h}
-        />
-      );
+      return <StoryArtboard ref={ref} payload={payload} mapImageUrl={mapImageUrl} width={w} height={h} />;
     }
 
-    return (
-      <SquareArtboard
-        ref={ref}
-        payload={payload}
-        mapImageUrl={mapImageUrl}
-        width={w}
-        height={h}
-      />
-    );
+    return <SquareArtboard ref={ref} payload={payload} mapImageUrl={mapImageUrl} width={w} height={h} />;
   }
 );
 
 /**
- * Carte carrée 1080×1080 — réplique fidèle de la maquette de partage :
- * - Colonne texte à gauche (header, titre, badge, allure, date, heure)
- * - Carte Mapbox réelle pleine bleed à droite avec gros pin centré
- * - Carte « lieu » flottante en bas-gauche (location + audience)
- * - Bandeau bleu RunConnect en bas, pleine largeur
+ * Carte carrée 1080×1080 — proportions fidèles à la maquette :
+ * - Header + titre `Séance seuil` (110px ultra-bold) + badge structure
+ * - Allure cible / date / heure dans la colonne gauche (icônes outline)
+ * - Carte Mapbox réelle pleine bleed à droite avec gros pin séance
+ * - Carte « lieu » flottante en bas-gauche
+ * - Bandeau bleu CTA inset, coins arrondis 4 côtés
  */
 const SquareArtboard = forwardRef<
   HTMLDivElement,
   { payload: SessionSharePayload; mapImageUrl: string | null; width: number; height: number }
 >(function SquareArtboard({ payload, mapImageUrl, width, height }, ref) {
-  const CTA_HEIGHT = 196;
-
   return (
     <div
       ref={ref}
@@ -380,7 +371,7 @@ const SquareArtboard = forwardRef<
     >
       {/* Zone supérieure : texte + carte */}
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-        {/* Carte Mapbox — pleine bleed à droite, avec un fade vers blanc à gauche */}
+        {/* Carte Mapbox — pleine bleed à droite, fade gauche vers blanc */}
         <div
           style={{
             position: 'absolute',
@@ -402,7 +393,6 @@ const SquareArtboard = forwardRef<
               filter: 'saturate(1.05) contrast(1.04)',
             }}
           />
-          {/* Fade gauche → blanc (transition douce vers la colonne texte) */}
           <div
             style={{
               position: 'absolute',
@@ -412,21 +402,18 @@ const SquareArtboard = forwardRef<
                 'linear-gradient(90deg, #ffffff 0%, rgba(255,255,255,0.92) 12%, rgba(255,255,255,0.45) 26%, rgba(255,255,255,0.05) 42%, rgba(255,255,255,0) 58%)',
             }}
           />
-          {/* Léger fade bas → blanc pour la jonction avec le bandeau bleu */}
           <div
             style={{
               position: 'absolute',
               left: 0,
               right: 0,
               bottom: 0,
-              height: 120,
+              height: 110,
               pointerEvents: 'none',
               background:
                 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0.92) 100%)',
             }}
           />
-
-          {/* Gros pin séance (style app) */}
           <div
             style={{
               position: 'absolute',
@@ -444,29 +431,30 @@ const SquareArtboard = forwardRef<
           </div>
         </div>
 
-        {/* Colonne texte (gauche) */}
+        {/* Colonne texte (gauche) — overflow visible pour laisser respirer le titre */}
         <div
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             bottom: 0,
-            width: '52%',
+            width: '54%',
             display: 'flex',
             flexDirection: 'column',
             gap: 22,
-            padding: '46px 40px 34px 44px',
+            padding: '52px 0 30px 44px',
             zIndex: 2,
+            overflow: 'visible',
           }}
         >
           {/* Header activité */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ActivityGlyph type={payload.activityType} size={26} />
+            <ActivityGlyph type={payload.activityType} size={32} />
             <span
               style={{
-                fontSize: 21,
+                fontSize: 26,
                 fontWeight: 800,
-                letterSpacing: '0.04em',
+                letterSpacing: '0.045em',
                 color: RC_BLUE,
                 textTransform: 'uppercase' as const,
               }}
@@ -475,15 +463,16 @@ const SquareArtboard = forwardRef<
             </span>
           </div>
 
-          {/* Titre */}
+          {/* Titre — peut déborder visuellement sur la zone de fade de la carte */}
           <h1
             style={{
-              fontSize: 92,
+              fontSize: 110,
               fontWeight: 900,
               color: RC_INK,
               lineHeight: 0.97,
-              letterSpacing: '-0.035em',
+              letterSpacing: '-0.04em',
               margin: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             {payload.title}
@@ -496,11 +485,11 @@ const SquareArtboard = forwardRef<
                 display: 'inline-flex',
                 width: 'fit-content',
                 alignItems: 'center',
-                padding: '14px 28px',
-                borderRadius: 18,
+                padding: '14px 32px',
+                borderRadius: 14,
                 background: `linear-gradient(135deg, #1d4ed8 0%, ${RC_BLUE} 50%, #1e40af 100%)`,
                 color: '#ffffff',
-                fontSize: 36,
+                fontSize: 50,
                 fontWeight: 800,
                 lineHeight: 1,
                 letterSpacing: '0.005em',
@@ -513,15 +502,15 @@ const SquareArtboard = forwardRef<
 
           {/* Allure cible */}
           {payload.pacePrimary && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 2 }}>
-              <MetaIcon>
-                <Clock style={{ width: 30, height: 30, color: RC_BLUE, strokeWidth: 1.9 }} />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginTop: 4 }}>
+              <MetaIcon size={36}>
+                <Clock style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
               </MetaIcon>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 30, fontWeight: 800, color: RC_INK, lineHeight: 1.05 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 46, fontWeight: 800, color: RC_INK, lineHeight: 1.02 }}>
                   {payload.pacePrimary}
                 </span>
-                <span style={{ fontSize: 18, fontWeight: 500, color: RC_MUTED, lineHeight: 1.1 }}>
+                <span style={{ fontSize: 22, fontWeight: 500, color: RC_MUTED, lineHeight: 1 }}>
                   allure cible
                 </span>
               </div>
@@ -532,23 +521,24 @@ const SquareArtboard = forwardRef<
           <div
             style={{
               height: 1,
-              width: 320,
-              background: 'rgba(15,23,42,0.08)',
+              width: 360,
+              background: 'rgba(15,23,42,0.10)',
               margin: '6px 0 4px',
             }}
           />
 
           {/* Date */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <MetaIcon>
-              <Calendar style={{ width: 30, height: 30, color: RC_BLUE, strokeWidth: 1.9 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <MetaIcon size={36}>
+              <Calendar style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
             </MetaIcon>
             <span
               style={{
-                fontSize: 28,
+                fontSize: 38,
                 fontWeight: 800,
                 color: RC_INK,
                 textTransform: 'capitalize' as const,
+                lineHeight: 1.05,
               }}
             >
               {payload.dateLabel}
@@ -556,11 +546,13 @@ const SquareArtboard = forwardRef<
           </div>
 
           {/* Heure */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <MetaIcon>
-              <Clock style={{ width: 30, height: 30, color: RC_BLUE, strokeWidth: 1.9 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <MetaIcon size={36}>
+              <Clock style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
             </MetaIcon>
-            <span style={{ fontSize: 28, fontWeight: 800, color: RC_INK }}>{payload.timeLabel}</span>
+            <span style={{ fontSize: 38, fontWeight: 800, color: RC_INK, lineHeight: 1.05 }}>
+              {payload.timeLabel}
+            </span>
           </div>
         </div>
 
@@ -569,39 +561,39 @@ const SquareArtboard = forwardRef<
           style={{
             position: 'absolute',
             left: 36,
-            bottom: 28,
-            width: 540,
+            bottom: 22,
+            width: 510,
             background: '#ffffff',
-            borderRadius: 26,
-            padding: '20px 24px',
+            borderRadius: 24,
+            padding: '22px 28px',
             boxShadow: '0 16px 38px rgba(15,23,42,0.10), 0 1px 0 rgba(15,23,42,0.04)',
             border: '1px solid rgba(15,23,42,0.05)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: 14,
             zIndex: 3,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             <MapPin
               style={{
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 color: RC_BLUE,
-                strokeWidth: 2.4,
+                strokeWidth: 2.2,
                 flexShrink: 0,
                 marginTop: 4,
-                fill: 'rgba(37,99,235,0.12)',
+                fill: 'rgba(37,99,235,0.16)',
               }}
             />
             <div style={{ minWidth: 0, flex: 1 }}>
               <p
                 style={{
                   margin: 0,
-                  fontSize: 24,
+                  fontSize: 30,
                   fontWeight: 800,
                   color: RC_INK,
-                  lineHeight: 1.15,
+                  lineHeight: 1.12,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -612,11 +604,11 @@ const SquareArtboard = forwardRef<
               {payload.locationSubtitle && (
                 <p
                   style={{
-                    margin: '3px 0 0 0',
-                    fontSize: 17,
+                    margin: '4px 0 0 0',
+                    fontSize: 20,
                     fontWeight: 500,
                     color: RC_MUTED,
-                    lineHeight: 1.25,
+                    lineHeight: 1.2,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -628,11 +620,11 @@ const SquareArtboard = forwardRef<
             </div>
           </div>
           {payload.audienceLine && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Users
-                style={{ width: 28, height: 28, color: RC_BLUE, strokeWidth: 2.2, flexShrink: 0 }}
+                style={{ width: 32, height: 32, color: RC_BLUE, strokeWidth: 2.05, flexShrink: 0 }}
               />
-              <span style={{ fontSize: 21, fontWeight: 600, color: RC_INK }}>
+              <span style={{ fontSize: 24, fontWeight: 600, color: RC_INK, lineHeight: 1.1 }}>
                 {payload.audienceLine}
               </span>
             </div>
@@ -640,8 +632,8 @@ const SquareArtboard = forwardRef<
         </div>
       </div>
 
-      {/* Bandeau bleu (CTA) — pleine largeur, bas */}
-      <div style={{ flexShrink: 0, height: CTA_HEIGHT }}>
+      {/* Bandeau bleu CTA — inset (margins gauche/droite/bas) */}
+      <div style={{ flexShrink: 0, padding: '0 22px 28px' }}>
         <SessionJoinBar />
       </div>
     </div>
@@ -650,7 +642,6 @@ const SquareArtboard = forwardRef<
 
 /**
  * Story Instagram 1080×1920 — variante verticale alignée sur la maquette.
- * Carte en haut (≈55% de la hauteur), texte en bas, CTA fullbleed en pied.
  */
 const StoryArtboard = forwardRef<
   HTMLDivElement,
@@ -670,7 +661,6 @@ const StoryArtboard = forwardRef<
         fontFamily: FONT_SANS,
       }}
     >
-      {/* Carte (top, full bleed) */}
       <div style={{ position: 'relative', height: '54%', overflow: 'hidden' }}>
         <ShareMapBackdropImg
           mapUrl={mapImageUrl}
@@ -712,7 +702,6 @@ const StoryArtboard = forwardRef<
         </div>
       </div>
 
-      {/* Bloc texte (bottom) */}
       <div
         style={{
           flex: 1,
@@ -725,12 +714,12 @@ const StoryArtboard = forwardRef<
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <ActivityGlyph type={payload.activityType} size={26} />
+          <ActivityGlyph type={payload.activityType} size={32} />
           <span
             style={{
-              fontSize: 22,
+              fontSize: 26,
               fontWeight: 800,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.045em',
               color: RC_BLUE,
               textTransform: 'uppercase' as const,
             }}
@@ -741,11 +730,11 @@ const StoryArtboard = forwardRef<
 
         <h1
           style={{
-            fontSize: 96,
+            fontSize: 116,
             fontWeight: 900,
             color: RC_INK,
             lineHeight: 0.97,
-            letterSpacing: '-0.035em',
+            letterSpacing: '-0.04em',
             margin: 0,
           }}
         >
@@ -757,11 +746,11 @@ const StoryArtboard = forwardRef<
             style={{
               display: 'inline-flex',
               width: 'fit-content',
-              padding: '14px 30px',
-              borderRadius: 20,
+              padding: '14px 32px',
+              borderRadius: 16,
               background: `linear-gradient(135deg, #1d4ed8 0%, ${RC_BLUE} 50%, #1e40af 100%)`,
               color: '#ffffff',
-              fontSize: 38,
+              fontSize: 52,
               fontWeight: 800,
               lineHeight: 1,
               boxShadow: '0 14px 30px rgba(37,99,235,0.32)',
@@ -772,15 +761,15 @@ const StoryArtboard = forwardRef<
         )}
 
         {payload.pacePrimary && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginTop: 2 }}>
-            <MetaIcon>
-              <Clock style={{ width: 32, height: 32, color: RC_BLUE, strokeWidth: 1.9 }} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginTop: 2 }}>
+            <MetaIcon size={36}>
+              <Clock style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
             </MetaIcon>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 32, fontWeight: 800, color: RC_INK, lineHeight: 1.05 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 48, fontWeight: 800, color: RC_INK, lineHeight: 1.02 }}>
                 {payload.pacePrimary}
               </span>
-              <span style={{ fontSize: 19, fontWeight: 500, color: RC_MUTED }}>allure cible</span>
+              <span style={{ fontSize: 22, fontWeight: 500, color: RC_MUTED }}>allure cible</span>
             </div>
           </div>
         )}
@@ -788,18 +777,18 @@ const StoryArtboard = forwardRef<
         <div
           style={{
             height: 1,
-            background: 'rgba(15,23,42,0.08)',
+            background: 'rgba(15,23,42,0.10)',
             margin: '4px 0',
           }}
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <MetaIcon>
-            <Calendar style={{ width: 32, height: 32, color: RC_BLUE, strokeWidth: 1.9 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <MetaIcon size={36}>
+            <Calendar style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
           </MetaIcon>
           <span
             style={{
-              fontSize: 30,
+              fontSize: 40,
               fontWeight: 800,
               color: RC_INK,
               textTransform: 'capitalize' as const,
@@ -809,11 +798,11 @@ const StoryArtboard = forwardRef<
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <MetaIcon>
-            <Clock style={{ width: 32, height: 32, color: RC_BLUE, strokeWidth: 1.9 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <MetaIcon size={36}>
+            <Clock style={{ width: 36, height: 36, color: RC_BLUE, strokeWidth: 1.85 }} />
           </MetaIcon>
-          <span style={{ fontSize: 30, fontWeight: 800, color: RC_INK }}>{payload.timeLabel}</span>
+          <span style={{ fontSize: 40, fontWeight: 800, color: RC_INK }}>{payload.timeLabel}</span>
         </div>
 
         <div
@@ -821,7 +810,7 @@ const StoryArtboard = forwardRef<
             marginTop: 8,
             background: '#ffffff',
             borderRadius: 28,
-            padding: '22px 26px',
+            padding: '24px 28px',
             boxShadow: '0 16px 38px rgba(15,23,42,0.10)',
             border: '1px solid rgba(15,23,42,0.06)',
             display: 'flex',
@@ -829,27 +818,27 @@ const StoryArtboard = forwardRef<
             gap: 14,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             <MapPin
               style={{
-                width: 30,
-                height: 30,
+                width: 32,
+                height: 32,
                 color: RC_BLUE,
-                strokeWidth: 2.4,
+                strokeWidth: 2.2,
                 flexShrink: 0,
-                marginTop: 3,
-                fill: 'rgba(37,99,235,0.12)',
+                marginTop: 4,
+                fill: 'rgba(37,99,235,0.16)',
               }}
             />
             <div style={{ minWidth: 0, flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: RC_INK, lineHeight: 1.2 }}>
+              <p style={{ margin: 0, fontSize: 30, fontWeight: 800, color: RC_INK, lineHeight: 1.18 }}>
                 {payload.locationTitle}
               </p>
               {payload.locationSubtitle && (
                 <p
                   style={{
-                    margin: '3px 0 0 0',
-                    fontSize: 19,
+                    margin: '4px 0 0 0',
+                    fontSize: 20,
                     fontWeight: 500,
                     color: RC_MUTED,
                   }}
@@ -860,11 +849,11 @@ const StoryArtboard = forwardRef<
             </div>
           </div>
           {payload.audienceLine && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <Users
-                style={{ width: 30, height: 30, color: RC_BLUE, strokeWidth: 2.2, flexShrink: 0 }}
+                style={{ width: 32, height: 32, color: RC_BLUE, strokeWidth: 2.05, flexShrink: 0 }}
               />
-              <span style={{ fontSize: 22, fontWeight: 600, color: RC_INK }}>
+              <span style={{ fontSize: 24, fontWeight: 600, color: RC_INK }}>
                 {payload.audienceLine}
               </span>
             </div>
@@ -874,9 +863,9 @@ const StoryArtboard = forwardRef<
         <div style={{ flex: 1 }} />
       </div>
 
-      {/* CTA en pied — pleine largeur */}
-      <div style={{ flexShrink: 0, padding: '0 0 40px' }}>
-        <SessionJoinBar inset={false} />
+      {/* CTA en pied — inset */}
+      <div style={{ flexShrink: 0, padding: '0 28px 36px' }}>
+        <SessionJoinBar />
       </div>
     </div>
   );
