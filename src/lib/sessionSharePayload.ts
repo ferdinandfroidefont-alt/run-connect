@@ -97,6 +97,24 @@ function buildStructureBadge(s: SessionLike): string | null {
   return null;
 }
 
+/**
+ * Nettoie une valeur d'allure saisie par l'utilisateur :
+ * supprime toute unité déjà présente (« min/km », « /km », « km », « min »…)
+ * pour qu'on puisse rajouter l'unité voulue une seule fois proprement.
+ * Ex : "4:00 min/km" → "4:00", "4:00 /km" → "4:00", "4:00" → "4:00".
+ */
+function stripPaceUnitSuffix(raw: string): string {
+  if (!raw) return raw;
+  return raw
+    .trim()
+    .replace(/\s*min\s*\/\s*km\s*$/i, '')
+    .replace(/\s*\/\s*km\s*$/i, '')
+    .replace(/\s*km\/h\s*$/i, '')
+    .replace(/\s*km\s*$/i, '')
+    .replace(/\s*min\s*$/i, '')
+    .trim();
+}
+
 function buildPace(s: SessionLike, _formatKm: (n: number) => string): { primary: string | null; secondary: string | null } {
   // Cherche aussi dans les session_blocks (fractionné stocké en JSON)
   const blocks = s.session_blocks as Array<{ type?: string; effortPace?: string; effortPaceUnit?: string }> | undefined;
@@ -105,17 +123,17 @@ function buildPace(s: SessionLike, _formatKm: (n: number) => string): { primary:
   const blockPaceUnit = intervalBlock?.effortPaceUnit;
 
   if (s.interval_pace || blockPace) {
-    const pace = s.interval_pace || blockPace!;
+    const pace = stripPaceUnitSuffix(s.interval_pace || blockPace!);
     const unit = s.interval_pace_unit || blockPaceUnit;
-    const u = unit === 'power' ? ' W' : '/km';
+    const u = unit === 'power' ? ' W' : ' /km';
     return {
       primary: `${pace}${u}`,
       secondary: 'allure cible',
     };
   }
   if (s.pace_general) {
-    const u = s.pace_unit === 'power' ? ' W' : '/km';
-    return { primary: `${s.pace_general}${u}`, secondary: 'allure' };
+    const u = s.pace_unit === 'power' ? ' W' : ' /km';
+    return { primary: `${stripPaceUnitSuffix(s.pace_general)}${u}`, secondary: 'allure' };
   }
   return { primary: null, secondary: null };
 }

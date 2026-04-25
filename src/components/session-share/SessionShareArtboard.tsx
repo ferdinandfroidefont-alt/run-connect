@@ -152,17 +152,53 @@ function BluePinMarker({
   );
 }
 
-function RunConnectPinIcon({ size = 88, color = '#ffffff' }: { size?: number; color?: string }) {
+/**
+ * Logo RunConnect — pin de localisation + ondes radio latérales.
+ * Réplique fidèle de `public/favicon.png` (icône d'app) :
+ * pin teardrop plein avec hole circulaire en haut, et 2 arcs ")" / "(" de chaque côté
+ * (proches + extérieurs) figurant les ondes émises par le pin.
+ */
+function RunConnectPinIcon({ size = 96, color = '#ffffff' }: { size?: number; color?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Pin (teardrop plein avec trou circulaire) */}
       <path
-        d="M24 4C16.27 4 10 10.27 10 18c0 11 14 26 14 26s14-15 14-26c0-7.73-6.27-14-14-14Zm0 19a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"
+        d="M50 20 C 38.954 20 30 28.954 30 38 C 30 51 50 80 50 80 C 50 80 70 51 70 38 C 70 28.954 61.046 20 50 20 Z M50 30 A 8 8 0 1 0 50 46 A 8 8 0 0 0 50 30 Z"
         fill={color}
+        fillRule="evenodd"
       />
-      <path d="M34.5 10.5c2.5 2.8 4 6.5 4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-      <path d="M37.5 7.5c3.2 3.8 5 8.7 5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
-      <path d="M13.5 10.5c-2.5 2.8-4 6.5-4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-      <path d="M10.5 7.5c-3.2 3.8-5 8.7-5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
+      {/* Ondes radio droites (arc proche + arc éloigné) */}
+      <path
+        d="M73 26 Q 80 38 73 50"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M82 18 Q 94 38 82 58"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      {/* Ondes radio gauches (miroir) */}
+      <path
+        d="M27 26 Q 20 38 27 50"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M18 18 Q 6 38 18 58"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
