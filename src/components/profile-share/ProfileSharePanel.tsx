@@ -6,8 +6,6 @@ import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
 
-type CardVariant = 'v1' | 'v2';
-
 type Props = {
   active?: boolean;
   compact?: boolean;
@@ -16,7 +14,6 @@ type Props = {
 export function ProfileSharePanel({ compact = false }: Props) {
   const { user } = useAuth();
   const [payload, setPayload] = useState<ProfileSharePayload | null>(null);
-  const [variant, setVariant] = useState<CardVariant>('v1');
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const [previewFrameSize, setPreviewFrameSize] = useState(0);
 
@@ -37,11 +34,6 @@ export function ProfileSharePanel({ compact = false }: Props) {
 
   const handleShare = () => {
     // Partage de l'image statique à implémenter
-  };
-
-  const templateFromVariant = (value: CardVariant) => {
-    if (value === 'v1') return 'light_card' as const;
-    return 'map_card' as const;
   };
 
   useEffect(() => {
@@ -83,33 +75,13 @@ export function ProfileSharePanel({ compact = false }: Props) {
                       transformOrigin: 'center center',
                     }}
                   >
-                    <ProfileShareArtboard payload={payload} templateId={templateFromVariant(variant)} />
+                    <ProfileShareArtboard payload={payload} templateId="map_card" />
                   </div>
                 ) : (
                   <div className="h-full w-full animate-pulse bg-muted/50" />
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Sélecteur de template */}
-          <div className="mt-4 inline-flex rounded-full border border-border bg-muted/40 p-1">
-            {([
-              { id: 'v1' as const, label: 'Carte 1' },
-              { id: 'v2' as const, label: 'Carte 2' },
-            ]).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setVariant(opt.id)}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors',
-                  variant === opt.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
           </div>
 
           <button

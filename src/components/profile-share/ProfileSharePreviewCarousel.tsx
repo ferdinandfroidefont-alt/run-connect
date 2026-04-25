@@ -9,8 +9,7 @@ import { ProfileShareTemplateCard } from './ProfileShareTemplateCard';
 import { ProfileSharePaginationDots } from './ProfileSharePaginationDots';
 
 const META: { id: ProfileShareTemplateId; label: string }[] = [
-  { id: 'light_card', label: 'Carte 1' },
-  { id: 'map_card', label: 'Carte 2' },
+  { id: 'map_card', label: 'Carte 1' },
 ];
 
 type Props = {
@@ -26,12 +25,17 @@ export function ProfileSharePreviewCarousel({ payload, activeTemplateId, onTempl
   const syncFromId = useCallback(
     (embla: EmblaCarouselType | null) => {
       const idx = META.findIndex((t) => t.id === activeTemplateId);
-      if (idx >= 0 && embla) {
+      if (!embla) return;
+      if (idx >= 0) {
         embla.scrollTo(idx, true);
         setActiveIndex(idx);
+        return;
       }
+      embla.scrollTo(0, true);
+      setActiveIndex(0);
+      onTemplateChange(META[0].id);
     },
-    [activeTemplateId]
+    [activeTemplateId, onTemplateChange]
   );
 
   useEffect(() => {

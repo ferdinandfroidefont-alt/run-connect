@@ -17,7 +17,7 @@ export interface WorkoutSegment {
   color?: string;
   intensitySource?: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
   repeatCount?: number;
-  visualStyle?: "default" | "pyramid";
+  visualStyle?: "default" | "pyramid" | "progressif" | "degressif";
 }
 
 export interface MiniProfileBlock {
@@ -46,6 +46,8 @@ type ParsedLikeBlock = {
   blockRecoveryDuration?: number;
   blockRecoveryDistance?: number;
   pace?: string;
+  paceStart?: string;
+  paceEnd?: string;
   zone?: string;
   notes?: string;
 };
@@ -61,6 +63,8 @@ type SessionLikeBlock = {
   blockRecoveryDurationSec?: number;
   blockRecoveryDistanceM?: number;
   paceSecPerKm?: number;
+  paceStartSecPerKm?: number;
+  paceEndSecPerKm?: number;
   zone?: string;
   notes?: string;
 };
@@ -202,11 +206,26 @@ export function buildWorkoutSegments(
         : clampPositive((parsedRaw.distance || 0) / 1000);
     const paceSecPerKm =
       "paceSecPerKm" in raw ? sessionRaw.paceSecPerKm || null : toPaceSecPerKmFromString(parsedRaw.pace);
+    const paceStartSecPerKm =
+      "paceStartSecPerKm" in raw
+        ? sessionRaw.paceStartSecPerKm || null
+        : toPaceSecPerKmFromString(parsedRaw.paceStart);
+    const paceEndSecPerKm =
+      "paceEndSecPerKm" in raw
+        ? sessionRaw.paceEndSecPerKm || null
+        : toPaceSecPerKmFromString(parsedRaw.paceEnd);
+    const effectivePaceSecPerKm =
+      paceSecPerKm ||
+      (paceStartSecPerKm && paceEndSecPerKm
+        ? Math.max(1, Math.round((paceStartSecPerKm + paceEndSecPerKm) / 2))
+        : paceStartSecPerKm || paceEndSecPerKm || null);
     const isPyramid = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Pyramid]"));
+    const isProgressif = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Progressif]"));
+    const isDegressif = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Dégressif]"));
 
     if (raw.type === "interval") {
       const durationFromDistance =
-        distanceKm > 0 && paceSecPerKm ? distanceKm * (paceSecPerKm / 60) : 0;
+        distanceKm > 0 && effectivePaceSecPerKm ? distanceKm * (effectivePaceSecPerKm / 60) : 0;
       const hasEffortVolume = durationMin > 0 || distanceKm > 0 || durationFromDistance > 0;
       if (!hasEffortVolume) {
         segments.push(
@@ -223,14 +242,14 @@ export function buildWorkoutSegments(
       const effortDistancePerRep =
         distanceKm > 0
           ? distanceKm
-          : estimateDistanceKm(perRepDuration, paceSecPerKm) || estimateDistanceFromFallback(perRepDuration, "rep");
+          : estimateDistanceKm(perRepDuration, effectivePaceSecPerKm) || estimateDistanceFromFallback(perRepDuration, "rep");
 
       const repIntensity =
         sport === "running"
           ? classifyRunningBlockIntensity({
               type: "interval",
               zone: raw.zone,
-              paceSecPerKm,
+              paceSecPerKm: effectivePaceSecPerKm,
               distanceM: distanceKm * 1000,
               durationSec: perRepDuration * 60,
               references: refResolution.refs,
@@ -298,14 +317,14 @@ export function buildWorkoutSegments(
     const segDistance =
       distanceKm > 0
         ? distanceKm * repetitions
-        : estimateDistanceKm(segDuration, paceSecPerKm) || estimateDistanceFromFallback(segDuration, kind);
+        : estimateDistanceKm(segDuration, effectivePaceSecPerKm) || estimateDistanceFromFallback(segDuration, kind);
 
     const steadyIntensity =
       sport === "running"
         ? classifyRunningBlockIntensity({
             type: kind,
             zone: raw.zone,
-            paceSecPerKm,
+            paceSecPerKm: effectivePaceSecPerKm,
             distanceM: distanceKm * 1000,
             durationSec: segDuration * 60,
             references: refResolution.refs,
@@ -324,7 +343,7 @@ export function buildWorkoutSegments(
         color: zoneToColorToken(steadyIntensity.zone),
         intensitySource: steadyIntensity.source,
         repeatCount: repetitions > 1 ? repetitions : undefined,
-        visualStyle: isPyramid ? "pyramid" : "default",
+        visualStyle: isPyramid ? "pyramid" : isProgressif ? "progressif" : isDegressif ? "degressif" : "default",
       });
       continue;
     }
@@ -338,7 +357,7 @@ export function buildWorkoutSegments(
       color: zoneToColorToken(steadyIntensity.zone),
       intensitySource: steadyIntensity.source,
       repeatCount: repetitions > 1 ? repetitions : undefined,
-      visualStyle: isPyramid ? "pyramid" : "default",
+      visualStyle: isPyramid ? "pyramid" : isProgressif ? "progressif" : isDegressif ? "degressif" : "default",
     });
   }
 
@@ -417,6 +436,20 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
           durationMin: seg.durationMin / steps.length,
           distanceKm: seg.distanceKm / steps.length,
           intensityBand: ratio > 0.88 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
+          repeatCount: undefined,
+        });
+      });
+      continue;
+    }
+    if (seg.visualStyle === "progressif" || seg.visualStyle === "degressif") {
+      // Bloc unique en rampe pour un rendu "gros bloc progressif/dégressif" sur le schéma.
+      const steps = seg.visualStyle === "progressif" ? [0.45, 0.62, 0.8, 1] : [1, 0.8, 0.62, 0.45];
+      steps.forEach((ratio) => {
+        expanded.push({
+          ...seg,
+          durationMin: seg.durationMin / steps.length,
+          distanceKm: seg.distanceKm / steps.length,
+          intensityBand: ratio > 0.9 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
           repeatCount: undefined,
         });
       });
