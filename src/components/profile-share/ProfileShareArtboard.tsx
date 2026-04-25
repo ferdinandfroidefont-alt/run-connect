@@ -297,7 +297,7 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               src={profileShareCardV3}
               alt=""
               crossOrigin="anonymous"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0, background: '#f5efe6', borderTopLeftRadius: 36, borderTopRightRadius: 36 }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0, background: '#f5efe6', borderTopLeftRadius: 48, borderTopRightRadius: 48 }}
             />
 
             {/* Avatar — grand cercle centré avec anneau blanc épais + contour bleu vif */}
