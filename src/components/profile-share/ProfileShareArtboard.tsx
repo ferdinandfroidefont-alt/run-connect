@@ -289,6 +289,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               height: 1024,
               transform: 'translate(-50%, -50%)',
               zIndex: 0,
+              background: '#ffffff',
+              borderRadius: 36,
             }}
           >
             <img
