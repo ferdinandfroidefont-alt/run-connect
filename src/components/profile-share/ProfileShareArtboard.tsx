@@ -575,8 +575,8 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               <p
                 style={{
                   margin: 0,
-                  marginRight: -28,
-                  textAlign: 'right',
+                  width: 144,
+                  textAlign: 'center',
                   fontSize: 16,
                   fontWeight: 500,
                   color: 'rgba(255,255,255,0.95)',
