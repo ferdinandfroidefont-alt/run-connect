@@ -1,7 +1,7 @@
 import { PROFILE_SPORT_LABELS, type ProfileSportKey } from '@/lib/profileSports';
 import { formatProfileShareLocationRow } from '@/lib/countryLabels';
 
-export type ProfileShareTemplateId = 'light_card' | 'organizer_focus' | 'minimal_story' | 'generated_card' | 'map_overlay_card';
+export type ProfileShareTemplateId = 'light_card' | 'map_card';
 
 export interface ProfileSharePayload {
   displayName: string;
@@ -29,8 +29,7 @@ export interface ProfileSharePayload {
   qrDataUrl: string | null;
 }
 
-export function templateDimensions(id: ProfileShareTemplateId): { w: number; h: number } {
-  if (id === 'minimal_story') return { w: 1080, h: 1920 };
+export function templateDimensions(_id: ProfileShareTemplateId): { w: number; h: number } {
   return { w: 1080, h: 1080 };
 }
 

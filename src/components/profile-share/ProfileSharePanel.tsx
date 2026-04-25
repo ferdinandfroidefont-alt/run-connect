@@ -6,7 +6,7 @@ import { fetchProfileSharePayload } from '@/lib/fetchProfileShareData';
 import type { ProfileSharePayload } from '@/lib/profileSharePayload';
 import { ProfileShareArtboard } from './ProfileShareArtboard';
 
-type CardVariant = 'v1' | 'v2' | 'v3' | 'v4' | 'v5';
+type CardVariant = 'v1' | 'v2';
 
 type Props = {
   active?: boolean;
@@ -41,10 +41,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
 
   const templateFromVariant = (value: CardVariant) => {
     if (value === 'v1') return 'light_card' as const;
-    if (value === 'v2') return 'organizer_focus' as const;
-    if (value === 'v3') return 'minimal_story' as const;
-    if (value === 'v4') return 'generated_card' as const;
-    return 'map_overlay_card' as const;
+    return 'map_card' as const;
   };
 
   useEffect(() => {
@@ -64,9 +61,8 @@ export function ProfileSharePanel({ compact = false }: Props) {
 
   const previewScale = useMemo(() => {
     if (!previewFrameSize) return 1;
-    const baseHeight = variant === 'v3' ? 1920 : 1080;
-    return previewFrameSize / baseHeight;
-  }, [previewFrameSize, variant]);
+    return previewFrameSize / 1080;
+  }, [previewFrameSize]);
 
   return (
     <div className="min-w-0 max-w-full">
@@ -82,7 +78,7 @@ export function ProfileSharePanel({ compact = false }: Props) {
                   <div
                     style={{
                       width: 1080,
-                      height: variant === 'v3' ? 1920 : 1080,
+                      height: 1080,
                       transform: `scale(${previewScale})`,
                       transformOrigin: 'center center',
                     }}
@@ -101,9 +97,6 @@ export function ProfileSharePanel({ compact = false }: Props) {
             {([
               { id: 'v1' as const, label: 'Carte 1' },
               { id: 'v2' as const, label: 'Carte 2' },
-              { id: 'v3' as const, label: 'Carte 3' },
-              { id: 'v4' as const, label: 'Carte 4' },
-              { id: 'v5' as const, label: 'Carte 5' },
             ]).map((opt) => (
               <button
                 key={opt.id}

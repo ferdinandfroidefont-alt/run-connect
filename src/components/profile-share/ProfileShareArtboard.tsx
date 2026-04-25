@@ -1,36 +1,18 @@
 import { forwardRef } from 'react';
 import {
-  Activity,
   Calendar,
   Footprints,
   MapPin,
-  Timer,
   UserPlus,
   Users,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import type { ProfileSharePayload, ProfileShareTemplateId } from '@/lib/profileSharePayload';
 import { templateDimensions } from '@/lib/profileSharePayload';
 import { ShareMapBackdropImg } from '@/components/share/ShareMapBackdropImg';
-import profileShareCardV2 from '@/assets/profile-share-card-v2.png';
 import profileShareCardV3 from '@/assets/profile-share-card-v3.png';
-import { PROFILE_SPORT_LABELS } from '@/lib/profileSports';
 
-const RC = '#2563eb';
 /** Bleu principal carte claire — plus proche de la maquette (#0055FF / #0066FF). */
 const RC_LIGHT = '#0066ff';
-
-function sportIconFromLabel(label: string) {
-  const normalized = label.trim().toLowerCase();
-  const match = Object.values(PROFILE_SPORT_LABELS).find((entry) => entry.label.toLowerCase() === normalized);
-  const key = match?.label.toLowerCase();
-  if (key?.includes('cycl')) return Activity;
-  if (key?.includes('nat')) return Activity;
-  if (key?.includes('triathlon')) return Timer;
-  if (key?.includes('marche')) return Footprints;
-  if (key?.includes('trail')) return Footprints;
-  return Footprints;
-}
 
 /** Badge vérifié style dentelé (comme Twitter/X) — bleu avec coche blanche */
 function VerifiedPremiumBadge({ compact, size }: { compact?: boolean; size?: number }) {
@@ -62,37 +44,6 @@ function RunConnectPinIcon({ size = 44, color = RC_LIGHT }: { size?: number; col
       <path d="M13.5 10.5c-2.5 2.8-4 6.5-4 10.5" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.5" />
       <path d="M10.5 7.5c-3.2 3.8-5 8.7-5 14" stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
     </svg>
-  );
-}
-
-function AvatarRing({
-  avatarUrl,
-  initials,
-  size,
-}: {
-  avatarUrl: string | null;
-  initials: string;
-  size: number;
-}) {
-  return (
-    <div
-      className="flex items-center justify-center overflow-hidden rounded-full border-[5px] border-white shadow-xl"
-      style={{
-        width: size,
-        height: size,
-        background: '#e2e8f0',
-        boxShadow: `0 12px 40px rgba(37,99,235,0.22)`,
-        borderColor: '#fff',
-      }}
-    >
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="" crossOrigin="anonymous" className="h-full w-full object-cover" />
-      ) : (
-        <span className="font-bold text-slate-600" style={{ fontSize: size * 0.28 }}>
-          {initials}
-        </span>
-      )}
-    </div>
   );
 }
 
@@ -143,41 +94,6 @@ function LightCardAvatarRing({
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/** Une stat : chiffre au-dessus, libellé court en dessous — templates sombres. */
-function StatQuad({ value, label }: { value: number | string; label: string }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-slate-200/90 bg-white/90 px-1 py-2.5 text-center shadow-sm">
-      <span className="text-[30px] font-bold leading-none tabular-nums" style={{ color: RC }}>
-        {value}
-      </span>
-      <span className="mt-1.5 max-w-[100%] px-0.5 text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-600">
-        {label}
-      </span>
-    </div>
-  );
-}
-
-function RunConnectBrandHeader({ dark = false, large = false }: { dark?: boolean; large?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <img
-        src="/brand/runconnect-splash-icon.png"
-        alt=""
-        className={cn('shrink-0 drop-shadow-sm', large ? 'h-11 w-11' : 'h-9 w-9')}
-      />
-      <span
-        className={cn(
-          'font-bold tracking-tight',
-          large ? 'text-[21px]' : 'text-[18px]',
-          dark ? 'text-white' : 'text-slate-900',
-        )}
-      >
-        RunConnect
-      </span>
     </div>
   );
 }
@@ -345,11 +261,13 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
   function ProfileShareArtboard({ payload, templateId }, ref) {
     const { w, h } = templateDimensions(templateId);
     const presence = payload.presenceRate != null ? `${payload.presenceRate}%` : null;
-    const ctaText = 'Ajoute-moi sur RunConnect';
-    const SportIcon = sportIconFromLabel(payload.sportLabel);
+    const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
 
-    if (templateId === 'generated_card') {
-      const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+    if (templateId === 'map_card') {
+      // Carte 2 — reproduction pixel par pixel de la maquette fournie par le produit.
+      // Fond : profile-share-card-v3.png (carte claire avec header « RunConnect » haut-gauche
+      // et bandeau bleu bas déjà intégrés). On superpose le reste du contenu en positionnement
+      // absolu dans un wrapper interne 1024x1024 centré dans l'artboard 1080x1080.
       return (
         <div
           ref={ref}
@@ -362,98 +280,17 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             background: '#ffffff',
           }}
         >
-          {/* Wrapper interne 1024x1024 (taille native du PNG) centré dans l'artboard 1080x1080 */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 1024, height: 1024, transform: 'translate(-50%, -50%)', zIndex: 0 }}>
-          <img
-            src={profileShareCardV2}
-            alt=""
-            crossOrigin="anonymous"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0 }}
-          />
-
-          <div style={{ position: 'absolute', top: 146, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-            <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={120} />
-          </div>
-
-          <div style={{ position: 'absolute', top: 325, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 90px' }}>
-            <h1 style={{ fontSize: 54, fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.02, textAlign: 'center' }}>
-              {payload.displayName}
-            </h1>
-            {payload.isPremium ? <VerifiedPremiumBadge size={38} /> : null}
-          </div>
-
-          <p style={{ position: 'absolute', top: 390, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 24, color: '#6B7280', margin: 0 }}>
-            @{payload.username}
-          </p>
-
-          <div style={{ position: 'absolute', top: 442, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '0 70px' }}>
-            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', borderRadius: 999, background: '#DBEAFE', padding: '10px 22px', boxShadow: '0 4px 14px rgba(37,99,235,0.08)' }}>
-              <span style={{ fontSize: 19, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.2 }}>{payload.roleLinePrimary}</span>
-              {payload.roleLineSecondary ? (
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1D4ED8', opacity: 0.9, lineHeight: 1.25, marginTop: 2 }}>{payload.roleLineSecondary}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <div style={{ position: 'absolute', top: 530, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 19, color: '#1f2937', fontWeight: 600 }}>
-              <MapPin style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
-              {payload.locationLine}
-              <span style={{ display: 'inline-block', width: 1, height: 20, background: '#cbd5e1', margin: '0 8px' }} />
-              <SportIcon style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
-              {payload.sportLabel}
-            </span>
-          </div>
-
-          <div style={{ position: 'absolute', top: 586, left: 54, right: 54, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            {[
-              { icon: Calendar, value: payload.sessionsCreated, label: 'Séances créées' },
-              { icon: Users, value: payload.sessionsJoined, label: 'Séances rejointes' },
-              { icon: Users, value: payload.followersCount, label: 'Abonnés' },
-              { icon: UserPlus, value: payload.followingCount, label: 'Abonnements' },
-            ].map((s) => (
-              <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '14px 8px', borderRadius: 18, background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(226,232,240,0.8)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
-                <s.icon style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.25} />
-                <span style={{ fontSize: 34, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
-                <span style={{ marginTop: 2, fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b', textAlign: 'center' }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {presence ? (
-            <div style={{ position: 'absolute', top: 762, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '9px 22px', borderRadius: 999, background: 'rgba(248,250,252,0.92)', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15,23,42,0.05)' }}>
-                <Users style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.3} />
-                <span style={{ fontSize: 18, fontWeight: 700, color: '#1D4ED8' }}>{presence} présence</span>
-              </div>
-            </div>
-          ) : null}
-
-          <div style={{ position: 'absolute', right: 58, bottom: 60, width: 150, height: 72, borderRadius: 18, zIndex: 2, background: 'linear-gradient(130deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.07) 100%)', border: '1px solid rgba(255,255,255,0.24)' }} />
-          <div style={{ position: 'absolute', right: 198, bottom: 90, width: 9, height: 9, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
-          <div style={{ position: 'absolute', right: 180, bottom: 74, width: 6, height: 6, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.35)' }} />
-          <div style={{ position: 'absolute', right: 228, bottom: 62, width: 4, height: 4, borderRadius: '50%', zIndex: 2, background: 'rgba(255,255,255,0.28)' }} />
-          </div>
-        </div>
-      );
-    }
-
-    if (templateId === 'map_overlay_card') {
-      const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
-      return (
-        <div
-          ref={ref}
-          style={{
-            position: 'relative',
-            width: w,
-            height: h,
-            overflow: 'hidden',
-            fontFamily: fontStack,
-            background: '#ffffff',
-          }}
-        >
-          {/* Wrapper interne 1024x1024 (taille native du PNG) centré dans 1080x1080 */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 1024, height: 1024, transform: 'translate(-50%, -50%)', zIndex: 0 }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 1024,
+              height: 1024,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 0,
+            }}
+          >
             <img
               src={profileShareCardV3}
               alt=""
@@ -461,226 +298,297 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0 }}
             />
 
-            {/* Avatar */}
-            <div style={{ position: 'absolute', top: 150, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
-              <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={120} />
+            {/* Avatar — grand cercle centré avec anneau blanc épais + contour bleu vif */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 42,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 2,
+              }}
+            >
+              <LightCardAvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} innerSize={246} />
             </div>
 
-            {/* Nom + badge */}
-            <div style={{ position: 'absolute', top: 295, left: 0, right: 0, zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '0 90px' }}>
-              <h1 style={{ fontSize: 48, fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.02, textAlign: 'center' }}>
+            {/* Nom + badge vérifié */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 328,
+                left: 0,
+                right: 0,
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 18,
+                padding: '0 60px',
+              }}
+            >
+              <h1
+                style={{
+                  fontSize: 82,
+                  fontWeight: 800,
+                  color: '#0f172a',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1,
+                  textAlign: 'center',
+                }}
+              >
                 {payload.displayName}
               </h1>
-              {payload.isPremium ? <VerifiedPremiumBadge size={34} /> : null}
+              {payload.isPremium ? <VerifiedPremiumBadge size={52} /> : null}
             </div>
 
             {/* Username */}
-            <p style={{ position: 'absolute', top: 360, left: 0, right: 0, zIndex: 2, textAlign: 'center', fontSize: 22, color: '#6B7280', margin: 0 }}>
+            <p
+              style={{
+                position: 'absolute',
+                top: 418,
+                left: 0,
+                right: 0,
+                zIndex: 2,
+                textAlign: 'center',
+                fontSize: 30,
+                color: '#9CA3AF',
+                margin: 0,
+                fontWeight: 500,
+              }}
+            >
               @{payload.username}
             </p>
 
-            {/* Pill rôle */}
-            <div style={{ position: 'absolute', top: 410, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center', padding: '0 70px' }}>
-              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', borderRadius: 999, background: '#DBEAFE', padding: '10px 22px', boxShadow: '0 4px 14px rgba(37,99,235,0.08)' }}>
-                <span style={{ fontSize: 19, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.2 }}>{payload.roleLinePrimary}</span>
-                {payload.roleLineSecondary ? (
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1D4ED8', opacity: 0.9, lineHeight: 1.25, marginTop: 2 }}>{payload.roleLineSecondary}</span>
-                ) : null}
+            {/* Pill rôle : icône Users à gauche, texte principal + sous-texte à droite */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 468,
+                left: 0,
+                right: 0,
+                zIndex: 2,
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '0 70px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderRadius: 999,
+                  background: '#DBEAFE',
+                  padding: '13px 28px',
+                  boxShadow: '0 4px 14px rgba(37,99,235,0.10)',
+                }}
+              >
+                <Users style={{ width: 30, height: 30, color: RC_LIGHT, flexShrink: 0 }} strokeWidth={2.3} />
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ fontSize: 26, fontWeight: 700, color: '#1D4ED8', lineHeight: 1.15 }}>
+                    {payload.roleLinePrimary}
+                  </span>
+                  {payload.roleLineSecondary ? (
+                    <span style={{ fontSize: 18, fontWeight: 500, color: '#1E40AF', opacity: 0.95, lineHeight: 1.25, marginTop: 2 }}>
+                      {payload.roleLineSecondary}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
 
-            {/* Ligne infos : ville | sport */}
-            <div style={{ position: 'absolute', top: 490, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, fontSize: 19, color: '#1f2937', fontWeight: 600 }}>
-                <MapPin style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
+            {/* Ligne infos : ville, drapeau | sport */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 565,
+                left: 0,
+                right: 0,
+                zIndex: 2,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  fontSize: 28,
+                  color: '#1f2937',
+                  fontWeight: 600,
+                }}
+              >
+                <MapPin style={{ width: 28, height: 28, color: RC_LIGHT }} strokeWidth={2.3} />
                 {payload.locationLine}
-                <span style={{ display: 'inline-block', width: 1, height: 20, background: '#cbd5e1', margin: '0 8px' }} />
-                <SportIcon style={{ width: 21, height: 21, color: '#0f172a' }} strokeWidth={2.3} />
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 1,
+                    height: 28,
+                    background: '#cbd5e1',
+                    margin: '0 14px',
+                  }}
+                />
+                <Footprints style={{ width: 28, height: 28, color: RC_LIGHT }} strokeWidth={2.3} />
                 {payload.sportLabel}
               </span>
             </div>
 
-            {/* Stats (4 cartes) */}
-            <div style={{ position: 'absolute', top: 545, left: 54, right: 54, zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {/* Stats (4 cartes blanches alignées) */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 618,
+                left: 60,
+                right: 60,
+                zIndex: 2,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 14,
+              }}
+            >
               {[
                 { icon: Calendar, value: payload.sessionsCreated, label: 'Séances créées' },
                 { icon: Users, value: payload.sessionsJoined, label: 'Séances rejointes' },
                 { icon: Users, value: payload.followersCount, label: 'Abonnés' },
                 { icon: UserPlus, value: payload.followingCount, label: 'Abonnements' },
               ].map((s) => (
-                <div key={s.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '14px 8px', borderRadius: 18, background: '#ffffff', border: '1px solid rgba(226,232,240,0.9)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
-                  <s.icon style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.25} />
-                  <span style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</span>
-                  <span style={{ marginTop: 2, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b', textAlign: 'center' }}>{s.label}</span>
+                <div
+                  key={s.label}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    padding: '16px 6px',
+                    borderRadius: 18,
+                    background: '#ffffff',
+                    border: '1px solid rgba(226,232,240,0.95)',
+                    boxShadow: '0 8px 22px rgba(15,23,42,0.08)',
+                    minHeight: 140,
+                  }}
+                >
+                  <s.icon style={{ width: 30, height: 30, color: RC_LIGHT }} strokeWidth={2.3} />
+                  <span
+                    style={{
+                      fontSize: 56,
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      lineHeight: 1,
+                      fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {s.value}
+                  </span>
+                  <span
+                    style={{
+                      marginTop: 2,
+                      fontSize: 17,
+                      fontWeight: 500,
+                      color: '#64748b',
+                      textAlign: 'center',
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    {s.label}
+                  </span>
                 </div>
               ))}
             </div>
 
-            {/* Pill présence */}
+            {/* Pill présence (blanche, flottante juste au-dessus du bandeau bleu) */}
             {presence ? (
-              <div style={{ position: 'absolute', top: 720, left: 0, right: 0, zIndex: 2, display: 'flex', justifyContent: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '9px 22px', borderRadius: 999, background: 'rgba(248,250,252,0.95)', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15,23,42,0.05)' }}>
-                  <Users style={{ width: 20, height: 20, color: RC_LIGHT }} strokeWidth={2.3} />
-                  <span style={{ fontSize: 18, fontWeight: 700, color: '#1D4ED8' }}>{presence} présence</span>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 772,
+                  left: 0,
+                  right: 0,
+                  zIndex: 3,
+                  display: 'flex',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '9px 24px',
+                    borderRadius: 999,
+                    background: '#ffffff',
+                    border: '1px solid rgba(226,232,240,0.95)',
+                    boxShadow: '0 6px 18px rgba(15,23,42,0.08)',
+                  }}
+                >
+                  <Users style={{ width: 24, height: 24, color: RC_LIGHT }} strokeWidth={2.3} />
+                  <span style={{ fontSize: 22, fontWeight: 700, color: '#1D4ED8' }}>
+                    {presence} présence
+                  </span>
                 </div>
               </div>
             ) : null}
-            {/* Bandeau bleu inférieur déjà présent dans le PNG — pas d'overlay (zone 820 → 1024) */}
-          </div>
-        </div>
-      );
-    }
 
-    if (templateId === 'organizer_focus') {
-      return (
-        <div
-          ref={ref}
-          className="relative flex flex-col overflow-hidden"
-          style={{
-            width: w,
-            height: h,
-            background: 'linear-gradient(165deg, #0f172a 0%, #020617 55%, #0b1220 100%)',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          }}
-        >
-          <ShareMapBackdropImg
-            mapUrl={payload.mapBackgroundUrl}
-            className="pointer-events-none absolute left-0 top-0 h-full w-full object-cover"
-            style={{ zIndex: 0 }}
-          />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              zIndex: 1,
-              background:
-                'linear-gradient(to bottom, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.72) 40%, rgba(255,255,255,0.45) 70%, rgba(255,255,255,0.18) 100%)',
-            }}
-          />
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.08]"
-            style={{
-              zIndex: 2,
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60 L60 0' stroke='%23fff' stroke-width='0.5' fill='none'/%3E%3C/svg%3E")`,
-              backgroundSize: '48px 48px',
-            }}
-          />
-          <div className="relative z-[2] flex items-start justify-between px-10 pt-8">
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-400">Profil organisateur</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h1 className="text-balance text-[44px] font-bold leading-tight text-white">{payload.displayName}</h1>
-                {payload.isPremium ? <VerifiedPremiumBadge /> : null}
-              </div>
-              <p className="mt-1 text-[19px] text-slate-400">@{payload.username}</p>
-            </div>
-            <RunConnectBrandHeader dark />
-          </div>
-
-          <div className="relative z-[2] mt-5 flex justify-center">
-            <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={148} />
-          </div>
-
-          <div className="relative z-[2] mt-6 px-10">
+            {/* QR code superposé sur le bandeau bleu (déjà présent dans le PNG) */}
             <div
-              className="inline-flex flex-col items-start rounded-full px-5 py-2.5 text-left text-[15px] font-semibold text-white"
-              style={{ background: RC }}
+              style={{
+                position: 'absolute',
+                right: 56,
+                bottom: 26,
+                zIndex: 3,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 4,
+              }}
             >
-              <span>{payload.roleLinePrimary}</span>
-              {payload.roleLineSecondary ? (
-                <span className="mt-0.5 text-[12px] font-medium text-white/90">{payload.roleLineSecondary}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="relative z-[2] mt-6 grid grid-cols-4 gap-2 px-10">
-            <StatQuad value={payload.sessionsCreated} label="Séances créées" />
-            <StatQuad value={payload.sessionsJoined} label="Séances rejointes" />
-            <StatQuad value={payload.followersCount} label="Abonnés" />
-            <StatQuad value={payload.followingCount} label="Abonnements" />
-          </div>
-
-          <div className="relative z-[2] mt-5 space-y-3 px-10">
-            {[
-              { icon: MapPin, text: payload.locationLine },
-              { icon: Activity, text: payload.sportLabel },
-              ...(presence ? [{ icon: Timer, text: `${presence} présence` }] : []),
-            ].map((row, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-xl bg-slate-800/80 px-4 py-3">
-                <row.icon className="h-6 w-6 shrink-0" style={{ color: RC }} />
-                <span className="text-[18px] font-semibold text-white">{row.text}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="relative z-[2] mt-auto px-10 pb-10 pt-6">
-            <div className="rounded-2xl bg-black px-6 py-4 text-white">
-              <p className="text-center text-[16px] font-semibold">{ctaText}</p>
-              <p className="mt-1 text-center text-[12px] text-slate-400">{payload.publicUrlDisplay}</p>
+              {payload.qrDataUrl ? (
+                <img
+                  src={payload.qrDataUrl}
+                  alt=""
+                  style={{
+                    width: 164,
+                    height: 164,
+                    borderRadius: 8,
+                    background: '#ffffff',
+                    padding: 6,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 164,
+                    height: 164,
+                    borderRadius: 8,
+                    border: '3px solid rgba(255,255,255,0.6)',
+                    background: 'rgba(255,255,255,0.12)',
+                  }}
+                />
+              )}
+              <p
+                style={{
+                  margin: 0,
+                  textAlign: 'right',
+                  fontSize: 16,
+                  fontWeight: 500,
+                  color: 'rgba(255,255,255,0.95)',
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                {payload.publicUrlDisplay}
+              </p>
             </div>
           </div>
         </div>
       );
     }
 
-    if (templateId === 'minimal_story') {
-      return (
-        <div
-          ref={ref}
-          className="relative flex flex-col overflow-hidden"
-          style={{
-            width: w,
-            height: h,
-            background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 40%, #020617 100%)',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-          }}
-        >
-          <div className="flex items-start justify-end px-10 pt-10">
-            <RunConnectBrandHeader dark />
-          </div>
-          <div className="flex flex-col items-center px-10 pt-4">
-            <AvatarRing avatarUrl={payload.avatarUrl} initials={payload.initials} size={168} />
-            <div className="mt-5 flex items-center gap-2">
-              <h1 className="text-center text-[48px] font-bold leading-none text-white">{payload.displayName}</h1>
-              {payload.isPremium ? <VerifiedPremiumBadge /> : null}
-            </div>
-            <p className="mt-2 text-[21px] text-slate-400">@{payload.username}</p>
-            <div
-              className="mt-4 inline-flex flex-col items-center rounded-full px-5 py-2 text-center text-[15px] font-semibold text-white"
-              style={{ background: RC }}
-            >
-              <span>{payload.roleLinePrimary}</span>
-              {payload.roleLineSecondary ? (
-                <span className="mt-0.5 text-[12px] font-medium text-white/90">{payload.roleLineSecondary}</span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-10 grid grid-cols-4 gap-2 px-10">
-            <StatQuad value={payload.sessionsCreated} label="Créées" />
-            <StatQuad value={payload.sessionsJoined} label="Rejointes" />
-            <StatQuad value={payload.followersCount} label="Abonnés" />
-            <StatQuad value={payload.followingCount} label="Abonnements" />
-          </div>
-
-          {presence ? (
-            <p className="mt-8 px-12 text-center text-[28px] font-semibold text-white">
-              {presence} <span className="text-slate-400">présence</span>
-            </p>
-          ) : null}
-
-          <div className="mt-auto px-8 pb-14 pt-10">
-            <div className="rounded-3xl px-8 py-6 text-center text-white" style={{ background: 'rgba(37,99,235,0.92)' }}>
-              <p className="text-[20px] font-bold">{ctaText}</p>
-              <p className="mt-2 text-[14px] text-white/90">{payload.publicUrlDisplay}</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // light_card — 1080×1080, aligné maquette partage
-    const fontStack = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
-
+    // light_card — 1080×1080, aligné maquette partage (Carte 1, inchangée)
     return (
       <div
         ref={ref}

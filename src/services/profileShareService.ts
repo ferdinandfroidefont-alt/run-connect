@@ -62,14 +62,12 @@ export async function generateProfileShareImage(
   templateId: ProfileShareTemplateId
 ): Promise<string> {
   const { w, h } = templateDimensions(templateId);
-  const bg =
-    templateId === 'organizer_focus' ? '#0b1220' : templateId === 'minimal_story' ? '#0f172a' : '#ffffff';
   return toPng(element, {
     width: w,
     height: h,
     pixelRatio: 1,
     cacheBust: true,
-    backgroundColor: bg,
+    backgroundColor: '#ffffff',
   });
 }
 

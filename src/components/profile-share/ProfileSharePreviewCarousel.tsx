@@ -9,11 +9,8 @@ import { ProfileShareTemplateCard } from './ProfileShareTemplateCard';
 import { ProfileSharePaginationDots } from './ProfileSharePaginationDots';
 
 const META: { id: ProfileShareTemplateId; label: string }[] = [
-  { id: 'light_card', label: 'Carte claire' },
-  { id: 'organizer_focus', label: 'Organisateur' },
-  { id: 'minimal_story', label: 'Story minimal' },
-  { id: 'generated_card', label: 'Carte 4' },
-  { id: 'map_overlay_card', label: 'Carte 5' },
+  { id: 'light_card', label: 'Carte 1' },
+  { id: 'map_card', label: 'Carte 2' },
 ];
 
 type Props = {
