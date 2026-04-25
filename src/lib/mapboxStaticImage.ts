@@ -1,26 +1,20 @@
 import { getMapboxAccessToken } from '@/lib/mapboxConfig';
-import { getHomeMapboxStyleUrl } from '@/lib/mapboxMapStylePreference';
 
 export type MapboxStaticPoint = { lat: number; lng: number };
 
 const STYLE_LIGHT = 'mapbox/light-v11';
-const STATIC_STYLE_FALLBACK = 'mapbox/streets-v12';
-
-function getSessionShareStaticStyleId(): string {
-  const styleUrl = getHomeMapboxStyleUrl();
-  const match = styleUrl.match(/^mapbox:\/\/styles\/([^/]+)\/([^/?#]+)$/);
-  if (!match) return STATIC_STYLE_FALLBACK;
-
-  const owner = match[1];
-  const styleId = match[2];
-
-  if (!owner || !styleId || styleId === 'standard') return STATIC_STYLE_FALLBACK;
-  return `${owner}/${styleId}`;
-}
 
 /**
- * Image statique Mapbox alignée visuellement sur la MiniMap du Feed.
- * Même style, même zoom, centrée sur le lieu ; le pin est rendu en React.
+ * Style coloré rues/parcs/eau utilisé pour le partage de séance.
+ * Identique à la maquette produit (gris clair + parcs verts + rivières bleues).
+ * On force ce style indépendamment des préférences utilisateur pour garantir
+ * un rendu cohérent et photogénique de la carte de partage.
+ */
+const SESSION_SHARE_MAP_STYLE = 'mapbox/streets-v12';
+
+/**
+ * Image statique Mapbox réelle, centrée sur la localisation de la séance.
+ * Le pin est rendu en React par-dessus (style "rc-session-pin" — voir SessionShareArtboard).
  */
 export function buildSessionStaticMapUrl(options: {
   routePath: MapboxStaticPoint[];
@@ -33,9 +27,10 @@ export function buildSessionStaticMapUrl(options: {
   if (!token) return null;
 
   const { pin, width, height } = options;
-  const staticStyle = getSessionShareStaticStyleId();
-  const zoom = 12;
-  const path = `/styles/v1/${staticStyle}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
+  // Zoom 13 → on voit le quartier autour du pin (rues, parcs, points de repère)
+  // tout en gardant les libellés (parcs, rivières) lisibles, comme sur la maquette.
+  const zoom = 13;
+  const path = `/styles/v1/${SESSION_SHARE_MAP_STYLE}/static/${pin.lng},${pin.lat},${zoom},0,0/${width}x${height}`;
   const params = new URLSearchParams({ access_token: token });
 
   return `https://api.mapbox.com${path}?${params.toString()}`;

@@ -429,6 +429,7 @@ export function renderWorkoutMiniProfile(
     meaningful.length === 1 &&
     meaningful[0].repeatCount == null &&
     meaningful[0].visualStyle !== "pyramid" &&
+    meaningful[0].visualStyle !== "variation" &&
     (meaningful[0].kind === "steady" || meaningful[0].kind === "warmup" || meaningful[0].kind === "cooldown")
   ) {
     const only = meaningful[0];

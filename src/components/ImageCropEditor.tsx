@@ -85,8 +85,8 @@ export const ImageCropEditor: React.FC<ImageCropEditorProps> = ({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
 
-    // Définir la taille du canvas à la taille finale souhaitée (200x200 px)
-    const targetSize = 200;
+    // Fichier servi en plein écran : ≥1024px pour rester net sur rétina (l’ancien 200px floutait à l’agrandissement)
+    const targetSize = 1024;
     canvas.width = targetSize;
     canvas.height = targetSize;
 
