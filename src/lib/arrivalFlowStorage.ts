@@ -4,6 +4,7 @@
  */
 
 export const ARRIVAL_PRIVACY_GATE_KEY = "runconnect-arrival-privacy-gate-v1";
+export const ARRIVAL_ONBOARDING_ENABLED = false;
 
 /** Par utilisateur : onboarding produit terminé. */
 export function onboardingCompletedKey(userId: string): string {
@@ -44,6 +45,7 @@ export function markPrivacyGateCompleted(): void {
 }
 
 export function hasCompletedOnboarding(userId: string | undefined): boolean {
+  if (!ARRIVAL_ONBOARDING_ENABLED) return true;
   if (!userId) return true;
   try {
     return localStorage.getItem(onboardingCompletedKey(userId)) === "1";

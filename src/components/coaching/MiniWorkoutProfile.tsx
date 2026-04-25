@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { MiniProfileBlock } from "@/lib/workoutVisualization";
+import type { PointerEvent as ReactPointerEvent } from "react";
 
 interface MiniWorkoutProfileProps {
   blocks?: MiniProfileBlock[];
@@ -15,6 +16,9 @@ interface MiniWorkoutProfileProps {
   zoneBandMode?: boolean;
   /** Espace entre barres (style Zwift), en px */
   interBlockGapPx?: number;
+  selectedBlockIndex?: number | null;
+  onBlockTap?: (params: { index: number; anchorX: number; anchorTop: number }) => void;
+  onBackgroundTap?: () => void;
 }
 
 function resolveBlockHeight(height: number, variant: MiniWorkoutProfileProps["variant"]): number {
@@ -32,6 +36,9 @@ export function MiniWorkoutProfile({
   barHeightScale = 1,
   zoneBandMode = false,
   interBlockGapPx,
+  selectedBlockIndex = null,
+  onBlockTap,
+  onBackgroundTap,
 }: MiniWorkoutProfileProps) {
   const profile = blocks?.length
     ? blocks
@@ -49,6 +56,24 @@ export function MiniWorkoutProfile({
 
   const showZoneBands = willUseZoneBands;
 
+  const handleBlockTap = (index: number, event: ReactPointerEvent<HTMLSpanElement>) => {
+    if (!onBlockTap) return;
+    const targetRect = event.currentTarget.getBoundingClientRect();
+    const parentRect = event.currentTarget.parentElement?.getBoundingClientRect();
+    if (!parentRect) return;
+    onBlockTap({
+      index,
+      anchorX: targetRect.left - parentRect.left + targetRect.width / 2,
+      anchorTop: targetRect.top - parentRect.top,
+    });
+  };
+
+  const handleBackgroundPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onBackgroundTap?.();
+    }
+  };
+
   const barRow = (
     <>
       {isRestDay ? (
@@ -62,9 +87,12 @@ export function MiniWorkoutProfile({
           return (
             <span
               key={`${index}-${block.width}-${block.height}-${block.zoneBandLevel ?? ""}`}
+              onPointerDown={(event) => handleBlockTap(index, event)}
               className={cn(
                 "min-w-0 shrink-0",
-                variant === "premiumCompact" ? "rounded-[2px]" : "rounded-full"
+                variant === "premiumCompact" ? "rounded-[2px]" : "rounded-full",
+                onBlockTap ? "cursor-pointer" : "",
+                selectedBlockIndex === index ? "ring-2 ring-white/95 ring-offset-1 ring-offset-[#2563EB]/60" : ""
               )}
               style={{
                 flexGrow: Math.max(block.width, 0.001),
@@ -108,6 +136,7 @@ export function MiniWorkoutProfile({
             "pt-1.5 pb-2.5",
             variant === "premiumCompact" ? "px-0.5" : "px-2"
           )}
+          onPointerDown={handleBackgroundPointerDown}
         >
           <div
             className="flex min-h-0 w-full flex-1 items-end"
@@ -130,6 +159,7 @@ export function MiniWorkoutProfile({
         compact ? (variant === "premiumCompact" ? "h-8" : "h-9") : variant === "premiumCompact" ? "h-12" : "h-10",
         className
       )}
+      onPointerDown={handleBackgroundPointerDown}
     >
       {barRow}
     </div>

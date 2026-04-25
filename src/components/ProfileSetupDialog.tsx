@@ -10,7 +10,7 @@ import { ImageCropEditor } from "@/components/ImageCropEditor";
 import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, User, Lock, FileText, Calendar, Eye, EyeOff, Globe } from "lucide-react";
+import { Camera, Loader2, User, Lock, FileText, Calendar, Eye, EyeOff, Globe, ChevronRight, Activity } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
@@ -77,7 +77,10 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [forceRenderKey, setForceRenderKey] = useState(0);
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
   const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
+  const [sportsDialogOpen, setSportsDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Nettoie les listeners file picker (annulation = pas d’événement change → évite le spinner bloqué). */
+  const endPhotoPickerSessionRef = useRef<(() => void) | null>(null);
   const { toast } = useToast();
   const { t, language, languageManuallySet, suggestLanguageFromCountry } = useLanguage();
 
@@ -580,6 +583,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   // Handler pour l'input React natif - méthode principale et fiable sur Android WebView
   const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('📸 [ProfileSetup] onChange input React déclenché');
+    endPhotoPickerSessionRef.current?.();
+    endPhotoPickerSessionRef.current = null;
     
     // ✅ NIVEAU 29: Retirer le flag de protection contre le reload
     (window as any).fileSelectionInProgress = false;
@@ -631,7 +636,39 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
     // Cela empêche main.tsx de recharger la page pendant la sélection de fichier
     (window as any).fileSelectionInProgress = true;
     
+    endPhotoPickerSessionRef.current?.();
+    endPhotoPickerSessionRef.current = null;
     setIsSelectingPhoto(true);
+
+    let focusTimeout: ReturnType<typeof setTimeout> | null = null;
+    const clearFocusTimeout = () => {
+      if (focusTimeout) {
+        clearTimeout(focusTimeout);
+        focusTimeout = null;
+      }
+    };
+    const cleanupListeners = () => {
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearFocusTimeout();
+      endPhotoPickerSessionRef.current = null;
+    };
+    const onWindowFocus = () => {
+      /* Annulation du sélecteur de fichiers : souvent pas d’onChange, mais retour focus sur la page. */
+      clearFocusTimeout();
+      focusTimeout = setTimeout(() => {
+        setIsSelectingPhoto(false);
+        sessionStorage.removeItem("photoSelectionInProgress");
+        cleanupListeners();
+      }, 250);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") onWindowFocus();
+    };
+    window.addEventListener("focus", onWindowFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    endPhotoPickerSessionRef.current = cleanupListeners;
+    
     fileInputRef.current?.click();
   };
 
@@ -822,41 +859,29 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
+                  <div className="ios-list-row-inset-sep" />
 
-              {/* Sports (multi) + pays */}
-              <div className="space-y-2">
-                <h3 className="px-4 text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('profileSetup.sectionSportsCountry')}
-                </h3>
-                <div className="overflow-hidden rounded-[10px] bg-card">
-                  <p className="border-b border-border px-4 py-2.5 text-[12px] leading-snug text-muted-foreground">
-                    {t('profileSetup.sportsPickHint')}
-                  </p>
-                  <p className="border-b border-border px-4 py-2 text-[12px] leading-snug text-muted-foreground">
-                    Sport favori et pays (facultatif)
-                  </p>
-                  <div className="px-2">
-                    {PROFILE_SPORT_KEYS.map((key) => (
-                      <label
-                        key={key}
-                        className="flex cursor-pointer items-center gap-3 border-b border-border/70 px-2 py-2.5 last:border-b-0 active:bg-secondary/40"
-                      >
-                        <Checkbox
-                          checked={selectedSports.includes(key)}
-                          onCheckedChange={() =>
-                            setSelectedSports((prev) =>
-                              prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-                            )
-                          }
-                          className="shrink-0"
-                        />
-                        <span className="text-[15px] text-foreground">{t(`profileSetup.sports.${key}`)}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="ios-list-row-inset-sep mx-4" />
+                  {/* Sports (ligne + popup) */}
+                  <button
+                    type="button"
+                    onClick={() => setSportsDialogOpen(true)}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left active:bg-secondary/30"
+                  >
+                    <div className="ios-list-row-icon bg-[#FF2D55]">
+                      <Activity className="h-[18px] w-[18px] text-white" />
+                    </div>
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[15px] ${selectedSports.length ? "text-foreground" : "text-muted-foreground"}`}
+                    >
+                      {selectedSports.length
+                        ? selectedSports.map((k) => t(`profileSetup.sports.${k}`)).join(" · ")
+                        : t("profileSetup.sportPlaceholder")}
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                  </button>
+                  <div className="ios-list-row-inset-sep" />
+
+                  {/* Pays */}
                   <div className="flex items-center gap-2.5 px-4 py-2.5">
                     <div className="ios-list-row-icon bg-[#30B0C7]">
                       <Globe className="h-[18px] w-[18px] text-white" />
@@ -868,8 +893,8 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                         void suggestLanguageFromCountry(v);
                       }}
                     >
-                      <SelectTrigger className="h-10 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0">
-                        <SelectValue placeholder={t('profileSetup.countryPlaceholder')} />
+                      <SelectTrigger className="h-10 min-w-0 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0">
+                        <SelectValue placeholder={t("profileSetup.countryPlaceholder")} />
                       </SelectTrigger>
                       <SelectContent className="max-h-[min(24rem,70dvh)]" sideOffset={6}>
                         {COUNTRY_CODES.map((code) => (
@@ -935,6 +960,54 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
               <p className="text-center text-[12px] leading-snug text-muted-foreground">{t('profileSetup.requiredFootnote')}</p>
             </form>
         </IosFixedPageHeaderShell>
+
+        {sportsDialogOpen && (
+          <div
+            className="fixed inset-0 z-[200] flex flex-col justify-end sm:justify-center sm:px-4"
+            role="dialog"
+            aria-modal
+            aria-labelledby="profile-setup-sports-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setSportsDialogOpen(false)}
+              aria-label={t("common.close")}
+            />
+            <div className="relative z-10 w-full max-h-[min(70dvh,32rem)] overflow-hidden rounded-t-2xl bg-card shadow-xl sm:mx-auto sm:max-w-lg sm:rounded-2xl">
+              <div className="border-b border-border px-4 py-3 text-center">
+                <p id="profile-setup-sports-title" className="text-[15px] font-semibold text-foreground">
+                  {t("profileSetup.sportsDialogTitle")}
+                </p>
+                <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{t("profileSetup.sportsPickHint")}</p>
+              </div>
+              <div className="max-h-[min(50dvh,22rem)] overflow-y-auto px-2">
+                {PROFILE_SPORT_KEYS.map((key) => (
+                  <label
+                    key={key}
+                    className="flex cursor-pointer items-center gap-3 border-b border-border/70 px-2 py-2.5 last:border-b-0 active:bg-secondary/40"
+                  >
+                    <Checkbox
+                      checked={selectedSports.includes(key)}
+                      onCheckedChange={() =>
+                        setSelectedSports((prev) =>
+                          prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+                        )
+                      }
+                      className="shrink-0"
+                    />
+                    <span className="text-[15px] text-foreground">{t(`profileSetup.sports.${key}`)}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <Button type="button" className="h-12 w-full rounded-ios-md" onClick={() => setSportsDialogOpen(false)}>
+                  {t("profileSetup.sportsDialogDone")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {preparingAvatarCrop && (
           <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">

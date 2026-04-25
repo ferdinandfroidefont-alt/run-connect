@@ -17,7 +17,9 @@ export interface WorkoutSegment {
   color?: string;
   intensitySource?: "coach_validated" | "athlete_record" | "auto_estimate" | "fallback";
   repeatCount?: number;
-  visualStyle?: "default" | "pyramid" | "progressif" | "degressif";
+  visualStyle?: "default" | "pyramid" | "variation";
+  progressiveStartZone?: ComputedZone;
+  progressiveEndZone?: ComputedZone;
 }
 
 export interface MiniProfileBlock {
@@ -220,8 +222,11 @@ export function buildWorkoutSegments(
         ? Math.max(1, Math.round((paceStartSecPerKm + paceEndSecPerKm) / 2))
         : paceStartSecPerKm || paceEndSecPerKm || null);
     const isPyramid = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Pyramid]"));
-    const isProgressif = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Progressif]"));
-    const isDegressif = Boolean(("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Dégressif]"));
+    const isVariation = Boolean(
+      ("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Variation]") ||
+        ("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Progressif]") ||
+        ("notes" in raw ? raw.notes : parsedRaw.notes)?.includes("[Dégressif]")
+    );
 
     if (raw.type === "interval") {
       const durationFromDistance =
@@ -331,6 +336,30 @@ export function buildWorkoutSegments(
             source: refResolution.source,
           })
         : { band: "endurance" as const, zone: "Z2" as const, source: "fallback" as const };
+    const progressiveStartZone =
+      sport === "running" && paceStartSecPerKm
+        ? classifyRunningBlockIntensity({
+            type: kind,
+            zone: raw.zone,
+            paceSecPerKm: paceStartSecPerKm,
+            distanceM: distanceKm * 1000,
+            durationSec: segDuration * 60,
+            references: refResolution.refs,
+            source: refResolution.source,
+          }).zone
+        : undefined;
+    const progressiveEndZone =
+      sport === "running" && paceEndSecPerKm
+        ? classifyRunningBlockIntensity({
+            type: kind,
+            zone: raw.zone,
+            paceSecPerKm: paceEndSecPerKm,
+            distanceM: distanceKm * 1000,
+            durationSec: segDuration * 60,
+            references: refResolution.refs,
+            source: refResolution.source,
+          }).zone
+        : undefined;
 
     const hasSteadyVolume = segDuration > 0 || segDistance > 0;
     if (!hasSteadyVolume) {
@@ -343,7 +372,9 @@ export function buildWorkoutSegments(
         color: zoneToColorToken(steadyIntensity.zone),
         intensitySource: steadyIntensity.source,
         repeatCount: repetitions > 1 ? repetitions : undefined,
-        visualStyle: isPyramid ? "pyramid" : isProgressif ? "progressif" : isDegressif ? "degressif" : "default",
+        visualStyle: isPyramid ? "pyramid" : isVariation ? "variation" : "default",
+        progressiveStartZone,
+        progressiveEndZone,
       });
       continue;
     }
@@ -357,7 +388,9 @@ export function buildWorkoutSegments(
       color: zoneToColorToken(steadyIntensity.zone),
       intensitySource: steadyIntensity.source,
       repeatCount: repetitions > 1 ? repetitions : undefined,
-      visualStyle: isPyramid ? "pyramid" : isProgressif ? "progressif" : isDegressif ? "degressif" : "default",
+      visualStyle: isPyramid ? "pyramid" : isVariation ? "variation" : "default",
+      progressiveStartZone,
+      progressiveEndZone,
     });
   }
 
@@ -441,15 +474,23 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
       });
       continue;
     }
-    if (seg.visualStyle === "progressif" || seg.visualStyle === "degressif") {
-      // Bloc unique en rampe pour un rendu "gros bloc progressif/dégressif" sur le schéma.
-      const steps = seg.visualStyle === "progressif" ? [0.45, 0.62, 0.8, 1] : [1, 0.8, 0.62, 0.45];
+    if (seg.visualStyle === "variation") {
+      // Bloc unique en rampe pour un rendu "variation" sur le schéma.
+      const startRank = zoneRank(seg.progressiveStartZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
+      const endRank = zoneRank(seg.progressiveEndZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
+      const increasing = endRank >= startRank;
+      const steps = increasing ? [0.45, 0.62, 0.8, 1] : [1, 0.8, 0.62, 0.45];
+      const startZone = seg.progressiveStartZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand);
+      const endZone = seg.progressiveEndZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand);
       steps.forEach((ratio) => {
+        const stepZone = interpolateZone(startZone, endZone, ratio);
         expanded.push({
           ...seg,
           durationMin: seg.durationMin / steps.length,
           distanceKm: seg.distanceKm / steps.length,
-          intensityBand: ratio > 0.9 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
+          computedZone: stepZone,
+          color: zoneToColorToken(stepZone),
+          intensityBand: bandForZone(stepZone),
           repeatCount: undefined,
         });
       });
@@ -497,6 +538,38 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
   }
 
   return expanded;
+}
+
+function zoneRank(zone: ComputedZone): number {
+  if (zone === "Z1") return 1;
+  if (zone === "Z2") return 2;
+  if (zone === "Z3") return 3;
+  if (zone === "Z4") return 4;
+  if (zone === "Z5") return 5;
+  return 6;
+}
+
+function rankToZone(rank: number): ComputedZone {
+  if (rank <= 1) return "Z1";
+  if (rank === 2) return "Z2";
+  if (rank === 3) return "Z3";
+  if (rank === 4) return "Z4";
+  if (rank === 5) return "Z5";
+  return "Z6";
+}
+
+function interpolateZone(start: ComputedZone, end: ComputedZone, ratio: number): ComputedZone {
+  const s = zoneRank(start);
+  const e = zoneRank(end);
+  const raw = s + (e - s) * Math.max(0, Math.min(1, ratio));
+  return rankToZone(Math.max(1, Math.min(6, Math.round(raw))));
+}
+
+function bandForZone(zone: ComputedZone): IntensityBand {
+  if (zone === "Z1") return "recovery";
+  if (zone === "Z2") return "endurance";
+  if (zone === "Z3") return "tempo";
+  return "interval";
 }
 
 function colorForZone(zone: ComputedZone): string {

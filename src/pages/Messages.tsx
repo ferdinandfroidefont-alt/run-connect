@@ -2027,19 +2027,85 @@ const Messages = () => {
     }
   }, [searchParams, setSearchParams]);
 
+  /** Rendu hors panneaux à transform (swipe onglets) : z-index au-dessus de la tab bar (z-110). */
+  const conversationDeleteDialogs = (
+    <>
+      <Dialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setConversationToDelete(null);
+        }}
+      >
+        <DialogContent className="max-w-md z-[150]" overlayClassName="z-[150]">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              {(conversationToDelete || selectedConversation)?.is_group
+                ? (conversationToDelete || selectedConversation)?.created_by === user?.id
+                  ? `Êtes-vous sûr de vouloir supprimer définitivement le club "${(conversationToDelete || selectedConversation)?.group_name}" ? Cette action est irréversible.`
+                  : `Êtes-vous sûr de vouloir quitter le club "${(conversationToDelete || selectedConversation)?.group_name}" ?`
+                : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${(conversationToDelete || selectedConversation)?.other_participant?.username || (conversationToDelete || selectedConversation)?.other_participant?.display_name} ? Tous les messages seront perdus.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-ios-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConversationToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={deleteConversation}>
+              {(conversationToDelete || selectedConversation)?.is_group &&
+              (conversationToDelete || selectedConversation)?.created_by !== user?.id
+                ? "Quitter"
+                : "Supprimer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent className="max-w-md z-[150]" overlayClassName="z-[150]">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer {selectedConversations.size} conversation(s) ? Cette action
+              est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-ios-2">
+            <Button variant="outline" onClick={() => setShowBulkDeleteDialog(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={bulkDeleteConversations}>
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
   if (showNewConversation) {
     return (
-      <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
-        <NewConversationView
-          onBack={() => setShowNewConversation(false)}
-          onStartConversation={startConversation}
-          onCreateClub={() => {
-            setShowNewConversation(false);
-            setShowCreateGroup(true);
-          }}
-          onAvatarClick={handleAvatarClick}
-        />
-      </Suspense>
+      <>
+        <Suspense fallback={<div className="h-full min-h-0 bg-secondary" />}>
+          <NewConversationView
+            onBack={() => setShowNewConversation(false)}
+            onStartConversation={startConversation}
+            onCreateClub={() => {
+              setShowNewConversation(false);
+              setShowCreateGroup(true);
+            }}
+            onAvatarClick={handleAvatarClick}
+          />
+        </Suspense>
+        {conversationDeleteDialogs}
+      </>
     );
   }
 
@@ -2766,75 +2832,12 @@ const Messages = () => {
             </div>
           </IosFixedPageHeaderShell>
 
-          {/* Delete Confirmation Dialog */}
-          <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Confirmer la suppression</DialogTitle>
-                <DialogDescription>
-                  {(conversationToDelete || selectedConversation)?.is_group 
-                    ? (conversationToDelete || selectedConversation)?.created_by === user?.id
-                      ? `Êtes-vous sûr de vouloir supprimer définitivement le club "${(conversationToDelete || selectedConversation)?.group_name}" ? Cette action est irréversible.`
-                      : `Êtes-vous sûr de vouloir quitter le club "${(conversationToDelete || selectedConversation)?.group_name}" ?`
-                    : `Êtes-vous sûr de vouloir supprimer cette conversation avec ${(conversationToDelete || selectedConversation)?.other_participant?.username || (conversationToDelete || selectedConversation)?.other_participant?.display_name} ? Tous les messages seront perdus.`
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-ios-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowDeleteDialog(false);
-                    setConversationToDelete(null);
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={deleteConversation}
-                >
-                  {(conversationToDelete || selectedConversation)?.is_group && (conversationToDelete || selectedConversation)?.created_by !== user?.id 
-                    ? "Quitter" 
-                    : "Supprimer"
-                  }
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Bulk Delete Dialog */}
-          <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Confirmer la suppression</DialogTitle>
-                <DialogDescription>
-                  Êtes-vous sûr de vouloir supprimer {selectedConversations.size} conversation(s) ? Cette action est irréversible.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-ios-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowBulkDeleteDialog(false)}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={bulkDeleteConversations}
-                >
-                  Supprimer
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-
         </div>
       </div>
+      {conversationDeleteDialogs}
       {/* Delete message confirmation dialog */}
       <AlertDialog open={!!messageToDelete} onOpenChange={(open) => { if (!open) setMessageToDelete(null); }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[160]" overlayClassName="z-[160]">
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer ce message ?</AlertDialogTitle>
             <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
@@ -3351,17 +3354,22 @@ const Messages = () => {
                 supabase.from('profiles').update({ notif_message: !newMuted }).eq('user_id', user.id);
               }
             }}
-            onEditGroup={() => {
-              setShowClubProfile(false);
-              setTimeout(() => {
-                setShowEditGroup(true);
-              }, 100);
+            onClubLeftOrDeleted={() => {
+              const id = groupInfoData?.id;
+              if (id) {
+                setConversations((prev) => prev.filter((c) => c.id !== id));
+                if (selectedConversation?.id === id) {
+                  setSelectedConversation(null);
+                }
+              }
+              setGroupInfoData(null);
+              void loadConversations();
             }}
-            onOpenCoachView={() => {
+            onOpenManageClubInCoaching={() => {
+              const id = groupInfoData?.id;
+              if (!id || !groupInfoData?.club_code) return;
               setShowClubProfile(false);
-              setTimeout(() => {
-                setShowGroupInfo(true);
-              }, 100);
+              navigate("/coaching", { state: { coachingClubManage: { clubId: id } } });
             }}
           />
         </Suspense>
@@ -3412,6 +3420,7 @@ const Messages = () => {
           />
         </Suspense>
 
+        {conversationDeleteDialogs}
       </div>
 
     </>

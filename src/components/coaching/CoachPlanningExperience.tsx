@@ -73,8 +73,8 @@ type BlockType = "warmup" | "interval" | "steady" | "recovery" | "cooldown";
 type IntensityMode = "zones" | "rpe";
 type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
 
-type SchemaToolKind = "steady" | "interval" | "pyramid" | "progressif" | "degressif" | "libre" | "repetition";
-type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "progressif" | "degressif";
+type SchemaToolKind = "steady" | "interval" | "pyramid" | "variation" | "libre" | "repetition";
+type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "variation";
 
 type SessionBlock = {
   id: string;
@@ -115,6 +115,12 @@ type TrainingSession = {
 };
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
+type SchemaTooltipState = {
+  blockIndex: number;
+  anchorX: number;
+  anchorTop: number;
+  label: string;
+};
 
 const SPORTS: Array<{ id: SportType; label: string; emoji: string }> = [
   { id: "running", label: "Course à pied", emoji: "🏃" },
@@ -281,6 +287,38 @@ function paceToTranscriptLabel(paceSecPerKm?: number) {
   return `${min}'${sec.toString().padStart(2, "0")}min/km`;
 }
 
+function pacePerKmShortLabel(paceSecPerKm?: number) {
+  if (!paceSecPerKm || paceSecPerKm <= 0) return "";
+  const rounded = Math.max(1, Math.round(paceSecPerKm));
+  const min = Math.floor(rounded / 60);
+  const sec = rounded % 60;
+  return `${min}:${sec.toString().padStart(2, "0")}/km`;
+}
+
+function durationBubbleLabel(totalSec?: number) {
+  if (!totalSec || totalSec <= 0) return "";
+  if (totalSec < 60) return `${Math.round(totalSec)} secondes`;
+  const minutes = Math.round(totalSec / 60);
+  return minutes > 1 ? `${minutes} min` : "1 min";
+}
+
+function blockBubbleLabel(block: SessionBlock, sport: SportType) {
+  const duration = durationBubbleLabel(block.durationSec);
+  const distance = simpleBlockDistanceValue(block.distanceM);
+  const progressiveTarget =
+    block.paceStartSecPerKm && block.paceEndSecPerKm
+      ? `${pacePerKmShortLabel(block.paceStartSecPerKm)} -> ${pacePerKmShortLabel(block.paceEndSecPerKm)}`
+      : "";
+  const runningTarget = progressiveTarget || pacePerKmShortLabel(block.paceSecPerKm);
+  const cyclingTarget = block.powerWatts && block.powerWatts > 0 ? `${Math.round(block.powerWatts)} W` : "";
+  const genericTarget = block.speedKmh && block.speedKmh > 0 ? `${Math.round(block.speedKmh)} km/h` : "";
+  const target = sport === "running" ? runningTarget : sport === "cycling" ? cyclingTarget || runningTarget : genericTarget || runningTarget || cyclingTarget;
+  const primary = duration || distance || blockTitle(block.type);
+  const main = target ? `${primary} à ${target}` : primary;
+  const shouldAppendDistance = Boolean(distance) && distance !== primary;
+  return shouldAppendDistance ? `${main} • ${distance}` : main;
+}
+
 function compactPaceLabel(paceSecPerKm?: number) {
   if (!paceSecPerKm || paceSecPerKm <= 0) return "—";
   const rounded = Math.max(1, Math.round(paceSecPerKm));
@@ -388,7 +426,11 @@ function deriveRunningVolume(
 }
 
 function isProgressiveBlock(block: SessionBlock) {
-  return Boolean(block.notes?.includes("[Progressif]") || block.notes?.includes("[Dégressif]"));
+  return Boolean(
+    block.notes?.includes("[Variation]") ||
+      block.notes?.includes("[Progressif]") ||
+      block.notes?.includes("[Dégressif]")
+  );
 }
 
 function deriveProgressiveRunningVolume(
@@ -443,8 +485,7 @@ function blockTitle(type: BlockType) {
 
 function blockDisplayLabel(block: SessionBlock) {
   if (block.notes?.includes("[Pyramid]")) return "Pyramidal";
-  if (block.notes?.includes("[Progressif]")) return "Progressif";
-  if (block.notes?.includes("[Dégressif]")) return "Dégressif";
+  if (isProgressiveBlock(block)) return "Variation";
   if (block.notes?.includes("[Libre]")) return "Libre";
   return blockTitle(block.type);
 }
@@ -804,18 +845,13 @@ export function CoachPlanningExperience() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [schemaDraggingTool, setSchemaDraggingTool] = useState<SchemaDragToolKind | null>(null);
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
-  const [schemaProgressPick, setSchemaProgressPick] = useState<"progressif" | "degressif">("progressif");
-  const schemaProgressPickRef = useRef<"progressif" | "degressif">("progressif");
-  const progressDegressPtrRef = useRef<{ id: number; t: number; x: number; y: number } | null>(null);
-  const progressDegressLongPressTimerRef = useRef<number | null>(null);
-  const progressDegressFromLongPressRef = useRef(false);
-  const progressDegressClickSuppressRef = useRef(false);
-  const progressDegressNudgeCancelsLongPressRef = useRef(false);
-  schemaProgressPickRef.current = schemaProgressPick;
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
   const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
+  const [schemaTooltip, setSchemaTooltip] = useState<SchemaTooltipState | null>(null);
+  const [schemaTooltipWidth, setSchemaTooltipWidth] = useState(0);
   const schemaDragFromAddCardStartRef = useRef<{ x: number; y: number } | null>(null);
   const addBlockFromCardGestureMovedRef = useRef(false);
+  const schemaTooltipRef = useRef<HTMLDivElement | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -872,6 +908,23 @@ export function CoachPlanningExperience() {
       setSelectedBlockId(draft.blocks[0].id);
     }
   }, [draft.blocks, selectedBlockId]);
+
+  useEffect(() => {
+    if (!schemaTooltipRef.current) return;
+    setSchemaTooltipWidth(schemaTooltipRef.current.getBoundingClientRect().width);
+  }, [schemaTooltip?.label]);
+
+  useEffect(() => {
+    if (!schemaTooltip) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (schemaPreviewRef.current?.contains(target)) return;
+      setSchemaTooltip(null);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [schemaTooltip]);
   const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
 
   const rotateActiveClub = () => {
@@ -1409,6 +1462,14 @@ export function CoachPlanningExperience() {
     () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
     [previewSegments]
   );
+  const schemaTooltipBlocks = useMemo(() => (draft.blocks.length ? draft.blocks : []), [draft.blocks]);
+  const selectedSchemaPreviewIndex = useMemo(() => {
+    if (!selectedBlockId || !schemaTooltipBlocks.length || !previewBars.length) return null;
+    const selectedDraftIndex = schemaTooltipBlocks.findIndex((block) => block.id === selectedBlockId);
+    if (selectedDraftIndex < 0) return null;
+    if (schemaTooltipBlocks.length === 1) return 0;
+    return Math.round((selectedDraftIndex / (schemaTooltipBlocks.length - 1)) * Math.max(0, previewBars.length - 1));
+  }, [previewBars.length, schemaTooltipBlocks, selectedBlockId]);
   const sessionTimeAxisLabels = useMemo(() => {
     const d = Math.max(0, Math.round(previewMetrics.durationMin));
     const end = Math.max(60, Math.ceil(Math.max(1, d) / 15) * 15);
@@ -1927,23 +1988,13 @@ export function CoachPlanningExperience() {
     if (kind === "interval" || kind === "repetition") {
       return createDefaultBlock("interval", nextOrder);
     }
-    if (kind === "progressif") {
+    if (kind === "variation") {
       return {
         ...createDefaultBlock("steady", nextOrder),
-        notes: "[Progressif]",
+        notes: "[Variation]",
         zone: "Z3",
         paceStartSecPerKm: 360,
         paceEndSecPerKm: 300,
-        paceSecPerKm: 330,
-      };
-    }
-    if (kind === "degressif") {
-      return {
-        ...createDefaultBlock("steady", nextOrder),
-        notes: "[Dégressif]",
-        zone: "Z3",
-        paceStartSecPerKm: 300,
-        paceEndSecPerKm: 360,
         paceSecPerKm: 330,
       };
     }
@@ -1969,7 +2020,6 @@ export function CoachPlanningExperience() {
       const el = schemaPreviewRef.current;
       if (!el) {
         schemaDragFromAddCardStartRef.current = null;
-        progressDegressPtrRef.current = null;
         setSchemaDraggingTool(null);
         setSchemaDragPointer(null);
         setSchemaDropRatio(null);
@@ -1987,8 +2037,6 @@ export function CoachPlanningExperience() {
         setSelectedBlockId(block.id);
       }
       schemaDragFromAddCardStartRef.current = null;
-      progressDegressFromLongPressRef.current = false;
-      progressDegressPtrRef.current = null;
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
@@ -1996,92 +2044,11 @@ export function CoachPlanningExperience() {
     [createQuickSchemaBlock, draft.blocks.length, insertDraftBlock, schemaDraggingTool]
   );
 
-  const clearProgressDegressLongPressTimer = useCallback(() => {
-    if (progressDegressLongPressTimerRef.current !== null) {
-      window.clearTimeout(progressDegressLongPressTimerRef.current);
-      progressDegressLongPressTimerRef.current = null;
-    }
-  }, []);
-
   const handleSchemaDragStart = useCallback((tool: SchemaDragToolKind, event: ReactPointerEvent<HTMLElement>) => {
     schemaDragFromAddCardStartRef.current = { x: event.clientX, y: event.clientY };
     addBlockFromCardGestureMovedRef.current = false;
     setSchemaDraggingTool(tool);
     setSchemaDragPointer({ x: event.clientX, y: event.clientY });
-  }, []);
-
-  const onProgressDegressBlockPointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (event.button !== 0) return;
-      clearProgressDegressLongPressTimer();
-      progressDegressNudgeCancelsLongPressRef.current = false;
-      progressDegressFromLongPressRef.current = false;
-      progressDegressPtrRef.current = {
-        id: event.pointerId,
-        t: performance.now(),
-        x: event.clientX,
-        y: event.clientY,
-      };
-      const startX = event.clientX;
-      const startY = event.clientY;
-      progressDegressLongPressTimerRef.current = window.setTimeout(() => {
-        progressDegressLongPressTimerRef.current = null;
-        if (progressDegressNudgeCancelsLongPressRef.current) return;
-        const tool = schemaProgressPickRef.current;
-        progressDegressFromLongPressRef.current = true;
-        addBlockFromCardGestureMovedRef.current = true;
-        schemaDragFromAddCardStartRef.current = { x: startX, y: startY };
-        setSchemaDraggingTool(tool);
-        setSchemaDragPointer({ x: startX, y: startY });
-      }, 420);
-    },
-    [clearProgressDegressLongPressTimer]
-  );
-
-  const onProgressDegressBlockPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    const p = progressDegressPtrRef.current;
-    if (!p || p.id !== event.pointerId) return;
-    const dist = Math.hypot(event.clientX - p.x, event.clientY - p.y);
-    if (dist > 12) {
-      progressDegressNudgeCancelsLongPressRef.current = true;
-      clearProgressDegressLongPressTimer();
-    }
-  }, [clearProgressDegressLongPressTimer]);
-
-  const onProgressDegressBlockPointerUp = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      const p = progressDegressPtrRef.current;
-      if (!p || p.id !== event.pointerId) return;
-      progressDegressPtrRef.current = null;
-      if (progressDegressLongPressTimerRef.current !== null) {
-        clearProgressDegressLongPressTimer();
-        if (!progressDegressNudgeCancelsLongPressRef.current) {
-          setSchemaProgressPick((m) => (m === "progressif" ? "degressif" : "progressif"));
-          progressDegressClickSuppressRef.current = true;
-        }
-        progressDegressNudgeCancelsLongPressRef.current = false;
-        return;
-      }
-      if (!progressDegressFromLongPressRef.current) {
-        progressDegressNudgeCancelsLongPressRef.current = false;
-        return;
-      }
-      progressDegressNudgeCancelsLongPressRef.current = false;
-    },
-    [clearProgressDegressLongPressTimer]
-  );
-
-  const onProgressDegressBlockPointerCancel = useCallback(() => {
-    clearProgressDegressLongPressTimer();
-    progressDegressPtrRef.current = null;
-    progressDegressNudgeCancelsLongPressRef.current = false;
-  }, [clearProgressDegressLongPressTimer]);
-
-  const onProgressDegressBlockClick = useCallback((event: React.MouseEvent) => {
-    if (progressDegressClickSuppressRef.current) {
-      event.preventDefault();
-      progressDegressClickSuppressRef.current = false;
-    }
   }, []);
 
   const handleSchemaPreviewPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
@@ -2119,8 +2086,6 @@ export function CoachPlanningExperience() {
     };
     const onPointerCancel = () => {
       schemaDragFromAddCardStartRef.current = null;
-      progressDegressFromLongPressRef.current = false;
-      progressDegressPtrRef.current = null;
       setSchemaDraggingTool(null);
       setSchemaDragPointer(null);
       setSchemaDropRatio(null);
@@ -2345,6 +2310,15 @@ export function CoachPlanningExperience() {
     },
     [navigate]
   );
+
+  useEffect(() => {
+    const st = location.state as { coachingClubManage?: { clubId: string } } | null | undefined;
+    const clubId = st?.coachingClubManage?.clubId;
+    if (!clubId || !user) return;
+    setActiveClubId(clubId);
+    goToCoachSection("club");
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, location.pathname, user, navigate, goToCoachSection]);
 
   const handleDrawerSelect = (key: CoachMenuKey) => {
     // Athlète sans rôle coach : tous les items "coach" déclenchent une popup d'invitation à créer un club.
@@ -3202,6 +3176,11 @@ export function CoachPlanningExperience() {
                         <div
                           ref={schemaPreviewRef}
                           onPointerMove={handleSchemaPreviewPointerMove}
+                          onPointerDown={(event) => {
+                            if (event.target === event.currentTarget) {
+                              setSchemaTooltip(null);
+                            }
+                          }}
                           className={cn(
                             "relative",
                             schemaDraggingTool ? "cursor-copy rounded-md ring-2 ring-[#2563EB]/35" : ""
@@ -3213,8 +3192,59 @@ export function CoachPlanningExperience() {
                             variant="premiumCompact"
                             barHeightScale={1}
                             zoneBandMode
+                            selectedBlockIndex={selectedSchemaPreviewIndex}
+                            onBackgroundTap={() => setSchemaTooltip(null)}
+                            onBlockTap={({ index, anchorX, anchorTop }) => {
+                              if (!schemaTooltipBlocks.length) return;
+                              const mappedDraftIndex =
+                                schemaTooltipBlocks.length <= 1 || previewBars.length <= 1
+                                  ? 0
+                                  : Math.round((index / Math.max(1, previewBars.length - 1)) * (schemaTooltipBlocks.length - 1));
+                              const block = schemaTooltipBlocks[Math.max(0, Math.min(schemaTooltipBlocks.length - 1, mappedDraftIndex))];
+                              if (!block) return;
+                              setSelectedBlockId(block.id);
+                              setSchemaTooltip({
+                                blockIndex: index,
+                                anchorX,
+                                anchorTop,
+                                label: blockBubbleLabel(block, draft.sport),
+                              });
+                            }}
                             className="h-[96px] w-full"
                           />
+                          {schemaTooltip ? (
+                            <div
+                              ref={schemaTooltipRef}
+                              className="pointer-events-none absolute z-20 max-w-[16rem] rounded-full bg-slate-950/88 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_10px_24px_-14px_rgba(2,6,23,0.95)] backdrop-blur-[2px]"
+                              style={{
+                                left: (() => {
+                                  const containerWidth = schemaPreviewRef.current?.clientWidth ?? 0;
+                                  const maxLeft = Math.max(8, containerWidth - schemaTooltipWidth - 8);
+                                  const preferred = schemaTooltip.anchorX - schemaTooltipWidth / 2;
+                                  return Math.max(8, Math.min(preferred, maxLeft));
+                                })(),
+                                top: Math.max(4, schemaTooltip.anchorTop - 8),
+                                transform: "translateY(-100%)",
+                              }}
+                            >
+                              {schemaTooltip.label}
+                              <span
+                                aria-hidden
+                                className="absolute h-2.5 w-2.5 rotate-45 bg-slate-950/88"
+                                style={{
+                                  left: (() => {
+                                    const containerWidth = schemaPreviewRef.current?.clientWidth ?? 0;
+                                    const maxLeft = Math.max(8, containerWidth - schemaTooltipWidth - 8);
+                                    const preferred = schemaTooltip.anchorX - schemaTooltipWidth / 2;
+                                    const bubbleLeft = Math.max(8, Math.min(preferred, maxLeft));
+                                    const arrow = schemaTooltip.anchorX - bubbleLeft - 5;
+                                    return Math.max(8, Math.min(arrow, Math.max(8, schemaTooltipWidth - 14)));
+                                  })(),
+                                  bottom: -4,
+                                }}
+                              />
+                            </div>
+                          ) : null}
                           {schemaDropRatio != null ? (
                             <span
                               aria-hidden
@@ -3303,44 +3333,33 @@ export function CoachPlanningExperience() {
                       <div
                         role="button"
                         tabIndex={0}
-                        aria-label={
-                          schemaProgressPick === "progressif"
-                            ? "Progressif — appui court pour passer en dégressif, maintenir puis glisser vers le schéma pour placer"
-                            : "Dégressif — appui court pour passer en progressif, maintenir puis glisser vers le schéma pour placer"
-                        }
-                        aria-pressed={schemaProgressPick === "degressif"}
-                        onPointerDown={onProgressDegressBlockPointerDown}
-                        onPointerMove={onProgressDegressBlockPointerMove}
-                        onPointerUp={onProgressDegressBlockPointerUp}
-                        onPointerCancel={onProgressDegressBlockPointerCancel}
-                        onClick={onProgressDegressBlockClick}
+                        aria-label="Variation — glisser vers le schéma pour placer"
+                        onPointerDown={(e) => handleSchemaDragStart("variation", e)}
+                        onClick={() => {
+                          if (addBlockFromCardGestureMovedRef.current) {
+                            addBlockFromCardGestureMovedRef.current = false;
+                            return;
+                          }
+                          addQuickSchemaBlock("variation");
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setSchemaProgressPick((m) => (m === "progressif" ? "degressif" : "progressif"));
+                            addQuickSchemaBlock("variation");
                           }
                         }}
                         className="group flex aspect-square w-[4.75rem] shrink-0 cursor-grab flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white select-none touch-none transition hover:border-[#2563EB]/45 active:cursor-grabbing sm:w-20"
                       >
                         <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
-                          {schemaProgressPick === "progressif" ? (
-                            <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                              <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
-                              <rect x="26" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
-                              <rect x="44" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                              <rect x="62" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
-                            </svg>
-                          ) : (
-                            <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                              <rect x="8" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
-                              <rect x="26" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                              <rect x="44" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
-                              <rect x="62" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
-                            </svg>
-                          )}
+                          <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+                            <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
+                            <rect x="26" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
+                            <rect x="44" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                            <rect x="62" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
+                          </svg>
                         </div>
                         <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
-                          {schemaProgressPick === "progressif" ? "Progressif" : "Dégressif"}
+                          Variation
                         </p>
                       </div>
 
@@ -3356,9 +3375,7 @@ export function CoachPlanningExperience() {
                             ? "Intervalle"
                             : schemaDraggingTool === "pyramid"
                               ? "Pyramide"
-                              : schemaDraggingTool === "progressif"
-                                ? "Progressif"
-                                : "Dégressif"}
+                              : "Variation"}
                       </div>
                     ) : null}
                 </div>

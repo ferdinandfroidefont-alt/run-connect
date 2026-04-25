@@ -8,7 +8,18 @@ export function getProfileAvatarDisplayUrl(url: string | null | undefined): stri
   if (!/^https?:\/\//i.test(t) && !t.startsWith("blob:")) return t;
   try {
     const u = new URL(t);
-    const strip = ["width", "height", "w", "h", "resize", "quality", "format"];
+    const strip = [
+      "width",
+      "height",
+      "w",
+      "h",
+      "resize",
+      "quality",
+      "q",
+      "format",
+      "f",
+      "dpr",
+    ];
     for (const k of strip) u.searchParams.delete(k);
     return u.toString();
   } catch {

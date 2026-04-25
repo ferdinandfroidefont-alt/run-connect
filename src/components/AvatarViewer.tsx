@@ -1,11 +1,9 @@
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getProfileAvatarDisplayUrl } from "@/lib/profileAvatarUrl";
 
@@ -17,6 +15,8 @@ interface AvatarViewerProps {
   /** Au-dessus d’un autre dialog (ex. profil). */
   stackNested?: boolean;
 }
+
+const AVATAR_SIZE = "min(88vmin, 24rem)";
 
 export const AvatarViewer = ({
   open,
@@ -30,46 +30,59 @@ export const AvatarViewer = ({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
+        fullScreen
         stackNested={stackNested}
         hideCloseButton
         noZoom
-        className="flex max-h-[min(92dvh,40rem)] min-h-0 min-w-0 max-w-[min(100vw,28rem)] flex-col gap-0 overflow-hidden rounded-2xl border border-border/60 bg-card p-0 shadow-lg"
+        onPointerDownOutside={() => onClose()}
+        onEscapeKeyDown={() => onClose()}
+        className="!border-0 !bg-transparent !shadow-none"
         aria-describedby="avatar-viewer-desc"
       >
-        <DialogTitle className="sr-only">Photo de profil de {username}</DialogTitle>
+        <DialogTitle className="sr-only">Photo de profil</DialogTitle>
         <DialogDescription id="avatar-viewer-desc" className="sr-only">
-          Agrandissement de la photo de profil de {username}
+          {username ? `Photo de profil de ${username}` : "Agrandissement de la photo de profil"}
         </DialogDescription>
 
-        <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
-          <p className="min-w-0 truncate text-[15px] font-semibold text-foreground">@{username}</p>
-          <DialogClose
-            type="button"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary active:opacity-70"
-            aria-label="Fermer"
-          >
-            <X className="h-5 w-5" />
-          </DialogClose>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-auto p-3">
+        <button
+          type="button"
+          className="flex h-full w-full items-center justify-center p-4 outline-none"
+          onClick={() => onClose()}
+          aria-label="Fermer"
+        >
           {src ? (
             <img
               src={src}
               alt=""
+              loading="eager"
               decoding="async"
               fetchPriority="high"
+              draggable={false}
               className={cn(
-                "mx-auto block h-auto max-h-[min(78dvh,36rem)] w-full max-w-full rounded-xl object-contain",
-                "[image-rendering:auto] [backface-visibility:hidden] [-webkit-backface-visibility:hidden]"
+                "shrink-0 rounded-full object-cover shadow-[0_8px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/10",
+                "transform-gpu [backface-visibility:hidden] [-webkit-backface-visibility:hidden]"
               )}
+              style={{
+                width: AVATAR_SIZE,
+                height: AVATAR_SIZE,
+                maxWidth: "100%",
+                maxHeight: "100%",
+              }}
             />
           ) : (
-            <div className="flex aspect-square max-h-80 w-full max-w-sm items-center justify-center rounded-xl bg-muted text-6xl font-semibold text-muted-foreground">
+            <div
+              className="flex shrink-0 items-center justify-center rounded-full bg-muted text-6xl font-semibold text-muted-foreground shadow-lg ring-1 ring-white/10"
+              style={{
+                width: AVATAR_SIZE,
+                height: AVATAR_SIZE,
+                maxWidth: "100%",
+                maxHeight: "100%",
+              }}
+            >
               {(username || "U").charAt(0).toUpperCase()}
             </div>
           )}
-        </div>
+        </button>
       </DialogContent>
     </Dialog>
   );

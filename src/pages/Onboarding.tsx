@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { ArrivalOnboardingFlow } from "@/components/arrival/ArrivalOnboardingFlow";
 import { useAuth } from "@/hooks/useAuth";
-import { hasCompletedOnboarding } from "@/lib/arrivalFlowStorage";
+import { ARRIVAL_ONBOARDING_ENABLED, hasCompletedOnboarding } from "@/lib/arrivalFlowStorage";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -24,6 +24,10 @@ const Onboarding = () => {
 
   if (!user?.id) {
     return <Navigate to="/auth" replace />;
+  }
+
+  if (!ARRIVAL_ONBOARDING_ENABLED) {
+    return <Navigate to="/" replace />;
   }
 
   if (hasCompletedOnboarding(user.id)) {

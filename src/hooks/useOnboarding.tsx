@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { ARRIVAL_ONBOARDING_ENABLED } from "@/lib/arrivalFlowStorage";
 
 export const useOnboarding = () => {
   const { user } = useAuth();
@@ -10,6 +11,12 @@ export const useOnboarding = () => {
 
   const checkOnboardingStatus = useCallback(async () => {
     if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    if (!ARRIVAL_ONBOARDING_ENABLED) {
+      setNeedsOnboarding(false);
       setLoading(false);
       return;
     }
