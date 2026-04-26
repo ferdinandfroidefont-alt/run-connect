@@ -149,7 +149,7 @@ export function AthleteMyPlanView(props: Props) {
                           duration: row.isRest ? undefined : metrics?.durationLabel,
                           distance: row.isRest ? undefined : metrics?.distanceLabel,
                           intensityLabel: row.sessions.length > 1 ? `${row.sessions.length} séances` : metrics?.intensityLabel,
-                          miniProfile: renderWorkoutMiniProfile(segments),
+                          miniProfile: renderWorkoutMiniProfile(segments, { sessionSchema: true }),
                           sportHint: row.primarySession?.sport,
                           isRestDay: row.isRest,
                         }

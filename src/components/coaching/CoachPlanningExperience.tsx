@@ -2789,7 +2789,7 @@ export function CoachPlanningExperience() {
                       duration: workoutMetrics?.durationLabel,
                       distance: workoutMetrics?.distanceLabel,
                       intensityLabel: [workoutMetrics?.intensityLabel, workoutMetrics?.feedbackLabel].filter(Boolean).join(" • "),
-                      miniProfile: renderWorkoutMiniProfile(normalizedSegments),
+                      miniProfile: renderWorkoutMiniProfile(normalizedSegments, { sessionSchema: true }),
                       isRestDay: isExplicitRestDay([session]),
                       sportHint,
                     }

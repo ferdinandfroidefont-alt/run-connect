@@ -37,7 +37,8 @@ export function DaySessionSummary({ summary, accentColor }: DaySessionSummaryPro
             isRestDay={summary.isRestDay}
             compact
             variant="premiumCompact"
-            className="h-8"
+            zoneBandMode
+            className="h-7 rounded-none border-0 bg-transparent px-0 py-0"
           />
         </div>
         <p className={cn("mt-1 truncate text-[12px] text-muted-foreground", !details && "opacity-0")}>{details || "Aucune donnée"}</p>
