@@ -219,24 +219,25 @@ const App = () => {
               return;
             }
 
-            // Pas de reload : l'évènement SIGNED_IN est émis par exchangeCodeForSession,
-            // useAuth met à jour `user`, et la page Auth (rendue actuellement) redirige
-            // automatiquement vers `/`. Reload via window.location.replace = source de
-            // races sur iOS (notamment pour Apple Sign-In, sans chemin natif). On s'appuie
-            // sur la navigation SPA, plus fiable.
+            // Voie rapide : `exchangeCodeForSession` a émis `SIGNED_IN`, `useAuth`
+            // met à jour `user`, et `Auth.tsx` rend `<Navigate to="/" />` au prochain
+            // render. Si ça suffit, le filet de sécurité ci-dessous ne déclenche pas.
             console.log('[OAuth/App] session OK → SPA navigation (Auth → "/")');
 
-            // Filet de sécurité : si pour une raison X la redirection SPA n'opère pas
-            // (ex: composant Auth démonté, listener manqué), on bascule sur un reload
-            // doux après 1.5 s. La cible est `/` (pas `/auth/callback`) pour laisser le
-            // Layout gérer l'état chargé.
+            // Filet de sécurité : si on est encore sur `/auth` après 800 ms,
+            // on bascule HORS de Layout vers `/auth/callback`. Cette page n'est PAS
+            // protégée par Layout (donc pas de redirection automatique vers `/auth`),
+            // et elle attend explicitement la session (polling + listener) avant de
+            // naviguer en SPA vers `/`. Cela neutralise les ~bouclages observés sur
+            // Apple Sign-In iOS quand la mise à jour de `useAuth` rate la fenêtre de
+            // re-render d'`Auth.tsx`.
             window.setTimeout(() => {
               const path = window.location.pathname;
-              if (path.startsWith('/auth')) {
-                console.warn('[OAuth/App] Auth toujours actif après 1.5 s — fallback /');
-                window.location.replace(`${window.location.origin}/`);
+              if (path === '/auth' || path === '/auth/') {
+                console.warn('[OAuth/App] Auth toujours actif après 800 ms — fallback /auth/callback');
+                window.location.replace(`${window.location.origin}/auth/callback`);
               }
-            }, 1500);
+            }, 800);
           } catch (err) {
             console.error('[OAuth/App] deep link handler error', err);
           }
@@ -282,11 +283,17 @@ const App = () => {
           }
           const result = await finalizeSupabaseOAuthFromDeepLink(supabase, incomingUrl);
           if (result.ok) {
-            // Cold start : l'app vient de démarrer sur `/` (URL initiale du WebView).
-            // La session est exchangée, `SIGNED_IN` est émis, useAuth récupère l'utilisateur.
-            // Layout (route `/`) attend `loading=false` puis affiche l'accueil.
-            // Pas besoin de reload sur `/auth/callback`.
-            console.log('[OAuth/App] cold start session OK — pas de reload (Layout prend la main)');
+            // Cold start : l'app vient de démarrer (typiquement sur `/`). Layout
+            // peut être plus rapide que `useAuth.getSession()` à se rendre, et voir
+            // brièvement `loading=false, user=null` → redirige sur `/auth` avant que
+            // l'évènement `SIGNED_IN` arrive. Pour neutraliser ce flash, on bascule
+            // explicitement sur `/auth/callback` (hors Layout) qui attend la session
+            // avant de naviguer vers `/`.
+            console.log('[OAuth/App] cold start session OK → /auth/callback (stabilise la session)');
+            const path = window.location.pathname;
+            if (path !== '/auth/callback' && path !== '/auth/callback/') {
+              window.location.replace(`${window.location.origin}/auth/callback`);
+            }
           }
           return;
         }

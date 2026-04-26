@@ -462,33 +462,32 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
     const seg = segments[index];
 
     if (seg.visualStyle === "pyramid") {
-      // 5 paliers : aligné sur la carte « Pyramide » (montée puis descente)
-      const steps = [0.45, 0.68, 1, 0.68, 0.45];
-      steps.forEach((ratio) => {
+      // 5 paliers fixes pour garantir Z4→Z5→Z6→Z5→Z4.
+      const pyramidZones: ComputedZone[] = ["Z4", "Z5", "Z6", "Z5", "Z4"];
+      pyramidZones.forEach((stepZone) => {
         expanded.push({
           ...seg,
-          durationMin: seg.durationMin / steps.length,
-          distanceKm: seg.distanceKm / steps.length,
-          intensityBand: ratio > 0.88 ? "interval" : ratio > 0.68 ? "tempo" : seg.intensityBand,
+          durationMin: seg.durationMin / pyramidZones.length,
+          distanceKm: seg.distanceKm / pyramidZones.length,
+          computedZone: stepZone,
+          color: zoneToColorToken(stepZone),
+          intensityBand: bandForZone(stepZone),
           repeatCount: undefined,
         });
       });
       continue;
     }
     if (seg.visualStyle === "variation") {
-      // Bloc unique en rampe pour un rendu "variation" sur le schéma.
+      // Bloc unique en rampe progressive Z1→Z2→Z3→Z4.
       const startRank = zoneRank(seg.progressiveStartZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
       const endRank = zoneRank(seg.progressiveEndZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
       const increasing = endRank >= startRank;
-      const steps = increasing ? [0.45, 0.62, 0.8, 1] : [1, 0.8, 0.62, 0.45];
-      const startZone = seg.progressiveStartZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand);
-      const endZone = seg.progressiveEndZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand);
-      steps.forEach((ratio) => {
-        const stepZone = interpolateZone(startZone, endZone, ratio);
+      const variationZones: ComputedZone[] = increasing ? ["Z1", "Z2", "Z3", "Z4"] : ["Z4", "Z3", "Z2", "Z1"];
+      variationZones.forEach((stepZone) => {
         expanded.push({
           ...seg,
-          durationMin: seg.durationMin / steps.length,
-          distanceKm: seg.distanceKm / steps.length,
+          durationMin: seg.durationMin / variationZones.length,
+          distanceKm: seg.distanceKm / variationZones.length,
           computedZone: stepZone,
           color: zoneToColorToken(stepZone),
           intensityBand: bandForZone(stepZone),
@@ -548,22 +547,6 @@ function zoneRank(zone: ComputedZone): number {
   if (zone === "Z4") return 4;
   if (zone === "Z5") return 5;
   return 6;
-}
-
-function rankToZone(rank: number): ComputedZone {
-  if (rank <= 1) return "Z1";
-  if (rank === 2) return "Z2";
-  if (rank === 3) return "Z3";
-  if (rank === 4) return "Z4";
-  if (rank === 5) return "Z5";
-  return "Z6";
-}
-
-function interpolateZone(start: ComputedZone, end: ComputedZone, ratio: number): ComputedZone {
-  const s = zoneRank(start);
-  const e = zoneRank(end);
-  const raw = s + (e - s) * Math.max(0, Math.min(1, ratio));
-  return rankToZone(Math.max(1, Math.min(6, Math.round(raw))));
 }
 
 function bandForZone(zone: ComputedZone): IntensityBand {

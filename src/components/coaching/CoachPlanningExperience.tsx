@@ -571,9 +571,9 @@ function blockAccent(type: BlockType) {
       };
     default:
       return {
-        iconWrap: "bg-slate-500",
+        iconWrap: "bg-emerald-500",
         iconColor: "text-white",
-        tint: "from-slate-500/12 via-slate-500/6 to-transparent",
+        tint: "from-emerald-500/16 via-emerald-500/8 to-transparent",
       };
   }
 }
@@ -1982,20 +1982,23 @@ export function CoachPlanningExperience() {
         ...createDefaultBlock("steady", nextOrder),
         repetitions: 5,
         notes: "[Pyramid]",
-        zone: "Z3",
+        zone: "Z4",
       };
     }
     if (kind === "interval" || kind === "repetition") {
-      return createDefaultBlock("interval", nextOrder);
+      return {
+        ...createDefaultBlock("interval", nextOrder),
+        zone: "Z5",
+      };
     }
     if (kind === "variation") {
       return {
         ...createDefaultBlock("steady", nextOrder),
         notes: "[Variation]",
-        zone: "Z3",
-        paceStartSecPerKm: 360,
-        paceEndSecPerKm: 300,
-        paceSecPerKm: 330,
+        zone: "Z2",
+        paceStartSecPerKm: 420,
+        paceEndSecPerKm: 270,
+        paceSecPerKm: 345,
       };
     }
     if (kind === "libre") {
@@ -3272,7 +3275,7 @@ export function CoachPlanningExperience() {
                             title: "Continu",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="12" width="72" height="12" rx="4" fill="#2563EB" fillOpacity="0.92" />
+                                <rect x="8" y="12" width="72" height="12" rx="4" fill="#10B981" fillOpacity="0.92" />
                               </svg>
                             ),
                           },
@@ -3281,10 +3284,10 @@ export function CoachPlanningExperience() {
                             title: "Intervalle",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="6" y="14" width="16" height="14" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                                <rect x="26" y="20" width="16" height="8" rx="2" fill="#e2e8f0" />
-                                <rect x="46" y="12" width="16" height="16" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                                <rect x="66" y="20" width="16" height="8" rx="2" fill="#e2e8f0" />
+                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#EF4444" fillOpacity="0.96" />
+                                <rect x="26" y="22" width="16" height="8" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#EF4444" fillOpacity="0.96" />
+                                <rect x="66" y="22" width="16" height="8" rx="2" fill="#2563EB" fillOpacity="0.92" />
                               </svg>
                             ),
                           },
@@ -3293,11 +3296,11 @@ export function CoachPlanningExperience() {
                             title: "Pyramide",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="24" width="10" height="6" rx="1.5" fill="#2563EB" fillOpacity="0.85" />
-                                <rect x="22" y="18" width="10" height="12" rx="1.5" fill="#2563EB" fillOpacity="0.88" />
-                                <rect x="36" y="10" width="12" height="20" rx="2" fill="#2563EB" fillOpacity="0.95" />
-                                <rect x="52" y="18" width="10" height="12" rx="1.5" fill="#2563EB" fillOpacity="0.88" />
-                                <rect x="66" y="24" width="10" height="6" rx="1.5" fill="#2563EB" fillOpacity="0.85" />
+                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#F97316" fillOpacity="0.9" />
+                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#EF4444" fillOpacity="0.93" />
+                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#000000" fillOpacity="0.95" />
+                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#EF4444" fillOpacity="0.93" />
+                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#F97316" fillOpacity="0.9" />
                               </svg>
                             ),
                           },
@@ -3352,10 +3355,10 @@ export function CoachPlanningExperience() {
                       >
                         <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
                           <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                            <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.88" />
-                            <rect x="26" y="16" width="14" height="14" rx="2" fill="#2563EB" fillOpacity="0.9" />
-                            <rect x="44" y="10" width="14" height="20" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                            <rect x="62" y="4" width="14" height="26" rx="2" fill="#2563EB" fillOpacity="0.95" />
+                            <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.9" />
+                            <rect x="26" y="16" width="14" height="14" rx="2" fill="#10B981" fillOpacity="0.92" />
+                            <rect x="44" y="10" width="14" height="20" rx="2" fill="#FACC15" fillOpacity="0.94" />
+                            <rect x="62" y="4" width="14" height="26" rx="2" fill="#F97316" fillOpacity="0.95" />
                           </svg>
                         </div>
                         <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
@@ -4122,7 +4125,7 @@ export function CoachPlanningExperience() {
                           ...createDefaultBlock("steady", nextOrder),
                           repetitions: 5,
                           notes: "[Pyramid]",
-                          zone: "Z3",
+                          zone: "Z4",
                         },
                         pendingInsertIndex
                       );
