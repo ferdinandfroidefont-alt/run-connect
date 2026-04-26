@@ -103,12 +103,30 @@ export function MiniWorkoutProfile({
                       height: `${(block.zoneBandLevel! / 6) * 100}%`,
                       minHeight: 0,
                       maxHeight: `${(block.zoneBandLevel! / 6) * 100}%`,
-                      backgroundColor: block.color,
+                      background:
+                        block.shape && block.gradientStartColor && block.gradientEndColor
+                          ? `linear-gradient(90deg, ${block.gradientStartColor} 0%, ${block.gradientEndColor} 100%)`
+                          : block.color,
+                      clipPath:
+                        block.shape === "slopeUp"
+                          ? "polygon(0% 100%, 100% 0%, 100% 100%)"
+                          : block.shape === "slopeDown"
+                            ? "polygon(0% 0%, 100% 100%, 0% 100%)"
+                            : undefined,
                       opacity: isFineRecovery ? (block.opacity ?? 1) * 0.65 : (block.opacity ?? 1),
                     }
                   : {
                       height: `${scaledHeight}px`,
-                      backgroundColor: block.color,
+                      background:
+                        block.shape && block.gradientStartColor && block.gradientEndColor
+                          ? `linear-gradient(90deg, ${block.gradientStartColor} 0%, ${block.gradientEndColor} 100%)`
+                          : block.color,
+                      clipPath:
+                        block.shape === "slopeUp"
+                          ? "polygon(0% 100%, 100% 0%, 100% 100%)"
+                          : block.shape === "slopeDown"
+                            ? "polygon(0% 0%, 100% 100%, 0% 100%)"
+                            : undefined,
                       opacity: isFineRecovery ? (block.opacity ?? 1) * 0.65 : (block.opacity ?? 1),
                     }),
               }}

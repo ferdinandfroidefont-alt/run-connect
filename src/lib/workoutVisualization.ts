@@ -27,6 +27,9 @@ export interface MiniProfileBlock {
   height: number;
   color: string;
   opacity?: number;
+  shape?: "slopeUp" | "slopeDown";
+  gradientStartColor?: string;
+  gradientEndColor?: string;
   /** 1=Z1 … 6=Z6 — hauteur relative aux bandes (mode schéma séance) */
   zoneBandLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
@@ -444,13 +447,26 @@ export function renderWorkoutMiniProfile(
   return expanded.map((seg) => {
     const weight = Math.max(seg.durationMin, seg.distanceKm * 8, minWeight);
     const previewZone = seg.computedZone ?? bandToComputedZone(seg.intensityBand);
+    const startZone = seg.progressiveStartZone ?? previewZone;
+    const endZone = seg.progressiveEndZone ?? previewZone;
+    const isVariationSlope = seg.visualStyle === "variation" && zoneRank(startZone) !== zoneRank(endZone);
     const block: MiniProfileBlock = {
       width: weight,
       height: heightForZone(previewZone),
       color: colorForZone(previewZone),
       opacity: seg.kind === "warmup" || seg.kind === "cooldown" ? 0.8 : seg.kind === "recovery" ? 0.75 : 1,
+      shape: isVariationSlope ? (zoneRank(endZone) > zoneRank(startZone) ? "slopeUp" : "slopeDown") : undefined,
+      gradientStartColor: isVariationSlope ? colorForZone(startZone) : undefined,
+      gradientEndColor: isVariationSlope ? colorForZone(endZone) : undefined,
     };
-    if (sessionSchema) block.zoneBandLevel = zoneToBandLevel(previewZone);
+    if (sessionSchema) {
+      if (isVariationSlope) {
+        const topZone = zoneRank(startZone) > zoneRank(endZone) ? startZone : endZone;
+        block.zoneBandLevel = zoneToBandLevel(topZone);
+      } else {
+        block.zoneBandLevel = zoneToBandLevel(previewZone);
+      }
+    }
     return block;
   });
 }
@@ -478,21 +494,9 @@ function expandSegmentsForMiniProfile(segments: WorkoutSegment[]): WorkoutSegmen
       continue;
     }
     if (seg.visualStyle === "variation") {
-      // Bloc unique en rampe progressive Z1→Z2→Z3→Z4.
-      const startRank = zoneRank(seg.progressiveStartZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
-      const endRank = zoneRank(seg.progressiveEndZone ?? seg.computedZone ?? bandToComputedZone(seg.intensityBand));
-      const increasing = endRank >= startRank;
-      const variationZones: ComputedZone[] = increasing ? ["Z1", "Z2", "Z3", "Z4"] : ["Z4", "Z3", "Z2", "Z1"];
-      variationZones.forEach((stepZone) => {
-        expanded.push({
-          ...seg,
-          durationMin: seg.durationMin / variationZones.length,
-          distanceKm: seg.distanceKm / variationZones.length,
-          computedZone: stepZone,
-          color: zoneToColorToken(stepZone),
-          intensityBand: bandForZone(stepZone),
-          repeatCount: undefined,
-        });
+      expanded.push({
+        ...seg,
+        repeatCount: undefined,
       });
       continue;
     }
@@ -557,12 +561,12 @@ function bandForZone(zone: ComputedZone): IntensityBand {
 }
 
 function colorForZone(zone: ComputedZone): string {
-  if (zone === "Z1") return "#2563EB";
-  if (zone === "Z2") return "#10B981";
-  if (zone === "Z3") return "#FACC15";
-  if (zone === "Z4") return "#F97316";
-  if (zone === "Z5") return "#EF4444";
-  return "#000000";
+  if (zone === "Z1") return "#9CA3AF";
+  if (zone === "Z2") return "#2563EB";
+  if (zone === "Z3") return "#22C55E";
+  if (zone === "Z4") return "#FACC15";
+  if (zone === "Z5") return "#F97316";
+  return "#EF4444";
 }
 
 /** Couleur des barres et des libellés d’axes zone (aligné sur le mini profil) */

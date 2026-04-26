@@ -76,6 +76,57 @@ type ZoneKey = "Z1" | "Z2" | "Z3" | "Z4" | "Z5" | "Z6";
 type SchemaToolKind = "steady" | "interval" | "pyramid" | "variation" | "libre" | "repetition";
 type SchemaDragToolKind = "steady" | "interval" | "pyramid" | "variation";
 
+function schemaDragToolLabel(tool: SchemaDragToolKind) {
+  if (tool === "steady") return "Continu";
+  if (tool === "interval") return "Intervalle";
+  if (tool === "pyramid") return "Pyramide";
+  return "Variation";
+}
+
+function SchemaDragToolMini({ tool }: { tool: SchemaDragToolKind }) {
+  if (tool === "steady") {
+    return (
+      <svg viewBox="0 0 88 36" className="h-8 w-[4.25rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+        <rect x="8" y="12" width="72" height="12" rx="4" fill="#10B981" fillOpacity="0.92" />
+      </svg>
+    );
+  }
+  if (tool === "interval") {
+    return (
+      <svg viewBox="0 0 88 36" className="h-8 w-[4.25rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+        <rect x="6" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+        <rect x="26" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
+        <rect x="46" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+        <rect x="66" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
+      </svg>
+    );
+  }
+  if (tool === "pyramid") {
+    return (
+      <svg viewBox="0 0 88 36" className="h-8 w-[4.25rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+        <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
+        <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
+        <rect x="36" y="4" width="12" height="26" rx="2" fill="#EF4444" fillOpacity="0.95" />
+        <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
+        <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 88 36" className="h-8 w-[4.25rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
+      <defs>
+        <linearGradient id="variationZoneGradientDragGhost" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#9CA3AF" />
+          <stop offset="33%" stopColor="#2563EB" />
+          <stop offset="66%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#FACC15" />
+        </linearGradient>
+      </defs>
+      <polygon points="8,30 76,4 76,30" fill="url(#variationZoneGradientDragGhost)" fillOpacity="0.95" />
+    </svg>
+  );
+}
+
 type SessionBlock = {
   id: string;
   order: number;
@@ -199,8 +250,8 @@ const ADD_BLOCK_CHOICES = [
 ];
 
 const ZONE_META: Array<{ zone: ZoneKey; label: string; description: string; tone: string }> = [
-  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300" },
-  { zone: "Z2", label: "Z2", description: "Endurance fondamentale", tone: "bg-primary/12 text-primary" },
+  { zone: "Z1", label: "Z1", description: "Récupération", tone: "bg-slate-500/12 text-slate-700 dark:text-slate-300" },
+  { zone: "Z2", label: "Z2", description: "Endurance fondamentale", tone: "bg-blue-500/12 text-blue-700 dark:text-blue-300" },
   { zone: "Z3", label: "Z3", description: "Endurance active", tone: "bg-green-500/12 text-green-700 dark:text-green-300" },
   { zone: "Z4", label: "Z4", description: "Seuil", tone: "bg-amber-500/12 text-amber-700 dark:text-amber-300" },
   { zone: "Z5", label: "Z5", description: "VO2 max", tone: "bg-orange-500/12 text-orange-700 dark:text-orange-300" },
@@ -582,19 +633,19 @@ function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
   switch (normalized) {
     case "Z1":
-      return "bg-[#2563EB]";
+      return "bg-slate-400";
     case "Z2":
-      return "bg-emerald-500";
+      return "bg-[#2563EB]";
     case "Z3":
-      return "bg-yellow-400";
+      return "bg-green-500";
     case "Z4":
-      return "bg-orange-500";
-    case "Z5":
-      return "bg-red-500";
-    case "Z6":
-      return "bg-black";
-    default:
       return "bg-yellow-400";
+    case "Z5":
+      return "bg-orange-500";
+    case "Z6":
+      return "bg-red-500";
+    default:
+      return "bg-green-500";
   }
 }
 
@@ -3249,11 +3300,24 @@ export function CoachPlanningExperience() {
                             </div>
                           ) : null}
                           {schemaDropRatio != null ? (
-                            <span
+                            <div
                               aria-hidden
-                              className="pointer-events-none absolute inset-y-2.5 w-1 rounded-full bg-[#2563EB] shadow-[0_0_0_1px_rgba(255,255,255,0.9)]"
-                              style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 2px)` }}
+                              className="pointer-events-none absolute inset-y-2.5 w-0.5 rounded-full bg-[#2563EB]/45"
+                              style={{ left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}% - 1px)` }}
                             />
+                          ) : null}
+                          {schemaDropRatio != null && schemaDraggingTool ? (
+                            <div
+                              aria-hidden
+                              className="pointer-events-none absolute z-30 rounded-xl border border-[#2563EB]/35 bg-white/95 px-1.5 py-1 shadow-[0_14px_30px_-18px_rgba(37,99,235,0.65)] backdrop-blur-[2px]"
+                              style={{
+                                left: `calc(${Math.max(0, Math.min(100, schemaDropRatio * 100))}%)`,
+                                top: "50%",
+                                transform: "translate(-50%, -50%)",
+                              }}
+                            >
+                              <SchemaDragToolMini tool={schemaDraggingTool} />
+                            </div>
                           ) : null}
                         </div>
                         <div className="mt-1 flex min-h-[14px] justify-between gap-0.5 pl-0.5 text-[7px] font-semibold tabular-nums text-slate-500 sm:text-[8px]">
@@ -3284,10 +3348,10 @@ export function CoachPlanningExperience() {
                             title: "Intervalle",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#EF4444" fillOpacity="0.96" />
-                                <rect x="26" y="22" width="16" height="8" rx="2" fill="#2563EB" fillOpacity="0.92" />
-                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#EF4444" fillOpacity="0.96" />
-                                <rect x="66" y="22" width="16" height="8" rx="2" fill="#2563EB" fillOpacity="0.92" />
+                                <rect x="6" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+                                <rect x="26" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
+                                <rect x="46" y="6" width="16" height="24" rx="2" fill="#F97316" fillOpacity="0.96" />
+                                <rect x="66" y="22" width="16" height="8" rx="2" fill="#9CA3AF" fillOpacity="0.92" />
                               </svg>
                             ),
                           },
@@ -3296,11 +3360,11 @@ export function CoachPlanningExperience() {
                             title: "Pyramide",
                             mini: (
                               <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#F97316" fillOpacity="0.9" />
-                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#EF4444" fillOpacity="0.93" />
-                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#000000" fillOpacity="0.95" />
-                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#EF4444" fillOpacity="0.93" />
-                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#F97316" fillOpacity="0.9" />
+                                <rect x="8" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
+                                <rect x="22" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
+                                <rect x="36" y="4" width="12" height="26" rx="2" fill="#EF4444" fillOpacity="0.95" />
+                                <rect x="52" y="10" width="10" height="20" rx="1.5" fill="#F97316" fillOpacity="0.93" />
+                                <rect x="66" y="14" width="10" height="16" rx="1.5" fill="#FACC15" fillOpacity="0.92" />
                               </svg>
                             ),
                           },
@@ -3355,10 +3419,15 @@ export function CoachPlanningExperience() {
                       >
                         <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center p-1.5">
                           <svg viewBox="0 0 88 36" className="h-11 w-full max-w-[4.5rem]" preserveAspectRatio="xMidYMid meet" aria-hidden>
-                            <rect x="8" y="22" width="14" height="8" rx="2" fill="#2563EB" fillOpacity="0.9" />
-                            <rect x="26" y="16" width="14" height="14" rx="2" fill="#10B981" fillOpacity="0.92" />
-                            <rect x="44" y="10" width="14" height="20" rx="2" fill="#FACC15" fillOpacity="0.94" />
-                            <rect x="62" y="4" width="14" height="26" rx="2" fill="#F97316" fillOpacity="0.95" />
+                            <defs>
+                              <linearGradient id="variationZoneGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#9CA3AF" />
+                                <stop offset="33%" stopColor="#2563EB" />
+                                <stop offset="66%" stopColor="#22C55E" />
+                                <stop offset="100%" stopColor="#FACC15" />
+                              </linearGradient>
+                            </defs>
+                            <polygon points="8,30 76,4 76,30" fill="url(#variationZoneGradient)" fillOpacity="0.95" />
                           </svg>
                         </div>
                         <p className="shrink-0 px-1 pb-1.5 text-center text-[11px] font-bold leading-tight text-foreground sm:text-xs">
@@ -3372,13 +3441,7 @@ export function CoachPlanningExperience() {
                         className="pointer-events-none fixed z-[120] rounded-full border border-[#2563EB]/45 bg-white px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] shadow-lg"
                         style={{ left: schemaDragPointer.x + 10, top: schemaDragPointer.y + 10 }}
                       >
-                        {schemaDraggingTool === "steady"
-                          ? "Continu"
-                          : schemaDraggingTool === "interval"
-                            ? "Intervalle"
-                            : schemaDraggingTool === "pyramid"
-                              ? "Pyramide"
-                              : "Variation"}
+                        {schemaDragToolLabel(schemaDraggingTool)}
                       </div>
                     ) : null}
                 </div>

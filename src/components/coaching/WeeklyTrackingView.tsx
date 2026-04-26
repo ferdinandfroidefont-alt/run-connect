@@ -15,14 +15,13 @@ import {
   Bell,
   Loader2,
   CalendarDays,
-  Bike,
-  Dumbbell,
-  Footprints,
-  Moon,
-  Waves,
+  Check,
+  Clock3,
+  Minus,
   Save,
   Plus,
   Trash2,
+  X,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -50,13 +49,13 @@ const PREVIEW_ZONE_ORDER = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6"] as const;
 
 function zoneToPreviewColorClass(zone?: string) {
   const normalized = typeof zone === "string" ? zone.toUpperCase() : "Z3";
-  if (normalized === "Z1") return "bg-[#2563EB]";
-  if (normalized === "Z2") return "bg-emerald-500";
-  if (normalized === "Z3") return "bg-yellow-400";
-  if (normalized === "Z4") return "bg-orange-500";
-  if (normalized === "Z5") return "bg-red-500";
-  if (normalized === "Z6") return "bg-black";
-  return "bg-yellow-400";
+  if (normalized === "Z1") return "bg-slate-400";
+  if (normalized === "Z2") return "bg-[#2563EB]";
+  if (normalized === "Z3") return "bg-green-500";
+  if (normalized === "Z4") return "bg-yellow-400";
+  if (normalized === "Z5") return "bg-orange-500";
+  if (normalized === "Z6") return "bg-red-500";
+  return "bg-green-500";
 }
 
 interface WeeklyTrackingViewProps {
@@ -84,8 +83,6 @@ interface SessionInfo {
   pace_target: string | null;
   rpe: number | null;
 }
-
-type CalendarSport = "running" | "cycling" | "swimming" | "strength" | "rest";
 
 interface DayData {
   status: string;
@@ -177,64 +174,12 @@ function formatDurationFromSeconds(totalSec?: number | null): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function sessionTone(sport: CalendarSport) {
-  switch (sport) {
-    case "running":
-      return "text-sky-500";
-    case "cycling":
-      return "text-emerald-500";
-    case "swimming":
-      return "text-cyan-500";
-    case "strength":
-      return "text-violet-500";
-    default:
-      return "text-muted-foreground";
-  }
-}
-
-function SessionIcon({ sport, className }: { sport: CalendarSport; className?: string }) {
-  switch (sport) {
-    case "running":
-      return <Footprints className={className} />;
-    case "cycling":
-      return <Bike className={className} />;
-    case "swimming":
-      return <Waves className={className} />;
-    case "strength":
-      return <Dumbbell className={className} />;
-    default:
-      return <Moon className={className} />;
-  }
-}
-
-function isRestSession(session: SessionInfo): boolean {
-  const title = (session.title || "").toLowerCase();
-  const objective = (session.objective || "").toLowerCase();
-  return title.includes("repos") || objective.includes("repos");
-}
-
-function sessionSummaryValue(session: SessionInfo): string | null {
-  if (isRestSession(session)) return "Repos";
-  const distanceKm = Number(session.distance_km || 0);
-  if (distanceKm > 0) return `${Math.round(distanceKm * 10) / 10} km`;
-  if (!session.rcc_code) return null;
-  const code = session.rcc_code.toLowerCase();
-  const hourMatch = code.match(/(\d+)\s*h(?:\s*(\d{1,2}))?/);
-  if (hourMatch) {
-    const h = Number(hourMatch[1]);
-    const m = Number(hourMatch[2] || 0);
-    return `${h}h${m.toString().padStart(2, "0")}`;
-  }
-  const minMatches = [...code.matchAll(/(\d+)\s*['m]/g)];
-  const totalMin = minMatches.reduce((acc, match) => acc + Number(match[1] || 0), 0);
-  if (totalMin >= 60) {
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}h${m.toString().padStart(2, "0")}`;
-  }
-  if (totalMin > 0) return `${totalMin} min`;
-  return null;
-}
+const DAY_STATUS_META: Record<UiDayStatus, { label: string; bgClass: string; Icon: typeof Check }> = {
+  done: { label: "Fait", bgClass: "bg-emerald-500", Icon: Check },
+  missed: { label: "Non fait", bgClass: "bg-red-500", Icon: X },
+  pending: { label: "En attente", bgClass: "bg-amber-400", Icon: Clock3 },
+  none: { label: "Aucune", bgClass: "bg-slate-400", Icon: Minus },
+};
 
 export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete, onOpenPlanForAthlete }: WeeklyTrackingViewProps) => {
   const { user } = useAuth();
@@ -968,18 +913,8 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
             const dayKey = format(day, "yyyy-MM-dd");
             const dayData = selectedAthlete.days[dayKey];
             const isSelected = dayKey === selectedDayKey;
-            const value = dayData ? sessionSummaryValue(dayData.session) : null;
-            const sport: CalendarSport = !dayData
-              ? "rest"
-              : isRestSession(dayData.session)
-              ? "rest"
-              : dayData.session.activity_type === "cycling"
-              ? "cycling"
-              : dayData.session.activity_type === "swimming"
-              ? "swimming"
-              : dayData.session.activity_type === "strength"
-              ? "strength"
-              : "running";
+            const uiStatus: UiDayStatus = dayData ? toUiStatus(dayData.status) : "none";
+            const statusMeta = DAY_STATUS_META[uiStatus];
             return (
               <button
                 key={dayKey}
@@ -991,14 +926,14 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
                 <p className={`mt-1 text-[11px] font-medium leading-none ${isSelected ? "text-white/90" : "text-muted-foreground"}`}>
                   {format(day, "EEE", { locale: fr }).slice(0, 1).toUpperCase()}
                 </p>
-                {value ? (
-                  <div className="mt-1.5 flex min-h-[24px] flex-col items-center justify-center">
-                    <SessionIcon sport={sport} className={`h-3 w-3 ${sessionTone(sport)}`} />
-                    <p className={`mt-0.5 text-[10px] font-medium leading-none ${sessionTone(sport)}`}>{value}</p>
-                  </div>
-                ) : (
-                  <div className="min-h-[24px]" />
-                )}
+                <div className="mt-1.5 flex min-h-[34px] flex-col items-center justify-center">
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${statusMeta.bgClass}`}>
+                    <statusMeta.Icon className="h-3 w-3 text-white" />
+                  </span>
+                  <p className={`mt-0.5 text-[10px] font-medium leading-none ${isSelected ? "text-white" : "text-foreground"}`}>
+                    {statusMeta.label}
+                  </p>
+                </div>
               </button>
             );
           })}

@@ -14,6 +14,38 @@ export type ProfileShareChannel =
   | 'more'
   | 'save_image';
 
+async function waitForArtboardImages(element: HTMLElement): Promise<void> {
+  const images = Array.from(element.querySelectorAll('img'));
+  if (!images.length) return;
+
+  const waitOne = (img: HTMLImageElement) =>
+    new Promise<void>((resolve) => {
+      if (img.complete) {
+        resolve();
+        return;
+      }
+
+      const cleanup = () => {
+        img.removeEventListener('load', onDone);
+        img.removeEventListener('error', onDone);
+      };
+      const onDone = () => {
+        cleanup();
+        resolve();
+      };
+
+      img.addEventListener('load', onDone, { once: true });
+      img.addEventListener('error', onDone, { once: true });
+
+      // decode() improves reliability in WebView captures when available.
+      if (typeof img.decode === 'function') {
+        void img.decode().catch(() => undefined);
+      }
+    });
+
+  await Promise.all(images.map(waitOne));
+}
+
 function dataUrlToBase64(dataUrl: string): string {
   const i = dataUrl.indexOf(',');
   return i >= 0 ? dataUrl.slice(i + 1) : dataUrl;
@@ -62,6 +94,7 @@ export async function generateProfileShareImage(
   templateId: ProfileShareTemplateId
 ): Promise<string> {
   const { w, h } = templateDimensions(templateId);
+  await waitForArtboardImages(element);
   return toPng(element, {
     width: w,
     height: h,

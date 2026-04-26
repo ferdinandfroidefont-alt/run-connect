@@ -168,11 +168,11 @@ export const SESSION_TYPES = [
 ];
 
 export const INTENSITY_LEVELS = [
-  { value: 'z1', label: 'Z1 - Récup', color: 'bg-blue-500' },
-  { value: 'z2', label: 'Z2 - Endurance', color: 'bg-green-500' },
-  { value: 'z3', label: 'Z3 - Tempo', color: 'bg-yellow-500' },
-  { value: 'z4', label: 'Z4 - Seuil', color: 'bg-orange-500' },
-  { value: 'z5', label: 'Z5 - VMA', color: 'bg-red-500' },
+  { value: 'z1', label: 'Z1 - Récup', color: 'bg-slate-400' },
+  { value: 'z2', label: 'Z2 - Endurance', color: 'bg-blue-600' },
+  { value: 'z3', label: 'Z3 - Tempo', color: 'bg-green-500' },
+  { value: 'z4', label: 'Z4 - Seuil', color: 'bg-yellow-400' },
+  { value: 'z5', label: 'Z5 - VMA', color: 'bg-orange-500' },
 ];
 
 export const TERRAIN_TYPES = [

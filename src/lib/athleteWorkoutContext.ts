@@ -40,16 +40,16 @@ export function zoneToFeedback(zone: ComputedZone): WorkoutIntensityFeedback {
 export function zoneToColorToken(zone: ComputedZone): string {
   switch (zone) {
     case "Z1":
-      return "hsl(var(--chart-2) / 0.22)";
+      return "#9CA3AF";
     case "Z2":
-      return "hsl(var(--primary))";
+      return "#2563EB";
     case "Z3":
-      return "hsl(var(--chart-2))";
+      return "#22C55E";
     case "Z4":
-      return "hsl(var(--chart-4))";
+      return "#FACC15";
     case "Z5":
-      return "hsl(var(--chart-5))";
+      return "#F97316";
     case "Z6":
-      return "hsl(var(--destructive))";
+      return "#EF4444";
   }
 }

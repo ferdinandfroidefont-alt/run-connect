@@ -296,7 +296,6 @@ export const ProfileShareArtboard = forwardRef<HTMLDivElement, ProfileShareArtbo
             <img
               src={profileShareCardV3}
               alt=""
-              crossOrigin="anonymous"
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill', zIndex: 0, background: '#f5efe6', borderRadius: 48 }}
             />
 
