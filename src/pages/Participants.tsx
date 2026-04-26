@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Clock, Expand, Minimize2, Navigation, Search, Users } from "lucide-react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { IosPageHeaderBar } from "@/components/layout/IosPageHeaderBar";
 import { MapIosColoredFab } from "@/components/map/MapIosColoredFab";
@@ -15,6 +15,8 @@ import { createSessionPinButton, resolveSessionPinVariant } from "@/lib/mapSessi
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { Badge } from "@/components/ui/badge";
+import { ActivityIcon } from "@/lib/activityIcons";
 
 type Participant = {
   id: string;
@@ -33,6 +35,9 @@ type LiveSessionRow = {
   id: string;
   title: string;
   scheduled_at: string;
+  activity_type: string | null;
+  current_participants: number | null;
+  live_tracking_max_duration: number | null;
 };
 
 function isValidLngLat(value: Partial<LngLatPoint> | null | undefined): value is LngLatPoint {
@@ -399,16 +404,46 @@ export default function Participants() {
     if (!showLiveSessionsPanel || !authSession?.user?.id) return;
     let cancelled = false;
     void (async () => {
-      const nowIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from("sessions")
-        .select("id, title, scheduled_at")
-        .eq("live_tracking_enabled", true)
-        .gte("scheduled_at", nowIso)
-        .order("scheduled_at", { ascending: true })
-        .limit(60);
+      const userId = authSession.user.id;
+      const { data: participations } = await supabase
+        .from("session_participants")
+        .select("session_id")
+        .eq("user_id", userId)
+        .limit(200);
+
+      const joinedSessionIds = (participations ?? []).map((row) => row.session_id).filter(Boolean);
+
+      const [createdRes, joinedRes] = await Promise.all([
+        supabase
+          .from("sessions")
+          .select("id, title, scheduled_at, activity_type, current_participants, live_tracking_max_duration")
+          .eq("live_tracking_enabled", true)
+          .eq("organizer_id", userId)
+          .order("scheduled_at", { ascending: true })
+          .limit(120),
+        joinedSessionIds.length > 0
+          ? supabase
+              .from("sessions")
+              .select("id, title, scheduled_at, activity_type, current_participants, live_tracking_max_duration")
+              .eq("live_tracking_enabled", true)
+              .in("id", joinedSessionIds)
+              .order("scheduled_at", { ascending: true })
+              .limit(120)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      const merged = new Map<string, LiveSessionRow>();
+      for (const row of [...(createdRes.data ?? []), ...((joinedRes.data as LiveSessionRow[] | null) ?? [])]) {
+        merged.set(row.id, row);
+      }
+
+      const sorted = Array.from(merged.values()).sort(
+        (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+      );
+
+      if (createdRes.error || joinedRes.error) return;
       if (cancelled) return;
-      setLiveSessions((data ?? []) as LiveSessionRow[]);
+      setLiveSessions(sorted);
     })();
     return () => {
       cancelled = true;
@@ -423,9 +458,9 @@ export default function Participants() {
 
   const filteredLiveSessions = useMemo(() => {
     const now = Date.now();
-    const liveWindowMs = 2 * 60 * 60 * 1000;
     const byFilter = liveSessions.filter((s) => {
       const t = new Date(s.scheduled_at).getTime();
+      const liveWindowMs = Math.max(15, Number(s.live_tracking_max_duration) || 120) * 60 * 1000;
       if (liveSessionsFilter === "live") return t <= now && now <= t + liveWindowMs;
       if (liveSessionsFilter === "upcoming") return t > now;
       return t + liveWindowMs < now;
@@ -665,17 +700,53 @@ export default function Participants() {
                     setShowLiveSessionsPanel(false);
                     navigate(`/participants?sessionId=${row.id}`);
                   }}
-                  className="w-full rounded-xl border border-border/70 bg-card px-3 py-3 text-left active:bg-secondary"
+                  className="ios-list-row border border-white dark:border-white/10 text-left active:bg-secondary"
                 >
-                  <p className="truncate text-[15px] font-semibold text-foreground">{row.title || "Séance live"}</p>
-                  <p className="mt-0.5 text-[12px] text-muted-foreground">
-                    {new Date(row.scheduled_at).toLocaleString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <div className="flex items-start gap-ios-2">
+                    <ActivityIcon activityType={row.activity_type || "course"} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <div className="mb-0.5 flex items-center gap-1.5">
+                        <Badge
+                          variant={
+                            liveSessionsFilter === "live"
+                              ? "destructive"
+                              : liveSessionsFilter === "upcoming"
+                                ? "default"
+                                : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {liveSessionsFilter === "live"
+                            ? "En cours"
+                            : liveSessionsFilter === "upcoming"
+                              ? "À venir"
+                              : "Terminée"}
+                        </Badge>
+                      </div>
+                      <h3 className="truncate text-ios-headline font-semibold">{row.title || "Séance live"}</h3>
+                      <div className="mt-0.5 flex items-center gap-ios-3 text-[12px] leading-tight text-muted-foreground">
+                        <span className="flex items-center gap-0.5">
+                          <Calendar className="h-3 w-3 shrink-0" />
+                          {new Date(row.scheduled_at).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                          })}
+                        </span>
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          {new Date(row.scheduled_at).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        <span className="flex items-center gap-0.5">
+                          <Users className="h-3 w-3 shrink-0" />
+                          {row.current_participants || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground/50" />
+                  </div>
                 </button>
               ))
             )}

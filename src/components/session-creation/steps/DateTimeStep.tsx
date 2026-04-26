@@ -110,7 +110,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                     ? "bg-primary text-primary-foreground"
                     : d.isWeekend
                       ? "bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
-                      : "bg-white/5 hover:bg-white/10 dark:bg-secondary/60 dark:hover:bg-secondary"
+                      : "border border-border bg-card text-foreground hover:bg-secondary"
                 )}
                 whileTap={{ scale: 0.95 }}
               >
@@ -141,7 +141,7 @@ export const DateTimeStep: React.FC<DateTimeStepProps> = ({
                   "flex flex-col items-center p-3 rounded-xl transition-all",
                   selectedTime === suggestion.time
                     ? "bg-primary text-primary-foreground"
-                    : "bg-white/5 hover:bg-white/10"
+                    : "border border-border bg-card text-foreground hover:bg-secondary"
                 )}
                 whileTap={{ scale: 0.95 }}
               >

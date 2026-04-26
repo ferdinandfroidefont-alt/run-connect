@@ -48,7 +48,7 @@ import { PlanningHeader } from "@/components/coaching/planning/PlanningHeader";
 import { PlanningSearchBar } from "@/components/coaching/planning/PlanningSearchBar";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
-import { buildWorkoutSegments, miniProfileZoneColor, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
+import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { MiniWorkoutProfile } from "@/components/coaching/MiniWorkoutProfile";
 import { AppDrawer, type CoachMenuKey } from "@/components/coaching/drawer/AppDrawer";
@@ -166,13 +166,6 @@ type TrainingSession = {
 };
 
 type SessionDraft = Omit<TrainingSession, "id" | "sent">;
-type SchemaTooltipState = {
-  blockIndex: number;
-  anchorX: number;
-  anchorTop: number;
-  label: string;
-};
-
 const SPORTS: Array<{ id: SportType; label: string; emoji: string }> = [
   { id: "running", label: "Course à pied", emoji: "🏃" },
   { id: "cycling", label: "Vélo", emoji: "🚴" },
@@ -344,30 +337,6 @@ function pacePerKmShortLabel(paceSecPerKm?: number) {
   const min = Math.floor(rounded / 60);
   const sec = rounded % 60;
   return `${min}:${sec.toString().padStart(2, "0")}/km`;
-}
-
-function durationBubbleLabel(totalSec?: number) {
-  if (!totalSec || totalSec <= 0) return "";
-  if (totalSec < 60) return `${Math.round(totalSec)} secondes`;
-  const minutes = Math.round(totalSec / 60);
-  return minutes > 1 ? `${minutes} min` : "1 min";
-}
-
-function blockBubbleLabel(block: SessionBlock, sport: SportType) {
-  const duration = durationBubbleLabel(block.durationSec);
-  const distance = simpleBlockDistanceValue(block.distanceM);
-  const progressiveTarget =
-    block.paceStartSecPerKm && block.paceEndSecPerKm
-      ? `${pacePerKmShortLabel(block.paceStartSecPerKm)} -> ${pacePerKmShortLabel(block.paceEndSecPerKm)}`
-      : "";
-  const runningTarget = progressiveTarget || pacePerKmShortLabel(block.paceSecPerKm);
-  const cyclingTarget = block.powerWatts && block.powerWatts > 0 ? `${Math.round(block.powerWatts)} W` : "";
-  const genericTarget = block.speedKmh && block.speedKmh > 0 ? `${Math.round(block.speedKmh)} km/h` : "";
-  const target = sport === "running" ? runningTarget : sport === "cycling" ? cyclingTarget || runningTarget : genericTarget || runningTarget || cyclingTarget;
-  const primary = duration || distance || blockTitle(block.type);
-  const main = target ? `${primary} à ${target}` : primary;
-  const shouldAppendDistance = Boolean(distance) && distance !== primary;
-  return shouldAppendDistance ? `${main} • ${distance}` : main;
 }
 
 function compactPaceLabel(paceSecPerKm?: number) {
@@ -898,11 +867,8 @@ export function CoachPlanningExperience() {
   const [schemaAddMoreOpen, setSchemaAddMoreOpen] = useState(false);
   const [schemaDragPointer, setSchemaDragPointer] = useState<{ x: number; y: number } | null>(null);
   const [schemaDropRatio, setSchemaDropRatio] = useState<number | null>(null);
-  const [schemaTooltip, setSchemaTooltip] = useState<SchemaTooltipState | null>(null);
-  const [schemaTooltipWidth, setSchemaTooltipWidth] = useState(0);
   const schemaDragFromAddCardStartRef = useRef<{ x: number; y: number } | null>(null);
   const addBlockFromCardGestureMovedRef = useRef(false);
-  const schemaTooltipRef = useRef<HTMLDivElement | null>(null);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<string | null>(null);
   const [wheelOpen, setWheelOpen] = useState(false);
@@ -960,22 +926,6 @@ export function CoachPlanningExperience() {
     }
   }, [draft.blocks, selectedBlockId]);
 
-  useEffect(() => {
-    if (!schemaTooltipRef.current) return;
-    setSchemaTooltipWidth(schemaTooltipRef.current.getBoundingClientRect().width);
-  }, [schemaTooltip?.label]);
-
-  useEffect(() => {
-    if (!schemaTooltip) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (schemaPreviewRef.current?.contains(target)) return;
-      setSchemaTooltip(null);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [schemaTooltip]);
   const effectiveAthleteMode = !isCoachMode || viewAsAthlete;
 
   const rotateActiveClub = () => {
@@ -1510,26 +1460,16 @@ export function CoachPlanningExperience() {
   );
   const previewMetrics = useMemo(() => resolveWorkoutMetrics({ segments: previewSegments }), [previewSegments]);
   const previewBars = useMemo(
-    () => renderWorkoutMiniProfile(previewSegments, { sessionSchema: true }),
+    () => renderWorkoutMiniProfile(previewSegments),
     [previewSegments]
   );
-  const schemaTooltipBlocks = useMemo(() => (draft.blocks.length ? draft.blocks : []), [draft.blocks]);
   const selectedSchemaPreviewIndex = useMemo(() => {
-    if (!selectedBlockId || !schemaTooltipBlocks.length || !previewBars.length) return null;
-    const selectedDraftIndex = schemaTooltipBlocks.findIndex((block) => block.id === selectedBlockId);
+    if (!selectedBlockId || !draft.blocks.length || !previewBars.length) return null;
+    const selectedDraftIndex = draft.blocks.findIndex((block) => block.id === selectedBlockId);
     if (selectedDraftIndex < 0) return null;
-    if (schemaTooltipBlocks.length === 1) return 0;
-    return Math.round((selectedDraftIndex / (schemaTooltipBlocks.length - 1)) * Math.max(0, previewBars.length - 1));
-  }, [previewBars.length, schemaTooltipBlocks, selectedBlockId]);
-  const sessionTimeAxisLabels = useMemo(() => {
-    const d = Math.max(0, Math.round(previewMetrics.durationMin));
-    const end = Math.max(60, Math.ceil(Math.max(1, d) / 15) * 15);
-    const labels: string[] = [];
-    for (let m = 0; m <= end; m += 15) {
-      labels.push(`${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`);
-    }
-    return labels;
-  }, [previewMetrics.durationMin]);
+    if (draft.blocks.length === 1) return 0;
+    return Math.round((selectedDraftIndex / (draft.blocks.length - 1)) * Math.max(0, previewBars.length - 1));
+  }, [draft.blocks, previewBars.length, selectedBlockId]);
   const sessionTranscript = useMemo(() => {
     if (!draft.blocks.length) return "Séance vide";
     return draft.blocks.map((block) => blockTranscript(block)).filter(Boolean).join(" + ");
@@ -3211,29 +3151,13 @@ export function CoachPlanningExperience() {
                 >
                   <div className="space-y-3 px-4 py-3">
                     <p className="text-[14px] font-semibold text-foreground">Schéma de séance</p>
-                    <div className="flex gap-1.5">
-                      <div
-                        className="flex h-[96px] w-5 shrink-0 flex-col border-r border-slate-200/60 pt-1.5 pb-2.5 pr-1 text-[8px] font-bold leading-none"
-                        aria-hidden
-                      >
-                        <div className="grid min-h-0 w-full flex-1 grid-rows-6">
-                          {(["Z6", "Z5", "Z4", "Z3", "Z2", "Z1"] as const).map((z) => (
-                            <div key={z} className="flex min-h-0 items-center justify-end">
-                              <span className="text-right" style={{ color: miniProfileZoneColor(z) }}>
-                                {z}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
+                      <div className="rounded-[16px] border border-border/65 bg-background px-2 py-2">
                         <div
                           ref={schemaPreviewRef}
                           onPointerMove={handleSchemaPreviewPointerMove}
                           onPointerDown={(event) => {
-                            if (event.target === event.currentTarget) {
-                              setSchemaTooltip(null);
-                            }
+                            if (event.target !== event.currentTarget) return;
                           }}
                           className={cn(
                             "relative",
@@ -3244,61 +3168,19 @@ export function CoachPlanningExperience() {
                           <MiniWorkoutProfile
                             blocks={previewBars}
                             variant="premiumCompact"
-                            barHeightScale={1}
-                            zoneBandMode
+                            compact
                             selectedBlockIndex={selectedSchemaPreviewIndex}
-                            onBackgroundTap={() => setSchemaTooltip(null)}
-                            onBlockTap={({ index, anchorX, anchorTop }) => {
-                              if (!schemaTooltipBlocks.length) return;
+                            onBlockTap={({ index }) => {
+                              if (!draft.blocks.length) return;
                               const mappedDraftIndex =
-                                schemaTooltipBlocks.length <= 1 || previewBars.length <= 1
+                                draft.blocks.length <= 1 || previewBars.length <= 1
                                   ? 0
-                                  : Math.round((index / Math.max(1, previewBars.length - 1)) * (schemaTooltipBlocks.length - 1));
-                              const block = schemaTooltipBlocks[Math.max(0, Math.min(schemaTooltipBlocks.length - 1, mappedDraftIndex))];
-                              if (!block) return;
-                              setSelectedBlockId(block.id);
-                              setSchemaTooltip({
-                                blockIndex: index,
-                                anchorX,
-                                anchorTop,
-                                label: blockBubbleLabel(block, draft.sport),
-                              });
+                                  : Math.round((index / Math.max(1, previewBars.length - 1)) * (draft.blocks.length - 1));
+                              const block = draft.blocks[Math.max(0, Math.min(draft.blocks.length - 1, mappedDraftIndex))];
+                              if (block) setSelectedBlockId(block.id);
                             }}
-                            className="h-[96px] w-full"
+                            className="h-9 w-full"
                           />
-                          {schemaTooltip ? (
-                            <div
-                              ref={schemaTooltipRef}
-                              className="pointer-events-none absolute z-20 max-w-[16rem] rounded-full bg-slate-950/88 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_10px_24px_-14px_rgba(2,6,23,0.95)] backdrop-blur-[2px]"
-                              style={{
-                                left: (() => {
-                                  const containerWidth = schemaPreviewRef.current?.clientWidth ?? 0;
-                                  const maxLeft = Math.max(8, containerWidth - schemaTooltipWidth - 8);
-                                  const preferred = schemaTooltip.anchorX - schemaTooltipWidth / 2;
-                                  return Math.max(8, Math.min(preferred, maxLeft));
-                                })(),
-                                top: Math.max(4, schemaTooltip.anchorTop - 8),
-                                transform: "translateY(-100%)",
-                              }}
-                            >
-                              {schemaTooltip.label}
-                              <span
-                                aria-hidden
-                                className="absolute h-2.5 w-2.5 rotate-45 bg-slate-950/88"
-                                style={{
-                                  left: (() => {
-                                    const containerWidth = schemaPreviewRef.current?.clientWidth ?? 0;
-                                    const maxLeft = Math.max(8, containerWidth - schemaTooltipWidth - 8);
-                                    const preferred = schemaTooltip.anchorX - schemaTooltipWidth / 2;
-                                    const bubbleLeft = Math.max(8, Math.min(preferred, maxLeft));
-                                    const arrow = schemaTooltip.anchorX - bubbleLeft - 5;
-                                    return Math.max(8, Math.min(arrow, Math.max(8, schemaTooltipWidth - 14)));
-                                  })(),
-                                  bottom: -4,
-                                }}
-                              />
-                            </div>
-                          ) : null}
                           {schemaDropRatio != null ? (
                             <div
                               aria-hidden
@@ -3319,13 +3201,6 @@ export function CoachPlanningExperience() {
                               <SchemaDragToolMini tool={schemaDraggingTool} />
                             </div>
                           ) : null}
-                        </div>
-                        <div className="mt-1 flex min-h-[14px] justify-between gap-0.5 pl-0.5 text-[7px] font-semibold tabular-nums text-slate-500 sm:text-[8px]">
-                          {sessionTimeAxisLabels.map((t) => (
-                            <span key={t} className="min-w-0 max-w-[3rem] flex-1 truncate text-center text-[#2563EB]/70">
-                              {t}
-                            </span>
-                          ))}
                         </div>
                       </div>
                     </div>

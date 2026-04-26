@@ -351,7 +351,7 @@ export const CreateSessionWizard: React.FC<CreateSessionWizardProps> = ({
           toast({ title: "Séance créée avec succès ! 🎉" });
         }
         showAdAfterSessionCreation();
-        if (sessionData?.id && isPublicSession && !isPremiumUser) {
+        if (sessionData?.id && !isPremiumUser) {
           setBoostingSessionId(sessionData.id);
           setBoostDialogOpen(true);
         }

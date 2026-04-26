@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,8 +10,12 @@ import { ReferralCodeInput } from "@/components/ReferralCodeInput";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2, User, Lock, FileText, Calendar, Eye, EyeOff, Globe, ChevronRight, Activity } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
+import {
+  HomeMapFilterGroupedList,
+  HomeMapFilterRow,
+  HomeMapFilterSheet,
+} from "@/components/map/HomeMapFilterSheet";
 import { saveImageToIndexedDB, loadImageFromIndexedDB, deleteImageFromIndexedDB } from "@/lib/indexedDBStorage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -78,6 +81,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
   const [isRestoring, setIsRestoring] = useState(true); // Start with restoring state
   const [preparingAvatarCrop, setPreparingAvatarCrop] = useState(false);
   const [sportsDialogOpen, setSportsDialogOpen] = useState(false);
+  const [countrySheetOpen, setCountrySheetOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   /** Nettoie les listeners file picker (annulation = pas d’événement change → évite le spinner bloqué). */
   const endPhotoPickerSessionRef = useRef<(() => void) | null>(null);
@@ -848,7 +852,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0"
+                        className={`flex-1 h-10 border-0 bg-transparent p-0 focus-visible:ring-0 ${birthDate ? 'text-foreground' : 'text-muted-foreground'}`}
                         max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split('T')[0]}
                         required
                       />
@@ -861,7 +865,7 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   </div>
                   <div className="ios-list-row-inset-sep" />
 
-                  {/* Sports (ligne + popup) */}
+                  {/* Sports (ligne + bottom sheet) */}
                   <button
                     type="button"
                     onClick={() => setSportsDialogOpen(true)}
@@ -882,29 +886,19 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
                   <div className="ios-list-row-inset-sep" />
 
                   {/* Pays */}
-                  <div className="flex items-center gap-2.5 px-4 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setCountrySheetOpen(true)}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left active:bg-secondary/30"
+                  >
                     <div className="ios-list-row-icon bg-[#30B0C7]">
                       <Globe className="h-[18px] w-[18px] text-white" />
                     </div>
-                    <Select
-                      value={country}
-                      onValueChange={(v) => {
-                        setCountry(v);
-                        void suggestLanguageFromCountry(v);
-                      }}
-                    >
-                      <SelectTrigger className="h-10 min-w-0 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0">
-                        <SelectValue placeholder={t("profileSetup.countryPlaceholder")} />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[min(24rem,70dvh)]" sideOffset={6}>
-                        {COUNTRY_CODES.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {t(`profileSetup.countries.${code}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <span className={`min-w-0 flex-1 truncate text-[15px] ${country ? "text-foreground" : "text-muted-foreground"}`}>
+                      {country ? t(`profileSetup.countries.${country}`) : t("profileSetup.countryPlaceholder")}
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/50" />
+                  </button>
                 </div>
               </div>
 
@@ -961,53 +955,57 @@ export const ProfileSetupDialog = ({ open, onOpenChange, userId, email, onComple
             </form>
         </IosFixedPageHeaderShell>
 
-        {sportsDialogOpen && (
-          <div
-            className="fixed inset-0 z-[200] flex flex-col justify-end sm:justify-center sm:px-4"
-            role="dialog"
-            aria-modal
-            aria-labelledby="profile-setup-sports-title"
-          >
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/50"
-              onClick={() => setSportsDialogOpen(false)}
-              aria-label={t("common.close")}
-            />
-            <div className="relative z-10 w-full max-h-[min(70dvh,32rem)] overflow-hidden rounded-t-2xl bg-card shadow-xl sm:mx-auto sm:max-w-lg sm:rounded-2xl">
-              <div className="border-b border-border px-4 py-3 text-center">
-                <p id="profile-setup-sports-title" className="text-[15px] font-semibold text-foreground">
-                  {t("profileSetup.sportsDialogTitle")}
-                </p>
-                <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{t("profileSetup.sportsPickHint")}</p>
-              </div>
-              <div className="max-h-[min(50dvh,22rem)] overflow-y-auto px-2">
-                {PROFILE_SPORT_KEYS.map((key) => (
-                  <label
-                    key={key}
-                    className="flex cursor-pointer items-center gap-3 border-b border-border/70 px-2 py-2.5 last:border-b-0 active:bg-secondary/40"
-                  >
-                    <Checkbox
-                      checked={selectedSports.includes(key)}
-                      onCheckedChange={() =>
-                        setSelectedSports((prev) =>
-                          prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-                        )
-                      }
-                      className="shrink-0"
-                    />
-                    <span className="text-[15px] text-foreground">{t(`profileSetup.sports.${key}`)}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <Button type="button" className="h-12 w-full rounded-ios-md" onClick={() => setSportsDialogOpen(false)}>
-                  {t("profileSetup.sportsDialogDone")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <HomeMapFilterSheet
+          open={sportsDialogOpen}
+          onClose={() => setSportsDialogOpen(false)}
+          title={t("profileSetup.sportsDialogTitle")}
+          description={t("profileSetup.sportsPickHint")}
+          titleId="profile-setup-sports-title"
+          variant="tall"
+          footer={
+            <Button type="button" className="h-12 w-full rounded-ios-md" onClick={() => setSportsDialogOpen(false)}>
+              {t("profileSetup.sportsDialogDone")}
+            </Button>
+          }
+        >
+          <HomeMapFilterGroupedList>
+            {PROFILE_SPORT_KEYS.map((key) => (
+              <HomeMapFilterRow
+                key={key}
+                label={t(`profileSetup.sports.${key}`)}
+                selected={selectedSports.includes(key)}
+                onClick={() =>
+                  setSelectedSports((prev) =>
+                    prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+                  )
+                }
+              />
+            ))}
+          </HomeMapFilterGroupedList>
+        </HomeMapFilterSheet>
+
+        <HomeMapFilterSheet
+          open={countrySheetOpen}
+          onClose={() => setCountrySheetOpen(false)}
+          title={t("profileSetup.countryPlaceholder")}
+          titleId="profile-setup-country-title"
+          variant="tall"
+        >
+          <HomeMapFilterGroupedList>
+            {COUNTRY_CODES.map((code) => (
+              <HomeMapFilterRow
+                key={code}
+                label={t(`profileSetup.countries.${code}`)}
+                selected={country === code}
+                onClick={() => {
+                  setCountry(code);
+                  void suggestLanguageFromCountry(code);
+                  setCountrySheetOpen(false);
+                }}
+              />
+            ))}
+          </HomeMapFilterGroupedList>
+        </HomeMapFilterSheet>
 
         {preparingAvatarCrop && (
           <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-3 bg-black/55 px-6">

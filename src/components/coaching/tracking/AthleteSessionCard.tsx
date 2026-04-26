@@ -1,8 +1,6 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ChevronRight, MessageSquare, MessageCircleMore } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { SessionStatusBadge } from "@/components/coaching/tracking/SessionStatusBadge";
-import { SessionFeedback } from "@/components/coaching/tracking/SessionFeedback";
 import { cn } from "@/lib/utils";
 
 interface AthleteSessionCardProps {
@@ -11,10 +9,8 @@ interface AthleteSessionCardProps {
   title: string;
   details: string;
   status: "pending" | "done" | "missed";
-  note: string | null;
   rpeLabel?: string;
   objective?: string | null;
-  onReply: () => void;
   onOpen?: () => void;
 }
 
@@ -30,10 +26,8 @@ export function AthleteSessionCard({
   title,
   details,
   status,
-  note,
   rpeLabel,
   objective,
-  onReply,
   onOpen,
 }: AthleteSessionCardProps) {
   return (
@@ -70,22 +64,11 @@ export function AthleteSessionCard({
             </div>
           </div>
 
-          <div className="mt-2.5 space-y-2 border-t border-border/50 pt-2.5">
-            <div className="flex items-center justify-between">
-              <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <MessageCircleMore className="h-3.5 w-3.5" />
-                Commentaire athlète
-              </p>
-              {rpeLabel ? (
-                <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold text-foreground">{rpeLabel}</span>
-              ) : null}
+          {rpeLabel ? (
+            <div className="mt-2 border-t border-border/50 pt-2">
+              <span className="inline-flex rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold text-foreground">{rpeLabel}</span>
             </div>
-            <SessionFeedback note={note} />
-            <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg text-[12px] font-semibold" onClick={onReply}>
-              <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-              Répondre
-            </Button>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>

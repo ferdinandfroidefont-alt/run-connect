@@ -22,17 +22,19 @@ import {
   Plus,
   Trash2,
   X,
+  BarChart3,
+  CircleHelp,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { coachingRowToWeekSession } from "@/lib/coachingWeekSessionImport";
 import type { WeekSession } from "@/components/coaching/WeeklyPlanSessionEditor";
 import { parseAthleteBlockRpeFelt } from "@/lib/sessionBlockRpe";
 import { useNavigate } from "react-router-dom";
 import { getOrCreateDirectConversation } from "@/lib/coachingMessaging";
 import { AthleteHeader } from "@/components/coaching/tracking/AthleteHeader";
 import { AthleteSessionCard } from "@/components/coaching/tracking/AthleteSessionCard";
+import { SessionFeedback } from "@/components/coaching/tracking/SessionFeedback";
 import { useProfileNavigation } from "@/hooks/useProfileNavigation";
 import { ProfilePreviewDialog } from "@/components/ProfilePreviewDialog";
 import { buildAthleteIntensityContext, computeAthletePaces, zoneToFeedback } from "@/lib/athleteWorkoutContext";
@@ -174,6 +176,19 @@ function formatDurationFromSeconds(totalSec?: number | null): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatRecordDistanceLabel(distanceKm: number, distanceM: number): string {
+  if (distanceKm >= 1) {
+    return `${distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: distanceKm % 1 === 0 ? 0 : 1 })} km`;
+  }
+  return `${Math.round(distanceM)} m`;
+}
+
+function computeAthleteLevelFrom5k(timeSec?: number | null): number | null {
+  if (!timeSec || !Number.isFinite(timeSec) || timeSec <= 0) return null;
+  const score = Math.round(2000 - timeSec);
+  return Math.max(100, Math.min(2200, score));
+}
+
 const DAY_STATUS_META: Record<UiDayStatus, { label: string; bgClass: string; Icon: typeof Check }> = {
   done: { label: "Fait", bgClass: "bg-emerald-500", Icon: Check },
   missed: { label: "Non fait", bgClass: "bg-red-500", Icon: X },
@@ -197,6 +212,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const [sendingReminder, setSendingReminder] = useState(false);
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
+  const [athleteProfileDialogOpen, setAthleteProfileDialogOpen] = useState(false);
   const [recordsDraft, setRecordsDraft] = useState<Array<{ id?: string; event_label: string; record_value: string; note: string }>>([]);
   const [savingRecords, setSavingRecords] = useState(false);
 
@@ -214,27 +230,13 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     [navigate, user]
   );
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-
-  const handleRescheduleSession = useCallback(
-    async (sessionId: string) => {
-      if (!onOpenPlanForAthlete || !selectedAthleteId) return;
-      const athlete = athletes.find((a) => a.userId === selectedAthleteId);
-      if (!athlete) return;
-      const { data, error } = await supabase.from("coaching_sessions").select("*").eq("id", sessionId).single();
-      if (error || !data) {
-        toast.error("Impossible de charger la séance");
-        return;
-      }
-      const ws = coachingRowToWeekSession(data);
-      onOpenPlanForAthlete(athlete.userId, athlete.displayName, athlete.groupId || undefined, currentWeek, [ws]);
-    },
-    [onOpenPlanForAthlete, selectedAthleteId, athletes, currentWeek],
-  );
+  const weekStart = useMemo(() => startOfWeek(currentWeek, { weekStartsOn: 1 }), [currentWeek]);
+  const weekEnd = useMemo(() => endOfWeek(currentWeek, { weekStartsOn: 1 }), [currentWeek]);
+  const weekDays = useMemo(() => eachDayOfInterval({ start: weekStart, end: weekEnd }), [weekStart, weekEnd]);
 
   const [initialNavDone, setInitialNavDone] = useState(false);
+  const [sessionDetailOpen, setSessionDetailOpen] = useState(false);
+  const [sessionDetailDayKey, setSessionDetailDayKey] = useState<string | null>(null);
   useEffect(() => {
     if (initialNavDone) return;
     const findLatestWeek = async () => {
@@ -517,6 +519,20 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
   const selectedAthleteProfileRecords = useMemo(() => {
     return parseAthleteRecords(selectedAthlete?.runningRecords ?? null).sort((a, b) => a.distanceM - b.distanceM);
   }, [selectedAthlete]);
+  const selectedAthlete5kRecord = useMemo(
+    () => selectedAthleteProfileRecords.find((record) => record.key === "5k") ?? null,
+    [selectedAthleteProfileRecords]
+  );
+  const selectedAthleteLevel = useMemo(
+    () => computeAthleteLevelFrom5k(selectedAthlete5kRecord?.timeSec),
+    [selectedAthlete5kRecord]
+  );
+  const profileCardHeadline = useMemo(() => {
+    if (selectedAthleteLevel != null) return `Niveau ${selectedAthleteLevel}`;
+    const firstRecord = selectedAthleteProfileRecords[0];
+    if (!firstRecord) return "Ajoute un record";
+    return `${formatRecordDistanceLabel(firstRecord.distanceKm, firstRecord.distanceM)} · ${formatDurationFromSeconds(firstRecord.timeSec)}`;
+  }, [selectedAthleteLevel, selectedAthleteProfileRecords]);
   const selectedAthleteZoneCards = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
     if (!zones) return [];
@@ -538,6 +554,7 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
       .map((row) => `${normalizeRunningEventKey(row.event_label).toUpperCase()} ${row.record_value}`);
   }, [selectedAthlete]);
   const selectedDayData = selectedAthlete && selectedDayKey ? selectedAthlete.days[selectedDayKey] : undefined;
+  const sessionDetailData = selectedAthlete && sessionDetailDayKey ? selectedAthlete.days[sessionDetailDayKey] : undefined;
   const selectedFeedback = useMemo(() => {
     const zones = selectedAthletePaces?.zones;
     const selectedPace = selectedDayData?.session.pace_target;
@@ -548,24 +565,6 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     const zone = getZoneFromPace(pace, zones);
     return zone ? zoneToFeedback(zone) : undefined;
   }, [selectedAthletePaces, selectedDayData]);
-
-  const openRecordsEditor = useCallback(() => {
-    if (!selectedAthlete) return;
-    const runningRows = selectedAthlete.coachPrivateRows.filter((row) => row.sport_key === "running");
-    const athleteRows = parseAthleteRecords(selectedAthlete.runningRecords).map((record) => ({
-      event_label: `${record.distanceKm >= 1 ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km` : `${Math.round(record.distanceM)} m`}`,
-      record_value: formatDurationFromSeconds(record.timeSec),
-      note: "Importé depuis le profil athlète",
-    }));
-    setRecordsDraft(
-      runningRows.length
-        ? runningRows.map((row) => ({ id: row.id, event_label: row.event_label, record_value: row.record_value, note: row.note ?? "" }))
-        : athleteRows.length
-        ? athleteRows
-        : [{ event_label: "5 km", record_value: "", note: "" }, { event_label: "3 km", record_value: "", note: "" }, { event_label: "10 km", record_value: "", note: "" }]
-    );
-    setRecordsDialogOpen(true);
-  }, [selectedAthlete]);
 
   const saveCoachPrivateRecords = useCallback(async () => {
     if (!user || !selectedAthlete) return;
@@ -606,19 +605,29 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
     }
   }, [clubId, loadTracking, recordsDraft, selectedAthlete, user]);
 
+  const openSessionDetail = useCallback((dayKey: string) => {
+    setSessionDetailDayKey(dayKey);
+    setSessionDetailOpen(true);
+  }, []);
+
   useEffect(() => {
     if (!selectedAthlete) {
       setSelectedDayKey(null);
+      setSessionDetailOpen(false);
+      setSessionDetailDayKey(null);
+      return;
+    }
+    if (selectedDayKey && weekDays.some((day) => format(day, "yyyy-MM-dd") === selectedDayKey)) {
       return;
     }
     const todayKey = format(new Date(), "yyyy-MM-dd");
-    if (selectedAthlete.days[todayKey]) {
+    if (weekDays.some((day) => format(day, "yyyy-MM-dd") === todayKey)) {
       setSelectedDayKey(todayKey);
       return;
     }
     const firstWithSession = weekDays.find((day) => !!selectedAthlete.days[format(day, "yyyy-MM-dd")]);
     setSelectedDayKey(firstWithSession ? format(firstWithSession, "yyyy-MM-dd") : format(weekStart, "yyyy-MM-dd"));
-  }, [selectedAthlete, weekDays, weekStart]);
+  }, [selectedAthlete, selectedDayKey, weekDays, weekStart]);
 
 
   const weekLabel = `${format(weekStart, "d MMM", { locale: fr })} – ${format(weekEnd, "d MMM", { locale: fr })}`;
@@ -950,11 +959,9 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
               title={selectedDayData.sessionTitle}
               details={selectedDetails}
               status={selectedStatus === "none" ? "pending" : selectedStatus}
-              note={selectedDayData.note}
               rpeLabel={selectedAvgRpe != null ? `RPE ${selectedAvgRpe}/10` : undefined}
               objective={selectedDayData.session.objective}
-              onReply={() => void openConversationWithAthlete(selectedAthlete.userId)}
-              onOpen={() => void handleRescheduleSession(selectedDayData.sessionId)}
+              onOpen={() => selectedDayKey && openSessionDetail(selectedDayKey)}
             />
           ) : (
             <div className="bg-secondary/20 px-3 py-6 text-center">
@@ -964,58 +971,186 @@ export const WeeklyTrackingView = ({ clubId, selectedAthleteId, onSelectAthlete,
         </div>
       </div>
       <div className="border-b border-border bg-card px-4 py-3">
-        <div className="rounded-2xl border border-border/60 bg-secondary/25 p-3 lg:p-5">
-          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-2">
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">Records du profil athlète</p>
-                <button
-                  type="button"
-                  onClick={openRecordsEditor}
-                  className="text-[11px] font-semibold text-primary hover:underline"
-                >
-                  (+ gérer)
-                </button>
-              </div>
-              {selectedAthleteProfileRecords.length > 0 ? (
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {selectedAthleteProfileRecords.map((record) => (
-                    <div key={`${record.key}-${record.timeSec}`} className="rounded-lg border border-border/50 bg-background px-2.5 py-2">
-                      <p className="text-[11px] font-medium text-muted-foreground">
-                        {record.distanceKm >= 1
-                          ? `${record.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: record.distanceKm % 1 === 0 ? 0 : 1 })} km`
-                          : `${Math.round(record.distanceM)} m`}
-                      </p>
-                      <p className="text-[13px] font-semibold text-foreground">{formatDurationFromSeconds(record.timeSec)}</p>
-                      <p className="text-[11px] text-muted-foreground">{formatPaceFromSeconds(record.paceSecPerKm)}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-2 text-[12px] text-muted-foreground">Aucun record détecté sur le profil athlète.</p>
-              )}
-            </div>
-            {selectedAthleteZoneCards.length > 0 ? (
-              <div className="rounded-xl border border-border/60 bg-background/80 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Repères zones d'entraînement</p>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {selectedAthleteZoneCards.map((zone) => (
-                    <div key={zone.zone} className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/50 px-2.5 py-2 text-[12px] text-foreground">
-                      <span className={`h-2.5 w-2.5 rounded-full ${zoneToPreviewColorClass(zone.zone)}`} />
-                      <span className="font-semibold">{zone.zone}</span>
-                      <span className="text-muted-foreground">{zone.minPace} → {zone.maxPace}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setAthleteProfileDialogOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setAthleteProfileDialogOpen(true);
+            }
+          }}
+          className="flex min-h-[92px] w-full items-center gap-3 rounded-2xl border bg-white px-4 py-4 text-left transition-colors active:bg-slate-50"
+          style={{ borderColor: "#E5E7EB", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <BarChart3 className="h-5 w-5" />
           </div>
-          {selectedAthleteIntensity && selectedFeedback ? (
-            <p className="mt-3 text-[12px] font-medium text-primary">Feedback calculé : {selectedFeedback}</p>
-          ) : null}
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-medium text-muted-foreground">Profil athlète</p>
+            <p className="truncate text-[20px] font-semibold leading-tight text-foreground">{profileCardHeadline}</p>
+            <p className="truncate text-[12px] text-muted-foreground">
+              {selectedAthleteZoneCards.length > 0
+                ? "Zones calculées automatiquement"
+                : "Ajoute un record pour générer tes zones"}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setAthleteProfileDialogOpen(true);
+              }}
+              className="rounded-full px-1 text-[14px] font-semibold text-[#2563EB]"
+            >
+              Voir zones
+            </button>
+            <button
+              type="button"
+              aria-label="Informations profil athlète"
+              onClick={(event) => {
+                event.stopPropagation();
+                setAthleteProfileDialogOpen(true);
+              }}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground"
+            >
+              <CircleHelp className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
       <ProfilePreviewDialog userId={selectedUserId} onClose={closeProfilePreview} />
+
+      <Dialog open={sessionDetailOpen} onOpenChange={setSessionDetailOpen}>
+        <DialogContent
+          fullScreen
+          hideCloseButton
+          className="overflow-hidden bg-secondary p-0 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom-[18px] data-[state=closed]:slide-out-to-bottom-[18px] data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0"
+        >
+          <DialogTitle className="sr-only">Détail séance</DialogTitle>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 border-b border-border bg-card px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <div className="relative flex min-h-[44px] items-center">
+                <button
+                  type="button"
+                  onClick={() => setSessionDetailOpen(false)}
+                  className="flex min-w-0 items-center gap-ios-1 text-primary active:opacity-70"
+                  aria-label="Retour"
+                >
+                  <ChevronLeft className="h-6 w-6 shrink-0" />
+                  <span className="truncate text-ios-headline">Retour</span>
+                </button>
+                <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold text-foreground">
+                  Séance athlète
+                </p>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {sessionDetailData ? (
+                <>
+                  <div className="rounded-2xl border border-border/60 bg-card p-3">
+                    <p className="text-[16px] font-semibold text-foreground">{sessionDetailData.sessionTitle}</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">
+                      {format(new Date(sessionDetailData.session.scheduled_at), "EEEE d MMMM", { locale: fr })}{" "}
+                      {sessionDetailData.session.distance_km ? `• ${Math.round(Number(sessionDetailData.session.distance_km) * 10) / 10} km` : ""}
+                    </p>
+                    {sessionDetailData.session.pace_target ? (
+                      <p className="mt-1 text-[13px] text-muted-foreground">Allure cible: {sessionDetailData.session.pace_target}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-border/60 bg-card p-3">
+                    <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Commentaire athlète</p>
+                    <SessionFeedback note={sessionDetailData.note} rpeLabel={selectedAvgRpe != null ? `RPE ${selectedAvgRpe}/10` : undefined} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 h-9 rounded-lg text-[12px] font-semibold"
+                      onClick={() => void openConversationWithAthlete(selectedAthlete.userId)}
+                    >
+                      Répondre
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-border/60 bg-card p-3 text-[13px] text-muted-foreground">
+                  Aucune donnée disponible pour cette séance.
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={athleteProfileDialogOpen} onOpenChange={setAthleteProfileDialogOpen}>
+        <DialogContent
+          hideCloseButton
+          className="fixed bottom-0 left-0 right-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-t-[20px] border border-border/70 bg-card p-0"
+        >
+          <DialogTitle className="sr-only">Profil athlète</DialogTitle>
+          <div className="flex max-h-[88vh] min-h-0 flex-col">
+            <div className="shrink-0 border-b border-border px-4 pb-3 pt-3">
+              <div className="relative flex min-h-[42px] items-center justify-center">
+                <p className="text-[17px] font-semibold text-foreground">Profil athlète</p>
+                <button
+                  type="button"
+                  onClick={() => setAthleteProfileDialogOpen(false)}
+                  className="absolute right-0 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground"
+                  aria-label="Fermer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="rounded-2xl border border-border/70 bg-secondary/20 p-3 text-[13px] text-muted-foreground">
+                Ces zones sont calculées automatiquement à partir des records du profil.
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-background p-3">
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Records utilisés</p>
+                <p className="mt-2 text-[15px] font-semibold text-foreground">
+                  5 km : {selectedAthlete5kRecord ? formatDurationFromSeconds(selectedAthlete5kRecord.timeSec) : "—"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/profile/records")}
+                  className="mt-2 text-[13px] font-semibold text-[#2563EB]"
+                >
+                  Modifier les records
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-background p-3">
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Zones</p>
+                {selectedAthleteZoneCards.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {selectedAthleteZoneCards.map((zone) => (
+                      <div key={zone.zone} className="flex items-center gap-2 rounded-lg bg-secondary/40 px-3 py-2 text-[13px]">
+                        <span className={`h-2.5 w-2.5 rounded-full ${zoneToPreviewColorClass(zone.zone)}`} />
+                        <span className="w-7 font-semibold text-foreground">{zone.zone}</span>
+                        <span className="text-muted-foreground">{zone.minPace} → {zone.maxPace}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[13px] text-muted-foreground">Ajoute un record pour générer tes zones</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-secondary/20 p-3 text-[12px] text-muted-foreground">
+                Ces allures sont indicatives. Adapte selon tes sensations.
+              </div>
+              {selectedAthleteIntensity && selectedFeedback ? (
+                <p className="px-1 text-[12px] font-medium text-primary">Feedback calculé : {selectedFeedback}</p>
+              ) : null}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
         <DialogContent fullScreen hideCloseButton className="overflow-hidden bg-secondary p-0">

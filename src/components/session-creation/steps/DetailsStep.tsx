@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Flame, Radio } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Users, Ruler, ImagePlus, X, Gauge, Mountain, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,6 @@ import {
   SessionFormData, 
   SelectedLocation, 
   ACTIVITY_TYPES, 
-  INTENSITY_LEVELS, 
   TERRAIN_TYPES,
   SessionBlock,
   SessionMode,
@@ -32,7 +31,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { SessionModeSwitch } from '../SessionModeSwitch';
 import { SessionBlockBuilder } from '../SessionBlockBuilder';
 import { RouteSelector } from '../RouteSelector';
 import { cn } from '@/lib/utils';
@@ -110,6 +108,7 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
   const showElevationField = showTerrainField;
   const distanceUnit = getDistanceUnit(formData.activity_type);
   const pacePlaceholder = getPacePlaceholder(formData.activity_type);
+  const selectedActivityMeta = ACTIVITY_TYPES.find((activity) => activity.value === formData.activity_type);
 
   const handleModeChange = (mode: SessionMode) => {
     onFormDataChange({ session_mode: mode });
@@ -203,60 +202,83 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
     >
       <div className={cn('space-y-4', hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4')}>
-        {/* Title - Always first */}
-        <div className="bg-card rounded-2xl p-4 space-y-3">
-          <div>
-            <Label htmlFor="title" className="text-sm font-medium">Titre (optionnel)</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => onFormDataChange({ title: e.target.value })}
-              placeholder="Généré automatiquement si vide"
-              className="h-12 mt-1.5"
-              required
-            />
-          </div>
-        </div>
+        {/* Session identity (coaching-like) */}
+        <div className="ios-card space-y-3 rounded-2xl border-border/70 bg-secondary/35 p-4 shadow-[var(--shadow-card)]">
+          <Input
+            value={formData.title}
+            onChange={(e) => onFormDataChange({ title: e.target.value })}
+            placeholder="Nom de la séance"
+            className="h-11 rounded-2xl border-border bg-white text-[15px] dark:bg-card"
+          />
 
-        {/* Mode Switch - Only for endurance sports */}
-        {showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4">
-            <Label className="text-sm font-medium mb-3 block">Type de séance</Label>
-            <SessionModeSwitch 
-              mode={formData.session_mode} 
-              onChange={handleModeChange}
-            />
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {ACTIVITY_TYPES.map((activity) => (
+              <button
+                key={activity.value}
+                type="button"
+                onClick={() => onFormDataChange({ activity_type: activity.value })}
+                className={cn(
+                  "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-medium transition-all",
+                  formData.activity_type === activity.value
+                    ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
+                    : "border-border/80 bg-white text-foreground dark:bg-card"
+                )}
+                title={activity.label}
+                aria-label={activity.label}
+              >
+                <span className="text-base leading-none" aria-hidden="true">
+                  {activity.icon}
+                </span>
+                <span>{activity.label.replace(/^.+?\s/, '')}</span>
+              </button>
+            ))}
           </div>
-        )}
+
+          {showEnduranceFields && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('simple')}
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    formData.session_mode === 'simple'
+                      ? "border-primary/70 bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  Simple
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('structured')}
+                  className={cn(
+                    "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    formData.session_mode === 'structured'
+                      ? "border-primary/70 bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
+                  )}
+                >
+                  Avec blocs
+                </button>
+                {formData.session_mode === 'structured' && (
+                  <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+                    Ajouter un bloc plus bas
+                  </span>
+                )}
+              </div>
+              {selectedActivityMeta && (
+                <p className="text-xs text-muted-foreground">
+                  Activité sélectionnée : {selectedActivityMeta.label}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Simple Mode Content */}
         {(formData.session_mode === 'simple' || !showEnduranceFields) && showEnduranceFields && (
           <div className="bg-card rounded-2xl p-4 space-y-4">
-            {/* Intensity Level */}
-            <div>
-              <Label className="flex items-center gap-2 text-sm font-medium mb-2">
-                <Flame className="w-4 h-4 text-orange-500" />
-                Intensité
-              </Label>
-              <div className="grid grid-cols-5 gap-1.5">
-                {INTENSITY_LEVELS.map((level) => (
-                  <button
-                    key={level.value}
-                    type="button"
-                    onClick={() => onFormDataChange({ intensity: level.value })}
-                    className={cn(
-                      "py-2.5 px-1 rounded-xl text-xs font-semibold transition-all text-center",
-                      formData.intensity === level.value
-                        ? `${level.color} text-white shadow-sm`
-                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                    )}
-                  >
-                    {level.label.split(' - ')[1]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* General Pace */}
             <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
               <Label className="text-sm font-medium flex items-center gap-2 mb-2">
