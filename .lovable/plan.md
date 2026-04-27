@@ -1,96 +1,104 @@
+## Refonte du design — page « Gérer le club »
 
-Objectif: corriger le vrai problème de visibilité en appliquant le bouton d’insertion entre blocs dans l’écran que l’utilisateur voit réellement sur `/coaching`, y compris en mode aperçu.
+Refonte complète de `ClubManagementDialog.tsx` pour passer d'une longue liste iOS Settings à une expérience **premium, plus visuelle, hiérarchisée et agréable à scroller**, dans la lignée du langage de design RunConnect (Komoot/Strava-like, iOS premium).
 
-1. Corriger la source du problème
-- Aujourd’hui, `/coaching` bifurque entre :
-  - `CoachPlanningExperience` en mode normal
-  - `CoachingPreviewExperience` en mode aperçu
-- Les derniers correctifs ont surtout touché des surfaces qui ne sont pas forcément celles affichées dans la preview actuelle.
-- Résultat : le “Ajouter ici” peut exister dans le code, mais pas dans l’expérience que l’utilisateur est en train de regarder.
+### Nouveau layout (de haut en bas)
 
-2. Aligner l’écran visible avec le vrai builder coaching
-- Modifier `src/pages/Coaching.tsx` et/ou `src/components/coaching/CoachingPreviewExperience.tsx` pour que le mode aperçu expose aussi le vrai éditeur de séance structuré, au lieu d’un mock trop simplifié.
-- Principe :
-  - garder les données mock si besoin
-  - mais réutiliser le même composant de structure/blocs que l’expérience coach réelle
-  - désactiver seulement la persistance backend, pas l’UI d’édition
-
-3. Unifier le composant d’insertion entre blocs
-- Éviter deux implémentations différentes du builder :
-  - `src/components/session-creation/SessionBlockBuilder.tsx`
-  - logique embarquée dans `src/components/coaching/CoachPlanningExperience.tsx`
-- Extraire ou réutiliser un composant commun pour :
-  - la liste des blocs
-  - le séparateur visible entre blocs
-  - le bouton central “Ajouter ici”
-  - le menu de choix de type de bloc
-- Ainsi, le même rendu sera visible partout : wizard, coaching, preview.
-
-4. Rendre le séparateur impossible à manquer
-- Renforcer visuellement le séparateur entre deux blocs dans le composant partagé :
-  - largeur pleine
-  - lignes latérales discrètes
-  - bouton central plus contrasté
-  - libellé explicite “Ajouter ici”
-  - cible tactile minimum 44px
-- Style RunConnect light / Premium iOS :
-  - `bg-card` / `bg-background`
-  - bordure plus marquée
-  - ombre douce mais visible
-  - icône `Plus` primaire
-  - espacement flush propre sur 390px de large
-
-5. Afficher le menu exactement à l’endroit cliqué
-- Conserver une logique d’ancrage claire :
-  - `top` pour ajout général
-  - `index` pour insertion entre deux blocs
-- Le clic sur “Ajouter ici” doit ouvrir inline le menu des types :
-  - Échauffement
-  - Série / Fractionné
-  - Bloc constant
-  - Retour au calme
-- L’ajout doit insérer le bloc au bon index, sans l’envoyer en fin de liste.
-
-6. Appliquer aussi la correction au vrai écran “Créer une séance”
-- Vérifier et harmoniser l’intégration dans :
-  - `src/components/session-creation/steps/DetailsStep.tsx`
-  - `src/components/session-creation/SessionBlockBuilder.tsx`
-- Objectif :
-  - même séparateur
-  - même comportement
-  - même hiérarchie visuelle
-  - aucun écart entre le wizard et le coaching planner
-
-7. Vérifications UX à couvrir
-- Cas à valider après implémentation :
-  - 2 blocs : le séparateur est visible immédiatement
-  - 3 à 5 blocs : chaque zone d’insertion reste lisible
-  - menu ouvert : pas de chevauchement avec le schéma de séance
-  - mobile 390px : le libellé reste lisible
-  - preview mode : l’utilisateur peut enfin voir et tester l’insert
-  - mode normal : comportement identique
-
-Détails techniques
-- Fichiers principaux :
-  - `src/pages/Coaching.tsx`
-  - `src/components/coaching/CoachingPreviewExperience.tsx`
-  - `src/components/coaching/CoachPlanningExperience.tsx`
-  - `src/components/session-creation/SessionBlockBuilder.tsx`
-  - `src/components/session-creation/steps/DetailsStep.tsx`
-- Architecture recommandée :
-```text
-Coaching.tsx
-  -> mode normal: CoachPlanningExperience
-  -> mode aperçu: Preview qui réutilise le même builder visuel
-
-Builder partagé
-  -> rendu des blocs
-  -> séparateurs d’insertion
-  -> menu de types
-  -> insertion par index
+```
+┌─────────────────────────────────────────┐
+│  ← Gérer le club            (header)    │
+├─────────────────────────────────────────┤
+│                                         │
+│        ╭─────────────────╮              │
+│        │   AVATAR 96px   │  ← bouton    │
+│        │   gradient ring │     caméra   │
+│        ╰─────────────────╯              │
+│            Nom du club                  │
+│        Description courte               │
+│                                         │
+│   ┌────────┬────────┬────────┐          │
+│   │  12    │   3    │   2    │  stats   │
+│   │membres │ coachs │ admins │  inline  │
+│   └────────┴────────┴────────┘          │
+│                                         │
+│   [ Inviter ]  [ Partager code ]        │  ← CTA pills
+├─────────────────────────────────────────┤
+│  CODE D'INVITATION (carte dédiée)       │
+│  ┌────────────────────────────────┐     │
+│  │  ABC-123-XYZ      [📋 copier]  │     │
+│  │  Partagez ce code…             │     │
+│  └────────────────────────────────┘     │
+├─────────────────────────────────────────┤
+│  INFORMATIONS                           │
+│  • Nom du club          ›               │
+│  • Description          ›               │
+│  • Photo du club        ›               │
+├─────────────────────────────────────────┤
+│  MEMBRES (12)            [+ Inviter]    │
+│  Filtres: [Tous] [Coachs] [Admins]      │
+│                                         │
+│  ▸ Avatar  Nom         [Coach][Admin] ⋯ │
+│  ▸ Avatar  Nom               [Athlète]⋯ │
+│  …                                      │
+├─────────────────────────────────────────┤
+│  ZONE DANGER                            │
+│  🗑  Supprimer le club                   │
+└─────────────────────────────────────────┘
 ```
 
-Résultat attendu
-- Le bouton “+” entre les blocs devient réellement visible dans la page que l’utilisateur consulte.
-- Le mode aperçu n’affiche plus une version déconnectée des correctifs.
-- L’ajout entre blocs est clair, premium et cohérent partout dans l’app.
+### Améliorations clés
+
+1. **En-tête héro premium**
+   - Avatar 96px avec anneau gradient subtil (primary → primary/40), ombre douce.
+   - Bouton caméra repensé (glassmorphism léger, ring blanc).
+   - Nom du club en gros (24px, bold), description en dessous (15px, muted).
+   - Suppression du bloc « Informations » dupliqué pour le nom : édition via tap direct sur le nom (sheet modale) → plus naturel.
+
+2. **Bandeau de stats inline**
+   - 3 chiffres (membres / coachs / admins) sur fond `bg-secondary/60`, divisés par séparateurs verticaux fins.
+   - Donne immédiatement le pouls du club.
+
+3. **Deux CTA principaux** côte à côte sous le héro
+   - « Inviter » (primary, rempli) et « Partager le code » (secondary, outline).
+   - Action attendue immédiatement accessible, pas enterrée en bas.
+
+4. **Code d'invitation en carte dédiée** (au lieu d'une ligne de liste)
+   - Code en mono, large, lisible.
+   - Bouton « Copier » explicite + feedback visuel (icône check pendant 1.5s).
+   - Sous-titre explicatif court.
+
+5. **Liste des membres revisitée**
+   - Filtres rapides en chips (Tous / Coachs / Admins) → utile dès qu'il y a >5 membres.
+   - Carte par membre : avatar 40px, nom + handle, badges de rôle compacts (Admin doré, Coach violet).
+   - Actions condensées dans un menu **⋯** (DropdownMenu) au lieu de 2 boutons icône → moins chargé visuellement. Options : Promouvoir/Rétrograder coach, Retirer du membre, Voir profil.
+   - Bouton « Inviter des membres » devient un IOSListItem avec icône `UserPlus` en haut de la liste, bien visible.
+   - Un seul `<div>` parent par ligne avec `divide-y` au lieu du séparateur absolute → plus propre.
+
+6. **Édition inline → bottom sheet**
+   - Plus d'inputs qui apparaissent au milieu de la liste (cassait le rythme visuel).
+   - Tap sur « Nom du club » ou « Description » → ouvre une petite Sheet en bas avec champ + bouton Enregistrer (style iOS).
+
+7. **Zone danger isolée visuellement**
+   - Carte avec bordure rouge subtile (`border-destructive/20`), fond `bg-destructive/5`.
+   - Icône poubelle blanche sur fond rouge, texte rouge.
+
+8. **Détails de polish**
+   - Espacement vertical augmenté entre sections (gap-5 au lieu de gap-3).
+   - Background `bg-secondary/40` pour mieux faire ressortir les cartes blanches.
+   - Animation fade-in subtile au mount.
+   - Skeleton loading pendant le chargement initial des membres.
+
+### Changements techniques
+
+- **Fichier modifié** : `src/components/coaching/ClubManagementDialog.tsx` (refactor complet du JSX, logique data préservée).
+- **Nouveau sous-composant** : `EditFieldSheet` (inline dans le fichier ou extrait) — petite Sheet réutilisable pour éditer nom / description.
+- **Nouveau sous-composant** : `MemberRow` — extrait pour clarifier la lecture, avec `DropdownMenu` pour les actions admin.
+- Utilisation des composants existants : `Sheet`, `DropdownMenu`, `IOSListGroup`, `IOSListItem`, `Badge`, `Avatar`.
+- Aucune nouvelle dépendance.
+- Aucun changement de schéma DB ni de hooks.
+- Comportement fonctionnel identique : toutes les actions (édition nom/desc, upload avatar, copie code, invite, promotion coach, retrait membre, suppression club) restent en place.
+
+### Hors scope
+
+- Pas de changement sur `InviteMembersDialog` ni sur `ImageCropEditor`.
+- Pas de nouvelles fonctionnalités (groupes, invitations en attente, etc.) — uniquement refonte visuelle de l'existant.

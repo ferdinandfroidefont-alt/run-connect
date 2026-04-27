@@ -1,15 +1,30 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { IOSListGroup, IOSListItem } from "@/components/ui/ios-list-item";
 import { CoachingFullscreenHeader } from "./CoachingFullscreenHeader";
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { InviteMembersDialog } from "@/components/InviteMembersDialog";
 import { ImageCropEditor } from "@/components/ImageCropEditor";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,16 +37,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Users,
-  Crown,
   Copy,
   Camera,
   UserPlus,
-  UserMinus,
   GraduationCap,
   Trash2,
   Pencil,
   FileText,
-  X,
+  Crown,
+  Check,
+  MoreHorizontal,
+  Share2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +74,8 @@ interface ClubManagementDialogProps {
   onClubUpdated: () => void;
 }
 
+type MemberFilter = "all" | "coaches" | "admins";
+
 export const ClubManagementDialog = ({
   isOpen,
   onClose,
@@ -75,11 +94,10 @@ export const ClubManagementDialog = ({
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Edit states
-  const [editingName, setEditingName] = useState(false);
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [tempName, setTempName] = useState("");
-  const [tempDesc, setTempDesc] = useState("");
+  // Edit sheets
+  const [editField, setEditField] = useState<null | "name" | "description">(null);
+  const [tempValue, setTempValue] = useState("");
+  const [savingField, setSavingField] = useState(false);
 
   // Avatar
   const [showImageCrop, setShowImageCrop] = useState(false);
@@ -87,6 +105,12 @@ export const ClubManagementDialog = ({
 
   // Invite
   const [showInvite, setShowInvite] = useState(false);
+
+  // Filter
+  const [memberFilter, setMemberFilter] = useState<MemberFilter>("all");
+
+  // Code copy feedback
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Confirm dialogs
   const [memberToRemove, setMemberToRemove] = useState<GroupMember | null>(null);
@@ -135,6 +159,8 @@ export const ClubManagementDialog = ({
         .sort((a, b) => {
           if (a.is_admin && !b.is_admin) return -1;
           if (!a.is_admin && b.is_admin) return 1;
+          if (a.is_coach && !b.is_coach) return -1;
+          if (!a.is_coach && b.is_coach) return 1;
           return (a.username || "").localeCompare(b.username || "");
         });
 
@@ -151,26 +177,29 @@ export const ClubManagementDialog = ({
     }
   }, [isOpen, clubId, loadClubInfo, loadMembers]);
 
-  // Save name
-  const saveName = async () => {
-    if (!tempName.trim()) return;
-    const { error } = await supabase.from("conversations").update({ group_name: tempName.trim() }).eq("id", clubId);
-    if (!error) {
-      setClubName(tempName.trim());
-      setEditingName(false);
-      onClubUpdated();
-      toast({ title: "Nom mis à jour" });
-    }
+  // Open edit sheet
+  const openEdit = (field: "name" | "description") => {
+    setTempValue(field === "name" ? clubName : clubDescription);
+    setEditField(field);
   };
 
-  // Save description
-  const saveDesc = async () => {
-    const { error } = await supabase.from("conversations").update({ group_description: tempDesc.trim() || null }).eq("id", clubId);
+  // Save edit
+  const saveEdit = async () => {
+    if (!editField) return;
+    if (editField === "name" && !tempValue.trim()) return;
+    setSavingField(true);
+    const payload =
+      editField === "name"
+        ? { group_name: tempValue.trim() }
+        : { group_description: tempValue.trim() || null };
+    const { error } = await supabase.from("conversations").update(payload).eq("id", clubId);
+    setSavingField(false);
     if (!error) {
-      setClubDescription(tempDesc.trim());
-      setEditingDesc(false);
+      if (editField === "name") setClubName(tempValue.trim());
+      else setClubDescription(tempValue.trim());
+      setEditField(null);
       onClubUpdated();
-      toast({ title: "Description mise à jour" });
+      toast({ title: editField === "name" ? "Nom mis à jour" : "Description mise à jour" });
     }
   };
 
@@ -201,8 +230,22 @@ export const ClubManagementDialog = ({
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(clubCode);
+      setCodeCopied(true);
       toast({ title: "Code copié !" });
+      setTimeout(() => setCodeCopied(false), 1800);
     } catch { /* ignore */ }
+  };
+
+  // Share code (Web Share API fallback)
+  const shareCode = async () => {
+    const shareData = {
+      title: `Rejoindre ${clubName}`,
+      text: `Rejoins le club « ${clubName} » sur RunConnect avec le code : ${clubCode}`,
+    };
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else await copyCode();
+    } catch { /* user cancelled */ }
   };
 
   // Toggle coach
@@ -232,6 +275,19 @@ export const ClubManagementDialog = ({
     window.location.reload();
   };
 
+  // Stats
+  const stats = useMemo(() => {
+    const coaches = members.filter((m) => m.is_coach).length;
+    const admins = members.filter((m) => m.is_admin).length;
+    return { total: members.length, coaches, admins };
+  }, [members]);
+
+  const filteredMembers = useMemo(() => {
+    if (memberFilter === "coaches") return members.filter((m) => m.is_coach);
+    if (memberFilter === "admins") return members.filter((m) => m.is_admin);
+    return members;
+  }, [members, memberFilter]);
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -239,169 +295,241 @@ export const ClubManagementDialog = ({
           <DialogTitle className="sr-only">Gérer le club</DialogTitle>
           <IosFixedPageHeaderShell
             className="min-h-0 flex-1"
-            contentTopOffsetPx={12}
+            contentTopOffsetPx={0}
             headerWrapperClassName="shrink-0"
             header={<CoachingFullscreenHeader title="Gérer le club" onBack={onClose} />}
-            scrollClassName="bg-secondary py-4"
+            scrollClassName="bg-secondary/40"
           >
-            {/* Club avatar + name header */}
-            <div className="flex flex-col items-center gap-2 pb-4">
-              <div className="relative">
-                <Avatar className="h-20 w-20 border-2 border-border">
-                  <AvatarImage src={clubAvatarUrl} />
-                  <AvatarFallback><Users className="h-8 w-8" /></AvatarFallback>
-                </Avatar>
+            {/* ============ HÉRO ============ */}
+            <div className="relative px-ios-4 pt-6 pb-5">
+              {/* Glow décoratif */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl"
+              />
+              <div className="relative flex flex-col items-center">
+                <div className="relative">
+                  {/* Anneau gradient */}
+                  <div className="rounded-full bg-gradient-to-br from-primary/60 via-primary/30 to-primary/10 p-[2.5px] shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.45)]">
+                    <Avatar className="h-24 w-24 border-2 border-card">
+                      <AvatarImage src={clubAvatarUrl} />
+                      <AvatarFallback className="bg-card">
+                        <Users className="h-9 w-9 text-primary" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById("mgmt-avatar-upload")?.click()}
+                      className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-card transition-transform active:scale-95"
+                      aria-label="Changer la photo"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  )}
+                  <input id="mgmt-avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+                </div>
+                <h1 className="mt-3 text-center text-[24px] font-bold tracking-tight text-foreground">
+                  {clubName || "Club"}
+                </h1>
+                {clubDescription && (
+                  <p className="mt-1 max-w-[280px] text-center text-[14px] leading-snug text-muted-foreground">
+                    {clubDescription}
+                  </p>
+                )}
+              </div>
+
+              {/* Stats inline */}
+              <div className="relative mt-5 flex items-stretch overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)]">
+                <StatCell label="Membres" value={stats.total} />
+                <div className="my-3 w-px bg-border/70" />
+                <StatCell label="Coachs" value={stats.coaches} />
+                <div className="my-3 w-px bg-border/70" />
+                <StatCell label="Admins" value={stats.admins} />
+              </div>
+
+              {/* CTA principaux */}
+              {isAdmin && (
+                <div className="relative mt-3 grid grid-cols-2 gap-2.5">
+                  <Button
+                    onClick={() => setShowInvite(true)}
+                    className="h-11 rounded-2xl text-[14px] font-semibold shadow-sm"
+                  >
+                    <UserPlus className="mr-1.5 h-4 w-4" />
+                    Inviter
+                  </Button>
+                  <Button
+                    onClick={shareCode}
+                    variant="secondary"
+                    className="h-11 rounded-2xl bg-card text-[14px] font-semibold shadow-sm hover:bg-card/80"
+                  >
+                    <Share2 className="mr-1.5 h-4 w-4" />
+                    Partager
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* ============ CODE D'INVITATION ============ */}
+            {isAdmin && clubCode && (
+              <div className="px-ios-4 pb-1">
+                <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Code d'invitation
+                </p>
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  className="group relative w-full overflow-hidden rounded-2xl border border-border/60 bg-card p-4 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99]"
+                >
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/10 blur-2xl"
+                  />
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                      {codeCopied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[20px] font-bold tracking-[0.18em] text-foreground">
+                        {clubCode}
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-muted-foreground">
+                        {codeCopied ? "Copié dans le presse-papier" : "Appuyez pour copier le code"}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* ============ INFORMATIONS ============ */}
+            {isAdmin && (
+              <IOSListGroup header="INFORMATIONS" className="px-ios-4">
+                <IOSListItem
+                  icon={Pencil}
+                  iconBgColor="bg-blue-500"
+                  title="Nom du club"
+                  value={clubName}
+                  onClick={() => openEdit("name")}
+                  showSeparator
+                />
+                <IOSListItem
+                  icon={FileText}
+                  iconBgColor="bg-emerald-500"
+                  title="Description"
+                  value={clubDescription || "Aucune"}
+                  onClick={() => openEdit("description")}
+                  showSeparator
+                />
+                <IOSListItem
+                  icon={ImageIcon}
+                  iconBgColor="bg-violet-500"
+                  title="Photo du club"
+                  onClick={() => document.getElementById("mgmt-avatar-upload")?.click()}
+                  showSeparator={false}
+                />
+              </IOSListGroup>
+            )}
+
+            {/* ============ MEMBRES ============ */}
+            <div className="px-ios-4 pt-2">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Membres ({stats.total})
+                </p>
                 {isAdmin && (
                   <button
                     type="button"
-                    onClick={() => document.getElementById("mgmt-avatar-upload")?.click()}
-                    className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow"
+                    onClick={() => setShowInvite(true)}
+                    className="flex items-center gap-1 text-[13px] font-semibold text-primary active:opacity-60"
                   >
-                    <Camera className="h-3.5 w-3.5" />
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Inviter
                   </button>
                 )}
-                <input id="mgmt-avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
               </div>
-              <p className="text-[20px] font-bold text-foreground">{clubName}</p>
-              {clubDescription && <p className="max-w-[260px] text-center text-[13px] text-muted-foreground">{clubDescription}</p>}
+
+              {/* Filtres en chips */}
+              {stats.total > 3 && (
+                <div className="mb-2.5 flex gap-1.5 overflow-x-auto pb-0.5">
+                  <FilterChip active={memberFilter === "all"} onClick={() => setMemberFilter("all")}>
+                    Tous · {stats.total}
+                  </FilterChip>
+                  <FilterChip active={memberFilter === "coaches"} onClick={() => setMemberFilter("coaches")}>
+                    Coachs · {stats.coaches}
+                  </FilterChip>
+                  <FilterChip active={memberFilter === "admins"} onClick={() => setMemberFilter("admins")}>
+                    Admins · {stats.admins}
+                  </FilterChip>
+                </div>
+              )}
+
+              {/* Liste */}
+              <div className="overflow-hidden rounded-2xl bg-card shadow-[var(--shadow-card)]">
+                {loading && members.length === 0 ? (
+                  <div className="divide-y divide-border/60">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3">
+                        <div className="h-10 w-10 animate-pulse rounded-full bg-secondary" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 w-1/3 animate-pulse rounded bg-secondary" />
+                          <div className="h-2.5 w-1/4 animate-pulse rounded bg-secondary" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredMembers.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-[14px] text-muted-foreground">Aucun membre dans cette catégorie</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    {filteredMembers.map((member) => (
+                      <MemberRow
+                        key={member.user_id}
+                        member={member}
+                        isSelf={member.user_id === user?.id}
+                        canManage={isAdmin && member.user_id !== user?.id}
+                        onToggleCoach={() => toggleCoach(member.user_id, member.is_coach)}
+                        onRemove={() => setMemberToRemove(member)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* INFORMATIONS */}
+            {/* ============ ZONE DANGER ============ */}
             {isAdmin && (
-              <IOSListGroup header="INFORMATIONS" className="px-ios-4">
-                {editingName ? (
-                  <div className="flex items-center gap-2 bg-card px-ios-4 py-2.5">
-                    <Input value={tempName} onChange={(e) => setTempName(e.target.value)} className="flex-1" autoFocus maxLength={50} />
-                    <Button size="sm" onClick={saveName} disabled={!tempName.trim()}>OK</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <IOSListItem
-                    icon={Pencil}
-                    iconBgColor="bg-blue-500"
-                    title="Nom du club"
-                    value={clubName}
-                    onClick={() => { setTempName(clubName); setEditingName(true); }}
-                    showSeparator={true}
-                  />
-                )}
-
-                {editingDesc ? (
-                  <div className="flex items-center gap-2 bg-card px-ios-4 py-2.5">
-                    <Input value={tempDesc} onChange={(e) => setTempDesc(e.target.value)} className="flex-1" autoFocus maxLength={200} placeholder="Description..." />
-                    <Button size="sm" onClick={saveDesc}>OK</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingDesc(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <IOSListItem
-                    icon={FileText}
-                    iconBgColor="bg-green-500"
-                    title="Description"
-                    value={clubDescription || "Aucune"}
-                    onClick={() => { setTempDesc(clubDescription); setEditingDesc(true); }}
-                    showSeparator={false}
-                  />
-                )}
-              </IOSListGroup>
-            )}
-
-            {/* CODE D'INVITATION */}
-            {isAdmin && clubCode && (
-              <IOSListGroup header="CODE D'INVITATION" className="px-ios-4">
-                <IOSListItem
-                  icon={Copy}
-                  iconBgColor="bg-indigo-500"
-                  title={clubCode}
-                  subtitle="Appuyer pour copier"
-                  onClick={copyCode}
-                  showChevron={false}
-                  showSeparator={false}
-                />
-              </IOSListGroup>
-            )}
-
-            {/* MEMBRES */}
-            <IOSListGroup header={`MEMBRES (${members.length})`} className="px-ios-4">
-              {isAdmin && (
-                <IOSListItem
-                  icon={UserPlus}
-                  iconBgColor="bg-blue-500"
-                  title="Inviter des membres"
-                  onClick={() => setShowInvite(true)}
-                  showSeparator={members.length > 0}
-                />
-              )}
-              {members.map((member, idx) => (
-                <div key={member.user_id} className="relative">
-                  <div className="flex items-center gap-2.5 bg-card px-ios-4 py-2.5">
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarImage src={member.avatar_url || ""} />
-                      <AvatarFallback>{(member.username || "?")[0].toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[17px] leading-snug text-foreground">
-                          {member.username || member.display_name}
-                        </p>
-                        {member.user_id === user?.id && (
-                          <span className="text-[13px] text-muted-foreground">(vous)</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        {member.is_admin && <Badge className="border-0 bg-primary/12 text-primary text-[11px] px-1.5 py-0">Admin</Badge>}
-                        {member.is_coach && <Badge className="border-0 bg-amber-500/15 text-amber-600 text-[11px] px-1.5 py-0">Coach</Badge>}
-                      </div>
-                    </div>
-                    {isAdmin && member.user_id !== user?.id && (
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => toggleCoach(member.user_id, member.is_coach)}
-                          className={cn("rounded-ios-md p-2 active:bg-secondary/80", member.is_coach ? "text-amber-500" : "text-muted-foreground")}
-                        >
-                          <GraduationCap className="h-5 w-5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setMemberToRemove(member)}
-                          className="rounded-ios-md p-2 text-destructive active:bg-secondary/80"
-                        >
-                          <UserMinus className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {idx < members.length - 1 && (
-                    <div className="absolute bottom-0 left-[54px] right-0 h-px bg-border" />
-                  )}
-                </div>
-              ))}
-            </IOSListGroup>
-
-            {/* ZONE DANGER */}
-            {isAdmin && (
-              <IOSListGroup header="ZONE DANGER" className="px-ios-4">
-                <IOSListItem
-                  icon={Trash2}
-                  iconBgColor="bg-destructive"
-                  iconColor="text-white"
-                  title="Supprimer le club"
+              <div className="px-ios-4 pt-5">
+                <p className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-destructive/80">
+                  Zone danger
+                </p>
+                <button
+                  type="button"
                   onClick={() => setShowDeleteClub(true)}
-                  showChevron={false}
-                  showSeparator={false}
-                />
-              </IOSListGroup>
+                  className="flex w-full items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-left transition active:scale-[0.99]"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-destructive text-destructive-foreground shadow-sm">
+                    <Trash2 className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold text-destructive">Supprimer le club</p>
+                    <p className="mt-0.5 text-[12px] text-destructive/70">
+                      Action irréversible. Tous les membres et messages seront perdus.
+                    </p>
+                  </div>
+                </button>
+              </div>
             )}
 
-            <div className="h-8" />
+            <div className="h-12" />
           </IosFixedPageHeaderShell>
         </DialogContent>
       </Dialog>
 
+      {/* Invite */}
       <InviteMembersDialog
         open={showInvite}
         onOpenChange={setShowInvite}
@@ -409,6 +537,53 @@ export const ClubManagementDialog = ({
         stackNested
         onMemberInvited={() => void loadMembers()}
       />
+
+      {/* Edit field sheet */}
+      <Sheet open={!!editField} onOpenChange={(o) => !o && setEditField(null)}>
+        <SheetContent side="bottom" className="rounded-t-3xl border-0 px-5 pb-6 pt-4">
+          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-border" aria-hidden />
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-[18px]">
+              {editField === "name" ? "Nom du club" : "Description"}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            {editField === "description" ? (
+              <Textarea
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                placeholder="Décrivez votre club en quelques mots…"
+                className="min-h-[100px] resize-none rounded-2xl"
+                maxLength={200}
+                autoFocus
+              />
+            ) : (
+              <Input
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                placeholder="Nom du club"
+                maxLength={50}
+                autoFocus
+              />
+            )}
+            <p className="mt-1.5 px-1 text-right text-[11px] text-muted-foreground">
+              {tempValue.length}/{editField === "description" ? 200 : 50}
+            </p>
+          </div>
+          <SheetFooter className="mt-4 flex-row gap-2">
+            <Button variant="secondary" className="flex-1 h-11 rounded-2xl" onClick={() => setEditField(null)}>
+              Annuler
+            </Button>
+            <Button
+              className="flex-1 h-11 rounded-2xl"
+              onClick={saveEdit}
+              disabled={savingField || (editField === "name" && !tempValue.trim())}
+            >
+              Enregistrer
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Remove member confirm */}
       <AlertDialog open={!!memberToRemove} onOpenChange={() => setMemberToRemove(null)}>
@@ -456,3 +631,120 @@ export const ClubManagementDialog = ({
     </>
   );
 };
+
+/* ---------------- sous-composants ---------------- */
+
+function StatCell({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center py-3">
+      <span className="text-[22px] font-bold leading-none tracking-tight text-foreground">{value}</span>
+      <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "bg-card text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MemberRow({
+  member,
+  isSelf,
+  canManage,
+  onToggleCoach,
+  onRemove,
+}: {
+  member: GroupMember;
+  isSelf: boolean;
+  canManage: boolean;
+  onToggleCoach: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="relative shrink-0">
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={member.avatar_url || ""} />
+          <AvatarFallback className="bg-secondary text-[13px] font-semibold">
+            {(member.username || "?")[0].toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        {member.is_admin && (
+          <div className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary ring-2 ring-card">
+            <Crown className="h-2.5 w-2.5 text-primary-foreground" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">
+            {member.username || member.display_name}
+          </p>
+          {isSelf && <span className="text-[12px] text-muted-foreground">(vous)</span>}
+        </div>
+        <div className="mt-1 flex items-center gap-1">
+          {member.is_admin && (
+            <Badge className="border-0 bg-primary/12 px-1.5 py-0 text-[10px] font-semibold text-primary">
+              Admin
+            </Badge>
+          )}
+          {member.is_coach && (
+            <Badge className="border-0 bg-amber-500/15 px-1.5 py-0 text-[10px] font-semibold text-amber-600">
+              Coach
+            </Badge>
+          )}
+          {!member.is_admin && !member.is_coach && (
+            <Badge className="border-0 bg-secondary px-1.5 py-0 text-[10px] font-semibold text-muted-foreground">
+              Athlète
+            </Badge>
+          )}
+        </div>
+      </div>
+      {canManage && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:bg-secondary"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={onToggleCoach}>
+              <GraduationCap className="mr-2 h-4 w-4" />
+              {member.is_coach ? "Retirer le rôle coach" : "Promouvoir coach"}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onRemove} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Retirer du club
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+}
