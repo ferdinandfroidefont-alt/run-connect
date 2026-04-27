@@ -1023,6 +1023,12 @@ export type Database = {
           cycling_records: Json | null
           display_name: string | null
           favorite_sport: string | null
+          garmin_access_token: string | null
+          garmin_connected: boolean | null
+          garmin_refresh_token: string | null
+          garmin_token_expires_at: string | null
+          garmin_user_id: string | null
+          garmin_verified_at: string | null
           id: string
           instagram_access_token: string | null
           instagram_connected: boolean | null
@@ -1081,6 +1087,12 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           favorite_sport?: string | null
+          garmin_access_token?: string | null
+          garmin_connected?: boolean | null
+          garmin_refresh_token?: string | null
+          garmin_token_expires_at?: string | null
+          garmin_user_id?: string | null
+          garmin_verified_at?: string | null
           id?: string
           instagram_access_token?: string | null
           instagram_connected?: boolean | null
@@ -1139,6 +1151,12 @@ export type Database = {
           cycling_records?: Json | null
           display_name?: string | null
           favorite_sport?: string | null
+          garmin_access_token?: string | null
+          garmin_connected?: boolean | null
+          garmin_refresh_token?: string | null
+          garmin_token_expires_at?: string | null
+          garmin_user_id?: string | null
+          garmin_verified_at?: string | null
           id?: string
           instagram_access_token?: string | null
           instagram_connected?: boolean | null

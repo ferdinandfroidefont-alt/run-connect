@@ -21,6 +21,8 @@ type Props = {
   qrDataUrl?: string | null;
   activeTemplateId: SessionShareTemplateId;
   onTemplateChange: (id: SessionShareTemplateId, index: number) => void;
+  onCardClick?: () => void;
+  disabled?: boolean;
 };
 
 export function SessionSharePreviewCarousel({
@@ -29,6 +31,8 @@ export function SessionSharePreviewCarousel({
   qrDataUrl,
   activeTemplateId,
   onTemplateChange,
+  onCardClick,
+  disabled = false,
 }: Props) {
   const [api, setApi] = useState<EmblaCarouselType | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -89,6 +93,21 @@ export function SessionSharePreviewCarousel({
                   <div
                     className="ios-card relative overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.1)]"
                     style={{ width: boxW, height: boxH }}
+                    role={onCardClick ? 'button' : undefined}
+                    tabIndex={onCardClick && !disabled ? 0 : -1}
+                    aria-disabled={onCardClick ? disabled : undefined}
+                    aria-label={onCardClick ? 'Partager la séance' : undefined}
+                    onClick={onCardClick && !disabled ? onCardClick : undefined}
+                    onKeyDown={
+                      onCardClick && !disabled
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onCardClick();
+                            }
+                          }
+                        : undefined
+                    }
                   >
                     <div
                       style={{

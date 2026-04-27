@@ -7,6 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { FloatingCreateSessionButton } from "@/components/FloatingCreateSessionButton";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type NavItem = {
   path: string;
@@ -30,6 +40,7 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   const { user } = useAuth();
   const { t } = useLanguage();
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [showNoClubDialog, setShowNoClubDialog] = useState(false);
   const { hideBottomNav } = useAppContext();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -121,10 +132,28 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
   /** Toujours montée : masquage visuel uniquement (pas d’animation / pas de translate). */
   const tabBarHidden = hideBottomNav || isProfileRoute;
 
-  const handleNavClick = (path: string) => {
+  const handleNavClick = async (path: string) => {
     if (path === "/messages") {
       navigate("/messages", { state: { resetConversation: true, fromBottomTab: true, ts: Date.now() } });
       return;
+    }
+    if (path === "/coaching" && user) {
+      const { data: memberships, error } = await supabase
+        .from("group_members")
+        .select("conversation_id")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      // Fallback to current behavior if membership check fails.
+      if (error) {
+        navigate(path);
+        return;
+      }
+
+      if (!memberships?.length) {
+        setShowNoClubDialog(true);
+        return;
+      }
     }
     navigate(path);
   };
@@ -205,6 +234,35 @@ export const BottomNavigation = ({ isProfileRoute = false }: BottomNavigationPro
           })}
         </div>
       </div>
+      <AlertDialog open={showNoClubDialog} onOpenChange={setShowNoClubDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vous n&apos;êtes pas dans un club</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pour accéder à l&apos;espace Coaching, vous devez d&apos;abord créer un club ou rejoindre un club existant.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Plus tard</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowNoClubDialog(false);
+                navigate("/search?tab=clubs");
+              }}
+            >
+              Rechercher un club
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                setShowNoClubDialog(false);
+                navigate("/messages?createClub=1");
+              }}
+            >
+              Créer un club
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </nav>
   );
 };

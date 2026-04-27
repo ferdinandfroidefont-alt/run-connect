@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ExternalLink, Share2 } from "lucide-react";
 import { DayPlanningRow } from "@/components/coaching/planning/DayPlanningRow";
 import { buildWorkoutHeadline, resolveWorkoutMetrics, workoutAccentColor } from "@/lib/workoutPresentation";
 import { buildWorkoutSegments, renderWorkoutMiniProfile } from "@/lib/workoutVisualization";
@@ -9,6 +10,13 @@ import { applyConflictFlags, formatCalendarDistance, isExplicitRestDay, kmForSes
 import { AthletePlanSessionDetailSheet } from "./AthletePlanSessionDetailSheet";
 import { WeekSelectorPremium, type DaySessionSummary } from "@/components/coaching/planning/WeekSelectorPremium";
 import { sportDotClass } from "./sportTokens";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 
 type Props = {
   loading: boolean;
@@ -32,8 +40,48 @@ type Props = {
   onOpenMessages?: () => void;
   onOpenPastSessions?: () => void;
   onOpenCalendar?: () => void;
+  onOpenExportApps?: () => void;
   navigateProfile: (userId: string) => void;
 };
+
+type ExportDestination = {
+  id: string;
+  name: string;
+  description: string;
+  url?: string;
+};
+
+const EXPORT_DESTINATIONS: ExportDestination[] = [
+  {
+    id: "garmin",
+    name: "Garmin Connect",
+    description: "Connecter Garmin puis exporter automatiquement tes séances.",
+  },
+  {
+    id: "trainingpeaks",
+    name: "TrainingPeaks",
+    description: "Retrouver et planifier tes entraînements.",
+    url: "https://app.trainingpeaks.com/",
+  },
+  {
+    id: "coros",
+    name: "COROS Training Hub",
+    description: "Synchroniser tes séances avec COROS.",
+    url: "https://traininghub.coros.com/",
+  },
+  {
+    id: "suunto",
+    name: "Suunto App",
+    description: "Gerer ton planning et tes exports Suunto.",
+    url: "https://www.suunto.com/fr-fr/suunto-app/",
+  },
+  {
+    id: "polar",
+    name: "Polar Flow",
+    description: "Importer et suivre tes entraînements Polar.",
+    url: "https://flow.polar.com/",
+  },
+];
 
 export function AthleteMyPlanView(props: Props) {
   const {
@@ -50,6 +98,39 @@ export function AthleteMyPlanView(props: Props) {
   } = props;
   const [detail, setDetail] = useState<AthletePlanSessionModel | null>(null);
   const [savingFeedback, setSavingFeedback] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [garminConnecting, setGarminConnecting] = useState(false);
+  const { user } = useAuth();
+  const isNative = Capacitor.isNativePlatform();
+
+  const handleGarminConnect = async () => {
+    if (!user) {
+      toast.error("Connecte-toi pour lier Garmin.");
+      return;
+    }
+
+    setGarminConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("garmin-connect", {
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+      if (error) throw error;
+      if (!data?.authUrl) throw new Error("Garmin URL manquante");
+
+      if (isNative) {
+        await Browser.open({ url: data.authUrl, presentationStyle: "popover" });
+      } else {
+        window.open(data.authUrl, "garmin_auth", "width=600,height=760");
+      }
+    } catch (error) {
+      console.error("Error connecting to Garmin:", error);
+      toast.error("Impossible de lancer la connexion Garmin.");
+    } finally {
+      setGarminConnecting(false);
+    }
+  };
 
   const sessions = useMemo(() => applyConflictFlags(rawSessions), [rawSessions]);
   const dayRows = useMemo(
@@ -98,8 +179,47 @@ export function AthleteMyPlanView(props: Props) {
     return summaries;
   }, [dayRows]);
 
+  useEffect(() => {
+    const onGarminAuthSuccess = () => {
+      toast.success("Garmin connecté. Tu peux exporter tes entraînements.");
+      setExportDialogOpen(false);
+    };
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "garmin_auth_success") {
+        onGarminAuthSuccess();
+      }
+    };
+    window.addEventListener("garminAuthSuccess", onGarminAuthSuccess as EventListener);
+    window.addEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("garminAuthSuccess", onGarminAuthSuccess as EventListener);
+      window.removeEventListener("message", onMessage);
+    };
+  }, []);
+
   return (
     <div className="bg-secondary pb-28 pt-2">
+      <section className="px-4 pb-3">
+        <div className="ios-card flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-semibold text-foreground">Exporte tes entraînements</p>
+            <p className="truncate text-[13px] text-muted-foreground">Vers Garmin et les autres apps compatibles.</p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 rounded-full px-3"
+            onClick={() => {
+              props.onOpenExportApps?.();
+              setExportDialogOpen(true);
+            }}
+          >
+            <Share2 className="mr-1.5 h-4 w-4" />
+            Exporter
+          </Button>
+        </div>
+      </section>
+
       <WeekSelectorPremium
         weekStart={props.weekStart}
         selectedDate={selectedDate}
@@ -214,6 +334,43 @@ export function AthleteMyPlanView(props: Props) {
           }
         }}
       />
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exporter mes entraînements</DialogTitle>
+            <DialogDescription>Choisis ton app pour ouvrir l'espace d'import/synchronisation.</DialogDescription>
+          </DialogHeader>
+          <div className="ios-list-stack space-y-2">
+            {EXPORT_DESTINATIONS.map((destination) => (
+              <button
+                key={destination.id}
+                type="button"
+                className="ios-list-row flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-3 text-left active:bg-secondary/60"
+                onClick={() => {
+                  if (destination.id === "garmin") {
+                    void handleGarminConnect();
+                    return;
+                  }
+                  if (destination.url) {
+                    window.open(destination.url, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-medium text-foreground">{destination.name}</p>
+                  <p className="truncate text-[12px] text-muted-foreground">{destination.description}</p>
+                </div>
+                {destination.id === "garmin" && garminConnecting ? (
+                  <span className="text-[12px] text-muted-foreground">Connexion...</span>
+                ) : (
+                  <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                )}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

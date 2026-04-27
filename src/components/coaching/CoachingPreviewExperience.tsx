@@ -265,6 +265,7 @@ export function CoachingPreviewExperience({ identity }: Props) {
               onOpenMessages={() => previewAction()}
               onOpenPastSessions={() => previewAction()}
               onOpenCalendar={() => previewAction()}
+              onOpenExportApps={() => previewAction()}
               navigateProfile={() => navigate("/", { state: { openProfileDialog: true } })}
             />
           </section>

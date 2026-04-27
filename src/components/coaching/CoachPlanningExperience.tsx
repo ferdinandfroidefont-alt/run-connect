@@ -2740,6 +2740,7 @@ export function CoachPlanningExperience() {
                 onOpenMessages={() => navigate("/messages")}
                 onOpenPastSessions={() => setWeekAnchor(startOfWeek(subWeeks(new Date(), 3), { weekStartsOn: 1 }))}
                 onOpenCalendar={() => toast.info("Vue calendrier complet", "Cette navigation arrive bientôt.")}
+                onOpenExportApps={() => toast.info("Export entraînements", "Choisis ton app pour lancer la synchronisation.")}
                 navigateProfile={(userId) => navigate(`/profile/${userId}`)}
               />
             ) : activeMenuKey === "planning" ? (

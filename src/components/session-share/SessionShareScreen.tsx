@@ -160,6 +160,8 @@ export function SessionShareScreen({ open, onClose, session, onOpenConversationS
                 qrDataUrl={qrDataUrl}
                 activeTemplateId={templateId}
                 onTemplateChange={(id) => setTemplateId(id)}
+                onCardClick={() => void handleSystemShare()}
+                disabled={exporting}
               />
             )}
 
