@@ -734,27 +734,31 @@ export function CoachDashboardPage({
 
   if (loading || !data) {
     return (
-      <div className="divide-y divide-border border-b border-border bg-card">
+      <div className="space-y-3 px-ios-4 pt-ios-4 pb-[calc(2rem+var(--safe-area-bottom))]">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-16 animate-pulse bg-secondary/40" />
+          <div key={i} className="ios-card h-24 animate-pulse border border-border/60 bg-secondary/40" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-0">
+    <div className="bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
       <DashboardAlertCard
         lateAthletesCount={data.lateAthletesCount}
         lateTodayCount={data.lateTodayCount}
         onClick={onOpenLateAthletes}
       />
-      <DashboardWeekProgress done={data.weekDone} planned={data.weekPlanned} trendPct={data.trendPct} points={data.graphPoints} />
+      <SectionHeader title="Cette semaine" />
+      <DashboardWeekProgress
+        done={data.weekDone}
+        planned={data.weekPlanned}
+        trendPct={data.trendPct}
+        points={data.graphPoints}
+      />
       <DashboardTodayCard data={data} />
-      <div className="grid grid-cols-2 gap-px border-b border-border bg-border">
-        <DashboardAthleteWatch rows={data.watchAthletes} onOpen={onOpenLateAthletes} />
-        <DashboardActivityFeed rows={data.activityFeed} onOpenMessages={onOpenMessages} />
-      </div>
+      <DashboardAthleteWatch rows={data.watchAthletes} onOpen={onOpenLateAthletes} />
+      <DashboardActivityFeed rows={data.activityFeed} onOpenMessages={onOpenMessages} />
       <DashboardStatsRow
         athletes={new Set(data.todayEntries.map((e) => e.athleteId).filter(Boolean)).size}
         planned={data.weekPlanned}
