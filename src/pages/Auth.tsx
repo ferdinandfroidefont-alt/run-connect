@@ -1427,12 +1427,6 @@ const Auth = () => {
     );
   }
 
-  const blockPrivacyGate =
-    authArrivalPreview || wantsArrivalPreview || isPasswordResetFlow;
-  if (!blockPrivacyGate && !user && !hasCompletedPrivacyGate()) {
-    return <Navigate to="/welcome" replace />;
-  }
-
   if (user && !authArrivalPreview && !wantsArrivalPreview && !isPasswordResetFlow) {
     console.log("[Auth] Session déjà active — redirection accueil");
     return <Navigate to="/" replace />;
