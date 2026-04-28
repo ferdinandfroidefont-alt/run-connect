@@ -26,7 +26,6 @@ import { MainTabsSwipeHost } from "@/components/MainTabsSwipeHost";
 import { restoreChromeAfterRuconnectSplash } from "@/lib/ruconnectSplashChrome";
 
 const Auth = lazy(() => import("./pages/Auth"));
-const Welcome = lazy(() => import("./pages/Welcome"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Feed = lazy(() => import("./pages/Feed"));
 const ProfileEntry = lazy(() => import("./pages/ProfileEntry"));
@@ -338,7 +337,7 @@ const App = () => {
                 <SessionExperienceFeedbackHost />
                 <div className="flex min-h-0 flex-1 flex-col">
                   <Routes>
-                  <Route path="/welcome" element={<PageTransition><PageSuspense><Welcome /></PageSuspense></PageTransition>} />
+                  <Route path="/welcome" element={<Navigate to="/auth" replace />} />
                   <Route path="/auth" element={<PageTransition><PageSuspense><Auth /></PageSuspense></PageTransition>} />
                   <Route path="/auth/callback" element={<PageSuspense><AuthCallback /></PageSuspense>} />
                   <Route path="/onboarding" element={<PageTransition><PageSuspense><Onboarding /></PageSuspense></PageTransition>} />
