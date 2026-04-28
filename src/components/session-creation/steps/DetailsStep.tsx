@@ -202,76 +202,65 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
       className={cn('flex min-h-0 w-full flex-col', !hideNavigation && 'flex-1')}
     >
       <div className={cn('space-y-4', hideNavigation ? 'pb-0' : 'flex-1 overflow-y-auto pb-4')}>
-        {/* Session identity (coaching-like) */}
-        <div className="ios-card space-y-3 rounded-2xl border-border/70 bg-secondary/35 p-4 shadow-[var(--shadow-card)]">
-          <Input
-            value={formData.title}
-            onChange={(e) => onFormDataChange({ title: e.target.value })}
-            placeholder="Nom de la séance"
-            className="h-11 rounded-2xl border-border bg-white text-[15px] dark:bg-card"
-          />
-
-          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {ACTIVITY_TYPES.map((activity) => (
-              <button
-                key={activity.value}
-                type="button"
-                onClick={() => onFormDataChange({ activity_type: activity.value })}
-                className={cn(
-                  "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-medium transition-all",
-                  formData.activity_type === activity.value
-                    ? "border-primary/70 bg-primary/10 text-primary shadow-[0_0_0_1px_rgba(59,130,246,0.2)]"
-                    : "border-border/80 bg-white text-foreground dark:bg-card"
-                )}
-                title={activity.label}
-                aria-label={activity.label}
+        {/* Session identity — aligné sur le style coaching (CreateCoachingSessionDialog) */}
+        <div className="ios-card space-y-4 border border-border/60 p-4 shadow-[var(--shadow-card)]">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0 space-y-1.5">
+              <Label className="text-xs">Sport</Label>
+              <Select
+                value={formData.activity_type}
+                onValueChange={(v) => onFormDataChange({ activity_type: v })}
               >
-                <span className="text-base leading-none" aria-hidden="true">
-                  {activity.icon}
-                </span>
-                <span>{activity.label.replace(/^.+?\s/, '')}</span>
-              </button>
-            ))}
+                <SelectTrigger className="h-11 rounded-xl border-border bg-card">
+                  <SelectValue placeholder="Choisir un sport" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACTIVITY_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      <span className="mr-1.5">{t.icon}</span>
+                      {t.label.replace(/^.+?\s/, '')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <Label className="text-xs">Nom de la séance</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => onFormDataChange({ title: e.target.value })}
+                placeholder="Footing matinal..."
+                className="h-11 rounded-xl border-border bg-card"
+              />
+            </div>
           </div>
 
           {showEnduranceFields && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleModeChange('simple')}
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                    formData.session_mode === 'simple'
-                      ? "border-primary/70 bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                  )}
-                >
-                  Simple
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleModeChange('structured')}
-                  className={cn(
-                    "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                    formData.session_mode === 'structured'
-                      ? "border-primary/70 bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                  )}
-                >
-                  Avec blocs
-                </button>
-                {formData.session_mode === 'structured' && (
-                  <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-                    Ajouter un bloc plus bas
-                  </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleModeChange('simple')}
+                className={cn(
+                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  formData.session_mode === 'simple'
+                    ? "border-primary/70 bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
                 )}
-              </div>
-              {selectedActivityMeta && (
-                <p className="text-xs text-muted-foreground">
-                  Activité sélectionnée : {selectedActivityMeta.label}
-                </p>
-              )}
+              >
+                Simple
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange('structured')}
+                className={cn(
+                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                  formData.session_mode === 'structured'
+                    ? "border-primary/70 bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
+                )}
+              >
+                Avec blocs
+              </button>
             </div>
           )}
         </div>
