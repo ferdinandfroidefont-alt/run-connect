@@ -26,7 +26,7 @@ import {
 import { IosFixedPageHeaderShell } from "@/components/layout/IosFixedPageHeaderShell";
 import { resetBodyInteractionLocks } from "@/lib/bodyInteractionLocks";
 import { AUTH_PENDING_PROFILE_SETUP_KEY } from "@/lib/authFlags";
-import { hasCompletedPrivacyGate } from "@/lib/arrivalFlowStorage";
+
 import { Checkbox } from "@/components/ui/checkbox";
 
 type AuthView = 'landing' | 'email-signin' | 'email-signin-form' | 'email-signup' | 'otp' | 'reset';
