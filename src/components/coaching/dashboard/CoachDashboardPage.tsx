@@ -537,37 +537,6 @@ export function DashboardQuickActions({
     </>
   );
 }
-
-export function DashboardQuickActions({
-  onCreate,
-  onTemplate,
-  onMessage,
-}: {
-  onCreate: () => void;
-  onTemplate: () => void;
-  onMessage: () => void;
-}) {
-  return (
-    <div className="border-b border-border bg-secondary/20 px-4 py-3">
-      <p className="mb-2 text-[16px] font-semibold text-foreground">Actions rapides</p>
-      <div className="grid grid-cols-3 gap-2">
-        <Button type="button" className="h-10 justify-start rounded-lg text-[12px] font-semibold" onClick={onCreate}>
-          <CalendarCheck2 className="mr-2 h-4.5 w-4.5" />
-          Créer une séance
-        </Button>
-        <Button type="button" variant="secondary" className="h-10 justify-start rounded-lg bg-emerald-500/10 text-[12px] font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300" onClick={onTemplate}>
-          <BookOpen className="mr-2 h-4.5 w-4.5" />
-          Ajouter un modèle
-        </Button>
-        <Button type="button" variant="secondary" className="h-10 justify-start rounded-lg bg-violet-500/10 text-[12px] font-semibold text-violet-700 hover:bg-violet-500/15 dark:text-violet-300" onClick={onMessage}>
-          <MessageCircle className="mr-2 h-4.5 w-4.5" />
-          Envoyer un message
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function CoachDashboardPage({
   clubId,
   onOpenLateAthletes,
