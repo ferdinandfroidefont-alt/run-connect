@@ -85,11 +85,11 @@ interface CoachDashboardPageProps {
   onOpenTemplates: () => void;
 }
 
-const STATUS_BADGE: Record<StatusUi, { label: string; className: string; icon: React.ComponentType<{ className?: string }> }> = {
-  done: { label: "Fait", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300", icon: CheckCircle2 },
-  pending: { label: "En attente", className: "bg-amber-500/15 text-amber-700 dark:text-amber-300", icon: Clock3 },
-  missed: { label: "Non faite", className: "bg-red-500/15 text-red-700 dark:text-red-300", icon: XCircle },
-  none: { label: "Aucune", className: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300", icon: MinusCircle },
+const STATUS_BADGE: Record<StatusUi, { label: string; tone: keyof typeof STATUS_TONE; icon: React.ComponentType<{ className?: string }> }> = {
+  done: { label: "Fait", tone: "done", icon: CheckCircle2 },
+  pending: { label: "En attente", tone: "pending", icon: Clock3 },
+  missed: { label: "Non faite", tone: "missed", icon: XCircle },
+  none: { label: "Aucune", tone: "none", icon: MinusCircle },
 };
 
 function toUiStatus(raw?: string | null): StatusUi {
@@ -107,30 +107,78 @@ function timeAgoLabel(iso: string) {
   return `il y a ${Math.floor(diffH / 24)} j`;
 }
 
+/* ───────────────────────── Sous-éléments génériques ───────────────────────── */
+
+function SectionHeader({ title, action }: { title: string; action?: { label: string; onClick: () => void } }) {
+  return (
+    <div className="flex items-end justify-between px-ios-4 pb-ios-2 pt-ios-4">
+      <h2 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+        {title}
+      </h2>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="inline-flex items-center gap-0.5 text-[13px] font-medium text-primary"
+        >
+          {action.label}
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Avatar({ name, url, size = 36 }: { name: string; url: string | null; size?: number }) {
+  return (
+    <div
+      className="shrink-0 overflow-hidden rounded-full bg-secondary"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[12px] font-semibold text-muted-foreground">
+          {name.charAt(0).toUpperCase()}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProgressRing({ pct }: { pct: number }) {
-  const radius = 35;
+  const radius = 32;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, pct));
   const offset = circumference - (clamped / 100) * circumference;
   return (
-    <svg width={86} height={86} className="-rotate-90">
-      <circle cx="43" cy="43" r={radius} strokeWidth="8" className="fill-none stroke-secondary" />
+    <svg width={78} height={78} className="-rotate-90">
+      <circle cx="39" cy="39" r={radius} strokeWidth="6" className="fill-none stroke-secondary" />
       <circle
-        cx="43"
-        cy="43"
+        cx="39"
+        cy="39"
         r={radius}
-        strokeWidth="8"
+        strokeWidth="6"
         strokeLinecap="round"
         className="fill-none stroke-primary"
         strokeDasharray={circumference}
         strokeDashoffset={offset}
+        style={{ transition: "stroke-dashoffset 600ms ease" }}
       />
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" className="rotate-90 fill-foreground text-[16px] font-bold">
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="rotate-90 fill-foreground text-[15px] font-bold"
+      >
         {clamped}%
       </text>
     </svg>
   );
 }
+
+/* ───────────────────────── Cartes du dashboard ───────────────────────── */
 
 export function DashboardAlertCard({
   lateAthletesCount,
@@ -141,22 +189,29 @@ export function DashboardAlertCard({
   lateTodayCount: number;
   onClick: () => void;
 }) {
+  if (lateAthletesCount === 0) return null;
   return (
-    <div className="border-b border-red-500/20 bg-red-500/5 px-4 py-3">
-      <div className="flex items-center gap-2.5">
-        <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-sm">
-          <AlertCircle className="h-4.5 w-4.5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[18px] font-bold leading-tight text-foreground">{lateAthletesCount} athlètes en retard</p>
-          <p className="text-[12px] text-muted-foreground">{lateTodayCount} séances non faites aujourd'hui</p>
-        </div>
-        <Button type="button" className="h-8 rounded-full bg-red-500 px-3 text-[11px] font-semibold text-white hover:bg-red-600" onClick={onClick}>
-          <Send className="mr-1 h-3.5 w-3.5" />
-          Relancer maintenant
-        </Button>
+    <button
+      type="button"
+      onClick={onClick}
+      className="ios-card mx-ios-4 mt-ios-4 flex w-[calc(100%-theme(spacing.ios-4)*2)] items-center gap-3 border border-destructive/20 bg-destructive/[0.06] px-ios-4 py-ios-3 text-left ios-interactive active:opacity-90"
+    >
+      <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+        <AlertCircle className="h-5 w-5" />
       </div>
-    </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold leading-tight text-foreground">
+          {lateAthletesCount} athlète{lateAthletesCount > 1 ? "s" : ""} en retard
+        </p>
+        <p className="text-[12px] text-muted-foreground">
+          {lateTodayCount} séance{lateTodayCount > 1 ? "s" : ""} non faite{lateTodayCount > 1 ? "s" : ""} aujourd'hui
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-3 py-1.5 text-[12px] font-semibold text-destructive-foreground">
+        <Send className="h-3.5 w-3.5" />
+        Relancer
+      </span>
+    </button>
   );
 }
 
@@ -172,43 +227,60 @@ export function DashboardWeekProgress({
   points: number[];
 }) {
   const pct = planned > 0 ? Math.round((done / planned) * 100) : 0;
+  const trendColor = trendPct >= 0
+    ? "text-[hsl(var(--success,142_72%_38%))]"
+    : "text-destructive";
   return (
-    <div className="grid grid-cols-2 border-b border-border bg-card">
-      <div className="p-4">
-        <p className="text-[13px] font-semibold text-foreground">Cette semaine</p>
-        <div className="mt-2 flex items-center gap-2">
-          <ProgressRing pct={pct} />
-          <div>
-            <p className="text-[32px] font-black leading-none text-foreground">
-              {done} <span className="text-[20px] font-semibold text-foreground/70">/ {planned}</span>
-            </p>
-            <p className="text-[13px] text-muted-foreground">séances réalisées</p>
-            <p className={cn("mt-0.5 text-[12px] font-semibold", trendPct >= 0 ? "text-emerald-500" : "text-red-500")}>
-              {trendPct >= 0 ? "+" : ""}
-              {trendPct}% vs semaine dernière
-            </p>
+    <div className="ios-card mx-ios-4 mt-ios-3 overflow-hidden border border-border/60">
+      <div className="grid grid-cols-2 divide-x divide-border/60">
+        <div className="px-ios-4 py-ios-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Cette semaine
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <ProgressRing pct={pct} />
+            <div className="min-w-0">
+              <p className="text-[24px] font-bold leading-none text-foreground">
+                {done}
+                <span className="ml-1 text-[15px] font-semibold text-muted-foreground">/ {planned}</span>
+              </p>
+              <p className="mt-1 text-[12px] text-muted-foreground">séances faites</p>
+              <p className={cn("mt-1 text-[11px] font-semibold", trendColor)}>
+                {trendPct >= 0 ? "+" : ""}{trendPct}% vs S-1
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="border-l border-border p-4">
-        <p className="text-[13px] font-semibold text-foreground">Évolution hebdomadaire</p>
-        <div className="mt-3 h-[105px]">
-          <svg viewBox="0 0 100 60" className="h-full w-full">
-            <polyline
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth="2.4"
-              points={points.map((v, idx) => `${idx * 33},${60 - Math.min(60, Math.max(0, (v / 100) * 60))}`).join(" ")}
-            />
-            {points.map((v, idx) => (
-              <circle key={idx} cx={idx * 33} cy={60 - Math.min(60, Math.max(0, (v / 100) * 60))} r="2.8" fill="hsl(var(--primary))" />
-            ))}
-          </svg>
-          <div className="mt-0.5 grid grid-cols-4 text-[10px] text-muted-foreground">
-            <span>S-3</span>
-            <span className="text-center">S-2</span>
-            <span className="text-center">S-1</span>
-            <span className="text-right">S</span>
+        <div className="px-ios-4 py-ios-4">
+          <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+            Évolution
+          </p>
+          <div className="mt-3 h-[78px]">
+            <svg viewBox="0 0 100 60" preserveAspectRatio="none" className="h-full w-full">
+              <polyline
+                fill="none"
+                stroke="hsl(var(--primary))"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={points.map((v, idx) => `${idx * 33},${60 - Math.min(60, Math.max(4, (v / 100) * 56))}`).join(" ")}
+              />
+              {points.map((v, idx) => (
+                <circle
+                  key={idx}
+                  cx={idx * 33}
+                  cy={60 - Math.min(60, Math.max(4, (v / 100) * 56))}
+                  r="2.4"
+                  fill="hsl(var(--primary))"
+                />
+              ))}
+            </svg>
+            <div className="mt-1 grid grid-cols-4 text-[10px] text-muted-foreground">
+              <span>S-3</span>
+              <span className="text-center">S-2</span>
+              <span className="text-center">S-1</span>
+              <span className="text-right">S</span>
+            </div>
           </div>
         </div>
       </div>
@@ -222,81 +294,95 @@ export function DashboardTodayCard({
   data: Pick<DashboardData, "todayPlanned" | "todayDone" | "todayPending" | "todayMissed" | "todayNone" | "todayEntries">;
 }) {
   const miniStats = [
-    { key: "done", label: "faites", value: data.todayDone, className: "text-emerald-600", icon: CheckCircle2 },
-    { key: "pending", label: "en attente", value: data.todayPending, className: "text-amber-500", icon: Clock3 },
-    { key: "missed", label: "non faite", value: data.todayMissed, className: "text-red-500", icon: XCircle },
-    { key: "none", label: "aucune", value: data.todayNone, className: "text-zinc-500", icon: MinusCircle },
-  ] as const;
+    { key: "done", label: "Faites", value: data.todayDone, tone: "done" as const, icon: CheckCircle2 },
+    { key: "pending", label: "En attente", value: data.todayPending, tone: "pending" as const, icon: Clock3 },
+    { key: "missed", label: "Non faites", value: data.todayMissed, tone: "missed" as const, icon: XCircle },
+    { key: "none", label: "Aucune", value: data.todayNone, tone: "none" as const, icon: MinusCircle },
+  ];
   const total = Math.max(1, data.todayPlanned);
-  const donePct = Math.round((data.todayDone / total) * 100);
-  const pendingPct = Math.round((data.todayPending / total) * 100);
-  const missedPct = Math.round((data.todayMissed / total) * 100);
-  const nonePct = Math.max(0, 100 - donePct - pendingPct - missedPct);
+  const donePct = (data.todayDone / total) * 100;
+  const pendingPct = (data.todayPending / total) * 100;
+  const missedPct = (data.todayMissed / total) * 100;
 
   return (
-    <div className="border-b border-border bg-card px-4 py-3">
-      <div className="mb-2 flex items-center gap-2">
-        <CalendarCheck2 className="h-4.5 w-4.5 text-primary" />
-        <p className="text-[17px] font-semibold leading-none text-foreground">Aujourd'hui</p>
-      </div>
-      <div className="mb-3 grid grid-cols-[86px_repeat(4,minmax(0,1fr))] gap-1.5">
-        <div className="rounded-xl border border-border/50 bg-secondary/20 p-2 text-center">
+    <>
+      <SectionHeader title="Aujourd'hui" />
+      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+        {/* Récap visuel */}
+        <div className="flex items-center gap-4 px-ios-4 py-ios-4">
           <div
-            className="mx-auto h-12 w-12 rounded-full"
+            className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full"
             style={{
               background: `conic-gradient(
-                #22c55e 0 ${donePct}%,
-                #f59e0b ${donePct}% ${donePct + pendingPct}%,
-                #ef4444 ${donePct + pendingPct}% ${donePct + pendingPct + missedPct}%,
-                #9ca3af ${donePct + pendingPct + missedPct}% 100%)`,
+                hsl(var(--success, 142 72% 38%)) 0 ${donePct}%,
+                hsl(var(--warning, 38 92% 50%)) ${donePct}% ${donePct + pendingPct}%,
+                hsl(var(--destructive)) ${donePct + pendingPct}% ${donePct + pendingPct + missedPct}%,
+                hsl(var(--muted)) ${donePct + pendingPct + missedPct}% 100%)`,
             }}
           >
-            <div className="m-[6px] flex h-[36px] w-[36px] items-center justify-center rounded-full bg-card text-[11px] font-bold text-foreground">
-              {data.todayPlanned}
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card">
+              <span className="text-[17px] font-bold text-foreground">{data.todayPlanned}</span>
             </div>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">séances prévues</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-foreground">
+              {data.todayPlanned} séance{data.todayPlanned > 1 ? "s" : ""} prévue{data.todayPlanned > 1 ? "s" : ""}
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              {data.todayDone} faite{data.todayDone > 1 ? "s" : ""} · {data.todayPending} en attente
+            </p>
+          </div>
         </div>
-        {miniStats.map((stat) => (
-          <div key={stat.key} className="rounded-xl border border-border/50 bg-secondary/30 px-2 py-2 text-center">
-            <stat.icon className={cn("mx-auto mb-1 h-4 w-4", stat.className)} />
-            <p className={cn("text-[17px] font-bold leading-none", stat.className)}>{stat.value}</p>
-            <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-      <div className="space-y-1.5">
-        {data.todayEntries.slice(0, 3).map((entry) => {
-          const conf = STATUS_BADGE[entry.status];
-          const Icon = conf.icon;
-          return (
-            <div key={entry.id} className="flex items-center gap-2 border-t border-border/60 bg-secondary/20 px-2 py-2 first:border-t-0">
-              <div className="h-8 w-8 overflow-hidden rounded-full bg-secondary">
-                {entry.athleteAvatar ? (
-                  <img src={entry.athleteAvatar} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-muted-foreground">
-                    {entry.athleteName.charAt(0).toUpperCase()}
+
+        {/* Mini stats */}
+        <div className="grid grid-cols-4 divide-x divide-border/60 border-t border-border/60">
+          {miniStats.map((stat) => {
+            const tone = STATUS_TONE[stat.tone];
+            return (
+              <div key={stat.key} className="flex flex-col items-center px-2 py-2.5">
+                <stat.icon className={cn("mb-1 h-4 w-4", tone.text)} />
+                <p className={cn("text-[16px] font-bold leading-none", tone.text)}>{stat.value}</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">{stat.label}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Liste flush des séances du jour */}
+        {data.todayEntries.length > 0 && (
+          <ul className="divide-y divide-border/60 border-t border-border/60">
+            {data.todayEntries.slice(0, 3).map((entry) => {
+              const conf = STATUS_BADGE[entry.status];
+              const Icon = conf.icon;
+              const tone = STATUS_TONE[conf.tone];
+              return (
+                <li key={entry.id} className="flex items-center gap-3 px-ios-4 py-ios-3">
+                  <Avatar name={entry.athleteName} url={entry.athleteAvatar} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-foreground">{entry.athleteName}</p>
+                    <p className="truncate text-[12px] text-muted-foreground">
+                      {entry.title} · {entry.when}
+                    </p>
                   </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold text-foreground">{entry.athleteName}</p>
-                <p className="truncate text-[12px] text-muted-foreground">{entry.title}</p>
-              </div>
-              <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold", conf.className)}>
-                <Icon className="h-3 w-3" />
-                {conf.label}
-              </span>
-              <span className="text-[11px] text-muted-foreground">{entry.when}</span>
-            </div>
-          );
-        })}
+                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold", tone.bg, tone.text)}>
+                    <Icon className="h-3 w-3" />
+                    {conf.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          className="flex w-full items-center justify-between border-t border-border/60 px-ios-4 py-ios-3 text-[13px] font-semibold text-primary ios-interactive active:bg-secondary/40"
+        >
+          Voir toutes les séances du jour
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
-      <button type="button" className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-primary">
-        Voir toutes les séances du jour <ArrowRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -308,29 +394,34 @@ export function DashboardAthleteWatch({
   onOpen: () => void;
 }) {
   return (
-    <div className="border-b border-border bg-card px-4 py-3">
-      <p className="text-[16px] font-semibold text-foreground">Athlètes à surveiller</p>
-      <div className="mt-2 divide-y divide-border rounded-md border border-border/60 bg-secondary/10">
-        {rows.slice(0, 3).map((row) => (
-          <div key={row.id} className="flex items-center gap-2 px-2 py-2">
-            <div className="h-8 w-8 overflow-hidden rounded-full bg-secondary">
-              {row.avatarUrl ? (
-                <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-muted-foreground">
-                  {row.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+    <>
+      <SectionHeader
+        title="Athlètes à surveiller"
+        action={rows.length > 0 ? { label: "Tout voir", onClick: onOpen } : undefined}
+      />
+      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+        {rows.length === 0 ? (
+          <div className="flex items-center gap-3 px-ios-4 py-ios-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <Users className="h-4 w-4" />
             </div>
-            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground">{row.name}</p>
-            <span className="rounded-full bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-600">{row.issue}</span>
+            <p className="text-[13px] text-muted-foreground">Aucun athlète à surveiller cette semaine.</p>
           </div>
-        ))}
+        ) : (
+          <ul className="divide-y divide-border/60">
+            {rows.slice(0, 4).map((row) => (
+              <li key={row.id} className="flex items-center gap-3 px-ios-4 py-ios-3">
+                <Avatar name={row.name} url={row.avatarUrl} size={36} />
+                <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">{row.name}</p>
+                <span className="rounded-full bg-destructive/10 px-2 py-1 text-[10px] font-semibold text-destructive">
+                  {row.issue}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <button type="button" className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-primary" onClick={onOpen}>
-        Voir tous les athlètes <ArrowRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -342,32 +433,35 @@ export function DashboardActivityFeed({
   onOpenMessages: () => void;
 }) {
   return (
-    <div className="border-b border-border bg-card px-4 py-3">
-      <p className="text-[16px] font-semibold text-foreground">Activité récente</p>
-      <div className="mt-2 divide-y divide-border rounded-md border border-border/60 bg-secondary/10">
-        {rows.slice(0, 3).map((row) => (
-          <div key={row.id} className="flex items-center gap-2 px-2 py-2">
-            <div className="h-8 w-8 overflow-hidden rounded-full bg-secondary">
-              {row.avatarUrl ? (
-                <img src={row.avatarUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-muted-foreground">
-                  {row.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+    <>
+      <SectionHeader
+        title="Activité récente"
+        action={{ label: "Messages", onClick: onOpenMessages }}
+      />
+      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+        {rows.length === 0 ? (
+          <div className="flex items-center gap-3 px-ios-4 py-ios-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <MessageCircle className="h-4 w-4" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-foreground">{row.name}</p>
-              <p className="truncate text-[12px] text-muted-foreground">{row.message}</p>
-            </div>
-            <span className="text-[10px] text-muted-foreground">{row.agoLabel}</span>
+            <p className="text-[13px] text-muted-foreground">Aucune activité récente.</p>
           </div>
-        ))}
+        ) : (
+          <ul className="divide-y divide-border/60">
+            {rows.slice(0, 4).map((row) => (
+              <li key={row.id} className="flex items-center gap-3 px-ios-4 py-ios-3">
+                <Avatar name={row.name} url={row.avatarUrl} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-foreground">{row.name}</p>
+                  <p className="truncate text-[12px] text-muted-foreground">{row.message}</p>
+                </div>
+                <span className="shrink-0 text-[11px] text-muted-foreground">{row.agoLabel}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <button type="button" className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-primary" onClick={onOpenMessages}>
-        Ouvrir les messages <ArrowRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    </>
   );
 }
 
@@ -383,24 +477,64 @@ export function DashboardStatsRow({
   trend: number;
 }) {
   const cards = [
-    { value: String(athletes), label: "Athlètes actifs", tone: "text-primary", icon: Zap },
-    { value: String(planned), label: "Séances prévues", tone: "text-emerald-500", icon: CalendarCheck2 },
-    { value: `${completionPct}%`, label: "Taux complétion", tone: "text-amber-500", icon: CheckCircle2 },
-    { value: `${trend >= 0 ? "+" : ""}${trend}%`, label: "vs semaine dernière", tone: trend >= 0 ? "text-violet-500" : "text-red-500", icon: TrendingUp },
-  ] as const;
+    { value: String(athletes), label: "Athlètes", icon: Users },
+    { value: String(planned), label: "Séances", icon: CalendarCheck2 },
+    { value: `${completionPct}%`, label: "Complétion", icon: CheckCircle2 },
+    { value: `${trend >= 0 ? "+" : ""}${trend}%`, label: "vs S-1", icon: TrendingUp },
+  ];
   return (
-    <div className="border-b border-border bg-card px-4 py-3">
-      <p className="mb-2 text-[16px] font-semibold text-foreground">Aperçu rapide</p>
-      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-md border border-border bg-border">
+    <>
+      <SectionHeader title="Aperçu rapide" />
+      <div className="ios-card mx-ios-4 grid grid-cols-4 divide-x divide-border/60 overflow-hidden border border-border/60">
         {cards.map((card) => (
-          <div key={card.label} className="bg-card px-2 py-2.5">
-            <card.icon className={cn("mb-1 h-4 w-4", card.tone)} />
-            <p className={cn("text-[18px] font-black leading-none", card.tone)}>{card.value}</p>
+          <div key={card.label} className="flex flex-col items-center gap-1 px-2 py-ios-3">
+            <card.icon className="h-4 w-4 text-primary" />
+            <p className="text-[17px] font-bold leading-none text-foreground">{card.value}</p>
             <p className="text-[10px] text-muted-foreground">{card.label}</p>
           </div>
         ))}
       </div>
-    </div>
+    </>
+  );
+}
+
+export function DashboardQuickActions({
+  onCreate,
+  onTemplate,
+  onMessage,
+}: {
+  onCreate: () => void;
+  onTemplate: () => void;
+  onMessage: () => void;
+}) {
+  const actions = [
+    { label: "Créer une séance", icon: CalendarCheck2, onClick: onCreate },
+    { label: "Ajouter un modèle", icon: BookOpen, onClick: onTemplate },
+    { label: "Envoyer un message", icon: MessageCircle, onClick: onMessage },
+  ];
+  return (
+    <>
+      <SectionHeader title="Actions rapides" />
+      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+        <ul className="divide-y divide-border/60">
+          {actions.map((action) => (
+            <li key={action.label}>
+              <button
+                type="button"
+                onClick={action.onClick}
+                className="flex w-full items-center gap-3 px-ios-4 py-ios-3 text-left ios-interactive active:bg-secondary/40"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                  <action.icon className="h-4.5 w-4.5" />
+                </div>
+                <span className="min-w-0 flex-1 text-[15px] font-semibold text-foreground">{action.label}</span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
 
