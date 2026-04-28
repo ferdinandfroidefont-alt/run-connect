@@ -7,18 +7,43 @@ import {
   BookOpen,
   CalendarCheck2,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   MessageCircle,
   MinusCircle,
   Send,
   Siren,
   TrendingUp,
+  Users,
   XCircle,
   Zap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/**
+ * Tokens visuels pour les statuts — alignés sur la palette iOS de l'app
+ * (utilise les tokens sémantiques HSL définis dans index.css).
+ */
+const STATUS_TONE = {
+  done: {
+    text: "text-[hsl(var(--success,142_72%_38%))]",
+    bg: "bg-[hsl(var(--success,142_72%_38%)/0.12)]",
+  },
+  pending: {
+    text: "text-[hsl(var(--warning,38_92%_50%))]",
+    bg: "bg-[hsl(var(--warning,38_92%_50%)/0.12)]",
+  },
+  missed: {
+    text: "text-destructive",
+    bg: "bg-destructive/10",
+  },
+  none: {
+    text: "text-muted-foreground",
+    bg: "bg-muted",
+  },
+} as const;
 
 type StatusUi = "done" | "pending" | "missed" | "none";
 
