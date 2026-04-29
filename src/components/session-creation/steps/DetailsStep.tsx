@@ -86,8 +86,15 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
     }
   }, [formData.activity_type, selectedLocation]);
 
+  // Force structured mode (schéma de séance) when sport supports it — like coaching wizard
+  useEffect(() => {
+    if (formData.session_mode !== 'structured') {
+      onFormDataChange({ session_mode: 'structured' });
+    }
+  }, [formData.session_mode, onFormDataChange]);
+
   // Auto-compute distance from structured blocks
-  const isStructured = formData.session_mode === 'structured';
+  const isStructured = true;
   const resolvedBlocks = React.useMemo(() => normalizeBlocksForStorage(formData.blocks), [formData.blocks]);
   const resolvedTotals = React.useMemo(() => resolveSessionTotals(resolvedBlocks), [resolvedBlocks]);
   const computedDistanceKm = React.useMemo(
@@ -234,59 +241,10 @@ export const DetailsStep: React.FC<DetailsStepProps> = ({
               />
             </div>
           </div>
-
-          {showEnduranceFields && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleModeChange('simple')}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                  formData.session_mode === 'simple'
-                    ? "border-primary/70 bg-primary/10 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                )}
-              >
-                Simple
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange('structured')}
-                className={cn(
-                  "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                  formData.session_mode === 'structured'
-                    ? "border-primary/70 bg-primary/10 text-primary"
-                    : "border-border bg-card text-muted-foreground hover:bg-secondary/70"
-                )}
-              >
-                Avec blocs
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Simple Mode Content */}
-        {(formData.session_mode === 'simple' || !showEnduranceFields) && showEnduranceFields && (
-          <div className="bg-card rounded-2xl p-4 space-y-4">
-            {/* General Pace */}
-            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <Label className="text-sm font-medium flex items-center gap-2 mb-2">
-                <Gauge className="w-4 h-4 text-blue-500" />
-                Allure générale
-              </Label>
-              <Input
-                value={formData.pace_general || ''}
-                readOnly
-                onClick={openPacePicker}
-                placeholder={pacePlaceholder}
-                className="h-11 cursor-pointer"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Structured Mode - Block Builder */}
-        {formData.session_mode === 'structured' && showEnduranceFields && (
+        {/* Schéma de séance — builder type Zwift, identique au coaching */}
+        {showEnduranceFields && (
           <div className="space-y-3 rounded-[28px] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
             <SessionBlockBuilder
               blocks={resolvedBlocks}
