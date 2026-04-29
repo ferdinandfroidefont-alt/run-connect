@@ -107,19 +107,19 @@ export function ProfileSharePanel({ compact = false }: Props) {
   }, [previewFrameSize]);
 
   return (
-    <div className="min-w-0 max-w-full">
-      <div className="flex min-h-0 flex-col">
+    <div className="rc-page-shell min-w-0 max-w-full">
+      <div className="rc-page-container flex min-h-0 flex-col">
         <div className={cn(
-          'flex flex-col items-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]',
+          'rc-page-stack items-center pb-[max(1rem,env(safe-area-inset-bottom))]',
           compact ? 'pt-2' : 'pt-4'
         )}>
-          <div ref={previewFrameRef} className="relative w-full max-w-sm mx-auto">
+          <div ref={previewFrameRef} className="relative mx-auto w-full max-w-sm">
             <button
               type="button"
               onClick={handleShare}
               disabled={!payload}
               aria-label="Partager mon profil"
-              className="relative block aspect-square w-full overflow-hidden rounded-none bg-muted/25 text-left shadow-[0_8px_32px_rgba(15,23,42,0.13)] transition-opacity duration-150 hover:opacity-95 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              className="rc-card relative block aspect-square w-full overflow-hidden rounded-2xl bg-muted/25 text-left shadow-[0_8px_32px_rgba(15,23,42,0.13)] transition-opacity duration-150 hover:opacity-95 active:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                 {payload ? (
@@ -143,13 +143,13 @@ export function ProfileSharePanel({ compact = false }: Props) {
           <button
             type="button"
             onClick={handleShare}
-            className="mt-4 flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-4 text-[16px] font-semibold text-white shadow-lg transition-all duration-200 hover:bg-primary/90 active:scale-[0.98]"
+            className="flex w-full max-w-sm items-center justify-center gap-2.5 rounded-2xl bg-primary px-6 py-4 text-[16px] font-semibold text-white shadow-lg transition-all duration-200 hover:bg-primary/90 active:scale-[0.98]"
           >
             <Share className="h-5 w-5" strokeWidth={2.2} />
             Partager mon profil
           </button>
 
-          <p className="mt-3 text-center text-[12px] text-muted-foreground">
+          <p className="text-center text-[12px] text-muted-foreground">
             La carte affichée sera celle partagée en story.
           </p>
         </div>

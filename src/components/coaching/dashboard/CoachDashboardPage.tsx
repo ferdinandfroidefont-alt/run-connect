@@ -194,7 +194,7 @@ export function DashboardAlertCard({
     <button
       type="button"
       onClick={onClick}
-      className="ios-card mx-ios-4 mt-ios-4 flex w-[calc(100%-theme(spacing.ios-4)*2)] items-center gap-3 border border-destructive/20 bg-destructive/[0.06] px-ios-4 py-ios-3 text-left ios-interactive active:opacity-90"
+      className="rc-card mt-ios-4 flex w-full items-center gap-3 border-destructive/20 bg-destructive/[0.06] px-ios-4 py-ios-3 text-left ios-interactive active:opacity-90"
     >
       <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
         <AlertCircle className="h-5 w-5" />
@@ -231,7 +231,7 @@ export function DashboardWeekProgress({
     ? "text-[hsl(var(--success,142_72%_38%))]"
     : "text-destructive";
   return (
-    <div className="ios-card mx-ios-4 mt-ios-3 overflow-hidden border border-border/60">
+    <div className="rc-card mt-ios-3">
       <div className="grid grid-cols-2 divide-x divide-border/60">
         <div className="px-ios-4 py-ios-4">
           <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -307,7 +307,7 @@ export function DashboardTodayCard({
   return (
     <>
       <SectionHeader title="Aujourd'hui" />
-      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+      <div className="rc-card">
         {/* Récap visuel */}
         <div className="flex items-center gap-4 px-ios-4 py-ios-4">
           <div
@@ -399,7 +399,7 @@ export function DashboardAthleteWatch({
         title="Athlètes à surveiller"
         action={rows.length > 0 ? { label: "Tout voir", onClick: onOpen } : undefined}
       />
-      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+      <div className="rc-card">
         {rows.length === 0 ? (
           <div className="flex items-center gap-3 px-ios-4 py-ios-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
@@ -438,7 +438,7 @@ export function DashboardActivityFeed({
         title="Activité récente"
         action={{ label: "Messages", onClick: onOpenMessages }}
       />
-      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+      <div className="rc-card">
         {rows.length === 0 ? (
           <div className="flex items-center gap-3 px-ios-4 py-ios-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
@@ -485,7 +485,7 @@ export function DashboardStatsRow({
   return (
     <>
       <SectionHeader title="Aperçu rapide" />
-      <div className="ios-card mx-ios-4 grid grid-cols-4 divide-x divide-border/60 overflow-hidden border border-border/60">
+      <div className="rc-card grid grid-cols-4 divide-x divide-border/60">
         {cards.map((card) => (
           <div key={card.label} className="flex flex-col items-center gap-1 px-2 py-ios-3">
             <card.icon className="h-4 w-4 text-primary" />
@@ -515,7 +515,7 @@ export function DashboardQuickActions({
   return (
     <>
       <SectionHeader title="Actions rapides" />
-      <div className="ios-card mx-ios-4 overflow-hidden border border-border/60">
+      <div className="rc-card">
         <ul className="divide-y divide-border/60">
           {actions.map((action) => (
             <li key={action.label}>
@@ -734,38 +734,40 @@ export function CoachDashboardPage({
 
   if (loading || !data) {
     return (
-      <div className="space-y-3 px-ios-4 pt-ios-4 pb-[calc(2rem+var(--safe-area-bottom))]">
+      <div className="rc-page-container rc-page-stack pt-ios-4 pb-[calc(2rem+var(--safe-area-bottom))]">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="ios-card h-24 animate-pulse border border-border/60 bg-secondary/40" />
+          <div key={i} className="rc-card h-24 animate-pulse bg-secondary/40" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="bg-secondary pb-[calc(2rem+var(--safe-area-bottom))]">
-      <DashboardAlertCard
-        lateAthletesCount={data.lateAthletesCount}
-        lateTodayCount={data.lateTodayCount}
-        onClick={onOpenLateAthletes}
-      />
-      <SectionHeader title="Cette semaine" />
-      <DashboardWeekProgress
-        done={data.weekDone}
-        planned={data.weekPlanned}
-        trendPct={data.trendPct}
-        points={data.graphPoints}
-      />
-      <DashboardTodayCard data={data} />
-      <DashboardAthleteWatch rows={data.watchAthletes} onOpen={onOpenLateAthletes} />
-      <DashboardActivityFeed rows={data.activityFeed} onOpenMessages={onOpenMessages} />
-      <DashboardStatsRow
-        athletes={new Set(data.todayEntries.map((e) => e.athleteId).filter(Boolean)).size}
-        planned={data.weekPlanned}
-        completionPct={completionPct}
-        trend={data.trendPct}
-      />
-      <DashboardQuickActions onCreate={onOpenPlanning} onTemplate={onOpenTemplates} onMessage={onOpenMessages} />
+    <div className="rc-page-shell pb-[calc(2rem+var(--safe-area-bottom))]">
+      <div className="rc-page-container">
+        <DashboardAlertCard
+          lateAthletesCount={data.lateAthletesCount}
+          lateTodayCount={data.lateTodayCount}
+          onClick={onOpenLateAthletes}
+        />
+        <SectionHeader title="Cette semaine" />
+        <DashboardWeekProgress
+          done={data.weekDone}
+          planned={data.weekPlanned}
+          trendPct={data.trendPct}
+          points={data.graphPoints}
+        />
+        <DashboardTodayCard data={data} />
+        <DashboardAthleteWatch rows={data.watchAthletes} onOpen={onOpenLateAthletes} />
+        <DashboardActivityFeed rows={data.activityFeed} onOpenMessages={onOpenMessages} />
+        <DashboardStatsRow
+          athletes={new Set(data.todayEntries.map((e) => e.athleteId).filter(Boolean)).size}
+          planned={data.weekPlanned}
+          completionPct={completionPct}
+          trend={data.trendPct}
+        />
+        <DashboardQuickActions onCreate={onOpenPlanning} onTemplate={onOpenTemplates} onMessage={onOpenMessages} />
+      </div>
     </div>
   );
 }

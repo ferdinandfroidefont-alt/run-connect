@@ -270,6 +270,23 @@ html, body {
 }
 
 @layer utilities {
+  /* RunConnect layout primitives: shared spacing across pages */
+  .rc-page-shell {
+    @apply bg-secondary;
+  }
+
+  .rc-page-container {
+    @apply mx-auto w-full max-w-[760px] px-ios-4;
+  }
+
+  .rc-page-stack {
+    @apply flex flex-col gap-4;
+  }
+
+  .rc-card {
+    @apply ios-card overflow-hidden border border-border/60;
+  }
+
   /* Safe viewport height: uses 100dvh with 100vh fallback */
   .h-screen-safe {
     height: 100vh;
